@@ -12,10 +12,9 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
-import net.corda.core.internal.x500Name
+import net.corda.core.internal.toX500Name
 import net.corda.core.utilities.seconds
 import net.corda.node.NodeRegistrationOption
-import net.corda.node.VersionInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -61,6 +60,7 @@ class NetworkRegistrationHelperTest {
             doReturn("").whenever(it).emailAddress
             doReturn(null).whenever(it).tlsCertCrlDistPoint
             doReturn(null).whenever(it).tlsCertCrlIssuer
+            doReturn(true).whenever(it).crlCheckSoftFail
         }
     }
 
@@ -182,7 +182,7 @@ class NetworkRegistrationHelperTest {
                                      rootAndIntermediateCA: Pair<CertificateAndKeyPair, CertificateAndKeyPair> = createDevIntermediateCaCertPath()): List<X509Certificate> {
         val (rootCa, intermediateCa) = rootAndIntermediateCA
         val nameConstraints = if (type == CertificateType.NODE_CA) {
-            NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.x500Name))), arrayOf())
+            NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.toX500Name()))), arrayOf())
         } else {
             null
         }
