@@ -310,7 +310,7 @@ Starting a flow
 
 We would start the ``CashIssueFlow`` flow as follows:
 
-``flow start CashIssueFlow amount: $1000, issuerRef: 1234, notary: "O=Controller, L=London, C=GB"``
+``flow start CashIssueFlow amount: $1000, issuerBankPartyRef: 1234, notary: "O=Controller, L=London, C=GB"``
 
 This breaks down as follows:
 
@@ -325,7 +325,7 @@ This command invokes the following ``CashIssueFlow`` constructor:
    .. sourcecode:: kotlin
 
       class CashIssueFlow(val amount: Amount<Currency>,
-                          val issueRef: OpaqueBytes,
+                          val issuerBankPartyRef: OpaqueBytes,
                           val recipient: Party,
                           val notary: Party) : AbstractCashFlow(progressTracker)
 
