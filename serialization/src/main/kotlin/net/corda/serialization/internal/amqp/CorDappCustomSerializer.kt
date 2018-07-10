@@ -85,6 +85,25 @@ class CorDappCustomSerializer(
     ) = uncheckedCast<SerializationCustomSerializer<*, *>, SerializationCustomSerializer<Any?, Any?>>(
             serializer).fromProxy(uncheckedCast(proxySerializer.readObject(obj, schemas, input, context)))!!
 
-    override fun isSerializerFor(clazz: Class<*>) = type.asClass()?.isAssignableFrom(clazz) ?: false
+    override fun isSerializerFor(clazz: Class<*>): Boolean {
+        return type.asClass()?.isAssignableFrom(clazz) ?: false
+    }
+
+    override fun serializationMatch(clazz: Class<*>): Int {
+        if (clazz == type) {
+            return 0
+        }
+        var jumps = 0
+        var typeToCheck = clazz.superclass
+        while (typeToCheck != null) {
+            if (typeToCheck.isAssignableFrom(type.asClass())) {
+                return jumps;
+            }
+            typeToCheck = typeToCheck.superclass
+            jumps += 1
+        }
+        return Int.MAX_VALUE
+    }
+
 }
 

@@ -23,6 +23,7 @@ import javax.annotation.concurrent.ThreadSafe
 
 @KeepForDJVM
 data class SerializationSchemas(val schema: Schema, val transforms: TransformsSchema)
+
 @KeepForDJVM
 data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typeDescriptor: Any)
 
@@ -286,8 +287,7 @@ open class SerializerFactory(
                 if (sentinel) {
                     logger.error("typeNotation=${typeNotation.name} error=\"after Carpentry attempt failed to load\"")
                     throw e
-                }
-                else {
+                } else {
                     logger.info("typeNotation=\"${typeNotation.name}\" action=\"carpentry required\"")
                 }
                 metaSchema.buildFor(typeNotation, classloader)
@@ -376,18 +376,20 @@ open class SerializerFactory(
         // e.g. Imagine if we provided a Map serializer this way, then it won't work if the declared type is
         // AbstractMap, only Map. Otherwise it needs to inject additional schema for a RestrictedType source of the
         // super type.  Could be done, but do we need it?
-        for (customSerializer in customSerializers) {
-            if (customSerializer.isSerializerFor(clazz)) {
-                val declaredSuperClass = declaredType.asClass()?.superclass
-                return if (declaredSuperClass == null
-                        || !customSerializer.isSerializerFor(declaredSuperClass)
-                        || !customSerializer.revealSubclassesInSchema) {
-                    @Suppress("UNCHECKED_CAST")
-                    customSerializer as? AMQPSerializer<Any>
-                } else {
-                    // Make a subclass serializer for the subclass and return that...
-                    CustomSerializer.SubClass(clazz, uncheckedCast(customSerializer))
-                }
+
+        //the sortKey is the "closeness" of this serializer for this class. Usually this measures the number of jumps to the class to the serializer type
+        //ie CS<InputStream> would return 3 for ZipInputStream (ZipInputStream -> InflaterInputStream -> InflaterInputStream -> InputStream
+        //if there were [CS<InputStream> and CS<InflaterInputStream>] CS<InflaterInputStream> would be first, and CS<InputStream> second
+        val filteredSerializers = customSerializers.filter { it.isSerializerFor(clazz) }.sortedBy { it.serializationMatch(clazz) }
+
+        for (customSerializer in filteredSerializers) {
+            val declaredSuperClass = declaredType.asClass()?.superclass
+            return if (declaredSuperClass == null || !customSerializer.isSerializerFor(declaredSuperClass) || !customSerializer.revealSubclassesInSchema) {
+                @Suppress("UNCHECKED_CAST")
+                customSerializer as? AMQPSerializer<Any>
+            } else {
+                // Make a subclass serializer for the subclass and return that...
+                CustomSerializer.SubClass(clazz, uncheckedCast(customSerializer))
             }
         }
         return null
