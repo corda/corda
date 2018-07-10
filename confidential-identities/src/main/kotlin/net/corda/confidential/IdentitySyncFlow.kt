@@ -23,7 +23,7 @@ object IdentitySyncFlow {
     class Send @JvmOverloads constructor(val otherSideSessions: Set<FlowSession>,
                val tx: WireTransaction,
                override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
-        constructor(otherSide: FlowSession, tx: WireTransaction) : this(setOf(otherSide), tx, tracker())
+        constructor(otherSide: FlowSession, tx: WireTransaction) : this(setOf(otherSide), tx)
 
         companion object {
             object SYNCING_IDENTITIES : ProgressTracker.Step("Syncing identities")
