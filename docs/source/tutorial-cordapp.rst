@@ -444,44 +444,24 @@ The nodes can be configured to communicate as a network even when distributed ac
    value after the nodes have been moved to their individual machines. The initial bootstrapping process requires access to the 
    nodes' databases and if two nodes share the same H2 port, the process will fail.
 
-Testing and debugging
----------------------
+Testing your CorDapp
+--------------------
 
-Testing a CorDapp
-~~~~~~~~~~~~~~~~~
 Corda provides several frameworks for writing unit and integration tests for CorDapps.
 
 Contract tests
-^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~
 You can run the CorDapp's contract tests by running the ``Run Contract Tests - Kotlin`` run configuration.
 
 Flow tests
-^^^^^^^^^^
+~~~~~~~~~~
 You can run the CorDapp's flow tests by running the ``Run Flow Tests - Kotlin`` run configuration.
 
 Integration tests
-^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~
 You can run the CorDapp's integration tests by running the ``Run Integration Tests - Kotlin`` run configuration.
 
-Debugging Corda nodes
-~~~~~~~~~~~~~~~~~~~~~
-Debugging is done via IntelliJ as follows:
+Debugging your CorDapp
+----------------------
 
-1. Start the nodes using the “Run Example CorDapp” run configuration in IntelliJ
-
-2. IntelliJ will build and run the CorDapp. The remote debug ports for each node will be automatically generated and
-   printed to the terminal. For example:
-
-.. sourcecode:: none
-
-    [INFO ] 15:27:59.533 [main] Node.logStartupInfo - Working Directory: /Users/joeldudley/cordapp-example/build/20170707142746/PartyA
-    [INFO ] 15:27:59.533 [main] Node.logStartupInfo - Debug port: dt_socket:5007
-
-3. Edit the “Debug CorDapp” run configuration with the port of the node you wish to connect to
-
-4. Run the “Debug CorDapp” run configuration
-
-5. Set your breakpoints and interact with the node you've connected to. When the node hits a breakpoint, execution will
-   pause
-
-   * The node webserver runs in a separate process, and is not attached to by the debugger
+See :doc:`debugging-a-cordapp`.
