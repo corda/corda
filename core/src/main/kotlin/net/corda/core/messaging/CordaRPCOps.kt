@@ -368,8 +368,20 @@ interface CordaRPCOps : RPCOps {
      */
     fun nodeInfoFromParty(party: AbstractParty): NodeInfo?
 
-    /** Clear all network map data from local node cache. */
+    /**
+     * Clear all network map data from local node cache. Notice that after invoking this method your node will lose
+     * network map data and effectively won't be able to start any flow with the peers until network map is downloaded
+     * again on next poll - when it happens, depends on polling interval set by network map server. You can also use [refreshNetworkMapCache]
+     * to force next fetch from network map server.
+     */
     fun clearNetworkMapCache()
+
+    /**
+     * Poll network map server if available for the network map. Notice that you need to have [compatibilityZone]
+     * or [networkServices] configured. This is normally done automatically on the regular time interval, but you may wish to
+     * have the fresh view of network earlier.
+     */
+    fun refreshNetworkMapCache()
 
     /** Sets the value of the node's flows draining mode.
      * If this mode is [enabled], the node will reject new flows through RPC, ignore scheduled flows, and do not process
