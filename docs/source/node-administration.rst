@@ -65,7 +65,7 @@ database should be via the usual database tools mechanisms, including access con
 Monitoring your node
 --------------------
 
-There are two ways to monitor performance and health of a node in Corda Enterprise:
+This section covers monitoring performance and health of a node in Corda Enterprise with Jolokia and Graphite. General best practices for monitoring (e.g. setting up TCP checks for the ports the node communicates on, database health checks etc.) are not covered here but should be followed.
 
 
 Monitoring via Jolokia
@@ -96,8 +96,11 @@ Here are a few ways to build dashboards and extract monitoring data for a node:
   It can bridge any data input to any output using their plugin system, for example, Telegraf can
   be configured to collect data from Jolokia and write to DataDog web api.
 
-The Node configuration parameter `jmxMonitoringHttpPort` has to be present in order to ensure a Jolokia agent is instrumented with
-the JVM run-time.
+In order to ensure that a Jolokia agent is instrumented with the JVM run-time, you can choose one of these options:
+
+* Specify the Node configuration parameter `jmxMonitoringHttpPort`.
+* When using the launcher, add the line `-javaagent:../../drivers/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost` to the `[JVMOptions] sections of the `launcher/app/launcher.cfg`. Make sure to place the Jolokia agent that you specify there into the `drivers` folder.
+* Start the node with `java -jar corda.jar -javaagent:drivers/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost`.
 
 The following JMX statistics are exported:
 
