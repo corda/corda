@@ -15,6 +15,8 @@ interface SerializerFor {
      */
     fun isSerializerFor(clazz: Class<*>): Boolean
 
+    fun serializationMatch(clazz: Class<*>): Int
+
     val revealSubclassesInSchema: Boolean
 }
 
@@ -61,6 +63,11 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
     // TODO: should this be a custom serializer at all, or should it just be a plain AMQPSerializer?
     @KeepForDJVM
     class SubClass<T : Any>(private val clazz: Class<*>, private val superClassSerializer: CustomSerializer<T>) : CustomSerializer<T>() {
+
+        override fun serializationMatch(clazz: Class<*>): Int {
+            return superClassSerializer.serializationMatch(clazz) + 1
+        }
+
         // TODO: should this be empty or contain the schema of the super?
         override val schemaForDocumentation = Schema(emptyList())
 
@@ -106,6 +113,24 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
         override fun writeClassInfo(output: SerializationOutput) {}
         override val descriptor: Descriptor = Descriptor(typeDescriptor)
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz
+
+        override fun serializationMatch(clazz: Class<*>): Int {
+            if (isSerializerFor(clazz)) {
+                if (clazz == type) {
+                    return 0
+                }
+                var jumps = 1
+                var typeToCheck = clazz.superclass
+                while (typeToCheck != null) {
+                    if (typeToCheck.isAssignableFrom(type.asClass())) {
+                        return jumps;
+                    }
+                    typeToCheck = typeToCheck.superclass
+                    jumps += 1
+                }
+            }
+            return Int.MAX_VALUE
+        }
     }
 
     /**

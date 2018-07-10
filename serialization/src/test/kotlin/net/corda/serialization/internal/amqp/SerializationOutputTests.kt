@@ -511,6 +511,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     }
 
     @Test
+    fun `generics from java are supported`() {
+        val obj = DummyOptional<String>("YES")
+        serdes(obj, SerializerFactory(EmptyWhitelist, ClassLoader.getSystemClassLoader()))
+    }
+
+    @Test
     fun `test throwables serialize`() {
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         factory.register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(factory))
