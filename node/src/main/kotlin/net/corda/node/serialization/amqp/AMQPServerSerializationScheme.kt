@@ -9,6 +9,7 @@ import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.RxNotificationSerializer
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 
 /**
  * When set as the serialization scheme, defines the RPC Server serialization scheme as using the Corda
@@ -16,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class AMQPServerSerializationScheme(
         cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
-        serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
+        serializerFactoriesForContexts: ConcurrentMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
 ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, serializerFactoriesForContexts) {
     constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, ConcurrentHashMap())
 
