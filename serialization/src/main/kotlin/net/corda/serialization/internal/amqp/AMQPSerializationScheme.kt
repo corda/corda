@@ -11,6 +11,7 @@ import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.serialization.internal.MutableClassWhitelist
@@ -56,6 +57,8 @@ abstract class AbstractAMQPSerializationScheme(
     companion object {
         const val SCAN_SPEC_PROP_NAME = "amqp.custom.serialization.scanSpec"
 
+        private val logger = contextLogger()
+
         private val serializationWhitelists: List<SerializationWhitelist> by lazy {
             ServiceLoader.load(SerializationWhitelist::class.java, this::class.java.classLoader).toList() + DefaultWhitelist
         }
@@ -64,8 +67,10 @@ abstract class AbstractAMQPSerializationScheme(
             val scanSpec: String? = System.getProperty(SCAN_SPEC_PROP_NAME)
 
             if (scanSpec == null) {
+                logger.info ("scanSpec not set, not scanning for Custom Serializers")
                 emptyList()
             } else {
+                logger.info ("scanSpec = \"$scanSpec\", scanning for Custom Serializers")
                 scanClasspathForSerializers(scanSpec)
             }
         }
@@ -130,6 +135,7 @@ abstract class AbstractAMQPSerializationScheme(
                 factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
             }
         } else {
+            logger.info("Custom Serializer list loaded - not scanning classpath")
             cordappCustomSerializers.forEach { customSerializer ->
                 factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
             }
