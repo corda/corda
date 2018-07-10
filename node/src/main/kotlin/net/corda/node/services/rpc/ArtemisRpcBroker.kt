@@ -10,11 +10,13 @@
 
 package net.corda.node.services.rpc
 
+import io.netty.channel.unix.Errors
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.artemis.*
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_SECURITY_CONFIG
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.RPC_SECURITY_CONFIG
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
@@ -54,7 +56,15 @@ internal class ArtemisRpcBroker internal constructor(
 
     override fun start() {
         logger.debug("Artemis RPC broker is starting.")
-        server.start()
+        try {
+            server.start()
+        } catch (e: java.io.IOException) {
+            if (e.isBindingError()) {
+                throw AddressBindingException(adminAddressOptional?.let { setOf(it, addresses.primary) } ?: setOf(addresses.primary))
+            } else {
+                throw e
+            }
+        }
         logger.debug("Artemis RPC broker is started.")
     }
 

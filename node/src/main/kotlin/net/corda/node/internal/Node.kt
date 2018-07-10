@@ -36,6 +36,7 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
@@ -46,7 +47,6 @@ import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.SecurityConfiguration
-import net.corda.node.services.config.VerifierType
 import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.messaging.ArtemisMessagingServer
@@ -71,10 +71,12 @@ import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT
 import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl
+import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Scheduler
 import rx.schedulers.Schedulers
+import java.net.BindException
 import java.nio.file.Path
 import java.security.PublicKey
 import java.time.Clock
@@ -354,7 +356,7 @@ open class Node(configuration: NodeConfiguration,
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
             val effectiveH2Settings = configuration.effectiveH2Settings
 
-            if(effectiveH2Settings != null && effectiveH2Settings.address != null) {
+            if (effectiveH2Settings?.address != null) {
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
                 val server = org.h2.tools.Server.createTcpServer(
                         "-tcpPort", effectiveH2Settings.address.port.toString(),
@@ -364,7 +366,15 @@ open class Node(configuration: NodeConfiguration,
                 // override interface that createTcpServer listens on (which is always 0.0.0.0)
                 System.setProperty("h2.bindAddress", effectiveH2Settings.address.host)
                 runOnStop += server::stop
-                val url = server.start().url
+                val url = try {
+                    server.start().url
+                } catch (e: JdbcSQLException) {
+                    if (e.cause is BindException) {
+                        throw AddressBindingException(effectiveH2Settings.address)
+                    } else {
+                        throw e
+                    }
+                }
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
         }

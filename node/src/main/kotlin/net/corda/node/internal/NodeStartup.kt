@@ -17,8 +17,14 @@ import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.Crypto
-import net.corda.core.internal.*
+import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.errors.AddressBindingException
+import net.corda.core.internal.exists
+import net.corda.core.internal.location
+import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
@@ -164,6 +170,9 @@ open class NodeStartup(val args: Array<String>) {
             logger.error(e.message, e.cause)
             return false
         } catch (e: CheckpointIncompatibleException) {
+            logger.error(e.message)
+            return false
+        } catch (e: AddressBindingException) {
             logger.error(e.message)
             return false
         } catch (e: NetworkParametersReader.Error) {

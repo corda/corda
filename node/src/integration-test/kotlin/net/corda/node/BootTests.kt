@@ -73,7 +73,7 @@ class BootTests : IntegrationTest() {
 
     @Test
     fun `double node start doesn't write into log file`() {
-        driver {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val alice = startNode(providedName = ALICE_NAME).get()
             val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }
