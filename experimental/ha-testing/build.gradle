@@ -8,30 +8,7 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
-buildscript {
-    // For sharing constants between builds
-    Properties constants = new Properties()
-    file("$projectDir/../../constants.properties").withInputStream { constants.load(it) }
-
-    ext.kotlin_version = constants.getProperty("kotlinVersion")
-    ext.byteman_version = "4.0.2"
-
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        jcenter()
-    }
-
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
-
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-}
+ext.byteman_version = "4.0.3"
 
 apply plugin: 'kotlin'
 apply plugin: 'idea'
@@ -39,12 +16,30 @@ apply plugin: 'net.corda.plugins.cordapp'
 
 description 'A set of tools to perform Nodes High Availability testing'
 
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
+    }
+}
+
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     cordaCompile project(":client:rpc")
-    cordaCompile project(':node-api')
+    cordaCompile project(":node-api")
     cordaCompile project(":finance")
     cordaCompile project(":perftestcordapp")
 
@@ -57,7 +52,14 @@ dependencies {
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
     // Byteman for runtime (termination) rules injection on the running node
-    //compile "org.jboss.byteman:byteman:$byteman_version"
+    // Submission tool allowing to install rules on running nodes
+    compile "org.jboss.byteman:byteman-submit:$byteman_version"
+    // The actual Byteman agent which should only be in the classpath of the out of process nodes
+    integrationTestCompile "org.jboss.byteman:byteman:$byteman_version"
+
+
+    integrationTestCompile project(":test-utils")
+    integrationTestCompile project(":node-driver")
 }
 
 jar {
@@ -70,4 +72,9 @@ jar {
         )
     }
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
 }
