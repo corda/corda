@@ -163,8 +163,10 @@ class NodeControllerTest {
                         country = "US"
                 ),
                 p2pAddress = localPort(p2pPort),
-                rpcAddress = localPort(rpcPort),
-                rpcAdminAddress = localPort(rpcAdminPort),
+                rpcSettings = NodeRpcSettings(
+                        address = localPort(rpcPort),
+                        adminAddress = localPort(rpcAdminPort)
+                ),
                 webAddress = localPort(webPort),
                 h2port = h2port,
                 notary = notary,
