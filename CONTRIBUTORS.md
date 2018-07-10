@@ -104,6 +104,7 @@ see changes to this list.
 * karnauskas
 * Kasia Streich (R3)
 * Kat Baker (R3)
+* Keerthi Nelaturu (Scotiabank)
 * Khaild Ahmed (Northern Trust)
 * Klaus Apolinario (Bradesco)
 * Koen Vingerhoets (KBC)
