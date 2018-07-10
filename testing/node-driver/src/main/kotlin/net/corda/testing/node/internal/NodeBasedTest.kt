@@ -131,7 +131,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 }
 
 class InProcessNode(
-        configuration: NodeConfiguration, versionInfo: VersionInfo, cordappPackages: List<String>) : Node(
-        configuration, versionInfo, false, CordappLoader.createDefaultWithTestPackages(configuration, cordappPackages)) {
+        configuration: NodeConfiguration, versionInfo: VersionInfo, cordappPackages: List<String>, packageToGeneratedJarNames: Map<String,String> = emptyMap()) : Node(
+        configuration, versionInfo, false, CordappLoader.createDefaultWithTestPackages(configuration, cordappPackages, packageToGeneratedJarNames)) {
     override fun getRxIoScheduler() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
 }
