@@ -275,4 +275,42 @@ class CorDappSerializerTests {
         val obj3 = DeserializationInput(proxyFactory).deserialize(blob3)
         assertEquals(listOf ("1", 2, "3"), obj3.a)
     }
+
+    open class Base<T> (val a: T)
+    class Derived<T> (a: T, val b: String) : Base<T>(a)
+
+    class BaseProxy :
+            SerializationCustomSerializer<Base<*>, BaseProxy.Proxy>
+    {
+        data class Proxy(val proxy_a_: Any?)
+
+        override fun fromProxy(proxy: Proxy) = Base(proxy.proxy_a_)
+        override fun toProxy(obj: Base<*>)   = Proxy(obj.a)
+    }
+
+    class DerivedProxy :
+            SerializationCustomSerializer<Derived<*>, DerivedProxy.Proxy>
+    {
+        data class Proxy(val proxy_a_: Any?, val proxy_b_: String)
+
+        override fun fromProxy(proxy: Proxy)  = Derived(proxy.proxy_a_, proxy.proxy_b_)
+        override fun toProxy(obj: Derived<*>) = Proxy(obj.a, obj.b)
+    }
+
+    // Tests CORDA-1747
+    @Test
+    fun proxiedInheritableGenerics() {
+        val proxyFactory = SerializerFactory (
+                AllWhitelist,
+                ClassLoader.getSystemClassLoader(),
+                onlyCustomSerializers = true)
+
+        proxyFactory.registerExternal (CorDappCustomSerializer(BaseProxy(), proxyFactory))
+        proxyFactory.registerExternal (CorDappCustomSerializer(DerivedProxy(), proxyFactory))
+
+        val blob1 = SerializationOutput(proxyFactory).serialize(Base(100L))
+        DeserializationInput(proxyFactory).deserialize(blob1)
+        val blob2 = SerializationOutput(proxyFactory).serialize(Derived(100L, "Hey pants"))
+        DeserializationInput(proxyFactory).deserialize(blob2)
+    }
 }

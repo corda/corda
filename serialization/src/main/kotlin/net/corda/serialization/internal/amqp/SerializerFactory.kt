@@ -341,8 +341,12 @@ open class SerializerFactory(
         return get(type.asClass() ?: throw NotSerializableException("Unable to build composite type for $type"), type)
     }
 
-    private fun makeClassSerializer(clazz: Class<*>, type: Type, declaredType: Type): AMQPSerializer<Any> = serializersByType.computeIfAbsent(type) {
-        logger.debug("class=${clazz.simpleName}, type=$type is a composite type")
+    private fun makeClassSerializer(
+            clazz: Class<*>,
+            type: Type,
+            declaredType: Type
+    ): AMQPSerializer<Any> = serializersByType.computeIfAbsent(type) {
+        logger.debug { "class=${clazz.simpleName}, type=$type is a composite type" }
         if (clazz.isSynthetic) {
             // Explicitly ban synthetic classes, we have no way of recreating them when deserializing. This also
             // captures Lambda expressions and other anonymous functions
@@ -379,9 +383,15 @@ open class SerializerFactory(
         for (customSerializer in customSerializers) {
             if (customSerializer.isSerializerFor(clazz)) {
                 val declaredSuperClass = declaredType.asClass()?.superclass
+
+
                 return if (declaredSuperClass == null
                         || !customSerializer.isSerializerFor(declaredSuperClass)
-                        || !customSerializer.revealSubclassesInSchema) {
+                        || !customSerializer.revealSubclassesInSchema
+                ) {
+                    logger.info ("action=\"Using custom serializer\", class=${clazz.typeName}, " +
+                            "declaredType=${declaredType.typeName}")
+
                     @Suppress("UNCHECKED_CAST")
                     customSerializer as? AMQPSerializer<Any>
                 } else {

@@ -46,8 +46,10 @@ const val PROXY_TYPE = 1
  */
 class CorDappCustomSerializer(
         private val serializer: SerializationCustomSerializer<*, *>,
-        factory: SerializerFactory) : AMQPSerializer<Any>, SerializerFor {
+        factory: SerializerFactory
+) : AMQPSerializer<Any>, SerializerFor {
     override val revealSubclassesInSchema: Boolean get() = false
+
     private val types = serializer::class.supertypes.filter { it.jvmErasure == SerializationCustomSerializer::class }
             .flatMap { it.arguments }
             .map { it.type!!.javaType }
@@ -86,6 +88,12 @@ class CorDappCustomSerializer(
     ) = uncheckedCast<SerializationCustomSerializer<*, *>, SerializationCustomSerializer<Any?, Any?>>(
             serializer).fromProxy(uncheckedCast(proxySerializer.readObject(obj, schemas, input, context)))!!
 
-    override fun isSerializerFor(clazz: Class<*>) = type.asClass()?.isAssignableFrom(clazz) ?: false
+    /**
+     * For 3rd party plugin serializers we are going to exist on exact type matching. i.e. we will
+     * not support base class serializers for derivedtypes
+     */
+    override fun isSerializerFor(clazz: Class<*>) = type.asClass()?.let {
+        TypeToken.of(type.asClass()!!) == TypeToken.of(clazz)
+    } ?: false
 }
 
