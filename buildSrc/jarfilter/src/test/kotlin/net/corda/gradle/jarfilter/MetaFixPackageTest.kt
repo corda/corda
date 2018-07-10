@@ -41,21 +41,21 @@ class MetaFixPackageTest {
 
     @Test
     fun testPackageFunction() {
-        assertFailsWith<UnsupportedOperationException> { sourceClass.kotlin.declaredFunctions }
+        assertFailsWith<UnsupportedOperationException> { fixedClass.kotlin.declaredFunctions }
         //assertThat("templateFun() not found", sourceClass.kotlin.declaredFunctions, hasItem(staticFun))
         //assertThat("templateFun() still exists", fixedClass.kotlin.declaredFunctions, not(hasItem(staticFun)))
     }
 
     @Test
     fun testPackageVal() {
-        assertFailsWith<UnsupportedOperationException> { sourceClass.kotlin.declaredMembers }
+        assertFailsWith<UnsupportedOperationException> { fixedClass.kotlin.declaredMembers }
         //assertThat("templateVal not found", sourceClass.kotlin.declaredMembers, hasItem(staticVal))
         //assertThat("templateVal still exists", fixedClass.kotlin.declaredMembers, not(hasItem(staticVal)))
     }
 
     @Test
     fun testPackageVar() {
-        assertFailsWith<UnsupportedOperationException> { sourceClass.kotlin.declaredMembers }
+        assertFailsWith<UnsupportedOperationException> { fixedClass.kotlin.declaredMembers }
         //assertThat("templateVar not found", sourceClass.kotlin.declaredMembers, hasItem(staticVar))
         //assertThat("templateVar still exists", fixedClass.kotlin.declaredMembers, not(hasItem(staticVar)))
     }

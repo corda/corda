@@ -34,10 +34,11 @@ internal abstract class MetaFixerTransformer<out T : MessageLite>(
     parser: (InputStream, ExtensionRegistryLite) -> T
 ) {
     private val stringTableTypes: StringTableTypes
-    private val nameResolver: NameResolver
+    protected val nameResolver: NameResolver
     protected val message: T
 
     protected abstract val typeTable: TypeTable
+    protected open val classDescriptor: String = ""
     protected open val classKind: ProtoBuf.Class.Kind? = null
     protected abstract val properties: MutableList<ProtoBuf.Property>
     protected abstract val functions: MutableList<ProtoBuf.Function>
@@ -93,15 +94,25 @@ internal abstract class MetaFixerTransformer<out T : MessageLite>(
     private fun filterFunctions(): Int {
         var count = 0
         var idx = 0
-        while (idx < functions.size) {
-            val signature = JvmProtoBufUtil.getJvmMethodSignature(functions[idx], nameResolver, typeTable)
-            if ((signature == null) || actualMethods.contains(signature)) {
-                ++idx
-            } else {
-                logger.info("-- removing method: {}", signature)
-                functions.removeAt(idx)
-                ++count
+        removed@ while (idx < functions.size) {
+            val function = functions[idx]
+            val signature = JvmProtoBufUtil.getJvmMethodSignature(function, nameResolver, typeTable)
+            if (signature != null) {
+                if (!actualMethods.contains(signature)) {
+                    logger.info("-- removing method: {}", signature)
+                    functions.removeAt(idx)
+                    ++count
+                    continue@removed
+                } else if (function.valueParameterList.hasAnyDefaultValues
+                             && !actualMethods.contains(signature.toKotlinDefaultFunction(classDescriptor))) {
+                    logger.info("-- removing default parameter values: {}", signature)
+                    functions[idx] = function.toBuilder()
+                        .updateValueParameters(ProtoBuf.ValueParameter::clearDeclaresDefaultValue)
+                        .build()
+                    ++count
+                }
             }
+            ++idx
         }
         return count
     }
@@ -109,15 +120,25 @@ internal abstract class MetaFixerTransformer<out T : MessageLite>(
     private fun filterConstructors(): Int {
         var count = 0
         var idx = 0
-        while (idx < constructors.size) {
-            val signature = JvmProtoBufUtil.getJvmConstructorSignature(constructors[idx], nameResolver, typeTable)
-            if ((signature == null) || actualMethods.contains(signature)) {
-                ++idx
-            } else {
-                logger.info("-- removing constructor: {}", signature)
-                constructors.removeAt(idx)
-                ++count
+        removed@ while (idx < constructors.size) {
+            val constructor = constructors[idx]
+            val signature = JvmProtoBufUtil.getJvmConstructorSignature(constructor, nameResolver, typeTable)
+            if (signature != null) {
+                if (!actualMethods.contains(signature)) {
+                    logger.info("-- removing constructor: {}", signature)
+                    constructors.removeAt(idx)
+                    ++count
+                    continue@removed
+                } else if (constructor.valueParameterList.hasAnyDefaultValues
+                             && !actualMethods.contains(signature.toKotlinDefaultConstructor())) {
+                    logger.info("-- removing default parameter values: {}", signature)
+                    constructors[idx] = constructor.toBuilder()
+                        .updateValueParameters(ProtoBuf.ValueParameter::clearDeclaresDefaultValue)
+                        .build()
+                    ++count
+                }
             }
+            ++idx
         }
         return count
     }
@@ -127,30 +148,32 @@ internal abstract class MetaFixerTransformer<out T : MessageLite>(
         var idx = 0
         removed@ while (idx < properties.size) {
             val property = properties[idx]
-            val signature = property.getExtensionOrNull(propertySignature) ?: continue
-            val field = signature.toFieldElement(property, nameResolver, typeTable)
-            val getterMethod = signature.toGetter(nameResolver)
+            val signature = property.getExtensionOrNull(propertySignature)
+            if (signature != null) {
+                val field = signature.toFieldElement(property, nameResolver, typeTable)
+                val getterMethod = signature.toGetter(nameResolver)
 
-            /**
-             * A property annotated with [JvmField] will use a field instead of a getter method.
-             * But properties without [JvmField] will also usually have a backing field. So we only
-             * remove a property that has either lost its getter method, or never had a getter method
-             * and has lost its field.
-             *
-             * Having said that, we cannot remove [JvmField] properties from a companion object class
-             * because these properties are implemented as static fields on the companion's host class.
-             */
-            val isValidProperty = if (getterMethod == null) {
-                actualFields.contains(field) || classKind == COMPANION_OBJECT
-            } else {
-                actualMethods.contains(getterMethod.name + getterMethod.descriptor)
-            }
+                /**
+                 * A property annotated with [JvmField] will use a field instead of a getter method.
+                 * But properties without [JvmField] will also usually have a backing field. So we only
+                 * remove a property that has either lost its getter method, or never had a getter method
+                 * and has lost its field.
+                 *
+                 * Having said that, we cannot remove [JvmField] properties from a companion object class
+                 * because these properties are implemented as static fields on the companion's host class.
+                 */
+                val isValidProperty = if (getterMethod == null) {
+                    actualFields.contains(field) || classKind == COMPANION_OBJECT
+                } else {
+                    actualMethods.contains(getterMethod.signature)
+                }
 
-            if (!isValidProperty) {
-                logger.info("-- removing property: {},{}", field.name, field.descriptor)
-                properties.removeAt(idx)
-                ++count
-                continue@removed
+                if (!isValidProperty) {
+                    logger.info("-- removing property: {},{}", field.name, field.descriptor)
+                    properties.removeAt(idx)
+                    ++count
+                    continue@removed
+                }
             }
             ++idx
         }
@@ -196,6 +219,7 @@ internal class ClassMetaFixerTransformer(
     ProtoBuf.Class::parseFrom
 ) {
     override val typeTable = TypeTable(message.typeTable)
+    override val classDescriptor = "L${nameResolver.getString(message.fqName)};"
     override val classKind: ProtoBuf.Class.Kind = CLASS_KIND.get(message.flags)
     override val properties = mutableList(message.propertyList)
     override val functions = mutableList(message.functionList)
@@ -204,17 +228,14 @@ internal class ClassMetaFixerTransformer(
     override val sealedSubclassNames= mutableList(message.sealedSubclassFqNameList)
 
     override fun rebuild(): ProtoBuf.Class = message.toBuilder().apply {
+        clearConstructor().addAllConstructor(constructors)
+        clearFunction().addAllFunction(functions)
+
         if (nestedClassNames.size != nestedClassNameCount) {
             clearNestedClassName().addAllNestedClassName(nestedClassNames)
         }
         if (sealedSubclassNames.size != sealedSubclassFqNameCount) {
             clearSealedSubclassFqName().addAllSealedSubclassFqName(sealedSubclassNames)
-        }
-        if (constructors.size != constructorCount) {
-            clearConstructor().addAllConstructor(constructors)
-        }
-        if (functions.size != functionCount) {
-            clearFunction().addAllFunction(functions)
         }
         if (properties.size != propertyCount) {
             clearProperty().addAllProperty(properties)
@@ -248,9 +269,8 @@ internal class PackageMetaFixerTransformer(
     override val constructors = mutableListOf<ProtoBuf.Constructor>()
 
     override fun rebuild(): ProtoBuf.Package = message.toBuilder().apply {
-        if (functions.size != functionCount) {
-            clearFunction().addAllFunction(functions)
-        }
+        clearFunction().addAllFunction(functions)
+
         if (properties.size != propertyCount) {
             clearProperty().addAllProperty(properties)
         }

@@ -13,14 +13,8 @@ import kotlin.jvm.kotlin
 class MetaFixConstructorTest {
     companion object {
         private val logger: Logger = StdOutLogging(MetaFixConstructorTest::class)
-        private val unwantedCon = isConstructor(
-            returnType = WithConstructor::class,
-            parameters = *arrayOf(Int::class, Long::class)
-        )
-        private val wantedCon = isConstructor(
-            returnType = WithConstructor::class,
-            parameters = *arrayOf(Long::class)
-        )
+        private val unwantedCon = isConstructor(WithConstructor::class, Int::class, Long::class)
+        private val wantedCon = isConstructor(WithConstructor::class, Long::class)
     }
 
     @Test
@@ -32,15 +26,19 @@ class MetaFixConstructorTest {
         // added to the metadata, and that the class is valid.
         val sourceObj = sourceClass.getDeclaredConstructor(Long::class.java).newInstance(BIG_NUMBER)
         assertEquals(BIG_NUMBER, sourceObj.longData())
-        assertThat("<init>(Int,Long) not found", sourceClass.kotlin.constructors, hasItem(unwantedCon))
-        assertThat("<init>(Long) not found", sourceClass.kotlin.constructors, hasItem(wantedCon))
+        with(sourceClass.kotlin.constructors) {
+            assertThat("<init>(Int,Long) not found", this, hasItem(unwantedCon))
+            assertThat("<init>(Long) not found", this, hasItem(wantedCon))
+        }
 
         // Rewrite the metadata according to the contents of the bytecode.
         val fixedClass = bytecode.fixMetadata(logger, pathsOf(WithConstructor::class)).toClass<WithConstructor, HasLong>()
         val fixedObj = fixedClass.getDeclaredConstructor(Long::class.java).newInstance(BIG_NUMBER)
         assertEquals(BIG_NUMBER, fixedObj.longData())
-        assertThat("<init>(Int,Long) still exists", fixedClass.kotlin.constructors, not(hasItem(unwantedCon)))
-        assertThat("<init>(Long) not found", fixedClass.kotlin.constructors, hasItem(wantedCon))
+        with(fixedClass.kotlin.constructors) {
+            assertThat("<init>(Int,Long) still exists", this, not(hasItem(unwantedCon)))
+            assertThat("<init>(Long) not found", this, hasItem(wantedCon))
+        }
     }
 
     class MetadataTemplate(private val longData: Long) : HasLong {
