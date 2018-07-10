@@ -6,6 +6,9 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* Docs for IdentityService. assertOwnership updated to correctly state that an UnknownAnonymousPartyException is thrown
+  rather than IllegalStateException.
+
 * The Corda JPA entities no longer implement java.io.Serializable, as this was causing persistence errors in obscure cases.
   Java serialization is disabled globally in the node, but in the unlikely event you were relying on these types being Java serializable please contact us.
 
