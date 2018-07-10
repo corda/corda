@@ -92,8 +92,8 @@ class CorDappCustomSerializer(
      * For 3rd party plugin serializers we are going to exist on exact type matching. i.e. we will
      * not support base class serializers for derivedtypes
      */
-    override fun isSerializerFor(clazz: Class<*>) = type.asClass()?.let {
-        TypeToken.of(type.asClass()!!) == TypeToken.of(clazz)
-    } ?: false
+    override fun isSerializerFor(clazz: Class<*>) : Boolean {
+        return type.asClass()?.let { TypeToken.of(it) == TypeToken.of(clazz) } ?: false
+    }
 }
 
