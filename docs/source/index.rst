@@ -30,66 +30,64 @@ application development please continue to refer to `the main project documentat
 
 .. Documentation is not included in the pdf unless it is included in a toctree somewhere
 
-.. only:: pdfmode
+.. conditional-toctree::
+   :caption: Contents
+   :maxdepth: 2
+   :if_tag: pdfmode
 
-    .. toctree::
-       :caption: Contents
-       :maxdepth: 2
+   release-notes.rst
+   key-concepts.rst
+   quickstart-index.rst
+   tutorials-index.rst
+   building-a-cordapp-index.rst
+   component-library-index.rst
+   corda-nodes-index.rst
+   corda-networks-index.rst
+   tools-index.rst
+   corda-firewall
+   database-management
+   hot-cold-deployment
+   running-a-notary-cluster/toctree
+   certificate-revocation
+   node-internals-index.rst
+   json.rst
+   troubleshooting.rst
 
-       release-notes.rst
-       key-concepts.rst
-       quickstart-index.rst
-       tutorials-index.rst
-       building-a-cordapp-index.rst
-       component-library-index.rst
-       corda-nodes-index.rst
-       corda-networks-index.rst
-       tools-index.rst
-       corda-firewall
-       database-management
-       hot-cold-deployment
-       running-a-notary-cluster/toctree
-       certificate-revocation
-       node-internals-index.rst
-       json.rst
-       troubleshooting.rst
+.. conditional-toctree::
+   :caption: Corda Enterprise
+   :maxdepth: 1
+   :if_tag: htmlmode
 
-.. only:: htmlmode
+   release-notes.rst
+   version-compatibility.rst
+   platform-support-matrix.rst
+   hot-cold-deployment
+   database-management
+   corda-firewall
+   sizing-and-performance
+   running-a-notary-cluster/toctree
 
-    .. toctree::
-       :caption: Corda Enterprise
-       :maxdepth: 1
+.. conditional-toctree::
+   :caption: Development
+   :maxdepth: 1
+   :if_tag: htmlmode
 
-       release-notes.rst
-       version-compatibility.rst
-       platform-support-matrix.rst
-       hot-cold-deployment
-       database-management
-       corda-firewall
-       sizing-and-performance
-       running-a-notary-cluster/toctree
+   quickstart-index.rst
+   key-concepts.rst
+   building-a-cordapp-index.rst
+   tutorials-index.rst
+   tools-index.rst
+   node-internals-index.rst
+   component-library-index.rst
+   serialization-index.rst
+   json.rst
+   troubleshooting.rst
 
-    .. toctree::
-       :caption: Development
-       :maxdepth: 1
+.. conditional-toctree::
+   :caption: Operations
+   :maxdepth: 2
+   :if_tag: htmlmode
 
-       quickstart-index.rst
-       key-concepts.rst
-       building-a-cordapp-index.rst
-       tutorials-index.rst
-       tools-index.rst
-       node-internals-index.rst
-       component-library-index.rst
-       serialization-index.rst
-       json.rst
-       troubleshooting.rst
-
-    .. toctree::
-       :caption: Operations
-       :maxdepth: 2
-
-       corda-nodes-index.rst
-       corda-networks-index.rst
-       azure-vm.rst
-       aws-vm.rst
-       certificate-revocation
+   corda-nodes-index.rst
+   corda-networks-index.rst
+   certificate-revocation
