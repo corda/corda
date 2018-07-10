@@ -22,10 +22,9 @@ import java.io.*
 import kotlin.test.assertEquals
 
 class BootTests {
-
     @Test
     fun `java deserialization is disabled`() {
-        driver {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val user = User("u", "p", setOf(startFlow<ObjectInputStreamFlow>()))
             val future = CordaRPCClient(startNode(rpcUsers = listOf(user)).getOrThrow().rpcAddress).
                     start(user.username, user.password).proxy.startFlow(::ObjectInputStreamFlow).returnValue
