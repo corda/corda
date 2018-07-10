@@ -6,6 +6,7 @@ CorDapps
 
    cordapp-overview
    writing-a-cordapp
+   debugging-a-cordapp
    upgrade-notes
    upgrading-cordapps
    cordapp-build-systems

@@ -314,24 +314,24 @@ Examples
 Starting a flow
 ~~~~~~~~~~~~~~~
 
-We would start the ``CashIssue`` flow as follows:
+We would start the ``CashIssueFlow`` flow as follows:
 
 ``flow start CashIssueFlow amount: $1000, issuerBankPartyRef: 1234, notary: "O=Controller, L=London, C=GB"``
 
 This breaks down as follows:
 
 * ``flow start`` is a shell command for starting a flow
-* ``CashIssue`` is the flow we want to start
+* ``CashIssueFlow`` is the flow we want to start
 * Each ``name: value`` pair after that is a flow constructor argument
 
-This command invokes the following ``CashIssue`` constructor:
+This command invokes the following ``CashIssueFlow`` constructor:
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
       class CashIssueFlow(val amount: Amount<Currency>,
-                          val issueRef: OpaqueBytes,
+                          val issuerBankPartyRef: OpaqueBytes,
                           val recipient: Party,
                           val notary: Party) : AbstractCashFlow(progressTracker)
 
