@@ -81,12 +81,12 @@ Download a sample project
 1. Open a command prompt
 2. Clone the CorDapp example repo by running ``git clone https://github.com/corda/cordapp-example``
 3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
-4. Checkout the branch for Corda Enterprise 3.0 by running ``git checkout release-enterprise-V3``
+4. Checkout the corresponding branch for Corda Enterprise 3.0 by running ``git checkout release-enterprise-V3`` in the current directory
 
 Resolve Corda Enterprise binaries
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The Corda Enterprise binaries are not available in a publicly accessible Maven repository. Instead, the Corda Enterprise
-binaries will be made available to your organisation as a tarball (``r3-corda-enterprise-3.0-developer-pack.tar``).
+binaries will be made available to your organisation as a tarball (``corda-3.0-developer-pack.tar.gz``).
 This tarball contains all of the Corda dependencies as they would appear in your local Maven repository located at
 ``C:\Documents and Settings\{your-username}\.m2``.
 
@@ -103,7 +103,7 @@ dependencies.
    c. Add Corda Enterprise binaries to a local directory and register a local Maven repository pointing to this directory with Gradle.
 
 .. note:: Upon receiving the binaries, the quickest way to get started developing your CorDapps is **option a**. This can
-          be done by firstly unpacking the ``r3-corda-enterprise-3.0-developer-pack.tar`` tarball. Then, copy the unpacked
+          be done by firstly unpacking the ``corda-3.0-developer-pack.tar.gz`` tarball. Then, copy the unpacked
           ``respository`` folder to your local Maven repository located at ``C:\Documents and Settings\{your-username}\.m2``.
 
 Run from the command prompt
@@ -161,14 +161,14 @@ Download a sample project
 1. Open a terminal
 2. Clone the CorDapp example repo by running ``git clone https://github.com/corda/cordapp-example``
 3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
-4. Checkout the branch for Corda Enterprise 3.0 by running ``git checkout release-enterprise-V3``
+4. Checkout the corresponding branch for Corda Enterprise 3.0 by running ``git checkout release-enterprise-V3`` in the current directory
 
 .. _resolve-corda-enterprise-binaries:
 
 Resolve Corda Enterprise binaries
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The Corda Enterprise binaries are not available in a publicly accessible Maven repository. Instead, the Corda Enterprise
-binaries will be made available to your organisation as a tarball (``r3-corda-enterprise-3.0-developer-pack.tar``).
+binaries will be made available to your organisation as a tarball (``corda-3.0-developer-pack.tar.gz``).
 This tarball contains all of the Corda dependencies as they would appear in your local Maven repository located at
 ``~/.m2/repository``.
 
@@ -185,9 +185,9 @@ dependencies.
    c. Add Corda Enterprise binaries to a local directory and register a local Maven repository pointing to this directory with Gradle.
 
 .. note:: Upon receiving the binaries, the quickest way to get started developing your CorDapps is **option a**. This can
-be done by firstly unpacking the ``r3-corda-enterprise-3.0-developer-pack.tar`` tarball:
+be done by firstly unpacking the ``corda-3.0-developer-pack.tar.gz`` tarball:
 
-            ``tar -xvf r3-corda-enterprise-3.0-developer-pack.tar``
+            ``tar -xvf corda-3.0-developer-pack.tar.gz``
 
           Then, copy the unpacked ``respository`` folder to your local Maven repository:
 
