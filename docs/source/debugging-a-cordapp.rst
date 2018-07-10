@@ -55,7 +55,11 @@ With remote debugging
     [INFO ] 11:39:55,471 [driver-pool-thread-0] (DriverDSLImpl.kt:814) internal.DriverDSLImpl.startOutOfProcessNode -
         Starting out-of-process Node PartyA, debug port is 5008, jolokia monitoring port is not enabled {}
 
-3. Attach the debugger to the node of interest on its debug port
+3. Attach the debugger to the node of interest on its debug port:
+
+    * In IntelliJ IDEA, create a new run/debug configuration of type ``Remote``
+    * Set the run/debug configuration's ``Port`` to the debug port
+    * Start the run/debug configuration in debug mode
 
 4. Set your breakpoints
 
