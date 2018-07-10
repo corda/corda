@@ -95,16 +95,29 @@ internal abstract class MetadataTransformer<out T : MessageLite>(
     private fun filterConstructors(): Int = deletedConstructors.count(::filterConstructor)
 
     private fun filterConstructor(deleted: MethodElement): Boolean {
+        /*
+         * Constructors with the default parameter marker are synthetic and DO NOT have
+         * entries in the metadata. So we construct an element for the "primary" one
+         * that it was synthesised for, and which we DO expect to find.
+         */
+        val deletedPrimary = deleted.asKotlinNonDefaultConstructor()
+
         for (idx in 0 until constructors.size) {
             val constructor = constructors[idx]
             val signature = JvmProtoBufUtil.getJvmConstructorSignature(constructor, nameResolver, typeTable)
-            if (signature == deleted.name + deleted.descriptor) {
+            if (signature == deleted.signature) {
                 if (IS_SECONDARY.get(constructor.flags)) {
-                    logger.info("-- removing constructor: {}{}", deleted.name, deleted.descriptor)
+                    logger.info("-- removing constructor: {}", deleted.signature)
                 } else {
                     logger.warn("Removing primary constructor: {}{}", className, deleted.descriptor)
                 }
                 constructors.removeAt(idx)
+                return true
+            } else if (signature == deletedPrimary?.signature) {
+                constructors[idx] = constructor.toBuilder()
+                    .updateValueParameters(ProtoBuf.ValueParameter::clearDeclaresDefaultValue)
+                    .build()
+                logger.info("-- removing default parameter values: {}", signature)
                 return true
             }
         }
@@ -118,8 +131,8 @@ internal abstract class MetadataTransformer<out T : MessageLite>(
             val function = functions[idx]
             if (nameResolver.getString(function.name) == deleted.name) {
                 val signature = JvmProtoBufUtil.getJvmMethodSignature(function, nameResolver, typeTable)
-                if (signature == deleted.name + deleted.descriptor) {
-                    logger.info("-- removing function: {}{}", deleted.name, deleted.descriptor)
+                if (signature == deleted.signature) {
+                    logger.info("-- removing function: {}", deleted.signature)
                     functions.removeAt(idx)
                     return true
                 }
@@ -157,7 +170,7 @@ internal abstract class MetadataTransformer<out T : MessageLite>(
 
     private fun deleteExtra(func: MethodElement) {
         if (!deletedFunctions.contains(func)) {
-            logger.info("-- identified extra method {}{} for deletion", func.name, func.descriptor)
+            logger.info("-- identified extra method {} for deletion", func.signature)
             handleExtraMethod(func)
             filterFunction(func)
         }
@@ -244,11 +257,10 @@ internal class ClassMetadataTransformer(
     override val typeAliases = mutableList(message.typeAliasList)
 
     override fun rebuild(): ProtoBuf.Class = message.toBuilder().apply {
+        clearConstructor().addAllConstructor(constructors)
+
         if (nestedClassNames.size != nestedClassNameCount) {
             clearNestedClassName().addAllNestedClassName(nestedClassNames)
-        }
-        if (constructors.size != constructorCount) {
-            clearConstructor().addAllConstructor(constructors)
         }
         if (functions.size != functionCount) {
             clearFunction().addAllFunction(functions)

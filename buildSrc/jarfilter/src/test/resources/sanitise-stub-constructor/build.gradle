@@ -8,7 +8,7 @@ sourceSets {
     main {
         kotlin {
             srcDir files(
-                '../resources/test/sanitise-constructor/kotlin',
+                '../resources/test/sanitise-stub-constructor/kotlin',
                 '../resources/test/annotations/kotlin'
             )
         }
@@ -21,14 +21,14 @@ dependencies {
 }
 
 jar {
-    baseName = 'sanitise-constructor'
+    baseName = 'sanitise-stub-constructor'
 }
 
 import net.corda.gradle.jarfilter.JarFilterTask
 task jarFilter(type: JarFilterTask) {
     jars jar
     annotations {
-        forDelete = ["net.corda.gradle.jarfilter.DeleteMe"]
-        forSanitise = ["net.corda.gradle.jarfilter.DeleteMe"]
+        forStub = ["net.corda.gradle.jarfilter.StubMeOut"]
+        forSanitise = ["net.corda.gradle.jarfilter.StubMeOut"]
     }
 }
