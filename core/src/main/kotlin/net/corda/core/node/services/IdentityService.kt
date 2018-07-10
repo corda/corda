@@ -13,6 +13,7 @@ package net.corda.core.node.services
 import net.corda.core.CordaException
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.PartyAndReference
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
@@ -47,10 +48,17 @@ interface IdentityService {
      * Asserts that an anonymous party maps to the given full party, by looking up the certificate chain associated with
      * the anonymous party and resolving it back to the given full party.
      *
-     * @throws IllegalStateException if the anonymous party is not owned by the full party.
+     * @throws UnknownAnonymousPartyException if the anonymous party is not owned by the full party.
      */
-    @Throws(IllegalStateException::class)
-    fun assertOwnership(party: Party, anonymousParty: AnonymousParty)
+    @Throws(UnknownAnonymousPartyException::class)
+    fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
+        val anonymousIdentity = certificateFromKey(anonymousParty.owningKey)
+                ?: throw UnknownAnonymousPartyException("Unknown $anonymousParty")
+        val issuingCert = anonymousIdentity.certPath.certificates[1]
+        require(issuingCert.publicKey == party.owningKey) {
+            "Issuing certificate's public key must match the party key ${party.owningKey.toStringShort()}."
+        }
+    }
 
     /**
      * Get all identities known to the service. This is expensive, and [partyFromKey] or [partyFromX500Name] should be
@@ -73,7 +81,7 @@ interface IdentityService {
      * @param key The owning [PublicKey] of the [Party].
      * @return Returns a [Party] with a matching owningKey if known, else returns null.
      */
-    fun partyFromKey(key: PublicKey): Party?
+    fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
 
     /**
      * Resolves a party name to the well known identity [Party] instance for this name. Where possible well known identity
@@ -92,7 +100,21 @@ interface IdentityService {
      * @param party identity to determine well known identity for.
      * @return well known identity, if found.
      */
-    fun wellKnownPartyFromAnonymous(party: AbstractParty): Party?
+    fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
+        // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
+        // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
+        // into a party, and from there figure out the well known party.
+        val candidate = partyFromKey(party.owningKey)
+        // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
+        return if (candidate != null) {
+            require(party.nameOrNull() == null || party.nameOrNull() == candidate.name) {
+                "Candidate party $candidate does not match expected $party"
+            }
+            wellKnownPartyFromX500Name(candidate.name)
+        } else {
+            null
+        }
+    }
 
     /**
      * Resolves a (optionally) confidential identity to the corresponding well known identity [Party].
@@ -103,7 +125,7 @@ interface IdentityService {
      * @param partyRef identity (and reference, which is unused) to determine well known identity for.
      * @return the well known identity, or null if unknown.
      */
-    fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference) = wellKnownPartyFromAnonymous(partyRef.party)
+    fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference): Party? = wellKnownPartyFromAnonymous(partyRef.party)
 
     /**
      * Resolve the well known identity of a party. Throws an exception if the party cannot be identified.
@@ -112,7 +134,10 @@ interface IdentityService {
      * @return the well known identity.
      * @throws IllegalArgumentException
      */
-    fun requireWellKnownPartyFromAnonymous(party: AbstractParty): Party
+    fun requireWellKnownPartyFromAnonymous(party: AbstractParty): Party {
+        return wellKnownPartyFromAnonymous(party)
+                ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
+    }
 
     /**
      * Returns a list of candidate matches for a given string, with optional fuzzy(ish) matching. Fuzzy matching may
