@@ -377,8 +377,8 @@ interface CordaRPCOps : RPCOps {
     fun clearNetworkMapCache()
 
     /**
-     * Poll network map server if available for the network map. Notice that you need to have [compatibilityZone]
-     * or [networkServices] configured. This is normally done automatically on the regular time interval, but you may wish to
+     * Poll network map server if available for the network map. Notice that you need to have `compatibilityZone`
+     * or `networkServices` configured. This is normally done automatically on the regular time interval, but you may wish to
      * have the fresh view of network earlier.
      */
     fun refreshNetworkMapCache()

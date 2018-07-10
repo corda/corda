@@ -78,7 +78,9 @@ internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps
 
         private fun ensureSerialisable(error: Throwable): Throwable {
             val serialisable = (superclasses(error::class.java) + error::class.java).any { it.isAnnotationPresent(CordaSerializable::class.java) || it.interfaces.any { it.isAnnotationPresent(CordaSerializable::class.java) } }
-            val result = if (serialisable) error else {
+            val result = if (serialisable) {
+                error
+            } else {
                 log(error)
                 CordaRuntimeException(error.message, error)
             }
