@@ -276,7 +276,7 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
                                 "in the Java compiler. Alternately, provide a proxy serializer " +
                                 "(SerializationCustomSerializer) if recompiling isn't an option")
 
-                Pair(PrivatePropertyReader(field, type), field.genericType)
+                Pair(PrivatePropertyReader(field, type), resolveTypeVariables(field.genericType, type))
             }
 
             this += PropertyAccessorConstructor(

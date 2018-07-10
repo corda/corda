@@ -46,7 +46,7 @@ class TestSerializerFactoryFactory : SerializerFactoryFactoryImpl() {
             }
 }
 
-class AMQPTestSerializationScheme : AbstractAMQPSerializationScheme(emptySet(), ConcurrentHashMap(), TestSerializerFactoryFactory()) {
+class AMQPTestSerializationScheme : AbstractAMQPSerializationScheme(emptySet(), AccessOrderLinkedHashMap { 128 }, TestSerializerFactoryFactory()) {
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         throw UnsupportedOperationException()
     }

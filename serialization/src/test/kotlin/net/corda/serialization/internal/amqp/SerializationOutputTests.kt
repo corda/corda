@@ -22,6 +22,7 @@ import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.SerializerFactory.Companion.isPrimitive
+import net.corda.serialization.internal.amqp.custom.OptionalSerializer
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.BOB_NAME
@@ -511,6 +512,22 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     }
 
     @Test
+    fun `generics from java are supported`() {
+        val obj = DummyOptional<String>("YES")
+        serdes(obj, SerializerFactory(EmptyWhitelist, ClassLoader.getSystemClassLoader()))
+    }
+
+    @Test
+    fun `java optionals should serialize`() {
+        val (factory1, factory2) = listOf(SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader()),
+                SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())).map { it.also { it.register(OptionalSerializer(it)) } }
+
+
+        val obj = Optional.ofNullable("YES")
+        serdes(obj, factory1, factory2)
+    }
+
+    @Test
     fun `test throwables serialize`() {
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         factory.register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(factory))
@@ -969,6 +986,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     class Spike private constructor(val a: String) {
         constructor() : this("a")
+
         override fun equals(other: Any?): Boolean = other is Spike && other.a == this.a
         override fun hashCode(): Int = a.hashCode()
     }
