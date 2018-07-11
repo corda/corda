@@ -195,7 +195,7 @@ class DriverDSLImpl(
             startInSameProcess: Boolean?,
             maximumHeapSize: String,
             packages: List<String>,
-            packageToGeneratedJarNames: Map<String,String>
+            packageToGeneratedJarName: Map<String,String>
     ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
@@ -211,7 +211,7 @@ class DriverDSLImpl(
         return registrationFuture.flatMap {
             networkMapAvailability.flatMap {
                 // But starting the node proper does require the network map
-                startRegisteredNode(name, it, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, p2pAddress, packages, packageToGeneratedJarNames)
+                startRegisteredNode(name, it, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, p2pAddress, packages, packageToGeneratedJarName)
             }
         }
     }
@@ -225,7 +225,7 @@ class DriverDSLImpl(
                                     maximumHeapSize: String = "512m",
                                     p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort(),
                                     packages: List<String> = emptyList(),
-                                    packageToGeneratedJarNames: Map<String,String> = emptyMap()): CordaFuture<NodeHandle> {
+                                    packageToGeneratedJarName: Map<String,String> = emptyMap()): CordaFuture<NodeHandle> {
         val rpcAddress = portAllocation.nextHostAndPort()
         val rpcAdminAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
@@ -253,7 +253,7 @@ class DriverDSLImpl(
                 allowMissingConfig = true,
                 configOverrides = if (overrides.hasPath("devMode")) overrides else overrides + mapOf("devMode" to true)
         )).checkAndOverrideForInMemoryDB()
-        return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap, packages, packageToGeneratedJarNames))
+        return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap, packages, packageToGeneratedJarName)
     }
 
     private fun startNodeRegistration(providedName: CordaX500Name, rootCert: X509Certificate, compatibilityZoneURL: URL): CordaFuture<NodeConfig> {
@@ -634,7 +634,7 @@ class DriverDSLImpl(
                                   maximumHeapSize: String,
                                   localNetworkMap: LocalNetworkMap?,
                                   packages: List<String> = emptyList(),
-                                  packageToGeneratedJarNames: Map<String,String> = emptyMap()): CordaFuture<NodeHandle> {
+                                  packageToGeneratedJarName: Map<String,String> = emptyMap()): CordaFuture<NodeHandle> {
         val visibilityHandle = networkVisibilityController.register(config.corda.myLegalName)
         val baseDirectory = config.corda.baseDirectory.createDirectories()
         localNetworkMap?.networkParametersCopier?.install(baseDirectory)
@@ -648,7 +648,7 @@ class DriverDSLImpl(
         val useHTTPS = config.typesafe.run { hasPath("useHTTPS") && getBoolean("useHTTPS") }
 
         if (startInProcess ?: startNodesInProcess) {
-            val nodeAndThreadFuture = startInProcessNode(executorService, config, cordappPackages + packages, packageToGeneratedJarNames)
+            val nodeAndThreadFuture = startInProcessNode(executorService, config, cordappPackages + packages, packageToGeneratedJarName)
             shutdownManager.registerShutdown(
                     nodeAndThreadFuture.map { (node, thread) ->
                         {
@@ -773,7 +773,7 @@ class DriverDSLImpl(
                 executorService: ScheduledExecutorService,
                 config: NodeConfig,
                 cordappPackages: List<String>,
-                packageToGeneratedJarNames: Map<String,String> = emptyMap()
+                packageToGeneratedJarName: Map<String,String> = emptyMap()
         ): CordaFuture<Pair<StartedNode<Node>, Thread>> {
             return executorService.fork {
                 log.info("Starting in-process Node ${config.corda.myLegalName.organisation}")
@@ -783,7 +783,7 @@ class DriverDSLImpl(
                 // Write node.conf
                 writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe.toNodeOnly())
                 // TODO pass the version in?
-                val node = InProcessNode(config.corda, MOCK_VERSION_INFO, cordappPackages, packageToGeneratedJarNames).start()
+                val node = InProcessNode(config.corda, MOCK_VERSION_INFO, cordappPackages, packageToGeneratedJarName).start()
                 val nodeThread = thread(name = config.corda.myLegalName.organisation) {
                     node.internals.run()
                 }

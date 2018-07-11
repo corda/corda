@@ -79,7 +79,7 @@ interface DriverDSL {
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
             maximumHeapSize: String = defaultParameters.maximumHeapSize,
             packages: List<String> = emptyList(),
-            packageToGeneratedJarNames: Map<String,String> = emptyMap()
+            packageToGeneratedJarName: Map<String,String> = emptyMap()
     ): CordaFuture<NodeHandle>
 
     /**
