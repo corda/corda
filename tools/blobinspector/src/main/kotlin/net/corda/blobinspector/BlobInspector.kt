@@ -7,12 +7,13 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.rootMessage
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.sequence
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
+import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
@@ -20,13 +21,14 @@ import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.amqpMagic
 import picocli.CommandLine
 import picocli.CommandLine.*
+import java.io.PrintStream
 import java.net.MalformedURLException
 import java.net.URL
 import java.nio.file.Paths
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
-    val main = Main()
+    val main = BlobInspector()
     try {
         CommandLine.run(main, *args)
     } catch (e: ExecutionException) {
@@ -47,9 +49,9 @@ fun main(args: Array<String>) {
         showDefaultValues = true,
         description = ["Inspect AMQP serialised binary blobs"]
 )
-class Main : Runnable {
+class BlobInspector : Runnable {
     @Parameters(index = "0", paramLabel = "SOURCE", description = ["URL or file path to the blob"], converter = [SourceConverter::class])
-    private var source: URL? = null
+    var source: URL? = null
 
     @Option(names = ["--format"], paramLabel = "type", description = ["Output format. Possible values: [YAML, JSON]"])
     private var formatType: FormatType = FormatType.YAML
@@ -64,7 +66,9 @@ class Main : Runnable {
     @Option(names = ["--verbose"], description = ["Enable verbose output"])
     var verbose: Boolean = false
 
-    override fun run() {
+    override fun run() = run(System.out)
+
+    fun run(out: PrintStream) {
         if (verbose) {
             System.setProperty("logLevel", "trace")
         }
@@ -78,39 +82,44 @@ class Main : Runnable {
 
         if (schema) {
             val envelope = DeserializationInput.getEnvelope(bytes)
-            println(envelope.schema)
-            println()
-            println(envelope.transformsSchema)
-            println()
+            out.println(envelope.schema)
+            out.println()
+            out.println(envelope.transformsSchema)
+            out.println()
         }
-
-        initialiseSerialization()
 
         val factory = when (formatType) {
             FormatType.YAML -> YAMLFactory()
             FormatType.JSON -> JsonFactory()
         }
+
         val mapper = JacksonSupport.createNonRpcMapper(factory, fullParties)
 
-        // Deserialise with the lenient carpenter as we only care for the AMQP field getters
-        val deserialized = bytes.deserialize<Any>(context = SerializationFactory.defaultFactory.defaultContext.withLenientCarpenter())
-        println(deserialized.javaClass.name)
-        mapper.writeValue(System.out, deserialized)
+        initialiseSerialization()
+        try {
+            val deserialized = bytes.deserialize<Any>(context = SerializationDefaults.STORAGE_CONTEXT)
+            out.println(deserialized.javaClass.name)
+            mapper.writeValue(out, deserialized)
+        } finally {
+            _contextSerializationEnv.set(null)
+        }
     }
 
     private fun initialiseSerialization() {
+        // Deserialise with the lenient carpenter as we only care for the AMQP field getters
         _contextSerializationEnv.set(SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
                     registerScheme(AMQPInspectorSerializationScheme)
                 },
-                AMQP_P2P_CONTEXT
+                p2pContext = AMQP_P2P_CONTEXT.withLenientCarpenter(),
+                storageContext = AMQP_STORAGE_CONTEXT.withLenientCarpenter()
         ))
     }
 }
 
 private object AMQPInspectorSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
     override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
-        return magic == amqpMagic && target == SerializationContext.UseCase.P2P
+        return magic == amqpMagic
     }
     override fun rpcClientSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
     override fun rpcServerSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
