@@ -22,7 +22,7 @@ buildscript {
     ext.capsule_version = '1.0.1'
 
     ext.asm_version = '5.0.4'
-    ext.artemis_version = '2.5.0'
+    ext.artemis_version = '2.6.2'
     ext.jackson_version = '2.9.5'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
