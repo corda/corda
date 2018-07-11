@@ -24,6 +24,7 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import org.junit.Assert
 import org.junit.ClassRule
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -38,16 +39,16 @@ class NodeUnloadHandlerTests : IntegrationTest() {
 
     @Test
     fun `should be able to register run on stop lambda`() {
-        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.node"))) {
+        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.node"), notarySpecs = emptyList())) {
             startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow()
             // just want to fall off the end of this for the mo...
         }
-        Assert.assertTrue("Timed out waiting for AbstractNode to invoke the test service shutdown callback", latch.await(30, TimeUnit.SECONDS))
+        assertTrue("Timed out waiting for AbstractNode to invoke the test service shutdown callback", latch.await(30, TimeUnit.SECONDS))
     }
 
+    @Suppress("unused")
     @CordaService
     class RunOnStopTestService(serviceHub: ServiceHub) : SingletonSerializeAsToken() {
-
         companion object {
             private val log = contextLogger()
         }
@@ -56,7 +57,7 @@ class NodeUnloadHandlerTests : IntegrationTest() {
             serviceHub.registerUnloadHandler(this::shutdown)
         }
 
-        fun shutdown() {
+        private fun shutdown() {
             log.info("shutting down")
             latch.countDown()
         }

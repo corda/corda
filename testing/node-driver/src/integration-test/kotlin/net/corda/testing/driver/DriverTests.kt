@@ -73,7 +73,7 @@ class DriverTests : IntegrationTest() {
 
     @Test
     fun `simple node startup and shutdown`() {
-        val handle = driver {
+        val handle = driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(providedName = DUMMY_REGULATOR_NAME)
             nodeMustBeUp(node)
         }

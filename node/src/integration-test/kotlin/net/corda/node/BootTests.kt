@@ -44,30 +44,15 @@ import java.io.ObjectOutputStream
 import java.io.Serializable
 import kotlin.test.assertEquals
 
-class BootTests : IntegrationTest() {
-    companion object {
-        @ClassRule
-        @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
-    }
-
+class BootTests {
     @Test
     fun `java deserialization is disabled`() {
-        val user = User("u", "p", setOf(startFlow<ObjectInputStreamFlow>()))
-        val params = NodeParameters(rpcUsers = listOf(user))
-
-        fun NodeHandle.attemptJavaDeserialization() {
-            CordaRPCClient(rpcAddress).use(user.username, user.password) { connection ->
-                connection.proxy
-                rpc.startFlow(::ObjectInputStreamFlow).returnValue.getOrThrow()
-            }
-        }
-        driver {
-            val devModeNode = startNode(params, BOB_NAME).getOrThrow()
-            val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
-
-            assertThatThrownBy { devModeNode.attemptJavaDeserialization() }.isInstanceOf(CordaRuntimeException::class.java)
-            assertThatThrownBy { node.attemptJavaDeserialization() }.isInstanceOf(InternalNodeException::class.java)
+        driver(DriverParameters(notarySpecs = emptyList())) {
+            val user = User("u", "p", setOf(startFlow<ObjectInputStreamFlow>()))
+            val future = CordaRPCClient(startNode(rpcUsers = listOf(user)).getOrThrow().rpcAddress).
+                    start(user.username, user.password).proxy.startFlow(::ObjectInputStreamFlow).returnValue
+            assertThatThrownBy { future.getOrThrow() }
+                    .isInstanceOf(CordaRuntimeException::class.java)
         }
     }
 

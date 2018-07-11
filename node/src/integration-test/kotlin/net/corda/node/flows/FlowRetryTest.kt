@@ -46,11 +46,13 @@ class FlowRetryTest : IntegrationTest() {
         val numSessions = 2
         val numIterations = 10
         val user = User("mark", "dadada", setOf(Permissions.startFlow<InitiatorFlow>()))
-        val result: Any? = driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified(),
-                portAllocation = RandomFree)) {
-
-            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
+        val result: Any? = driver(DriverParameters(
+                startNodesInProcess = isQuasarAgentSpecified(),
+                portAllocation = RandomFree,
+                notarySpecs = emptyList()
+        )) {
+            val nodeAHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
+            val nodeBHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
 
             val result = CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlow(::InitiatorFlow, numSessions, numIterations, nodeBHandle.nodeInfo.singleIdentity()).returnValue.getOrThrow()
