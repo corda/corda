@@ -29,7 +29,7 @@ class BlacklistKotlinClosureTest {
 
     @Test
     fun `closure sent via RPC`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val rpc = startNode(providedName = ALICE_NAME).getOrThrow().rpc
             val packet = Packet { EVIL }
             assertThatExceptionOfType(RPCException::class.java)

@@ -16,24 +16,22 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.node.User
 import net.corda.testing.driver.driver
+import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.util.io.Streams
 import org.junit.Ignore
 import org.junit.Test
-import java.lang.Thread.sleep
 import java.net.ConnectException
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class SSHServerTest {
-
-    @Test()
+    @Test
     fun `ssh server does not start be default`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             node.getOrThrow()
 
@@ -44,7 +42,7 @@ class SSHServerTest {
             try {
                 session.connect()
                 fail()
-            } catch (e:JSchException) {
+            } catch (e: JSchException) {
                 assertTrue(e.cause is ConnectException)
             }
         }
@@ -54,7 +52,7 @@ class SSHServerTest {
     fun `ssh server starts when configured`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)) /*, startInSameProcess = true */)
             node.getOrThrow()
@@ -73,7 +71,7 @@ class SSHServerTest {
     fun `ssh server verify credentials`() {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
-        driver {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -97,7 +95,7 @@ class SSHServerTest {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>(),
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name)))
         // The driver will automatically pick up the annotated flows below
-        driver {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -126,7 +124,7 @@ class SSHServerTest {
     fun `ssh runs flows`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
-        driver {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -171,9 +169,10 @@ class SSHServerTest {
         override val progressTracker: ProgressTracker? = ProgressTracker(HELLO_STEP)
     }
 
+    @Suppress("unused")
     @StartableByRPC
     @InitiatingFlow
-    class FlowICannotRun(val otherParty: Party) : FlowLogic<String>() {
+    class FlowICannotRun(private val otherParty: Party) : FlowLogic<String>() {
         @Suspendable
         override fun call(): String = initiateFlow(otherParty).receive<String>().unwrap { it }
 
