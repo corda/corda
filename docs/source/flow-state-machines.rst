@@ -24,9 +24,7 @@ partially signed invalid transactions outside of the main network, and by doing 
 traded asset are performed atomically by the same transaction. To perform such a trade involves a multi-step flow
 in which messages are passed back and forth privately between parties, checked, signed and so on.
 
-Despite how useful these flows are, platforms such as Bitcoin and Ethereum do not assist the developer with the rather
-tricky task of actually building them. That is unfortunate. There are many awkward problems in their implementation
-that a good platform would take care of for you, problems like:
+There are many benefits of this flow based design and some development complexities as well.  Some of the development challenges include:
 
 * Avoiding "callback hell" in which code that should ideally be sequential is turned into an unreadable mess due to the
   desire to avoid using up a thread for every flow instantiation.
