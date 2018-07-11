@@ -67,7 +67,7 @@ class BridgeRestartTest : IntegrationTest() {
     @Test
     fun restartLongPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
-        internalDriver(isDebug = true, startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.bridge")) {
+        internalDriver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.bridge")) {
             val bFuture = startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
             val bridgePort = 20005
             val brokerPort = 21005
@@ -120,7 +120,7 @@ class BridgeRestartTest : IntegrationTest() {
     @Test
     fun restartSeveralPingPongFlowsRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
-        internalDriver(isDebug = true, startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.bridge")) {
+        internalDriver(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.bridge")) {
             val bFuture = startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
             val bridgePort = 20005
             val brokerPort = 21005
