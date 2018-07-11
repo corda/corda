@@ -1,13 +1,15 @@
 package net.corda.core.crypto
 
+import net.corda.core.KeepForDJVM
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import java.security.Signature
 import java.security.spec.AlgorithmParameterSpec
 
 /**
  * This class is used to define a digital signature scheme.
- * @param schemeNumberID we assign a number ID for better efficiency on-wire serialisation. Please ensure uniqueness between schemes.
- * @param schemeCodeName code name for this signature scheme (e.g. RSA_SHA256, ECDSA_SECP256K1_SHA256, ECDSA_SECP256R1_SHA256, EDDSA_ED25519_SHA512, SPHINCS-256_SHA512).
+ * @param schemeNumberID unique number ID for better efficiency on-wire serialisation.
+ * @param schemeCodeName unique code name for this signature scheme (e.g. RSA_SHA256, ECDSA_SECP256K1_SHA256, ECDSA_SECP256R1_SHA256,
+ * EDDSA_ED25519_SHA512, SPHINCS-256_SHA512).
  * @param signatureOID ASN.1 algorithm identifier of the signature algorithm (e.g 1.3.101.112 for EdDSA)
  * @param alternativeOIDs ASN.1 algorithm identifiers for keys of the signature, where we want to map multiple keys to
  * the same signature scheme.
@@ -19,6 +21,7 @@ import java.security.spec.AlgorithmParameterSpec
  * @param keySize the private key size (currently used for RSA only).
  * @param desc a human-readable description for this scheme.
  */
+@KeepForDJVM
 data class SignatureScheme(
         val schemeNumberID: Int,
         val schemeCodeName: String,

@@ -1,15 +1,17 @@
 buildscript {
-    ext.tornadofx_version = '1.7.10'
-    ext.jna_version = '4.1.0'
-    ext.purejavacomm_version = '0.0.18'
-    ext.controlsfx_version = '8.40.12'
+    ext {
+        tornadofx_version = '1.7.15'
+        jna_version = '4.1.0'
+        purejavacomm_version = '0.0.18'
+        controlsfx_version = '8.40.12'
 
-    ext.java_home = System.properties.'java.home'
-    ext.pkg_source = "$buildDir/packagesrc"
-    ext.pkg_outDir = "$buildDir/javapackage"
-    ext.dist_source = "$pkg_source/demobench-$version"
-    ext.pkg_version = version.indexOf('-') >= 0 ? version.substring(0, version.indexOf('-')) : version
-    ext.pkg_macosxKeyUserName = 'R3CEV'
+        java_home = System.properties.'java.home'
+        pkg_source = "$buildDir/packagesrc"
+        pkg_outDir = "$buildDir/javapackage"
+        dist_source = "$pkg_source/demobench-$version"
+        pkg_version = version.indexOf('-') >= 0 ? version.substring(0, version.indexOf('-')) : version
+        pkg_macosxKeyUserName = 'R3CEV'
+    }
 
     repositories {
         mavenLocal()
@@ -22,6 +24,7 @@ apply plugin: 'kotlin'
 apply plugin: 'application'
 
 evaluationDependsOn(':tools:explorer:capsule')
+evaluationDependsOn(':webserver:webcapsule')
 
 mainClassName = 'net.corda.demobench.DemoBench'
 applicationDefaultJvmArgs = [
@@ -33,9 +36,16 @@ repositories {
     flatDir {
         dirs 'libs'
     }
+    jcenter()
     maven {
-        jcenter()
         url 'http://www.sparetimelabs.com/maven2'
+    }
+}
+
+configurations {
+    compile {
+        // We don't need Hibernate just for its @Type annotation.
+        exclude group: 'org.hibernate', module: 'hibernate-core'
     }
 }
 
@@ -73,8 +83,7 @@ dependencies {
 
     testCompile "junit:junit:$junit_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    testCompile "org.assertj:assertj-core:${assertj_version}"
-    testCompile "org.mockito:mockito-core:$mockito_version"
+    testCompile "org.assertj:assertj-core:$assertj_version"
 }
 
 jar {
@@ -124,11 +133,6 @@ distributions {
             }
             from(project(':finance').tasks.jar) {
                 rename 'corda-finance-(.*)', 'corda-finance.jar'
-                into 'cordapps'
-                fileMode = 0444
-            }
-            from(project(':samples:bank-of-corda-demo').jar) {
-                rename 'bank-of-corda-demo-(.*)', 'bank-of-corda.jar'
                 into 'cordapps'
                 fileMode = 0444
             }

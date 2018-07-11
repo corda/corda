@@ -234,7 +234,7 @@ object NodeInterestRates {
         fun getRate(tenor: Tenor): BigDecimal? {
             return rates.getOrElse(tenor) {
                 val rate = interpolate(tenor)
-                if (rate != null) rates.put(tenor, rate)
+                if (rate != null) rates[tenor] = rate
                 return rate
             }
         }

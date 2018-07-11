@@ -5,7 +5,11 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
@@ -20,6 +24,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NotaryConfig
@@ -31,94 +36,95 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
-import org.junit.After
-import org.junit.Before
+import org.hamcrest.Matchers.instanceOf
+import org.junit.AfterClass
+import org.junit.Assert.assertThat
+import org.junit.BeforeClass
 import org.junit.Test
 import java.nio.file.Paths
+import java.time.Duration
+import java.time.Instant
+import java.util.concurrent.ExecutionException
+import kotlin.collections.List
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.distinct
+import kotlin.collections.forEach
+import kotlin.collections.last
+import kotlin.collections.listOf
+import kotlin.collections.map
+import kotlin.collections.mapIndexedNotNull
+import kotlin.collections.plus
+import kotlin.collections.single
+import kotlin.collections.zip
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class BFTNotaryServiceTests {
-    private lateinit var mockNet: InternalMockNetwork
-    private lateinit var notary: Party
-    private lateinit var node: StartedNode<MockNode>
+    companion object {
+        private lateinit var mockNet: InternalMockNetwork
+        private lateinit var notary: Party
+        private lateinit var node: StartedNode<MockNode>
 
-    @Before
-    fun before() {
-        mockNet = InternalMockNetwork(listOf("net.corda.testing.contracts"))
-    }
-
-    @After
-    fun stopNodes() {
-        mockNet.stopNodes()
-    }
-
-    private fun startBftClusterAndNode(clusterSize: Int, exposeRaces: Boolean = false) {
-        (Paths.get("config") / "currentView").deleteIfExists() // XXX: Make config object warn if this exists?
-        val replicaIds = (0 until clusterSize)
-
-        notary = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
-                replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
-                CordaX500Name("BFT", "Zurich", "CH"))
-
-        val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notary, false))))
-
-        val clusterAddresses = replicaIds.map { NetworkHostAndPort("localhost", 11000 + it * 10) }
-
-        val nodes = replicaIds.map { replicaId ->
-            mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = {
-                val notary = NotaryConfig(validating = false, bftSMaRt = BFTSMaRtConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces))
-                doReturn(notary).whenever(it).notary
-            }))
-        } + mockNet.createUnstartedNode()
-
-        // MockNetwork doesn't support BFT clusters, so we create all the nodes we need unstarted, and then install the
-        // network-parameters in their directories before they're started.
-        node = nodes.map { node ->
-            networkParameters.install(mockNet.baseDirectory(node.id))
-            node.start()
-        }.last()
-    }
-
-    /** Failure mode is the redundant replica gets stuck in startup, so we can't dispose it cleanly at the end. */
-    @Test
-    fun `all replicas start even if there is a new consensus during startup`() {
-        startBftClusterAndNode(minClusterSize(1), exposeRaces = true) // This true adds a sleep to expose the race.
-        val f = node.run {
-            val trivialTx = signInitialTransaction(notary) {
-                addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
-            }
-            // Create a new consensus while the redundant replica is sleeping:
-            services.startFlow(NotaryFlow.Client(trivialTx)).resultFuture
+        @BeforeClass
+        @JvmStatic
+        fun before() {
+            mockNet = InternalMockNetwork(listOf("net.corda.testing.contracts"))
+            val clusterSize = minClusterSize(1)
+            val started = startBftClusterAndNode(clusterSize, mockNet)
+            notary = started.first
+            node = started.second
         }
-        mockNet.runNetwork()
-        f.getOrThrow()
+
+        @AfterClass
+        @JvmStatic
+        fun stopNodes() {
+            mockNet.stopNodes()
+        }
+
+        fun startBftClusterAndNode(clusterSize: Int, mockNet: InternalMockNetwork, exposeRaces: Boolean = false): Pair<Party, StartedNode<MockNode>> {
+            (Paths.get("config") / "currentView").deleteIfExists() // XXX: Make config object warn if this exists?
+            val replicaIds = (0 until clusterSize)
+
+            val notaryIdentity = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
+                    replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
+                    CordaX500Name("BFT", "Zurich", "CH"))
+
+            val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryIdentity, false))))
+
+            val clusterAddresses = replicaIds.map { NetworkHostAndPort("localhost", 11000 + it * 10) }
+
+            val nodes = replicaIds.map { replicaId ->
+                mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = {
+                    val notary = NotaryConfig(validating = false, bftSMaRt = BFTSMaRtConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces))
+                    doReturn(notary).whenever(it).notary
+                }))
+            } + mockNet.createUnstartedNode()
+
+            // MockNetwork doesn't support BFT clusters, so we create all the nodes we need unstarted, and then install the
+            // network-parameters in their directories before they're started.
+            val node = nodes.map { node ->
+                networkParameters.install(mockNet.baseDirectory(node.id))
+                node.start()
+            }.last()
+
+            return Pair(notaryIdentity, node)
+        }
     }
 
     @Test
-    fun `detect double spend 1 faulty`() {
-        detectDoubleSpend(1)
-    }
-
-    @Test
-    fun `detect double spend 2 faulty`() {
-        detectDoubleSpend(2)
-    }
-
-    private fun detectDoubleSpend(faultyReplicas: Int) {
-        val clusterSize = minClusterSize(faultyReplicas)
-        startBftClusterAndNode(clusterSize)
+    fun `detect double spend`() {
         node.run {
             val issueTx = signInitialTransaction(notary) {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
-            database.transaction {
-                services.recordTransactions(issueTx)
-            }
+            services.recordTransactions(issueTx)
             val spendTxs = (1..10).map {
                 signInitialTransaction(notary) {
                     addInputState(issueTx.tx.outRef<ContractState>(0))
@@ -132,7 +138,7 @@ class BFTNotaryServiceTests {
             val successfulIndex = results.mapIndexedNotNull { index, result ->
                 if (result is Try.Success) {
                     val signers = result.value.map { it.by }
-                    assertEquals(minCorrectReplicas(clusterSize), signers.size)
+                    assertEquals(minCorrectReplicas(3), signers.size)
                     signers.forEach {
                         assertTrue(it in (notary.owningKey as CompositeKey).leafKeys)
                     }
@@ -152,6 +158,74 @@ class BFTNotaryServiceTests {
                 }
             }
         }
+    }
+
+    @Test
+    fun `transactions outside their time window are rejected`() {
+        node.run {
+            val issueTx = signInitialTransaction(notary) {
+                addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
+            }
+            services.recordTransactions(issueTx)
+            val spendTx = signInitialTransaction(notary) {
+                addInputState(issueTx.tx.outRef<ContractState>(0))
+                setTimeWindow(TimeWindow.fromOnly(Instant.MAX))
+            }
+            val flow = NotaryFlow.Client(spendTx)
+            val resultFuture = services.startFlow(flow).resultFuture
+            mockNet.runNetwork()
+            val exception = assertFailsWith<ExecutionException> { resultFuture.get() }
+            assertThat(exception.cause, instanceOf(NotaryException::class.java))
+            val error = (exception.cause as NotaryException).error
+            assertThat(error, instanceOf(NotaryError.TimeWindowInvalid::class.java))
+        }
+    }
+
+    @Test
+    fun `notarise issue tx with time-window`() {
+        node.run {
+            val issueTx = signInitialTransaction(notary) {
+                setTimeWindow(services.clock.instant(), 30.seconds)
+                addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
+            }
+            val resultFuture = services.startFlow(NotaryFlow.Client(issueTx)).resultFuture
+
+            mockNet.runNetwork()
+            val signatures = resultFuture.get()
+            verifySignatures(signatures, issueTx.id)
+        }
+    }
+
+    @Test
+    fun `transactions can be re-notarised outside their time window`() {
+        node.run {
+            val issueTx = signInitialTransaction(notary) {
+                addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
+            }
+            services.recordTransactions(issueTx)
+            val spendTx = signInitialTransaction(notary) {
+                addInputState(issueTx.tx.outRef<ContractState>(0))
+                setTimeWindow(TimeWindow.untilOnly(Instant.now() + Duration.ofHours(1)))
+            }
+            val resultFuture = services.startFlow(NotaryFlow.Client(spendTx)).resultFuture
+            mockNet.runNetwork()
+            val signatures = resultFuture.get()
+            verifySignatures(signatures, spendTx.id)
+
+            for (node in mockNet.nodes) {
+                (node.started!!.services.clock as TestClock).advanceBy(Duration.ofDays(1))
+            }
+
+            val resultFuture2 = services.startFlow(NotaryFlow.Client(spendTx)).resultFuture
+            mockNet.runNetwork()
+            val signatures2 = resultFuture2.get()
+            verifySignatures(signatures2, spendTx.id)
+        }
+    }
+
+    private fun verifySignatures(signatures: List<TransactionSignature>, txId: SecureHash) {
+        notary.owningKey.isFulfilledBy(signatures.map { it.by })
+        signatures.forEach { it.verify(txId) }
     }
 
     private fun StartedNode<MockNode>.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {

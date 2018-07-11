@@ -1,42 +1,35 @@
 package net.corda.node.services.api
 
-import net.corda.core.crypto.SecureHash
+import net.corda.core.cordapp.Cordapp
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.SerializedBytes
-import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.node.services.statemachine.Checkpoint
+import java.util.stream.Stream
 
 /**
  * Thread-safe storage of fiber checkpoints.
  */
 interface CheckpointStorage {
-
     /**
      * Add a new checkpoint to the store.
      */
-    fun addCheckpoint(checkpoint: Checkpoint)
+    fun addCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>)
 
     /**
-     * Remove existing checkpoint from the store. It is an error to attempt to remove a checkpoint which doesn't exist
-     * in the store. Doing so will throw an [IllegalArgumentException].
+     * Remove existing checkpoint from the store.
+     * @return whether the id matched a checkpoint that was removed.
      */
-    fun removeCheckpoint(checkpoint: Checkpoint)
+    fun removeCheckpoint(id: StateMachineRunId): Boolean
 
     /**
-     * Allows the caller to process safely in a thread safe fashion the set of all checkpoints.
-     * The checkpoints are only valid during the lifetime of a single call to the block, to allow memory management.
-     * Return false from the block to terminate further iteration.
+     * Load an existing checkpoint from the store.
+     * @return the checkpoint, still in serialized form, or null if not found.
      */
-    fun forEach(block: (Checkpoint) -> Boolean)
+    fun getCheckpoint(id: StateMachineRunId): SerializedBytes<Checkpoint>?
 
-}
-
-// This class will be serialised, so everything it points to transitively must also be serialisable (with Kryo).
-class Checkpoint(val serializedFiber: SerializedBytes<FlowStateMachineImpl<*>>) {
-
-    val id: SecureHash get() = serializedFiber.hash
-
-    override fun equals(other: Any?): Boolean = other === this || other is Checkpoint && other.id == this.id
-
-    override fun hashCode(): Int = id.hashCode()
-
-    override fun toString(): String = "${javaClass.simpleName}(id=$id)"
+    /**
+     * Stream all checkpoints from the store. If this is backed by a database the stream will be valid until the
+     * underlying database connection is closed, so any processing should happen before it is closed.
+     */
+    fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, SerializedBytes<Checkpoint>>>
 }

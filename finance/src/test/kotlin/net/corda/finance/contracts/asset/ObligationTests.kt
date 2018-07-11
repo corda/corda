@@ -25,6 +25,7 @@ import net.corda.testing.core.*
 import net.corda.testing.dsl.*
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.CommodityState
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import net.corda.testing.node.transaction
@@ -574,15 +575,15 @@ class ObligationTests {
             unverifiedTransaction {
                 attachments(Obligation.PROGRAM_ID)
                 output(Obligation.PROGRAM_ID, "Alice's 1 FCOJ obligation to Bob", oneUnitFcojObligation between Pair(ALICE, BOB))
-                output(Obligation.PROGRAM_ID, "Alice's 1 FCOJ", CommodityContract.State(oneUnitFcoj, ALICE))
+                output(Obligation.PROGRAM_ID, "Alice's 1 FCOJ", CommodityState(oneUnitFcoj, ALICE))
             }
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID)
                 input("Alice's 1 FCOJ obligation to Bob")
                 input("Alice's 1 FCOJ")
-                output(Obligation.PROGRAM_ID, "Bob's 1 FCOJ", CommodityContract.State(oneUnitFcoj, BOB))
+                output(Obligation.PROGRAM_ID, "Bob's 1 FCOJ", CommodityState(oneUnitFcoj, BOB))
                 command(ALICE_PUBKEY, Obligation.Commands.Settle(Amount(oneUnitFcoj.quantity, oneUnitFcojObligation.amount.token)))
-                command(ALICE_PUBKEY, CommodityContract.Commands.Move(Obligation::class.java))
+                command(ALICE_PUBKEY, Obligation.Commands.Move(Obligation::class.java))
                 attachment(attachment(commodityContractBytes.inputStream()))
                 verifies()
             }
@@ -608,8 +609,8 @@ class ObligationTests {
         val futureTestTime = TEST_TX_TIME + 7.days
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` futureTestTime)
-            output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob", (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` futureTestTime).copy(lifecycle = Lifecycle.DEFAULTED))
+            input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) at futureTestTime)
+            output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob", (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) at futureTestTime).copy(lifecycle = Lifecycle.DEFAULTED))
             command(BOB_PUBKEY, Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED))
             timeWindow(TEST_TX_TIME)
             this `fails with` "the due date has passed"
@@ -619,8 +620,8 @@ class ObligationTests {
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 attachments(Obligation.PROGRAM_ID)
-                input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` pastTestTime)
-                output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob", (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` pastTestTime).copy(lifecycle = Lifecycle.DEFAULTED))
+                input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) at pastTestTime)
+                output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob", (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) at pastTestTime).copy(lifecycle = Lifecycle.DEFAULTED))
                 command(BOB_PUBKEY, Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED))
                 timeWindow(TEST_TX_TIME)
                 this.verifies()

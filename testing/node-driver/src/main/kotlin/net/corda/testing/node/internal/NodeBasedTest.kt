@@ -67,10 +67,10 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
             // Wait until ports are released
             val portNotBoundChecks = nodes.flatMap {
                 listOf(
-                        it.internals.configuration.p2pAddress.let { addressMustNotBeBoundFuture(shutdownExecutor, it) },
-                        it.internals.configuration.rpcOptions.address?.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
+                        addressMustNotBeBoundFuture(shutdownExecutor, it.internals.configuration.p2pAddress),
+                        addressMustNotBeBoundFuture(shutdownExecutor, it.internals.configuration.rpcOptions.address)
                 )
-            }.filterNotNull()
+            }
             nodes.clear()
             portNotBoundChecks.transpose().getOrThrow()
         } finally {
@@ -92,6 +92,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 configOverrides = configOf(
                         "myLegalName" to legalName.toString(),
                         "p2pAddress" to p2pAddress,
+                        "devMode" to true,
                         "rpcSettings.address" to localPort[1].toString(),
                         "rpcSettings.adminAddress" to localPort[2].toString(),
                         "rpcUsers" to rpcUsers.map { it.toConfig().root().unwrapped() }

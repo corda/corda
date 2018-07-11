@@ -9,7 +9,7 @@ import kotlin.test.assertNotEquals
 
 class PartyTest {
     @Test
-    fun `equality`() {
+    fun equality() {
         val key = entropyToKeyPair(BigInteger.valueOf(20170207L)).public
         val differentKey = entropyToKeyPair(BigInteger.valueOf(7201702L)).public
         val anonymousParty = AnonymousParty(key)

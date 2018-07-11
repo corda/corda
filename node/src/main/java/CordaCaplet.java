@@ -4,7 +4,6 @@
 
 import com.typesafe.config.*;
 import sun.misc.Signal;
-import sun.misc.SignalHandler;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -22,8 +21,16 @@ public class CordaCaplet extends Capsule {
 
     private Config parseConfigFile(List<String> args) {
         String baseDirOption = getOption(args, "--base-directory");
+        // Ensure consistent behaviour with NodeArgsParser.kt, see CORDA-1598.
+        if (null == baseDirOption || baseDirOption.isEmpty()) {
+            baseDirOption = getOption(args, "-base-directory");
+        }
         this.baseDir = Paths.get((baseDirOption == null) ? "." : baseDirOption).toAbsolutePath().normalize().toString();
         String config = getOption(args, "--config-file");
+        // Same as for baseDirOption.
+        if (null == config || config.isEmpty()) {
+            config = getOption(args, "-config-file");
+        }
         File configFile = (config == null) ? new File(baseDir, "node.conf") : new File(config);
         try {
             ConfigParseOptions parseOptions = ConfigParseOptions.defaults().setAllowMissing(false);
@@ -32,7 +39,7 @@ public class CordaCaplet extends Capsule {
             Config nodeConfig = ConfigFactory.parseFile(configFile, parseOptions);
             return baseDirectoryConfig.withFallback(nodeConfig).withFallback(defaultConfig).resolve();
         } catch (ConfigException e) {
-            log(LOG_QUIET, e);
+            log(LOG_DEBUG, e);
             return ConfigFactory.empty();
         }
     }
@@ -80,8 +87,11 @@ public class CordaCaplet extends Capsule {
         if (ATTR_APP_CLASS_PATH == attr) {
             T cp = super.attribute(attr);
 
-            (new File(baseDir, "cordapps")).mkdir();
-            // Add additional directories of JARs to the classpath (at the end). e.g. for JDBC drivers
+            File cordappsDir = new File(baseDir, "cordapps");
+            // Create cordapps directory if it doesn't exist.
+            requireCordappsDirExists(cordappsDir);
+            // Add additional directories of JARs to the classpath (at the end), e.g., for JDBC drivers.
+            augmentClasspath((List<Path>) cp, cordappsDir);
             try {
                 List<String> jarDirs = nodeConfig.getStringList("jarDirs");
                 log(LOG_VERBOSE, "Configured JAR directories = " + jarDirs);
@@ -127,24 +137,58 @@ public class CordaCaplet extends Capsule {
     }
 
     private void augmentClasspath(List<Path> classpath, File dir) {
-        if (dir.exists()) {
-            File[] files = dir.listFiles();
-            for (File file : files) {
+        try {
+            if (dir.exists()) {
+                // The following might return null if the directory is not there (we check this already) or if an I/O error occurs.
+                for (File file : dir.listFiles()) {
+                    addToClasspath(classpath, file);
+                }
+            } else {
+                log(LOG_VERBOSE, "Directory to add in Classpath was not found " + dir.getAbsolutePath());
+            }
+        } catch (SecurityException | NullPointerException e) {
+            log(LOG_QUIET, e);
+        }
+    }
+
+    private void requireCordappsDirExists(File dir) {
+        try {
+            if (!dir.mkdir() && !dir.exists()) { // It is unlikely to enter this if-branch, but just in case.
+                logOnFailedCordappDir();
+                throw new RuntimeException("Cordapps dir could not be created"); // Let Capsule handle the error (log error, clean up, die).
+            }
+        }
+        catch (SecurityException | NullPointerException e) {
+            logOnFailedCordappDir();
+            throw e; // Let Capsule handle the error (log error, clean up, die).
+        }
+    }
+
+    private void logOnFailedCordappDir() {
+        log(LOG_VERBOSE, "Cordapps dir could not be created");
+    }
+
+    private void addToClasspath(List<Path> classpath, File file) {
+        try {
+            if (file.canRead()) {
                 if (file.isFile() && isJAR(file)) {
                     classpath.add(file.toPath().toAbsolutePath());
+                } else if (file.isDirectory()) { // Search in nested folders as well. TODO: check for circular symlinks.
+                    augmentClasspath(classpath, file);
                 }
+            } else {
+                log(LOG_VERBOSE, "File or directory to add in Classpath could not be read " + file.getAbsolutePath());
             }
+        } catch (SecurityException | NullPointerException e) {
+            log(LOG_QUIET, e);
         }
     }
 
     @Override
     protected void liftoff() {
         super.liftoff();
-        Signal.handle(new Signal("INT"), new SignalHandler() {
-            @Override
-            public void handle(Signal signal) {
-                // Disable Ctrl-C for this process, so the child process can handle it in the shell instead.
-            }
+        Signal.handle(new Signal("INT"), signal -> {
+            // Disable Ctrl-C for this process, so the child process can handle it in the shell instead.
         });
     }
 

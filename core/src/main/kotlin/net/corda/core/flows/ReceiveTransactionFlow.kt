@@ -3,8 +3,10 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.internal.ResolveTransactionsFlow
+import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
 import java.security.SignatureException
 
@@ -32,22 +34,29 @@ class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSess
             TransactionVerificationException::class)
     override fun call(): SignedTransaction {
         if (checkSufficientSignatures) {
-            logger.trace("Receiving a transaction from ${otherSideSession.counterparty}")
+            logger.trace { "Receiving a transaction from ${otherSideSession.counterparty}" }
         } else {
-            logger.trace("Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}")
+            logger.trace { "Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}" }
         }
-
         val stx = otherSideSession.receive<SignedTransaction>().unwrap {
+            it.pushToLoggingContext()
+            logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty.name}.")
             subFlow(ResolveTransactionsFlow(it, otherSideSession))
-            it.verify(serviceHub, checkSufficientSignatures)
-            it
+            logger.info("Transaction dependencies resolution completed.")
+            try {
+                it.verify(serviceHub, checkSufficientSignatures)
+                it
+            } catch (e: Exception) {
+                logger.warn("Transaction verification failed.")
+                throw e
+            }
         }
-
         if (checkSufficientSignatures) {
             // We should only send a transaction to the vault for processing if we did in fact fully verify it, and
             // there are no missing signatures. We don't want partly signed stuff in the vault.
-            logger.trace("Successfully received fully signed tx ${stx.id}, sending to the vault for processing")
+            logger.info("Successfully received fully signed tx. Sending it to the vault for processing.")
             serviceHub.recordTransactions(statesToRecord, setOf(stx))
+            logger.info("Successfully recorded received transaction locally.")
         }
         return stx
     }

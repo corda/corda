@@ -1,5 +1,6 @@
 package net.corda.core.contracts
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.identity.Party
 import net.corda.core.internal.extractFile
 import net.corda.core.serialization.CordaSerializable
@@ -27,9 +28,12 @@ import java.util.jar.JarInputStream
  * Finally, using ZIPs ensures files have a timestamp associated with them, and enables informational attachments
  * to be password protected (although in current releases password protected ZIPs are likely to fail to work).
  */
+@KeepForDJVM
 @CordaSerializable
 interface Attachment : NamedByHash {
     fun open(): InputStream
+
+    @JvmDefault
     fun openAsJAR(): JarInputStream {
         val stream = open()
         try {
@@ -43,6 +47,7 @@ interface Attachment : NamedByHash {
      * Finds the named file case insensitively and copies it to the output stream.
      * @throws FileNotFoundException if the given path doesn't exist in the attachment.
      */
+    @JvmDefault
     fun extractFile(path: String, outputTo: OutputStream) = openAsJAR().use { it.extractFile(path, outputTo) }
 
     /**

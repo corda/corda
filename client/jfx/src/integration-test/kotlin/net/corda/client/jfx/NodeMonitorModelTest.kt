@@ -3,7 +3,6 @@ package net.corda.client.jfx
 import net.corda.client.jfx.model.NodeMonitorModel
 import net.corda.client.jfx.model.ProgressTrackingEvent
 import net.corda.core.context.InvocationOrigin
-import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
@@ -22,12 +21,9 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
-import net.corda.finance.USD
-import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.services.Permissions.Companion.invokeRpc
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
@@ -54,18 +50,7 @@ class NodeMonitorModelTest {
 
     private fun setup(runTest: () -> Unit) {
         driver(DriverParameters(extraCordappPackagesToScan = listOf("net.corda.finance"))) {
-            val cashUser = User("user1", "test", permissions = setOf(
-                    startFlow<CashIssueFlow>(),
-                    startFlow<CashPaymentFlow>(),
-                    startFlow<CashExitFlow>(),
-                    invokeRpc(CordaRPCOps::notaryIdentities),
-                    invokeRpc("vaultTrackBy"),
-                    invokeRpc("vaultQueryBy"),
-                    invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
-                    invokeRpc(CordaRPCOps::stateMachineRecordedTransactionMappingFeed),
-                    invokeRpc(CordaRPCOps::stateMachinesFeed),
-                    invokeRpc(CordaRPCOps::networkMapFeed))
-            )
+            val cashUser = User("user1", "test", permissions = setOf(all()))
             val aliceNodeHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(cashUser)).getOrThrow()
             aliceNode = aliceNodeHandle.nodeInfo
             newNode = { nodeName -> startNode(providedName = nodeName).getOrThrow().nodeInfo }
@@ -78,7 +63,7 @@ class NodeMonitorModelTest {
             networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
 
             monitor.register(aliceNodeHandle.rpcAddress, cashUser.username, cashUser.password)
-            rpc = monitor.proxyObservable.value!!
+            rpc = monitor.proxyObservable.value!!.cordaRPCOps
             notaryParty = defaultNotaryIdentity
 
             val bobNodeHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(cashUser)).getOrThrow()
@@ -86,7 +71,7 @@ class NodeMonitorModelTest {
             val monitorBob = NodeMonitorModel()
             stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
             monitorBob.register(bobNodeHandle.rpcAddress, cashUser.username, cashUser.password)
-            rpcBob = monitorBob.proxyObservable.value!!
+            rpcBob = monitorBob.proxyObservable.value!!.cordaRPCOps
             runTest()
         }
     }
@@ -100,13 +85,13 @@ class NodeMonitorModelTest {
                     sequence(
                             // TODO : Add test for remove when driver DSL support individual node shutdown.
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentities.any { it.name == ALICE_NAME }) { "Expecting : ${ALICE_NAME}, Actual : ${output.node.legalIdentities.map(Party::name)}" }
+                                require(output.node.legalIdentities.any { it.name == ALICE_NAME }) { "Expecting : $ALICE_NAME, Actual : ${output.node.legalIdentities.map(Party::name)}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentities.any { it.name == BOB_NAME }) { "Expecting : ${BOB_NAME}, Actual : ${output.node.legalIdentities.map(Party::name)}" }
+                                require(output.node.legalIdentities.any { it.name == BOB_NAME }) { "Expecting : $BOB_NAME, Actual : ${output.node.legalIdentities.map(Party::name)}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentities.any { it.name == CHARLIE_NAME }) { "Expecting : ${CHARLIE_NAME}, Actual : ${output.node.legalIdentities.map(Party::name)}" }
+                                require(output.node.legalIdentities.any { it.name == CHARLIE_NAME }) { "Expecting : $CHARLIE_NAME, Actual : ${output.node.legalIdentities.map(Party::name)}" }
                             }
                     )
                 }
@@ -114,11 +99,7 @@ class NodeMonitorModelTest {
 
     @Test
     fun `cash issue works end to end`() = setup {
-        rpc.startFlow(::CashIssueFlow,
-                Amount(100, USD),
-                OpaqueBytes(ByteArray(1, { 1 })),
-                notaryParty
-        )
+        rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notaryParty)
 
         vaultUpdates.expectEvents(isStrict = false) {
             sequence(

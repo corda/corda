@@ -17,6 +17,9 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/kotlin')
         }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
     }
 }
 
@@ -68,6 +71,12 @@ jar {
     exclude "META-INF/*.MF"
     exclude "META-INF/LICENSE"
     exclude "META-INF/NOTICE"
+}
+
+cordapp {
+    info {
+        vendor "R3"
+    }
 }
 
 publish {

@@ -1,6 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -17,7 +18,6 @@ import net.corda.finance.USD
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.contracts.DummyContract
@@ -116,7 +116,7 @@ class ContractUpgradeFlowTest {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,
-                        ops = SecureCordaRPCOps(node.services, node.smm, node.database, node.services)
+                        ops = node.rpcOps
                 ).get().broker.hostAndPort!!,
                 username = user.username,
                 password = user.password
@@ -153,7 +153,7 @@ class ContractUpgradeFlowTest {
                     DummyContractV2::class.java).returnValue
 
             mockNet.runNetwork()
-            assertFailsWith(UnexpectedFlowEndException::class) { rejectedFuture.getOrThrow() }
+            assertFailsWith(CordaRuntimeException::class) { rejectedFuture.getOrThrow() }
 
             // Party B authorise the contract state upgrade, and immediately deauthorise the same.
             rpcB.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow.Authorise(stateAndRef, upgrade) },
@@ -168,7 +168,7 @@ class ContractUpgradeFlowTest {
                     DummyContractV2::class.java).returnValue
 
             mockNet.runNetwork()
-            assertFailsWith(UnexpectedFlowEndException::class) { deauthorisedFuture.getOrThrow() }
+            assertFailsWith(CordaRuntimeException::class) { deauthorisedFuture.getOrThrow() }
 
             // Party B authorise the contract state upgrade.
             rpcB.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow.Authorise(stateAndRef, upgrade) },

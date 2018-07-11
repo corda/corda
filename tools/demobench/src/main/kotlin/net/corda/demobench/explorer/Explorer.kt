@@ -1,5 +1,6 @@
 package net.corda.demobench.explorer
 
+import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.list
@@ -11,6 +12,7 @@ import net.corda.demobench.readErrorLines
 import tornadofx.*
 import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.util.concurrent.Executors
 
@@ -93,13 +95,13 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
                     Files.createSymbolicLink(destPath, path)
                 } catch (e: UnsupportedOperationException) {
                     // OS doesn't support symbolic links?
-                    Files.copy(path, destPath, REPLACE_EXISTING)
+                    path.copyTo(destPath, REPLACE_EXISTING)
                 } catch (e: java.nio.file.FileAlreadyExistsException) {
                     // OK, don't care ...
                 } catch (e: IOException) {
                     // Windows 10 might not allow this user to create a symlink
                     log.warn("Failed to create symlink '{}' for '{}': {}", destPath, path, e.message)
-                    Files.copy(path, destPath, REPLACE_EXISTING)
+                    path.copyTo(destPath, REPLACE_EXISTING)
                 }
             }
         }
@@ -122,7 +124,7 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
 
 class ExplorerController : Controller() {
     private val jvm by inject<JVMConfig>()
-    private val explorerPath = jvm.applicationDir.resolve("explorer").resolve("node-explorer.jar")
+    private val explorerPath: Path = jvm.applicationDir.resolve("explorer").resolve("node-explorer.jar")
 
     init {
         log.info("Explorer JAR: $explorerPath")

@@ -17,7 +17,8 @@ the `CRaSH`_ shell and supports many of the same features. These features includ
 * Uploading and downloading attachments
 * Issuing SQL queries to the underlying database
 * Viewing JMX metrics and monitoring exports
-* UNIX style pipes for both text and objects, an ``egrep`` command and a command for working with columnular data
+* UNIX style pipes for both text and objects, an ``egrep`` command and a command for working with columnar data
+* Shutting the node down.
 
 Permissions
 -----------
@@ -32,8 +33,10 @@ with the node using RPC calls.
 The shell via the local terminal
 --------------------------------
 
-In development mode, the shell will display in the node's terminal window.
-The shell connects to the node as 'shell' user with password 'shell' which is only available in dev mode.
+.. note::  Local terminal shell works only in development mode!
+
+The shell will display in the node's terminal window. It connects to the node as 'shell' user with password 'shell'
+(which is only available in dev mode).
 It may be disabled by passing the ``--no-local-shell`` flag when running the node.
 
 The shell via SSH
@@ -90,13 +93,13 @@ Windows
 Windows does not provide a built-in SSH tool. An alternative such as PuTTY should be used.
 
 The standalone shell
-------------------------------
+--------------------
 The standalone shell is a standalone application interacting with a Corda node via RPC calls.
 RPC node permissions are necessary for authentication and authorisation.
 Certain operations, such as starting flows, require access to CordApps jars.
 
 Starting the standalone shell
-*************************
+*****************************
 
 Run the following command from the terminal:
 
@@ -105,7 +108,7 @@ Linux and MacOS
 
 .. code:: bash
 
-    ./shell [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
+    java -jar corda-tools-shell-cli-VERSION_NUMBER.jar [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
              --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
              --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
 
@@ -114,7 +117,7 @@ Windows
 
 .. code:: bash
 
-    shell.bat [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
+    java -jar corda-tools-shell-cli-VERSION_NUMBER.jar [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
              --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
              --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
 
@@ -176,7 +179,7 @@ The format of ``config-file``:
 
 
 Standalone Shell via SSH
-------------------------------------------
+------------------------
 The standalone shell can embed an SSH server which redirects interactions via RPC calls to the Corda node.
 To run SSH server use ``--sshd-port`` option when starting standalone shell or ``extensions.sshd`` entry in the configuration file.
 For connection to SSH refer to `Connecting to the shell`_.
@@ -196,6 +199,14 @@ Some RPCs return a stream of events that will be shown on screen until you press
 
 You can find a list of the available RPC methods
 `here <https://docs.corda.net/api/kotlin/corda/net.corda.core.messaging/-corda-r-p-c-ops/index.html>`_.
+
+Shutting down the node
+**********************
+
+You can shut the node down via shell:
+
+* ``gracefulShutdown`` will put node into draining mode, and shut down when there are no flows running
+* ``shutdown`` will shut the node down immediately
 
 Flow commands
 *************
@@ -224,6 +235,8 @@ simple JSON-like language. The key features of Yaml are:
 
 * Strings do not need to be surrounded by quotes unless they contain commas, colons or embedded quotes
 * Class names must be fully-qualified (e.g. ``java.lang.String``)
+* Nested classes are referenced using ``$``. For example, the ``net.corda.finance.contracts.asset.Cash.State`` 
+  class is referenced as ``net.corda.finance.contracts.asset.Cash$State`` (note the ``$``)
 
 .. note:: If your CorDapp is written in Java, named arguments won't work unless you compiled the node using the
    ``-parameters`` argument to javac. See :doc:`generating-a-node` for how to specify it via Gradle.
@@ -244,8 +257,8 @@ Where ``newCampaign`` is a parameter of type ``Campaign``.
 
 Mappings from strings to types
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Several parameter types can automatically be mapped from strings. See the `defined parsers`_ for more information. We
-cover the most common types here.
+In addition to the types already supported by Jackson, several parameter types can automatically be mapped from strings.
+We cover the most common types here.
 
 Amount
 ~~~~~~
@@ -254,23 +267,44 @@ A parameter of type ``Amount<Currency>`` can be written as either:
 * A dollar ($), pound (£) or euro (€) symbol followed by the amount as a decimal
 * The amount as a decimal followed by the ISO currency code (e.g. "100.12 CHF")
 
+SecureHash
+~~~~~~~~~~
+A parameter of type ``SecureHash`` can be written as a hexadecimal string: ``F69A7626ACC27042FEEAE187E6BFF4CE666E6F318DC2B32BE9FAF87DF687930C``
+
 OpaqueBytes
 ~~~~~~~~~~~
-A parameter of type ``OpaqueBytes`` can be provided as a string, which will be automatically converted to
-``OpaqueBytes``.
+A parameter of type ``OpaqueBytes`` can be provided as a UTF-8 string.
+
+PublicKey and CompositeKey
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+A parameter of type ``PublicKey`` can be written as a Base58 string of its encoded format: ``GfHq2tTVk9z4eXgyQXzegw6wNsZfHcDhfw8oTt6fCHySFGp3g7XHPAyc2o6D``.
+``net.corda.core.utilities.EncodingUtils.toBase58String`` will convert a ``PublicKey`` to this string format.
 
 Party
 ~~~~~
 A parameter of type ``Party`` can be written in several ways:
 
-* By using the node's full name: ``"O=Monogram Bank,L=Sao Paulo,C=GB"``
+* By using the full name: ``"O=Monogram Bank,L=Sao Paulo,C=GB"``
 * By specifying the organisation name only: ``"Monogram Bank"``
 * By specifying any other non-ambiguous part of the name: ``"Sao Paulo"`` (if only one network node is located in Sao
   Paulo)
+* By specifying the public key (see above)
 
-Instant
-~~~~~~~
-A parameter of type ``Instant`` can be written as follows: ``"2017-12-22T00:00:00Z"``.
+NodeInfo
+~~~~~~~~
+A parameter of type ``NodeInfo`` can be written in terms of one of its identities (see ``Party`` above)
+
+AnonymousParty
+~~~~~~~~~~~~~~
+A parameter of type ``AnonymousParty`` can be written in terms of its ``PublicKey`` (see above)
+
+NetworkHostAndPort
+~~~~~~~~~~~~~~~~~~
+A parameter of type ``NetworkHostAndPort`` can be written as a "host:port" string: ``"localhost:1010"``
+
+Instant and Date
+~~~~~~~~~~~~~~~~
+A parameter of ``Instant`` and ``Date`` can be written as an ISO-8601 string: ``"2017-12-22T00:00:00Z"``
 
 Examples
 ^^^^^^^^
@@ -278,24 +312,24 @@ Examples
 Starting a flow
 ~~~~~~~~~~~~~~~
 
-We would start the ``CashIssue`` flow as follows:
+We would start the ``CashIssueFlow`` flow as follows:
 
 ``flow start CashIssueFlow amount: $1000, issuerBankPartyRef: 1234, notary: "O=Controller, L=London, C=GB"``
 
 This breaks down as follows:
 
 * ``flow start`` is a shell command for starting a flow
-* ``CashIssue`` is the flow we want to start
+* ``CashIssueFlow`` is the flow we want to start
 * Each ``name: value`` pair after that is a flow constructor argument
 
-This command invokes the following ``CashIssue`` constructor:
+This command invokes the following ``CashIssueFlow`` constructor:
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
       class CashIssueFlow(val amount: Amount<Currency>,
-                          val issueRef: OpaqueBytes,
+                          val issuerBankPartyRef: OpaqueBytes,
                           val recipient: Party,
                           val notary: Party) : AbstractCashFlow(progressTracker)
 
@@ -347,6 +381,8 @@ Limitations
 
 The shell will be enhanced over time. The currently known limitations include:
 
+* Flows cannot be run unless they override the progress tracker
+* If a command requires an argument of an abstract type, the command cannot be run because the concrete subclass to use cannot be specified using the YAML syntax
 * There is no command completion for flows or RPCs
 * Command history is not preserved across restarts
 * The ``jdbc`` command requires you to explicitly log into the database first
@@ -354,6 +390,5 @@ The shell will be enhanced over time. The currently known limitations include:
 * The ``jul`` command advertises access to logs, but it doesn't work with the logging framework we're using
 
 .. _Yaml: http://www.yaml.org/spec/1.2/spec.html
-.. _defined parsers: api/kotlin/corda/net.corda.client.jackson/-jackson-support/index.html
 .. _Groovy: http://groovy-lang.org/
 .. _CRaSH: http://www.crashub.org/

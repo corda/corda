@@ -39,37 +39,20 @@ Opening the example CorDapp in IntelliJ
 ---------------------------------------
 Let's open the example CorDapp in IntelliJ IDEA:
 
-**If opening a fresh IntelliJ instance**:
-
 * Open IntelliJ
-* A dialogue box will appear:
 
-  .. image:: resources/intellij-welcome.png
-     :width: 400
+* A splash screen will appear. Click ``open``, navigate to the folder where you cloned the ``cordapp-example``, and
+  click ``OK``
 
-* Click open, navigate to the folder where you cloned the ``cordapp-example``, and click OK
+* Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
+  clicking ``New...``, clicking ``JDK``, and navigating to ``C:\Program Files\Java\jdk1.8.0_XXX`` (where ``XXX`` is the
+  latest minor version number). Click ``OK``
 
-* IntelliJ will show several pop-up windows, one of which requires our attention:
-
-  .. image:: resources/unlinked-gradle-project.png
-     :width: 400
-
-* Click the 'import gradle project' link. Press OK on the dialogue that pops up
+* Again under ``File`` then ``Project Structure``, select ``Modules``. Click ``+``, then ``Import Module``, then select
+  the ``cordapp-example`` folder and click ``Open``. Choose to ``Import module from external model``, select
+  ``Gradle``, click ``Next`` then ``Finish`` (leaving the defaults) and ``OK``
 
 * Gradle will now download all the project dependencies and perform some indexing. This usually takes a minute or so
-
-  * If the 'import gradle project' pop-up does not appear, click the small green speech bubble at the bottom-right of
-    the IDE, or simply close and re-open IntelliJ again to make it reappear
-
-**If you already have IntelliJ open**:
-
-* Open the ``File`` menu
-
-* Navigate to ``Open ...``
-
-* Navigate to the directory where you cloned the ``cordapp-example``
-
-* Click OK
 
 Project structure
 ~~~~~~~~~~~~~~~~~
@@ -156,11 +139,13 @@ The key files and directories are as follows:
   about which version is required
 * **lib** contains the Quasar jar which rewrites our CorDapp's flows to be checkpointable
 * **kotlin-source** contains the source code for the example CorDapp written in Kotlin
- * **kotlin-source/src/main/kotlin** contains the source code for the example CorDapp
- * **kotlin-source/src/main/resources** contains the certificate store, some static web content to be served by the
-   nodes and the WebServerPluginRegistry file
- * **kotlin-source/src/test/kotlin** contains unit tests for the contracts and flows, and the driver to run the nodes
-   via IntelliJ
+
+  * **kotlin-source/src/main/kotlin** contains the source code for the example CorDapp
+  * **kotlin-source/src/main/resources** contains the certificate store, some static web content to be served by the
+    nodes and the WebServerPluginRegistry file
+  * **kotlin-source/src/test/kotlin** contains unit tests for the contracts and flows, and the driver to run the nodes
+    via IntelliJ
+
 * **java-source** contains the same source code, but written in Java. CorDapps can be developed in any language
   targeting the JVM
 
@@ -233,8 +218,8 @@ For each node, the ``runnodes`` script creates a node tab/window:
 
    Logs can be found in                    : /Users/joeldudley/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs
    Database connection url is              : jdbc:h2:tcp://localhost:59472/node
-   Incoming connection address             : localhost:10005
-   Listening on port                       : 10005
+   Incoming connection address             : localhost:10007
+   Listening on port                       : 10007
    Loaded CorDapps                         : corda-finance-corda-3.0, cordapp-example-0.1, corda-core-corda-3.0
    Node for "PartyA" started up and registered in 38.59 sec
 
@@ -249,12 +234,12 @@ For every node except the notary, the script also creates a webserver terminal t
 .. sourcecode:: none
 
     Logs can be found in /Users/username/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs/web
-    Starting as webserver: localhost:10007
+    Starting as webserver: localhost:10009
     Webserver started up in 42.02 sec
 
 It usually takes around 60 seconds for the nodes to finish starting up. To ensure that all the nodes are running, you
 can query the 'status' end-point located at ``http://localhost:[port]/api/status`` (e.g.
-``http://localhost:10007/api/status`` for ``PartyA``).
+``http://localhost:10009/api/status`` for ``PartyA``).
 
 Running the example CorDapp from IntelliJ
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -275,9 +260,9 @@ Via HTTP
 ~~~~~~~~
 The nodes' webservers run locally on the following ports:
 
-* PartyA: ``localhost:10007``
-* PartyB: ``localhost:10010``
-* PartyC: ``localhost:10013``
+* PartyA: ``localhost:10009``
+* PartyB: ``localhost:10012``
+* PartyC: ``localhost:10015``
 
 These ports are defined in each node's node.conf file under ``kotlin-source/build/nodes/NodeX/node.conf``.
 
@@ -302,9 +287,9 @@ To create an IOU between PartyA and PartyB, run the following command from the c
 
 .. sourcecode:: bash
 
-   curl -X PUT 'http://localhost:10007/api/example/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
+   curl -X PUT 'http://localhost:10009/api/example/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
 
-Note that both PartyA's port number (``10007``) and PartyB are referenced in the PUT request path. This command
+Note that both PartyA's port number (``10009``) and PartyB are referenced in the PUT request path. This command
 instructs PartyA to agree an IOU with PartyB. Once the process is complete, both nodes will have a signed, notarised
 copy of the IOU. PartyC will not.
 
@@ -326,15 +311,15 @@ Assuming all went well, you can view the newly-created IOU by accessing the vaul
 
 *Via the HTTP API:*
 
-* PartyA's vault: Navigate to http://localhost:10007/api/example/ious
-* PartyB's vault: Navigate to http://localhost:10010/api/example/ious
+* PartyA's vault: Navigate to http://localhost:10009/api/example/ious
+* PartyB's vault: Navigate to http://localhost:10012/api/example/ious
 
 *Via web/example:*
 
-* PartyA: Navigate to http://localhost:10007/web/example and hit the "refresh" button
-* PartyA: Navigate to http://localhost:10010/web/example and hit the "refresh" button
+* PartyA: Navigate to http://localhost:10009/web/example and hit the "refresh" button
+* PartyA: Navigate to http://localhost:10012/web/example and hit the "refresh" button
 
-The vault and web front-end of PartyC (at ``localhost:10013``) will not display any IOUs. This is because PartyC was
+The vault and web front-end of PartyC (at ``localhost:10015``) will not display any IOUs. This is because PartyC was
 not involved in this transaction.
 
 Via the interactive shell (terminal only)
@@ -426,67 +411,57 @@ For more information on the client RPC interface and how to build an RPC client 
 
 Running nodes across machines
 -----------------------------
-The nodes can be split across different machines and configured to communicate across the network.
+The nodes can be configured to communicate as a network even when distributed across several machines:
 
-After deploying the nodes, navigate to the build folder (``kotlin-source/build/nodes``) and for each node that needs to
-be moved to another machine open its config file and change the Artemis messaging address to the IP address of the machine
-where the node will run (e.g. ``p2pAddress="10.18.0.166:10006"``).
+* Deploy the nodes as usual:
 
-These changes require new node-info files to be distributed amongst the nodes. Use the network bootstrapper tool
-(see :doc:`setting-up-a-corda-network` for more information on this and how to built it) to update the files and have
-them distributed locally.
+  * Unix/Mac OSX: ``./gradlew deployNodes``
+  * Windows: ``gradlew.bat deployNodes``
 
-``java -jar network-bootstrapper.jar kotlin-source/build/nodes``
+* Navigate to the build folder (``kotlin-source/build/nodes``)
+* For each node, open its ``node.conf`` file and change ``localhost`` in its ``p2pAddress`` to the IP address of the machine
+  where the node will be run (e.g. ``p2pAddress="10.18.0.166:10007"``)
+* These changes require new node-info files to be distributed amongst the nodes. Use the network bootstrapper tool
+  (see :doc:`network-bootstrapper`) to update the files and have them distributed locally:
 
-Once that's done move the node folders to their designated machines (e.g. using a USB key). It is important that none of the
-nodes - including the notary - end up on more than one machine. Each computer should also have a copy of ``runnodes``
-and ``runnodes.bat``.
+  ``java -jar network-bootstrapper.jar kotlin-source/build/nodes``
 
-For example, you may end up with the following layout:
+* Move the node folders to their individual machines (e.g. using a USB key). It is important that none of the
+  nodes - including the notary - end up on more than one machine. Each computer should also have a copy of ``runnodes``
+  and ``runnodes.bat``.
 
-* Machine 1: ``Notary``, ``PartyA``, ``runnodes``, ``runnodes.bat``
-* Machine 2: ``PartyB``, ``PartyC``, ``runnodes``, ``runnodes.bat``
+  For example, you may end up with the following layout:
 
-After starting each node, the nodes will be able to see one another and agree IOUs among themselves.
+  * Machine 1: ``Notary``, ``PartyA``, ``runnodes``, ``runnodes.bat``
+  * Machine 2: ``PartyB``, ``PartyC``, ``runnodes``, ``runnodes.bat``
 
-Testing and debugging
----------------------
+* After starting each node, the nodes will be able to see one another and agree IOUs among themselves
 
-Testing a CorDapp
-~~~~~~~~~~~~~~~~~
+.. warning:: The bootstrapper must be run **after** the ``node.conf`` files have been modified, but **before** the nodes 
+   are distributed across machines. Otherwise, the nodes will not be able to communicate.
+
+.. note:: If you are using H2 and wish to use the same ``h2port`` value for two or more nodes, you must only assign them that
+   value after the nodes have been moved to their individual machines. The initial bootstrapping process requires access to the 
+   nodes' databases and if two nodes share the same H2 port, the process will fail.
+
+Testing your CorDapp
+--------------------
+
 Corda provides several frameworks for writing unit and integration tests for CorDapps.
 
 Contract tests
-^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~
 You can run the CorDapp's contract tests by running the ``Run Contract Tests - Kotlin`` run configuration.
 
 Flow tests
-^^^^^^^^^^
+~~~~~~~~~~
 You can run the CorDapp's flow tests by running the ``Run Flow Tests - Kotlin`` run configuration.
 
 Integration tests
-^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~
 You can run the CorDapp's integration tests by running the ``Run Integration Tests - Kotlin`` run configuration.
 
-Debugging Corda nodes
-~~~~~~~~~~~~~~~~~~~~~
-Debugging is done via IntelliJ as follows:
+Debugging your CorDapp
+----------------------
 
-1. Start the nodes using the “Run Example CorDapp” run configuration in IntelliJ
-
-2. IntelliJ will build and run the CorDapp. The remote debug ports for each node will be automatically generated and
-   printed to the terminal. For example:
-
-.. sourcecode:: none
-
-    [INFO ] 15:27:59.533 [main] Node.logStartupInfo - Working Directory: /Users/joeldudley/cordapp-example/build/20170707142746/PartyA
-    [INFO ] 15:27:59.533 [main] Node.logStartupInfo - Debug port: dt_socket:5007
-
-3. Edit the “Debug CorDapp” run configuration with the port of the node you wish to connect to
-
-4. Run the “Debug CorDapp” run configuration
-
-5. Set your breakpoints and interact with the node you've connected to. When the node hits a breakpoint, execution will
-   pause
-
-   * The node webserver runs in a separate process, and is not attached to by the debugger
+See :doc:`debugging-a-cordapp`.

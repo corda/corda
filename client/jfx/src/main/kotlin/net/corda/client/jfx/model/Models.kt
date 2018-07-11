@@ -1,15 +1,6 @@
 package net.corda.client.jfx.model
 
-import javafx.beans.property.ObjectProperty
-import javafx.beans.value.ObservableValue
-import javafx.beans.value.WritableValue
-import javafx.collections.ObservableList
 import net.corda.core.internal.uncheckedCast
-import org.reactfx.EventSink
-import org.reactfx.EventStream
-import rx.Observable
-import rx.Observer
-import rx.subjects.Subject
 import java.util.*
 import kotlin.reflect.KClass
 
@@ -74,7 +65,7 @@ object Models {
 
     fun <M : Any> initModel(klass: KClass<M>) = modelStore.getOrPut(klass) { klass.java.newInstance() }
     fun <M : Any> get(klass: KClass<M>, origin: KClass<*>): M {
-        dependencyGraph.getOrPut(origin) { mutableSetOf<KClass<*>>() }.add(klass)
+        dependencyGraph.getOrPut(origin) { mutableSetOf() }.add(klass)
         val model = initModel(klass)
         if (model.javaClass != klass.java) {
             throw IllegalStateException("Model stored as ${klass.qualifiedName} has type ${model.javaClass}")

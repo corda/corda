@@ -2,13 +2,13 @@ package net.corda.testing.internal
 
 import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
+import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.DoNotImplement
 import net.corda.core.serialization.internal.*
-import net.corda.node.serialization.KryoServerSerializationScheme
-import net.corda.nodeapi.internal.serialization.*
-import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
+import net.corda.node.serialization.kryo.KryoServerSerializationScheme
+import net.corda.serialization.internal.*
 import net.corda.testing.core.SerializationEnvironmentRule
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
@@ -31,16 +31,16 @@ fun <T> withoutTestSerialization(callable: () -> T): T { // TODO: Delete this, s
 
 internal fun createTestSerializationEnv(label: String): SerializationEnvironmentImpl {
     val factory = SerializationFactoryImpl().apply {
-        registerScheme(KryoClientSerializationScheme())
-        registerScheme(KryoServerSerializationScheme())
         registerScheme(AMQPClientSerializationScheme(emptyList()))
         registerScheme(AMQPServerSerializationScheme(emptyList()))
+        // needed for checkpointing
+        registerScheme(KryoServerSerializationScheme())
     }
     return object : SerializationEnvironmentImpl(
             factory,
             AMQP_P2P_CONTEXT,
-            KRYO_RPC_SERVER_CONTEXT,
-            KRYO_RPC_CLIENT_CONTEXT,
+            AMQP_RPC_SERVER_CONTEXT,
+            AMQP_RPC_CLIENT_CONTEXT,
             AMQP_STORAGE_CONTEXT,
             KRYO_CHECKPOINT_CONTEXT
     ) {

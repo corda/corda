@@ -1,5 +1,7 @@
-Network Map
+Network map
 ===========
+
+.. contents::
 
 The network map is a collection of signed ``NodeInfo`` objects. Each NodeInfo is signed by the node it represents and
 thus cannot be tampered with. It forms the set of reachable nodes in a compatibility zone. A node can receive these
@@ -35,7 +37,9 @@ The set of REST end-points for the network map service are as follows.
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | POST           | /network-map/ack-parameters             | For the node operator to acknowledge network map that new parameters were accepted for future update.                                        |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /network-map                            | Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.         |
+| GET            | /network-map                            | Retrieve the current signed public network map object. The entire object is signed with the network map certificate which is also attached.  |
++----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
+| GET            | /network-map/{uuid}                     | Retrieve the current signed private network map object with given uuid. Format is the same as for ``/network-map`` endpoint.                 |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | GET            | /network-map/node-info/{hash}           | Retrieve a signed ``NodeInfo`` as specified in the network map object.                                                                       |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
@@ -70,7 +74,7 @@ the network, along with the network parameters file and identity certificates. G
 online at once - an offline node that isn't being interacted with doesn't impact the network in any way. So a test
 cluster generated like this can be sized for the maximum size you may need, and then scaled up and down as necessary.
 
-More information can be found in :doc:`setting-up-a-corda-network`.
+More information can be found in :doc:`network-bootstrapper`.
 
 Network parameters
 ------------------
@@ -103,11 +107,9 @@ The current set of network parameters:
 :notaries: List of identity and validation type (either validating or non-validating) of the notaries which are permitted
         in the compatibility zone.
 
-:maxMessageSize: (This is currently ignored. However, it will be wired up in a future release.)
-
-.. TODO Replace the above with this once wired: Maximum allowed size in bytes of an individual message sent over the wire. Note that attachments are
-        a special case and may be fragmented for streaming transfer, however, an individual transaction or flow message
-        may not be larger than this value.
+:maxMessageSize: Maximum allowed size in bytes of an individual message sent over the wire. Note that attachments are
+            a special case and may be fragmented for streaming transfer, however, an individual transaction or flow message
+            may not be larger than this value.
 
 :maxTransactionSize: Maximum allowed size in bytes of a transaction. This is the size of the transaction object and its attachments.
 
@@ -119,9 +121,12 @@ The current set of network parameters:
         For each contract class there is a list of hashes of the approved CorDapp jar versions containing that contract.
         Read more about *Zone constraints* here :doc:`api-contract-constraints`
 
+:eventHorizon: Time after which nodes are considered to be unresponsive and removed from network map. Nodes republish their
+        ``NodeInfo`` on a regular interval. Network map treats that as a heartbeat from the node.
+
 More parameters will be added in future releases to regulate things like allowed port numbers, how long a node can be
 offline before it is evicted from the zone, whether or not IPv6 connectivity is required for zone members, required
-cryptographic algorithms and rollout schedules (e.g. for moving to post quantum cryptography), parameters related to
+cryptographic algorithms and roll-out schedules (e.g. for moving to post quantum cryptography), parameters related to
 SGX and so on.
 
 Network parameters update process
@@ -131,7 +136,7 @@ In case of the need to change network parameters Corda zone operator will start 
 that may lead to this decision: adding a notary, setting new fields that were added to enable smooth network interoperability,
 or a change of the existing compatibility constants is required, for example.
 
-.. note:: A future release may support the notion of phased rollout of network parameter changes.
+.. note:: A future release may support the notion of phased roll-out of network parameter changes.
 
 To synchronize all nodes in the compatibility zone to use the new set of the network parameters two RPC methods are
 provided. The process requires human interaction and approval of the change, so node operators can review the
@@ -171,4 +176,18 @@ If the administrator does not accept the update then next time the node polls ne
 advertised network parameters will be the updated ones. The previous set of parameters will no longer be valid.
 At this point the node will automatically shutdown and will require the node operator to bring it back again.
 
+Cleaning the network map cache
+------------------------------
 
+Sometimes it may happen that the node ends up with an inconsistent view of the network. This can occur due to changes in deployment
+leading to stale data in the database, different data distribution time and mistakes in configuration. For these unlikely
+events both RPC method and command line option for clearing local network map cache database exist. To use them
+you either need to run from the command line:
+
+.. code-block:: shell
+
+    java -jar corda.jar --clear-network-map-cache
+
+or call RPC method `clearNetworkMapCache` (it can be invoked through the node's shell as `run clearNetworkMapCache`, for more information on
+how to log into node's shell see :doc:`shell`). As we are testing and hardening the implementation this step shouldn't be required.
+After cleaning the cache, network map data is restored on the next poll from the server or filesystem.

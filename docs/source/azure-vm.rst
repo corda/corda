@@ -1,5 +1,5 @@
-Building a Corda Network on Azure Marketplace
-=============================================
+Azure Marketplace
+=================
 
 To help you design, build and test applications on Corda, called CorDapps, a Corda network can be deployed on the `Microsoft Azure Marketplace <https://azure.microsoft.com/en-gb/overview/what-is-azure>`_
 
@@ -8,7 +8,7 @@ This Corda network offering builds a pre-configured network of Corda nodes as Ub
 Pre-requisites
 --------------
 * Ensure you have a registered Microsoft Azure account which can create virtual machines under your subscription(s) and you are logged on to the Azure portal (portal.azure.com)
-* It is recommended you generate a private-public SSH key pair (see `here <https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2/>`_)
+* It is recommended you generate a private-public SSH key pair (see `here <https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2/>`__)
 
 
 Deploying the Corda Network
@@ -81,7 +81,7 @@ The deployment process will start and typically takes 8-10 minutes to complete.
 
 Once deployed click 'Resources Groups', select the resource group you defined in Step 1 above and click 'Overview' to see the virtual machine details. The names of your VMs will be pre-fixed with the resource prefix value you defined in Step 1 above.
 
-The Newtork Map Service node is suffixed nm0. The Notary node is suffixed not0. Your Corda participant nodes are suffixed node0, node1, node2 etc. Note down the **Public IP address** for your Corda nodes. You will need these to connect to UI screens via your web browser:
+The Network Map Service node is suffixed nm0. The Notary node is suffixed not0. Your Corda participant nodes are suffixed node0, node1, node2 etc. Note down the **Public IP address** for your Corda nodes. You will need these to connect to UI screens via your web browser:
 
 .. image:: resources/azure_ip.png
   :width: 300px
@@ -114,6 +114,15 @@ For Corda nodes running release M11
 
 	cd /opt/corda/cordapps
 	wget http://downloads.corda.net/cordapps/net/corda/yo/0.11.0/yo-0.11.0.jar
+
+For Corda nodes running version 2
+
+.. sourcecode:: shell
+
+	cd /opt/corda/plugins
+	wget http://ci-artifactory.corda.r3cev.com/artifactory/cordapp-showcase/yo-4.jar
+
+
 
 Now restart Corda and the Corda webserver using the following commands or restart your Corda VM from the Azure portal:
 

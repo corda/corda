@@ -1,11 +1,14 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.flows.FlowLogic
-import net.corda.core.internal.FlowStateMachine
 import net.corda.core.context.InvocationContext
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.Try
+import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.messaging.ReceivedMessage
 import rx.Observable
 
 /**
@@ -23,7 +26,6 @@ import rx.Observable
  * TODO: Think about how to bring the system to a clean stop so it can be upgraded without any serialised stacks on disk
  * TODO: Timeouts
  * TODO: Surfacing of exceptions via an API and/or management UI
- * TODO: Ability to control checkpointing explicitly, for cases where you know replaying a message can't hurt
  * TODO: Don't store all active flows in memory, load from the database on demand.
  */
 interface StateMachineManager {
@@ -31,6 +33,7 @@ interface StateMachineManager {
      * Starts the state machine manager, loading and starting the state machines in storage.
      */
     fun start(tokenizableServices: List<Any>)
+
     /**
      * Stops the state machine manager gracefully, waiting until all but [allowedUnsuspendedFiberCount] flows reach the
      * next checkpoint.
@@ -38,18 +41,11 @@ interface StateMachineManager {
     fun stop(allowedUnsuspendedFiberCount: Int)
 
     /**
-     * Starts a new flow.
-     *
-     * @param flowLogic The flow's code.
-     * @param context The context of the flow.
-     */
-    fun <A> startFlow(flowLogic: FlowLogic<A>, context: InvocationContext): CordaFuture<FlowStateMachine<A>>
-
-    /**
      * Represents an addition/removal of a state machine.
      */
     sealed class Change {
         abstract val logic: FlowLogic<*>
+
         data class Add(override val logic: FlowLogic<*>) : Change()
         data class Removed(override val logic: FlowLogic<*>, val result: Try<*>) : Change()
     }
@@ -73,4 +69,69 @@ interface StateMachineManager {
      * Returns all currently live flows.
      */
     val allStateMachines: List<FlowLogic<*>>
+
+    /**
+     * Attempts to kill a flow. This is not a clean termination and should be reserved for exceptional cases such as stuck fibers.
+     *
+     * @return whether the flow existed and was killed.
+     */
+    fun killFlow(id: StateMachineRunId): Boolean
+
+    /**
+     * Deliver an external event to the state machine.  Such an event might be a new P2P message, or a request to start a flow.
+     * The event may be replayed if a flow fails and attempts to retry.
+     */
+    fun deliverExternalEvent(event: ExternalEvent)
+
+    val flowHospital: StaffedFlowHospital
+
+    /**
+     * Returns a snapshot of all [FlowStateMachineImpl]s currently managed.
+     */
+    fun snapshot(): Set<FlowStateMachineImpl<*>>
+}
+
+// These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call
+// these functions again
+interface StateMachineManagerInternal {
+    fun signalFlowHasStarted(flowId: StateMachineRunId)
+    fun addSessionBinding(flowId: StateMachineRunId, sessionId: SessionId)
+    fun removeSessionBindings(sessionIds: Set<SessionId>)
+    fun removeFlow(flowId: StateMachineRunId, removalReason: FlowRemovalReason, lastState: StateMachineState)
+    fun retryFlowFromSafePoint(currentState: StateMachineState)
+    fun scheduleFlowTimeout(flowId: StateMachineRunId)
+    fun cancelFlowTimeout(flowId: StateMachineRunId)
+}
+
+/**
+ * Represents an external event that can be injected into the state machine and that might need to be replayed if
+ * a flow retries.  They always have de-duplication handlers to assist with the at-most once logic where required.
+ */
+interface ExternalEvent {
+    val deduplicationHandler: DeduplicationHandler
+
+    /**
+     * An external P2P message event.
+     */
+    interface ExternalMessageEvent : ExternalEvent {
+        val receivedMessage: ReceivedMessage
+    }
+
+    /**
+     * An external request to start a flow, from the scheduler for example.
+     */
+    interface ExternalStartFlowEvent<T> : ExternalEvent {
+        val flowLogic: FlowLogic<T>
+        val context: InvocationContext
+
+        /**
+         * A callback for the state machine to pass back the [Future] associated with the flow start to the submitter.
+         */
+        fun wireUpFuture(flowFuture: CordaFuture<FlowStateMachine<T>>)
+
+        /**
+         * The future representing the flow start, passed back from the state machine to the submitter of this event.
+         */
+        val future: CordaFuture<FlowStateMachine<T>>
+    }
 }

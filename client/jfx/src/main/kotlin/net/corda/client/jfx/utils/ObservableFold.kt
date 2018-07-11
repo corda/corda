@@ -8,12 +8,19 @@ import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.collections.ObservableMap
+import org.slf4j.LoggerFactory
 import rx.Observable
 import java.util.concurrent.TimeUnit
 
 /**
  * Simple utilities for converting an [rx.Observable] into a javafx [ObservableValue]/[ObservableList]
  */
+
+private val logger = LoggerFactory.getLogger("ObservableFold")
+
+private fun onError(th: Throwable) {
+    logger.debug("OnError when folding", th)
+}
 
 /**
  * [foldToObservableValue] takes an [rx.Observable] stream and creates an [ObservableValue] out of it.
@@ -23,11 +30,11 @@ import java.util.concurrent.TimeUnit
  */
 fun <A, B> Observable<A>.foldToObservableValue(initial: B, folderFun: (A, B) -> B): ObservableValue<B> {
     val result = SimpleObjectProperty<B>(initial)
-    subscribe {
+    subscribe({
         Platform.runLater {
             result.set(folderFun(it, result.get()))
         }
-    }
+    }, ::onError)
     return result
 }
 
@@ -42,7 +49,7 @@ fun <T, R> Observable<T>.fold(accumulator: R, folderFun: (R, T) -> Unit): R {
      * This capture is fine, as [Platform.runLater] runs closures in order.
      * The buffer is to avoid flooding FX thread with runnable.
      */
-    buffer(1, TimeUnit.SECONDS).subscribe {
+    buffer(1, TimeUnit.SECONDS).subscribe({
         if (it.isNotEmpty()) {
             Platform.runLater {
                 it.fold(accumulator) { list, item ->
@@ -51,7 +58,7 @@ fun <T, R> Observable<T>.fold(accumulator: R, folderFun: (R, T) -> Unit): R {
                 }
             }
         }
-    }
+    }, ::onError)
     return accumulator
 }
 

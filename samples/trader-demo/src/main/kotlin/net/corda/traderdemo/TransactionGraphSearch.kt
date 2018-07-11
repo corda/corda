@@ -62,7 +62,7 @@ class TransactionGraphSearch(private val transactions: TransactionStorage,
                 results += tx
 
             val inputsLeadingToUnvisitedTx: Iterable<StateRef> = tx.inputs.filter { it.txhash !in alreadyVisited }
-            val unvisitedInputTxs: Map<SecureHash, SignedTransaction> = inputsLeadingToUnvisitedTx.map { it.txhash }.toHashSet().map { transactions.getTransaction(it) }.filterNotNull().associateBy { it.id }
+            val unvisitedInputTxs: Map<SecureHash, SignedTransaction> = inputsLeadingToUnvisitedTx.map { it.txhash }.toHashSet().mapNotNull { transactions.getTransaction(it) }.associateBy { it.id }
             val unvisitedInputTxsWithInputIndex: Iterable<Pair<SignedTransaction, Int>> = inputsLeadingToUnvisitedTx.filter { it.txhash in unvisitedInputTxs.keys }.map { Pair(unvisitedInputTxs[it.txhash]!!, it.index) }
             next += (unvisitedInputTxsWithInputIndex.filter { (stx, idx) ->
                 query.followInputsOfType == null || stx.tx.outputs[idx].data.javaClass == query.followInputsOfType

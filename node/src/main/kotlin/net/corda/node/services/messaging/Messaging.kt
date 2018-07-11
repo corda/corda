@@ -1,6 +1,7 @@
 package net.corda.node.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
@@ -8,8 +9,10 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
+import net.corda.node.services.statemachine.DeduplicationId
+import net.corda.node.services.statemachine.ExternalEvent
+import net.corda.node.services.statemachine.SenderDeduplicationId
 import java.time.Instant
-import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -25,6 +28,12 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 interface MessagingService {
     /**
+     * A unique identifier for this sender that changes whenever a node restarts.  This is used in conjunction with a sequence
+     * number for message de-duplication at the recipient.
+     */
+    val ourSenderUUID: String
+
+    /**
      * The provided function will be invoked for each received message whose topic and session matches.  The callback
      * will run on the main server thread provided when the messaging service is constructed, and a database
      * transaction is set up for you automatically.
@@ -35,7 +44,7 @@ interface MessagingService {
      *
      * @param topic identifier for the topic to listen for messages arriving on.
      */
-    fun addMessageHandler(topic: String, callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
+    fun addMessageHandler(topic: String, callback: MessageHandler): MessageHandlerRegistration
 
     /**
      * Removes a handler given the object returned from [addMessageHandler]. The callback will no longer be invoked once
@@ -55,8 +64,6 @@ interface MessagingService {
      * There is no way to know if a message has been received. If your flow requires this, you need the recipient
      * to send an ACK message back.
      *
-     * @param retryId if provided the message will be scheduled for redelivery until [cancelRedelivery] is called for this id.
-     *     Note that this feature should only be used when the target is an idempotent distributed service, e.g. a notary.
      * @param sequenceKey an object that may be used to enable a parallel [MessagingService] implementation. Two
      *     subsequent send()s with the same [sequenceKey] (up to equality) are guaranteed to be delivered in the same
      *     sequence the send()s were called. By default this is chosen conservatively to be [target].
@@ -65,16 +72,13 @@ interface MessagingService {
     fun send(
             message: Message,
             target: MessageRecipients,
-            retryId: Long? = null,
-            sequenceKey: Any = target,
-            additionalHeaders: Map<String, String> = emptyMap()
+            sequenceKey: Any = target
     )
 
     /** A message with a target and sequenceKey specified. */
     data class AddressedMessage(
             val message: Message,
             val target: MessageRecipients,
-            val retryId: Long? = null,
             val sequenceKey: Any = target
     )
 
@@ -87,17 +91,15 @@ interface MessagingService {
     @Suspendable
     fun send(addressedMessages: List<AddressedMessage>)
 
-    /** Cancels the scheduled message redelivery for the specified [retryId] */
-    fun cancelRedelivery(retryId: Long)
-
     /**
      * Returns an initialised [Message] with the current time, etc, already filled in.
      *
-     * @param topicSession identifier for the topic and session the message is sent to.
-     * @param additionalProperties optional additional message headers.
      * @param topic identifier for the topic the message is sent to.
+     * @param data the payload for the message.
+     * @param deduplicationId optional message deduplication ID including sender identifier.
+     * @param additionalHeaders optional additional message headers.
      */
-    fun createMessage(topic: String, data: ByteArray, deduplicationId: String = UUID.randomUUID().toString()): Message
+    fun createMessage(topic: String, data: ByteArray, deduplicationId: SenderDeduplicationId = SenderDeduplicationId(DeduplicationId.createRandom(newSecureRandom()), ourSenderUUID), additionalHeaders: Map<String, String> = emptyMap()): Message
 
     /** Given information about either a specific node or a service returns its corresponding address */
     fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients
@@ -106,9 +108,7 @@ interface MessagingService {
     val myAddress: SingleMessageRecipient
 }
 
-
-fun MessagingService.send(topicSession: String, payload: Any, to: MessageRecipients, deduplicationId: String = UUID.randomUUID().toString(), retryId: Long? = null)
-        = send(createMessage(topicSession, payload.serialize().bytes, deduplicationId), to, retryId)
+fun MessagingService.send(topicSession: String, payload: Any, to: MessageRecipients, deduplicationId: SenderDeduplicationId = SenderDeduplicationId(DeduplicationId.createRandom(newSecureRandom()), ourSenderUUID), additionalHeaders: Map<String, String> = emptyMap()) = send(createMessage(topicSession, payload.serialize().bytes, deduplicationId, additionalHeaders), to)
 
 interface MessageHandlerRegistration
 
@@ -127,7 +127,9 @@ interface Message {
     val topic: String
     val data: ByteSequence
     val debugTimestamp: Instant
-    val uniqueMessageId: String
+    val uniqueMessageId: DeduplicationId
+    val senderUUID: String?
+    val additionalHeaders: Map<String, String>
 }
 
 // TODO Have ReceivedMessage point to the TLS certificate of the peer, and [peer] would simply be the subject DN of that.
@@ -138,6 +140,10 @@ interface ReceivedMessage : Message {
     val peer: CordaX500Name
     /** Platform version of the sender's node. */
     val platformVersion: Int
+    /** Sequence number of message with respect to senderUUID */
+    val senderSeqNo: Long?
+    /** True if a flow session init message */
+    val isSessionInit: Boolean
 }
 
 /** A singleton that's useful for validating topic strings */
@@ -147,3 +153,36 @@ object TopicStringValidator {
     fun check(tag: String) = require(regex.matcher(tag).matches())
 }
 
+/**
+ * This handler is used to implement exactly-once delivery of an external event on top of an at-least-once delivery. This is done
+ * using two hooks that are called from the event processor, one called from the database transaction committing the
+ * side-effect caused by the external event, and another one called after the transaction has committed successfully.
+ *
+ * For example for messaging we can use [insideDatabaseTransaction] to store the message's unique ID for later
+ * deduplication, and [afterDatabaseTransaction] to acknowledge the message and stop retries.
+ *
+ * We also use this for exactly-once start of a scheduled flow, [insideDatabaseTransaction] is used to remove the
+ * to-be-scheduled state of the flow, [afterDatabaseTransaction] is used for cleanup of in-memory bookkeeping.
+ *
+ * It holds a reference back to the causing external event.
+ */
+interface DeduplicationHandler {
+    /**
+     * This will be run inside a database transaction that commits the side-effect of the event, allowing the
+     * implementor to persist the event delivery fact atomically with the side-effect.
+     */
+    fun insideDatabaseTransaction()
+
+    /**
+     * This will be run strictly after the side-effect has been committed successfully and may be used for
+     * cleanup/acknowledgement/stopping of retries.
+     */
+    fun afterDatabaseTransaction()
+
+    /**
+     * The external event for which we are trying to reduce from at-least-once delivery to exactly-once.
+     */
+    val externalCause: ExternalEvent
+}
+
+typealias MessageHandler = (ReceivedMessage, MessageHandlerRegistration, DeduplicationHandler) -> Unit

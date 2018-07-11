@@ -27,6 +27,7 @@ import net.corda.smoketesting.NodeProcess
 import org.apache.commons.io.output.NullOutputStream
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.io.FilterInputStream
 import java.io.InputStream
@@ -94,8 +95,24 @@ class StandaloneCordaRPClientTest {
         financeJar.copyToDirectory(cordappsDir)
     }
 
+
     @Test
     fun `test attachments`() {
+        val attachment = InputStreamAndHash.createInMemoryTestZip(attachmentSize, 1)
+        assertFalse(rpcProxy.attachmentExists(attachment.sha256))
+        val id = attachment.inputStream.use { rpcProxy.uploadAttachment(it) }
+        assertEquals(attachment.sha256, id, "Attachment has incorrect SHA256 hash")
+
+        val hash = HashingInputStream(Hashing.sha256(), rpcProxy.openAttachment(id)).use { it ->
+            it.copyTo(NullOutputStream())
+            SecureHash.SHA256(it.hash().asBytes())
+        }
+        assertEquals(attachment.sha256, hash)
+    }
+
+    @Ignore("CORDA-1520 - After switching from Kryo to AMQP this test won't work")
+    @Test
+    fun `test wrapped attachments`() {
         val attachment = InputStreamAndHash.createInMemoryTestZip(attachmentSize, 1)
         assertFalse(rpcProxy.attachmentExists(attachment.sha256))
         val id = WrapperStream(attachment.inputStream).use { rpcProxy.uploadAttachment(it) }
@@ -195,7 +212,7 @@ class StandaloneCordaRPClientTest {
         assertEquals(1, queryResults.totalStatesAvailable)
         assertEquals(queryResults.states.first().state.data.amount.quantity, 629.POUNDS.quantity)
 
-        rpcProxy.startFlow(::CashPaymentFlow, 100.POUNDS, notaryNodeIdentity).returnValue.getOrThrow()
+        rpcProxy.startFlow(::CashPaymentFlow, 100.POUNDS, notaryNodeIdentity, true, notaryNodeIdentity).returnValue.getOrThrow()
 
         val moreResults = rpcProxy.vaultQueryBy<Cash.State>(criteria, paging, sorting)
         assertEquals(3, moreResults.totalStatesAvailable)   // 629 - 100 + 100
@@ -218,7 +235,7 @@ class StandaloneCordaRPClientTest {
         flowHandle.returnValue.get()
 
         val balance = rpcProxy.getCashBalance(USD)
-        println("Balance: " + balance)
+        println("Balance: $balance")
         assertEquals(629.DOLLARS, balance)
     }
 

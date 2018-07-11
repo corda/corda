@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.test.spring
 
 import net.corda.core.concurrent.CordaFuture
@@ -5,17 +7,13 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.utilities.contextLogger
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.WebserverHandle
 import net.corda.testing.driver.internal.NodeHandleInternal
-import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.ConnectException
 import java.net.URL
-import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 fun <A> springDriver(
@@ -76,26 +74,22 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
     }
 
     private fun startApplication(handle: NodeHandle, debugPort: Int?, clazz: Class<*>): Process {
-        val className = clazz.canonicalName
-        return ProcessUtilities.startJavaProcessImpl(
-                className = className, // cannot directly get class for this, so just use string
+        return ProcessUtilities.startJavaProcess(
+                className = clazz.canonicalName, // cannot directly get class for this, so just use string
                 jdwpPort = debugPort,
                 extraJvmArguments = listOf(
                         "-Dname=node-${handle.p2pAddress}-webserver",
                         "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}"
                         // Inherit from parent process
                 ),
-                classpath = ProcessUtilities.defaultClassPath,
                 workingDirectory = handle.baseDirectory,
-                errorLogPath = Paths.get("error.$className.log"),
                 arguments = listOf(
                         "--base-directory", handle.baseDirectory.toString(),
                         "--server.port=${(handle as NodeHandleInternal).webAddress.port}",
                         "--corda.host=${handle.rpcAddress}",
                         "--corda.user=${handle.rpcUsers.first().username}",
                         "--corda.password=${handle.rpcUsers.first().password}"
-                ),
-                maximumHeapSize = null
+                )
         )
     }
 }

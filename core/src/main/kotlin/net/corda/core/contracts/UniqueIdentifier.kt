@@ -1,5 +1,7 @@
 package net.corda.core.contracts
 
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.CordaSerializable
 import java.util.*
@@ -17,7 +19,8 @@ import java.util.*
  * Subsequent copies and evolutions of a state should just copy the [externalId] and [id] fields unmodified.
  */
 @CordaSerializable
-data class UniqueIdentifier(val externalId: String? = null, val id: UUID = UUID.randomUUID()) : Comparable<UniqueIdentifier> {
+@KeepForDJVM
+data class UniqueIdentifier @JvmOverloads @DeleteForDJVM constructor(val externalId: String? = null, val id: UUID = UUID.randomUUID()) : Comparable<UniqueIdentifier> {
     override fun toString(): String = if (externalId != null) "${externalId}_$id" else id.toString()
 
     companion object {

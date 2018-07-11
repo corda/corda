@@ -3,14 +3,13 @@ package net.corda.node.services.transactions
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.flows.*
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.node.services.NotaryService
-import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.internal.notary.NotaryInternalException
+import net.corda.core.internal.notary.NotaryService
+import net.corda.core.internal.notary.verifySignature
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -99,58 +98,51 @@ class BFTNonValidatingNotaryService(
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}bft_committed_states")
-    class PersistedCommittedState(id: PersistentStateRef, consumingTxHash: String, consumingIndex: Int, party: PersistentUniquenessProvider.PersistentParty)
-        : PersistentUniquenessProvider.PersistentUniqueness(id, consumingTxHash, consumingIndex, party)
+    class CommittedState(id: PersistentStateRef, consumingTxHash: String) : PersistentUniquenessProvider.BaseComittedState(id, consumingTxHash)
 
-    private fun createMap(): AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentStateRef> {
+    private fun createMap(): AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef> {
         return AppendOnlyPersistentMap(
                 toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
                 fromPersistentEntity = {
                     //TODO null check will become obsolete after making DB/JPA columns not nullable
-                    val txId = it.id.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
-                    val index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
-                    Pair(StateRef(txhash = SecureHash.parse(txId), index = index),
-                            UniquenessProvider.ConsumingTx(
-                                    id = SecureHash.parse(it.consumingTxHash),
-                                    inputIndex = it.consumingIndex,
-                                    requestingParty = Party(
-                                            name = CordaX500Name.parse(it.party.name),
-                                            owningKey = Crypto.decodePublicKey(it.party.owningKey))))
-                },
-                toPersistentEntity = { (txHash, index): StateRef, (id, inputIndex, requestingParty): UniquenessProvider.ConsumingTx ->
-                    PersistedCommittedState(
-                            id = PersistentStateRef(txHash.toString(), index),
-                            consumingTxHash = id.toString(),
-                            consumingIndex = inputIndex,
-                            party = PersistentUniquenessProvider.PersistentParty(requestingParty.name.toString(),
-                                    requestingParty.owningKey.encoded)
+                    val txId = it.id.txId
+                    val index = it.id.index
+                    Pair(
+                            StateRef(txhash = SecureHash.parse(txId), index = index),
+                            SecureHash.parse(it.consumingTxHash)
                     )
                 },
-                persistentEntityClass = PersistedCommittedState::class.java
+                toPersistentEntity = { (txHash, index): StateRef, id: SecureHash ->
+                    CommittedState(
+                            id = PersistentStateRef(txHash.toString(), index),
+                            consumingTxHash = id.toString()
+                    )
+                },
+                persistentEntityClass = CommittedState::class.java
         )
     }
 
     private class Replica(config: BFTSMaRtConfig,
                           replicaId: Int,
-                          createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx, PersistedCommittedState, PersistentStateRef>,
+                          createMap: () -> AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef>,
                           services: ServiceHubInternal,
                           notaryIdentityKey: PublicKey) : BFTSMaRt.Replica(config, replicaId, createMap, services, notaryIdentityKey) {
 
         override fun executeCommand(command: ByteArray): ByteArray {
             val commitRequest = command.deserialize<BFTSMaRt.CommitRequest>()
             verifyRequest(commitRequest)
-            val response = verifyAndCommitTx(commitRequest.payload.coreTransaction, commitRequest.callerIdentity)
+            val response = verifyAndCommitTx(commitRequest.payload.coreTransaction, commitRequest.callerIdentity, commitRequest.payload.requestSignature)
             return response.serialize().bytes
         }
 
-        private fun verifyAndCommitTx(transaction: CoreTransaction, callerIdentity: Party): BFTSMaRt.ReplicaResponse {
+        private fun verifyAndCommitTx(transaction: CoreTransaction, callerIdentity: Party, requestSignature: NotarisationRequestSignature): BFTSMaRt.ReplicaResponse {
             return try {
                 val id = transaction.id
                 val inputs = transaction.inputs
                 val notary = transaction.notary
-                if (transaction is FilteredTransaction) NotaryService.validateTimeWindow(services.clock, transaction.timeWindow)
+                val timeWindow = (transaction as? FilteredTransaction)?.timeWindow
                 if (notary !in services.myInfo.legalIdentities) throw NotaryInternalException(NotaryError.WrongNotary)
-                commitInputStates(inputs, id, callerIdentity)
+                commitInputStates(inputs, id, callerIdentity.name, requestSignature, timeWindow)
                 log.debug { "Inputs committed successfully, signing $id" }
                 BFTSMaRt.ReplicaResponse.Signature(sign(id))
             } catch (e: NotaryInternalException) {
@@ -166,7 +158,6 @@ class BFTNonValidatingNotaryService(
             val transaction = commitRequest.payload.coreTransaction
             val notarisationRequest = NotarisationRequest(transaction.inputs, transaction.id)
             notarisationRequest.verifySignature(commitRequest.payload.requestSignature, commitRequest.callerIdentity)
-            // TODO: persist the signature for traceability.
         }
     }
 

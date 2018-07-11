@@ -175,7 +175,7 @@ private fun getFrameOffsets(stack: Stack): List<Pair<Int, Int>> {
     return offsets
 }
 
-private val MASK_FULL: Long = -1L
+private const val MASK_FULL: Long = -1L
 
 private fun getNumSlots(record: Long): Int {
     return getUnsignedBits(record, 14, 16).toInt()

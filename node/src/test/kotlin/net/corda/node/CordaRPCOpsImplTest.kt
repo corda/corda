@@ -1,5 +1,6 @@
 package net.corda.node
 
+import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.PermissionException
 import net.corda.core.context.AuthServiceId
@@ -13,37 +14,37 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.GBP
-import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
+import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.expect
 import net.corda.testing.core.expectEvents
 import net.corda.testing.core.sequence
-import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.testActor
 import org.apache.commons.io.IOUtils
-import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.*
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Before
@@ -66,7 +67,7 @@ private fun buildSubject(principal: String, permissionStrings: Set<String>) =
 
 class CordaRPCOpsImplTest {
     private companion object {
-        val testJar = "net/corda/node/testing/test.jar"
+        const val testJar = "net/corda/node/testing/test.jar"
     }
 
     private lateinit var mockNet: InternalMockNetwork
@@ -82,7 +83,7 @@ class CordaRPCOpsImplTest {
     fun setup() {
         mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
-        rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services)
+        rpc = aliceNode.rpcOps
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
 
         mockNet.runNetwork()
@@ -99,9 +100,12 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `cash issue accepted`() {
-
-        withPermissions(invokeRpc("vaultTrackBy"), invokeRpc("vaultQueryBy"), invokeRpc(CordaRPCOps::stateMachinesFeed), startFlow<CashIssueFlow>()) {
-
+        withPermissions(
+                invokeRpc("vaultTrackBy"),
+                invokeRpc("vaultQueryBy"),
+                invokeRpc(CordaRPCOps::stateMachinesFeed),
+                startFlow<CashIssueFlow>()
+        ) {
             aliceNode.database.transaction {
                 stateMachineUpdates = rpc.stateMachinesFeed().updates
                 vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
@@ -152,7 +156,7 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `issue and move`() {
-
+        @Suppress("DEPRECATION")
         withPermissions(invokeRpc(CordaRPCOps::stateMachinesFeed),
                 invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
                 invokeRpc("vaultTrackBy"),
@@ -164,11 +168,7 @@ class CordaRPCOpsImplTest {
                 vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
             }
 
-            val result = rpc.startFlow(::CashIssueFlow,
-                    100.DOLLARS,
-                    OpaqueBytes(ByteArray(1, { 1 })),
-                    notary
-            )
+            val result = rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notary)
 
             mockNet.runNetwork()
 
@@ -243,7 +243,7 @@ class CordaRPCOpsImplTest {
     fun `cash command by user not permissioned for cash`() {
         withoutAnyPermissions {
             assertThatExceptionOfType(PermissionException::class.java).isThrownBy {
-                rpc.startFlow(::CashIssueFlow, Amount(100, USD), OpaqueBytes(ByteArray(1, { 1 })), notary)
+                rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notary)
             }
         }
     }
@@ -260,11 +260,11 @@ class CordaRPCOpsImplTest {
     @Test
     fun `can't upload the same attachment`() {
         withPermissions(invokeRpc(CordaRPCOps::uploadAttachment), invokeRpc(CordaRPCOps::attachmentExists)) {
+            val inputJar1 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
+            val inputJar2 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
+            rpc.uploadAttachment(inputJar1)
             assertThatExceptionOfType(java.nio.file.FileAlreadyExistsException::class.java).isThrownBy {
-                val inputJar1 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
-                val inputJar2 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
-                val secureHash1 = rpc.uploadAttachment(inputJar1)
-                val secureHash2 = rpc.uploadAttachment(inputJar2)
+                rpc.uploadAttachment(inputJar2)
             }
         }
     }
@@ -287,9 +287,76 @@ class CordaRPCOpsImplTest {
     @Test
     fun `attempt to start non-RPC flow`() {
         withPermissions(startFlow<NonRPCFlow>()) {
-            assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
+            assertThatExceptionOfType(NonRpcFlowException::class.java).isThrownBy {
                 rpc.startFlow(::NonRPCFlow)
             }
+        }
+    }
+
+    @Test
+    fun `kill a stuck flow through RPC`() {
+        withPermissions(
+                startFlow<NewJoinerFlow>(),
+                invokeRpc(CordaRPCOps::killFlow),
+                invokeRpc(CordaRPCOps::stateMachinesFeed),
+                invokeRpc(CordaRPCOps::stateMachinesSnapshot)
+        ) {
+            val flow = rpc.startFlow(::NewJoinerFlow)
+            val killed = rpc.killFlow(flow.id)
+            assertThat(killed).isTrue()
+            assertThat(rpc.stateMachinesSnapshot().map { info -> info.id }).doesNotContain(flow.id)
+        }
+    }
+
+    @Test
+    fun `kill a waiting flow through RPC`() {
+        withPermissions(
+                startFlow<HopefulFlow>(),
+                invokeRpc(CordaRPCOps::killFlow),
+                invokeRpc(CordaRPCOps::stateMachinesFeed),
+                invokeRpc(CordaRPCOps::stateMachinesSnapshot)
+        ) {
+            val flow = rpc.startFlow(::HopefulFlow, alice)
+            val killed = rpc.killFlow(flow.id)
+            assertThat(killed).isTrue()
+            assertThat(rpc.stateMachinesSnapshot().map { info -> info.id }).doesNotContain(flow.id)
+        }
+    }
+
+    @Test
+    fun `kill a nonexistent flow through RPC`() {
+        withPermissions(invokeRpc(CordaRPCOps::killFlow)) {
+            val nonexistentFlowId = StateMachineRunId.createRandom()
+            val killed = rpc.killFlow(nonexistentFlowId)
+            assertThat(killed).isFalse()
+        }
+    }
+
+    @Test
+    fun `non-ContractState class for the contractStateType param in vault queries`() {
+        val nonContractStateClass: Class<out ContractState> = uncheckedCast(Cash::class.java)
+        withPermissions(invokeRpc("vaultTrack"), invokeRpc("vaultQuery")) {
+            assertThatThrownBy { rpc.vaultQuery(nonContractStateClass) }.hasMessageContaining(Cash::class.java.name)
+            assertThatThrownBy { rpc.vaultTrack(nonContractStateClass) }.hasMessageContaining(Cash::class.java.name)
+        }
+    }
+
+    @StartableByRPC
+    class NewJoinerFlow : FlowLogic<String>() {
+        @Suspendable
+        override fun call(): String {
+            logger.info("When can I join you say? Almost there buddy...")
+            Fiber.currentFiber().join()
+            return "You'll never get me!"
+        }
+    }
+
+    @StartableByRPC
+    class HopefulFlow(private val party: Party) : FlowLogic<String>() {
+        @Suspendable
+        override fun call(): String {
+            logger.info("Waiting for a miracle...")
+            return initiateFlow(party).receive<String>().unwrap { it }
         }
     }
 
@@ -313,17 +380,15 @@ class CordaRPCOpsImplTest {
         override fun call(): Void? = null
     }
 
-    private fun withPermissions(vararg permissions: String, action: () -> Unit) {
-
+    private inline fun withPermissions(vararg permissions: String, action: () -> Unit) {
         val previous = CURRENT_RPC_CONTEXT.get()
         try {
-            CURRENT_RPC_CONTEXT.set(previous.copy(authorizer =
-            buildSubject(previous.principal, permissions.toSet())))
+            CURRENT_RPC_CONTEXT.set(previous.copy(authorizer = buildSubject(previous.principal, permissions.toSet())))
             action.invoke()
         } finally {
             CURRENT_RPC_CONTEXT.set(previous)
         }
     }
 
-    private fun withoutAnyPermissions(action: () -> Unit) = withPermissions(action = action)
+    private inline fun withoutAnyPermissions(action: () -> Unit) = withPermissions(action = action)
 }

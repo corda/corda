@@ -25,11 +25,11 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.VaultServiceInternal
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Test
@@ -70,8 +70,7 @@ class NodePair(private val mockNet: InternalMockNetwork) {
         client.services.startFlow(clientLogic)
         while (!serverRunning.get()) mockNet.runNetwork(1)
         if (rebootClient) {
-            client.dispose()
-            client = mockNet.createNode(InternalMockNodeParameters(client.internals.id))
+            client = mockNet.restartNode(client)
         }
         return uncheckedCast(client.smm.allStateMachines.single().stateMachine)
     }
@@ -83,10 +82,13 @@ class VaultSoftLockManagerTest {
     }
     private val mockNet = InternalMockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = { args ->
         object : InternalMockNetwork.MockNode(args) {
-            override fun makeVaultService(keyManagementService: KeyManagementService, services: ServicesForResolution, hibernateConfig: HibernateConfiguration): VaultServiceInternal {
-                val realVault = super.makeVaultService(keyManagementService, services, hibernateConfig)
+            override fun makeVaultService(keyManagementService: KeyManagementService, services: ServicesForResolution, hibernateConfig: HibernateConfiguration, database: CordaPersistence): VaultServiceInternal {
+                val node = this
+                val realVault = super.makeVaultService(keyManagementService, services, hibernateConfig, database)
                 return object : VaultServiceInternal by realVault {
                     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
+                        // Should be called before flow is removed
+                        assertEquals(1, node.started!!.smm.allStateMachines.size)
                         mockVault.softLockRelease(lockId, stateRefs) // No need to also call the real one for these tests.
                     }
                 }

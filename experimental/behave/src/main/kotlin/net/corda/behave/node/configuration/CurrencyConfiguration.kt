@@ -8,11 +8,12 @@ class CurrencyConfiguration(private val issuableCurrencies: List<String>) : Conf
                 ""
             } else {
                 """
-                |issuableCurrencies=[
-                |    ${issuableCurrencies.joinToString(", ")}
-                |]
+                |custom : {
+                |   issuableCurrencies : [
+                |       ${issuableCurrencies.joinToString(", ")}
+                |   ]
+                |}
                 """
             }
         }
-
 }

@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import net.corda.core.KeepForDJVM
 import java.util.*
 
 /**
@@ -14,8 +15,8 @@ import java.util.*
 sealed class MerkleTree {
     abstract val hash: SecureHash
 
-    data class Leaf(override val hash: SecureHash) : MerkleTree()
-    data class Node(override val hash: SecureHash, val left: MerkleTree, val right: MerkleTree) : MerkleTree()
+    @KeepForDJVM data class Leaf(override val hash: SecureHash) : MerkleTree()
+    @KeepForDJVM data class Node(override val hash: SecureHash, val left: MerkleTree, val right: MerkleTree) : MerkleTree()
 
     companion object {
         private fun isPow2(num: Int): Boolean = num and (num - 1) == 0
@@ -48,8 +49,8 @@ sealed class MerkleTree {
          * @return Tree root.
          */
         private tailrec fun buildMerkleTree(lastNodesList: List<MerkleTree>): MerkleTree {
-            if (lastNodesList.size == 1) {
-                return lastNodesList[0] // Root reached.
+            return if (lastNodesList.size == 1) {
+                lastNodesList[0] // Root reached.
             } else {
                 val newLevelHashes: MutableList<MerkleTree> = ArrayList()
                 val n = lastNodesList.size
@@ -61,7 +62,7 @@ sealed class MerkleTree {
                     val combined = Node(newHash, left, right)
                     newLevelHashes.add(combined)
                 }
-                return buildMerkleTree(newLevelHashes)
+                buildMerkleTree(newLevelHashes)
             }
         }
     }

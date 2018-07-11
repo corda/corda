@@ -13,12 +13,19 @@ import bftsmart.tom.server.defaultservices.DefaultRecoverable
 import bftsmart.tom.server.defaultservices.DefaultReplier
 import bftsmart.tom.util.Extractor
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.*
-import net.corda.core.flows.*
+import net.corda.core.flows.NotarisationPayload
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.StateConsumptionDetails
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.declaredField
+import net.corda.core.internal.notary.NotaryInternalException
+import net.corda.core.internal.notary.isConsumedByTheSameTx
+import net.corda.core.internal.notary.validateTimeWindow
 import net.corda.core.internal.toTypedArray
-import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -30,6 +37,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.BFTSMaRt.Client
 import net.corda.node.services.transactions.BFTSMaRt.Replica
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.nio.file.Path
 import java.security.PublicKey
 import java.util.*
@@ -169,8 +177,8 @@ object BFTSMaRt {
      */
     abstract class Replica(config: BFTSMaRtConfig,
                            replicaId: Int,
-                           createMap: () -> AppendOnlyPersistentMap<StateRef, UniquenessProvider.ConsumingTx,
-                                   BFTNonValidatingNotaryService.PersistedCommittedState, PersistentStateRef>,
+                           createMap: () -> AppendOnlyPersistentMap<StateRef, SecureHash,
+                                   BFTNonValidatingNotaryService.CommittedState, PersistentStateRef>,
                            protected val services: ServiceHubInternal,
                            protected val notaryIdentityKey: PublicKey) : DefaultRecoverable() {
         companion object {
@@ -215,26 +223,40 @@ object BFTSMaRt {
          */
         abstract fun executeCommand(command: ByteArray): ByteArray?
 
-        protected fun commitInputStates(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
+        protected fun commitInputStates(states: List<StateRef>, txId: SecureHash, callerName: CordaX500Name, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?) {
             log.debug { "Attempting to commit inputs for transaction: $txId" }
-            val conflicts = mutableMapOf<StateRef, UniquenessProvider.ConsumingTx>()
             services.database.transaction {
-                states.forEach { state ->
-                    commitLog[state]?.let { conflicts[state] = it }
+                logRequest(txId, callerName, requestSignature)
+                val conflictingStates = LinkedHashMap<StateRef, StateConsumptionDetails>()
+                for (state in states) {
+                    commitLog[state]?.let { conflictingStates[state] = StateConsumptionDetails(it.sha256()) }
                 }
-                if (conflicts.isEmpty()) {
-                    log.debug { "No conflicts detected, committing input states: ${states.joinToString()}" }
-                    states.forEachIndexed { i, stateRef ->
-                        val txInfo = UniquenessProvider.ConsumingTx(txId, i, callerIdentity)
-                        commitLog[stateRef] = txInfo
+                if (conflictingStates.isNotEmpty()) {
+                    if (!isConsumedByTheSameTx(txId.sha256(), conflictingStates)) {
+                        log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
+                        throw NotaryInternalException(NotaryError.Conflict(txId, conflictingStates))
                     }
                 } else {
-                    log.debug { "Conflict detected – the following inputs have already been committed: ${conflicts.keys.joinToString()}" }
-                    val conflict = conflicts.mapValues { StateConsumptionDetails(it.value.id.sha256()) }
-                    val error = NotaryError.Conflict(txId, conflict)
-                    throw NotaryInternalException(error)
+                    val outsideTimeWindowError = validateTimeWindow(services.clock.instant(), timeWindow)
+                    if (outsideTimeWindowError == null) {
+                        states.forEach { commitLog[it] = txId }
+                        log.debug { "Successfully committed all input states: $states" }
+                    } else {
+                        throw NotaryInternalException(outsideTimeWindowError)
+                    }
                 }
             }
+        }
+
+        private fun logRequest(txId: SecureHash, callerName: CordaX500Name, requestSignature: NotarisationRequestSignature) {
+            val request = PersistentUniquenessProvider.Request(
+                    consumingTxHash = txId.toString(),
+                    partyName = callerName.toString(),
+                    requestSignature = requestSignature.serialize().bytes,
+                    requestDate = services.clock.instant()
+            )
+            val session = currentDBSession()
+            session.persist(request)
         }
 
         /** Generates a signature over an arbitrary array of bytes. */
@@ -253,18 +275,25 @@ object BFTSMaRt {
         // - Add streaming to support large data sets.
         override fun getSnapshot(): ByteArray {
             // LinkedHashMap for deterministic serialisation
-            val m = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
-            services.database.transaction {
-                commitLog.allPersisted().forEach { m[it.first] = it.second }
+            val committedStates = LinkedHashMap<StateRef, SecureHash>()
+            val requests = services.database.transaction {
+                commitLog.allPersisted().forEach { committedStates[it.first] = it.second }
+                val criteriaQuery = session.criteriaBuilder.createQuery(PersistentUniquenessProvider.Request::class.java)
+                criteriaQuery.select(criteriaQuery.from(PersistentUniquenessProvider.Request::class.java))
+                session.createQuery(criteriaQuery).resultList
             }
-            return m.serialize().bytes
+            return (committedStates to requests).serialize().bytes
         }
 
         override fun installSnapshot(bytes: ByteArray) {
-            val m = bytes.deserialize<LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>>()
+            val (committedStates, requests) = bytes.deserialize<Pair<LinkedHashMap<StateRef, SecureHash>, List<PersistentUniquenessProvider.Request>>>()
             services.database.transaction {
                 commitLog.clear()
-                commitLog.putAll(m)
+                commitLog.putAll(committedStates)
+                val deleteQuery = session.criteriaBuilder.createCriteriaDelete(PersistentUniquenessProvider.Request::class.java)
+                deleteQuery.from(PersistentUniquenessProvider.Request::class.java)
+                session.createQuery(deleteQuery).executeUpdate()
+                requests.forEach { session.persist(it) }
             }
         }
     }

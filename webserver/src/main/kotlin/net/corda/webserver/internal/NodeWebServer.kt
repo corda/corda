@@ -1,15 +1,17 @@
 package net.corda.webserver.internal
 
 import com.google.common.html.HtmlEscapers.htmlEscaper
+import io.netty.channel.unix.Errors
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.RPCException
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.contextLogger
 import net.corda.webserver.WebServerConfig
 import net.corda.webserver.converters.CordaConverterProvider
 import net.corda.webserver.services.WebServerPluginRegistry
 import net.corda.webserver.servlets.*
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.ErrorHandler
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -17,7 +19,6 @@ import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.util.ssl.SslContextFactory
-import org.eclipse.jetty.webapp.WebAppContext
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
@@ -25,10 +26,10 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.io.Writer
 import java.lang.reflect.InvocationTargetException
+import java.net.BindException
 import java.nio.file.NoSuchFileException
 import java.util.*
 import javax.servlet.http.HttpServletRequest
-import javax.ws.rs.core.MediaType
 
 class NodeWebServer(val config: WebServerConfig) {
     private companion object {
@@ -87,7 +88,15 @@ class NodeWebServer(val config: WebServerConfig) {
         server.connectors = arrayOf<Connector>(connector)
 
         server.handler = handlerCollection
-        server.start()
+        try {
+            server.start()
+        } catch (e: IOException) {
+            if (e is BindException || e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
+                throw AddressBindingException(address)
+            } else {
+                throw e
+            }
+        }
         log.info("Starting webserver on address $address")
         return server
     }
@@ -170,7 +179,7 @@ class NodeWebServer(val config: WebServerConfig) {
         while (true) {
             try {
                 return connectLocalRpcAsNodeUser()
-            } catch (e: ActiveMQNotConnectedException) {
+            } catch (e: RPCException) {
                 log.debug("Could not connect to ${config.rpcAddress} due to exception: ", e)
                 Thread.sleep(retryDelay)
                 // This error will happen if the server has yet to create the keystore

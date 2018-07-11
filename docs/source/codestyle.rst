@@ -34,7 +34,7 @@ that doesn't mean it's always better. In particular:
   bugs, but over-used it can make code that has to adjust fields of an immutable object (in a clone) hard to read and
   stress the garbage collector. When such code becomes a widespread pattern it can lead to code that is just generically
   slow but without hotspots.
-* The tradeoffs between various thread safety techniques are complex, subtle, and no technique is always superior to
+* The trade-offs between various thread safety techniques are complex, subtle, and no technique is always superior to
   the others. Our code uses a mix of locks, worker threads and messaging depending on the situation.
 
 1.1 Line Length and Spacing
@@ -50,7 +50,7 @@ be structured one parameter per line.
 
 Code is vertically dense, blank lines in methods are used sparingly. This is so more code can fit on screen at once.
 
-We use spaces and not tabs.
+We use spaces and not tabs, with indents being 4 spaces wide.
 
 1.2 Naming
 ----------
@@ -68,7 +68,7 @@ told by the code are best deleted. Comments should:
 
 * Explain what the code is doing at a higher level than is obtainable from just examining the statement and
   surrounding code.
-* Explain why certain choices were made and the tradeoffs considered.
+* Explain why certain choices were made and the trade-offs considered.
 * Explain how things can go wrong, which is a detail often not easily seen just by reading the code.
 * Use good grammar with capital letters and full stops. This gets us in the right frame of mind for writing real
   explanations of things.

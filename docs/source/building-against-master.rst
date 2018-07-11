@@ -1,36 +1,41 @@
-Building against Master
-=======================
+Building CorDapps against a non-release branch
+==============================================
 
-It is advisable to develop CorDapps against the most recent Corda stable release. However you may need to build
-against the unstable Master branch if you are using a very recent feature, or are testing a PR on the main codebase.
+It is advisable to develop CorDapps against the most recent Corda stable release. However, you may need to build a CorDapp 
+against an unstable non-release branch if your CorDapp uses a very recent feature, or you are using the CorDapp to test a PR 
+on the main codebase.
 
-To work against the Master branch, proceed as follows:
+To work against a non-release branch, proceed as follows:
 
-1. Open a terminal window in the folder where you cloned the Corda repository
-  (available `here <https://github.com/corda/corda>`_)
+1. Clone the `Corda repository <https://github.com/corda/corda>`_
 
-2. Use the following command to check out the latest master branch:
+2. Check out the branch or commit of the Corda repository you want to work against
 
-    ``git checkout master; git pull``
+3. Make a note of the ``gradlePluginsVersion`` in the root ``constants.properties`` file of the Corda repository
+    
+4. Clone the `Corda Gradle Plugins repository <https://github.com/corda/corda-gradle-plugins>`_
 
-3. Publish Corda to your local Maven repository using the following commands:
+5. Check out the tag of the Corda Gradle Plugins repository corresponding to the ``gradlePluginsVersion``
+
+6. Follow the instructions in the readme of the Corda Gradle Plugins repository to install this version of the Corda Gradle plugins locally
+
+7. Open a terminal window in the folder where you cloned the Corda repository
+
+8. Publish Corda to your local Maven repository using the following commands:
 
   * Unix/Mac OSX: ``./gradlew install``
   * Windows: ``gradlew.bat install``
 
-  By default, the Maven local repository is found at:
-
-  * ``~/.m2/repository`` on Unix/Mac OS X
-  * ``%HOMEPATH%\.m2`` on Windows
-
-  This step is not necessary when using a stable releases, as the stable releases are published online
-
   .. warning:: If you do modify your local Corda repository after having published it to Maven local, then you must
      re-publish it to Maven local for the local installation to reflect the changes you have made.
 
-  .. warning:: As the Corda repository evolves on a daily basis, two clones of the Master branch at different points in
-     time may differ. If you are using a Master release and need help debugging an error, then please let us know the
+  .. warning:: As the Corda repository evolves on a daily basis, two clones of an unstable branch at different points in
+     time may differ. If you are using an unstable release and need help debugging an error, then please let us know the
      **commit** you are working from. This will help us ascertain the issue.
+     
+9. Make a note of the ``corda_release_version`` in the root ``build.gradle`` file of the Corda repository
 
-4. Update the ``ext.corda_release_version`` property in your CorDapp's root ``build.gradle`` file to match the version
-   here: https://github.com/corda/corda/blob/master/build.gradle#L7
+10. In your CorDapp's root ``build.gradle`` file:
+
+    * Update ``ext.corda_release_version`` to the ``corda_release_version`` noted down earlier
+    * Update ``corda_gradle_plugins_version`` to the ``gradlePluginsVersion`` noted down earlier

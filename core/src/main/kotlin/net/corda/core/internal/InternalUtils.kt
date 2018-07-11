@@ -1,46 +1,51 @@
 @file:JvmName("InternalUtils")
-
+@file:KeepForDJVM
 package net.corda.core.internal
 
+import com.google.common.hash.Hashing
+import com.google.common.hash.HashingInputStream
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.*
-import net.corda.core.flows.NotarisationRequest
-import net.corda.core.flows.NotarisationRequestSignature
-import net.corda.core.flows.NotaryFlow
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.ServiceHub
+import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
+import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.X500NameBuilder
-import org.bouncycastle.asn1.x500.style.BCStyle
+import net.corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
+import org.slf4j.MDC
 import rx.Observable
 import rx.Observer
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
-import java.io.*
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
 import java.lang.reflect.Field
+import java.lang.reflect.Member
+import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.net.HttpURLConnection
+import java.net.HttpURLConnection.HTTP_OK
+import java.net.URI
 import java.net.URL
 import java.nio.ByteBuffer
-import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.*
-import java.nio.file.attribute.FileAttribute
-import java.nio.file.attribute.FileTime
+import java.nio.file.CopyOption
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.PrivateKey
-import java.security.cert.X509Certificate
+import java.security.PublicKey
+import java.security.cert.*
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.*
@@ -57,20 +62,22 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 
 val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
-fun Throwable.getStackTraceAsString() = StringWriter().also { printStackTrace(PrintWriter(it)) }.toString()
+val Throwable.rootMessage: String? get() {
+    var message = this.message
+    var throwable = cause
+    while (throwable != null) {
+        if (throwable.message != null) {
+            message = throwable.message
+        }
+        throwable = throwable.cause
+    }
+    return message
+}
 
 infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(this, endExclusive)
 
 operator fun Duration.div(divider: Long): Duration = dividedBy(divider)
 operator fun Duration.times(multiplicand: Long): Duration = multipliedBy(multiplicand)
-
-/**
- * Allows you to write code like: Paths.get("someDir") / "subdir" / "filename" but using the Paths API to avoid platform
- * separator problems.
- */
-operator fun Path.div(other: String): Path = resolve(other)
-
-operator fun String.div(other: String): Path = Paths.get(this) / other
 
 /**
  * Returns the single element matching the given [predicate], or `null` if the collection is empty, or throws exception
@@ -101,6 +108,7 @@ fun <T> List<T>.noneOrSingle(): T? {
 }
 
 /** Returns a random element in the list, or `null` if empty */
+@DeleteForDJVM
 fun <T> List<T>.randomOrNull(): T? {
     return when (size) {
         0 -> null
@@ -116,41 +124,27 @@ fun <T> List<T>.indexOfOrThrow(item: T): Int {
     return i
 }
 
-fun Path.createDirectory(vararg attrs: FileAttribute<*>): Path = Files.createDirectory(this, *attrs)
-fun Path.createDirectories(vararg attrs: FileAttribute<*>): Path = Files.createDirectories(this, *attrs)
-fun Path.exists(vararg options: LinkOption): Boolean = Files.exists(this, *options)
-fun Path.copyToDirectory(targetDir: Path, vararg options: CopyOption): Path {
-    require(targetDir.isDirectory()) { "$targetDir is not a directory" }
-    val targetFile = targetDir.resolve(fileName)
-    Files.copy(this, targetFile, *options)
-    return targetFile
-}
+@DeleteForDJVM fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
-fun Path.moveTo(target: Path, vararg options: CopyOption): Path = Files.move(this, target, *options)
-fun Path.isRegularFile(vararg options: LinkOption): Boolean = Files.isRegularFile(this, *options)
-fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(this, *options)
-inline val Path.size: Long get() = Files.size(this)
-fun Path.lastModifiedTime(vararg options: LinkOption): FileTime = Files.getLastModifiedTime(this, *options)
-inline fun <R> Path.list(block: (Stream<Path>) -> R): R = Files.list(this).use(block)
-fun Path.deleteIfExists(): Boolean = Files.deleteIfExists(this)
-fun Path.reader(charset: Charset = UTF_8): BufferedReader = Files.newBufferedReader(this, charset)
-fun Path.writer(charset: Charset = UTF_8, vararg options: OpenOption): BufferedWriter = Files.newBufferedWriter(this, charset, *options)
-fun Path.readAll(): ByteArray = Files.readAllBytes(this)
-inline fun <R> Path.read(vararg options: OpenOption, block: (InputStream) -> R): R = Files.newInputStream(this, *options).use(block)
-inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = emptyArray(), block: (OutputStream) -> Unit) {
-    if (createDirs) {
-        normalize().parent?.createDirectories()
+/** Same as [InputStream.readBytes] but also closes the stream. */
+fun InputStream.readFully(): ByteArray = use { it.readBytes() }
+
+/** Calculate the hash of the remaining bytes in this input stream. The stream is closed at the end. */
+fun InputStream.hash(): SecureHash {
+    return use {
+        val his = HashingInputStream(Hashing.sha256(), it)
+        his.copyTo(NullOutputStream)  // To avoid reading in the entire stream into memory just write out the bytes to /dev/null
+        SecureHash.SHA256(his.hash().asBytes())
     }
-    Files.newOutputStream(this, *options).use(block)
 }
 
-inline fun <R> Path.readLines(charset: Charset = UTF_8, block: (Stream<String>) -> R): R = Files.lines(this, charset).use(block)
-fun Path.readAllLines(charset: Charset = UTF_8): List<String> = Files.readAllLines(this, charset)
-fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, vararg options: OpenOption): Path = Files.write(this, lines, charset, *options)
+inline fun <reified T : Any> InputStream.readObject(): T = readFully().deserialize()
 
-inline fun <reified T : Any> Path.readObject(): T = readAll().deserialize()
-
-fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
+object NullOutputStream : OutputStream() {
+    override fun write(b: Int) = Unit
+    override fun write(b: ByteArray) = Unit
+    override fun write(b: ByteArray, off: Int, len: Int) = Unit
+}
 
 fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else take(maxWidth - 1) + "…"
 
@@ -161,6 +155,7 @@ fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a +
  * Returns an Observable that buffers events until subscribed.
  * @see UnicastSubject
  */
+@DeleteForDJVM
 fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
     val subject = UnicastSubject.create<T>()
     val subscription = subscribe(subject)
@@ -168,6 +163,7 @@ fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
 }
 
 /** Copy an [Observer] to multiple other [Observer]s. */
+@DeleteForDJVM
 fun <T> Observer<T>.tee(vararg teeTo: Observer<T>): Observer<T> {
     val subject = PublishSubject.create<T>()
     subject.subscribe(this)
@@ -176,6 +172,7 @@ fun <T> Observer<T>.tee(vararg teeTo: Observer<T>): Observer<T> {
 }
 
 /** Executes the given code block and returns a [Duration] of how long it took to execute in nanosecond precision. */
+@DeleteForDJVM
 inline fun elapsedTime(block: () -> Unit): Duration {
     val start = System.nanoTime()
     block()
@@ -188,26 +185,35 @@ fun <T> Logger.logElapsedTime(label: String, body: () -> T): T = logElapsedTime(
 
 // TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError
 // returns in the IRSSimulationTest. If not, commit the inline back.
+@DeleteForDJVM
 fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
     // Use nanoTime as it's monotonic.
     val now = System.nanoTime()
+    var failed = false
     try {
         return body()
-    } finally {
+    }
+    catch (th: Throwable) {
+        failed = true
+        throw th
+    }
+    finally {
         val elapsed = Duration.ofNanos(System.nanoTime() - now).toMillis()
+        val msg = (if(failed) "Failed " else "") + "$label took $elapsed msec"
         if (logger != null)
-            logger.info("$label took $elapsed msec")
+            logger.info(msg)
         else
-            println("$label took $elapsed msec")
+            println(msg)
     }
 }
 
 /** Convert a [ByteArrayOutputStream] to [InputStreamAndHash]. */
 fun ByteArrayOutputStream.toInputStreamAndHash(): InputStreamAndHash {
     val bytes = toByteArray()
-    return InputStreamAndHash(ByteArrayInputStream(bytes), bytes.sha256())
+    return InputStreamAndHash(bytes.inputStream(), bytes.sha256())
 }
 
+@KeepForDJVM
 data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHash.SHA256) {
     companion object {
         /**
@@ -215,6 +221,7 @@ data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHa
          * called "z" that contains the given content byte repeated the given number of times.
          * Note that a slightly bigger than numOfExpectedBytes size is expected.
          */
+        @DeleteForDJVM
         fun createInMemoryTestZip(numOfExpectedBytes: Int, content: Byte): InputStreamAndHash {
             require(numOfExpectedBytes > 0)
             val baos = ByteArrayOutputStream()
@@ -268,34 +275,96 @@ inline fun <T, R : Any> Stream<T>.mapNotNull(crossinline transform: (T) -> R?): 
 fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) else null
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [Class]. */
+@DeleteForDJVM
 fun <T> Class<*>.staticField(name: String): DeclaredField<T> = DeclaredField(this, name, null)
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [KClass]. */
+@DeleteForDJVM
 fun <T> KClass<*>.staticField(name: String): DeclaredField<T> = DeclaredField(java, name, null)
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) instance field of the receiver object. */
+@DeleteForDJVM
 fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaClass, name, this)
 
 /**
  * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
  * in its superclass [clazz].
  */
+@DeleteForDJVM
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
+
+/**
+ * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
+ * in its superclass [clazz].
+ */
+@DeleteForDJVM
+fun <T> Any.declaredField(clazz: Class<*>, name: String): DeclaredField<T> = DeclaredField(clazz, name, this)
 
 /** creates a new instance if not a Kotlin object */
 fun <T : Any> KClass<T>.objectOrNewInstance(): T {
     return this.objectInstance ?: this.createInstance()
 }
 
+/** Similar to [KClass.objectInstance] but also works on private objects. */
+val <T : Any> Class<T>.kotlinObjectInstance: T? get() {
+    return try {
+        kotlin.objectInstance
+    } catch (_: Throwable) {
+        val field = try { getDeclaredField("INSTANCE") } catch (_: NoSuchFieldException) { null }
+        field?.let {
+            if (it.type == this && it.isPublic && it.isStatic && it.isFinal) {
+                it.isAccessible = true
+                uncheckedCast(it.get(null))
+            } else {
+                null
+            }
+        }
+    }
+}
+
 /**
  * A simple wrapper around a [Field] object providing type safe read and write access using [value], ignoring the field's
  * visibility.
  */
+@DeleteForDJVM
 class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?) {
-    private val javaField = clazz.getDeclaredField(name).apply { isAccessible = true }
+    private val javaField = findField(name, clazz)
     var value: T
-        get() = uncheckedCast<Any?, T>(javaField.get(receiver))
-        set(value) = javaField.set(receiver, value)
+        get() {
+            synchronized(this) {
+                return javaField.accessible { uncheckedCast<Any?, T>(get(receiver)) }
+            }
+        }
+        set(value) {
+            synchronized(this) {
+                javaField.accessible {
+                    set(receiver, value)
+                }
+            }
+        }
+    val name: String = javaField.name
+
+    private fun <RESULT> Field.accessible(action: Field.() -> RESULT): RESULT {
+        val accessible = isAccessible
+        isAccessible = true
+        try {
+            return action(this)
+        } finally {
+            isAccessible = accessible
+        }
+    }
+
+    @Throws(NoSuchFieldException::class)
+    private fun findField(fieldName: String, clazz: Class<*>?): Field {
+        if (clazz == null) {
+            throw NoSuchFieldException(fieldName)
+        }
+        return try {
+            return clazz.getDeclaredField(fieldName)
+        } catch (e: NoSuchFieldException) {
+            findField(fieldName, clazz.superclass)
+        }
+    }
 }
 
 /** The annotated object would have a more restricted visibility were it not needed in tests. */
@@ -314,42 +383,72 @@ fun <T, U : T> uncheckedCast(obj: T) = obj as U
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
+@DeleteForDJVM
 fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
     return toWireTransactionWithContext(services, serializationContext)
 }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
-fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
+@DeleteForDJVM
+fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
+    return toLedgerTransactionWithContext(services, serializationContext)
+}
+
+/** Returns the location of this class. */
+val Class<*>.location: URL get() = protectionDomain.codeSource.location
 
 /** Convenience method to get the package name of a class literal. */
-val KClass<*>.packageName: String get() = java.`package`.name
+val KClass<*>.packageName: String get() = java.packageName
+val Class<*>.packageName: String get() = `package`.name
 
+inline val Class<*>.isAbstractClass: Boolean get() = Modifier.isAbstract(modifiers)
+
+inline val Class<*>.isConcreteClass: Boolean get() = !isInterface && !isAbstractClass
+
+inline val Member.isPublic: Boolean get() = Modifier.isPublic(modifiers)
+
+inline val Member.isStatic: Boolean get() = Modifier.isStatic(modifiers)
+
+inline val Member.isFinal: Boolean get() = Modifier.isFinal(modifiers)
+
+@DeleteForDJVM fun URI.toPath(): Path = Paths.get(this)
+
+@DeleteForDJVM fun URL.toPath(): Path = toURI().toPath()
+
+@DeleteForDJVM
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
 
-fun URL.post(serializedData: OpaqueBytes): ByteArray {
+@DeleteForDJVM
+fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String>): ByteArray {
     return openHttpConnection().run {
         doOutput = true
         requestMethod = "POST"
+        properties.forEach { (key, value) -> setRequestProperty(key, value) }
         setRequestProperty("Content-Type", "application/octet-stream")
         outputStream.use { serializedData.open().copyTo(it) }
         checkOkResponse()
-        inputStream.use { it.readBytes() }
+        inputStream.readFully()
     }
 }
 
+@DeleteForDJVM
 fun HttpURLConnection.checkOkResponse() {
-    if (responseCode != 200) {
-        val message = errorStream.use { it.reader().readText() }
-        throw IOException("Response Code $responseCode: $message")
+    if (responseCode != HTTP_OK) {
+        throw IOException("Response Code $responseCode: $errorMessage")
     }
 }
 
+@DeleteForDJVM
+val HttpURLConnection.errorMessage: String? get() = errorStream?.let { it.use { it.reader().readText() } }
+
+@DeleteForDJVM
 inline fun <reified T : Any> HttpURLConnection.responseAs(): T {
     checkOkResponse()
-    return inputStream.use { it.readBytes() }.deserialize()
+    return inputStream.readObject()
 }
 
 /** Analogous to [Thread.join]. */
+@DeleteForDJVM
 fun ExecutorService.join() {
     shutdown() // Do not change to shutdownNow, tests use this method to assert the executor has no more tasks.
     while (!awaitTermination(1, TimeUnit.SECONDS)) {
@@ -357,31 +456,33 @@ fun ExecutorService.join() {
     }
 }
 
-/**
- * Return the underlying X.500 name from this Corda-safe X.500 name. These are guaranteed to have a consistent
- * ordering, such that their `toString()` function returns the same value every time for the same [CordaX500Name].
- */
-val CordaX500Name.x500Name: X500Name
-    get() {
-        return X500NameBuilder(BCStyle.INSTANCE).apply {
-            addRDN(BCStyle.C, country)
-            state?.let { addRDN(BCStyle.ST, it) }
-            addRDN(BCStyle.L, locality)
-            addRDN(BCStyle.O, organisation)
-            organisationUnit?.let { addRDN(BCStyle.OU, it) }
-            commonName?.let { addRDN(BCStyle.CN, it) }
-        }.build()
-    }
+// TODO: Currently the certificate revocation status is not handled here. Nowhere in the code the second parameter is used. Consider adding the support in the future.
+fun CertPath.validate(trustAnchor: TrustAnchor, checkRevocation: Boolean = false): PKIXCertPathValidatorResult {
+    val parameters = PKIXParameters(setOf(trustAnchor)).apply { isRevocationEnabled = checkRevocation }
+    try {
+        return CertPathValidator.getInstance("PKIX").validate(this, parameters) as PKIXCertPathValidatorResult
+    } catch (e: CertPathValidatorException) {
+        throw CertPathValidatorException(
+                """Cert path failed to validate.
+Reason: ${e.reason}
+Offending cert index: ${e.index}
+Cert path: $this
 
-@Suppress("unused")
-@VisibleForTesting
-val CordaX500Name.Companion.unspecifiedCountry
-    get() = "ZZ"
+Trust anchor:
+$trustAnchor""", e, this, e.index)
+    }
+}
+
+inline fun <T : Any> T.signWithCert(signer: (SerializedBytes<T>) -> DigitalSignatureWithCert): SignedDataWithCert<T> {
+    val serialised = serialize()
+    return SignedDataWithCert(serialised, signer(serialised))
+}
 
 fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificate): SignedDataWithCert<T> {
-    val serialised = serialize()
-    val signature = Crypto.doSign(privateKey, serialised.bytes)
-    return SignedDataWithCert(serialised, DigitalSignatureWithCert(certificate, signature))
+    return signWithCert {
+        val signature = Crypto.doSign(privateKey, it.bytes)
+        DigitalSignatureWithCert(certificate, signature)
+    }
 }
 
 inline fun <T : Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> DigitalSignature.WithKey): SignedData<T> {
@@ -396,19 +497,32 @@ fun createCordappContext(cordapp: Cordapp, attachmentId: SecureHash?, classLoade
     return CordappContext(cordapp, attachmentId, classLoader, config)
 }
 
-/** Verifies that the correct notarisation request was signed by the counterparty. */
-fun NotaryFlow.Service.validateRequest(request: NotarisationRequest, signature: NotarisationRequestSignature) {
-    val requestingParty = otherSideSession.counterparty
-    request.verifySignature(signature, requestingParty)
-    // TODO: persist the signature for traceability. Do we need to persist the request as well?
+val PublicKey.hash: SecureHash get() = encoded.sha256()
+
+/** Checks if this flow is an idempotent flow. */
+fun Class<out FlowLogic<*>>.isIdempotentFlow(): Boolean {
+    return IdempotentFlow::class.java.isAssignableFrom(this)
 }
 
-/** Creates a signature over the notarisation request using the legal identity key. */
-fun NotarisationRequest.generateSignature(serviceHub: ServiceHub): NotarisationRequestSignature {
-    val serializedRequest = this.serialize().bytes
-    val signature = with(serviceHub) {
-        val myLegalIdentity = myInfo.legalIdentitiesAndCerts.first().owningKey
-        keyManagementService.sign(serializedRequest, myLegalIdentity)
+/**
+ * Extension method for providing a sumBy method that processes and returns a Long
+ */
+fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long = this.map { selector(it) }.sum()
+
+/**
+ * Ensures each log entry from the current thread will contain id of the transaction in the MDC.
+ */
+internal fun SignedTransaction.pushToLoggingContext() {
+    MDC.put("tx_id", id.toString())
+}
+
+fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
+    val payloadData: T = try {
+        val serializer = SerializationDefaults.SERIALIZATION_FACTORY
+        serializer.deserialize(this, type, SerializationDefaults.P2P_CONTEXT)
+    } catch (ex: Exception) {
+        throw IllegalArgumentException("Payload invalid", ex)
     }
-    return NotarisationRequestSignature(signature, serviceHub.myInfo.platformVersion)
+    return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) }
+            ?: throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a ${payloadData.javaClass.name} ($payloadData)")
 }

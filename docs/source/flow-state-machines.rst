@@ -228,7 +228,7 @@ Next, we call another subflow called ``SignTransactionFlow``. ``SignTransactionF
 * Sending the transaction back to the buyer.
 
 The transaction then needs to be finalized. This is the the process of sending the transaction to a notary to assert
-(with another signature) that the timestamp in the transaction (if any) is valid and there are no double spends.
+(with another signature) that the time-window in the transaction (if any) is valid and there are no double spends.
 In this flow, finalization is handled by the buyer, so we just wait for the signed transaction to appear in our
 transaction storage. It will have the same ID as the one we started with but more signatures.
 
@@ -419,7 +419,7 @@ the other counterparties. Instead they will be informed the flow has terminated 
 generic exception.
 
 .. note:: A future version will extend this to give the node administrator more control on what to do with such erroring
-flows.
+   flows.
 
 Throwing a ``FlowException`` enables a flow to reject a piece of data it has received back to the sender. This is typically
 done in the ``unwrap`` method of the received ``UntrustworthyData``. In the above example the seller checks the price
@@ -492,7 +492,7 @@ whether the change is one of position (i.e. progress), structure (i.e. new subta
 aspect of rendering (i.e. a step has changed in some way and is requesting a re-render).
 
 The flow framework is somewhat integrated with this API. Each ``FlowLogic`` may optionally provide a tracker by
-overriding the ``flowTracker`` property (``getFlowTracker`` method in Java). If the
+overriding the ``progressTracker`` property (``getProgressTracker`` method in Java). If the
 ``FlowLogic.subFlow`` method is used, then the tracker of the sub-flow will be made a child of the current
 step in the parent flow automatically, if the parent is using tracking in the first place. The framework will also
 automatically set the current step to ``DONE`` for you, when the flow is finished.

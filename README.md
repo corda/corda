@@ -4,7 +4,7 @@
 
 # Corda
 
-Corda is a decentralised database system in which nodes trust each other as little as possible.
+Corda is an open source blockchain project, designed for business from the start. Only Corda allows you to build interoperable blockchain networks that transact in strict privacy. Corda's smart contract technology allows businesses to transact directly, with value.
 
 ## Features
 
@@ -25,16 +25,17 @@ Corda is a decentralised database system in which nodes trust each other as litt
 ## Useful links
 
 * [Project Website](https://corda.net)
+* [Mailing Lists](https://www.corda.net/mailing-lists/)
 * [Documentation](https://docs.corda.net)
+* [Stack Overflow Tag](https://stackoverflow.com/questions/tagged/corda)
 * [Slack Channel](https://slack.corda.net/)
-* [Stack Overflow tag](https://stackoverflow.com/questions/tagged/corda)
-* [Forum](https://discourse.corda.net)
+* [Twitter](https://twitter.com/cordadlt)
 * [Meetups](https://www.meetup.com/pro/corda/)
 * [Training Courses](https://www.corda.net/corda-training/)
 
 ## Contributing
 
-Please read [here](./CONTRIBUTING.md).
+We welcome contributions to Corda! Please see our [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 

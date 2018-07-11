@@ -5,18 +5,15 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.io.Output
 import javassist.ClassPool
 import javassist.CtClass
-import java.io.ByteArrayInputStream
-import java.lang.StringBuilder
 import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
 import java.security.ProtectionDomain
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 
 class KryoHookAgent {
     companion object {
         @JvmStatic
-        fun premain(argumentsString: String?, instrumentation: Instrumentation) {
+        fun premain(@Suppress("UNUSED_PARAMETER") argumentsString: String?, instrumentation: Instrumentation) {
             Runtime.getRuntime().addShutdownHook(Thread {
                 val statsTrees = KryoHook.events.values.flatMap {
                     readTrees(it, 0).second
@@ -54,9 +51,9 @@ fun prettyStatsTree(indent: Int, statsTree: StatsTree, builder: StringBuilder) {
  * Later we "parse" these lists into a tree.
  */
 object KryoHook : ClassFileTransformer {
-    val classPool = ClassPool.getDefault()
+    val classPool = ClassPool.getDefault()!!
 
-    val hookClassName = javaClass.name
+    val hookClassName = javaClass.name!!
 
     override fun transform(
             loader: ClassLoader?,
@@ -69,7 +66,7 @@ object KryoHook : ClassFileTransformer {
             return null
         }
         return try {
-            val clazz = classPool.makeClass(ByteArrayInputStream(classfileBuffer))
+            val clazz = classPool.makeClass(classfileBuffer.inputStream())
             instrumentClass(clazz)?.toBytecode()
         } catch (throwable: Throwable) {
             println("SOMETHING WENT WRONG")
@@ -98,14 +95,14 @@ object KryoHook : ClassFileTransformer {
     val events = ConcurrentHashMap<Long, ArrayList<StatsEvent>>()
 
     @JvmStatic
-    fun writeEnter(kryo: Kryo, output: Output, obj: Any) {
+    fun writeEnter(@Suppress("UNUSED_PARAMETER") kryo: Kryo, output: Output, obj: Any) {
         events.getOrPut(Strand.currentStrand().id) { ArrayList() }.add(
                 StatsEvent.Enter(obj.javaClass.name, output.total())
         )
     }
     @JvmStatic
-    fun writeExit(kryo: Kryo, output: Output, obj: Any) {
-        events.get(Strand.currentStrand().id)!!.add(
+    fun writeExit(@Suppress("UNUSED_PARAMETER") kryo: Kryo, output: Output, obj: Any) {
+        events[Strand.currentStrand().id]!!.add(
                 StatsEvent.Exit(obj.javaClass.name, output.total())
         )
     }

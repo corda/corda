@@ -1,36 +1,14 @@
-buildscript {
-    // For sharing constants between builds
-    Properties constants = new Properties()
-    file("$projectDir/../../constants.properties").withInputStream { constants.load(it) }
-
-    ext.kotlin_version = constants.getProperty("kotlinVersion")
-    ext.javaassist_version = "3.12.1.GA"
-
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        jcenter()
-    }
-
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
-
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
+ext {
+    javaassist_version = "3.12.1.GA"
 }
 
 apply plugin: 'kotlin'
-apply plugin: 'kotlin-kapt'
 apply plugin: 'idea'
 
 description 'A javaagent to allow hooking into Kryo'
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "javassist:javassist:$javaassist_version"
     compile "com.esotericsoftware:kryo:4.0.0"

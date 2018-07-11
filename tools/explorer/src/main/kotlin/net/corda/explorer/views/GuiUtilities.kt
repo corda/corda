@@ -25,7 +25,7 @@ const val WINDOW_TITLE = "Corda Node Explorer"
  *  Helper method to reduce boiler plate code
  */
 fun <T> stringConverter(fromStringFunction: ((String?) -> T)? = null, toStringFunction: (T) -> String): StringConverter<T> {
-    val converter = object : StringConverter<T>() {
+    return object : StringConverter<T>() {
         override fun fromString(string: String?): T {
             return fromStringFunction?.invoke(string) ?: throw UnsupportedOperationException("not implemented")
         }
@@ -34,7 +34,6 @@ fun <T> stringConverter(fromStringFunction: ((String?) -> T)? = null, toStringFu
             return toStringFunction(o)
         }
     }
-    return converter
 }
 
 /**

@@ -5,9 +5,9 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.exists
-import net.corda.core.internal.x500Name
+import net.corda.core.internal.toX500Name
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.DEV_ROOT_CA
@@ -43,10 +43,10 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
     }
 
     @Test
-    fun `only the node running the broker can login using the special node user`() {
+    fun `only the node running the broker can login using the special P2P node user`() {
         val attacker = clientTo(alice.internals.configuration.p2pAddress)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
-            attacker.start(NODE_USER, NODE_USER)
+            attacker.start(NODE_P2P_USER, NODE_P2P_USER)
         }
     }
 
@@ -68,15 +68,15 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
 
     @Test
     fun `login to a non ssl port as a node user`() {
-        val attacker = clientTo(alice.internals.configuration.rpcOptions.address!!, sslConfiguration = null)
+        val attacker = clientTo(alice.internals.configuration.rpcOptions.address, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
-            attacker.start(NODE_USER, NODE_USER, enableSSL = false)
+            attacker.start(NODE_P2P_USER, NODE_P2P_USER, enableSSL = false)
         }
     }
 
     @Test
     fun `login to a non ssl port as a peer user`() {
-        val attacker = clientTo(alice.internals.configuration.rpcOptions.address!!, sslConfiguration = null)
+        val attacker = clientTo(alice.internals.configuration.rpcOptions.address, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(PEER_USER, PEER_USER, enableSSL = false)  // Login as a peer
         }
@@ -88,17 +88,18 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
             override val certificatesDirectory = Files.createTempDirectory("certs")
             override val keyStorePassword: String get() = "cordacadevpass"
             override val trustStorePassword: String get() = "trustpass"
+            override val crlCheckSoftFail: Boolean = true
 
             init {
                 val legalName = CordaX500Name("MegaCorp", "London", "GB")
                 certificatesDirectory.createDirectories()
                 if (!trustStoreFile.exists()) {
-                    javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks").copyTo(trustStoreFile)
+                    javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks").use { it.copyTo(trustStoreFile) }
                 }
 
                 val clientKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
                 // Set name constrain to the legal name.
-                val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.x500Name))), arrayOf())
+                val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.toX500Name()))), arrayOf())
                 val clientCACert = X509Utilities.createCertificate(
                         CertificateType.INTERMEDIATE_CA,
                         DEV_INTERMEDIATE_CA.certificate,

@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
@@ -14,6 +15,7 @@ import java.security.SignatureException
  * @param sig the (unverified) signature for the data.
  */
 @CordaSerializable
+@KeepForDJVM
 open class SignedData<T : Any>(val raw: SerializedBytes<T>, val sig: DigitalSignature.WithKey) {
     /**
      * Return the deserialized data if the signature can be verified.
@@ -36,7 +38,7 @@ open class SignedData<T : Any>(val raw: SerializedBytes<T>, val sig: DigitalSign
      * @throws IllegalArgumentException if the data is invalid.
      */
     @Throws(IllegalArgumentException::class)
-    open protected fun verifyData(data: T) {
+    protected open fun verifyData(data: T) {
         // By default we accept anything
     }
 }

@@ -1,9 +1,10 @@
-Corda nodes
-===========
+Nodes
+=====
 
 .. toctree::
    :maxdepth: 1
 
+   node-structure
    generating-a-node
    running-a-node
    deploying-a-node
@@ -11,5 +12,5 @@ Corda nodes
    clientrpc
    shell
    node-database
+   node-database-access-h2
    node-administration
-   out-of-process-verification

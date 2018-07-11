@@ -33,14 +33,11 @@ handling, and ensures the Corda service is run at boot.
 5. Create a directory called ``cordapps`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively, download one of
    our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``cordapps`` directory
 
-6. Save the below as ``/opt/corda/node.conf``. See :doc:`corda-configuration-file` for a description of these options
-
-   .. code-block:: json
+6. Save the below as ``/opt/corda/node.conf``. See :doc:`corda-configuration-file` for a description of these options::
 
       basedir : "/opt/corda"
       p2pAddress : "example.com:10002"
       rpcAddress : "example.com:10003"
-      webAddress : "0.0.0.0:10004"
       h2port : 11000
       emailAddress : "you@example.com"
       myLegalName : "O=Bank of Breakfast Tea, L=London, C=GB"
@@ -192,9 +189,7 @@ at boot, and means the Corda service stays running with no users connected to th
    * Oracle Java 8. The supported versions are listed in :doc:`getting-set-up`
 
 1. Create a Corda directory and download the Corda jar. Replace ``VERSION_NUMBER`` with the desired version. Here's an
-   example using PowerShell:
-
-   .. code-block:: PowerShell
+   example using PowerShell::
 
         mkdir C:\Corda
         wget http://jcenter.bintray.com/net/corda/corda/VERSION_NUMBER/corda-VERSION_NUMBER.jar -OutFile C:\Corda\corda.jar
@@ -202,14 +197,11 @@ at boot, and means the Corda service stays running with no users connected to th
 2. Create a directory called ``cordapps`` in ``C:\Corda\`` and save your CorDapp jar file to it. Alternatively,
    download one of our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``cordapps`` directory
 
-3. Save the below as ``C:\Corda\node.conf``. See :doc:`corda-configuration-file` for a description of these options
-
-   .. code-block:: json
+3. Save the below as ``C:\Corda\node.conf``. See :doc:`corda-configuration-file` for a description of these options::
 
         basedir : "C:\\Corda"
         p2pAddress : "example.com:10002"
         rpcAddress : "example.com:10003"
-        webAddress : "0.0.0.0:10004"
         h2port : 11000
         emailAddress: "you@example.com"
         myLegalName : "O=Bank of Breakfast Tea, L=London, C=GB"

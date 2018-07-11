@@ -7,7 +7,7 @@ Attachments are ZIP/JAR files referenced from transaction by hash, but not inclu
 itself. These files are automatically requested from the node sending the transaction when needed and cached
 locally so they are not re-requested if encountered again. Attachments typically contain:
 
-* Contract executable code
+* Contract code
 * Metadata about a transaction, such as PDF version of an invoice being settled
 * Shared information to be permanently recorded on the ledger
 
@@ -23,11 +23,11 @@ Uploading and downloading
 To upload an attachment to the node, or download an attachment named by its hash, you use :doc:`clientrpc`. This
 is also available for interactive use via the shell. To **upload** run:
 
-``>>> run uploadAttachment jar: /path/to/the/file.jar``
+``>>> run uploadAttachment jar: path/to/the/file.jar``
 
 or
 
-``>>> run uploadAttachmentWithMetadata jar: /path/to/the/file.jar, uploader: myself, filename: original_name.jar``
+``>>> run uploadAttachmentWithMetadata jar: path/to/the/file.jar, uploader: myself, filename: original_name.jar``
 
 to include the metadata with the attachment which can be used to find it later on. Note, that currently both uploader
 and filename are just plain strings (there is no connection between uploader and the RPC users for example).

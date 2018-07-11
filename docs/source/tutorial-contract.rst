@@ -299,13 +299,13 @@ logic.
 
 This loop is the core logic of the contract.
 
-The first line simply gets the timestamp out of the transaction. Timestamping of transactions is optional, so a time
+The first line simply gets the time-window out of the transaction. Setting a time-window in transactions is optional, so a time
 may be missing here. We check for it being null later.
 
 .. warning:: In the Kotlin version as long as we write a comparison with the transaction time first the compiler will
-   verify we didn't forget to check if it's missing. Unfortunately due to the need for smooth Java interop, this
+   verify we didn't forget to check if it's missing. Unfortunately due to the need for smooth interoperability with Java, this
    check won't happen if we write e.g. ``someDate > time``, it has to be ``time < someDate``. So it's good practice to
-   always write the transaction timestamp first.
+   always write the transaction time-window first.
 
 Next, we take one of three paths, depending on what the type of the command object is.
 
@@ -317,7 +317,7 @@ this group. We do not allow multiple units of CP to be split or merged even if t
 exception if the list size is not 1, otherwise it returns the single item in that list. In Java, this appears as a
 regular static method of the type familiar from many FooUtils type singleton classes and we have statically imported it
 here. In Kotlin, it appears as a method that can be called on any JDK list. The syntax is slightly different but
-behind the scenes, the code compiles to the same bytecodes.
+behind the scenes, the code compiles to the same bytecode.
 
 Next, we check that the transaction was signed by the public key that's marked as the current owner of the commercial
 paper. Because the platform has already verified all the digital signatures before the contract begins execution,
@@ -597,7 +597,7 @@ The time-lock contract mentioned above can be implemented very simply:
     class TestTimeLock : Contract {
         ...
         override fun verify(tx: LedgerTransaction) {
-            val time = tx.timestamp.before ?: throw IllegalStateException(...)
+            val time = tx.timeWindow?.untilTime ?: throw IllegalStateException(...)
             ...
             requireThat {
                 "the time specified in the time-lock has passed" by

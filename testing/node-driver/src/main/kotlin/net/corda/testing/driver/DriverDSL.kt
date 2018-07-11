@@ -11,8 +11,7 @@ import net.corda.testing.node.NotarySpec
 import java.nio.file.Path
 
 enum class VerifierType {
-    InMemory,
-    OutOfProcess
+    InMemory
 }
 
 /**
@@ -67,8 +66,9 @@ interface DriverDSL {
      *     in. If null the Driver-level value will be used.
      * @param maximumHeapSize The maximum JVM heap size to use for the node as a [String]. By default a number is interpreted
      *     as being in bytes. Append the letter 'k' or 'K' to the value to indicate Kilobytes, 'm' or 'M' to indicate
-     *     megabytes, and 'g' or 'G' to indicate gigabytes. The default value is "200m" = 200 megabytes.
-     * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available.
+     *     megabytes, and 'g' or 'G' to indicate gigabytes. The default value is "512m" = 512 megabytes.
+     * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available and
+     * it sees all previously started nodes, including the notaries.
      */
     fun startNode(
             defaultParameters: NodeParameters = NodeParameters(),
@@ -89,6 +89,7 @@ interface DriverDSL {
     fun startNode(parameters: NodeParameters): CordaFuture<NodeHandle> = startNode(defaultParameters = parameters)
 
     /** Call [startWebserver] with a default maximumHeapSize. */
+    @Suppress("DEPRECATION")
     fun startWebserver(handle: NodeHandle): CordaFuture<WebserverHandle> = startWebserver(handle, "200m")
 
     /**
@@ -96,6 +97,7 @@ interface DriverDSL {
      * @param handle The handle for the node that this webserver connects to via RPC.
      * @param maximumHeapSize Argument for JVM -Xmx option e.g. "200m".
      */
+    @Suppress("DEPRECATION")
     fun startWebserver(handle: NodeHandle, maximumHeapSize: String): CordaFuture<WebserverHandle>
 
     /**

@@ -1,12 +1,12 @@
 package net.corda.behave.process
 
-import java.io.File
+import java.nio.file.Path
 import java.time.Duration
 
 class JarCommand(
-        jarFile: File,
-        arguments: Array<String>,
-        directory: File,
+        jarFile: Path,
+        arguments: Array<out String>,
+        directory: Path,
         timeout: Duration,
         enableRemoteDebugging: Boolean = false
 ) : Command(
@@ -23,12 +23,10 @@ class JarCommand(
     companion object {
 
         private fun extraArguments(enableRemoteDebugging: Boolean) =
-            if (enableRemoteDebugging) {
-                arrayOf("-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
-            } else {
-                arrayOf()
-            }
-
+                if (enableRemoteDebugging) {
+                    arrayOf("-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
+                } else {
+                    arrayOf()
+                }
     }
-
 }

@@ -1,6 +1,5 @@
 package net.corda.client.rpc
 
-import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.RPCOps
@@ -44,8 +43,8 @@ open class AbstractRPCTest {
     inline fun <reified I : RPCOps> RPCDriverDSL.testProxy(
             ops: I,
             rpcUser: User = rpcTestUser,
-            clientConfiguration: RPCClientConfiguration = RPCClientConfiguration.default,
-            serverConfiguration: RPCServerConfiguration = RPCServerConfiguration.default
+            clientConfiguration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            serverConfiguration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT
     ): TestProxy<I> {
         return when (mode) {
             RPCTestMode.InVm ->

@@ -1,8 +1,10 @@
 package net.corda.demobench.model
 
 import com.typesafe.config.Config
+import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.parseAs
 import tornadofx.*
 import java.io.IOException
@@ -18,7 +20,7 @@ class InstallFactory : Controller() {
             require(nodeController.isPortValid(port)) { "Invalid port $port" }
         }
 
-        val nodeConfig = config.parseAs<NodeConfig>()
+        val nodeConfig = config.parseAs<NodeConfig>(UnknownConfigKeysPolicy.IGNORE::handle)
         nodeConfig.p2pAddress.checkPort()
         nodeConfig.rpcAddress.checkPort()
         nodeConfig.webAddress.checkPort()
@@ -37,6 +39,6 @@ class InstallConfig internal constructor(val baseDir: Path, private val config: 
     val key = config.key
     override val cordappsDir: Path = baseDir / "cordapps"
 
-    fun deleteBaseDir(): Boolean = baseDir.toFile().deleteRecursively()
+    fun deleteBaseDir(): Unit = baseDir.deleteRecursively()
     fun installTo(installDir: Path) = config.copy(baseDir = installDir)
 }

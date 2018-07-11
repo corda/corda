@@ -7,15 +7,14 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.WireTransaction
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -41,7 +40,7 @@ class DBTransactionStorageTests {
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock())
+        database = configureDatabase(dataSourceProps, DatabaseConfig(), { null }, { null })
         newTransactionStorage()
     }
 
@@ -53,51 +52,33 @@ class DBTransactionStorageTests {
 
     @Test
     fun `empty store`() {
-        database.transaction {
-            assertThat(transactionStorage.getTransaction(newTransaction().id)).isNull()
-        }
-        database.transaction {
-            assertThat(transactionStorage.transactions).isEmpty()
-        }
+        assertThat(transactionStorage.getTransaction(newTransaction().id)).isNull()
+        assertThat(transactionStorage.transactions).isEmpty()
         newTransactionStorage()
-        database.transaction {
-            assertThat(transactionStorage.transactions).isEmpty()
-        }
+        assertThat(transactionStorage.transactions).isEmpty()
     }
 
     @Test
     fun `one transaction`() {
         val transaction = newTransaction()
-        database.transaction {
-            transactionStorage.addTransaction(transaction)
-        }
+        transactionStorage.addTransaction(transaction)
         assertTransactionIsRetrievable(transaction)
-        database.transaction {
-            assertThat(transactionStorage.transactions).containsExactly(transaction)
-        }
+        assertThat(transactionStorage.transactions).containsExactly(transaction)
         newTransactionStorage()
         assertTransactionIsRetrievable(transaction)
-        database.transaction {
-            assertThat(transactionStorage.transactions).containsExactly(transaction)
-        }
+        assertThat(transactionStorage.transactions).containsExactly(transaction)
     }
 
     @Test
     fun `two transactions across restart`() {
         val firstTransaction = newTransaction()
         val secondTransaction = newTransaction()
-        database.transaction {
-            transactionStorage.addTransaction(firstTransaction)
-        }
+        transactionStorage.addTransaction(firstTransaction)
         newTransactionStorage()
-        database.transaction {
-            transactionStorage.addTransaction(secondTransaction)
-        }
+        transactionStorage.addTransaction(secondTransaction)
         assertTransactionIsRetrievable(firstTransaction)
         assertTransactionIsRetrievable(secondTransaction)
-        database.transaction {
-            assertThat(transactionStorage.transactions).containsOnly(firstTransaction, secondTransaction)
-        }
+        assertThat(transactionStorage.transactions).containsOnly(firstTransaction, secondTransaction)
     }
 
     @Test
@@ -110,24 +91,18 @@ class DBTransactionStorageTests {
             rollback()
         }
 
-        database.transaction {
-            assertThat(transactionStorage.transactions).isEmpty()
-        }
+        assertThat(transactionStorage.transactions).isEmpty()
     }
 
     @Test
     fun `two transactions in same DB transaction scope`() {
         val firstTransaction = newTransaction()
         val secondTransaction = newTransaction()
-        database.transaction {
-            transactionStorage.addTransaction(firstTransaction)
-            transactionStorage.addTransaction(secondTransaction)
-        }
+        transactionStorage.addTransaction(firstTransaction)
+        transactionStorage.addTransaction(secondTransaction)
         assertTransactionIsRetrievable(firstTransaction)
         assertTransactionIsRetrievable(secondTransaction)
-        database.transaction {
-            assertThat(transactionStorage.transactions).containsOnly(firstTransaction, secondTransaction)
-        }
+        assertThat(transactionStorage.transactions).containsOnly(firstTransaction, secondTransaction)
     }
 
     @Test
@@ -138,36 +113,29 @@ class DBTransactionStorageTests {
             transactionStorage.addTransaction(firstTransaction)
         }
         assertTransactionIsRetrievable(firstTransaction)
-        database.transaction {
-            assertThat(transactionStorage.transactions).containsOnly(firstTransaction)
-        }
+        assertThat(transactionStorage.transactions).containsOnly(firstTransaction)
     }
 
     @Test
     fun `transaction saved twice in two DB transaction scopes`() {
         val firstTransaction = newTransaction()
         val secondTransaction = newTransaction()
-        database.transaction {
-            transactionStorage.addTransaction(firstTransaction)
-        }
+
+        transactionStorage.addTransaction(firstTransaction)
 
         database.transaction {
             transactionStorage.addTransaction(secondTransaction)
             transactionStorage.addTransaction(firstTransaction)
         }
         assertTransactionIsRetrievable(firstTransaction)
-        database.transaction {
-            assertThat(transactionStorage.transactions).containsOnly(firstTransaction, secondTransaction)
-        }
+        assertThat(transactionStorage.transactions).containsOnly(firstTransaction, secondTransaction)
     }
 
     @Test
     fun `updates are fired`() {
         val future = transactionStorage.updates.toFuture()
         val expected = newTransaction()
-        database.transaction {
-            transactionStorage.addTransaction(expected)
-        }
+        transactionStorage.addTransaction(expected)
         val actual = future.get(1, TimeUnit.SECONDS)
         assertEquals(expected, actual)
     }
@@ -186,19 +154,15 @@ class DBTransactionStorageTests {
     }
 
     private fun newTransactionStorage(cacheSizeBytesOverride: Long? = null) {
-        database.transaction {
-            transactionStorage = DBTransactionStorage(cacheSizeBytesOverride ?: NodeConfiguration.defaultTransactionCacheSize)
-        }
+        transactionStorage = DBTransactionStorage(cacheSizeBytesOverride ?: NodeConfiguration.defaultTransactionCacheSize, database)
     }
 
     private fun assertTransactionIsRetrievable(transaction: SignedTransaction) {
-        database.transaction {
-            assertThat(transactionStorage.getTransaction(transaction.id)).isEqualTo(transaction)
-        }
+        assertThat(transactionStorage.getTransaction(transaction.id)).isEqualTo(transaction)
     }
 
     private fun newTransaction(): SignedTransaction {
-        val wtx = WireTransaction(
+        val wtx = createWireTransaction(
                 inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
                 outputs = emptyList(),
@@ -206,6 +170,9 @@ class DBTransactionStorageTests {
                 notary = DUMMY_NOTARY,
                 timeWindow = null
         )
-        return SignedTransaction(wtx, listOf(TransactionSignature(ByteArray(1), ALICE_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID))))
+        return SignedTransaction(
+                wtx,
+                listOf(TransactionSignature(ByteArray(1), ALICE_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID)))
+        )
     }
 }

@@ -5,10 +5,9 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.InputStreamAndHash
-import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
@@ -22,8 +21,8 @@ import net.corda.testing.node.StartedMockNode
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
+import java.io.InputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -60,10 +59,10 @@ class MaxTransactionSizeTests {
         val bigFile3 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024, 2)
         val bigFile4 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024, 3)
         val flow = aliceNode.transaction {
-            val hash1 = aliceNode.services.attachments.importAttachment(bigFile1.inputStream)
-            val hash2 = aliceNode.services.attachments.importAttachment(bigFile2.inputStream)
-            val hash3 = aliceNode.services.attachments.importAttachment(bigFile3.inputStream)
-            val hash4 = aliceNode.services.attachments.importAttachment(bigFile4.inputStream)
+            val hash1 = aliceNode.importAttachment(bigFile1.inputStream)
+            val hash2 = aliceNode.importAttachment(bigFile2.inputStream)
+            val hash3 = aliceNode.importAttachment(bigFile3.inputStream)
+            val hash4 = aliceNode.importAttachment(bigFile4.inputStream)
             assertEquals(hash1, bigFile1.sha256)
             SendLargeTransactionFlow(notary, bob, hash1, hash2, hash3, hash4)
         }
@@ -83,19 +82,22 @@ class MaxTransactionSizeTests {
         val bigFile3 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024, 2)
         val bigFile4 = InputStreamAndHash.createInMemoryTestZip(1024 * 1024, 3)
         val flow = aliceNode.transaction {
-            val hash1 = aliceNode.services.attachments.importAttachment(bigFile1.inputStream)
-            val hash2 = aliceNode.services.attachments.importAttachment(bigFile2.inputStream)
-            val hash3 = aliceNode.services.attachments.importAttachment(bigFile3.inputStream)
-            val hash4 = aliceNode.services.attachments.importAttachment(bigFile4.inputStream)
+            val hash1 = aliceNode.importAttachment(bigFile1.inputStream)
+            val hash2 = aliceNode.importAttachment(bigFile2.inputStream)
+            val hash3 = aliceNode.importAttachment(bigFile3.inputStream)
+            val hash4 = aliceNode.importAttachment(bigFile4.inputStream)
             assertEquals(hash1, bigFile1.sha256)
             SendLargeTransactionFlow(notary, bob, hash1, hash2, hash3, hash4, verify = false)
         }
-        val ex = assertFailsWith<UnexpectedFlowEndException> {
+        assertFailsWith<UnexpectedFlowEndException> {
             val future = aliceNode.startFlow(flow)
             mockNet.runNetwork()
             future.getOrThrow()
         }
-        assertThat(ex).hasMessageContaining("Counterparty flow on O=Bob Plc, L=Rome, C=IT had an internal error and has terminated")
+    }
+
+    private fun StartedMockNode.importAttachment(inputStream: InputStream): AttachmentId {
+        return services.attachments.importAttachment(inputStream, "test", null)
     }
 
     @StartableByRPC

@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.persistence
 
+import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.internal.castIfPossible
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
@@ -21,7 +22,6 @@ import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
 import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
 import java.lang.management.ManagementFactory
 import java.sql.Connection
-import java.util.concurrent.ConcurrentHashMap
 import javax.management.ObjectName
 import javax.persistence.AttributeConverter
 
@@ -35,8 +35,7 @@ class HibernateConfiguration(
         private val logger = contextLogger()
     }
 
-    // TODO: make this a guava cache or similar to limit ability for this to grow forever.
-    private val sessionFactories = ConcurrentHashMap<Set<MappedSchema>, SessionFactory>()
+    private val sessionFactories = Caffeine.newBuilder().maximumSize(databaseConfig.mappedSchemaCacheSize).build<Set<MappedSchema>, SessionFactory>()
 
     val sessionFactoryForRegisteredSchemas = schemas.let {
         logger.info("Init HibernateConfiguration for schemas: $it")
@@ -44,7 +43,7 @@ class HibernateConfiguration(
     }
 
     /** @param key must be immutable, not just read-only. */
-    fun sessionFactoryForSchemas(key: Set<MappedSchema>) = sessionFactories.computeIfAbsent(key, { makeSessionFactoryForSchemas(key) })
+    fun sessionFactoryForSchemas(key: Set<MappedSchema>): SessionFactory = sessionFactories.get(key, ::makeSessionFactoryForSchemas)!!
 
     private fun makeSessionFactoryForSchemas(schemas: Set<MappedSchema>): SessionFactory {
         logger.info("Creating session factory for schemas: $schemas")
@@ -157,7 +156,7 @@ class HibernateConfiguration(
 
     // A tweaked version of `org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor` that truncates logged messages.
     private object CordaPrimitiveByteArrayTypeDescriptor : PrimitiveByteArrayTypeDescriptor() {
-        private val LOG_SIZE_LIMIT = 1024
+        private const val LOG_SIZE_LIMIT = 1024
 
         override fun extractLoggableRepresentation(value: ByteArray?): String {
             return if (value == null) {

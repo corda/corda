@@ -1,6 +1,7 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.client.rpc.internal.drainAndShutdown
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
@@ -9,15 +10,19 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -47,10 +52,9 @@ class P2PFlowsDrainingModeTest {
 
     @Test
     fun `flows draining mode suspends consumption of initial session messages`() {
-
-        driver(DriverParameters(isDebug = true, startNodesInProcess = false, portAllocation = portAllocation)) {
-            val initiatedNode = startNode().getOrThrow()
-            val initiating = startNode(rpcUsers = users).getOrThrow().rpc
+        driver(DriverParameters(startNodesInProcess = false, portAllocation = portAllocation, notarySpecs = emptyList())) {
+            val initiatedNode = startNode(providedName = ALICE_NAME).getOrThrow()
+            val initiating = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow().rpc
             val counterParty = initiatedNode.nodeInfo.singleIdentity()
             val initiated = initiatedNode.rpc
 
@@ -76,27 +80,52 @@ class P2PFlowsDrainingModeTest {
         }
     }
 
-    @StartableByRPC
-    @InitiatingFlow
-    class InitiateSessionFlow(private val counterParty: Party) : FlowLogic<String>() {
+    @Test
+    fun `clean shutdown by draining`() {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
+            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
+            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
+            var successful = false
+            val latch = CountDownLatch(1)
+            nodeB.rpc.setFlowsDrainingModeEnabled(true)
+            IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
 
-        @Suspendable
-        override fun call(): String {
+            nodeA.rpc.drainAndShutdown()
+                    .doOnError { error ->
+                        error.printStackTrace()
+                        successful = false
+                    }
+                    .doOnCompleted { successful = true }
+                    .doAfterTerminate { latch.countDown() }
+                    .subscribe()
+            nodeB.rpc.setFlowsDrainingModeEnabled(false)
+            latch.await()
 
-            val session = initiateFlow(counterParty)
-            session.send("Hi there")
-            return session.receive<String>().unwrap { it }
+            assertThat(successful).isTrue()
         }
     }
+}
 
-    @InitiatedBy(InitiateSessionFlow::class)
-    class InitiatedFlow(private val initiatingSession: FlowSession) : FlowLogic<Unit>() {
+@StartableByRPC
+@InitiatingFlow
+class InitiateSessionFlow(private val counterParty: Party) : FlowLogic<String>() {
 
-        @Suspendable
-        override fun call() {
+    @Suspendable
+    override fun call(): String {
 
-            val message = initiatingSession.receive<String>().unwrap { it }
-            initiatingSession.send("$message answer")
-        }
+        val session = initiateFlow(counterParty)
+        session.send("Hi there")
+        return session.receive<String>().unwrap { it }
+    }
+}
+
+@InitiatedBy(InitiateSessionFlow::class)
+class InitiatedFlow(private val initiatingSession: FlowSession) : FlowLogic<Unit>() {
+
+    @Suspendable
+    override fun call() {
+
+        val message = initiatingSession.receive<String>().unwrap { it }
+        initiatingSession.send("$message answer")
     }
 }

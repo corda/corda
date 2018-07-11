@@ -71,7 +71,7 @@ The ``InitiatedBy`` flow does the opposite:
 * Receives a ``String``
 * Sends a ``CustomType``
 
-As long as both the ``IntiatingFlow`` and the ``InitiatedBy`` flows conform to the sequence of actions, the flows can
+As long as both the ``InitiatingFlow`` and the ``InitiatedBy`` flows conform to the sequence of actions, the flows can
 be implemented in any way you see fit (including adding proprietary business logic that is not shared with other
 parties).
 
@@ -81,7 +81,7 @@ A flow can become backwards-incompatible in two main ways:
 
 * The sequence of ``send`` and ``receive`` calls changes:
 
-  * A ``send`` or ``receive`` is added or removed from either the ``InitatingFlow`` or ``InitiatedBy`` flow
+  * A ``send`` or ``receive`` is added or removed from either the ``InitiatingFlow`` or ``InitiatedBy`` flow
   * The sequence of ``send`` and ``receive`` calls changes
 
 * The types of the ``send`` and ``receive`` calls changes
@@ -112,7 +112,7 @@ If you shut down all nodes and upgrade them all at the same time, any incompatib
 
 In situations where some nodes may still be using previous versions of a flow and thus new versions of your flow may
 talk to old versions, the updated flows need to be backwards-compatible. This will be the case for almost any real
-deployment in which you cannot easily coordinate the rollout of new code across the network.
+deployment in which you cannot easily coordinate the roll-out of new code across the network.
 
 How do I ensure flow backwards-compatibility?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -475,47 +475,48 @@ existing object relational mapper. For example, we can update:
     .. sourcecode:: java
 
         public class ObligationSchemaV1 extends MappedSchema {
-            public IOUSchemaV1() {
+            public ObligationSchemaV1() {
                 super(Obligation.class, 1, ImmutableList.of(ObligationEntity.class));
             }
+        }
 
-            @Entity
-            @Table(name = "obligations")
-            public static class ObligationEntity extends PersistentState {
-                @Column(name = "currency") private final String currency;
-                @Column(name = "amount") private final Long amount;
-                @Column(name = "lender") @Lob private final Byte[] lender;
-                @Column(name = "borrower") @Lob private final Byte[] borrower;
-                @Column(name = "linear_id") private final UUID linearId;
+        @Entity
+        @Table(name = "obligations")
+        public class ObligationEntity extends PersistentState {
+            @Column(name = "currency") private String currency;
+            @Column(name = "amount") private Long amount;
+            @Column(name = "lender") @Lob private byte[] lender;
+            @Column(name = "borrower") @Lob private byte[] borrower;
+            @Column(name = "linear_id") private UUID linearId;
 
+            protected ObligationEntity(){}
 
-                public ObligationEntity(String currency, Long amount, Byte[] lender, Byte[] borrower, UUID linearId) {
-                    this.currency = currency;
-                    this.amount = amount;
-                    this.lender = lender;
-                    this.borrower = borrower;
-                    this.linearId = linearId;
-                }
+            public ObligationEntity(String currency, Long amount, byte[] lender, byte[] borrower, UUID linearId) {
+                this.currency = currency;
+                this.amount = amount;
+                this.lender = lender;
+                this.borrower = borrower;
+                this.linearId = linearId;
+            }
 
-                public String getCurrency() {
-                    return currency;
-                }
+            public String getCurrency() {
+                return currency;
+            }
 
-                public Long getAmount() {
-                    return amount;
-                }
+            public Long getAmount() {
+                return amount;
+            }
 
-                public ByteArray getLender() {
-                    return lender;
-                }
+            public byte[] getLender() {
+                return lender;
+            }
 
-                public ByteArray getBorrower() {
-                    return borrower;
-                }
+            public byte[] getBorrower() {
+                return borrower;
+            }
 
-                public UUID getId() {
-                    return linearId;
-                }
+            public UUID getLinearId() {
+                return linearId;
             }
         }
 
@@ -540,53 +541,54 @@ To:
     .. sourcecode:: java
 
         public class ObligationSchemaV1 extends MappedSchema {
-            public IOUSchemaV1() {
+            public ObligationSchemaV1() {
                 super(Obligation.class, 1, ImmutableList.of(ObligationEntity.class));
             }
+        }
 
-            @Entity
-            @Table(name = "obligations")
-            public static class ObligationEntity extends PersistentState {
-                @Column(name = "currency") private final String currency;
-                @Column(name = "amount") private final Long amount;
-                @Column(name = "lender") @Lob private final Byte[] lender;
-                @Column(name = "borrower") @Lob private final Byte[] borrower;
-                @Column(name = "linear_id") private final UUID linearId;
-                @Column(name = "defaulted") private final Boolean defaulted;            // NEW COLUMN!
+        @Entity
+        @Table(name = "obligations")
+        public class ObligationEntity extends PersistentState {
+            @Column(name = "currency") private String currency;
+            @Column(name = "amount") private Long amount;
+            @Column(name = "lender") @Lob private byte[] lender;
+            @Column(name = "borrower") @Lob private byte[] borrower;
+            @Column(name = "linear_id") private UUID linearId;
+            @Column(name = "defaulted") private Boolean defaulted;            // NEW COLUMN!
 
+            protected ObligationEntity(){}
 
-                public ObligationEntity(String currency, Long amount, Byte[] lender, Byte[] borrower, UUID linearId, Boolean defaulted) {
-                    this.currency = currency;
-                    this.amount = amount;
-                    this.lender = lender;
-                    this.borrower = borrower;
-                    this.linearId = linearId;
-                    this.defaulted = defaulted;
-                }
+            public ObligationEntity(String currency, Long amount, byte[] lender, byte[] borrower, UUID linearId, Boolean defaulted) {
+                this.currency = currency;
+                this.amount = amount;
+                this.lender = lender;
+                this.borrower = borrower;
+                this.linearId = linearId;
+                this.defaulted = defaulted;
+            }
 
-                public String getCurrency() {
-                    return currency;
-                }
+            public String getCurrency() {
+                return currency;
+            }
 
-                public Long getAmount() {
-                    return amount;
-                }
+            public Long getAmount() {
+                return amount;
+            }
 
-                public ByteArray getLender() {
-                    return lender;
-                }
+            public byte[] getLender() {
+                return lender;
+            }
 
-                public ByteArray getBorrower() {
-                    return borrower;
-                }
+            public byte[] getBorrower() {
+                return borrower;
+            }
 
-                public UUID getId() {
-                    return linearId;
-                }
+            public UUID getLinearId() {
+                return linearId;
+            }
 
-                public Boolean isDefaulted() {
-                    return defaulted;
-                }
+            public Boolean isDefaulted() {
+                return defaulted;
             }
         }
 

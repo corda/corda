@@ -17,42 +17,31 @@ import javax.persistence.*
 object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPaperSchema.javaClass, version = 1,
         mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
     @Entity
-    @Table(name = "cp_states_v2",
-            indexes = arrayOf(Index(name = "ccy_code_index2", columnList = "ccy_code"),
-                    Index(name = "maturity_index2", columnList = "maturity_instant")))
+    @Table(name = "cp_states_v2", indexes = [Index(name = "ccy_code_index2", columnList = "ccy_code"), Index(name = "maturity_index2", columnList = "maturity_instant")])
     class PersistentCommercialPaperState(
-
-            @ElementCollection
-            @Column(name = "participants")
-            @CollectionTable(name="cp_states_v2_participants", joinColumns = arrayOf(
-                    JoinColumn(name = "output_index", referencedColumnName = "output_index"),
-                    JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
-            override var participants: MutableSet<AbstractParty>? = null,
-
-            @Column(name = "maturity_instant")
+            @Column(name = "maturity_instant", nullable = false)
             var maturity: Instant,
 
-            @Column(name = "ccy_code", length = 3)
+            @Column(name = "ccy_code", length = 3, nullable = false)
             var currency: String,
 
-            @Column(name = "face_value_issuer_key_hash", length = MAX_HASH_HEX_SIZE)
+            @Column(name = "face_value_issuer_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var faceValueIssuerPartyHash: String,
 
-            @Column(name = "face_value_issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Column(name = "face_value_issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
             @Type(type = "corda-wrapper-binary")
             var faceValueIssuerRef: ByteArray,
 
-            /** parent attributes */
-            @Transient
-            val _participants: Set<AbstractParty>,
-            @Transient
-            val _owner: AbstractParty,
-            @Transient
-            // face value
-            val _quantity: Long,
-            @Transient
-            val _issuerParty: AbstractParty,
-            @Transient
-            val _issuerRef: OpaqueBytes
-    ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef.bytes)
+            participants: Set<AbstractParty>,
+            owner: AbstractParty,
+            quantity: Long,
+            issuerParty: AbstractParty,
+            issuerRef: OpaqueBytes
+    ) : CommonSchemaV1.FungibleState(participants.toMutableSet(), owner, quantity, issuerParty, issuerRef.bytes) {
+
+        @ElementCollection
+        @Column(name = "participants")
+        @CollectionTable(name = "cp_states_v2_participants", joinColumns = [JoinColumn(name = "output_index", referencedColumnName = "output_index"), JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")])
+        override var participants: MutableSet<AbstractParty?>? = null
+    }
 }

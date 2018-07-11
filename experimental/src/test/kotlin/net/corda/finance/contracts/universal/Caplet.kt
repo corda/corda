@@ -67,7 +67,7 @@ class Caplet {
     }
 
     @Test
-    fun `execute`() {
+    fun execute() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, stateFixed)
             output(UNIVERSAL_PROGRAM_ID, stateFinal)
@@ -83,7 +83,7 @@ class Caplet {
     }
 
     @Test
-    fun `fixing`() {
+    fun fixing() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, stateStart)
             output(UNIVERSAL_PROGRAM_ID, stateFixed)

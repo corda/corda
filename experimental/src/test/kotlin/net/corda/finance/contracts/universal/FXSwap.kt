@@ -60,7 +60,7 @@ class FXSwap {
     }
 
     @Test
-    fun `execute`() {
+    fun execute() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outState1)

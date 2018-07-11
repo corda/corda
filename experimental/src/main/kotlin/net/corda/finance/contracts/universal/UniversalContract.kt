@@ -36,46 +36,45 @@ class UniversalContract : Contract {
         class Split(val ratio: BigDecimal) : Commands
     }
 
-    fun eval(@Suppress("UNUSED_PARAMETER") tx: LedgerTransaction, expr: Perceivable<Instant>): Instant? = when (expr) {
+    fun evalInstant(expr: Perceivable<Instant>): Instant? = when (expr) {
         is Const -> expr.value
         is StartDate -> null
         is EndDate -> null
         else -> throw Error("Unable to evaluate")
     }
 
-    fun eval(tx: LedgerTransaction, expr: Perceivable<Boolean>): Boolean = when (expr) {
-        is PerceivableAnd -> eval(tx, expr.left) && eval(tx, expr.right)
-        is PerceivableOr -> eval(tx, expr.left) || eval(tx, expr.right)
+    fun evalBoolean(tx: LedgerTransaction, expr: Perceivable<Boolean>): Boolean = when (expr) {
+        is PerceivableAnd -> evalBoolean(tx, expr.left) && evalBoolean(tx, expr.right)
+        is PerceivableOr -> evalBoolean(tx, expr.left) || evalBoolean(tx, expr.right)
         is Const<Boolean> -> expr.value
         is TimePerceivable -> when (expr.cmp) {
-            Comparison.LTE -> tx.timeWindow!!.fromTime!! <= eval(tx, expr.instant)
-            Comparison.GTE -> tx.timeWindow!!.untilTime!! >= eval(tx, expr.instant)
+            Comparison.LTE -> tx.timeWindow!!.fromTime!! <= evalInstant(expr.instant)
+            Comparison.GTE -> tx.timeWindow!!.untilTime!! >= evalInstant(expr.instant)
             else -> throw NotImplementedError("eval special")
         }
         is ActorPerceivable -> tx.commands.single().signers.contains(expr.actor.owningKey)
         else -> throw NotImplementedError("eval - Boolean - " + expr.javaClass.name)
     }
 
-    fun eval(tx: LedgerTransaction, expr: Perceivable<BigDecimal>): BigDecimal =
+    fun evalBigDecimal(tx: LedgerTransaction, expr: Perceivable<BigDecimal>): BigDecimal =
             when (expr) {
                 is Const<BigDecimal> -> expr.value
                 is UnaryPlus -> {
-                    val x = eval(tx, expr.arg)
+                    val x = evalBigDecimal(tx, expr.arg)
                     if (x > BigDecimal.ZERO)
                         x
                     else
                         BigDecimal.ZERO
                 }
                 is PerceivableOperation -> {
-                    val l = eval(tx, expr.left)
-                    val r = eval(tx, expr.right)
+                    val l = evalBigDecimal(tx, expr.left)
+                    val r = evalBigDecimal(tx, expr.right)
 
                     when (expr.op) {
                         Operation.DIV -> l / r
                         Operation.MINUS -> l - r
                         Operation.PLUS -> l + r
                         Operation.TIMES -> l * r
-                        else -> throw NotImplementedError("eval - amount - operation " + expr.op)
                     }
                 }
                 is Fixing -> {
@@ -83,8 +82,8 @@ class UniversalContract : Contract {
                     0.0.bd
                 }
                 is Interest -> {
-                    val a = eval(tx, expr.amount)
-                    val i = eval(tx, expr.interest)
+                    val a = evalBigDecimal(tx, expr.amount)
+                    val i = evalBigDecimal(tx, expr.interest)
 
                     //TODO
 
@@ -95,7 +94,7 @@ class UniversalContract : Contract {
 
     fun validateImmediateTransfers(tx: LedgerTransaction, arrangement: Arrangement): Arrangement = when (arrangement) {
         is Obligation -> {
-            val amount = eval(tx, arrangement.amount)
+            val amount = evalBigDecimal(tx, arrangement.amount)
             requireThat { "transferred quantity is non-negative" using (amount >= BigDecimal.ZERO) }
             Obligation(const(amount), arrangement.currency, arrangement.from, arrangement.to)
         }
@@ -116,12 +115,12 @@ class UniversalContract : Contract {
 
         val arr = replaceStartEnd(rollOut.template, start.toInstant(), nextStart.toInstant())
 
-        if (nextStart < end) {
+        return if (nextStart < end) {
             // TODO: we may have to save original start date in order to roll out correctly
             val newRollOut = RollOut(nextStart, end, rollOut.frequency, rollOut.template)
-            return replaceNext(arr, newRollOut)
+            replaceNext(arr, newRollOut)
         } else {
-            return removeNext(arr)
+            removeNext(arr)
         }
     }
 
@@ -132,7 +131,7 @@ class UniversalContract : Contract {
                 is EndDate -> uncheckedCast(const(end))
                 is StartDate -> uncheckedCast(const(start))
                 is UnaryPlus -> UnaryPlus(replaceStartEnd(p.arg, start, end))
-                is PerceivableOperation -> PerceivableOperation<T>(replaceStartEnd(p.left, start, end), p.op, replaceStartEnd(p.right, start, end))
+                is PerceivableOperation -> PerceivableOperation(replaceStartEnd(p.left, start, end), p.op, replaceStartEnd(p.right, start, end))
                 is Interest -> uncheckedCast(Interest(replaceStartEnd(p.amount, start, end), p.dayCountConvention, replaceStartEnd(p.interest, start, end), replaceStartEnd(p.start, start, end), replaceStartEnd(p.end, start, end)))
                 is Fixing -> uncheckedCast(Fixing(p.source, replaceStartEnd(p.date, start, end), p.tenor))
                 is PerceivableAnd -> uncheckedCast(replaceStartEnd(p.left, start, end) and replaceStartEnd(p.right, start, end))
@@ -204,13 +203,13 @@ class UniversalContract : Contract {
                 val rest = extractRemainder(arr, action)
 
                 // for now - let's assume not
-                assert(rest is Zero)
+                require(rest is Zero)
 
                 requireThat {
                     "action must have a time-window" using (tx.timeWindow != null)
                     // "action must be authorized" by (cmd.signers.any { action.actors.any { party -> party.owningKey == it } })
                     // todo perhaps merge these two requirements?
-                    "condition must be met" using (eval(tx, action.condition))
+                    "condition must be met" using evalBoolean(tx, action.condition)
                 }
 
                 // verify that any resulting transfers can be resolved
@@ -221,7 +220,7 @@ class UniversalContract : Contract {
                     1 -> {
                         val outState = tx.outputsOfType<State>().single()
                         requireThat {
-                            "output state must match action result state" using (arrangement.equals(outState.details))
+                            "output state must match action result state" using (arrangement == outState.details)
                             "output state must match action result state" using (rest == zero)
                         }
                     }
@@ -230,7 +229,7 @@ class UniversalContract : Contract {
                         val allContracts = And(tx.outputsOfType<State>().map { it.details }.toSet())
 
                         requireThat {
-                            "output states must match action result state" using (arrangement.equals(allContracts))
+                            "output states must match action result state" using (arrangement == allContracts)
                         }
 
                     }
@@ -250,7 +249,7 @@ class UniversalContract : Contract {
                     "the transaction is signed by all liable parties" using
                             (liableParties(outState.details).all { it in cmd.signers })
                     "output state does not reflect move command" using
-                            (replaceParty(inState.details, value.from, value.to).equals(outState.details))
+                            (replaceParty(inState.details, value.from, value.to) == outState.details)
                 }
             }
             is Commands.Fix -> {
@@ -269,7 +268,7 @@ class UniversalContract : Contract {
                 requireThat {
                     "relevant fixing must be included" using unusedFixes.isEmpty()
                     "output state does not reflect fix command" using
-                            (expectedArr.equals(outState.details))
+                            (expectedArr == outState.details)
                 }
             }
             else -> throw IllegalArgumentException("Unrecognised command")
@@ -287,7 +286,7 @@ class UniversalContract : Contract {
                         perceivable.dayCountConvention, replaceFixing(tx, perceivable.interest, fixings, unusedFixings),
                         perceivable.start, perceivable.end))
                 is Fixing -> {
-                    val dt = eval(tx, perceivable.date)
+                    val dt = evalInstant(perceivable.date)
                     if (dt != null && fixings.containsKey(FixOf(perceivable.source, dt.toLocalDate(), perceivable.tenor))) {
                         unusedFixings.remove(FixOf(perceivable.source, dt.toLocalDate(), perceivable.tenor))
                         uncheckedCast(Const(fixings[FixOf(perceivable.source, dt.toLocalDate(), perceivable.tenor)]!!))

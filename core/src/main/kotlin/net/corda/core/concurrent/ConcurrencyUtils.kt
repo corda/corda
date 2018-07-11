@@ -1,5 +1,4 @@
 @file:JvmName("ConcurrencyUtils")
-
 package net.corda.core.concurrent
 
 import net.corda.core.internal.concurrent.openFuture
@@ -36,12 +35,12 @@ internal fun <V, W> firstOf(futures: Array<out CordaFuture<out V>>, log: Logger,
     val winnerChosen = AtomicBoolean()
     futures.forEach {
         it.then {
-            if (winnerChosen.compareAndSet(false, true)) {
-                resultFuture.capture { handler(it) }
-            } else if (it.isCancelled) {
-                // Do nothing.
-            } else {
-                it.match({}, { log.error(shortCircuitedTaskFailedMessage, it) })
+            when {
+                winnerChosen.compareAndSet(false, true) -> resultFuture.capture { handler(it) }
+                it.isCancelled -> {
+                    // Do nothing.
+                }
+                else -> it.match({}, { log.error(shortCircuitedTaskFailedMessage, it) })
             }
         }
     }

@@ -35,7 +35,7 @@ class CorDappInfoServlet(val plugins: List<WebServerPluginRegistry>, val rpc: Co
                                 plugin.webApis.forEach { api ->
                                     val resource = Resource.from(api.apply(rpc)::class.java)
                                     p { +"${resource.name}:" }
-                                    val endpoints = processEndpoints("", resource, mutableListOf<Endpoint>())
+                                    val endpoints = processEndpoints("", resource, mutableListOf())
                                     ul {
                                         endpoints.forEach {
                                             li { a(it.uri) { +"${it.method}\t${it.text}" } }

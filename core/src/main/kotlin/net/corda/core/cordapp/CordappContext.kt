@@ -1,5 +1,6 @@
 package net.corda.core.cordapp
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.SecureHash
 
 /**
@@ -15,6 +16,7 @@ import net.corda.core.crypto.SecureHash
  * @property classLoader the classloader used to load this cordapp's classes
  * @property config Configuration for this CorDapp
  */
+@DeleteForDJVM
 class CordappContext internal constructor(
         val cordapp: Cordapp,
         val attachmentId: SecureHash?,

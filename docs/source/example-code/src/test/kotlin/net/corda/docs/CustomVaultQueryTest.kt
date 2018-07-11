@@ -1,15 +1,30 @@
 package net.corda.docs
 
 import net.corda.core.contracts.Amount
+import net.corda.core.contracts.ContractState
 import net.corda.core.identity.Party
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
+import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.builder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.*
+import net.corda.docs.java.tutorial.helloworld.IOUFlow
+import net.corda.finance.CHF
+import net.corda.finance.DOLLARS
+import net.corda.finance.GBP
+import net.corda.finance.POUNDS
+import net.corda.finance.SWISS_FRANCS
+import net.corda.finance.USD
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
+import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -24,7 +39,7 @@ class CustomVaultQueryTest {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance", "net.corda.docs"))
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance", "net.corda.docs", "com.template"))
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
         nodeA.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)
@@ -34,6 +49,22 @@ class CustomVaultQueryTest {
     @After
     fun cleanUp() {
         mockNet.stopNodes()
+    }
+
+    @Test
+    fun `query by max recorded time`() {
+
+        nodeA.startFlow(IOUFlow(1000, nodeB.info.singleIdentity())).getOrThrow()
+        nodeA.startFlow(IOUFlow(500, nodeB.info.singleIdentity())).getOrThrow()
+
+        val max = builder { VaultSchemaV1.VaultStates::recordedTime.max() }
+        val maxCriteria = QueryCriteria.VaultCustomQueryCriteria(max)
+
+        val results = nodeA.transaction {
+            val pageSpecification = PageSpecification(pageNumber = DEFAULT_PAGE_NUM, pageSize = DEFAULT_PAGE_SIZE)
+            nodeA.services.vaultService.queryBy<ContractState>(criteria = maxCriteria, paging = pageSpecification)
+        }
+        assertThatCode { results.otherResults.single() }.doesNotThrowAnyException()
     }
 
     @Test
@@ -73,12 +104,12 @@ class CustomVaultQueryTest {
         val balancesNodesA = nodeA.transaction {
             nodeA.services.getCashBalances()
         }
-        println("BalanceA\n" + balancesNodesA)
+        println("BalanceA\n$balancesNodesA")
 
         val balancesNodesB = nodeB.transaction {
             nodeB.services.getCashBalances()
         }
-        println("BalanceB\n" + balancesNodesB)
+        println("BalanceB\n$balancesNodesB")
 
         return Pair(balancesNodesA, balancesNodesB)
     }

@@ -3,10 +3,10 @@ package net.corda.irs.web
 import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.RPCException
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.finance.plugin.registerFinanceJSONMappers
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -23,23 +23,23 @@ import org.springframework.context.annotation.Bean
 @SpringBootApplication
 class IrsDemoWebApplication {
     @Value("\${corda.host}")
-    lateinit var cordaHost:String
+    lateinit var cordaHost: String
 
     @Value("\${corda.user}")
-    lateinit var cordaUser:String
+    lateinit var cordaUser: String
 
     @Value("\${corda.password}")
-    lateinit var cordaPassword:String
+    lateinit var cordaPassword: String
 
     @Bean
     fun rpcClient(): CordaRPCOps {
         log.info("Connecting to Corda on $cordaHost using username $cordaUser and password $cordaPassword")
         // TODO remove this when CordaRPC gets proper connection retry, please
-        var maxRetries = 100;
+        var maxRetries = 100
         do {
             try {
                 return CordaRPCClient(NetworkHostAndPort.parse(cordaHost)).start(cordaUser, cordaPassword).proxy
-            } catch (ex: ActiveMQNotConnectedException) {
+            } catch (ex: RPCException) {
                 if (maxRetries-- > 0) {
                     Thread.sleep(1000)
                 } else {
@@ -60,7 +60,8 @@ class IrsDemoWebApplication {
     companion object {
         private val log = LoggerFactory.getLogger(this::class.java)
 
-        @JvmStatic fun main(args: Array<String>) {
+        @JvmStatic
+        fun main(args: Array<String>) {
             SpringApplication.run(IrsDemoWebApplication::class.java, *args)
         }
     }

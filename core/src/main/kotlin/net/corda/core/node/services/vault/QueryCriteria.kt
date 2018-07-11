@@ -51,6 +51,13 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     @CordaSerializable
     data class TimeCondition(val type: TimeInstantType, val predicate: ColumnPredicate<Instant>)
 
+    /**
+     * Select states based on their locks.
+     *
+     * @param [type] Whether to select all locked states, all unlocked states,
+     *   specific locked states, or all unlocked states plus specific locked states.
+     * @param [lockIds] The specific locked states to select (if applicable).
+     */
     // DOCSTART VaultQuerySoftLockingCriteria
     @CordaSerializable
     data class SoftLockingCondition(val type: SoftLockingType, val lockIds: List<UUID> = emptyList())
@@ -107,11 +114,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     }
 
     /**
-     * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleState]
-     *
-     * Valid TokenType implementations defined by Amount<T> are
-     *   [Currency] as used in [Cash] contract state
-     *   [Commodity] as used in [CommodityContract] state
+     * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleStates]
      */
     data class FungibleAssetQueryCriteria @JvmOverloads constructor(val participants: List<AbstractParty>? = null,
                                                                     val owner: List<AbstractParty>? = null,
@@ -133,8 +136,6 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
      *
      * Params
      *  [expression] refers to a (composable) type safe [CriteriaExpression]
-     *
-     * Refer to [CommercialPaper.State] for a concrete example.
      */
     data class VaultCustomQueryCriteria<L : PersistentState> @JvmOverloads constructor
     (val expression: CriteriaExpression<L, Boolean>,

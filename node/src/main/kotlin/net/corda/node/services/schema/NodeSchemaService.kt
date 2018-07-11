@@ -3,18 +3,20 @@ package net.corda.node.services.schema
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.LinearState
-import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
+import net.corda.core.schemas.*
+import net.corda.core.schemas.MappedSchemaValidator.crossReferencesToOtherMappedSchema
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.SchemaService.SchemaOptions
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
-import net.corda.node.services.messaging.P2PMessagingClient
+import net.corda.node.services.messaging.P2PMessageDeduplicator
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -43,9 +45,7 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
                     PersistentKeyManagementService.PersistentKey::class.java,
                     NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
-                    P2PMessagingClient.ProcessedMessage::class.java,
-                    P2PMessagingClient.RetryMessage::class.java,
-                    NodeAttachmentService.DBAttachment::class.java,
+                    P2PMessageDeduplicator.ProcessedMessage::class.java,
                     PersistentIdentityService.PersistentIdentity::class.java,
                     PersistentIdentityService.PersistentIdentityNames::class.java,
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java
@@ -55,10 +55,11 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
     object NodeNotary
 
     object NodeNotaryV1 : MappedSchema(schemaFamily = NodeNotary.javaClass, version = 1,
-            mappedTypes = listOf(PersistentUniquenessProvider.PersistentUniqueness::class.java,
-                    PersistentUniquenessProvider.PersistentNotaryCommit::class.java,
-                    RaftUniquenessProvider.RaftState::class.java,
-                    BFTNonValidatingNotaryService.PersistedCommittedState::class.java
+            mappedTypes = listOf(PersistentUniquenessProvider.BaseComittedState::class.java,
+                    PersistentUniquenessProvider.Request::class.java,
+                    PersistentUniquenessProvider.CommittedState::class.java,
+                    RaftUniquenessProvider.CommittedState::class.java,
+                    BFTNonValidatingNotaryService.CommittedState::class.java
             ))
 
     // Required schemas are those used by internal Corda services
@@ -86,10 +87,15 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
 
     // Because schema is always one supported by the state, just delegate.
     override fun generateMappedObject(state: ContractState, schema: MappedSchema): PersistentState {
-        if ((schema is VaultSchemaV1) && (state is LinearState))
+        if ((schema === VaultSchemaV1) && (state is LinearState))
             return VaultSchemaV1.VaultLinearStates(state.linearId, state.participants)
-        if ((schema is VaultSchemaV1) && (state is FungibleAsset<*>))
+        if ((schema === VaultSchemaV1) && (state is FungibleAsset<*>))
             return VaultSchemaV1.VaultFungibleStates(state.owner, state.amount.quantity, state.amount.token.issuer.party, state.amount.token.issuer.reference, state.participants)
         return (state as QueryableState).generateMappedObject(schema)
     }
+
+    /** Returns list of [MappedSchemaValidator.SchemaCrossReferenceReport] violations. */
+    fun mappedSchemasWarnings(): List<MappedSchemaValidator.SchemaCrossReferenceReport> =
+            schemaOptions.keys.map { schema -> crossReferencesToOtherMappedSchema(schema) }.flatMap { it.toList() }
+
 }

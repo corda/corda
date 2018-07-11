@@ -13,6 +13,7 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
 import javafx.util.Duration
+import net.corda.client.rpc.RPCException
 import net.corda.core.concurrent.match
 import net.corda.core.contracts.ContractState
 import net.corda.core.messaging.CordaRPCOps
@@ -41,7 +42,7 @@ class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
 
     private companion object {
-        val pageSpecification = PageSpecification(1, 1)
+        private val pageSpecification = PageSpecification(1, 1)
     }
 
     private val nodeController by inject<NodeController>()
@@ -85,7 +86,7 @@ class NodeTerminalView : Fragment() {
         root.children.add(stack)
         root.isVisible = true
 
-        SwingUtilities.invokeLater({
+        SwingUtilities.invokeLater {
             val r3pty = R3Pty(config.nodeConfig.myLegalName, TerminalSettingsProvider(), Dimension(160, 80), onExit)
             pty = r3pty
 
@@ -111,7 +112,7 @@ class NodeTerminalView : Fragment() {
                     rpc?.close()
                 }
             }
-        })
+        }
     }
 
     /*
@@ -180,11 +181,12 @@ class NodeTerminalView : Fragment() {
     }
 
     private fun launchRPC(config: NodeConfigWrapper) = NodeRPC(
-            config = config,
-            start = this::initialise,
-            invoke = this::pollCashBalances
+        config = config,
+        start = ::initialise,
+        invoke = ::pollCashBalances
     )
 
+    @Suppress("DEPRECATION")
     private fun initialise(config: NodeConfigWrapper, ops: CordaRPCOps) {
         try {
             val (txInit, txNext) = ops.internalVerifiedTransactionsFeed()
@@ -201,13 +203,25 @@ class NodeTerminalView : Fragment() {
             }
 
             val fxScheduler = Schedulers.from(Platform::runLater)
-            subscriptions.add(txNext.observeOn(fxScheduler).subscribe {
+            subscriptions.add(txNext.observeOn(fxScheduler).subscribe({
                 transactions.value = (++txCount).toString()
-            })
-            subscriptions.add(stateNext.observeOn(fxScheduler).subscribe {
+            }, { error ->
+                if (error is RPCException && error.message?.contains("Connection failure detected") == true) {
+                    // Ignore this ^^^, it only happens when we shutdown a node in Demobench.
+                } else {
+                    throw error
+                }
+            }))
+            subscriptions.add(stateNext.observeOn(fxScheduler).subscribe({
                 stateCount += (it.produced.size - it.consumed.size)
                 states.value = stateCount.toString()
-            })
+            }, { error ->
+                if (error is RPCException && error.message?.contains("Connection failure detected") == true) {
+                    // Ignore this ^^^, it only happens when we shutdown a node in Demobench.
+                } else {
+                    throw error
+                }
+            }))
         } catch (e: Exception) {
             log.log(Level.WARNING, "RPC failed: ${e.message}", e)
         }
@@ -221,8 +235,8 @@ class NodeTerminalView : Fragment() {
     private fun pollCashBalances(ops: CordaRPCOps) {
         try {
             val cashBalances = ops.getCashBalances().entries.joinToString(
-                    separator = ", ",
-                    transform = { e -> e.value.toString() }
+                separator = ", ",
+                transform = { e -> e.value.toString() }
             )
 
             Platform.runLater {
@@ -239,21 +253,18 @@ class NodeTerminalView : Fragment() {
         header.isDisable = true
         subscriptions.forEach {
             // Don't allow any exceptions here to halt tab destruction.
-            try {
-                it.unsubscribe()
-            } catch (e: Exception) {
-            }
+            ignoreExceptions { it.unsubscribe() }
         }
-        webServer.close()
-        explorer.close()
-        viewer.close()
-        rpc?.close()
+        ignoreExceptions { webServer.close() }
+        ignoreExceptions { explorer.close() }
+        ignoreExceptions { viewer.close() }
+        ignoreExceptions { rpc?.close() }
     }
 
     fun destroy() {
         if (!isDestroyed) {
             shutdown()
-            pty?.close()
+            ignoreExceptions { pty?.close() }
             isDestroyed = true
         }
     }
@@ -264,6 +275,10 @@ class NodeTerminalView : Fragment() {
         Platform.runLater {
             swingTerminal.requestFocus()
         }
+    }
+
+    private fun ignoreExceptions(op: () -> Unit) {
+        try { op() } catch (e: Exception) {}
     }
 
     class TerminalSettingsProvider : DefaultSettingsProvider() {

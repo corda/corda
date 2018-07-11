@@ -1,8 +1,12 @@
 package net.corda.core.node
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
+import net.corda.core.utilities.days
+import java.time.Duration
 import java.time.Instant
 
 /**
@@ -16,10 +20,11 @@ import java.time.Instant
  * @property epoch Version number of the network parameters. Starting from 1, this will always increment on each new set
  * of parameters.
  * @property whitelistedContractImplementations List of whitelisted jars containing contract code for each contract class.
- *  This will be used by [net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint]. Read more about contract constraints here: <https://docs.corda.net/api-contract-constraints.html>
+ *  This will be used by [net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint]. [You can learn more about contract constraints here](https://docs.corda.net/api-contract-constraints.html).
+ * @property eventHorizon Time after which nodes will be removed from the network map if they have not been seen
+ * during this period
  */
-// TODO Add eventHorizon - how many days a node can be offline before being automatically ejected from the network.
-//  It needs separate design.
+@KeepForDJVM
 @CordaSerializable
 data class NetworkParameters(
         val minimumPlatformVersion: Int,
@@ -28,14 +33,67 @@ data class NetworkParameters(
         val maxTransactionSize: Int,
         val modifiedTime: Instant,
         val epoch: Int,
-        val whitelistedContractImplementations: Map<String, List<AttachmentId>>
+        val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
+        val eventHorizon: Duration
 ) {
+    @DeprecatedConstructorForDeserialization(1)
+    constructor (minimumPlatformVersion: Int,
+                 notaries: List<NotaryInfo>,
+                 maxMessageSize: Int,
+                 maxTransactionSize: Int,
+                 modifiedTime: Instant,
+                 epoch: Int,
+                 whitelistedContractImplementations: Map<String, List<AttachmentId>>
+    ) : this(minimumPlatformVersion,
+            notaries,
+            maxMessageSize,
+            maxTransactionSize,
+            modifiedTime,
+            epoch,
+            whitelistedContractImplementations,
+            Int.MAX_VALUE.days
+    )
+
     init {
         require(minimumPlatformVersion > 0) { "minimumPlatformVersion must be at least 1" }
         require(notaries.distinctBy { it.identity } == notaries) { "Duplicate notary identities" }
         require(epoch > 0) { "epoch must be at least 1" }
         require(maxMessageSize > 0) { "maxMessageSize must be at least 1" }
         require(maxTransactionSize > 0) { "maxTransactionSize must be at least 1" }
+        require(!eventHorizon.isNegative) { "eventHorizon must be positive value" }
+    }
+
+    fun copy(minimumPlatformVersion: Int,
+             notaries: List<NotaryInfo>,
+             maxMessageSize: Int,
+             maxTransactionSize: Int,
+             modifiedTime: Instant,
+             epoch: Int,
+             whitelistedContractImplementations: Map<String, List<AttachmentId>>
+    ): NetworkParameters {
+        return copy(minimumPlatformVersion = minimumPlatformVersion,
+                notaries = notaries,
+                maxMessageSize = maxMessageSize,
+                maxTransactionSize = maxTransactionSize,
+                modifiedTime = modifiedTime,
+                epoch = epoch,
+                whitelistedContractImplementations = whitelistedContractImplementations,
+                eventHorizon = eventHorizon)
+    }
+
+    override fun toString(): String {
+        return """NetworkParameters {
+  minimumPlatformVersion=$minimumPlatformVersion
+  notaries=$notaries
+  maxMessageSize=$maxMessageSize
+  maxTransactionSize=$maxTransactionSize
+  whitelistedContractImplementations {
+    ${whitelistedContractImplementations.entries.joinToString("\n    ")}
+  }
+  eventHorizon=$eventHorizon
+  modifiedTime=$modifiedTime
+  epoch=$epoch
+}"""
     }
 }
 
@@ -44,5 +102,6 @@ data class NetworkParameters(
  * @property identity Identity of the notary (note that it can be an identity of the distributed node).
  * @property validating Indicates if the notary is validating.
  */
+@KeepForDJVM
 @CordaSerializable
 data class NotaryInfo(val identity: Party, val validating: Boolean)

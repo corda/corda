@@ -1,7 +1,9 @@
 package net.corda.core.identity
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.validate
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.security.cert.*
@@ -12,6 +14,7 @@ import java.security.cert.*
  * not part of the identifier themselves.
  */
 @CordaSerializable
+@KeepForDJVM
 class PartyAndCertificate(val certPath: CertPath) {
     @Transient
     val certificate: X509Certificate
@@ -40,9 +43,7 @@ class PartyAndCertificate(val certPath: CertPath) {
 
     /** Verify the certificate path is valid. */
     fun verify(trustAnchor: TrustAnchor): PKIXCertPathValidatorResult {
-        val parameters = PKIXParameters(setOf(trustAnchor)).apply { isRevocationEnabled = false }
-        val validator = CertPathValidator.getInstance("PKIX")
-        val result = validator.validate(certPath, parameters) as PKIXCertPathValidatorResult
+        val result = certPath.validate(trustAnchor)
         // Apply Corda-specific validity rules to the chain. This only applies to chains with any roles present, so
         // an all-null chain is in theory valid.
         var parentRole: CertRole? = CertRole.extract(result.trustAnchor.trustedCert)

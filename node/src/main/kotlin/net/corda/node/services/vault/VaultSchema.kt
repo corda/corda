@@ -11,7 +11,6 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import org.hibernate.annotations.Type
-import java.io.Serializable
 import java.time.Instant
 import java.util.*
 import javax.persistence.*
@@ -28,27 +27,25 @@ object VaultSchema
 object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, version = 1,
         mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java, VaultTxnNote::class.java)) {
     @Entity
-    @Table(name = "vault_states",
-            indexes = arrayOf(Index(name = "state_status_idx", columnList = "state_status"),
-                    Index(name = "lock_id_idx", columnList = "lock_id, state_status")))
+    @Table(name = "vault_states", indexes = [Index(name = "state_status_idx", columnList = "state_status"), Index(name = "lock_id_idx", columnList = "lock_id, state_status")])
     class VaultStates(
             /** NOTE: serialized transaction state (including contract state) is now resolved from transaction store */
             // TODO: create a distinct table to hold serialized state data (once DBTransactionStore is encrypted)
 
             /** refers to the X500Name of the notary a state is attached to */
-            @Column(name = "notary_name")
+            @Column(name = "notary_name", nullable = false)
             var notary: Party,
 
             /** references a concrete ContractState that is [QueryableState] and has a [MappedSchema] */
-            @Column(name = "contract_state_class_name")
+            @Column(name = "contract_state_class_name", nullable = false)
             var contractStateClassName: String,
 
             /** state lifecycle: unconsumed, consumed */
-            @Column(name = "state_status")
+            @Column(name = "state_status", nullable = false)
             var stateStatus: Vault.StateStatus,
 
             /** refers to timestamp recorded upon entering UNCONSUMED state */
-            @Column(name = "recorded_timestamp")
+            @Column(name = "recorded_timestamp", nullable = false)
             var recordedTime: Instant,
 
             /** refers to timestamp recorded upon entering CONSUMED state */
@@ -66,28 +63,24 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     ) : PersistentState()
 
     @Entity
-    @Table(name = "vault_linear_states",
-            indexes = arrayOf(Index(name = "external_id_index", columnList = "external_id"),
-                    Index(name = "uuid_index", columnList = "uuid")))
+    @Table(name = "vault_linear_states", indexes = [Index(name = "external_id_index", columnList = "external_id"), Index(name = "uuid_index", columnList = "uuid")])
     class VaultLinearStates(
             /** [ContractState] attributes */
 
             /** X500Name of participant parties **/
             @ElementCollection
             @CollectionTable(name = "vault_linear_states_parts",
-                    joinColumns = arrayOf(
-                            JoinColumn(name = "output_index", referencedColumnName = "output_index"),
-                            JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")),
+                    joinColumns = [(JoinColumn(name = "output_index", referencedColumnName = "output_index")), (JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"))],
                     foreignKey = ForeignKey(name = "FK__lin_stat_parts__lin_stat"))
             @Column(name = "participants")
-            var participants: MutableSet<AbstractParty>? = null,
+            var participants: MutableSet<AbstractParty?>? = null,
             // Reason for not using Set is described here:
             // https://stackoverflow.com/questions/44213074/kotlin-collection-has-neither-generic-type-or-onetomany-targetentity
 
             /**
              *  Represents a [LinearState] [UniqueIdentifier]
              */
-            @Column(name = "external_id")
+            @Column(name = "external_id", nullable = true)
             var externalId: String?,
 
             @Column(name = "uuid", nullable = false)
@@ -108,18 +101,16 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             /** X500Name of participant parties **/
             @ElementCollection
             @CollectionTable(name = "vault_fungible_states_parts",
-                    joinColumns = arrayOf(
-                            JoinColumn(name = "output_index", referencedColumnName = "output_index"),
-                            JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")),
+                    joinColumns = [(JoinColumn(name = "output_index", referencedColumnName = "output_index")), (JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"))],
                     foreignKey = ForeignKey(name = "FK__fung_st_parts__fung_st"))
-            @Column(name = "participants")
+            @Column(name = "participants", nullable = true)
             var participants: MutableSet<AbstractParty>? = null,
 
             /** [OwnableState] attributes */
 
             /** X500Name of owner party **/
-            @Column(name = "owner_name")
-            var owner: AbstractParty,
+            @Column(name = "owner_name", nullable = true)
+            var owner: AbstractParty?,
 
             /** [FungibleAsset] attributes
              *
@@ -128,16 +119,16 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
              */
 
             /** Amount attributes */
-            @Column(name = "quantity")
+            @Column(name = "quantity", nullable = false)
             var quantity: Long,
 
             /** Issuer attributes */
 
             /** X500Name of issuer party **/
-            @Column(name = "issuer_name")
-            var issuer: AbstractParty,
+            @Column(name = "issuer_name", nullable = true)
+            var issuer: AbstractParty?,
 
-            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
             @Type(type = "corda-wrapper-binary")
             var issuerRef: ByteArray
     ) : PersistentState() {
@@ -150,21 +141,19 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     }
 
     @Entity
-    @Table(name = "vault_transaction_notes",
-            indexes = arrayOf(Index(name = "seq_no_index", columnList = "seq_no"),
-                    Index(name = "transaction_id_index", columnList = "transaction_id")))
+    @Table(name = "vault_transaction_notes", indexes = [Index(name = "seq_no_index", columnList = "seq_no"), Index(name = "transaction_id_index", columnList = "transaction_id")])
     class VaultTxnNote(
             @Id
             @GeneratedValue
-            @Column(name = "seq_no")
+            @Column(name = "seq_no", nullable = false)
             var seqNo: Int,
 
-            @Column(name = "transaction_id", length = 64)
-            var txId: String,
+            @Column(name = "transaction_id", length = 64, nullable = true)
+            var txId: String?,
 
-            @Column(name = "note")
-            var note: String
-    ) : Serializable {
+            @Column(name = "note", nullable = true)
+            var note: String?
+    ) {
         constructor(txId: String, note: String) : this(0, txId, note)
     }
 }

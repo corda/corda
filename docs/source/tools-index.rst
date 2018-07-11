@@ -4,9 +4,7 @@ Tools
 .. toctree::
    :maxdepth: 1
 
-   network-simulator
+   network-bootstrapper
+   blob-inspector
    demobench
    node-explorer
-   azure-vm
-   aws-vm
-   loadtesting

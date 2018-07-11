@@ -1,9 +1,7 @@
 package net.corda.demobench.model
 
-import com.typesafe.config.Config
+import com.typesafe.config.*
 import com.typesafe.config.ConfigFactory.empty
-import com.typesafe.config.ConfigRenderOptions
-import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
@@ -33,27 +31,34 @@ data class NodeConfig(
         val issuableCurrencies: List<String> = emptyList(),
         /** Pass-through for generating node.conf with external DB */
         val dataSourceProperties: Properties? = null,
-        val database: Properties? = null
+        val database: Properties? = null,
+        private val devMode: Boolean = true,
+        private val detectPublicIp: Boolean = false,
+        private val useTestClock: Boolean = true
 ) {
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
         val defaultUser = user("guest")
-        val cordappDirName = "cordapps"
+        const val cordappDirName = "cordapps"
     }
 
-    @Suppress("unused")
-    private val detectPublicIp = false
-    @Suppress("unused")
-    private val useTestClock = true
-
     fun nodeConf(): Config {
-
-        val basic = NodeConfigurationData(myLegalName, p2pAddress, rpcAddress, notary, h2port, rpcUsers, useTestClock, detectPublicIp).toConfig()
-        val rpcSettings = empty()
-                .withValue("address", ConfigValueFactory.fromAnyRef(rpcAddress.toString()))
-                .withValue("adminAddress", ConfigValueFactory.fromAnyRef(rpcAdminAddress.toString()))
-                .root()
-        return basic.withoutPath("rpcAddress").withoutPath("rpcAdminAddress").withValue("rpcSettings", rpcSettings)
+        val rpcSettings: ConfigObject = empty()
+            .withValue("address", valueFor(rpcAddress.toString()))
+            .withValue("adminAddress", valueFor(rpcAdminAddress.toString()))
+            .root()
+        val customMap: Map<String, Any> = HashMap<String, Any>().also {
+            if (issuableCurrencies.isNotEmpty()) {
+                it["issuableCurrencies"] = issuableCurrencies
+            }
+        }
+        val custom: ConfigObject = ConfigFactory.parseMap(customMap).root()
+        return NodeConfigurationData(myLegalName, p2pAddress, rpcAddress, notary, h2port, rpcUsers, useTestClock, detectPublicIp, devMode)
+            .toConfig()
+            .withoutPath("rpcAddress")
+            .withoutPath("rpcAdminAddress")
+            .withValue("rpcSettings", rpcSettings)
+            .withOptionalValue("custom", custom)
     }
 
     fun webServerConf() = WebServerConfigurationData(myLegalName, rpcAddress, webAddress, rpcUsers).asConfig()
@@ -62,32 +67,29 @@ data class NodeConfig(
 
     fun toWebServerConfText() = webServerConf().render()
 
-    fun serialiseAsString(): String {
-
-        return toConfig().render()
-    }
+    fun serialiseAsString(): String = toConfig().render()
 
     private fun Config.render(): String = root().render(renderOptions)
 }
 
 private data class NodeConfigurationData(
-        val myLegalName: CordaX500Name,
-        val p2pAddress: NetworkHostAndPort,
-        val rpcAddress: NetworkHostAndPort,
-        val notary: NotaryService?,
-        val h2port: Int,
-        val rpcUsers: List<User> = listOf(NodeConfig.defaultUser),
-        val useTestClock: Boolean,
-        val detectPublicIp: Boolean
+    val myLegalName: CordaX500Name,
+    val p2pAddress: NetworkHostAndPort,
+    val rpcAddress: NetworkHostAndPort,
+    val notary: NotaryService?,
+    val h2port: Int,
+    val rpcUsers: List<User> = listOf(NodeConfig.defaultUser),
+    val useTestClock: Boolean,
+    val detectPublicIp: Boolean,
+    val devMode: Boolean
 )
 
 private data class WebServerConfigurationData(
-        val myLegalName: CordaX500Name,
-        val rpcAddress: NetworkHostAndPort,
-        val webAddress: NetworkHostAndPort,
-        val rpcUsers: List<User>
+    val myLegalName: CordaX500Name,
+    val rpcAddress: NetworkHostAndPort,
+    val webAddress: NetworkHostAndPort,
+    val rpcUsers: List<User>
 ) {
-
    fun asConfig() = toConfig()
 }
 
@@ -118,3 +120,9 @@ data class NodeConfigWrapper(val baseDir: Path, val nodeConfig: NodeConfig) : Ha
 fun user(name: String) = User(name, "letmein", setOf("ALL"))
 
 fun String.toKey() = filter { !it.isWhitespace() }.toLowerCase()
+
+fun <T> valueFor(any: T): ConfigValue = ConfigValueFactory.fromAnyRef(any)
+
+private fun Config.withOptionalValue(path: String, obj: ConfigObject): Config {
+    return if (obj.isEmpty()) this else this.withValue(path, obj)
+}

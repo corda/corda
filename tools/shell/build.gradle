@@ -1,7 +1,8 @@
 apply plugin: 'kotlin'
 apply plugin: 'java'
-apply plugin: 'application'
 apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda Shell'
 
@@ -35,9 +36,8 @@ dependencies {
     compile project(':node-api')
     compile project(':client:rpc')
 
-    // Jackson support: serialisation to/from JSON, YAML, etc
+    // Jackson support: serialisation to/from JSON, YAML, etc.
     compile project(':client:jackson')
-    compile group: 'org.json', name: 'json', version: json_version
 
 
     // JOpt: for command line flags.
@@ -57,8 +57,11 @@ dependencies {
     // JAnsi: for drawing things to the terminal in nicely coloured ways.
     compile "org.fusesource.jansi:jansi:$jansi_version"
 
-    // Manifests: for reading stuff from the manifest file
+    // Manifests: for reading stuff from the manifest file.
     compile "com.jcabi:jcabi-manifests:1.1"
+    
+    // For logging, required for ANSIProgressRenderer.
+    compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
 
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
@@ -66,27 +69,25 @@ dependencies {
     testCompile project(':test-utils')
     testCompile project(':finance')
 
-    // Integration test helpers
+    // Integration test helpers.
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
 
-    // Jsh: Testing SSH server
+    // Jsh: Testing SSH server.
     integrationTestCompile "com.jcraft:jsch:$jsch_version"
 
     integrationTestCompile project(':node-driver')
 }
 
-mainClassName = 'net.corda.tools.shell.StandaloneShellKt'
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
 
 jar {
     baseName 'corda-shell'
 }
 
-processResources {
-    from file("$rootDir/config/dev/log4j2.xml")
-}
-
-task integrationTest(type: Test) {
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
+publish {
+    name jar.baseName
 }

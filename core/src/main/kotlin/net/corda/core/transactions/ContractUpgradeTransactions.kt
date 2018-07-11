@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -22,6 +23,7 @@ import java.security.PublicKey
 // TODO: check transaction size is within limits
 
 /** A special transaction for upgrading the contract of a state. */
+@KeepForDJVM
 @CordaSerializable
 data class ContractUpgradeWireTransaction(
         /**
@@ -41,6 +43,7 @@ data class ContractUpgradeWireTransaction(
 
     init {
         check(inputs.isNotEmpty()) { "A contract upgrade transaction must have inputs" }
+        checkBaseInvariants()
     }
 
     /**
@@ -109,6 +112,7 @@ data class ContractUpgradeWireTransaction(
  * is no flexibility on what parts of the transaction to reveal – the inputs and notary field are always visible and the
  * rest of the transaction is always hidden. Its only purpose is to hide transaction data when using a non-validating notary.
  */
+@KeepForDJVM
 @CordaSerializable
 data class ContractUpgradeFilteredTransaction(
         /** Transaction components that are exposed. */
@@ -157,6 +161,7 @@ data class ContractUpgradeFilteredTransaction(
  * In contrast with a regular transaction, signatures are checked against the signers specified by input states'
  * *participants* fields, so full resolution is needed for signature verification.
  */
+@KeepForDJVM
 data class ContractUpgradeLedgerTransaction(
         override val inputs: List<StateAndRef<ContractState>>,
         override val notary: Party,
@@ -211,17 +216,17 @@ data class ContractUpgradeLedgerTransaction(
      * Outputs are computed by running the contract upgrade logic on input states. This is done eagerly so that the
      * transaction is verified during construction.
      */
-    override val outputs: List<TransactionState<ContractState>> = inputs.map { input ->
+    override val outputs: List<TransactionState<ContractState>> = inputs.map { (state) ->
         // TODO: if there are encumbrance states in the inputs, just copy them across without modifying
-        val upgradedState = upgradedContract.upgrade(input.state.data)
-        val inputConstraint = input.state.constraint
+        val upgradedState = upgradedContract.upgrade(state.data)
+        val inputConstraint = state.constraint
         val outputConstraint = when (inputConstraint) {
             is HashAttachmentConstraint -> HashAttachmentConstraint(upgradedContractAttachment.id)
             WhitelistedByZoneAttachmentConstraint -> WhitelistedByZoneAttachmentConstraint
             else -> throw IllegalArgumentException("Unsupported input contract constraint $inputConstraint")
         }
         // TODO: re-map encumbrance pointers
-        input.state.copy(
+        state.copy(
                 data = upgradedState,
                 contract = upgradedContractClassName,
                 constraint = outputConstraint

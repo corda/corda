@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static net.corda.core.contracts.ContractsDSL.requireThat;
 import static net.corda.core.crypto.Crypto.generateKeyPair;
 
@@ -466,7 +467,7 @@ public class FlowCookbookJava {
             subFlow(new SendStateAndRefFlow(counterpartySession, dummyStates));
 
             // On the receive side ...
-            List<StateAndRef<DummyState>> resolvedStateAndRef = subFlow(new ReceiveStateAndRefFlow<DummyState>(counterpartySession));
+            List<StateAndRef<DummyState>> resolvedStateAndRef = subFlow(new ReceiveStateAndRefFlow<>(counterpartySession));
             // DOCEND 14
 
             try {
@@ -662,7 +663,7 @@ public class FlowCookbookJava {
                     requireThat(require -> {
                         // Any additional checking we see fit...
                         DummyState outputState = (DummyState) stx.getTx().getOutputs().get(0).getData();
-                        assert (outputState.getMagicNumber() == 777);
+                        checkArgument(outputState.getMagicNumber() == 777);
                         return null;
                     });
                 }

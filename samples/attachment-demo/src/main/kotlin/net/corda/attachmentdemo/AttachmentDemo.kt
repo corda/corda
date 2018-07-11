@@ -86,14 +86,12 @@ fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
 }
 
 private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256, executor: ScheduledExecutorService) {
-
     // Get the identity key of the other side (the recipient).
     val notaryFuture: CordaFuture<Party> = poll(executor, DUMMY_NOTARY_NAME.toString()) { rpc.wellKnownPartyFromX500Name(DUMMY_NOTARY_NAME) }
     val otherSideFuture: CordaFuture<Party> = poll(executor, DUMMY_BANK_B_NAME.toString()) { rpc.wellKnownPartyFromX500Name(DUMMY_BANK_B_NAME) }
     // Make sure we have the file in storage
     if (!rpc.attachmentExists(hash)) {
         inputStream.use {
-            val avail = inputStream.available()
             val id = rpc.uploadAttachment(it)
             require(hash == id) { "Id was '$id' instead of '$hash'" }
         }
@@ -133,6 +131,7 @@ class AttachmentDemoFlow(private val otherSide: Party,
     }
 }
 
+@Suppress("DEPRECATION")
 // DOCSTART 1
 fun recipient(rpc: CordaRPCOps, webPort: Int) {
     println("Waiting to receive transaction ...")
@@ -183,7 +182,7 @@ private fun printHelp(parser: OptionParser) {
     parser.printHelpOn(System.out)
 }
 
-val ATTACHMENT_PROGRAM_ID = "net.corda.attachmentdemo.AttachmentContract"
+const val ATTACHMENT_PROGRAM_ID = "net.corda.attachmentdemo.AttachmentContract"
 
 class AttachmentContract : Contract {
     override fun verify(tx: LedgerTransaction) {

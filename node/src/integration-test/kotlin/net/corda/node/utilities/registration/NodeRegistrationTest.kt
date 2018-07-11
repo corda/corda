@@ -2,11 +2,10 @@ package net.corda.node.utilities.registration
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.logElapsedTime
+import net.corda.core.internal.readFully
 import net.corda.core.messaging.startFlow
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.minutes
+import net.corda.core.utilities.*
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -21,7 +20,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.internal.CompatibilityZoneParams
+import net.corda.testing.node.internal.SharedCompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
@@ -38,6 +37,8 @@ import java.security.KeyPair
 import java.security.cert.CertPath
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentSkipListSet
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.ws.rs.*
@@ -63,10 +64,10 @@ class NodeRegistrationTest {
     @Before
     fun startServer() {
         server = NetworkMapServer(
-                cacheTimeout = 1.minutes,
+                pollInterval = 1.seconds,
                 hostAndPort = portAllocation.nextHostAndPort(),
                 myHostNameValue = "localhost",
-                additionalServices = registrationHandler)
+                additionalServices = *arrayOf(registrationHandler))
         serverHostAndPort = server.start()
     }
 
@@ -77,7 +78,7 @@ class NodeRegistrationTest {
 
     @Test
     fun `node registration correct root cert`() {
-        val compatibilityZone = CompatibilityZoneParams(
+        val compatibilityZone = SharedCompatibilityZoneParams(
                 URL("http://$serverHostAndPort"),
                 publishNotaries = { server.networkParameters = testNetworkParameters(it) },
                 rootCert = DEV_ROOT_CA.certificate)
@@ -86,14 +87,13 @@ class NodeRegistrationTest {
                 compatibilityZone = compatibilityZone,
                 initialiseSerialization = false,
                 notarySpecs = listOf(NotarySpec(notaryName)),
-                extraCordappPackagesToScan = listOf("net.corda.finance")
+                extraCordappPackagesToScan = listOf("net.corda.finance"),
+                notaryCustomOverrides = mapOf("devMode" to false)
         ) {
-            val nodes = listOf(
-                    startNode(providedName = aliceName),
-                    startNode(providedName = genevieveName),
-                    defaultNotaryNode
+            val (alice, genevieve) = listOf(
+                    startNode(providedName = aliceName, customOverrides = mapOf("devMode" to false)),
+                    startNode(providedName = genevieveName, customOverrides = mapOf("devMode" to false))
             ).transpose().getOrThrow()
-            val (alice, genevieve) = nodes
 
             assertThat(registrationHandler.idsPolled).containsOnly(
                     aliceName.organisation,
@@ -116,28 +116,36 @@ class NodeRegistrationTest {
 
 @Path("certificate")
 class RegistrationHandler(private val rootCertAndKeyPair: CertificateAndKeyPair) {
-    private val certPaths = HashMap<String, CertPath>()
-    val idsPolled = HashSet<String>()
+    private val certPaths = ConcurrentHashMap<String, CertPath>()
+    val idsPolled = ConcurrentSkipListSet<String>()
+
+    companion object {
+        val log = loggerFor<RegistrationHandler>()
+    }
 
     @POST
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     @Produces(MediaType.TEXT_PLAIN)
     fun registration(input: InputStream): Response {
-        val certificationRequest = input.use { JcaPKCS10CertificationRequest(it.readBytes()) }
-        val (certPath, name) = createSignedClientCertificate(
-                certificationRequest,
-                rootCertAndKeyPair.keyPair,
-                listOf(rootCertAndKeyPair.certificate))
-        require(!name.organisation.contains("\\s".toRegex())) { "Whitespace in the organisation name not supported" }
-        certPaths[name.organisation] = certPath
-        return Response.ok(name.organisation).build()
+        return log.logElapsedTime("Registration") {
+            val certificationRequest = JcaPKCS10CertificationRequest(input.readFully())
+            val (certPath, name) = createSignedClientCertificate(
+                    certificationRequest,
+                    rootCertAndKeyPair.keyPair,
+                    listOf(rootCertAndKeyPair.certificate))
+            require(!name.organisation.contains("\\s".toRegex())) { "Whitespace in the organisation name not supported" }
+            certPaths[name.organisation] = certPath
+            Response.ok(name.organisation).build()
+        }
     }
 
     @GET
     @Path("{id}")
     fun reply(@PathParam("id") id: String): Response {
-        idsPolled += id
-        return buildResponse(certPaths[id]!!.certificates)
+        return log.logElapsedTime("Reply by Id") {
+            idsPolled += id
+            buildResponse(certPaths[id]!!.certificates)
+        }
     }
 
     private fun buildResponse(certificates: List<Certificate>): Response {

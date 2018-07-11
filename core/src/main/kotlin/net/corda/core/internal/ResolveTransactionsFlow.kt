@@ -1,6 +1,7 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
@@ -12,6 +13,8 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.exactAdd
 import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.math.min
 
 // TODO: This code is currently unit tested by TwoPartyTradeFlowTests, it should have its own tests.
 /**
@@ -20,8 +23,13 @@ import java.util.*
  *
  * @return a list of verified [SignedTransaction] objects, in a depth-first order.
  */
-class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
-                              private val otherSide: FlowSession) : FlowLogic<List<SignedTransaction>>() {
+@DeleteForDJVM
+class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
+                              private val otherSide: FlowSession) : FlowLogic<Unit>() {
+
+    // Need it ordered in terms of iteration. Needs to be a variable for the check-pointing logic to work.
+    private val txHashes = txHashesArg.toList()
+
     /**
      * Resolves and validates the dependencies of the specified [SignedTransaction]. Fetches the attachments, but does
      * *not* validate or store the [SignedTransaction] itself.
@@ -32,38 +40,21 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
         this.signedTransaction = signedTransaction
     }
 
+    @DeleteForDJVM
     companion object {
         private fun dependencyIDs(stx: SignedTransaction) = stx.inputs.map { it.txhash }.toSet()
+
+        private const val RESOLUTION_PAGE_SIZE = 100
 
         /**
          * Topologically sorts the given transactions such that dependencies are listed before dependers. */
         @JvmStatic
         fun topologicalSort(transactions: Collection<SignedTransaction>): List<SignedTransaction> {
-            // Construct txhash -> dependent-txs map
-            val forwardGraph = HashMap<SecureHash, HashSet<SignedTransaction>>()
-            transactions.forEach { stx ->
-                stx.inputs.forEach { (txhash) ->
-                    // Note that we use a LinkedHashSet here to make the traversal deterministic (as long as the input list is)
-                    forwardGraph.getOrPut(txhash) { LinkedHashSet() }.add(stx)
-                }
+            val sort = TopologicalSort()
+            for (tx in transactions) {
+                sort.add(tx)
             }
-
-            val visited = HashSet<SecureHash>(transactions.size)
-            val result = ArrayList<SignedTransaction>(transactions.size)
-
-            fun visit(transaction: SignedTransaction) {
-                if (transaction.id !in visited) {
-                    visited.add(transaction.id)
-                    forwardGraph[transaction.id]?.forEach(::visit)
-                    result.add(transaction)
-                }
-            }
-
-            transactions.forEach(::visit)
-
-            result.reverse()
-            require(result.size == transactions.size)
-            return result
+            return sort.complete()
         }
     }
 
@@ -83,10 +74,16 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
 
     @Suspendable
     @Throws(FetchDataFlow.HashNotFound::class)
-    override fun call(): List<SignedTransaction> {
+    override fun call() {
+        val newTxns = ArrayList<SignedTransaction>(txHashes.size)
         // Start fetching data.
-        val newTxns = downloadDependencies(txHashes)
-        fetchMissingAttachments(signedTransaction?.let { newTxns + it } ?: newTxns)
+        for (pageNumber in 0..(txHashes.size - 1) / RESOLUTION_PAGE_SIZE) {
+            val page = page(pageNumber, RESOLUTION_PAGE_SIZE)
+
+            newTxns += downloadDependencies(page)
+            val txsWithMissingAttachments = if (pageNumber == 0) signedTransaction?.let { newTxns + it } ?: newTxns else newTxns
+            fetchMissingAttachments(txsWithMissingAttachments)
+        }
         otherSide.send(FetchDataFlow.Request.End)
         // Finish fetching data.
 
@@ -99,13 +96,17 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             it.verify(serviceHub)
             serviceHub.recordTransactions(StatesToRecord.NONE, listOf(it))
         }
+    }
 
-        return signedTransaction?.let {
-            result + it
-        } ?: result
+    private fun page(pageNumber: Int, pageSize: Int): Set<SecureHash> {
+        val offset = pageNumber * pageSize
+        val limit = min(offset + pageSize, txHashes.size)
+        // call toSet() is needed because sub-lists are not checkpoint-friendly.
+        return txHashes.subList(offset, limit).toSet()
     }
 
     @Suspendable
+    // TODO use paging here (we literally get the entire dependencies graph in memory)
     private fun downloadDependencies(depsToCheck: Set<SecureHash>): List<SignedTransaction> {
         // Maintain a work queue of all hashes to load/download, initialised with our starting set. Then do a breadth
         // first traversal across the dependency graph.
@@ -132,13 +133,14 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
         while (nextRequests.isNotEmpty()) {
             // Don't re-download the same tx when we haven't verified it yet but it's referenced multiple times in the
             // graph we're traversing.
-            val notAlreadyFetched = nextRequests.filterNot { it in resultQ }.toSet()
+            val notAlreadyFetched: Set<SecureHash> = nextRequests - resultQ.keys
             nextRequests.clear()
 
             if (notAlreadyFetched.isEmpty())   // Done early.
                 break
 
             // Request the standalone transaction data (which may refer to things we don't yet have).
+            // TODO use paging here
             val downloads: List<SignedTransaction> = subFlow(FetchTransactionsFlow(notAlreadyFetched, otherSide)).downloaded
 
             for (stx in downloads)

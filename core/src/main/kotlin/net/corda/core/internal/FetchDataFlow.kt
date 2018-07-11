@@ -85,6 +85,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
             for (hash in toFetch) {
                 // We skip the validation here (with unwrap { it }) because we will do it below in validateFetchResponse.
                 // The only thing checked is the object type. It is a protocol violation to send results out of order.
+                // TODO We need to page here after large messages will work.
                 maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.of(hash), dataType)).unwrap { it }
             }
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
@@ -133,7 +134,6 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     }
 }
 
-
 /**
  * Given a set of hashes either loads from from local storage  or requests them from the other peer. Downloaded
  * attachments are saved to local storage automatically.
@@ -147,7 +147,13 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
 
     override fun maybeWriteToDisk(downloaded: List<Attachment>) {
         for (attachment in downloaded) {
-            serviceHub.attachments.importAttachment(attachment.open(), "$P2P_UPLOADER:${otherSideSession.counterparty.name}", null)
+            with(serviceHub.attachments) {
+                if (!hasAttachment(attachment.id)) {
+                    importAttachment(attachment.open(), "$P2P_UPLOADER:${otherSideSession.counterparty.name}", null)
+                } else {
+                    logger.info("Attachment ${attachment.id} already exists, skipping.")
+                }
+            }
         }
     }
 

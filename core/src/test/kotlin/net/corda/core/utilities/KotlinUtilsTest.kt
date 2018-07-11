@@ -2,15 +2,19 @@ package net.corda.core.utilities
 
 import com.esotericsoftware.kryo.KryoException
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
-import net.corda.nodeapi.internal.serialization.KRYO_CHECKPOINT_CONTEXT
+import net.corda.core.serialization.*
+import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
+import net.corda.node.serialization.kryo.kryoMagic
+import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException
+
+object EmptyWhitelist : ClassWhitelist {
+    override fun hasListed(type: Class<*>): Boolean = false
+}
 
 class KotlinUtilsTest {
     @Rule
@@ -19,6 +23,14 @@ class KotlinUtilsTest {
     @JvmField
     @Rule
     val expectedEx: ExpectedException = ExpectedException.none()
+
+    private val KRYO_CHECKPOINT_NOWHITELIST_CONTEXT = SerializationContextImpl(kryoMagic,
+            javaClass.classLoader,
+            EmptyWhitelist,
+            emptyMap(),
+            true,
+            SerializationContext.UseCase.Checkpoint,
+            null)
 
     @Test
     fun `transient property which is null`() {
@@ -43,7 +55,7 @@ class KotlinUtilsTest {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
         val original = NonCapturingTransientProperty()
-        original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize()
+        original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
     }
 
     @Test
@@ -61,8 +73,10 @@ class KotlinUtilsTest {
     fun `deserialise transient property with capturing lambda`() {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
+
         val original = CapturingTransientProperty("Hello")
-        original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize()
+
+        original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
     }
 
     private class NullTransientProperty {

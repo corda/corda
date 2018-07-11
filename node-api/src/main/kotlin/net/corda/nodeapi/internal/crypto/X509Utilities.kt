@@ -4,19 +4,18 @@ import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.CertRole
-import net.corda.core.internal.reader
-import net.corda.core.internal.uncheckedCast
-import net.corda.core.internal.writer
+import net.corda.core.internal.*
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import org.bouncycastle.asn1.*
+import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.X509v3CertificateBuilder
 import org.bouncycastle.cert.bc.BcX509ExtensionUtils
+import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.operator.ContentSigner
@@ -49,7 +48,7 @@ object X509Utilities {
     const val CORDA_CLIENT_TLS = "cordaclienttls"
     const val CORDA_CLIENT_CA = "cordaclientca"
 
-    private val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
+    val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
 
     /**
      * Helper function to return the latest out of an instant and an optional date.
@@ -105,9 +104,7 @@ object X509Utilities {
     }
 
     fun validateCertPath(trustedRoot: X509Certificate, certPath: CertPath) {
-        val params = PKIXParameters(setOf(TrustAnchor(trustedRoot, null)))
-        params.isRevocationEnabled = false
-        CertPathValidator.getInstance("PKIX").validate(certPath, params)
+        certPath.validate(TrustAnchor(trustedRoot, null))
     }
 
     /**
@@ -141,18 +138,25 @@ object X509Utilities {
     /**
      * Build a partial X.509 certificate ready for signing.
      *
+     * @param certificateType type of the certificate.
      * @param issuer name of the issuing entity.
+     * @param issuerPublicKey public key of the issuing entity.
      * @param subject name of the certificate subject.
      * @param subjectPublicKey public key of the certificate subject.
      * @param validityWindow the time period the certificate is valid for.
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
+     * @param crlDistPoint CRL distribution point.
+     * @param crlIssuer X500Name of the CRL issuer.
      */
     fun createPartialCertificate(certificateType: CertificateType,
                                  issuer: X500Principal,
+                                 issuerPublicKey: PublicKey,
                                  subject: X500Principal,
                                  subjectPublicKey: PublicKey,
                                  validityWindow: Pair<Date, Date>,
-                                 nameConstraints: NameConstraints? = null): X509v3CertificateBuilder {
+                                 nameConstraints: NameConstraints? = null,
+                                 crlDistPoint: String? = null,
+                                 crlIssuer: X500Name? = null): X509v3CertificateBuilder {
         val serial = BigInteger.valueOf(random63BitValue())
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(subjectPublicKey.encoded))
@@ -163,10 +167,12 @@ object X509Utilities {
                 .addExtension(Extension.basicConstraints, true, BasicConstraints(certificateType.isCA))
                 .addExtension(Extension.keyUsage, false, certificateType.keyUsage)
                 .addExtension(Extension.extendedKeyUsage, false, keyPurposes)
+                .addExtension(Extension.authorityKeyIdentifier, false, JcaX509ExtensionUtils().createAuthorityKeyIdentifier(issuerPublicKey))
 
         if (role != null) {
             builder.addExtension(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE), false, role)
         }
+        addCrlInfo(builder, crlDistPoint, crlIssuer)
         if (nameConstraints != null) {
             builder.addExtension(Extension.nameConstraints, true, nameConstraints)
         }
@@ -177,11 +183,15 @@ object X509Utilities {
     /**
      * Create a X509 v3 certificate using the given issuer certificate and key pair.
      *
+     * @param certificateType type of the certificate.
      * @param issuerCertificate The Public certificate of the root CA above this used to sign it.
      * @param issuerKeyPair The KeyPair of the root CA above this used to sign it.
      * @param subject subject of the generated certificate.
      * @param subjectPublicKey subject's public key.
      * @param validityWindow The certificate's validity window. Default to [DEFAULT_VALIDITY_WINDOW] if not provided.
+     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
+     * @param crlDistPoint CRL distribution point.
+     * @param crlIssuer X500Name of the CRL issuer.
      * @return A data class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates.
      */
@@ -192,7 +202,9 @@ object X509Utilities {
                           subject: X500Principal,
                           subjectPublicKey: PublicKey,
                           validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW,
-                          nameConstraints: NameConstraints? = null): X509Certificate {
+                          nameConstraints: NameConstraints? = null,
+                          crlDistPoint: String? = null,
+                          crlIssuer: X500Name? = null): X509Certificate {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, issuerCertificate)
         return createCertificate(
                 certificateType,
@@ -201,28 +213,36 @@ object X509Utilities {
                 subject,
                 subjectPublicKey,
                 window,
-                nameConstraints
+                nameConstraints,
+                crlDistPoint,
+                crlIssuer
         )
     }
 
     /**
      * Build and sign an X.509 certificate with the given signer.
      *
+     * @param certificateType type of the certificate.
      * @param issuer name of the issuing entity.
      * @param issuerSigner content signer to sign the certificate with.
      * @param subject name of the certificate subject.
      * @param subjectPublicKey public key of the certificate subject.
      * @param validityWindow the time period the certificate is valid for.
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
+     * @param crlDistPoint CRL distribution point.
+     * @param crlIssuer X500Name of the CRL issuer.
      */
     fun createCertificate(certificateType: CertificateType,
                           issuer: X500Principal,
+                          issuerPublicKey: PublicKey,
                           issuerSigner: ContentSigner,
                           subject: X500Principal,
                           subjectPublicKey: PublicKey,
                           validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null): X509Certificate {
-        val builder = createPartialCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
+                          nameConstraints: NameConstraints? = null,
+                          crlDistPoint: String? = null,
+                          crlIssuer: X500Name? = null): X509Certificate {
+        val builder = createPartialCertificate(certificateType, issuer, issuerPublicKey, subject, subjectPublicKey, validityWindow, nameConstraints, crlDistPoint, crlIssuer)
         return builder.build(issuerSigner).run {
             require(isValidOn(Date()))
             toJca()
@@ -232,6 +252,7 @@ object X509Utilities {
     /**
      * Build and sign an X.509 certificate with CA cert private key.
      *
+     * @param certificateType type of the certificate.
      * @param issuer name of the issuing entity.
      * @param issuerKeyPair the public & private key to sign the certificate with.
      * @param subject name of the certificate subject.
@@ -245,11 +266,21 @@ object X509Utilities {
                           subject: X500Principal,
                           subjectPublicKey: PublicKey,
                           validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null): X509Certificate {
+                          nameConstraints: NameConstraints? = null,
+                          crlDistPoint: String? = null,
+                          crlIssuer: X500Name? = null): X509Certificate {
         val signatureScheme = Crypto.findSignatureScheme(issuerKeyPair.private)
         val provider = Crypto.findProvider(signatureScheme.providerName)
         val signer = ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
-        val builder = createPartialCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
+        val builder = createPartialCertificate(
+                certificateType,
+                issuer,
+                issuerKeyPair.public,
+                subject, subjectPublicKey,
+                validityWindow,
+                nameConstraints,
+                crlDistPoint,
+                crlIssuer)
         return builder.build(signer).run {
             require(isValidOn(Date()))
             require(isSignatureValid(JcaContentVerifierProviderBuilder().build(issuerKeyPair.public)))
@@ -293,6 +324,21 @@ object X509Utilities {
 
     fun buildCertPath(certificates: List<X509Certificate>): CertPath {
         return X509CertificateFactory().generateCertPath(certificates)
+    }
+
+    private fun addCrlInfo(builder: X509v3CertificateBuilder, crlDistPoint: String?, crlIssuer: X500Name?) {
+        if (crlDistPoint != null) {
+            val distPointName = DistributionPointName(GeneralNames(GeneralName(GeneralName.uniformResourceIdentifier, crlDistPoint)))
+            val crlIssuerGeneralNames = crlIssuer?.let {
+                GeneralNames(GeneralName(crlIssuer))
+            }
+            // The second argument is flag that allows you to define what reason of certificate revocation is served by this distribution point see [ReasonFlags].
+            // The idea is that you have different revocation per revocation reason. Since we won't go into such a granularity, we can skip that parameter.
+            // The third argument allows you to specify the name of the CRL issuer, it needs to be consistent with the crl (IssuingDistributionPoint) extension and the idp argument.
+            // If idp == true, set it, if idp == false, leave it null as done here.
+            val distPoint = DistributionPoint(distPointName, null, crlIssuerGeneralNames)
+            builder.addExtension(Extension.cRLDistributionPoints, false, CRLDistPoint(arrayOf(distPoint)))
+        }
     }
 }
 
@@ -415,4 +461,6 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
     )
 }
 
-data class CertificateAndKeyPair(val certificate: X509Certificate, val keyPair: KeyPair)
+data class CertificateAndKeyPair(val certificate: X509Certificate, val keyPair: KeyPair) {
+    fun <T : Any> sign(obj: T): SignedDataWithCert<T> = obj.signWithCert(keyPair.private, certificate)
+}

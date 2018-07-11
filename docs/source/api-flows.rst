@@ -30,7 +30,7 @@ In our flow, the Initiator flow class will be doing the majority of the work:
 2. Create a transaction builder
 3. Extract any input states from the vault and add them to the builder
 4. Create any output states and add them to the builder
-5. Add any commands, attachments and timestamps to the builder
+5. Add any commands, attachments and time-window to the builder
 
 *Part 2 - Sign the transaction*
 
@@ -265,10 +265,11 @@ In order to create a communication session between your initiator flow and the r
     * Sends the ``payload`` object and receives an object of type ``receiveType`` back
 
 In addition ``FlowLogic`` provides functions that batch receives:
+
 * ``receiveAllMap(sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>>``
-    * Receives from all ``FlowSession``s specified in the passed in map. The received types may differ.
+  Receives from all ``FlowSession`` objects specified in the passed in map. The received types may differ.
 * ``receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>>``
-    * Receives from all ``FlowSession``s specified in the passed in list. The received types must be the same.
+  Receives from all ``FlowSession`` objects specified in the passed in list. The received types must be the same.
 
 The batched functions are implemented more efficiently by the flow framework.
 
@@ -580,6 +581,18 @@ We can also choose to send the transaction to additional parties who aren't one 
 Only one party has to call ``FinalityFlow`` for a given transaction to be recorded by all participants. It does
 **not** need to be called by each participant individually.
 
+Because the transaction has already been notarised and the input states consumed, if the participants when receiving the
+transaction fail to verify it, or the receiving flow (the finality handler) fails due to some other error, we then have
+the scenario where not all parties have the correct up to date view of the ledger. To recover from this the finality handler
+is automatically sent to the flow hospital where it's suspended and retried from its last checkpoint on node restart.
+This gives the node operator the opportunity to recover from the error. Until the issue is resolved the node will continue
+to retry the flow on each startup.
+
+.. note:: It's possible to forcibly terminate the erroring finality handler using the ``killFlow`` RPC but at the risk
+   of an inconsistent view of the ledger.
+
+.. note:: A future release will allow retrying hospitalised flows without restarting the node, i.e. via RPC.
+
 CollectSignaturesFlow/SignTransactionFlow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The list of parties who need to sign a transaction is dictated by the transaction's commands. Once we've signed a
@@ -601,7 +614,7 @@ transaction ourselves, we can automatically gather the signatures of the other r
         :dedent: 12
 
 Each required signer will need to respond by invoking its own ``SignTransactionFlow`` subclass to check the
-transaction and provide their signature if they are satisfied:
+transaction (by implementing the ``checkTransaction`` method) and provide their signature if they are satisfied:
 
 .. container:: codeset
 
@@ -616,6 +629,14 @@ transaction and provide their signature if they are satisfied:
         :start-after: DOCSTART 16
         :end-before: DOCEND 16
         :dedent: 12
+
+Types of things to check include:
+
+    * Ensuring that the transaction received is the expected type, i.e. has the expected type of inputs and outputs
+    * Checking that the properties of the outputs are expected, this is in the absence of integrating reference
+      data sources to facilitate this
+    * Checking that the transaction is not incorrectly spending (perhaps maliciously) asset states, as potentially
+      the transaction creator has access to some of signer's state references
 
 SendTransactionFlow/ReceiveTransactionFlow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -750,6 +771,9 @@ HTTP and database calls
 HTTP, database and other calls to external resources are allowed in flows. However, their support is currently limited:
 
 * The call must be executed in a BLOCKING way. Flows don't currently support suspending to await the response to a call to an external resource
+
+  * For this reason, the call should be provided with a timeout to prevent the flow from suspending forever. If the timeout elapses, this should be treated as a soft failure and handled by the flow's business logic
+  
 * The call must be idempotent. If the flow fails and has to restart from a checkpoint, the call will also be replayed
 
 Concurrency, Locking and Waiting

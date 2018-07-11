@@ -1,53 +1,60 @@
 package net.corda.node.services.rpc
 
-import net.corda.core.internal.noneOrSingle
+import io.netty.channel.unix.Errors
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.node.internal.artemis.ArtemisBroker
-import net.corda.node.internal.artemis.BrokerAddresses
+import net.corda.node.internal.artemis.*
+import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_SECURITY_CONFIG
+import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.RPC_SECURITY_CONFIG
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.node.internal.security.RPCSecurityManager
-import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.internal.artemis.CertificateChainCheckPolicy
+import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.nodeapi.internal.crypto.loadKeyStore
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
 import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
-import rx.Observable
 import java.io.IOException
 import java.nio.file.Path
 import java.security.KeyStoreException
-import java.util.concurrent.CompletableFuture
 import javax.security.auth.login.AppConfigurationEntry
 
 internal class ArtemisRpcBroker internal constructor(
         address: NetworkHostAndPort,
         private val adminAddressOptional: NetworkHostAndPort?,
-        private val sslOptions: SSLConfiguration,
+        private val sslOptions: BrokerRpcSslOptions?,
         private val useSsl: Boolean,
         private val securityManager: RPCSecurityManager,
-        private val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         private val maxMessageSize: Int,
         private val jmxEnabled: Boolean = false,
-        private val baseDirectory: Path) : ArtemisBroker {
+        private val baseDirectory: Path,
+        private val nodeConfiguration: SSLConfiguration,
+        private val shouldStartLocalShell: Boolean) : ArtemisBroker {
 
     companion object {
         private val logger = loggerFor<ArtemisRpcBroker>()
 
-        fun withSsl(address: NetworkHostAndPort, sslOptions: SSLConfiguration, securityManager: RPCSecurityManager, certificateChainCheckPolicies: List<CertChainPolicyConfig>, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path): ArtemisBroker {
-            return ArtemisRpcBroker(address, null, sslOptions, true, securityManager, certificateChainCheckPolicies, maxMessageSize, jmxEnabled, baseDirectory)
+        fun withSsl(configuration: SSLConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
+            return ArtemisRpcBroker(address, adminAddress, sslOptions, true, securityManager, maxMessageSize, jmxEnabled, baseDirectory, configuration, shouldStartLocalShell)
         }
 
-        fun withoutSsl(address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: SSLConfiguration, securityManager: RPCSecurityManager, certificateChainCheckPolicies: List<CertChainPolicyConfig>, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path): ArtemisBroker {
-            return ArtemisRpcBroker(address, adminAddress, sslOptions, false, securityManager, certificateChainCheckPolicies, maxMessageSize, jmxEnabled, baseDirectory)
+        fun withoutSsl(configuration: SSLConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
+            return ArtemisRpcBroker(address, adminAddress, null, false, securityManager, maxMessageSize, jmxEnabled, baseDirectory, configuration, shouldStartLocalShell)
         }
     }
 
     override fun start() {
         logger.debug("Artemis RPC broker is starting.")
-        server.start()
+        try {
+            server.start()
+        } catch (e: java.io.IOException) {
+            if (e.isBindingError()) {
+                throw AddressBindingException(adminAddressOptional?.let { setOf(it, addresses.primary) } ?: setOf(addresses.primary))
+            } else {
+                throw e
+            }
+        }
         logger.debug("Artemis RPC broker is started.")
     }
 
@@ -66,8 +73,8 @@ internal class ArtemisRpcBroker internal constructor(
     private val server = initialiseServer()
 
     private fun initialiseServer(): ActiveMQServer {
-        val serverConfiguration = RpcBrokerConfiguration(baseDirectory, maxMessageSize, jmxEnabled, addresses.primary, adminAddressOptional, sslOptions, useSsl)
-        val serverSecurityManager = createArtemisSecurityManager(serverConfiguration.loginListener, sslOptions)
+        val serverConfiguration = RpcBrokerConfiguration(baseDirectory, maxMessageSize, jmxEnabled, addresses.primary, adminAddressOptional, sslOptions, useSsl, nodeConfiguration, shouldStartLocalShell)
+        val serverSecurityManager = createArtemisSecurityManager(serverConfiguration.loginListener)
 
         return ActiveMQServerImpl(serverConfiguration, serverSecurityManager).apply {
             registerActivationFailureListener { exception -> throw exception }
@@ -76,33 +83,21 @@ internal class ArtemisRpcBroker internal constructor(
     }
 
     @Throws(IOException::class, KeyStoreException::class)
-    private fun createArtemisSecurityManager(loginListener: LoginListener, sslOptions: SSLConfiguration): ActiveMQJAASSecurityManager {
-        val keyStore = loadKeyStore(sslOptions.sslKeystore, sslOptions.keyStorePassword)
-        val trustStore = loadKeyStore(sslOptions.trustStoreFile, sslOptions.trustStorePassword)
-
-        val defaultCertPolicies = mapOf(
-                NodeLoginModule.NODE_ROLE to CertificateChainCheckPolicy.LeafMustMatch,
-                NodeLoginModule.RPC_ROLE to CertificateChainCheckPolicy.Any
-        )
-        val certChecks = defaultCertPolicies.mapValues { (role, defaultPolicy) ->
-            val policy = certificateChainCheckPolicies.noneOrSingle { it.role == role }?.certificateChainCheckPolicy ?: defaultPolicy
-            policy.createCheck(keyStore, trustStore)
-        }
+    private fun createArtemisSecurityManager(loginListener: LoginListener): ActiveMQJAASSecurityManager {
+        val keyStore = nodeConfiguration.loadSslKeyStore().internal
+        val trustStore = nodeConfiguration.loadTrustStore().internal
 
         val securityConfig = object : SecurityConfiguration() {
             override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
                 val options = mapOf(
-                        NodeLoginModule.LOGIN_LISTENER_ARG to loginListener,
-                        NodeLoginModule.SECURITY_MANAGER_ARG to securityManager,
-                        NodeLoginModule.USE_SSL_ARG to useSsl,
-                        NodeLoginModule.CERT_CHAIN_CHECKS_ARG to certChecks)
+                        RPC_SECURITY_CONFIG to RPCJaasConfig(securityManager, loginListener, useSsl),
+                        NODE_SECURITY_CONFIG to NodeJaasConfig(keyStore, trustStore)
+                )
                 return arrayOf(AppConfigurationEntry(name, AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, options))
             }
         }
-        return ActiveMQJAASSecurityManager(NodeLoginModule::class.java.name, securityConfig)
+        return ActiveMQJAASSecurityManager(BrokerJaasLoginModule::class.java.name, securityConfig)
     }
 }
 
 typealias LoginListener = (String) -> Unit
-
-private fun <RESULT> CompletableFuture<RESULT>.toObservable() = Observable.from(this)

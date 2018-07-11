@@ -3,6 +3,8 @@ package net.corda.node.utilities
 import com.ea.agentloader.AgentLoader
 import net.corda.core.internal.exists
 import net.corda.core.internal.isRegularFile
+import net.corda.core.internal.toPath
+import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -42,9 +44,9 @@ object JVMAgentRegistry {
             path
         } else {
             (this::class.java.classLoader as? URLClassLoader)
-                ?.urLs
-                ?.map { Paths.get(it.toURI()) }
-                ?.firstOrNull { it.fileName.toString() == jarFileName }
+                    ?.urLs
+                    ?.map(URL::toPath)
+                    ?.firstOrNull { it.fileName.toString() == jarFileName }
         }
     }
 }

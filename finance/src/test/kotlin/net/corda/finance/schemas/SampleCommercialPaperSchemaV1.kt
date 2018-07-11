@@ -22,34 +22,31 @@ object CommercialPaperSchema
  */
 object SampleCommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
     @Entity
-    @Table(name = "cp_states",
-            indexes = arrayOf(Index(name = "ccy_code_index", columnList = "ccy_code"),
-                    Index(name = "maturity_index", columnList = "maturity_instant"),
-                    Index(name = "face_value_index", columnList = "face_value")))
+    @Table(name = "cp_states", indexes = [Index(name = "ccy_code_index", columnList = "ccy_code"), Index(name = "maturity_index", columnList = "maturity_instant"), Index(name = "face_value_index", columnList = "face_value")])
     class PersistentCommercialPaperState(
-            @Column(name = "issuance_key_hash", length = MAX_HASH_HEX_SIZE)
+            @Column(name = "issuance_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var issuancePartyHash: String,
 
-            @Column(name = "issuance_ref")
+            @Column(name = "issuance_ref", nullable = false)
             @Type(type = "corda-wrapper-binary")
             var issuanceRef: ByteArray,
 
-            @Column(name = "owner_key_hash", length = MAX_HASH_HEX_SIZE)
+            @Column(name = "owner_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var ownerHash: String,
 
-            @Column(name = "maturity_instant")
+            @Column(name = "maturity_instant", nullable = false)
             var maturity: Instant,
 
-            @Column(name = "face_value")
+            @Column(name = "face_value", nullable = false)
             var faceValue: Long,
 
-            @Column(name = "ccy_code", length = 3)
+            @Column(name = "ccy_code", length = 3, nullable = false)
             var currency: String,
 
-            @Column(name = "face_value_issuer_key_hash", length = MAX_HASH_HEX_SIZE)
+            @Column(name = "face_value_issuer_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var faceValueIssuerPartyHash: String,
 
-            @Column(name = "face_value_issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Column(name = "face_value_issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
             @Type(type = "corda-wrapper-binary")
             var faceValueIssuerRef: ByteArray
     ) : PersistentState()

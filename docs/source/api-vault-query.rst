@@ -118,7 +118,7 @@ All ``QueryCriteria`` implementations are composable using ``and`` and ``or`` op
 All ``QueryCriteria`` implementations provide an explicitly specifiable set of common attributes:
 
 1. State status attribute (``Vault.StateStatus``), which defaults to filtering on UNCONSUMED states.
-   When chaining several criterias using AND / OR, the last value of this attribute will override any previous
+   When chaining several criteria using AND / OR, the last value of this attribute will override any previous
 2. Contract state types (``<Set<Class<out ContractState>>``), which will contain at minimum one type (by default this
    will be ``ContractState`` which resolves to all state types). When chaining several criteria using ``and`` and
    ``or`` operators, all specified contract state types are combined into a single set
@@ -259,13 +259,13 @@ Query for all states with pagination specification (10 results per page):
 .. note:: The result set metadata field `totalStatesAvailable` allows you to further paginate accordingly as
    demonstrated in the following example.
 
-Query for all states using pagination specification and iterate using `totalStatesAvailable` field until no further
+Query for all states using a pagination specification and iterate using the `totalStatesAvailable` field until no further
 pages available:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/events/ScheduledFlowTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
-    :start-after: DOCSTART VaultQueryExamplePaging
-    :end-before: DOCEND VaultQueryExamplePaging
+    :start-after: DOCSTART VaultQueryExample24
+    :end-before: DOCEND VaultQueryExample24
     :dedent: 8
 
 **LinearState and DealState queries using** ``LinearStateQueryCriteria``:
@@ -377,7 +377,7 @@ Track unconsumed cash states:
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample15
     :end-before: DOCEND VaultQueryExample15
-    :dedent: 20
+    :dedent: 12
 
 Track unconsumed linear states:
 
@@ -385,7 +385,7 @@ Track unconsumed linear states:
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample16
     :end-before: DOCEND VaultQueryExample16
-    :dedent: 20
+    :dedent: 12
 
 .. note:: This will return both ``DealState`` and ``LinearState`` states.
 
@@ -395,7 +395,7 @@ Track unconsumed deal states:
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample17
     :end-before: DOCEND VaultQueryExample17
-    :dedent: 20
+    :dedent: 12
 
 .. note:: This will return only ``DealState`` states.
 
@@ -425,6 +425,14 @@ Query for consumed deal states or linear ids, specify a paging specification and
     :start-after: DOCSTART VaultJavaQueryExample2
     :end-before: DOCEND VaultJavaQueryExample2
     :dedent: 12
+
+Query for all states using a pagination specification and iterate using the `totalStatesAvailable` field until no further pages available:
+
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+    :language: java
+    :start-after: DOCSTART VaultQueryExample24
+    :end-before: DOCEND VaultQueryExample24
+    :dedent: 8
 
 **Aggregate Function queries using** ``VaultCustomQueryCriteria``:
 
@@ -465,8 +473,8 @@ identifier):
 
 .. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
     :language: java
-    :start-after: DOCSTART VaultJavaQueryExample4
-    :end-before: DOCEND VaultJavaQueryExample4
+    :start-after: DOCSTART VaultJavaQueryExample5
+    :end-before: DOCEND VaultJavaQueryExample5
     :dedent: 12
 
 Troubleshooting

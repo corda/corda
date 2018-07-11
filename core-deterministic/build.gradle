@@ -1,0 +1,199 @@
+description 'Corda core (deterministic)'
+
+apply from: '../deterministic.gradle'
+apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'idea'
+
+evaluationDependsOn(":core")
+
+def javaHome = System.getProperty('java.home')
+def jarBaseName = "corda-${project.name}".toString()
+
+configurations {
+    runtimeLibraries
+    runtimeArtifacts.extendsFrom runtimeLibraries
+}
+
+dependencies {
+    compileOnly project(':core')
+    compileOnly "com.google.guava:guava:$guava_version"
+    compileOnly "$quasar_group:quasar-core:$quasar_version:jdk8"
+
+    // Configure these by hand. It should be a minimal subset of core's dependencies,
+    // and without any obviously non-deterministic ones such as Hibernate.
+    runtimeLibraries "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    runtimeLibraries "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    runtimeLibraries "org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final"
+    runtimeLibraries "org.bouncycastle:bcprov-jdk15on:$bouncycastle_version"
+    runtimeLibraries "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
+    runtimeLibraries "com.google.code.findbugs:jsr305:$jsr305_version"
+    runtimeLibraries "com.google.guava:guava:$guava_version"
+    runtimeLibraries "net.i2p.crypto:eddsa:$eddsa_version"
+    runtimeLibraries "org.slf4j:slf4j-api:$slf4j_version"
+}
+
+jar {
+    baseName 'DOES-NOT-EXIST'
+    // Don't build a jar here because it would be the wrong one.
+    // The jar we really want will be built by the metafix task.
+    enabled = false
+}
+
+def coreJarTask = tasks.getByPath(':core:jar')
+def originalJar = coreJarTask.outputs.files.singleFile
+
+task patchCore(type: Zip, dependsOn: coreJarTask) {
+    destinationDir file("$buildDir/source-libs")
+    metadataCharset 'UTF-8'
+    classifier 'transient'
+    extension 'jar'
+
+    from(compileKotlin)
+    from(zipTree(originalJar)) {
+        exclude 'net/corda/core/internal/*ToggleField*.class'
+        exclude 'net/corda/core/serialization/*SerializationFactory*.class'
+    }
+
+    reproducibleFileOrder = true
+    includeEmptyDirs = false
+}
+
+import proguard.gradle.ProGuardTask
+task predeterminise(type: ProGuardTask) {
+    injars patchCore
+    outjars "$buildDir/proguard/pre-deterministic-${project.version}.jar"
+
+    libraryjars "$javaHome/lib/rt.jar"
+    libraryjars "$javaHome/lib/jce.jar"
+    configurations.compileOnly.forEach {
+        if (originalJar.path != it.path) {
+            libraryjars it.path, filter: '!META-INF/versions/**'
+        }
+    }
+
+    keepattributes '*'
+    keepdirectories
+    dontwarn '**$1$1,org.hibernate.annotations.*'
+    dontpreverify
+    dontobfuscate
+    dontoptimize
+    dontnote
+    printseeds
+    verbose
+
+    keep '@interface net.corda.core.* { *; }'
+    keep '@interface net.corda.core.contracts.** { *; }'
+    keep '@interface net.corda.core.serialization.** { *; }'
+    keep '@net.corda.core.KeepForDJVM class * { *; }', includedescriptorclasses:true
+    keepclassmembers 'class net.corda.core.** { public synthetic <methods>; }'
+}
+
+import net.corda.gradle.jarfilter.JarFilterTask
+task jarFilter(type: JarFilterTask) {
+    jars predeterminise
+    annotations {
+        forDelete = [
+            "net.corda.core.DeleteForDJVM"
+        ]
+        forStub = [
+            "net.corda.core.StubOutForDJVM"
+        ]
+        forRemove = [
+            "co.paralleluniverse.fibers.Suspendable",
+            "org.hibernate.annotations.Immutable"
+        ]
+        forSanitise = [
+            "net.corda.core.DeleteForDJVM"
+        ]
+    }
+}
+
+task determinise(type: ProGuardTask) {
+    injars jarFilter
+    outjars "$buildDir/proguard/$jarBaseName-${project.version}.jar"
+
+    libraryjars "$javaHome/lib/rt.jar"
+    libraryjars "$javaHome/lib/jce.jar"
+    configurations.runtimeLibraries.forEach {
+        libraryjars it.path, filter: '!META-INF/versions/**'
+    }
+
+    // Analyse the JAR for dead code, and remove (some of) it.
+    optimizations 'code/removal/simple,code/removal/advanced'
+    printconfiguration
+
+    keepattributes '*'
+    keepdirectories
+    dontobfuscate
+    dontnote
+    printseeds
+    verbose
+
+    keep '@interface net.corda.core.CordaInternal { *; }'
+    keep '@interface net.corda.core.DoNotImplement { *; }'
+    keep '@interface net.corda.core.KeepForDJVM { *; }'
+    keep '@interface net.corda.core.contracts.** { *; }'
+    keep '@interface net.corda.core.serialization.** { *; }'
+    keep '@net.corda.core.KeepForDJVM class * { *; }', includedescriptorclasses:true
+    keepclassmembers 'class net.corda.core.** { public synthetic <methods>; }'
+}
+
+import net.corda.gradle.jarfilter.MetaFixerTask
+task metafix(type: MetaFixerTask) {
+    outputDir file("$buildDir/libs")
+    jars determinise
+    suffix ""
+
+    // Strip timestamps from the JAR to make it reproducible.
+    preserveTimestamps = false
+}
+
+// DOCSTART 01
+task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
+    injars metafix
+
+    libraryjars deterministic_rt_jar
+
+    configurations.runtimeLibraries.forEach {
+        libraryjars it.path, filter: '!META-INF/versions/**'
+    }
+
+    keepattributes '*'
+    dontpreverify
+    dontobfuscate
+    dontoptimize
+    verbose
+
+    keep 'class *'
+}
+// DOCEND 01
+
+defaultTasks "determinise"
+determinise.finalizedBy metafix
+metafix.finalizedBy checkDeterminism
+assemble.dependsOn checkDeterminism
+
+def deterministicJar = metafix.outputs.files.singleFile
+artifacts {
+    runtimeArtifacts file: deterministicJar, name: jarBaseName, type: 'jar', extension: 'jar', builtBy: metafix
+    publish file: deterministicJar, name: jarBaseName, type: 'jar', extension: 'jar', builtBy: metafix
+}
+
+publish {
+    dependenciesFrom configurations.runtimeArtifacts
+    publishSources = false
+    publishJavadoc = false
+    name jarBaseName
+}
+
+// Must be after publish {} so that the previous install task exists for overwriting.
+task install(overwrite: true, dependsOn: 'publishToMavenLocal')
+
+idea {
+    module {
+        if (project.hasProperty("deterministic_idea_sdk")) {
+            jdkName project.property("deterministic_idea_sdk") as String
+        }
+    }
+}

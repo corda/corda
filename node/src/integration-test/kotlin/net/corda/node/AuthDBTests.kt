@@ -40,13 +40,14 @@ class AuthDBTests : NodeBasedTest() {
     private lateinit var db: UsersDB
 
     companion object {
-        private val cacheExpireAfterSecs: Long = 1
+        private const val cacheExpireAfterSecs: Long = 1
 
         @JvmStatic
         @Parameterized.Parameters(name = "password encryption format = {0}")
         fun encFormats() = arrayOf(PasswordEncryption.NONE, PasswordEncryption.SHIRO_1_CRYPT)
     }
 
+    @Suppress("MemberVisibilityCanBePrivate")
     @Parameterized.Parameter
     lateinit var passwordEncryption: PasswordEncryption
 
@@ -94,7 +95,7 @@ class AuthDBTests : NodeBasedTest() {
         )
 
         node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = securityConfig)
-        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!)
+        client = CordaRPCClient(node.internals.configuration.rpcOptions.address)
     }
 
     @Test
@@ -215,7 +216,7 @@ class AuthDBTests : NodeBasedTest() {
 
     @After
     fun tearDown() {
-         db.close()
+        db.close()
     }
 
     private fun encodePassword(s: String) = encodePassword(s, passwordEncryption)
@@ -227,12 +228,11 @@ private data class RoleAndPermissions(val role: String, val permissions: List<St
 /*
  * Manage in-memory DB mocking a users database with the schema expected by Node's security manager
  */
-private class UsersDB : AutoCloseable {
-
-    val jdbcUrl: String
+private class UsersDB(name: String, users: List<UserAndRoles> = emptyList(), roleAndPermissions: List<RoleAndPermissions> = emptyList()) : AutoCloseable {
+    val jdbcUrl = "jdbc:h2:mem:$name;DB_CLOSE_DELAY=-1"
 
     companion object {
-        val DB_CREATE_SCHEMA = """
+        const val DB_CREATE_SCHEMA = """
             CREATE TABLE users (username VARCHAR(256), password TEXT);
             CREATE TABLE user_roles (username VARCHAR(256), role_name VARCHAR(256));
             CREATE TABLE roles_permissions (role_name VARCHAR(256), permission TEXT);
@@ -243,7 +243,7 @@ private class UsersDB : AutoCloseable {
         session {
             it.execute("INSERT INTO users VALUES ('${user.username}', '${user.password}')")
             for (role in user.roles) {
-                it.execute("INSERT INTO user_roles VALUES ('${user.username}', '${role}')")
+                it.execute("INSERT INTO user_roles VALUES ('${user.username}', '$role')")
             }
         }
     }
@@ -271,7 +271,7 @@ private class UsersDB : AutoCloseable {
     }
 
     private val dataSource: DataSource
-    inline private fun session(statement: (Statement) -> Unit) {
+    private inline fun session(statement: (Statement) -> Unit) {
         dataSource.connection.use {
             it.autoCommit = false
             it.createStatement().use(statement)
@@ -279,11 +279,7 @@ private class UsersDB : AutoCloseable {
         }
     }
 
-    constructor(name: String,
-                users: List<UserAndRoles> = emptyList(),
-                roleAndPermissions: List<RoleAndPermissions> = emptyList()) {
-
-        jdbcUrl = "jdbc:h2:mem:${name};DB_CLOSE_DELAY=-1"
+    init {
         dataSource = DataSourceFactory.createDataSource(Properties().apply {
             put("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
             put("dataSource.url", jdbcUrl)
@@ -291,11 +287,9 @@ private class UsersDB : AutoCloseable {
         session {
             it.execute(DB_CREATE_SCHEMA)
         }
-
         require(users.map { it.username }.toSet().size == users.size) {
             "Duplicate username in input"
         }
-
         users.forEach { insert(it) }
         roleAndPermissions.forEach { insert(it) }
     }
@@ -322,7 +316,6 @@ private val hashedPasswords = mapOf(
  * A functional object for producing password encoded according to the given scheme.
  */
 private fun encodePassword(s: String, format: PasswordEncryption) = when (format) {
-        PasswordEncryption.NONE -> s
-        PasswordEncryption.SHIRO_1_CRYPT -> hashedPasswords[format]!![s] ?:
-            DefaultPasswordService().encryptPassword(s.toCharArray())
-    }
+    PasswordEncryption.NONE -> s
+    PasswordEncryption.SHIRO_1_CRYPT -> hashedPasswords[format]!![s] ?: DefaultPasswordService().encryptPassword(s.toCharArray())
+}

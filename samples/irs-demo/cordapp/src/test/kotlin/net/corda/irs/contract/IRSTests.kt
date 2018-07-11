@@ -262,7 +262,7 @@ class IRSTests {
      */
     private fun generateIRSTxn(irsSelect: Int): SignedTransaction {
         val dummyIRS = createDummyIRS(irsSelect)
-        val genTX: SignedTransaction = run {
+        return run {
             val gtx = InterestRateSwap().generateAgreement(
                     fixedLeg = dummyIRS.fixedLeg,
                     floatingLeg = dummyIRS.floatingLeg,
@@ -276,7 +276,6 @@ class IRSTests {
             val ptx2 = miniCorpServices.addSignature(ptx1)
             notaryServices.addSignature(ptx2)
         }
-        return genTX
     }
 
     /**

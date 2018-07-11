@@ -1,0 +1,19 @@
+apply plugin: 'kotlin'
+
+dependencies {
+    testCompile project(path: ':core-deterministic', configuration: 'runtimeArtifacts')
+    testCompile project(path: ':serialization-deterministic', configuration: 'runtimeArtifacts')
+    testCompile project(path: ':core-deterministic:testing:data', configuration: 'testData')
+    testCompile project(':core-deterministic:testing:common')
+    testCompile(project(':finance')) {
+        transitive = false
+    }
+
+    testCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile "junit:junit:$junit_version"
+}
+
+// This module has no artifact and only contains tests.
+jar.enabled = false

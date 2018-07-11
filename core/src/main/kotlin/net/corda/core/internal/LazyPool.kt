@@ -1,5 +1,6 @@
 package net.corda.core.internal
 
+import net.corda.core.DeleteForDJVM
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Semaphore
 
@@ -14,6 +15,7 @@ import java.util.concurrent.Semaphore
  *     instance is released.
  * @param newInstance The function to call to lazily newInstance a pooled resource.
  */
+@DeleteForDJVM
 class LazyPool<A>(
         private val clear: ((A) -> Unit)? = null,
         private val shouldReturnToPool: ((A) -> Boolean)? = null,
@@ -39,10 +41,10 @@ class LazyPool<A>(
         lifeCycle.requireState(State.STARTED)
         poolSemaphore.acquire()
         val pooled = poolQueue.poll()
-        if (pooled == null) {
-            return newInstance()
+        return if (pooled == null) {
+            newInstance()
         } else {
-            return clearIfNeeded(pooled)
+            clearIfNeeded(pooled)
         }
     }
 

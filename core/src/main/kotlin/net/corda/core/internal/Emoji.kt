@@ -1,8 +1,11 @@
 package net.corda.core.internal
 
+import net.corda.core.DeleteForDJVM
+
 /**
  * A simple wrapper class that contains icons and support for printing them only when we're connected to a terminal.
  */
+@DeleteForDJVM
 object Emoji {
     // Unfortunately only Apple has a terminal that can do colour emoji AND an emoji font installed by default.
     // However the JediTerm java terminal emulator can also do emoji on OS X when using the JetBrains JRE.
@@ -45,7 +48,12 @@ object Emoji {
     val CODE_FREE: String = codePointsString(0x1F193)
     @JvmStatic
     val CODE_SOON: String = codePointsString(0x1F51C)
-
+    @JvmStatic
+    val CODE_DEVELOPER: String = codePointsString(0x1F469, 0x200D, 0x1F4BB)
+    @JvmStatic
+    val CODE_WARNING_SIGN: String = codePointsString(0x26A0, 0xFE0F)
+    @JvmStatic
+    val CROSS_MARK_BUTTON: String = codePointsString(0x274E)
 
     /**
      * When non-null, toString() methods are allowed to use emoji in the output as we're going to render them to a
@@ -65,12 +73,15 @@ object Emoji {
     val lightBulb: String get() = if (emojiMode.get() != null) "$CODE_LIGHTBULB  " else ""
     val free: String get() = if (emojiMode.get() != null) "$CODE_FREE  " else ""
     val soon: String get() = if (emojiMode.get() != null) "$CODE_SOON  " else ""
+    val developer: String get() = if (emojiMode.get() != null) "$CODE_DEVELOPER  " else ""
+    val warningSign: String get() = if (emojiMode.get() != null) "$CODE_WARNING_SIGN  " else "!"
 
     // These have old/non-emoji symbols with better platform support.
     val greenTick: String get() = if (emojiMode.get() != null) "$CODE_GREEN_TICK  " else "✓"
     val rightArrow: String get() = if (emojiMode.get() != null) "$CODE_RIGHT_ARROW  " else "▶︎"
     val skullAndCrossbones: String get() = if (emojiMode.get() != null) "$CODE_SKULL_AND_CROSSBONES  " else "☂"
     val noEntry: String get() = if (emojiMode.get() != null) "$CODE_NO_ENTRY  " else "✘"
+    val notRun: String get() = if (emojiMode.get() != null) "$CROSS_MARK_BUTTON  " else "-"
 
     inline fun <T> renderIfSupported(body: () -> T): T {
         if (hasEmojiTerminal)

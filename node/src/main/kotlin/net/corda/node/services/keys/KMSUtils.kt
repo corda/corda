@@ -25,14 +25,12 @@ import java.time.Duration
  * @param subjectPublicKey public key of new identity.
  * @param issuer issuer to generate a key and certificate for. Must be an identity this node has the private key for.
  * @param issuerSigner a content signer for the issuer.
- * @param revocationEnabled whether to check revocation status of certificates in the certificate path.
  * @return X.509 certificate and path to the trust root.
  */
 fun freshCertificate(identityService: IdentityService,
                      subjectPublicKey: PublicKey,
                      issuer: PartyAndCertificate,
-                     issuerSigner: ContentSigner,
-                     revocationEnabled: Boolean = false): PartyAndCertificate {
+                     issuerSigner: ContentSigner): PartyAndCertificate {
     val issuerRole = CertRole.extract(issuer.certificate)
     require(issuerRole == CertRole.LEGAL_IDENTITY) { "Confidential identities can only be issued from well known identities, provided issuer ${issuer.name} has role $issuerRole" }
     val issuerCert = issuer.certificate
@@ -40,6 +38,7 @@ fun freshCertificate(identityService: IdentityService,
     val ourCertificate = X509Utilities.createCertificate(
             CertificateType.CONFIDENTIAL_LEGAL_IDENTITY,
             issuerCert.subjectX500Principal,
+            issuerCert.publicKey,
             issuerSigner,
             issuer.name.x500Principal,
             subjectPublicKey,

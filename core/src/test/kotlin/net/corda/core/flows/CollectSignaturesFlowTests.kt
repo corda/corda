@@ -13,7 +13,11 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.InternalMockNetwork
@@ -22,7 +26,6 @@ import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import kotlin.reflect.KClass
 import kotlin.test.assertFailsWith
 
 class CollectSignaturesFlowTests {
@@ -41,7 +44,7 @@ class CollectSignaturesFlowTests {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.core.flows"))
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bobNode = mockNet.createPartyNode(BOB_NAME)
         charlieNode = mockNet.createPartyNode(CHARLIE_NAME)
@@ -54,12 +57,6 @@ class CollectSignaturesFlowTests {
     @After
     fun tearDown() {
         mockNet.stopNodes()
-    }
-
-    private fun registerFlowOnAllNodes(flowClass: KClass<out FlowLogic<*>>) {
-        listOf(aliceNode, bobNode, charlieNode).forEach {
-            it.registerInitiatedFlow(flowClass.java)
-        }
     }
 
     // With this flow, the initiator starts the "CollectTransactionFlow". It is then the responders responsibility to
@@ -82,9 +79,11 @@ class CollectSignaturesFlowTests {
 
         @InitiatedBy(TestFlow.Initiator::class)
         class Responder(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
-            @Suspendable override fun call() {
+            @Suspendable
+            override fun call() {
                 val signFlow = object : SignTransactionFlow(otherSideSession) {
-                    @Suspendable override fun checkTransaction(stx: SignedTransaction) = requireThat {
+                    @Suspendable
+                    override fun checkTransaction(stx: SignedTransaction) = requireThat {
                         val tx = stx.tx
                         val ltx = tx.toLedgerTransaction(serviceHub)
                         "There should only be one output state" using (tx.outputs.size == 1)
@@ -110,7 +109,6 @@ class CollectSignaturesFlowTests {
             // Normally this is handled by TransactionKeyFlow, but here we have to manually let A know about the identity
             aliceNode.services.identityService.verifyAndRegisterIdentity(bConfidentialIdentity)
         }
-        registerFlowOnAllNodes(TestFlow.Responder::class)
         val magicNumber = 1337
         val parties = listOf(alice, bConfidentialIdentity.party, charlie)
         val state = DummyContract.MultiOwnerState(magicNumber, parties)

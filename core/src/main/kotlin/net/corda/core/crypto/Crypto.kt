@@ -1,5 +1,7 @@
 package net.corda.core.crypto
 
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.internal.*
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
@@ -58,6 +60,7 @@ import javax.crypto.spec.SecretKeySpec
  * <li>SPHINCS256_SHA512 (SPHINCS-256 hash-based signature scheme using SHA512 as hash algorithm).
  * </ul>
  */
+@KeepForDJVM
 object Crypto {
     /**
      * RSA PKCS#1 signature scheme using SHA256 for message hashing.
@@ -220,7 +223,7 @@ object Crypto {
     }
 
     /**
-     * Factory pattern to retrieve the corresponding [SignatureScheme] based on the type of the [String] input.
+     * Factory pattern to retrieve the corresponding [SignatureScheme] based on [SignatureScheme.schemeCodeName].
      * This function is usually called by key generators and verify signature functions.
      * In case the input is not a key in the supportedSignatureSchemes map, null will be returned.
      * @param schemeCodeName a [String] that should match a supported signature scheme code name (e.g. ECDSA_SECP256K1_SHA256), see [Crypto].
@@ -613,6 +616,7 @@ object Crypto {
      * @return a KeyPair for the requested signature scheme code name.
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
+    @DeleteForDJVM
     @JvmStatic
     fun generateKeyPair(schemeCodeName: String): KeyPair = generateKeyPair(findSignatureScheme(schemeCodeName))
 
@@ -623,6 +627,7 @@ object Crypto {
      * @return a new [KeyPair] for the requested [SignatureScheme].
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
+    @DeleteForDJVM
     @JvmOverloads
     @JvmStatic
     fun generateKeyPair(signatureScheme: SignatureScheme = DEFAULT_SIGNATURE_SCHEME): KeyPair {
@@ -789,6 +794,7 @@ object Crypto {
      * @return a new [KeyPair] from an entropy input.
      * @throws IllegalArgumentException if the requested signature scheme is not supported for KeyPair generation using an entropy input.
      */
+    @DeleteForDJVM
     @JvmStatic
     fun deriveKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
         return when (signatureScheme) {
@@ -804,6 +810,7 @@ object Crypto {
      * @param entropy a [BigInteger] value.
      * @return a new [KeyPair] from an entropy input.
      */
+    @DeleteForDJVM
     @JvmStatic
     fun deriveKeyPairFromEntropy(entropy: BigInteger): KeyPair = deriveKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
 
@@ -897,6 +904,13 @@ object Crypto {
         return signatureScheme.schemeCodeName in signatureSchemeMap
     }
 
+    /**
+     * Check if a public key satisfies algorithm specs.
+     * For instance, an ECC key should lie on the curve and not being point-at-infinity.
+     */
+    @JvmStatic
+    fun validatePublicKey(key: PublicKey): Boolean = validatePublicKey(findSignatureScheme(key), key)
+
     // Validate a key, by checking its algorithmic params.
     private fun validateKey(signatureScheme: SignatureScheme, key: Key): Boolean {
         return when (key) {
@@ -910,7 +924,8 @@ object Crypto {
     private fun validatePublicKey(signatureScheme: SignatureScheme, key: PublicKey): Boolean {
         return when (key) {
             is BCECPublicKey, is EdDSAPublicKey -> publicKeyOnCurve(signatureScheme, key)
-            is BCRSAPublicKey, is BCSphincs256PublicKey -> true // TODO: Check if non-ECC keys satisfy params (i.e. approved/valid RSA modulus size).
+            is BCRSAPublicKey -> key.modulus.bitLength() >= 2048 // Although the recommended RSA key size is 3072, we accept any key >= 2048bits.
+            is BCSphincs256PublicKey -> true
             else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
         }
     }
@@ -990,5 +1005,17 @@ object Crypto {
         } else {
             txId
         }
-     }
+    }
+
+    /**
+     * Method to force registering all [Crypto]-related cryptography [Provider]s.
+     * It is recommended that it is invoked first thing on `main` functions, so the [Provider]s are in place before any
+     * cryptographic operation is requested outside [Crypto] (i.e., SecureRandom, KeyStore, cert-path validation,
+     * CRL & CSR checks etc.).
+     */
+    // TODO: perform all cryptographic operations via Crypto.
+    @JvmStatic
+    fun registerProviders() {
+        providerMap
+    }
 }

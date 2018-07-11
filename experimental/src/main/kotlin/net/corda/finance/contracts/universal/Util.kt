@@ -20,7 +20,7 @@ private fun signingParties(perceivable: Perceivable<Boolean>) : ImmutableSet<Par
         is TimePerceivable -> ImmutableSet.of<Party>()
         is TerminalEvent -> ImmutableSet.of( perceivable.reference )
         is PerceivableComparison<*> -> ImmutableSet.of<Party>() // todo
-        else -> throw IllegalArgumentException("signingParties " + perceivable)
+        else -> throw IllegalArgumentException("signingParties $perceivable")
     }
 
 private fun liablePartiesVisitor(arrangement: Arrangement): ImmutableSet<PublicKey> =
@@ -33,7 +33,7 @@ private fun liablePartiesVisitor(arrangement: Arrangement): ImmutableSet<PublicK
                 arrangement.actions.fold(ImmutableSet.builder<PublicKey>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
             is RollOut -> liablePartiesVisitor(arrangement.template)
             is Continuation -> ImmutableSet.of<PublicKey>()
-            else -> throw IllegalArgumentException("liableParties " + arrangement)
+            else -> throw IllegalArgumentException("liableParties $arrangement")
         }
 
 private fun liablePartiesVisitor(action: Action): ImmutableSet<PublicKey> {
@@ -76,7 +76,7 @@ fun replaceParty(perceivable: Perceivable<Boolean>, from: Party, to: Party): Per
             is PerceivableAnd -> replaceParty(perceivable.left, from, to) and replaceParty(perceivable.right, from, to)
             is PerceivableOr -> replaceParty(perceivable.left, from, to) or replaceParty(perceivable.right, from, to)
             is TimePerceivable -> perceivable
-            else -> throw IllegalArgumentException("replaceParty " + perceivable)
+            else -> throw IllegalArgumentException("replaceParty $perceivable")
         }
 
 fun replaceParty(action: Action, from: Party, to: Party): Action =
@@ -125,7 +125,7 @@ fun actions(arrangement: Arrangement): Map<String, Action> = when (arrangement) 
 }
 
 fun debugCompare(left: String, right: String) {
-    assert(left == right)
+    require(left == right)
 }
 
 fun <T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
@@ -142,7 +142,7 @@ fun <T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
             if (perRight is PerceivableOperation) {
                 debugCompare(perLeft.left, perRight.left)
                 debugCompare(perLeft.right, perRight.right)
-                assert(perLeft.op == perRight.op)
+                require(perLeft.op == perRight.op)
                 return
             }
         }
@@ -152,7 +152,7 @@ fun <T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
                 debugCompare(perLeft.interest, perRight.interest)
                 debugCompare(perLeft.start, perRight.start)
                 debugCompare(perLeft.end, perRight.end)
-                assert(perLeft.dayCountConvention == perRight.dayCountConvention)
+                require(perLeft.dayCountConvention == perRight.dayCountConvention)
                 return
             }
         }
@@ -166,25 +166,25 @@ fun <T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
         }
     }
 
-    assert(false)
+    require(false)
 }
 
 fun debugCompare(parLeft: Party, parRight: Party) {
-    assert(parLeft == parRight)
+    require(parLeft == parRight)
 }
 
 fun debugCompare(left: Frequency, right: Frequency) {
-    assert(left == right)
+    require(left == right)
 }
 
 fun debugCompare(left: LocalDate, right: LocalDate) {
-    assert(left == right)
+    require(left == right)
 }
 
 fun debugCompare(parLeft: Set<Party>, parRight: Set<Party>) {
     if (parLeft == parRight) return
 
-    assert(parLeft == parRight)
+    require(parLeft == parRight)
 }
 
 fun debugCompare(arrLeft: Arrangement, arrRight: Arrangement) {
@@ -229,5 +229,5 @@ fun debugCompare(arrLeft: Arrangement, arrRight: Arrangement) {
         }
     }
 
-    assert(false)
+    require(false)
 }

@@ -19,12 +19,6 @@ buildscript {
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    compile {
-        // We don't need these because we already include netty-all.
-        exclude group: 'io.netty', module: 'netty-transport'
-        exclude group: 'io.netty', module: 'netty-handler'
-    }
-
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
 }
@@ -73,9 +67,13 @@ dependencies {
     compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+
+    // Kryo: object graph serialization.
+    compile "com.esotericsoftware:kryo:4.0.0"
+    compile "de.javakaffee:kryo-serializers:0.41"
 
     compile "com.google.guava:guava:$guava_version"
 
@@ -100,14 +98,14 @@ dependencies {
     compile "org.fusesource.jansi:jansi:$jansi_version"
 
     // Manifests: for reading stuff from the manifest file
-    compile "com.jcabi:jcabi-manifests:1.1"
+    compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
 
     compile("com.intellij:forms_rt:7.0.3") {
         exclude group: "asm"
     }
 
     // Coda Hale's Metrics: for monitoring of key statistics
-    compile "io.dropwizard.metrics:metrics-core:3.1.2"
+    compile "io.dropwizard.metrics:metrics-core:$metrics_version"
 
     // JimFS: in memory java.nio filesystem. Used for test and simulation utilities.
     compile "com.google.jimfs:jimfs:1.1"
@@ -143,12 +141,9 @@ dependencies {
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
 
     // Java Atomix: RAFT library
-    compile 'io.atomix.copycat:copycat-client:1.2.3'
-    compile 'io.atomix.copycat:copycat-server:1.2.3'
-    compile 'io.atomix.catalyst:catalyst-netty:1.1.2'
-
-    // Netty: All of it.
-    compile "io.netty:netty-all:$netty_version"
+    compile 'io.atomix.copycat:copycat-client:1.2.8'
+    compile 'io.atomix.copycat:copycat-server:1.2.8'
+    compile 'io.atomix.catalyst:catalyst-netty:1.2.1'
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"

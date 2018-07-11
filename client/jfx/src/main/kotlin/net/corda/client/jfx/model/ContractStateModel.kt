@@ -2,6 +2,7 @@ package net.corda.client.jfx.model
 
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
+import net.corda.client.jfx.utils.distinctBy
 import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.map
 import net.corda.core.contracts.ContractState
@@ -28,24 +29,23 @@ class ContractStateModel {
     private val cashStatesDiff: Observable<Diff<Cash.State>> = contractStatesDiff.map {
         Diff(it.added.filterCashStateAndRefs(), it.removed.filterCashStateAndRefs())
     }
-    val cashStates: ObservableList<StateAndRef<Cash.State>> = cashStatesDiff.fold(FXCollections.observableArrayList()) { list: MutableList<StateAndRef<Cash.State>>, statesDiff ->
-        list.removeIf { it in statesDiff.removed }
-        list.addAll(statesDiff.added)
-    }
+    val cashStates: ObservableList<StateAndRef<Cash.State>> = cashStatesDiff.fold(FXCollections.observableArrayList()) { list: MutableList<StateAndRef<Cash.State>>, (added, removed) ->
+        list.removeIf { it in removed }
+        list.addAll(added)
+    }.distinctBy { it.ref }
 
     val cash = cashStates.map { it.state.data.amount }
 
     companion object {
         private fun Collection<StateAndRef<ContractState>>.filterCashStateAndRefs(): List<StateAndRef<Cash.State>> {
-            return this.map { stateAndRef ->
+            return this.mapNotNull { stateAndRef ->
                 if (stateAndRef.state.data is Cash.State) {
                     // Kotlin doesn't unify here for some reason
                     uncheckedCast<StateAndRef<ContractState>, StateAndRef<Cash.State>>(stateAndRef)
                 } else {
                     null
                 }
-            }.filterNotNull()
+            }
         }
     }
-
 }

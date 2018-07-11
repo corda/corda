@@ -1,5 +1,6 @@
 package net.corda.core.node
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
@@ -11,6 +12,7 @@ import rx.Observable
  * With the [AppServiceHub] parameter a [CordaService] is able to access to privileged operations.
  * In particular such a [CordaService] can initiate and track flows marked with [net.corda.core.flows.StartableByService].
  */
+@DeleteForDJVM
 interface AppServiceHub : ServiceHub {
 
     /**
@@ -26,5 +28,4 @@ interface AppServiceHub : ServiceHub {
      * TODO it is assumed here that the flow object has an appropriate classloader.
      */
     fun <T> startTrackedFlow(flow: FlowLogic<T>): FlowProgressHandle<T>
-
 }

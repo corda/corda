@@ -1,10 +1,12 @@
 @file:JvmName("EncodingUtils")
+@file:KeepForDJVM
 
 package net.corda.core.utilities
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.Base58
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.sha256
+import net.corda.core.internal.hash
 import java.nio.charset.Charset
 import java.security.PublicKey
 import java.util.*
@@ -31,7 +33,6 @@ fun ByteArray.toBase64(): String = Base64.getEncoder().encodeToString(this)
 /** Convert a byte array to a hex (Base16) capitalized encoded [String]. */
 fun ByteArray.toHex(): String = DatatypeConverter.printHexBinary(this)
 
-
 // [String] encoders and decoders
 
 /** Base58-String to the actual real [String], i.e. "JxF12TrwUP45BMd" -> "Hello World". */
@@ -49,7 +50,6 @@ fun String.base64ToByteArray(): ByteArray = Base64.getDecoder().decode(this)
 
 /** Hex-String to [ByteArray]. Accept any hex form (capitalized, lowercase, mixed). */
 fun String.hexToByteArray(): ByteArray = DatatypeConverter.parseHexBinary(this)
-
 
 // Encoding changers
 
@@ -85,4 +85,4 @@ fun parsePublicKeyBase58(base58String: String): PublicKey = Crypto.decodePublicK
 fun PublicKey.toBase58String(): String = this.encoded.toBase58()
 
 /** Return the bytes of the SHA-256 output for this public key. */
-fun PublicKey.toSHA256Bytes(): ByteArray = this.encoded.sha256().bytes
+fun PublicKey.toSHA256Bytes(): ByteArray = this.hash.bytes

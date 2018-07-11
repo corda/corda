@@ -16,7 +16,6 @@ import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.finance.contracts.asset.CommodityContract
 import java.math.BigDecimal
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -87,9 +86,8 @@ data class Tenor(val name: String) {
         }
         // Move date to the closest business day when it falls on a weekend/holiday
         val adjustedMaturityDate = calendar.applyRollConvention(maturityDate, DateRollConvention.ModifiedFollowing)
-        val daysToMaturity = BusinessCalendar.calculateDaysBetween(startDate, adjustedMaturityDate, DayCountBasisYear.Y360, DayCountBasisDay.DActual)
 
-        return daysToMaturity
+        return BusinessCalendar.calculateDaysBetween(startDate, adjustedMaturityDate, DayCountBasisYear.Y360, DayCountBasisDay.DActual)
     }
 
     override fun toString(): String = name

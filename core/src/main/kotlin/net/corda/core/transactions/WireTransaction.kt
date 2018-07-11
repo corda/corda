@@ -1,5 +1,8 @@
 package net.corda.core.transactions
 
+import net.corda.core.CordaInternal
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
@@ -40,9 +43,13 @@ import java.util.function.Predicate
  * </ul></p>
  */
 @CordaSerializable
-class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt = PrivacySalt()) : TraversableTransaction(componentGroups) {
+@KeepForDJVM
+class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt) : TraversableTransaction(componentGroups) {
+    @DeleteForDJVM
+    constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
 
-    @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.", ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
+    @Deprecated("Required only for backwards compatibility purposes.", ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
+    @DeleteForDJVM
     constructor(inputs: List<StateRef>,
                 attachments: List<SecureHash>,
                 outputs: List<TransactionState<ContractState>>,
@@ -68,7 +75,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     val requiredSigningKeys: Set<PublicKey>
         get() {
             val commandKeys = commands.flatMap { it.signers }.toSet()
-            // TODO: prevent notary field from being set if there are no inputs and no timestamp.
+            // TODO: prevent notary field from being set if there are no inputs and no time-window.
             return if (notary != null && (inputs.isNotEmpty() || timeWindow != null)) {
                 commandKeys + notary.owningKey
             } else {
@@ -84,6 +91,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * @throws TransactionResolutionException if an input points to a transaction not found in storage.
      */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
+    @DeleteForDJVM
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
         return toLedgerTransactionInternal(
                 resolveIdentity = { services.identityService.partyFromKey(it) },
@@ -106,7 +114,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
-            resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
+            @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
     ): LedgerTransaction {
         return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef, null)
     }
@@ -226,11 +234,12 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         sig.verify(id)
     }
 
-    internal companion object {
+    companion object {
         /**
          * Creating list of [ComponentGroup] used in one of the constructors of [WireTransaction] required
          * for backwards compatibility purposes.
          */
+        @CordaInternal
         fun createComponentGroups(inputs: List<StateRef>,
                                   outputs: List<TransactionState<ContractState>>,
                                   commands: List<Command<*>>,
@@ -252,6 +261,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }
     }
 
+    @DeleteForDJVM
     override fun toString(): String {
         val buf = StringBuilder()
         buf.appendln("Transaction:")

@@ -1,5 +1,5 @@
-Tradeoffs
-=========
+Trade-offs
+==========
 
 .. topic:: Summary
 
@@ -39,8 +39,8 @@ Corda also uses several other techniques to maximize privacy on the network:
 
 * **Transaction tear-offs**: Transactions are structured in a way that allows them to be digitally signed without
   disclosing the transaction's contents. This is achieved using a data structure called a Merkle tree. You can read
-  more about this technique in :doc:`merkle-trees`.
-* **Key randomisation**: The parties to a transaction are identified only by their public keys, and fresh keypairs are
+  more about this technique in :doc:`tutorial-tear-offs`.
+* **Key randomisation**: The parties to a transaction are identified only by their public keys, and fresh key pairs are
   generated for each transaction. As a result, an onlooker cannot identify which parties were involved in a given
   transaction.
 
@@ -63,8 +63,8 @@ is designed to make this possible by:
 
 * Having permissioned networks, meaning that participants are aware of who they are dealing with in every single
   transaction
-* All code contracts are backed by a legal document describing the contract's intended behavior which can be relied
-  upon to resolve conflicts
+* All code contracts should include a ``LegalProseReference`` link to the legal document describing the contract's intended behavior
+  which can be relied upon to resolve conflicts
 
 Build vs. re-use
 ----------------

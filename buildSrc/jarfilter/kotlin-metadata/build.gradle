@@ -1,0 +1,84 @@
+plugins {
+    id 'base'
+}
+
+description "Kotlin's metadata-handling classes"
+
+repositories {
+    mavenLocal()
+    jcenter()
+}
+
+configurations {
+    proguard
+    runtime
+    configurations.default.extendsFrom runtime
+}
+
+dependencies {
+    proguard "org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlin_version"
+    proguard "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    runtime "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+}
+
+def javaHome = System.getProperty('java.home')
+def originalJar = configurations.proguard.files.find { it.name.startsWith("kotlin-compiler-embeddable") }
+
+import proguard.gradle.ProGuardTask
+task metadata(type: ProGuardTask) {
+    injars originalJar, filter: 'META-INF/MANIFEST.MF,META-INF/metadata*.kotlin_module,**.class'
+    outjars "$buildDir/libs/${project.name}-${kotlin_version}.jar"
+
+    libraryjars "$javaHome/lib/rt.jar"
+    libraryjars "$javaHome/../lib/tools.jar"
+    configurations.proguard.forEach {
+        if (originalJar != it) {
+            libraryjars it.path, filter: '!META-INF/versions/**'
+        }
+    }
+
+    keepattributes '*'
+    dontoptimize
+    verbose
+
+    dontwarn 'com.sun.jna.**'
+    dontwarn 'org.jetbrains.annotations.**'
+    dontwarn 'org.jetbrains.kotlin.com.intellij.**'
+    dontwarn 'org.jetbrains.kotlin.com.google.j2objc.annotations.**'
+    dontwarn 'org.jetbrains.kotlin.com.google.errorprone.annotations.**'
+    dontnote
+
+    keep 'class org.jetbrains.kotlin.load.java.JvmAnnotationNames { *; }'
+    keep 'class org.jetbrains.kotlin.metadata.ProtoBuf { *; }', includedescriptorclasses: true
+    keep 'class org.jetbrains.kotlin.metadata.ProtoBuf$* { *; }', includedescriptorclasses: true
+    keep 'class org.jetbrains.kotlin.metadata.deserialization.** { *; }', includedescriptorclasses: true
+    keep 'class org.jetbrains.kotlin.metadata.jvm.** { *; }', includedescriptorclasses: true
+    keep 'class org.jetbrains.kotlin.protobuf.** { *; }', includedescriptorclasses: true
+}
+def metadataJar = metadata.outputs.files.singleFile
+
+task validate(type: ProGuardTask) {
+    injars metadataJar
+    libraryjars "$javaHome/lib/rt.jar"
+    configurations.runtime.forEach {
+        libraryjars it.path, filter: '!META-INF/versions/**'
+    }
+
+    keepattributes '*'
+    dontpreverify
+    dontobfuscate
+    dontoptimize
+    verbose
+
+    dontwarn 'org.jetbrains.kotlin.com.google.errorprone.annotations.**'
+    dontnote
+
+    keep 'class *'
+}
+
+artifacts {
+    'default' file: metadataJar, name: project.name, type: 'jar', extension: 'jar', builtBy: metadata
+}
+
+defaultTasks "metadata"
+metadata.finalizedBy validate

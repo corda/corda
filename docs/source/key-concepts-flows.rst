@@ -7,12 +7,15 @@ Flows
    * *Communication between nodes only occurs in the context of these flows, and is point-to-point*
    * *Built-in flows are provided to automate common tasks*
 
-Video
------
-.. raw:: html
+.. only:: htmlmode
 
-    <iframe src="https://player.vimeo.com/video/214046145" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
-    <p></p>
+    Video
+    -----
+    .. raw:: html
+    
+        <iframe src="https://player.vimeo.com/video/214046145" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+        <p></p>
+
 
 Motivation
 ----------
@@ -22,9 +25,19 @@ what order.
 
 Here is a visualisation of the process of agreeing a simple ledger update between Alice and Bob:
 
-.. image:: resources/flow.gif
-   :scale: 25%
-   :align: center
+.. only:: htmlmode
+
+   .. image:: resources/flow.gif
+      :scale: 25%
+      :align: center
+
+
+.. only:: pdfmode
+
+   .. image:: resources/flow.png
+      :scale: 25%
+      :align: center
+
 
 The flow framework
 ------------------
@@ -76,7 +89,7 @@ logic behind common processes such as:
 * Gathering signatures from counterparty nodes
 * Verifying a chain of transactions
 
-Further information on the available built-in flows can be found in :doc:`flow-library`.
+Further information on the available built-in flows can be found in :doc:`api-flows`.
 
 Concurrency
 -----------

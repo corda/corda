@@ -1,4 +1,4 @@
-@file:Suppress("UNUSED_VARIABLE", "unused")
+@file:Suppress("UNUSED_VARIABLE", "unused", "DEPRECATION")
 
 package net.corda.docs
 
@@ -642,7 +642,7 @@ class ResponderFlow(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
             override fun checkTransaction(stx: SignedTransaction) = requireThat {
                 // Any additional checking we see fit...
                 val outputState = stx.tx.outputsOfType<DummyState>().single()
-                assert(outputState.magicNumber == 777)
+                require(outputState.magicNumber == 777)
             }
         }
 

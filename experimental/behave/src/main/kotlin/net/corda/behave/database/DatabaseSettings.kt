@@ -16,6 +16,9 @@ class DatabaseSettings {
     var userName: String = "sa"
         private set
 
+    var driverJar: String? = null
+        private set
+
     private var databaseConfigTemplate: DatabaseConfigurationTemplate = DatabaseConfigurationTemplate()
 
     private val serviceInitiators = mutableListOf<ServiceInitiator>()
@@ -27,6 +30,11 @@ class DatabaseSettings {
 
     fun withSchema(name: String): DatabaseSettings {
         schemaName = name
+        return this
+    }
+
+    fun withDriver(name: String): DatabaseSettings {
+        driverJar = name
         return this
     }
 
@@ -55,5 +63,4 @@ class DatabaseSettings {
 
     val template: DatabaseConfigurationTemplate
         get() = databaseConfigTemplate
-
 }

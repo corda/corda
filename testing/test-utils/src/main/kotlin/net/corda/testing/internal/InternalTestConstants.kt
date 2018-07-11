@@ -9,4 +9,4 @@ val DEV_ROOT_CA: CertificateAndKeyPair by lazy { net.corda.nodeapi.internal.DEV_
 
 /** A dummy time at which we will be pretending test transactions are created. **/
 @JvmField
-val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
+val TEST_TX_TIME: Instant = Instant.parse("2015-04-17T12:00:00.00Z")

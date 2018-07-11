@@ -77,7 +77,7 @@ class CashViewer : CordaView("Cash") {
             null -> FXCollections.observableArrayList(leftPane)
             else -> FXCollections.observableArrayList(leftPane, rightPane)
         }
-    })
+    }, "CashViewerSplitPane")
 
     /**
      * This holds the data for each row in the TreeTable.

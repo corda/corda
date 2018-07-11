@@ -18,32 +18,32 @@ import kotlin.reflect.full.primaryConstructor
 
 class ConfigParsingTest {
     @Test
-    fun `String`() {
+    fun String() {
         testPropertyType<StringData, StringListData, String>("hello world!", "bye")
     }
 
     @Test
-    fun `Int`() {
+    fun Int() {
         testPropertyType<IntData, IntListData, Int>(1, 2)
     }
 
     @Test
-    fun `Long`() {
+    fun Long() {
         testPropertyType<LongData, LongListData, Long>(Long.MAX_VALUE, Long.MIN_VALUE)
     }
 
     @Test
-    fun `Double`() {
+    fun Double() {
         testPropertyType<DoubleData, DoubleListData, Double>(1.2, 3.4)
     }
 
     @Test
-    fun `Boolean`() {
+    fun Boolean() {
         testPropertyType<BooleanData, BooleanListData, Boolean>(true, false)
     }
 
     @Test
-    fun `Enum`() {
+    fun Enum() {
         testPropertyType<EnumData, EnumListData, TestEnum>(TestEnum.Value2, TestEnum.Value1, valuesToString = true)
     }
 
@@ -56,17 +56,17 @@ class ConfigParsingTest {
     }
 
     @Test
-    fun `LocalDate`() {
+    fun LocalDate() {
         testPropertyType<LocalDateData, LocalDateListData, LocalDate>(LocalDate.now(), LocalDate.now().plusDays(1), valuesToString = true)
     }
 
     @Test
-    fun `Instant`() {
+    fun Instant() {
         testPropertyType<InstantData, InstantListData, Instant>(Instant.now(), Instant.now().plusMillis(100), valuesToString = true)
     }
 
     @Test
-    fun `NetworkHostAndPort`() {
+    fun NetworkHostAndPort() {
         testPropertyType<NetworkHostAndPortData, NetworkHostAndPortListData, NetworkHostAndPort>(
                 NetworkHostAndPort("localhost", 2223),
                 NetworkHostAndPort("localhost", 2225),
@@ -74,14 +74,19 @@ class ConfigParsingTest {
     }
 
     @Test
-    fun `Path`() {
+    fun Path() {
         val path = "tmp" / "test"
         testPropertyType<PathData, PathListData, Path>(path, path / "file", valuesToString = true)
     }
 
     @Test
-    fun `URL`() {
+    fun URL() {
         testPropertyType<URLData, URLListData, URL>(URL("http://localhost:1234"), URL("http://localhost:1235"), valuesToString = true)
+    }
+
+    @Test
+    fun UUID() {
+        testPropertyType<UUIDData, UUIDListData, UUID>(UUID.randomUUID(), UUID.randomUUID(), valuesToString = true)
     }
 
     @Test
@@ -131,7 +136,7 @@ class ConfigParsingTest {
     }
 
     @Test
-    fun `Set`() {
+    fun Set() {
         val data = StringSetData(setOf("a", "b"))
         assertThat(config("values" to listOf("a", "a", "b")).parseAs<StringSetData>()).isEqualTo(data)
         assertThat(data.toConfig()).isEqualTo(config("values" to listOf("a", "b")))
@@ -222,6 +227,36 @@ class ConfigParsingTest {
         }
     }
 
+    @Test
+    fun `parse with provided parser`() {
+        val type1Config = mapOf("type" to "1", "value" to "type 1 value")
+        val type2Config = mapOf("type" to "2", "value" to "type 2 value")
+
+        val configuration = config("values" to listOf(type1Config, type2Config))
+        val objects = configuration.parseAs<TestObjects>()
+
+        assertThat(objects.values).containsExactly(TestObject.Type1("type 1 value"), TestObject.Type2("type 2 value"))
+    }
+
+    class TestParser : ConfigParser<TestObject> {
+        override fun parse(config: Config): TestObject {
+            val type = config.getInt("type")
+            return when (type) {
+                1 -> config.parseAs<TestObject.Type1>(onUnknownKeys = UnknownConfigKeysPolicy.IGNORE::handle)
+                2 -> config.parseAs<TestObject.Type2>(onUnknownKeys = UnknownConfigKeysPolicy.IGNORE::handle)
+                else -> throw IllegalArgumentException("Unsupported Object type : '$type'")
+            }
+        }
+    }
+
+    data class TestObjects(val values: List<TestObject>)
+
+    @CustomConfigParser(TestParser::class)
+    sealed class TestObject {
+        data class Type1(val value: String) : TestObject()
+        data class Type2(val value: String) : TestObject()
+    }
+
     private inline fun <reified S : SingleData<V>, reified L : ListData<V>, V : Any> testPropertyType(
             value1: V,
             value2: V,
@@ -289,6 +324,8 @@ class ConfigParsingTest {
     data class PathListData(override val values: List<Path>) : ListData<Path>
     data class URLData(override val value: URL) : SingleData<URL>
     data class URLListData(override val values: List<URL>) : ListData<URL>
+    data class UUIDData(override val value: UUID) : SingleData<UUID>
+    data class UUIDListData(override val values: List<UUID>) : ListData<UUID>
     data class CordaX500NameData(override val value: CordaX500Name) : SingleData<CordaX500Name>
     data class CordaX500NameListData(override val values: List<CordaX500Name>) : ListData<CordaX500Name>
     data class PropertiesData(override val value: Properties) : SingleData<Properties>
@@ -303,6 +340,7 @@ class ConfigParsingTest {
             require(positive > 0) { "$positive is not positive" }
         }
     }
+
     data class OldData(
             @OldConfig("oldValue")
             val newValue: String)

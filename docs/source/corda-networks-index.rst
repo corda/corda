@@ -1,5 +1,5 @@
-Corda networks
-==============
+Networks
+========
 
 .. toctree::
    :maxdepth: 1
@@ -12,3 +12,4 @@ Corda networks
    azure-vm-explore
    aws-vm-explore
    gcp-vm
+   cipher-suites

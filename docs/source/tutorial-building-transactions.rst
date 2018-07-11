@@ -44,7 +44,7 @@ Transactions in Corda contain a number of elements:
    transactions to migrate the states across to a consistent notary node
    before being allowed to mutate any states)
 
-7. Optionally a timestamp that can used by the notary to bound the
+7. Optionally a time-window that can used by the notary to bound the
    period during which the proposed transaction can be committed to the
    ledger
 
@@ -94,7 +94,7 @@ tests in ``FxTransactionBuildTutorialTest.kt`` and
 part of a simulated in-memory network of nodes.
 
 .. note:: Before creating the IntelliJ run configurations for these unit tests
-    go to Run -> Edit |nbsp| Configurations -> Defaults -> JUnit, add
+    go to Run -> Edit Configurations -> Defaults -> JUnit, add
     ``-javaagent:lib/quasar.jar``
     to the VM options, and set Working directory to ``$PROJECT_DIR$``
     so that the ``Quasar`` instrumentation is correctly configured.
@@ -301,4 +301,4 @@ overall transaction id is still provable from the
 not expose that data to the other node directly. A full example of this
 can be found in the ``NodeInterestRates`` Oracle code from the
 ``irs-demo`` project which interacts with the ``RatesFixFlow`` flow.
-Also, refer to the :doc:`merkle-trees` documentation.
+Also, refer to the :doc:`tutorial-tear-offs`.
