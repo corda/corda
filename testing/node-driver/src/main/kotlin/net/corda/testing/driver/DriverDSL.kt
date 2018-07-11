@@ -78,8 +78,7 @@ interface DriverDSL {
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
             maximumHeapSize: String = defaultParameters.maximumHeapSize,
-            packages: List<String> = emptyList(),
-            packageToGeneratedJarName: Map<String,String> = emptyMap()
+            packageToGeneratedJarName: Map<String,String?> = emptyMap()
     ): CordaFuture<NodeHandle>
 
     /**

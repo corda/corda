@@ -106,7 +106,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          * @param testPackages See [createWithTestPackages]
          */
         @VisibleForTesting
-        fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>, testPackageToGeneratedJarName: Map<String, String> = emptyMap()): CordappLoader {
+        fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>, testPackageToGeneratedJarName: Map<String, String?> = emptyMap()): CordappLoader {
             if (!configuration.devMode) {
                 logger.warn("Package scanning should only occur in dev mode!")
             }
