@@ -22,9 +22,13 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58
 import net.corda.core.utilities.toSHA256Bytes
+import org.bouncycastle.asn1.x509.CRLDistPoint
+import org.bouncycastle.asn1.x509.Extension
+import org.bouncycastle.x509.extension.X509ExtensionUtil
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.security.*
+import java.security.cert.X509Certificate
 
 /**
  * Utility to simplify the act of signing a byte array.
@@ -117,6 +121,7 @@ val PublicKey.keys: Set<PublicKey> get() = (this as? CompositeKey)?.leafKeys ?: 
 
 /** Return true if [otherKey] fulfils the requirements of this [PublicKey]. */
 fun PublicKey.isFulfilledBy(otherKey: PublicKey): Boolean = isFulfilledBy(setOf(otherKey))
+
 /** Return true if [otherKeys] fulfil the requirements of this [PublicKey]. */
 fun PublicKey.isFulfilledBy(otherKeys: Iterable<PublicKey>): Boolean = (this as? CompositeKey)?.isFulfilledBy(otherKeys) ?: (this in otherKeys)
 
@@ -133,6 +138,7 @@ fun Iterable<TransactionSignature>.byKeys() = map { it.by }.toSet()
 // val (private, public) = keyPair
 /* The [PrivateKey] of this [KeyPair]. */
 operator fun KeyPair.component1(): PrivateKey = this.private
+
 /* The [PublicKey] of this [KeyPair]. */
 operator fun KeyPair.component2(): PublicKey = this.public
 
@@ -207,6 +213,7 @@ private class DummySecureRandomSpi : SecureRandomSpi() {
         return ByteArray(numberOfBytes)
     }
 }
+
 object DummySecureRandom : SecureRandom(DummySecureRandomSpi(), null)
 
 /**
@@ -273,3 +280,19 @@ fun <T : Any> serializedHash(x: T): SecureHash = x.serialize(context = Serializa
  * @return SHA256(SHA256(privacySalt || groupIndex || internalIndex))
  */
 fun computeNonce(privacySalt: PrivacySalt, groupIndex: Int, internalIndex: Int) = SecureHash.sha256Twice(privacySalt.bytes + ByteBuffer.allocate(8).putInt(groupIndex).putInt(internalIndex).array())
+
+/**
+ * Method to check if the certificate path contains blacklisted CRL distribution point URL.
+ */
+val blacklistedCrlEndpoints = setOf("r3-test.com")
+
+fun isCRLDistributionPointBlacklisted(certChain: List<X509Certificate>): Boolean {
+    // Doorman certificate checks for mis-configured CRL endpoint.
+    return certChain.any {
+        it.getExtensionValue(Extension.cRLDistributionPoints.id)?.let {
+            CRLDistPoint.getInstance(X509ExtensionUtil.fromExtensionValue(it)).distributionPoints.any { distPoint ->
+                blacklistedCrlEndpoints.any { distPoint.distributionPoint.toString().contains(it) }
+            }
+        } ?: false
+    }
+}
