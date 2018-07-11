@@ -49,6 +49,7 @@ task patchSerialization(type: Zip, dependsOn: serializationJarTask) {
         exclude 'net/corda/serialization/internal/DefaultWhitelist*'
         exclude 'net/corda/serialization/internal/amqp/AMQPSerializerFactories*'
         exclude 'net/corda/serialization/internal/amqp/AMQPStreams*'
+        exclude 'net/corda/serialization/internal/amqp/AMQPSerializationThreadContext*'
     }
 
     reproducibleFileOrder = true

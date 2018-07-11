@@ -12,10 +12,12 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.contextLogger
-import net.corda.serialization.internal.*
+import net.corda.serialization.internal.CordaSerializationMagic
+import net.corda.serialization.internal.DefaultWhitelist
+import net.corda.serialization.internal.MutableClassWhitelist
+import net.corda.serialization.internal.SerializationScheme
 import java.lang.reflect.Modifier
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 
 val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == amqpMagic
 
@@ -37,12 +39,12 @@ interface SerializerFactoryFactory {
 
 @KeepForDJVM
 abstract class AbstractAMQPSerializationScheme(
-    private val cordappCustomSerializers: Set<SerializationCustomSerializer<*,*>>,
-    private val serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>,
-    val sff: SerializerFactoryFactory = createSerializerFactoryFactory()
+        private val cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
+        private val serializerFactoriesForContexts: AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>,
+        val sff: SerializerFactoryFactory = createSerializerFactoryFactory()
 ) : SerializationScheme {
     @DeleteForDJVM
-    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, ConcurrentHashMap())
+    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, AccessOrderLinkedHashMap(128))
 
     // TODO: This method of initialisation for the Whitelist and plugin serializers will have to change
     //       when we have per-cordapp contexts and dynamic app reloading but for now it's the easiest way
@@ -59,26 +61,27 @@ abstract class AbstractAMQPSerializationScheme(
             val scanSpec: String? = System.getProperty(SCAN_SPEC_PROP_NAME)
 
             if (scanSpec == null) {
-                logger.info ("scanSpec not set, not scanning for Custom Serializers")
+                logger.debug("scanSpec not set, not scanning for Custom Serializers")
                 emptyList()
             } else {
-                logger.info ("scanSpec = \"$scanSpec\", scanning for Custom Serializers")
+                logger.debug("scanSpec = \"$scanSpec\", scanning for Custom Serializers")
                 scanClasspathForSerializers(scanSpec)
             }
         }
 
         @StubOutForDJVM
         private fun scanClasspathForSerializers(scanSpec: String): List<SerializationCustomSerializer<*, *>> =
-            this::class.java.classLoader.let { cl ->
-                FastClasspathScanner(scanSpec).addClassLoader(cl).scan()
-                        .getNamesOfClassesImplementing(SerializationCustomSerializer::class.java)
-                        .map { cl.loadClass(it).asSubclass(SerializationCustomSerializer::class.java) }
-                        .filterNot { Modifier.isAbstract(it.modifiers) }
-                        .map { it.kotlin.objectOrNewInstance() }
-            }
+                this::class.java.classLoader.let { cl ->
+                    FastClasspathScanner(scanSpec).addClassLoader(cl).scan()
+                            .getNamesOfClassesImplementing(SerializationCustomSerializer::class.java)
+                            .map { cl.loadClass(it).asSubclass(SerializationCustomSerializer::class.java) }
+                            .filterNot { Modifier.isAbstract(it.modifiers) }
+                            .map { it.kotlin.objectOrNewInstance() }
+                }
 
         @DeleteForDJVM
-        val List<Cordapp>.customSerializers get() = flatMap { it.serializationCustomSerializers }.toSet()
+        val List<Cordapp>.customSerializers
+            get() = flatMap { it.serializationCustomSerializers }.toSet()
     }
 
     // Parameter "context" is unused directly but passed in by reflection. Removing it will cause failures.
@@ -100,6 +103,7 @@ abstract class AbstractAMQPSerializationScheme(
             register(net.corda.serialization.internal.amqp.custom.ZoneIdSerializer(this))
             register(net.corda.serialization.internal.amqp.custom.OffsetTimeSerializer(this))
             register(net.corda.serialization.internal.amqp.custom.OffsetDateTimeSerializer(this))
+            register(net.corda.serialization.internal.amqp.custom.OptionalSerializer(this))
             register(net.corda.serialization.internal.amqp.custom.YearSerializer(this))
             register(net.corda.serialization.internal.amqp.custom.YearMonthSerializer(this))
             register(net.corda.serialization.internal.amqp.custom.MonthDaySerializer(this))
@@ -126,7 +130,7 @@ abstract class AbstractAMQPSerializationScheme(
                 factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
             }
         } else {
-            logger.info("Custom Serializer list loaded - not scanning classpath")
+            logger.debug("Custom Serializer list loaded - not scanning classpath")
             cordappCustomSerializers.forEach { customSerializer ->
                 factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
             }
@@ -153,32 +157,41 @@ abstract class AbstractAMQPSerializationScheme(
     protected abstract fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory
 
     // Not used as a simple direct import to facilitate testing
-    open val publicKeySerializer : CustomSerializer<*> = net.corda.serialization.internal.amqp.custom.PublicKeySerializer
+    open val publicKeySerializer: CustomSerializer<*> = net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 
     private fun getSerializerFactory(context: SerializationContext): SerializerFactory {
-        return serializerFactoriesForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
-            when (context.useCase) {
-                SerializationContext.UseCase.Checkpoint ->
-                    throw IllegalStateException("AMQP should not be used for checkpoint serialization.")
-                SerializationContext.UseCase.RPCClient ->
-                    rpcClientSerializerFactory(context)
-                SerializationContext.UseCase.RPCServer ->
-                    rpcServerSerializerFactory(context)
-                else -> sff.make(context)
-            }.also {
-                registerCustomSerializers(context, it)
+        return synchronized(serializerFactoriesForContexts) {
+            serializerFactoriesForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
+                when (context.useCase) {
+                    SerializationContext.UseCase.Checkpoint ->
+                        throw IllegalStateException("AMQP should not be used for checkpoint serialization.")
+                    SerializationContext.UseCase.RPCClient ->
+                        rpcClientSerializerFactory(context)
+                    SerializationContext.UseCase.RPCServer ->
+                        rpcServerSerializerFactory(context)
+                    else -> sff.make(context)
+                }.also {
+                    registerCustomSerializers(context, it)
+                }
             }
         }
     }
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-        val serializerFactory = getSerializerFactory(context)
+        var contextToUse = context
+        if (context.useCase == SerializationContext.UseCase.RPCClient) {
+            contextToUse = context.withClassLoader(getContextClassLoader())
+        }
+        val serializerFactory = getSerializerFactory(contextToUse)
         return DeserializationInput(serializerFactory).deserialize(byteSequence, clazz, context)
     }
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-        val serializerFactory = getSerializerFactory(context)
-
+        var contextToUse = context
+        if (context.useCase == SerializationContext.UseCase.RPCClient) {
+            contextToUse = context.withClassLoader(getContextClassLoader())
+        }
+        val serializerFactory = getSerializerFactory(contextToUse)
         return SerializationOutput(serializerFactory).serialize(obj, context)
     }
 

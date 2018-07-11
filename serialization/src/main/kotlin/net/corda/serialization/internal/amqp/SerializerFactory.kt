@@ -140,7 +140,7 @@ open class SerializerFactory(
                 }
             }
             Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
-                logger.debug("class=[${actualClass?.simpleName} | $declaredClass] is an enumeration "
+                logger.info("class=[${actualClass?.simpleName} | $declaredClass] is an enumeration "
                         + "declaredType=${declaredType.typeName} "
                         + "isEnum=${declaredType::class.java.isEnum}")
 

@@ -382,20 +382,20 @@ artifactory {
 
         defaults {
             // Root project applies the plugin (for this block) but does not need to be published
-            if(project != rootProject) {
+            if (project != rootProject) {
                 publications(project.extensions.publish.name())
             }
         }
     }
 }
 
-task generateApi(type: net.corda.plugins.GenerateApi){
+task generateApi(type: net.corda.plugins.GenerateApi) {
     baseName = "api-corda"
 }
 
 // This exists to reduce CI build time when the envvar is set (can save up to 40 minutes)
-if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUILD') != null)) {
-    if(file('corda-docs-only-build').exists()) {
+if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUILD') != null)) {
+    if (file('corda-docs-only-build').exists()) {
         logger.info("Tests are disabled due to presence of file 'corda-docs-only-build' in the project root")
     } else {
         logger.info("Tests are disabled due to the presence of envvar CORDA_DOCS_ONLY_BUILD")
@@ -407,7 +407,7 @@ if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUI
         }
 
         it.afterEvaluate {
-            if(it.tasks.findByName("integrationTest") != null) {
+            if (it.tasks.findByName("integrationTest") != null) {
                 integrationTest {
                     exclude '*/**'
                 }
@@ -415,7 +415,7 @@ if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUI
         }
 
         it.afterEvaluate {
-            if(it.tasks.findByName("smokeTest") != null) {
+            if (it.tasks.findByName("smokeTest") != null) {
                 smokeTest {
                     exclude '*/**'
                 }
