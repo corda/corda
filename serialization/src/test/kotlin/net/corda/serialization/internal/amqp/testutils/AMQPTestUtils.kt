@@ -17,9 +17,14 @@ import java.io.NotSerializableException
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
 fun testDefaultFactory() = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+
 fun testDefaultFactoryNoEvolution(): SerializerFactory {
-    return SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader(), evolutionSerializerGetter = EvolutionSerializerGetterTesting())
+    return SerializerFactory(
+            AllWhitelist,
+            ClassLoader.getSystemClassLoader(),
+            evolutionSerializerGetter = EvolutionSerializerGetterTesting())
 }
+
 fun testDefaultFactoryWithWhitelist() = SerializerFactory(EmptyWhitelist, ClassLoader.getSystemClassLoader())
 
 class TestSerializationOutput(
