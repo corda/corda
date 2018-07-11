@@ -248,7 +248,7 @@ class FilterTransformer private constructor (
                         logger.info("-- also identified property or typealias {},{} for deletion", method.visibleName, extensionType)
                     }
                 }
-            } else if (stubAnnotations.contains(descriptor) && (method.access and (ACC_ABSTRACT or ACC_SYNTHETIC)) == 0) {
+            } else if (stubAnnotations.contains(descriptor) && (method.access and ACC_ABSTRACT) == 0) {
                 if (stubbedMethods.add(method)) {
                     logger.info("- Identified method {}{} for stubbing out", method.name, method.descriptor)
                 }

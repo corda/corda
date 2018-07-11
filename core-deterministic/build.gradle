@@ -184,6 +184,7 @@ task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
 defaultTasks "determinise"
 determinise.finalizedBy metafix
 metafix.finalizedBy checkDeterminism
+assemble.dependsOn checkDeterminism
 
 def deterministicJar = metafix.outputs.files.singleFile
 artifacts {

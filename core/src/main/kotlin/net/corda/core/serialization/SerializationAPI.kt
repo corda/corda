@@ -184,7 +184,6 @@ interface SerializationContext {
     /**
      * Helper method to return a new context based on this context with the deserialization class loader changed.
      */
-    @DeleteForDJVM
     fun withClassLoader(classLoader: ClassLoader): SerializationContext
 
     /**
