@@ -25,6 +25,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
 
@@ -40,7 +41,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     }
 
     private val parametersUpdatesTrack: PublishSubject<ParametersUpdateInfo> = PublishSubject.create<ParametersUpdateInfo>()
-    private val executor = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("Network Map Updater Thread", Executors.defaultThreadFactory()))
+    private val executor = ScheduledThreadPoolExecutor(1, NamedThreadFactory("Network Map Updater Thread", Executors.defaultThreadFactory()))
     private var newNetworkParameters: Pair<ParametersUpdate, SignedNetworkParameters>? = null
     private var fileWatcherSubscription: Subscription? = null
 
@@ -64,6 +65,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         if (networkMapClient == null) return
 
         // Subscribe to remote network map if configured.
+        executor.executeExistingDelayedTasksAfterShutdownPolicy = false
         executor.submit(object : Runnable {
             override fun run() {
                 val nextScheduleDelay = try {
