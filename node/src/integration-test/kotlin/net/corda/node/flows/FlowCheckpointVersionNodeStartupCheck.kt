@@ -43,7 +43,7 @@ class FlowCheckpointVersionNodeStartupCheck {
         val cordappsVersionAtRestart = mapOf("net.test.cordapp.v1" to "fancy")
 
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlowY>(), Permissions.invokeRpc("vaultQuery"), Permissions.invokeRpc("vaultTrack")))
-        return driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
+        return driver(DriverParameters(isDebug = true, startNodesInProcess = true, inMemoryDB = false, portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
             {
                 val alice = startNode(rpcUsers = listOf(user), providedName = ALICE_NAME, packageToGeneratedJarName = cordappsVersionAtStartup).getOrThrow()
                 val bob = startNode(rpcUsers = listOf(user), providedName = BOB_NAME, packageToGeneratedJarName = cordappsVersionAtStartup).getOrThrow()
@@ -83,7 +83,7 @@ class FlowCheckpointVersionNodeStartupCheck {
         val cordappsVersionAtRestart = mapOf("net.test.cordapp" to "fancy")  // including now addtional Dummy class to change hash of JAr file, despite reusing the same file name
 
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlowY>(), Permissions.invokeRpc("vaultQuery"), Permissions.invokeRpc("vaultTrack")))
-        return driver(DriverParameters(isDebug = true, startNodesInProcess = true,
+        return driver(DriverParameters(isDebug = true, startNodesInProcess = true, inMemoryDB = false,
                 portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
             {
                 val alice = startNode(rpcUsers = listOf(user), providedName = ALICE_NAME, packageToGeneratedJarName = cordappsVersionAtStartup).getOrThrow()
@@ -116,7 +116,7 @@ class FlowCheckpointVersionNodeStartupCheck {
         val cordappsVersionAtRestart = mapOf("net.test.cordapp.v1" to null)
 
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlowY>(), Permissions.invokeRpc("vaultQuery"), Permissions.invokeRpc("vaultTrack")))
-        return driver(DriverParameters(isDebug = true, startNodesInProcess = true,
+        return driver(DriverParameters(isDebug = true, startNodesInProcess = true, inMemoryDB = false,
                 portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
             {
                 val alice = startNode(rpcUsers = listOf(user), providedName = ALICE_NAME, packageToGeneratedJarName = cordappsVersionAtStartup).getOrThrow()
