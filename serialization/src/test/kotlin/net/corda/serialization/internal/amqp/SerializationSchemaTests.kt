@@ -2,11 +2,11 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
-import net.corda.serialization.internal.*
 import net.corda.serialization.internal.BuiltInExceptionsWhitelist
+import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.GlobalTransientClassWhiteList
+import net.corda.serialization.internal.SerializationContextImpl
 import org.junit.Test
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 
 // Make sure all serialization calls in this test don't get stomped on by anything else
@@ -91,7 +91,7 @@ class SerializationSchemaTests {
 
         val c = C(1)
         val testSerializationFactory = TestSerializationFactory()
-        val expectedCustomSerializerCount = 40
+        val expectedCustomSerializerCount = 41
 
         assertEquals(0, testFactory.registerCount)
         c.serialize(testSerializationFactory, TESTING_CONTEXT)
