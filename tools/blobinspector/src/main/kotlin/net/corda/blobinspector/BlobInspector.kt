@@ -2,7 +2,6 @@ package net.corda.blobinspector
 
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.google.common.io.BaseEncoding
 import com.jcabi.manifests.Manifests
 import net.corda.client.jackson.JacksonSupport
 import net.corda.core.internal.isRegularFile
@@ -12,6 +11,8 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
+import net.corda.core.utilities.base64ToByteArray
+import net.corda.core.utilities.hexToByteArray
 import net.corda.core.utilities.sequence
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
@@ -116,8 +117,8 @@ class BlobInspector : Runnable {
         try {
             val bytes = when (format) {
                 InputFormatType.BINARY -> inputBytes
-                InputFormatType.HEX -> BaseEncoding.base16().decode(String(inputBytes).trim().toUpperCase())
-                InputFormatType.BASE64 -> BaseEncoding.base64().decode(String(inputBytes).trim())
+                InputFormatType.HEX -> String(inputBytes).trim().toUpperCase().hexToByteArray()
+                InputFormatType.BASE64 -> String(inputBytes).trim().base64ToByteArray()
             }
             require(bytes.size > amqpMagic.size) { "Insufficient bytes for AMQP blob" }
             return if (bytes.copyOf(amqpMagic.size).contentEquals(amqpMagic.bytes)) {
