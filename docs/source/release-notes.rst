@@ -6,23 +6,52 @@ Release notes
 Release 3.2
 -----------
 
-As we see more Corda deployments in production this minor release of the open sorce platform brings
+As we see more Corda deployments in production this minor release of the open source platform brings
 several fixes that make it easier for a node to to join Corda Networks broader than those used when
 operating as part of an internal testing deployment. This will ensure Corda nodes will be free to interact
 with with upcoming network offerings from R3 and others who may make broad-access Corda networks available
 
-* **Split Compatibility Zone**
-
 * **The Network Bootstrapper**
 
 To support the ongoing move toward usability, testing, and deployment, 3.2 is releasing the
-Network Bootstrapper <docs ref> to facilitate the simple creation of more dynamic ad-hoc testing
+Network Bootstrapper <docs ref> to facilitate the simple creation of more dynamic ad hoc testing
 environments.
+
+Using a graphical interface you will be able to dynamically create and alter Corda Networks, adding
+nodes and CorDapps with the click of a button!. Additionally, you can leverage its integration
+with Azure cloud services for remote hosting of Nodes and Docker instances for local testing.
+
+* **Split Compatibility Zone**
+
+Prior to this release compatibility zone membership was denoted with a single configuration setting
+
+.. sourcecode:: shell
+
+    compatibilityZoneURL : "http://<host>(:<port>)"
+
+That would indicate both the location of the Doorman service the node should use for registration
+of its identity as well as the Network Map service where it would publish it's signed Node Info and
+retrieve the Network Map.
+
+Compatibility Zones can now, however, be configured with the two disparate services, Doorman and
+Netowrk Map, running on different URLs. If the compatibility zone your node is connecting to
+is configured in this manner, the new configuration looks as follows.
+
+.. sourcecode:: shell
+
+    networkServices {
+        doormanURL: "http://<host>(:<port>)"
+        networkMapURL: "http://<host>(:<port>)"
+    }
+
+.. note:: The ``compatibilityZoneURL`` setting should be considered deprecated in favour of the new
+    ``networkServices`` settings group.
 
 * **The Blob Inspector**
 
-Finally, the Blob Inspector <docs ref> brings the ability to inspect serializes Corda Blobs at the
-command line, meaning those serialized Network Parameters and Node Info files are suddenly a lot
+Finally, the Blob Inspector <docs ref> brings the ability to unpack serialized Corda Blobs at the
+command line, giving a human readable interpretation of the encoded date. Practically speaking this
+meas the binary Network Parameters and Node Info files used by the nodes are suddenly a lot
 easier to understand and debug.
 
 Issues Fixed
