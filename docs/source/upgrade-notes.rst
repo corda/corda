@@ -37,6 +37,27 @@ You will need to update the ``corda_release_version`` identifier in your project
 
   ext.corda_release_version = '3.2-corda'
 
+v3.0 to v3.2
+------------
+
+You will need to update the ``corda_release_version`` identifier in your project gradle file.
+
+.. sourcecode:: shell
+
+  ext.corda_release_version = '3.2-corda'
+
+Database schema changes
+^^^^^^^^^^^^^^^^^^^^^^^
+
+H2 database upgrade - the ``NODE_ATTACHMENTS_CONTRACT_CLASS_NAME`` table name was changed, for each database instance and schema run the following SQL statement:
+
+    ALTER TABLE [schema].NODE_ATTACHMENTS_CONTRACT_CLASS_NAME RENAME TO NODE_ATTCHMENTS_CONTRACTS;
+
+Schema is optional, run SQL when the node is not running.
+
+Note: the table was changed in version ``3.1`` but not mentioned in ``3.1`` Upgrade Notes.
+
+
 v3.0 to v3.1
 ------------
 
