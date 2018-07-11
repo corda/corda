@@ -17,14 +17,14 @@ private const val DUMMY_PASSES = 1
 
 private val DECLARES_DEFAULT_VALUE_MASK: Int = DECLARES_DEFAULT_VALUE.toFlags(true).inv()
 
-internal abstract class Element(val name: String, val descriptor: String) {
+abstract class Element(val name: String, val descriptor: String) {
     private var lifetime: Int = DUMMY_PASSES
 
     open val isExpired: Boolean get() = --lifetime < 0
 }
 
 
-internal class MethodElement(name: String, descriptor: String, val access: Int = 0) : Element(name, descriptor) {
+class MethodElement(name: String, descriptor: String, val access: Int = 0) : Element(name, descriptor) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other?.javaClass != javaClass) return false
@@ -65,7 +65,7 @@ internal class MethodElement(name: String, descriptor: String, val access: Int =
  * A class cannot have two fields with the same name but different types. However,
  * it can define extension functions and properties.
  */
-internal class FieldElement(name: String, descriptor: String = "?", val extension: String = "()") : Element(name, descriptor) {
+class FieldElement(name: String, descriptor: String = "?", val extension: String = "()") : Element(name, descriptor) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other?.javaClass != javaClass) return false

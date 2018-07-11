@@ -34,7 +34,7 @@ class StaticFieldRemovalTest {
                     removeAnnotations = emptySet(),
                     deleteAnnotations = setOf(Deletable::class.jvmName.descriptor),
                     stubAnnotations = emptySet(),
-                    unwantedClasses = mutableSetOf()
+                    unwantedElements = UnwantedCache()
                 )
             }, COMPUTE_MAXS)
             return bytecode.toClass(type, asType)
