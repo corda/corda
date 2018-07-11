@@ -20,6 +20,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.node.User
 import net.test.cordapp.v1.SendMessageFlowY
+import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
@@ -29,6 +30,12 @@ import kotlin.test.assertNotNull
 class FlowCheckpointVersionNodeStartupCheck {
     companion object {
         val message = Message("Hello world!")
+    }
+
+    @Before
+    fun setUp() {
+        //for in-process nodes the cache of CordappLoader should be invalidated
+        CordappLoader.invalidateCache()
     }
 
     @Test
@@ -41,8 +48,7 @@ class FlowCheckpointVersionNodeStartupCheck {
         val jarNamesVersionAtRestart = mapOf("net.test.cordapp.v1" to "fancy")
 
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlowY>(), Permissions.invokeRpc("vaultQuery"), Permissions.invokeRpc("vaultTrack")))
-        return driver(DriverParameters(isDebug = true, startNodesInProcess = true,//isQuasarAgentSpecified(),
-                portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
+        return driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
             {
                 val alice = startNode(rpcUsers = listOf(user), providedName = ALICE_NAME, packages = cordappsVersionAtStartup, packageToGeneratedJarNames = jarNamesVersionAtStartup).getOrThrow()
                 val bob = startNode(rpcUsers = listOf(user), providedName = BOB_NAME, packages = cordappsVersionAtStartup, packageToGeneratedJarNames = jarNamesVersionAtStartup).getOrThrow()
@@ -54,12 +60,14 @@ class FlowCheckpointVersionNodeStartupCheck {
                 }
                 bob.stop()
             }()
-            //for in-process nodes the cahce of CordappLoader should be invalidated
+            //for in-process nodes the cache of CordappLoader should be invalidated
             CordappLoader.invalidateCache()
             val result =  {
                 //Bob will resume the flow
-                val alice = startNode(rpcUsers = listOf(user), providedName = ALICE_NAME, packages = cordappsVersionAtRestart, customOverrides = mapOf( "devMode" to false), packageToGeneratedJarNames = jarNamesVersionAtRestart).getOrThrow()
-                startNode(providedName = BOB_NAME, rpcUsers = listOf(user), packages = cordappsVersionAtRestart, customOverrides = mapOf("devMode" to false), packageToGeneratedJarNames = jarNamesVersionAtRestart).getOrThrow()
+                val alice = startNode(rpcUsers = listOf(user), providedName = ALICE_NAME, packages = cordappsVersionAtRestart, customOverrides = mapOf( "devMode" to false),
+                        packageToGeneratedJarNames = jarNamesVersionAtRestart).getOrThrow()
+                startNode(providedName = BOB_NAME, rpcUsers = listOf(user), packages = cordappsVersionAtRestart, customOverrides = mapOf("devMode" to false),
+                        packageToGeneratedJarNames = jarNamesVersionAtRestart).getOrThrow()
                 CordaRPCClient(alice.rpcAddress).start(user.username, user.password).use {
                     val page = it.proxy.vaultTrack(MessageState::class.java)
                     if (page.snapshot.states.isNotEmpty()) {
@@ -103,7 +111,7 @@ class FlowCheckpointVersionNodeStartupCheck {
                 bob.stop()
                  logFolder
             }()
-            //for in-process nodes the cahce of CordappLoader should be invalidated
+            //for in-process nodes the cache of CordappLoader should be invalidated
             CordappLoader.invalidateCache()
 
             startNode(rpcUsers = listOf(user), providedName = ALICE_NAME, customOverrides = mapOf("devMode" to false),
@@ -112,14 +120,6 @@ class FlowCheckpointVersionNodeStartupCheck {
                     startNode(providedName = BOB_NAME, rpcUsers = listOf(user), customOverrides = mapOf("devMode" to false),
                             packages = cordappsVersionAtRestart, packageToGeneratedJarNames = jarNamesVersionAtRestart).getOrThrow()
             }
-
-            //for out of process node
-            //val logFile = logFolder.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }
-            // We count the number of nodes that wrote into the logfile by counting "Logs can be found in"
-            //val numberOfNodesThatLogged = logFile.readLines { it.filter { "that is incompatible with the current installed version of" in it }.count() }
-            //val numberOfNodesThatLogged = logFile.readLines { it.filter {"that is no longer installed" in it }.count() }
-            //assertEquals(1, numberOfNodesThatLogged)
-
         }
     }
 
@@ -130,8 +130,8 @@ class FlowCheckpointVersionNodeStartupCheck {
         val cordappsVersionAtStartup = listOf("net.test.cordapp.v1")
         val cordappsVersionAtRestart = listOf("net.test.cordapp.v1")
 
-        val jarNamesVersionAtStartup = mapOf<String, String>("net.test.cordapp.v1" to "zzzz")  //the same content by the JAR will have different random name (we don't provide a package to JAr name mapping)
-        val jarNamesVersionAtRestart = mapOf<String, String>("net.test.cordapp.v1" to "yyyy")
+        val jarNamesVersionAtStartup = emptyMap<String, String>() //mapOf<String, String>("net.test.cordapp.v1" to "zzzz")  //the same content by the JAR will have different random name (we don't provide a package to JAr name mapping)
+        val jarNamesVersionAtRestart = emptyMap<String, String>() //mapOf<String, String>("net.test.cordapp.v1" to "yyyy")
 
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlowY>(), Permissions.invokeRpc("vaultQuery"), Permissions.invokeRpc("vaultTrack")))
         return driver(DriverParameters(isDebug = true, startNodesInProcess = true,//isQuasarAgentSpecified(),
@@ -152,7 +152,7 @@ class FlowCheckpointVersionNodeStartupCheck {
                 bob.stop()
                 logFolder
             }()
-            //for in-process nodes the cahce of CordappLoader should be invalidated
+            //for in-process nodes the cache of CordappLoader should be invalidated
             CordappLoader.invalidateCache()
 
             startNode(rpcUsers = listOf(user), providedName = ALICE_NAME, customOverrides = mapOf("devMode" to false),
@@ -161,14 +161,6 @@ class FlowCheckpointVersionNodeStartupCheck {
                 startNode(providedName = BOB_NAME, rpcUsers = listOf(user), customOverrides = mapOf("devMode" to false),
                         packages = cordappsVersionAtRestart, packageToGeneratedJarNames = jarNamesVersionAtRestart).getOrThrow()
             }
-
-            //for out of process node
-            //val logFile = logFolder.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }
-            // We count the number of nodes that wrote into the logfile by counting "Logs can be found in"
-            //val numberOfNodesThatLogged = logFile.readLines { it.filter { "that is incompatible with the current installed version of" in it }.count() }
-            //val numberOfNodesThatLogged = logFile.readLines { it.filter {"that is no longer installed" in it }.count() }
-            //assertEquals(1, numberOfNodesThatLogged)
-
         }
     }
 }
