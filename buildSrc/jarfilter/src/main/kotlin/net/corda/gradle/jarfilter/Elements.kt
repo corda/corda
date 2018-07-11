@@ -81,6 +81,13 @@ internal class FieldElement(name: String, descriptor: String = "?", val extensio
 val String.extensionType: String get() = substring(0, 1 + indexOf(')'))
 
 /**
+ * Returns a fully-qualified class name as it would exist
+ * in the byte-code, e.g. as "a/b/c/ClassName$Nested".
+ */
+fun NameResolver.getClassInternalName(idx: Int): String
+    = getQualifiedClassName(idx).replace('.', '$')
+
+/**
  * Construct the signatures of the synthetic methods that
  * Kotlin would create to handle default parameter values.
  */

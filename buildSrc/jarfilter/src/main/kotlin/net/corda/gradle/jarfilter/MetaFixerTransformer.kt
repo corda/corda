@@ -79,7 +79,7 @@ internal abstract class MetaFixerTransformer<out T : MessageLite>(
         var count = 0
         var idx = 0
         while (idx < sealedSubclassNames.size) {
-            val sealedSubclassName = nameResolver.getString(sealedSubclassNames[idx]).replace('.', '$')
+            val sealedSubclassName = nameResolver.getClassInternalName(sealedSubclassNames[idx])
             if (actualClasses.contains(sealedSubclassName)) {
                 ++idx
             } else {
@@ -219,7 +219,7 @@ internal class ClassMetaFixerTransformer(
     ProtoBuf.Class::parseFrom
 ) {
     override val typeTable = TypeTable(message.typeTable)
-    override val classDescriptor = "L${nameResolver.getString(message.fqName)};"
+    override val classDescriptor = "L${nameResolver.getClassInternalName(message.fqName)};"
     override val classKind: ProtoBuf.Class.Kind = CLASS_KIND.get(message.flags)
     override val properties = mutableList(message.propertyList)
     override val functions = mutableList(message.functionList)
