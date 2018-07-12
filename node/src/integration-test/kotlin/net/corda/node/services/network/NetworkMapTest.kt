@@ -5,7 +5,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
@@ -21,7 +20,10 @@ import net.corda.testing.core.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.RandomFree
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.CompatibilityZoneParams
+import net.corda.testing.node.internal.DriverDSLImpl
+import net.corda.testing.node.internal.SplitCompatibilityZoneParams
+import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -30,13 +32,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
 import java.net.URL
 import java.time.Instant
 
-@RunWith(Parameterized::class)
-class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneParams) {
+class NetworkMapTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
@@ -47,37 +46,17 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
     private lateinit var networkMapServer: NetworkMapServer
     private lateinit var compatibilityZone: CompatibilityZoneParams
 
-    companion object {
-        @JvmStatic
-        @Parameterized.Parameters(name = "{0}")
-        fun runParams() = listOf(
-                { addr: URL, nms: NetworkMapServer ->
-                    SharedCompatibilityZoneParams(
-                            addr,
-                            publishNotaries = {
-                                nms.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
-                            }
-                    )
-                },
-                { addr: URL, nms: NetworkMapServer ->
-                    SplitCompatibilityZoneParams(
-                            doormanURL = URL("http://I/Don't/Exist"),
-                            networkMapURL = addr,
-                            publishNotaries = {
-                                nms.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
-                            }
-                    )
-                }
-
-        )
-    }
-
-
     @Before
     fun start() {
         networkMapServer = NetworkMapServer(cacheTimeout, portAllocation.nextHostAndPort())
         val address = networkMapServer.start()
-        compatibilityZone = initFunc(URL("http://$address"), networkMapServer)
+        compatibilityZone = SplitCompatibilityZoneParams(
+                doormanURL = URL("http://I/Don't/Exist"),
+                networkMapURL = URL("http://$address"),
+                publishNotaries = {
+                    networkMapServer.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
+                }
+        )
     }
 
     @After
@@ -133,43 +112,7 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
     }
 
     @Test
-    fun `node correctly downloads and saves network parameters file on startup`() {
-        internalDriver(
-                portAllocation = portAllocation,
-                compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
-                notarySpecs = emptyList()
-        ) {
-            val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
-            val networkParameters = (alice.baseDirectory / NETWORK_PARAMS_FILE_NAME)
-                    .readObject<SignedNetworkParameters>()
-                    .verified()
-            // We use a random modified time above to make the network parameters unqiue so that we're sure they came
-            // from the server
-            assertEquals(networkMapServer.networkParameters, networkParameters)
-        }
-    }
-
-    @Test
-    fun `nodes can see each other using the http network map`() {
-        internalDriver(
-                portAllocation = portAllocation,
-                compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
-                notarySpecs = emptyList()
-        ) {
-            val (aliceNode, bobNode) = listOf(
-                    startNode(providedName = ALICE_NAME, devMode = false),
-                    startNode(providedName = BOB_NAME, devMode = false)
-            ).transpose().getOrThrow()
-
-            aliceNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
-            bobNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
-        }
-    }
-
-    @Test
-    fun `nodes process network map add updates correctly when adding new node to network map`() {
+    fun `nodes process additions and removals to the network map`() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
@@ -177,34 +120,18 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
                 notarySpecs = emptyList()
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
+            assertNetworkParametersDownloaded(aliceNode)
 
             aliceNode.onlySees(aliceNode.nodeInfo)
 
             val bobNode = startNode(providedName = BOB_NAME, devMode = false).getOrThrow()
+            assertNetworkParametersDownloaded(bobNode)
 
             // Wait for network map client to poll for the next update.
             Thread.sleep(cacheTimeout.toMillis() * 2)
 
             bobNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
             aliceNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
-        }
-    }
-
-    @Test
-    fun `nodes process network map remove updates correctly`() {
-        internalDriver(
-                portAllocation = portAllocation,
-                compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
-                notarySpecs = emptyList()
-        ) {
-            val (aliceNode, bobNode) = listOf(
-                    startNode(providedName = ALICE_NAME, devMode = false),
-                    startNode(providedName = BOB_NAME, devMode = false)
-            ).transpose().getOrThrow()
-
-            aliceNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
-            bobNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
 
             networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
 
@@ -240,6 +167,15 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
             assertThat(nodeInfosDir.list()).isEmpty()
         }
         assertThat(rpc.networkMapSnapshot()).containsOnly(*nodes)
+    }
+
+    private fun assertNetworkParametersDownloaded(node: NodeHandle) {
+        val networkParameters = (node.baseDirectory / NETWORK_PARAMS_FILE_NAME)
+                .readObject<SignedNetworkParameters>()
+                .verified()
+        // We use a random modified time above to make the network parameters unqiue so that we're sure they came
+        // from the server
+        assertEquals(networkMapServer.networkParameters, networkParameters)
     }
 }
 
