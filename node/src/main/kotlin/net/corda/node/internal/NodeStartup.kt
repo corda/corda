@@ -184,7 +184,7 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     private fun shouldRegisterWithNetwork(cmdlineOptions: CmdLineOptions, conf: NodeConfiguration): Boolean {
-        val compatibilityZoneURL = conf.compatibilityZoneURL
+        val compatibilityZoneURL = conf.networkServices?.doormanURL
         return !(!cmdlineOptions.isRegistration || compatibilityZoneURL == null)
     }
 
