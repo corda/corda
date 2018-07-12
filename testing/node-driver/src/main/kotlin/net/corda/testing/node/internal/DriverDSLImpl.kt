@@ -1217,11 +1217,11 @@ fun Class<*>.classFileURL(): URL {
 // TODO sollecitom
 fun Package.classFilesDirectoryURL(classLoader: ClassLoader): List<URL> {
 
-    return packageURLs(name, classLoader)
+    return classFilesDirectoryURL(name, classLoader)
 }
 
 // TODO sollecitom
-fun packageURLs(targetPackage: String, classLoader: ClassLoader): List<URL> {
+fun classFilesDirectoryURL(targetPackage: String, classLoader: ClassLoader): List<URL> {
 
     val resource = targetPackage.replace('.', '/')
     return classLoader.getResources(resource).toList()
