@@ -33,9 +33,9 @@ others to provide support. However, if you do use other tools, we'd be intereste
 
 Set-up instructions
 -------------------
-The instructions below will allow you to set up a Corda development environment and run a basic CorDapp. If you have
-any issues, please consult the :doc:`troubleshooting` page, or reach out on `Slack <http://slack.corda.net/>`_,
-`Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ or the `forums <https://discourse.corda.net/>`_.
+The instructions below will allow you to set up your development environment for running Corda and writing CorDapps. If 
+you have any issues, please reach out on `Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ or via
+`our Slack channels <http://slack.corda.net/>`_.
 
 The set-up instructions are available for the following platforms:
 
