@@ -70,3 +70,67 @@ Note that:
   `PostgreSQL documentation <https://www.postgresql.org/docs/9.3/static/ddl-schemas.html#DDL-SCHEMAS-PATH>`_, or
   the schema search path must be set explicitly for the user.
 
+
+
+Node Database Schema
+----------
+The node has a standard set of tables in its database schema which is used to store information into the database.
+Tables below:
+
+contract_cash_states	
+
+cp_states
+
+node_attachments
+
+node_attachments_contracts	
+
+node_checkpoints	
+
+node_contract_upgrades	
+
+node_identities
+
+node_info_hosts	
+
+node_info_party_cert
+
+node_infos
+
+node_link_nodeinfo_party	
+
+node_message_ids
+> *stores in-flight information related to all communication and interactions the the node during a transaction*
+
+node_message_retry	
+
+node_mutual_exclusion	
+
+node_named_identities	
+
+node_our_key_pairs	
+
+node_properties	
+
+node_scheduled_states
+
+node_transaction_mappings	
+
+node_transactions	
+
+vault_fungible_states
+
+vault_fungible_states_parts	
+
+vault_linear_states	
+
+vault_linear_states_parts	
+
+vault_states	
+
+vault_transaction_notes	
+
+DATABASECHANGELOG
+
+DATABASECHANGELOGLOCK	
+
