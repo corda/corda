@@ -24,7 +24,7 @@ Please note:
   `here <https://medium.com/@octskyward/why-kotlin-is-my-next-programming-language-c25c001e26e3>`_. If you're
   unfamiliar with Kotlin, there is an official
   `getting started guide <https://kotlinlang.org/docs/tutorials/>`_, and a series of
-  `Kotlin Koans <https://kotlinlang.org/docs/tutorials/koans.html>`_.
+  `Kotlin Koans <https://kotlinlang.org/docs/tutorials/koans.html>`_
 
 * IntelliJ IDEA is recommended due to the strength of its Kotlin integration
 
