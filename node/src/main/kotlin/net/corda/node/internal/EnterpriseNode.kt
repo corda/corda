@@ -14,10 +14,8 @@ import com.codahale.metrics.MetricFilter
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.graphite.GraphiteReporter
 import com.codahale.metrics.graphite.PickledGraphite
-import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.JSchException
-import io.netty.util.concurrent.FastThreadLocalThread
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.Emoji
@@ -27,6 +25,7 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.RelayConfiguration
+import net.corda.node.services.statemachine.MultiThreadedStateMachineExecutor
 import net.corda.node.services.statemachine.MultiThreadedStateMachineManager
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -35,7 +34,6 @@ import org.fusesource.jansi.AnsiConsole
 import java.io.IOException
 import java.net.Inet6Address
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 open class EnterpriseNode(configuration: NodeConfiguration,
@@ -185,10 +183,7 @@ D""".trimStart()
 
     private fun makeStateMachineExecutorService(): ExecutorService {
         log.info("Multi-threaded state machine manager with ${configuration.enterpriseConfiguration.tuning.flowThreadPoolSize} threads.")
-        return Executors.newFixedThreadPool(
-                configuration.enterpriseConfiguration.tuning.flowThreadPoolSize,
-                ThreadFactoryBuilder().setNameFormat("flow-worker").setThreadFactory(::FastThreadLocalThread).build()
-        )
+        return MultiThreadedStateMachineExecutor(configuration.enterpriseConfiguration.tuning.flowThreadPoolSize)
     }
 
     override fun makeStateMachineManager(database: CordaPersistence): StateMachineManager {
