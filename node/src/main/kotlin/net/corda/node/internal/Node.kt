@@ -56,6 +56,7 @@ import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.AttachmentsContractsTableBackwardCompatibleNamingStrategy
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT
@@ -352,7 +353,12 @@ open class Node(configuration: NodeConfiguration,
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
         }
-        return super.initialiseDatabasePersistence(schemaService, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous)
+        val persistence = super.initialiseDatabasePersistence(schemaService, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous)
+        if (AttachmentsContractsTableBackwardCompatibleNamingStrategy.incorrectNameDetected()) {
+            log.warn(AttachmentsContractsTableBackwardCompatibleNamingStrategy.getWarning())
+            printWarning(AttachmentsContractsTableBackwardCompatibleNamingStrategy.getWarning())
+        }
+        return persistence
     }
 
     private val _startupComplete = openFuture<Unit>()

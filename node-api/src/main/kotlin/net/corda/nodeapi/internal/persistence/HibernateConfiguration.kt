@@ -8,6 +8,7 @@ import net.corda.core.utilities.toHexString
 import org.hibernate.SessionFactory
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.model.naming.Identifier
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy
 import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl
@@ -29,7 +30,8 @@ class HibernateConfiguration(
         schemas: Set<MappedSchema>,
         private val databaseConfig: DatabaseConfig,
         private val attributeConverters: Collection<AttributeConverter<*, *>>,
-        val cordappClassLoader: ClassLoader? = null
+        val cordappClassLoader: ClassLoader? = null,
+        private val tableNamingStrategyOverride: PhysicalNamingStrategy? = null
 ) {
     companion object {
         private val logger = contextLogger()
@@ -99,12 +101,13 @@ class HibernateConfiguration(
         }
 
         val metadata = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build()).run {
-            applyPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
-                override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
-                    val default = super.toPhysicalTableName(name, context)
-                    return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
-                }
-            })
+            applyPhysicalNamingStrategy(
+                    tableNamingStrategyOverride ?: object : PhysicalNamingStrategyStandardImpl() {
+                        override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
+                            val default = super.toPhysicalTableName(name, context)
+                            return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
+                        }
+                    })
             // register custom converters
             attributeConverters.forEach { applyAttributeConverter(it) }
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.

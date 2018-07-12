@@ -61,7 +61,7 @@ class CordaPersistence(
     private val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
-            HibernateConfiguration(schemas, databaseConfig, attributeConverters)
+            HibernateConfiguration(schemas, databaseConfig, attributeConverters, tableNamingStrategyOverride = AttachmentsContractsTableBackwardCompatibleNamingStrategy.getNamingStrategy(connection, databaseConfig))
         }
     }
     val entityManagerFactory get() = hibernateConfig.sessionFactoryForRegisteredSchemas
