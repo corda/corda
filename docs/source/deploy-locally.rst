@@ -1,5 +1,5 @@
 Setting up your local environment to allow the deployment of a Corda node
-========================================================================
+=========================================================================
 
 .. contents::
 
@@ -10,8 +10,7 @@ downloading a node ZIP from: https://testnet.corda.network.
 
 Pre-requisites
 --------------
-* Register for an account on https://testnet.corda.network and download
-  and install the Corda node from the ZIP file.
+* Register for an account on https://testnet.corda.network.
 
 
 Set up your local network
@@ -39,7 +38,7 @@ router to make sure packets intended for Corda are routed to the right
 place on your local network.
 	  
 Set up static IP address local host machine
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The next steps will configure your router to forward
 packets to the Corda node, but for this it is required to set the host
@@ -53,7 +52,7 @@ setting a static IP on the host machine.
 
 
 Set up port forwarding on your router
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Port forwarding is a method of making a computer on your network
 accessible to computers on the Internet, even though it is behind a router.
@@ -61,7 +60,7 @@ accessible to computers on the Internet, even though it is behind a router.
 .. note:: All routers are slightly different and you will need to  consult the
 documentation for your specific make and model.
 
-Log in to the admin page of your router (often ``192.168.0.1`` in your
+Log in to the admin page of your router (often ``192.168.0.1``) in your
 browser bar.
 
 .. note:: Router administration IP and log in credentials are usually
@@ -91,7 +90,7 @@ enabling  port forwarding.
 
 
 Open firewall ports
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 If you are operating a firewall on your host machine or local network
 you will also need to open the above ports for incoming traffic.
@@ -126,14 +125,14 @@ ability to transact while this happens.
 
 	     
 Test is the ports are open
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can use a port checking tool to make sure the ports are open
 properly.
 
 
 Download and install your node
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Navigate to https://testnet.corda.network/platform.
 
@@ -150,6 +149,7 @@ Unzip the file in your Corda root directory:
     cd corda
     cp <PATH_TO_DOWNLOAD>/node.zip .
     unzip node.zip
+    cd node
 
 Run the ``run-corda.sh`` script to start your Corda node.
 
