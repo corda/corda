@@ -34,13 +34,13 @@ import java.time.Instant
  */
 @CordaSerializable
 data class StateMachineInfo @JvmOverloads constructor(
-        /** A univerally unique ID ([java.util.UUID]) representing this particular instance of the named flow. */
+        /** A universally unique ID ([java.util.UUID]) representing this particular instance of the named flow. */
         val id: StateMachineRunId,
         /** The JVM class name of the flow code. */
         val flowLogicClassName: String,
         /**
          * An object representing information about the initiator of the flow. Note that this field is
-         * superceded by the [invocationContext] property, which has more detail.
+         * superseded by the [invocationContext] property, which has more detail.
          */
         @Deprecated("There is more info available using 'context'") val initiator: FlowInitiator,
         /** A [DataFeed] of the current progress step as a human readable string, and updates to that string. */
@@ -371,8 +371,11 @@ interface CordaRPCOps : RPCOps {
     /**
      * Clear all network map data from local node cache. Notice that after invoking this method your node will lose
      * network map data and effectively won't be able to start any flow with the peers until network map is downloaded
-     * again on next poll - when it happens, depends on polling interval set by network map server. You can also use [refreshNetworkMapCache]
-     * to force next fetch from network map server.
+     * again on next poll - from `additional-node-infos` directory or from network map server. It depends on the
+     * polling interval when it happens. You can also use [refreshNetworkMapCache] to force next fetch from network map server
+     * (not from directory - it will happen automatically).
+     * If you run local test deployment and want clear view of the network, you may want to clear also `additional-node-infos`
+     * directory, because cache can be repopulated from there.
      */
     fun clearNetworkMapCache()
 
