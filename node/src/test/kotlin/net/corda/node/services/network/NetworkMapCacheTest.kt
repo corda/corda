@@ -18,7 +18,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class NetworkMapCacheTest {
-    private val mockNet = InternalMockNetwork(emptyList())
+    private val mockNet = InternalMockNetwork()
 
     @After
     fun teardown() {

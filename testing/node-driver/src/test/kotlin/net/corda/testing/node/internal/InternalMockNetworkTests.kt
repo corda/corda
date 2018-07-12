@@ -9,7 +9,7 @@ class InternalMockNetworkTests {
     fun `does not leak serialization env if init fails`() {
         val e = Exception("didn't work")
         assertThatThrownBy {
-            object : InternalMockNetwork(emptyList()) {
+            object : InternalMockNetwork() {
                 override fun createNotaries() = throw e
             }
         }.isSameAs(e)
