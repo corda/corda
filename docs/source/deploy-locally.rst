@@ -64,6 +64,9 @@ documentation for your specific make and model.
 Log in to the admin page of your router (often ``192.168.0.1`` in your
 browser bar.
 
+.. note:: Router administration IP and log in credentials are usually
+	  on the bottom or side of your router.
+
 Navigate to the ``port forwarding`` section of the admin console.
 
 Add rules for the following ports which Corda uses:
