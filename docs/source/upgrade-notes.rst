@@ -20,10 +20,10 @@ and `Corda V3.0 upgrade notes <https://docs.corda.net/releases/release-V3.0/upgr
 
 Upgrading to |release| from Open Source 3.x requires updating build file properties. For Gradle:
 
-.. parsed-literal:: shell
+.. sourcecode:: shell
 
     ext.corda_release_distribution = 'com.r3.corda'
-    ext.corda_release_version = '|version|'
+    ext.corda_release_version = '3.1'
     ext.corda_gradle_plugins_version = '4.0.25'
 ..
 
@@ -49,9 +49,9 @@ and specifying an additional repository entry to point to the location of the Co
 
        cordaCompile "net.corda:corda-core:$corda_release_version"
 
-   becomes:
+becomes:
 
-   .. sourcecode:: shell
+.. sourcecode:: shell
 
        cordaCompile "$corda_release_distribution:corda-core:$corda_release_version"
 
@@ -89,9 +89,9 @@ A limited distribution preview of |release| was made available to a small number
 
 * Update versions in your build files, for Gradle, as an example:
 
-  .. parsed-literal:: shell
+  .. sourcecode:: shell
 
-      ext.corda_release_version = '|version|'
+      ext.corda_release_version = '3.1'
       ext.corda_gradle_plugins_version = '4.0.25'
       ext.kotlin_version = '1.2.50'
   ..
