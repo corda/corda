@@ -58,6 +58,7 @@ task patchSerialization(type: Zip, dependsOn: serializationJarTask) {
         exclude 'net/corda/serialization/internal/DefaultWhitelist*'
         exclude 'net/corda/serialization/internal/amqp/AMQPSerializerFactories*'
         exclude 'net/corda/serialization/internal/amqp/AMQPStreams*'
+        exclude 'net/corda/serialization/internal/amqp/AMQPSerializationThreadContext*'
     }
 
     reproducibleFileOrder = true
@@ -166,6 +167,7 @@ task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
 defaultTasks "determinise"
 determinise.finalizedBy metafix
 metafix.finalizedBy checkDeterminism
+assemble.dependsOn checkDeterminism
 
 def deterministicJar = metafix.outputs.files.singleFile
 artifacts {

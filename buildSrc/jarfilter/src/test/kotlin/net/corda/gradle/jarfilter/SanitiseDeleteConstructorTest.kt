@@ -16,12 +16,13 @@ import kotlin.jvm.kotlin
 import kotlin.reflect.full.primaryConstructor
 import kotlin.test.assertFailsWith
 
-class SanitiseConstructorTest {
+class SanitiseDeleteConstructorTest {
     companion object {
+        private const val COMPLEX_CONSTRUCTOR_CLASS = "net.corda.gradle.HasOverloadedComplexConstructorToDelete"
         private const val COUNT_INITIAL_OVERLOADED = 1
         private const val COUNT_INITIAL_MULTIPLE = 2
         private val testProjectDir = TemporaryFolder()
-        private val testProject = JarFilterProject(testProjectDir, "sanitise-constructor")
+        private val testProject = JarFilterProject(testProjectDir, "sanitise-delete-constructor")
 
         @ClassRule
         @JvmField
@@ -32,13 +33,13 @@ class SanitiseConstructorTest {
 
     @Test
     fun deleteOverloadedLongConstructor() = checkClassWithLongParameter(
-        "net.corda.gradle.HasOverloadedLongConstructor",
+        "net.corda.gradle.HasOverloadedLongConstructorToDelete",
         COUNT_INITIAL_OVERLOADED
     )
 
     @Test
     fun deleteMultipleLongConstructor() = checkClassWithLongParameter(
-        "net.corda.gradle.HasMultipleLongConstructors",
+        "net.corda.gradle.HasMultipleLongConstructorsToDelete",
         COUNT_INITIAL_MULTIPLE
     )
 
@@ -57,9 +58,9 @@ class SanitiseConstructorTest {
                 val primary = kotlin.primaryConstructor ?: throw AssertionError("primary constructor missing")
                 assertThat(primary.call(BIG_NUMBER).longData()).isEqualTo(BIG_NUMBER)
 
-                newInstance().also {
-                    assertEquals(0, it.longData())
-                }
+                val noArg = kotlin.noArgConstructor ?: throw AssertionError("no-arg constructor missing")
+                assertThat(noArg.callBy(emptyMap()).longData()).isEqualTo(0)
+                assertThat(newInstance().longData()).isEqualTo(0)
             }
         }
 
@@ -75,6 +76,7 @@ class SanitiseConstructorTest {
                 val primary = kotlin.primaryConstructor ?: throw AssertionError("primary constructor missing")
                 assertThat(primary.call(BIG_NUMBER).longData()).isEqualTo(BIG_NUMBER)
 
+                assertNull("no-arg constructor exists", kotlin.noArgConstructor)
                 assertFailsWith<NoSuchMethodException> { getDeclaredConstructor() }
             }
         }
@@ -82,13 +84,13 @@ class SanitiseConstructorTest {
 
     @Test
     fun deleteOverloadedIntConstructor() = checkClassWithIntParameter(
-        "net.corda.gradle.HasOverloadedIntConstructor",
+        "net.corda.gradle.HasOverloadedIntConstructorToDelete",
         COUNT_INITIAL_OVERLOADED
     )
 
     @Test
     fun deleteMultipleIntConstructor() = checkClassWithIntParameter(
-        "net.corda.gradle.HasMultipleIntConstructors",
+        "net.corda.gradle.HasMultipleIntConstructorsToDelete",
         COUNT_INITIAL_MULTIPLE
     )
 
@@ -107,10 +109,9 @@ class SanitiseConstructorTest {
                 val primary = kotlin.primaryConstructor ?: throw AssertionError("primary constructor missing")
                 assertThat(primary.call(NUMBER).intData()).isEqualTo(NUMBER)
 
-                //assertThat("", constructors, hasItem(isConstructor(""))
-                newInstance().also {
-                    assertEquals(0, it.intData())
-                }
+                val noArg = kotlin.noArgConstructor ?: throw AssertionError("no-arg constructor missing")
+                assertThat(noArg.callBy(emptyMap()).intData()).isEqualTo(0)
+                assertThat(newInstance().intData()).isEqualTo(0)
             }
         }
 
@@ -126,6 +127,7 @@ class SanitiseConstructorTest {
                 val primary = kotlin.primaryConstructor ?: throw AssertionError("primary constructor missing")
                 assertThat(primary.call(NUMBER).intData()).isEqualTo(NUMBER)
 
+                assertNull("no-arg constructor exists", kotlin.noArgConstructor)
                 assertFailsWith<NoSuchMethodException> { getDeclaredConstructor() }
             }
         }
@@ -133,13 +135,13 @@ class SanitiseConstructorTest {
 
     @Test
     fun deleteOverloadedStringConstructor() = checkClassWithStringParameter(
-        "net.corda.gradle.HasOverloadedStringConstructor",
+        "net.corda.gradle.HasOverloadedStringConstructorToDelete",
         COUNT_INITIAL_OVERLOADED
     )
 
     @Test
     fun deleteMultipleStringConstructor() = checkClassWithStringParameter(
-        "net.corda.gradle.HasMultipleStringConstructors",
+        "net.corda.gradle.HasMultipleStringConstructorsToDelete",
         COUNT_INITIAL_MULTIPLE
     )
 
@@ -158,9 +160,9 @@ class SanitiseConstructorTest {
                 val primary = kotlin.primaryConstructor ?: throw AssertionError("primary constructor missing")
                 assertThat(primary.call(MESSAGE).stringData()).isEqualTo(MESSAGE)
 
-                newInstance().also {
-                    assertEquals(DEFAULT_MESSAGE, it.stringData())
-                }
+                val noArg = kotlin.noArgConstructor ?: throw AssertionError("no-arg constructor missing")
+                assertThat(noArg.callBy(emptyMap()).stringData()).isEqualTo(DEFAULT_MESSAGE)
+                assertThat(newInstance().stringData()).isEqualTo(DEFAULT_MESSAGE)
             }
         }
 
@@ -176,7 +178,56 @@ class SanitiseConstructorTest {
                 val primary = kotlin.primaryConstructor ?: throw AssertionError("primary constructor missing")
                 assertThat(primary.call(MESSAGE).stringData()).isEqualTo(MESSAGE)
 
+                assertNull("no-arg constructor exists", kotlin.noArgConstructor)
                 assertFailsWith<NoSuchMethodException> { getDeclaredConstructor() }
+            }
+        }
+    }
+
+    @Test
+    fun deleteOverloadedComplexConstructor() {
+        val complexConstructor = isConstructor(COMPLEX_CONSTRUCTOR_CLASS, Int::class, String::class)
+
+        classLoaderFor(testProject.sourceJar).use { cl ->
+            cl.load<Any>(COMPLEX_CONSTRUCTOR_CLASS).apply {
+                kotlin.constructors.apply {
+                    assertThat("<init>(Int,String) not found", this, hasItem(complexConstructor))
+                    assertEquals(1, this.size)
+                }
+
+                val primary = kotlin.primaryConstructor ?: throw AssertionError("primary constructor missing")
+                primary.call(NUMBER, MESSAGE).also { complex ->
+                    assertThat((complex as HasString).stringData()).isEqualTo(MESSAGE)
+                    assertThat((complex as HasInt).intData()).isEqualTo(NUMBER)
+                }
+
+                primary.callBy(mapOf(primary.parameters[1] to MESSAGE)).also { complex ->
+                    assertThat((complex as HasString).stringData()).isEqualTo(MESSAGE)
+                    assertThat((complex as HasInt).intData()).isEqualTo(0)
+                }
+                getDeclaredConstructor(String::class.java).newInstance(MESSAGE).also { complex ->
+                    assertThat((complex as HasString).stringData()).isEqualTo(MESSAGE)
+                    assertThat((complex as HasInt).intData()).isEqualTo(0)
+                }
+            }
+        }
+
+        classLoaderFor(testProject.filteredJar).use { cl ->
+            cl.load<Any>(COMPLEX_CONSTRUCTOR_CLASS).apply {
+                kotlin.constructors.apply {
+                    assertThat("<init>(Int,String) not found", this, hasItem(complexConstructor))
+                    assertEquals(1, this.size)
+                }
+
+                val primary = kotlin.primaryConstructor ?: throw AssertionError("primary constructor missing")
+                primary.call(NUMBER, MESSAGE).also { complex ->
+                    assertThat((complex as HasString).stringData()).isEqualTo(MESSAGE)
+                    assertThat((complex as HasInt).intData()).isEqualTo(NUMBER)
+                }
+
+                assertThat(assertFailsWith<IllegalArgumentException> { primary.callBy(mapOf(primary.parameters[1] to MESSAGE)) })
+                    .hasMessageContaining("No argument provided for a required parameter")
+                assertFailsWith<NoSuchMethodException> { getDeclaredConstructor(String::class.java) }
             }
         }
     }

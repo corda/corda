@@ -65,9 +65,7 @@ class TimedFlowMultiThreadedSMMTests : IntegrationTest() {
     @Test
     fun `timed flow is retried`() {
         val user = User("test", "pwd", setOf(Permissions.startFlow<TimedInitiatorFlow>(), Permissions.startFlow<SuperFlow>()))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = true,
-                portAllocation = RandomFree)) {
-
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree)) {
             val configOverrides = mapOf("flowTimeout" to mapOf(
                     "timeout" to Duration.ofSeconds(3),
                     "maxRestartCount" to 2,
@@ -88,8 +86,7 @@ class TimedFlowMultiThreadedSMMTests : IntegrationTest() {
     @Test
     fun `progress tracker is preserved after flow is retried`() {
         val user = User("test", "pwd", setOf(Permissions.startFlow<TimedInitiatorFlow>(), Permissions.startFlow<SuperFlow>()))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = true,
-                portAllocation = RandomFree)) {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree)) {
 
             val configOverrides = mapOf("flowTimeout" to mapOf(
                     "timeout" to Duration.ofSeconds(2),
