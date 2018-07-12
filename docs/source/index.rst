@@ -88,3 +88,4 @@ We look forward to seeing what you can do with Corda!
       corda-repo-layout.rst
       deterministic-modules.rst
       building-the-docs.rst
+      building-container-images.rst
