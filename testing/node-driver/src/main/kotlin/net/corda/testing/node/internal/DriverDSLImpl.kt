@@ -6,6 +6,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
+import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import net.corda.client.rpc.internal.createCordaRPCClientWithInternalSslAndClassLoader
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
@@ -26,6 +27,7 @@ import net.corda.node.NodeRegistrationOption
 import net.corda.node.VersionInfo
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
+import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
@@ -56,10 +58,13 @@ import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import rx.Observable
+import rx.Single
 import rx.Subscription
 import rx.schedulers.Schedulers
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
+import java.net.URI
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
@@ -1187,4 +1192,37 @@ fun writeConfig(path: Path, filename: String, config: Config) {
 
 private fun Config.toNodeOnly(): Config {
     return if (hasPath("webAddress")) withoutPath("webAddress").withoutPath("useHTTPS") else this
+}
+
+// TODO sollecitom
+fun main(args: Array<String>) {
+
+    val classLoader = CordappLoader.Companion::class.java.classLoader
+    val packages = Observable.just("net.corda.node.internal.cordapp")
+    val packageURLs = packages.flatMap { packageURLs(it, classLoader) }
+    println(packageURLs.toList().toBlocking().single())
+
+    val classURL = classURL(CordappLoader::class.java)
+    println(classURL.toBlocking().value())
+
+    val result = FastClasspathScanner("net.corda.node.internal.cordapp").scan()
+    val info = result.namesOfAllClasses.filter { it.startsWith("net.corda.node.internal.cordapp") }.map { result.classNameToClassRef(it) }.map(::classURL).map { it.toBlocking().value() }
+    println(info)
+}
+
+// TODO sollecitom
+fun classURL(targetClass: Class<*>): Single<URL> {
+
+    return Single.just(URI.create("${targetClass.protectionDomain.codeSource.location}/${targetClass.name.replace(".", "/")}.class")).map(URI::toURL)
+}
+
+// TODO sollecitom
+fun packageURLs(targetPackage: String, classLoader: ClassLoader): Observable<URL> {
+
+    val resource = targetPackage.replace('.', '/')
+    return Observable.from(classLoader.getResources(resource).toList())
+    // This is to only scan classes from test folders.
+//            .filter { url: URL ->
+//                !url.toString().contains("main/$resource")  || listOf("net.corda.core", "net.corda.node", "net.corda.finance").none { targetPackage.startsWith(it) }
+//            }
 }

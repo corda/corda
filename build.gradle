@@ -168,7 +168,7 @@ allprojects {
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
             freeCompilerArgs = ['-Xjvm-default=compatibility']
-            allWarningsAsErrors = true
+            allWarningsAsErrors = false
         }
     }
 
