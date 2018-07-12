@@ -1,6 +1,7 @@
 package net.corda.node.services.network
 
 import com.google.common.util.concurrent.MoreExecutors
+import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.internal.copyTo
@@ -86,7 +87,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         executor.submit(object : Runnable {
             override fun run() {
                 val nextScheduleDelay = try {
-                    updateNetworkMapCache(networkMapClient)
+                    updateNetworkMapCache()
                 } catch (t: Throwable) {
                     logger.warn("Error encountered while updating network map, will retry in $defaultRetryInterval", t)
                     defaultRetryInterval
@@ -97,7 +98,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         }) // The check may be expensive, so always run it in the background even the first time.
     }
 
-    private fun updateNetworkMapCache(networkMapClient: NetworkMapClient): Duration {
+    fun updateNetworkMapCache(): Duration {
+        if (networkMapClient == null) throw CordaRuntimeException("Network map cache can be updated only if network map/compatibility zone URL is specified")
         val (globalNetworkMap, cacheTimeout) = networkMapClient.getNetworkMap()
         globalNetworkMap.parametersUpdate?.let { handleUpdateNetworkParameters(networkMapClient, it) }
         val additionalHashes = extraNetworkMapKeys.flatMap {
