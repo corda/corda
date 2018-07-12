@@ -12,11 +12,9 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
-import net.corda.core.cordapp.Cordapp
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
-import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
@@ -1216,28 +1214,28 @@ fun main(args: Array<String>) {
     println(allClassFilesURLs.size)
 
 
+    // TODO sollecitom - refactor this mess
+    val outputDir = Paths.get("/home/michele/Desktop")
+    val uuid = UUID.randomUUID()
+    val packageName = packages[0].name
+    val cordappJar = outputDir / "$packageName-$uuid.jar"
+    val manifest = createTestManifest("Test CorDapp $packageName", "Test CorDapp $packageName", "test-$uuid", "R3")
 
-//    val cordappDir = (Paths.get("build") / "tmp" / "generated-test-cordapps").createDirectories()
-//    val uuid = UUID.randomUUID()
-//    val cordappJar = cordappDir / "$scanPackage-$uuid.jar"
-//    CordappLoader.logger.info("Generating a test-only CorDapp of classes discovered for package $scanPackage in $url: $cordappJar")
-//    val manifest = createTestManifest(resource, scanPackage, uuid)
-//    val scanDir = url.toPath()
-//    JarOutputStream(cordappJar.outputStream(), manifest).use { jos ->
-//        scanDir.walk {
-//            it.forEach {
-//                val entryPath = "$resource/${scanDir.relativize(it).toString().replace('\\', '/')}"
-//                val time = FileTime.from(Instant.EPOCH)
-//                val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
-//                jos.putNextEntry(entry)
-//                if (it.isRegularFile()) {
-//                    it.copyTo(jos)
-//                }
-//                jos.closeEntry()
-//            }
-//        }
-//    }
-//    cordappJar
+    val rootDir = Paths.get(packageURLs[0].toPath().toString().replace(packageName.replace(".", "/"), ""))
+    JarOutputStream(cordappJar.outputStream(), manifest).use { jos ->
+
+        allClassFilesURLs.map { it.toPath() }.distinct().forEach { path ->
+
+            val entryPath = rootDir.relativize(path).toString().replace('\\', '/')
+            val time = FileTime.from(Instant.EPOCH)
+            val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
+            jos.putNextEntry(entry)
+            if (path.isRegularFile()) {
+                path.copyTo(jos)
+            }
+            jos.closeEntry()
+        }
+    }
 }
 
 // TODO sollecitom
@@ -1277,10 +1275,9 @@ fun classFilesDirectoryURL(targetPackage: String, classLoader: ClassLoader): Lis
 }
 
 // TODO sollecitom move to utils
-internal fun createTestManifest(name: String, title: String, jarUUID: UUID): Manifest {
+internal fun createTestManifest(name: String, title: String, version: String, vendor: String): Manifest {
+
     val manifest = Manifest()
-    val version = "test-$jarUUID"
-    val vendor = "R3"
 
     // Mandatory manifest attribute. If not present, all other entries are silently skipped.
     manifest.mainAttributes[Attributes.Name.MANIFEST_VERSION] = "1.0"
@@ -1300,5 +1297,6 @@ internal fun createTestManifest(name: String, title: String, jarUUID: UUID): Man
 
 // TODO sollecitom move to utils
 internal operator fun Manifest.set(key: String, value: String) {
+
     mainAttributes.putValue(key, value)
 }
