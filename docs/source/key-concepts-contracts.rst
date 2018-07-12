@@ -62,8 +62,7 @@ that provide the current time, random number generators, libraries that provide 
 libraries, for example. Ultimately, the only information available to the contract when verifying the transaction is
 the information included in the transaction itself.
 
-Developers can pre-verify their CorDapps are determinsitic by linking their CorDapps against the deterministic modules
-(see the :doc:`Deterministic Corda Modules <deterministic-modules>`).
+Developers can pre-verify their CorDapps are determinsitic by linking their CorDapps against the deterministic modules.
 
 Contract limitations
 --------------------

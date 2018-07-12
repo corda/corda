@@ -51,6 +51,7 @@ application development please continue to refer to `the main project documentat
    certificate-revocation
    node-internals-index.rst
    json.rst
+   deterministic-modules.rst
    troubleshooting.rst
 
 .. conditional-toctree::
@@ -81,6 +82,7 @@ application development please continue to refer to `the main project documentat
    component-library-index.rst
    serialization-index.rst
    json.rst
+   deterministic-modules.rst
    troubleshooting.rst
 
 .. conditional-toctree::
