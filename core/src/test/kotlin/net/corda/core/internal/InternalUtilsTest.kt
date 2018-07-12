@@ -1,9 +1,11 @@
 package net.corda.core.internal
 
 import net.corda.core.contracts.TimeWindow
+import net.corda.core.crypto.SecureHash
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
+import java.util.*
 import java.util.stream.IntStream
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -97,6 +99,19 @@ open class InternalUtilsTest {
         assertThat(ProtectedObject::class.java.kotlinObjectInstance).isSameAs(ProtectedObject)
         assertThat(TimeWindow::class.java.kotlinObjectInstance).isNull()
         assertThat(PrivateClass::class.java.kotlinObjectInstance).isNull()
+    }
+
+    @Test
+    fun `test SHA-256 hash for InputStream`() {
+        val contents = arrayOfJunk(DEFAULT_BUFFER_SIZE * 2 + DEFAULT_BUFFER_SIZE / 2)
+        assertThat(contents.inputStream().hash())
+            .isEqualTo(SecureHash.parse("A4759E7AA20338328866A2EA17EAF8C7FE4EC6BBE3BB71CEE7DF7C0461B3C22F"))
+    }
+
+    private fun arrayOfJunk(size: Int) = ByteArray(size).apply {
+        for (i in 0 until size) {
+            this[i] = (i and 0xFF).toByte()
+        }
     }
 
     object PublicObject
