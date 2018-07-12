@@ -1,6 +1,5 @@
 package net.corda.core.identity
 
-import com.google.common.collect.ImmutableSet
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.LegalNameValidator
 import net.corda.core.internal.toAttributesMap
@@ -79,7 +78,7 @@ data class CordaX500Name(val commonName: String?,
         const val MAX_LENGTH_COMMON_NAME = 64
 
         private val supportedAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L, BCStyle.CN, BCStyle.ST, BCStyle.OU)
-        private val countryCodes: Set<String> = ImmutableSet.copyOf(Locale.getISOCountries() + unspecifiedCountry)
+        private val countryCodes: Set<String> = setOf(*Locale.getISOCountries(), unspecifiedCountry)
 
         @JvmStatic
         fun build(principal: X500Principal): CordaX500Name {
