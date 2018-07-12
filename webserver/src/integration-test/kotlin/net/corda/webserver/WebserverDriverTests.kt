@@ -18,6 +18,7 @@ import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.WebserverHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.addressMustBeBound
@@ -47,7 +48,7 @@ class WebserverDriverTests : IntegrationTest() {
 
     @Test
     fun `starting a node and independent web server works`() {
-        val addr = driver {
+        val addr = driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow()
             val webserverHandle = startWebserver(node).getOrThrow()
             webserverMustBeUp(webserverHandle)

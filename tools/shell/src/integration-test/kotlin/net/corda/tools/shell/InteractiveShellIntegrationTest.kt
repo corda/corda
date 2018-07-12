@@ -62,12 +62,12 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
     @JvmField
     val tempFolder = TemporaryFolder()
 
-    val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
+    private val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
 
     @Test
     fun `shell should not log in with invalid credentials`() {
         val user = User("u", "p", setOf())
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree)) {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, notarySpecs = emptyList())) {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
 
@@ -83,7 +83,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
     @Test
     fun `shell should log in with valid credentials`() {
         val user = User("u", "p", setOf())
-        driver {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
 
@@ -108,7 +108,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree)) {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, notarySpecs = emptyList())) {
             startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                 val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
@@ -136,7 +136,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert1)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree)) {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, notarySpecs = emptyList())) {
             startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                 val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
@@ -153,7 +153,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
 
     @Test
     fun `internal shell user should not be able to connect if node started with devMode=false`() {
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree)) {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, notarySpecs = emptyList())) {
             startNode().getOrThrow().use { node ->
                 val conf = (node as NodeHandleInternal).configuration.toShellConfig()
                 InteractiveShell.startShellInternal(conf)
@@ -168,7 +168,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
         val user = User("u", "p", setOf(Permissions.startFlow<SSHServerTest.FlowICanRun>(),
                 Permissions.invokeRpc(CordaRPCOps::registeredFlows),
                 Permissions.invokeRpc(CordaRPCOps::nodeInfo)))
-        driver {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
 
@@ -219,7 +219,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
         var successful = false
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree)) {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, notarySpecs = emptyList())) {
             startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                 val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
