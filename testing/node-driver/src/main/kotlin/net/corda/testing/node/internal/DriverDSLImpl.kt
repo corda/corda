@@ -1192,7 +1192,7 @@ private fun Config.toNodeOnly(): Config {
     return if (hasPath("webAddress")) withoutPath("webAddress").withoutPath("useHTTPS") else this
 }
 
-// TODO sollecitom
+// TODO sollecitom - make all these functions reactive
 fun main(args: Array<String>) {
 
     val classLoader = CordappLoader::class.java.classLoader
@@ -1203,9 +1203,8 @@ fun main(args: Array<String>) {
     val classURL = CordappLoader::class.java.classFileURL()
     println(classURL)
 
-    val result = FastClasspathScanner("net.corda.node.internal.cordapp").scan()
-    val info = result.namesOfAllClasses.filter { it.startsWith("net.corda.node.internal.cordapp") }.map { result.classNameToClassRef(it) }.map { it.classFileURL() }
-    println(info)
+    val allClassFilesURLs = packages.flatMap(Package::allClassFileURLs)
+    println(allClassFilesURLs)
 }
 
 // TODO sollecitom
@@ -1221,6 +1220,19 @@ fun Package.classFilesDirectoryURL(classLoader: ClassLoader): List<URL> {
 }
 
 // TODO sollecitom
+fun Package.allClassFileURLs(): List<URL> {
+
+    return allClassFileURLs(name)
+}
+
+// TODO sollecitom
+fun allClassFileURLs(targetPackage: String): List<URL> {
+
+    val scanResult = FastClasspathScanner(targetPackage).scan()
+    return scanResult.namesOfAllClasses.filter { it.startsWith(targetPackage) }.map(scanResult::classNameToClassRef).map(Class<*>::classFileURL)
+}
+
+// TODO sollecitom - this could return more than one match
 fun classFilesDirectoryURL(targetPackage: String, classLoader: ClassLoader): List<URL> {
 
     val resource = targetPackage.replace('.', '/')
