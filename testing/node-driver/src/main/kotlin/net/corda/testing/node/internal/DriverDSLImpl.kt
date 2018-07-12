@@ -58,8 +58,6 @@ import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import rx.Observable
-import rx.Single
 import rx.Subscription
 import rx.schedulers.Schedulers
 import java.lang.management.ManagementFactory
