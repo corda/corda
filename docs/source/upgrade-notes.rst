@@ -51,7 +51,9 @@ Database schema changes
 
 H2 database upgrade - the ``NODE_ATTACHMENTS_CONTRACT_CLASS_NAME`` table name was changed, for each database instance and schema run the following SQL statement:
 
-    ALTER TABLE [schema].NODE_ATTACHMENTS_CONTRACT_CLASS_NAME RENAME TO NODE_ATTCHMENTS_CONTRACTS;
+  .. sourcecode:: sql
+
+     ALTER TABLE [schema].NODE_ATTACHMENTS_CONTRACT_CLASS_NAME RENAME TO NODE_ATTCHMENTS_CONTRACTS;
 
 Schema is optional, run SQL when the node is not running.
 
