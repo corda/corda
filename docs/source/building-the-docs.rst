@@ -7,44 +7,39 @@ is pre-generated, as well as code documentation, and this can be done automatica
 Requirements
 ------------
 
-To build the documentation, you will need:
-
-* GNU Make
-* Python and pip (tested with Python 2.7.10)
-* Sphinx: http://www.sphinx-doc.org/
-* sphinx_rtd_theme: https://github.com/snide/sphinx_rtd_theme
-
-Note that to install under OS X El Capitan, you will need to tell pip to install under ``/usr/local``, which can be
-done by specifying the installation target on the command line:
-
-.. sourcecode:: shell
-
-    sudo -H pip install --install-option '--install-data=/usr/local' Sphinx
-    sudo -H pip install --install-option '--install-data=/usr/local' sphinx_rtd_theme
-    
-.. warning:: When installing Sphinx, you may see the following error message: "Found existing installation: six 1.4.1
-   Cannot uninstall 'six'. It is a distutils installed project and thus we cannot accurately determine which files
-   belong to it which would lead to only a partial uninstall.". If so, run the install with the 
-   ``--ignore-installed six`` flag.
+In order to build the documentation you will need a development environment set up as described under :doc:`building-corda`.
 
 Build
 -----
 
-Once the requirements are installed, you can automatically build the HTML format user documentation and the API
-documentation by running the following script:
+Once the requirements are installed, you can automatically build the HTML format user documentation, PDF, and
+the API documentation by running the following script:
 
 .. sourcecode:: shell
 
+    // On Windows
+    gradlew buildDocs
+
+    // On Mac
     ./gradlew buildDocs
 
-Alternatively you can build non-HTML formats from the ``docs`` folder. Change directory to the folder and then run the
-following to see a list of all available formats:
+Alternatively you can build non-HTML formats from the ``docs`` folder.
+
+However, running ``make`` from the command line requires further dependencies to be installed. When building in gradle they
+are installed in a `python virtualenv <https://virtualenv.pypa.io/en/stable/>`_, so they will need explicitly installing
+by running:
+
+.. sourcecode:: shell
+
+    pip install -r requirements.txt
+
+Change directory to the ``docs`` folder and then run the following to see a list of all available formats:
 
 .. sourcecode:: shell
 
     make
 
-For example to produce the documentation in HTML format:
+For example to produce the documentation in HTML format run:
 
 .. sourcecode:: shell
 
