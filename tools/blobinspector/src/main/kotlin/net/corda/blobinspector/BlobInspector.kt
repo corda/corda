@@ -53,7 +53,7 @@ fun main(args: Array<String>) {
 )
 class BlobInspector : Runnable {
     @Parameters(index = "0", paramLabel = "SOURCE", description = ["URL or file path to the blob"], converter = [SourceConverter::class])
-    private var source: URL? = null
+    var source: URL? = null
 
     @Option(names = ["--format"], paramLabel = "type", description = ["Output format. Possible values: [YAML, JSON]"])
     private var formatType: OutputFormatType = OutputFormatType.YAML
@@ -109,15 +109,19 @@ class BlobInspector : Runnable {
 
     private fun parseToBinaryRelaxed(format: InputFormatType, inputBytes: ByteArray): ByteArray? {
         // Try the format the user gave us first, then try the others.
-        return parseToBinary(format, inputBytes) ?: parseToBinary(InputFormatType.HEX, inputBytes)
-        ?: parseToBinary(InputFormatType.BASE64, inputBytes) ?: parseToBinary(InputFormatType.BINARY, inputBytes)
+        //@formatter:off
+        return parseToBinary(format, inputBytes) ?:
+               parseToBinary(InputFormatType.HEX, inputBytes) ?:
+               parseToBinary(InputFormatType.BASE64, inputBytes) ?:
+               parseToBinary(InputFormatType.BINARY, inputBytes)
+        //@formatter:on
     }
 
     private fun parseToBinary(format: InputFormatType, inputBytes: ByteArray): ByteArray? {
         try {
             val bytes = when (format) {
                 InputFormatType.BINARY -> inputBytes
-                InputFormatType.HEX -> String(inputBytes).trim().toUpperCase().hexToByteArray()
+                InputFormatType.HEX -> String(inputBytes).trim().hexToByteArray()
                 InputFormatType.BASE64 -> String(inputBytes).trim().base64ToByteArray()
             }
             require(bytes.size > amqpMagic.size) { "Insufficient bytes for AMQP blob" }
