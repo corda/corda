@@ -1205,6 +1205,7 @@ fun main(args: Array<String>) {
 
     val allClassFilesURLs = packages.flatMap(Package::allClassFileURLs)
     println(allClassFilesURLs)
+    println(allClassFilesURLs.size)
 }
 
 // TODO sollecitom
