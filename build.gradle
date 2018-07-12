@@ -102,7 +102,6 @@ buildscript {
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
         classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
-        classpath "org.ajoberstar:grgit:1.1.0"
         classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
         classpath "org.owasp:dependency-check-gradle:${dependency_checker_version}"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
@@ -117,7 +116,7 @@ plugins {
 }
 
 ext {
-    corda_revision = org.ajoberstar.grgit.Grgit.open(file('.')).head().id
+    corda_revision = "git rev-parse HEAD".execute().text.trim()
 }
 
 apply plugin: 'project-report'
