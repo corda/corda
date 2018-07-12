@@ -1197,30 +1197,36 @@ private fun Config.toNodeOnly(): Config {
 // TODO sollecitom
 fun main(args: Array<String>) {
 
-    val classLoader = CordappLoader.Companion::class.java.classLoader
-    val packages = Observable.just("net.corda.node.internal.cordapp")
-    val packageURLs = packages.flatMap { packageURLs(it, classLoader) }
-    println(packageURLs.toList().toBlocking().single())
+    val classLoader = CordappLoader::class.java.classLoader
+    val packages = listOf(CordappLoader::class.java.`package`)
+    val packageURLs = packages.flatMap { it.classFilesDirectoryURL(classLoader) }
+    println(packageURLs)
 
-    val classURL = classURL(CordappLoader::class.java)
-    println(classURL.toBlocking().value())
+    val classURL = CordappLoader::class.java.classFileURL()
+    println(classURL)
 
     val result = FastClasspathScanner("net.corda.node.internal.cordapp").scan()
-    val info = result.namesOfAllClasses.filter { it.startsWith("net.corda.node.internal.cordapp") }.map { result.classNameToClassRef(it) }.map(::classURL).map { it.toBlocking().value() }
+    val info = result.namesOfAllClasses.filter { it.startsWith("net.corda.node.internal.cordapp") }.map { result.classNameToClassRef(it) }.map { it.classFileURL() }
     println(info)
 }
 
 // TODO sollecitom
-fun classURL(targetClass: Class<*>): Single<URL> {
+fun Class<*>.classFileURL(): URL {
 
-    return Single.just(URI.create("${targetClass.protectionDomain.codeSource.location}/${targetClass.name.replace(".", "/")}.class")).map(URI::toURL)
+    return URI.create("${protectionDomain.codeSource.location}/${name.replace(".", "/")}.class").toURL()
 }
 
 // TODO sollecitom
-fun packageURLs(targetPackage: String, classLoader: ClassLoader): Observable<URL> {
+fun Package.classFilesDirectoryURL(classLoader: ClassLoader): List<URL> {
+
+    return packageURLs(name, classLoader)
+}
+
+// TODO sollecitom
+fun packageURLs(targetPackage: String, classLoader: ClassLoader): List<URL> {
 
     val resource = targetPackage.replace('.', '/')
-    return Observable.from(classLoader.getResources(resource).toList())
+    return classLoader.getResources(resource).toList()
     // This is to only scan classes from test folders.
 //            .filter { url: URL ->
 //                !url.toString().contains("main/$resource")  || listOf("net.corda.core", "net.corda.node", "net.corda.finance").none { targetPackage.startsWith(it) }
