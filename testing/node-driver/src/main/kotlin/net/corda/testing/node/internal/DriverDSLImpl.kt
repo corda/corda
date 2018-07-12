@@ -12,9 +12,11 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
+import net.corda.core.cordapp.Cordapp
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
+import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
@@ -66,6 +68,8 @@ import java.net.URI
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.attribute.FileTime
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
@@ -76,6 +80,10 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.jar.Attributes
+import java.util.jar.JarOutputStream
+import java.util.jar.Manifest
+import java.util.zip.ZipEntry
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.concurrent.thread
@@ -1192,7 +1200,7 @@ private fun Config.toNodeOnly(): Config {
     return if (hasPath("webAddress")) withoutPath("webAddress").withoutPath("useHTTPS") else this
 }
 
-// TODO sollecitom - make all these functions reactive
+// TODO sollecitom - make all these functions reactive, move them into a JarBuilder type
 fun main(args: Array<String>) {
 
     val classLoader = CordappLoader::class.java.classLoader
@@ -1206,6 +1214,30 @@ fun main(args: Array<String>) {
     val allClassFilesURLs = packages.flatMap(Package::allClassFileURLs)
     println(allClassFilesURLs)
     println(allClassFilesURLs.size)
+
+
+
+//    val cordappDir = (Paths.get("build") / "tmp" / "generated-test-cordapps").createDirectories()
+//    val uuid = UUID.randomUUID()
+//    val cordappJar = cordappDir / "$scanPackage-$uuid.jar"
+//    CordappLoader.logger.info("Generating a test-only CorDapp of classes discovered for package $scanPackage in $url: $cordappJar")
+//    val manifest = createTestManifest(resource, scanPackage, uuid)
+//    val scanDir = url.toPath()
+//    JarOutputStream(cordappJar.outputStream(), manifest).use { jos ->
+//        scanDir.walk {
+//            it.forEach {
+//                val entryPath = "$resource/${scanDir.relativize(it).toString().replace('\\', '/')}"
+//                val time = FileTime.from(Instant.EPOCH)
+//                val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
+//                jos.putNextEntry(entry)
+//                if (it.isRegularFile()) {
+//                    it.copyTo(jos)
+//                }
+//                jos.closeEntry()
+//            }
+//        }
+//    }
+//    cordappJar
 }
 
 // TODO sollecitom
@@ -1242,4 +1274,31 @@ fun classFilesDirectoryURL(targetPackage: String, classLoader: ClassLoader): Lis
 //            .filter { url: URL ->
 //                !url.toString().contains("main/$resource")  || listOf("net.corda.core", "net.corda.node", "net.corda.finance").none { targetPackage.startsWith(it) }
 //            }
+}
+
+// TODO sollecitom move to utils
+internal fun createTestManifest(name: String, title: String, jarUUID: UUID): Manifest {
+    val manifest = Manifest()
+    val version = "test-$jarUUID"
+    val vendor = "R3"
+
+    // Mandatory manifest attribute. If not present, all other entries are silently skipped.
+    manifest.mainAttributes[Attributes.Name.MANIFEST_VERSION] = "1.0"
+
+    manifest["Name"] = name
+
+    manifest["Specification-Title"] = title
+    manifest["Specification-Version"] = version
+    manifest["Specification-Vendor"] = vendor
+
+    manifest["Implementation-Title"] = title
+    manifest["Implementation-Version"] = version
+    manifest["Implementation-Vendor"] = vendor
+
+    return manifest
+}
+
+// TODO sollecitom move to utils
+internal operator fun Manifest.set(key: String, value: String) {
+    mainAttributes.putValue(key, value)
 }
