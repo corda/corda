@@ -29,3 +29,23 @@ preserve the credentials and node data between container restarts.
 
 The JVM options are currently hardcoded in ``node/build.gradle`` in the
 ``jib.container`` section.
+
+Below is an example directory layout and command to run your image with Docker.
+Make sure to run ``touch persistence.mv.db`` befor starting the container,
+otherwise a new directory will be created by Docker.
+
+::
+
+        .
+        ├── certificates
+        ├── config
+        │   └── node.conf
+        ├── network-parameters
+        └── persistence.mv.db
+
+.. sourcecode:: shell
+
+        docker run --rm -it -v ${PWD}/certificates:/certificates \
+                            -v ${PWD}/config:/config \
+                            -v ${PWD}/network-parameters:/network-parameters \
+                            -v ${PWD}/persistence.mv.db:/persistence.mv.db
