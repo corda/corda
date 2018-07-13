@@ -1,24 +1,81 @@
-buildscript {
-    ext.strata_version = '1.1.2'
-}
-
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
+def javaHome = System.getProperty('java.home')
+def shrinkJar = file("$buildDir/libs/${project.name}-${project.version}-tiny.jar")
+def strata_version = project(':samples:simm-valuation-demo').strata_version
+
+cordapp {
+    info {
+        vendor = 'R3'
+    }
+}
+
+configurations {
+    shrinkArtifacts
+}
+
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    cordaCompile "org.slf4j:slf4j-api:$slf4j_version"
 
     // The SIMM demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance')
 
     // Corda integration dependencies
-    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
 
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
-    compile "com.opengamma.strata:strata-product:${strata_version}"
-    compile "com.opengamma.strata:strata-market:${strata_version}"
+    compile("com.opengamma.strata:strata-product:$strata_version")
+    compile("com.opengamma.strata:strata-market:$strata_version") {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+}
 
+jar {
+    classifier = 'fat'
+}
+
+import proguard.gradle.ProGuardTask
+task shrink(type: ProGuardTask) {
+    injars jar
+    outjars shrinkJar
+
+    libraryjars "$javaHome/lib/rt.jar"
+    libraryjars "$javaHome/lib/jce.jar"
+    configurations.runtime.forEach {
+        libraryjars it.path, filter: '!META-INF/versions/**'
+    }
+
+    dontwarn 'afu.org.checkerframework.**'
+    dontwarn 'co.paralleluniverse.**'
+    dontwarn 'javax.servlet.**'
+    dontwarn 'org.checkerframework.**'
+    dontwarn 'org.joda.**'
+    dontwarn 'org.jolokia.**'
+    dontwarn 'org.slf4j.**'
+    dontnote
+
+    keepattributes '*'
+    keepdirectories
+    dontobfuscate
+    dontoptimize
+    verbose
+
+    // These are our CorDapp classes, so don't change these.
+    keep 'class net.corda.vega.** { *; }', includedescriptorclasses:true
+
+    // Until CorDapps are isolated from each other, we need to ensure that the
+    // versions of the classes that this CorDapp needs are still usable by other
+    // CorDapps. Unfortunately, this means that we cannot shrink them as much as
+    // we'd like to.
+    keepclassmembers 'class com.opengamma.strata.** { *; }', includedescriptorclasses:true
+    keepclassmembers 'class com.google.** { *; }', includedescriptorclasses:true
+    keepclassmembers 'class org.joda.** { *; }', includedescriptorclasses:true
+}
+
+artifacts {
+    shrinkArtifacts file: shrinkJar, name: project.name, type: 'jar', extension: 'jar', classifier: 'tiny', builtBy: shrink
 }
