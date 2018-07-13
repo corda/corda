@@ -835,6 +835,7 @@ class DriverDSLImpl(
             systemProperties += inheritFromParentProcess()
 
             if (cordappPackages.isNotEmpty()) {
+                // TODO sollecitom remove this and use the test cordapps instead
                 systemProperties += Node.scanPackagesSystemProperty to cordappPackages.joinToString(Node.scanPackagesSeparator)
             }
 
