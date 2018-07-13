@@ -159,4 +159,4 @@ Run the ``run-corda.sh`` script to start your Corda node.
 
 Congratulations! You now have a running Corda node on Testnet.
 
-
+.. warning:: It is possible to copy the ``node.zip`` file from your local machine to any other host machine and run the Corda node from there. Do not run multiple copies of the same node (i.e. with the same identity). If a new copy of the node appears on the network then the network map server will interpret this as a change in the address of the node and route traffic to the most recent instance. Any states which are on the old node will no longer be available and undefined behaviour may result. Please provision a new node from the application instead. 
