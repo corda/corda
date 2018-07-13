@@ -7,12 +7,14 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
 import org.hibernate.SessionFactory
 import org.hibernate.boot.MetadataSources
-import org.hibernate.boot.model.naming.PhysicalNamingStrategy
+import org.hibernate.boot.model.naming.Identifier
+import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
 import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
 import org.hibernate.type.AbstractSingleColumnStandardBasicType
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
@@ -27,8 +29,7 @@ class HibernateConfiguration(
         schemas: Set<MappedSchema>,
         private val databaseConfig: DatabaseConfig,
         private val attributeConverters: Collection<AttributeConverter<*, *>>,
-        val cordappClassLoader: ClassLoader? = null,
-        private val tableNamingStrategy: PhysicalNamingStrategy
+        val cordappClassLoader: ClassLoader? = null
 ) {
     companion object {
         private val logger = contextLogger()
@@ -61,7 +62,7 @@ class HibernateConfiguration(
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
 
-        val sessionFactory = buildSessionFactory(config, metadataSources, cordappClassLoader)
+        val sessionFactory = buildSessionFactory(config, metadataSources, databaseConfig.serverNameTablePrefix, cordappClassLoader)
         logger.info("Created session factory for schemas: $schemas")
 
         // export Hibernate JMX statistics
@@ -88,7 +89,7 @@ class HibernateConfiguration(
         }
     }
 
-    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, cordappClassLoader: ClassLoader?): SessionFactory {
+    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, tablePrefix: String, cordappClassLoader: ClassLoader?): SessionFactory {
         config.standardServiceRegistryBuilder.applySettings(config.properties)
 
         if (cordappClassLoader != null) {
@@ -98,7 +99,12 @@ class HibernateConfiguration(
         }
 
         val metadata = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build()).run {
-            applyPhysicalNamingStrategy(tableNamingStrategy)
+            applyPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
+                override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
+                    val default = super.toPhysicalTableName(name, context)
+                    return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
+                }
+            })
             // register custom converters
             attributeConverters.forEach { applyAttributeConverter(it) }
             // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.

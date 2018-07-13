@@ -48,7 +48,6 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.NamingStrategyFactoryMethod
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.setGlobalSerialization
@@ -321,9 +320,8 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         private var dbCloser: (() -> Any?)? = null
         override fun initialiseDatabasePersistence(schemaService: SchemaService,
                                                    wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
-                                                   wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
-                                                   namingStrategyProducer: NamingStrategyFactoryMethod): CordaPersistence {
-            return super.initialiseDatabasePersistence(schemaService, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, namingStrategyProducer).also { dbCloser = it::close }
+                                                   wellKnownPartyFromAnonymous: (AbstractParty) -> Party?): CordaPersistence {
+            return super.initialiseDatabasePersistence(schemaService, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous).also { dbCloser = it::close }
         }
 
         fun disableDBCloseOnStop() {

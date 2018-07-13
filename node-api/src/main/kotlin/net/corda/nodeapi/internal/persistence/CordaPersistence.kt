@@ -52,8 +52,7 @@ class CordaPersistence(
         val dataSource: DataSource,
         databaseConfig: DatabaseConfig,
         schemas: Set<MappedSchema>,
-        attributeConverters: Collection<AttributeConverter<*, *>> = emptySet(),
-        namingStrategyProducer: NamingStrategyFactoryMethod
+        attributeConverters: Collection<AttributeConverter<*, *>> = emptySet()
 ) : Closeable {
     companion object {
         private val log = contextLogger()
@@ -62,7 +61,7 @@ class CordaPersistence(
     private val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
-            HibernateConfiguration(schemas, databaseConfig, attributeConverters, tableNamingStrategy = namingStrategyProducer.getNamingStrategy(connection, databaseConfig))
+            HibernateConfiguration(schemas, databaseConfig, attributeConverters)
         }
     }
     val entityManagerFactory get() = hibernateConfig.sessionFactoryForRegisteredSchemas
@@ -81,6 +80,8 @@ class CordaPersistence(
         // Check not in read-only mode.
         transaction {
             check(!connection.metaData.isReadOnly) { "Database should not be readonly." }
+
+            requireCorrectAttachmentsContractsTableName(connection)
         }
     }
 
@@ -268,3 +269,16 @@ private fun Throwable.hasSQLExceptionCause(): Boolean =
         }
 
 class CouldNotCreateDataSourceException(override val message: String?, override val cause: Throwable? = null) : Exception()
+
+private fun requireCorrectAttachmentsContractsTableName(connection: Connection) {
+    val correctName = "NODE_ATTACHMENTS_CONTRACTS"
+    val incorrectV30Name = "NODE_ATTACHMENTS_CONTRACT_CLASS_NAME"
+    val incorrectV31Name = "NODE_ATTCHMENTS_CONTRACTS"
+
+    fun warning(incorrectName: String) = "The database contains the older table name $incorrectName instead of $correctName,  migrate your database as per Upgrade Notes."
+
+    if (!connection.metaData.getTables(null, null, correctName, null).next()) {
+        require(!connection.metaData.getTables(null, null, incorrectV30Name, null).next()) { warning(incorrectV30Name) }
+        require(!connection.metaData.getTables(null, null, incorrectV31Name, null).next()) { warning(incorrectV31Name) }
+    }
+}

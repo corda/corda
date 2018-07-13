@@ -280,7 +280,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     fun clearNetworkMapCache() {
         Node.printBasicNodeInfo("Clearing network map cache entries")
         log.info("Starting clearing of network map cache entries...")
-        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }, namingStrategyProducer = CordaV30BackwardCompatibleNamingStrategyFactory).use {
+        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
             val networkMapCache = PersistentNetworkMapCache(it, emptyList())
             networkMapCache.clearNetworkMapCache()
         }
@@ -307,12 +307,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val identityServiceRef = AtomicReference<IdentityService>()
 
         // Do all of this in a database transaction so anything that might need a connection has one.
-        val tableNameStrategyNamingFactoryMethod = CordaV30BackwardCompatibleNamingStrategyFactory
         val database = initialiseDatabasePersistence(
                 schemaService,
                 { name -> identityServiceRef.get().wellKnownPartyFromX500Name(name) },
-                { party -> identityServiceRef.get().wellKnownPartyFromAnonymous(party) },
-                tableNameStrategyNamingFactoryMethod)
+                { party -> identityServiceRef.get().wellKnownPartyFromAnonymous(party) })
 
         val identityService = makeIdentityService(identity.certificate, database).also(identityServiceRef::set)
         networkMapClient = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, identityService.trustRoot) }
@@ -408,11 +406,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
         // If we successfully loaded network data from database, we set this future to Unit.
         _nodeReadyFuture.captureLater(services.networkMapCache.nodeReady.map { Unit })
-
-        tableNameStrategyNamingFactoryMethod.getWarning()?.let {
-            log.warn(it)
-            Node.printWarning(it)
-        }
 
         return startedImpl.apply {
             database.transaction {
@@ -844,11 +837,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     protected open fun initialiseDatabasePersistence(schemaService: SchemaService,
                                                      wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
-                                                     wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
-                                                     namingStrategyProducer: NamingStrategyFactoryMethod = DefaultNamingStrategyFactory): CordaPersistence {
+                                                     wellKnownPartyFromAnonymous: (AbstractParty) -> Party?): CordaPersistence {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        val database = configureDatabase(props, configuration.database, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, namingStrategyProducer)
+        val database = configureDatabase(props, configuration.database, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
         runOnStop += database::close
@@ -1119,8 +1111,7 @@ fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
-                      schemaService: SchemaService = NodeSchemaService(),
-                      namingStrategyProducer: NamingStrategyFactoryMethod = DefaultNamingStrategyFactory): CordaPersistence {
+                      schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
     // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
     // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
@@ -1129,7 +1120,7 @@ fun configureDatabase(hikariProperties: Properties,
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties)
         val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
-        return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters, namingStrategyProducer)
+        return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
     } catch (ex: Exception) {
         when {
             ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)
