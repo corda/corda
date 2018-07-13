@@ -1204,13 +1204,7 @@ private fun Config.toNodeOnly(): Config {
 // TODO sollecitom - make all these functions reactive, move them into a JarBuilder type
 fun main(args: Array<String>) {
 
-    val classLoader = CordappLoader::class.java.classLoader
     val packages = listOf(CordappLoader::class.java.`package`)
-    val packageURLs = packages.flatMap { it.classFilesDirectoryURL(classLoader) }
-    println(packageURLs)
-
-    val classURL = CordappLoader::class.java.classFileURL()
-    println(classURL)
 
     val allClassesForPackage = packages.flatMap(Package::allClasses)
     println(allClassesForPackage)
@@ -1224,33 +1218,30 @@ fun main(args: Array<String>) {
     val packageName = packages[0].name
     val cordappJar = outputDir / "$packageName-$uuid.jar"
 
-    allClasses.packageToCorDapp(cordappJar, classLoader, "Test CorDapp $packageName", "test-$uuid", "R3")
+    allClasses.packageToCorDapp(cordappJar, "Test CorDapp $packageName", "test-$uuid", "R3")
 }
 
 // TODO sollecitom
-fun Iterable<Class<*>>.packageToCorDapp(path: Path, classLoader: ClassLoader, name: String, version: String, vendor: String, title: String = name) {
+fun Iterable<Class<*>>.packageToCorDapp(path: Path, name: String, version: String, vendor: String, title: String = name) {
 
-    packageToCorDapp(path.outputStream(), classLoader, name, version, vendor, title)
+    packageToCorDapp(path.outputStream(), name, version, vendor, title)
 }
 
 // TODO sollecitom - try and remove this ClassLoader argument (it's only used to figure out the out folder)
-fun Iterable<Class<*>>.packageToCorDapp(outputStream: OutputStream, classLoader: ClassLoader, name: String, version: String, vendor: String, title: String = name) {
+fun Iterable<Class<*>>.packageToCorDapp(outputStream: OutputStream, name: String, version: String, vendor: String, title: String = name) {
 
     val manifest = createTestManifest(name, title, version, vendor)
-    JarOutputStream(outputStream, manifest).use { jos ->
-        // TODO sollecitom try and remove this `pkg.classFilesDirectoryURL(classLoader)`, as it requires a classLoader and can explode if more than 1 result is returned
-        zip(jos) { pkg -> pkg.classFilesDirectoryURL(classLoader).single().toPath() }
-    }
+    JarOutputStream(outputStream, manifest).use(::zip)
 }
 
 // TODO sollecitom
-fun Iterable<Class<*>>.zip(outputStream: ZipOutputStream, pathFromPackage: (Package) -> Path) {
+fun Iterable<Class<*>>.zip(outputStream: ZipOutputStream) {
 
-    zip(outputStream, map(Class<*>::jarInfo), pathFromPackage)
+    zip(outputStream, map(Class<*>::jarInfo))
 }
 
 // TODO sollecitom - use Maybe here
-fun zip(outputStream: ZipOutputStream, allInfo: Iterable<ClassJarInfo>, pathFromPackage: (Package) -> Path) {
+fun zip(outputStream: ZipOutputStream, allInfo: Iterable<ClassJarInfo>) {
 
     val illegal = allInfo.map { it.clazz }.filter { it.protectionDomain?.codeSource?.location == null }
     if (illegal.isNotEmpty()) {
@@ -1259,7 +1250,7 @@ fun zip(outputStream: ZipOutputStream, allInfo: Iterable<ClassJarInfo>, pathFrom
     allInfo.distinctBy { it.url }.forEach { info ->
 
         val path = info.url.toPath()
-        val packagePath = pathFromPackage(info.clazz.`package`)
+        val packagePath = info.clazz.classFilesDirectoryURL().toPath()
         // TODO sollecitom use file separator everywhere
         val entryPath = info.clazz.`package`.name.packageToPath() + File.separator +packagePath.relativize(path).toString()
         // TODO sollecitom investigate this replacement
@@ -1287,27 +1278,16 @@ fun Class<*>.classFileURL(): URL {
 }
 
 // TODO sollecitom
-fun Class<*>.classFilesDirectoryURL(): List<URL> {
+fun Class<*>.classFilesDirectoryURL(): URL {
 
     return `package`.classFilesDirectoryURL(classLoader)
 }
 
 // TODO sollecitom
-fun Package.classFilesDirectoryURL(classLoader: ClassLoader): List<URL> {
+fun Package.classFilesDirectoryURL(classLoader: ClassLoader): URL {
 
-    return classFilesDirectoryURL(name, classLoader)
-}
-
-// TODO sollecitom
-fun Package.allClassFileURLs(): List<ClassJarInfo> {
-
-    return allClassFileURLs(name)
-}
-
-// TODO sollecitom
-fun allClassFileURLs(targetPackage: String): List<ClassJarInfo> {
-
-    return allClasses(targetPackage).map(Class<*>::jarInfo)
+    // TODO sollecitom can this return more than one URL? Investigate
+    return classLoader.getResources(name.packageToPath()).toList().single()
 }
 
 // TODO sollecitom
@@ -1324,17 +1304,6 @@ fun allClasses(targetPackage: String): List<Class<*>> {
 
     val scanResult = FastClasspathScanner(targetPackage).scan()
     return scanResult.namesOfAllClasses.filter { it.startsWith(targetPackage) }.map(scanResult::classNameToClassRef)
-}
-
-// TODO sollecitom - this could return more than one match
-fun classFilesDirectoryURL(targetPackage: String, classLoader: ClassLoader): List<URL> {
-
-    val resource = targetPackage.packageToPath()
-    return classLoader.getResources(resource).toList()
-    // This is to only scan classes from test folders.
-//            .filter { url: URL ->
-//                !url.toString().contains("main/$resource")  || listOf("net.corda.core", "net.corda.node", "net.corda.finance").none { targetPackage.startsWith(it) }
-//            }
 }
 
 data class ClassJarInfo(val clazz: Class<*>, val url: URL)
