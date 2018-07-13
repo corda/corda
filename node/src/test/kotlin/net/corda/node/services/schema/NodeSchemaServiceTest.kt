@@ -50,7 +50,7 @@ class NodeSchemaServiceTest {
 
     @Test
     fun `check node runs with minimal core schema set`() {
-        val mockNet = InternalMockNetwork(cordappPackages = emptyList())
+        val mockNet = InternalMockNetwork()
         val mockNode = mockNet.createNode()
         val schemaService = mockNode.services.schemaService
 
@@ -62,7 +62,7 @@ class NodeSchemaServiceTest {
 
     @Test
     fun `check node runs inclusive of notary node schema set`() {
-        val mockNet = InternalMockNetwork(cordappPackages = emptyList())
+        val mockNet = InternalMockNetwork()
         val mockNotaryNode = mockNet.notaryNodes.first()
         val schemaService = mockNotaryNode.services.schemaService
 

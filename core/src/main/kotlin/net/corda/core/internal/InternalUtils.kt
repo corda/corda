@@ -12,8 +12,6 @@
 @file:KeepForDJVM
 package net.corda.core.internal
 
-import com.google.common.hash.Hashing
-import com.google.common.hash.HashingInputStream
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.cordapp.Cordapp
@@ -53,6 +51,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
+import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.*
@@ -142,9 +141,16 @@ fun InputStream.readFully(): ByteArray = use { it.readBytes() }
 /** Calculate the hash of the remaining bytes in this input stream. The stream is closed at the end. */
 fun InputStream.hash(): SecureHash {
     return use {
-        val his = HashingInputStream(Hashing.sha256(), it)
-        his.copyTo(NullOutputStream)  // To avoid reading in the entire stream into memory just write out the bytes to /dev/null
-        SecureHash.SHA256(his.hash().asBytes())
+        val md = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val count = it.read(buffer)
+            if (count == -1) {
+                break
+            }
+            md.update(buffer, 0, count)
+        }
+        SecureHash.SHA256(md.digest())
     }
 }
 

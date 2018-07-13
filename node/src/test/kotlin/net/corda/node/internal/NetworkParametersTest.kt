@@ -39,8 +39,7 @@ import kotlin.test.assertFails
 
 class NetworkParametersTest {
     private val mockNet = InternalMockNetwork(
-            emptyList(),
-            MockNetworkParameters(networkSendManuallyPumped = true),
+            defaultParameters = MockNetworkParameters(networkSendManuallyPumped = true),
             notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME)))
 
     @After

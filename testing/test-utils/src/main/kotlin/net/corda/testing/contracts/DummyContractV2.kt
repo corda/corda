@@ -50,5 +50,5 @@ class DummyContractV2 : UpgradedContractWithLegacyConstraint<DummyContract.State
     override fun verify(tx: LedgerTransaction) {
         // Other verifications.
     }
-    // DOCEND 1
 }
+// DOCEND 1

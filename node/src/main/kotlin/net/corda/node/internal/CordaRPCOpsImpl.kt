@@ -11,6 +11,7 @@
 package net.corda.node.internal
 
 import net.corda.client.rpc.notUsed
+import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
@@ -59,6 +60,7 @@ import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import rx.Observable
 import java.io.InputStream
+import java.net.ConnectException
 import java.security.PublicKey
 import java.time.Instant
 
@@ -245,6 +247,17 @@ internal class CordaRPCOpsImpl(
 
     override fun clearNetworkMapCache() {
         services.networkMapCache.clearNetworkMapCache()
+    }
+
+    override fun refreshNetworkMapCache() {
+        try {
+            services.networkMapUpdater.updateNetworkMapCache()
+        } catch (e: Exception) {
+            when (e) {
+                is ConnectException -> throw CordaRuntimeException("There is connection problem to network map. The possible causes are incorrect configuration or network map service being down")
+                else -> throw e
+            }
+        }
     }
 
     override fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T> {

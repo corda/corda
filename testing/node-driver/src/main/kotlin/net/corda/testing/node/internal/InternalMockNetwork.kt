@@ -106,7 +106,7 @@ data class InternalMockNodeParameters(
     )
 }
 
-open class InternalMockNetwork(private val cordappPackages: List<String>,
+open class InternalMockNetwork(private val cordappPackages: List<String> = emptyList(),
                                defaultParameters: MockNetworkParameters = MockNetworkParameters(),
                                val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
                                val threadPerNode: Boolean = defaultParameters.threadPerNode,

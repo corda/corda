@@ -534,7 +534,7 @@ private fun Throwable.setMessage(newMsg: String) {
 
 fun ClassWhitelist.requireWhitelisted(type: Type) {
     if (!this.isWhitelisted(type.asClass()!!)) {
-        throw NotSerializableException("Class $type is not on the whitelist or annotated with @CordaSerializable.")
+        throw NotSerializableException("Class \"$type\" is not on the whitelist or annotated with @CordaSerializable.")
     }
 }
 

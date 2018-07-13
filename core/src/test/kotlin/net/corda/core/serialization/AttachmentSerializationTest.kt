@@ -82,7 +82,7 @@ class AttachmentSerializationTest {
 
     @Before
     fun setUp() {
-        mockNet = InternalMockNetwork(emptyList())
+        mockNet = InternalMockNetwork()
         server = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         client = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
         client.internals.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.

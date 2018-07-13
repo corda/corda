@@ -46,8 +46,6 @@ internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps
                 val result = super.invoke(proxy, method, arguments)
                 return result?.let { ensureSerialisable(it) }
             } catch (exception: Exception) {
-                // In this special case logging and re-throwing is the right approach.
-                log(exception)
                 throw ensureSerialisable(exception)
             }
         }
@@ -90,7 +88,13 @@ internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps
 
         private fun ensureSerialisable(error: Throwable): Throwable {
             val serialisable = (superclasses(error::class.java) + error::class.java).any { it.isAnnotationPresent(CordaSerializable::class.java) || it.interfaces.any { it.isAnnotationPresent(CordaSerializable::class.java) } }
-            val result = if (serialisable) error else CordaRuntimeException(error.message, error)
+            val result = if (serialisable) {
+                error
+            } else {
+                log(error)
+                CordaRuntimeException(error.message, error)
+            }
+
             if (result is CordaThrowable) {
                 result.stackTrace = arrayOf<StackTraceElement>()
                 result.setCause(null)
