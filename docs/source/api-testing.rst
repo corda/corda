@@ -52,7 +52,7 @@ Configuring the ``MockNetwork``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``MockNetwork`` is configured automatically. You can tweak its configuration using a ``MockNetworkParameters``
-object, or by using named paramters in Kotlin:
+object, or by using named parameters in Kotlin:
 
 .. container:: codeset
 

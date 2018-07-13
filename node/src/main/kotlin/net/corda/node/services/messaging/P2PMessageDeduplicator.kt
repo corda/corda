@@ -6,7 +6,6 @@ import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import java.io.Serializable
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import javax.persistence.Column
@@ -97,7 +96,7 @@ class P2PMessageDeduplicator(private val database: CordaPersistence) {
 
             @Column(name = "sequence_number", nullable = true)
             var seqNo: Long? = null
-    ) : Serializable
+    )
 
     private data class MessageMeta(val insertionTime: Instant, val senderHash: String?, val senderSeqNo: Long?)
 

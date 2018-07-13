@@ -108,19 +108,21 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             if (value) field = value else throw IllegalArgumentException("Can only set to true")
         }
 
-     /**
+    /**
      * Processes an event by creating the associated transition and executing it using the given executor.
      * Try to avoid using this directly, instead use [processEventsUntilFlowIsResumed] or [processEventImmediately]
      * instead.
      */
     @Suspendable
     private fun processEvent(transitionExecutor: TransitionExecutor, event: Event): FlowContinuation {
+        setLoggingContext()
         val stateMachine = getTransientField(TransientValues::stateMachine)
         val oldState = transientState!!.value
         val actionExecutor = getTransientField(TransientValues::actionExecutor)
         val transition = stateMachine.transition(event, oldState)
         val (continuation, newState) = transitionExecutor.executeTransition(this, oldState, event, transition, actionExecutor)
         transientState = TransientReference(newState)
+        setLoggingContext()
         return continuation
     }
 
@@ -196,6 +198,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         context.pushToLoggingContext()
         MDC.put("flow-id", id.uuid.toString())
         MDC.put("fiber-id", this.getId().toString())
+        MDC.put("thread-id", Thread.currentThread().id.toString())
     }
 
     @Suspendable
@@ -254,6 +257,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun <R> subFlow(subFlow: FlowLogic<R>): R {
+        checkpointIfSubflowIdempotent(subFlow.javaClass)
         processEventImmediately(
                 Event.EnterSubFlow(subFlow.javaClass,
                         createSubFlowVersion(
@@ -271,6 +275,21 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     isDbTransactionOpenOnEntry = true,
                     isDbTransactionOpenOnExit = true
             )
+        }
+    }
+
+    /**
+     * If the sub-flow is [IdempotentFlow] we need to perform a checkpoint to make sure any potentially side-effect
+     * generating logic between the last checkpoint and the sub-flow invocation does not get replayed if the
+     * flow restarts.
+     *
+     * We don't checkpoint if the current flow is [IdempotentFlow] as well.
+     */
+    @Suspendable
+    private fun checkpointIfSubflowIdempotent(subFlow: Class<FlowLogic<*>>) {
+        val currentFlow = snapshot().checkpoint.subFlowStack.last().flowClass
+        if (!currentFlow.isIdempotentFlow() && subFlow.isIdempotentFlow()) {
+            suspend(FlowIORequest.ForceCheckpoint, false)
         }
     }
 
@@ -337,6 +356,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val serializationContext = TransientReference(getTransientField(TransientValues::checkpointSerializationContext))
         val transaction = extractThreadLocalTransaction()
         parkAndSerialize { _, _ ->
+            setLoggingContext()
             logger.trace { "Suspended on $ioRequest" }
 
             // Will skip checkpoint if there are any idempotent flows in the subflow stack.
@@ -363,7 +383,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             require(continuation == FlowContinuation.ProcessEvents)
             unpark(SERIALIZER_BLOCKER)
         }
-        setLoggingContext()
         return uncheckedCast(processEventsUntilFlowIsResumed(
                 isDbTransactionOpenOnEntry = false,
                 isDbTransactionOpenOnExit = true
@@ -420,7 +439,7 @@ val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out F
 
 val Class<out FlowLogic<*>>.appName: String
     get() {
-        val jarFile = protectionDomain.codeSource.location.toPath()
+        val jarFile = location.toPath()
         return if (jarFile.isRegularFile() && jarFile.toString().endsWith(".jar")) {
             jarFile.fileName.toString().removeSuffix(".jar")
         } else {

@@ -8,6 +8,7 @@ import java.nio.ByteBuffer
 
 @KeepForDJVM
 class OrdinalBits(private val ordinal: Int) {
+    @KeepForDJVM
     interface OrdinalWriter {
         val bits: OrdinalBits
         @JvmDefault val encodedSize get() = 1

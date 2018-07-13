@@ -40,8 +40,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException
 import org.junit.rules.ExternalResource
-import java.lang.Thread.sleep
-import java.time.Instant
+import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
@@ -103,7 +102,7 @@ open class VaultQueryTestRule : ExternalResource(), VaultQueryParties {
     override val bob = TestIdentity(BOB_NAME, 80)
     override val cashNotary = TestIdentity(CordaX500Name("Cash Notary Service", "Zurich", "CH"), 21)
     override val charlie = TestIdentity(CHARLIE_NAME, 90)
-    override val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
+    final override val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
     override val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
     override val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
     override val DUMMY_OBLIGATION_ISSUER = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10).party
@@ -133,7 +132,7 @@ open class VaultQueryTestRule : ExternalResource(), VaultQueryParties {
                 cordappPackages,
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
                 megaCorp,
-                moreKeys = DUMMY_NOTARY_KEY)
+                moreKeys = *arrayOf(DUMMY_NOTARY_KEY))
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
@@ -151,7 +150,7 @@ open class VaultQueryTestRule : ExternalResource(), VaultQueryParties {
     }
 }
 
-class VaultQueryRollbackRule(val vaultQueryParties: VaultQueryParties) : ExternalResource() {
+class VaultQueryRollbackRule(private val vaultQueryParties: VaultQueryParties) : ExternalResource() {
 
     lateinit var transaction: DatabaseTransaction
 
@@ -198,7 +197,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             vaultFiller.fillWithSomeTestLinearStates(3, "ABC")
             val dealStates = vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789"))
             // Total unconsumed states = 10 + 1 + 2 + 3 + 3 = 19
-            sleep(delay)
+            services.clock.advanceBy(Duration.ofMillis(delay))
 
             // consume some states
             vaultFiller.consumeLinearStates(linearStatesXYZ.states.toList())
@@ -1806,12 +1805,11 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     // specifying Query on Linear state attributes
     @Test
     fun `unconsumed linear heads for linearId between two timestamps`() {
-        val start = Instant.now()
-        val end = start.plus(1, ChronoUnit.SECONDS)
-
         database.transaction {
+            val start = services.clock.instant()
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST")
-            sleep(1000)
+            services.clock.advanceBy(1.seconds)
+            val end = services.clock.instant()
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST")
             // 2 unconsumed states with same external ID
             val recordedBetweenExpression = TimeCondition(TimeInstantType.RECORDED, builder { between(start, end) })
@@ -1842,13 +1840,12 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     // specifying Query on Linear state attributes
     @Test
     fun `unconsumed linear heads for linearId between two timestamps for a given external id`() {
-        val start = Instant.now()
-        val end = start.plus(1, ChronoUnit.SECONDS)
-
         database.transaction {
+            val start = services.clock.instant()
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1")
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST2")
-            sleep(1000)
+            services.clock.advanceBy(1.seconds)
+            val end = services.clock.instant()
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST3")
             // 2 unconsumed states with same external ID
 

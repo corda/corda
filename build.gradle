@@ -22,21 +22,7 @@ buildscript {
     ext.capsule_version = '1.0.1'
 
     ext.asm_version = '5.0.4'
-
-    /*
-     * TODO Upgrade to version 2.4 for large message streaming support
-     *
-     * Due to a memory leak in the connection handling code in Artemis, we are
-     * temporarily downgrading to version 2.2.0.
-     *
-     * The memory leak essentially triggers an out-of-memory exception within
-     * less than 10 seconds and can take down a node if a non-TLS connection is
-     * attempted against the P2P port.
-     *
-     * The issue has been reported to upstream:
-     * https://issues.apache.org/jira/browse/ARTEMIS-1559
-     */
-    ext.artemis_version = '2.5.0'
+    ext.artemis_version = '2.6.2'
     ext.jackson_version = '2.9.5'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
@@ -67,6 +53,7 @@ buildscript {
     ext.crash_version = 'cadb53544fbb3c0fb901445da614998a6a419488'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.0'
+    ext.shadow_version = '2.0.4'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
     ext.artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
@@ -77,12 +64,14 @@ buildscript {
     ext.proguard_version = constants.getProperty('proguardVersion')
     ext.jsch_version = '0.1.54'
     ext.commons_cli_version = '1.4'
-    ext.protonj_version = '0.27.1'
+    ext.protonj_version = '0.27.1' // This is now aligned with the Artemis version, but retaining in case we ever need to diverge again for a bug fix.
     ext.snappy_version = '0.4'
     ext.fast_classpath_scanner_version = '2.12.3'
     ext.jcabi_manifests_version = '1.1'
+    ext.picocli_version = '3.0.0'
 
-    ext.deterministic_rt_version = '1.0-SNAPSHOT'
+    // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
+    // ext.deterministic_idea_sdk = '1.8 (Deterministic)'
 
     // Update 121 is required for ObjectInputFilter.
     // Updates [131, 161] also have zip compression bugs on MacOS (High Sierra).
@@ -113,7 +102,6 @@ buildscript {
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
         classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
-        classpath "org.ajoberstar:grgit:1.1.0"
         classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
         classpath "org.owasp:dependency-check-gradle:${dependency_checker_version}"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
@@ -128,7 +116,7 @@ plugins {
 }
 
 ext {
-    corda_revision = org.ajoberstar.grgit.Grgit.open(file('.')).head().id
+    corda_revision = "git rev-parse HEAD".execute().text.trim()
 }
 
 apply plugin: 'project-report'
@@ -178,7 +166,8 @@ allprojects {
             apiVersion = "1.2"
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
-            freeCompilerArgs = ['-Xenable-jvm-default']
+            freeCompilerArgs = ['-Xjvm-default=compatibility']
+            allWarningsAsErrors = true
         }
     }
 
@@ -349,9 +338,11 @@ bintrayConfig {
             'corda-node-driver',
             'corda-confidential-identities',
             'corda-shell',
+            'corda-tools-shell-cli',
             'corda-serialization',
             'corda-serialization-deterministic',
             'corda-tools-blob-inspector',
+            'corda-tools-explorer',
             'corda-tools-network-bootstrapper'
     ]
     license {
@@ -390,20 +381,20 @@ artifactory {
 
         defaults {
             // Root project applies the plugin (for this block) but does not need to be published
-            if(project != rootProject) {
+            if (project != rootProject) {
                 publications(project.extensions.publish.name())
             }
         }
     }
 }
 
-task generateApi(type: net.corda.plugins.GenerateApi){
+task generateApi(type: net.corda.plugins.GenerateApi) {
     baseName = "api-corda"
 }
 
 // This exists to reduce CI build time when the envvar is set (can save up to 40 minutes)
-if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUILD') != null)) {
-    if(file('corda-docs-only-build').exists()) {
+if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUILD') != null)) {
+    if (file('corda-docs-only-build').exists()) {
         logger.info("Tests are disabled due to presence of file 'corda-docs-only-build' in the project root")
     } else {
         logger.info("Tests are disabled due to the presence of envvar CORDA_DOCS_ONLY_BUILD")
@@ -415,7 +406,7 @@ if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUI
         }
 
         it.afterEvaluate {
-            if(it.tasks.findByName("integrationTest") != null) {
+            if (it.tasks.findByName("integrationTest") != null) {
                 integrationTest {
                     exclude '*/**'
                 }
@@ -423,7 +414,7 @@ if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUI
         }
 
         it.afterEvaluate {
-            if(it.tasks.findByName("smokeTest") != null) {
+            if (it.tasks.findByName("smokeTest") != null) {
                 smokeTest {
                     exclude '*/**'
                 }
@@ -433,6 +424,6 @@ if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUI
 }
 
 wrapper {
-    gradleVersion = "4.8"
+    gradleVersion = "4.8.1"
     distributionType = Wrapper.DistributionType.ALL
 }

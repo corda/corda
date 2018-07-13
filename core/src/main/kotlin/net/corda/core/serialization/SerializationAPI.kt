@@ -143,6 +143,14 @@ interface SerializationContext {
      */
     val objectReferencesEnabled: Boolean
     /**
+     * If true the carpenter will happily synthesis classes that implement interfaces containing methods that are not
+     * getters for any AMQP fields. Invoking these methods will throw an [AbstractMethodError]. If false then an exception
+     * will be thrown during deserialization instead.
+     *
+     * The default is false.
+     */
+    val lenientCarpenterEnabled: Boolean
+    /**
      * The use case we are serializing or deserializing for.  See [UseCase].
      */
     val useCase: UseCase
@@ -158,9 +166,14 @@ interface SerializationContext {
     fun withoutReferences(): SerializationContext
 
     /**
+     * Return a new context based on this one but with a lenient carpenter.
+     * @see lenientCarpenterEnabled
+     */
+    fun withLenientCarpenter(): SerializationContext
+
+    /**
      * Helper method to return a new context based on this context with the deserialization class loader changed.
      */
-    @DeleteForDJVM
     fun withClassLoader(classLoader: ClassLoader): SerializationContext
 
     /**

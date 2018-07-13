@@ -40,6 +40,7 @@ enum class PrintOrVisualise {
     Visualise
 }
 
+@Suppress("DEPRECATION")
 fun main(args: Array<String>) {
     require(args.isNotEmpty()) { "Usage: <binary> [Print|Visualise]" }
     val printOrVisualise = PrintOrVisualise.valueOf(args[0])
@@ -99,6 +100,7 @@ fun main(args: Array<String>) {
             }
         }
         // END 5
+        Unit
     }
 }
 

@@ -1,32 +1,13 @@
-buildscript {
-    ext.commonsio_version = '2.6'
-    ext.commonslogging_version = '1.2'
-    ext.cucumber_version = '1.2.5'
-    ext.crash_version = 'cce5a00f114343c1145c1d7756e1dd6df3ea984e'
-    ext.docker_client_version = '8.11.0'
-
-    repositories {
-        maven {
-            jcenter()
-            url 'https://jitpack.io'
-        }
-    }
-
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
+ext {
+    commonsio_version = '2.6'
+    cucumber_version = '1.2.5'
+    crash_version = 'cce5a00f114343c1145c1d7756e1dd6df3ea984e'
+    docker_client_version = '8.11.0'
 }
 
 group 'net.corda.behave'
 
-apply plugin: 'java'
 apply plugin: 'kotlin'
-
-sourceCompatibility = 1.8
-
-repositories {
-    mavenCentral()
-}
 
 sourceSets {
     behave {
@@ -63,6 +44,7 @@ dependencies {
 
     compile "org.slf4j:log4j-over-slf4j:$slf4j_version"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
+    compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     compile "org.apache.logging.log4j:log4j-core:$log4j_version"
 
@@ -70,10 +52,9 @@ dependencies {
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
     // FastClasspathScanner: classpath scanning
-    compile 'io.github.lukehutch:fast-classpath-scanner:2.12.3'
+    compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
 
     compile "commons-io:commons-io:$commonsio_version"
-    compile "commons-logging:commons-logging:$commonslogging_version"
     compile "com.spotify:docker-client:$docker_client_version"
     compile "io.reactivex:rxjava:$rxjava_version"
 
@@ -91,14 +72,6 @@ dependencies {
     behaveCompile "info.cukes:cucumber-java8:$cucumber_version"
     behaveCompile "info.cukes:cucumber-junit:$cucumber_version"
     behaveCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
-}
-
-compileKotlin {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
-compileTestKotlin {
-    kotlinOptions.jvmTarget = "1.8"
 }
 
 test {

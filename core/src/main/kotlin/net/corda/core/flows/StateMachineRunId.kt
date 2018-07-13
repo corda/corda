@@ -8,10 +8,10 @@ import java.util.*
  * A unique identifier for a single state machine run, valid across node restarts. Note that a single run always
  * has at least one flow, but that flow may also invoke sub-flows: they all share the same run id.
  */
+@DeleteForDJVM
 @CordaSerializable
 data class StateMachineRunId(val uuid: UUID) {
     companion object {
-        @DeleteForDJVM
         fun createRandom(): StateMachineRunId = StateMachineRunId(UUID.randomUUID())
     }
 

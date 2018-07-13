@@ -234,7 +234,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     jmxPolicy = defaultParameters.jmxPolicy,
                     compatibilityZone = null,
                     networkParameters = defaultParameters.networkParameters,
-                    notaryCustomOverrides = defaultParameters.notaryCustomOverrides
+                    notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
+                    inMemoryDB = defaultParameters.inMemoryDB
             ),
             coerce = { it },
             dsl = dsl,
@@ -267,6 +268,10 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
  * @property networkParameters The network parameters to be used by all the nodes. [NetworkParameters.notaries] must be
  *     empty as notaries are defined by [notarySpecs].
  * @property notaryCustomOverrides Extra settings that need to be passed to the notary.
+ * @property initialiseSerialization Indicates whether to initialized the serialization subsystem.
+ * @property inMemoryDB Whether to use in-memory H2 for new nodes rather then on-disk (the node starts quicker, however
+ *     the data is not persisted between node restarts). Has no effect if node is configured
+ *     in any way to use database other than H2.
  */
 @Suppress("unused")
 data class DriverParameters(
@@ -283,7 +288,8 @@ data class DriverParameters(
         val jmxPolicy: JmxPolicy = JmxPolicy(),
         val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
-        val initialiseSerialization: Boolean = true
+        val initialiseSerialization: Boolean = true,
+        val inMemoryDB: Boolean = true
     ) {
     constructor(
             isDebug: Boolean,
@@ -312,6 +318,7 @@ data class DriverParameters(
             jmxPolicy,
             networkParameters,
             emptyMap(),
+            true,
             true
     )
 
@@ -328,7 +335,8 @@ data class DriverParameters(
             extraCordappPackagesToScan: List<String>,
             jmxPolicy: JmxPolicy,
             networkParameters: NetworkParameters,
-            initialiseSerialization: Boolean
+            initialiseSerialization: Boolean,
+            inMemoryDB: Boolean
     ) : this(
             isDebug,
             driverDirectory,
@@ -343,7 +351,8 @@ data class DriverParameters(
             jmxPolicy,
             networkParameters,
             emptyMap(),
-            initialiseSerialization
+            initialiseSerialization,
+            inMemoryDB
     )
 
     fun withIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)
@@ -360,6 +369,7 @@ data class DriverParameters(
     fun withJmxPolicy(jmxPolicy: JmxPolicy): DriverParameters = copy(jmxPolicy = jmxPolicy)
     fun withNetworkParameters(networkParameters: NetworkParameters): DriverParameters = copy(networkParameters = networkParameters)
     fun withNotaryCustomOverrides(notaryCustomOverrides: Map<String, Any?>): DriverParameters = copy(notaryCustomOverrides = notaryCustomOverrides)
+    fun withInMemoryDB(inMemoryDB: Boolean): DriverParameters = copy(inMemoryDB = inMemoryDB)
 
     fun copy(
             isDebug: Boolean,

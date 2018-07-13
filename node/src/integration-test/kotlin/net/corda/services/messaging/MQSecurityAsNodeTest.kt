@@ -5,7 +5,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.exists
-import net.corda.core.internal.x500Name
+import net.corda.core.internal.toX500Name
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
@@ -68,7 +68,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
 
     @Test
     fun `login to a non ssl port as a node user`() {
-        val attacker = clientTo(alice.internals.configuration.rpcOptions.address!!, sslConfiguration = null)
+        val attacker = clientTo(alice.internals.configuration.rpcOptions.address, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(NODE_P2P_USER, NODE_P2P_USER, enableSSL = false)
         }
@@ -76,7 +76,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
 
     @Test
     fun `login to a non ssl port as a peer user`() {
-        val attacker = clientTo(alice.internals.configuration.rpcOptions.address!!, sslConfiguration = null)
+        val attacker = clientTo(alice.internals.configuration.rpcOptions.address, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(PEER_USER, PEER_USER, enableSSL = false)  // Login as a peer
         }
@@ -99,7 +99,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
 
                 val clientKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
                 // Set name constrain to the legal name.
-                val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.x500Name))), arrayOf())
+                val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.toX500Name()))), arrayOf())
                 val clientCACert = X509Utilities.createCertificate(
                         CertificateType.INTERMEDIATE_CA,
                         DEV_INTERMEDIATE_CA.certificate,

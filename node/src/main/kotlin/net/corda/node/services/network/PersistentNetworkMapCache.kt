@@ -166,7 +166,7 @@ open class PersistentNetworkMapCache(
         }
     }
 
-    override fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo> = database.transaction { queryByLegalName(session, name) }
+    override fun getNodesByLegalName(name: CordaX500Name): List<NodeInfo> = database.transaction { queryByLegalName(session, name) }.sortedByDescending { it.serial }
 
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> = nodesByKeyCache[identityKey]!!
 
@@ -255,7 +255,8 @@ open class PersistentNetworkMapCache(
     }
 
     private fun removeInfoDB(session: Session, nodeInfo: NodeInfo) {
-        val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey).singleOrNull()
+        // findByIdentityKey might returns multiple node info with the same key, need to pick the right one by comparing serial.
+        val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey).singleOrNull { it.serial == nodeInfo.serial }
         info?.let { session.remove(it) }
         // invalidate cache last - this way, we might serve up the wrong info for a short time, but it will get refreshed
         // on the next load

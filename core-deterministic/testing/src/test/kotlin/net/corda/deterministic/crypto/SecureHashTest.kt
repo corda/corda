@@ -33,7 +33,7 @@ class SecureHashTest {
     @Test
     fun testConstants() {
         assertArrayEquals(SecureHash.zeroHash.bytes, ByteArray(32))
-        assertArrayEquals(SecureHash.allOnesHash.bytes, ByteArray(32, { 0xFF.toByte() }))
+        assertArrayEquals(SecureHash.allOnesHash.bytes, ByteArray(32) { 0xFF.toByte() })
     }
 }
 

@@ -7,13 +7,12 @@ import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl
 
-
 class SerializationEngine {
     companion object {
         fun init() {
             synchronized(this) {
                 if (nodeSerializationEnv == null) {
-                    val classloader = this.javaClass.classLoader
+                    val classloader = this::class.java.classLoader
                     nodeSerializationEnv = SerializationEnvironmentImpl(
                             SerializationFactoryImpl().apply {
                                 registerScheme(AMQPServerSerializationScheme(emptyList()))

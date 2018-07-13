@@ -2,12 +2,13 @@ package net.corda.deterministic.common
 
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationContext.UseCase.*
+import net.corda.core.serialization.SerializationContext.UseCase.P2P
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
+import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.amqpMagic
 import org.junit.rules.TestRule
@@ -21,13 +22,13 @@ class LocalSerializationRule(private val label: String) : TestRule {
 
     private companion object {
         private val AMQP_P2P_CONTEXT = SerializationContextImpl(
-            amqpMagic,
-            LocalSerializationRule::class.java.classLoader,
-            GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
-            emptyMap(),
-            true,
-            P2P,
-            null
+                amqpMagic,
+                LocalSerializationRule::class.java.classLoader,
+                GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
+                emptyMap(),
+                true,
+                P2P,
+                null
         )
     }
 
@@ -59,7 +60,7 @@ class LocalSerializationRule(private val label: String) : TestRule {
 
     private fun createTestSerializationEnv(): SerializationEnvironmentImpl {
         val factory = SerializationFactoryImpl(mutableMapOf()).apply {
-            registerScheme(AMQPSerializationScheme(emptySet(), mutableMapOf()))
+            registerScheme(AMQPSerializationScheme(emptySet(), AccessOrderLinkedHashMap(128)))
         }
         return object : SerializationEnvironmentImpl(factory, AMQP_P2P_CONTEXT) {
             override fun toString() = "testSerializationEnv($label)"
@@ -67,8 +68,8 @@ class LocalSerializationRule(private val label: String) : TestRule {
     }
 
     private class AMQPSerializationScheme(
-        cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
-        serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
+            cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
+            serializerFactoriesForContexts: AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
     ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, serializerFactoriesForContexts) {
         override fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory {
             throw UnsupportedOperationException()

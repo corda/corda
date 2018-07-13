@@ -411,71 +411,57 @@ For more information on the client RPC interface and how to build an RPC client 
 
 Running nodes across machines
 -----------------------------
-The nodes can be split across different machines and configured to communicate across the network.
+The nodes can be configured to communicate as a network even when distributed across several machines:
 
-After deploying the nodes, navigate to the build folder (``kotlin-source/build/nodes``) and for each node that needs to
-be moved to another machine open its config file and change the Artemis messaging address to the IP address of the machine
-where the node will run (e.g. ``p2pAddress="10.18.0.166:10007"``).
+* Deploy the nodes as usual:
 
-These changes require new node-info files to be distributed amongst the nodes. Use the network bootstrapper tool
-(see :doc:`setting-up-a-corda-network` for more information on this and how to built it) to update the files and have
-them distributed locally.
+  * Unix/Mac OSX: ``./gradlew deployNodes``
+  * Windows: ``gradlew.bat deployNodes``
 
-``java -jar network-bootstrapper.jar kotlin-source/build/nodes``
+* Navigate to the build folder (``kotlin-source/build/nodes``)
+* For each node, open its ``node.conf`` file and change ``localhost`` in its ``p2pAddress`` to the IP address of the machine
+  where the node will be run (e.g. ``p2pAddress="10.18.0.166:10007"``)
+* These changes require new node-info files to be distributed amongst the nodes. Use the network bootstrapper tool
+  (see :doc:`network-bootstrapper`) to update the files and have them distributed locally:
 
-Once that's done move the node folders to their designated machines (e.g. using a USB key). It is important that none of the
-nodes - including the notary - end up on more than one machine. Each computer should also have a copy of ``runnodes``
-and ``runnodes.bat``.
+  ``java -jar network-bootstrapper.jar kotlin-source/build/nodes``
 
-For example, you may end up with the following layout:
+* Move the node folders to their individual machines (e.g. using a USB key). It is important that none of the
+  nodes - including the notary - end up on more than one machine. Each computer should also have a copy of ``runnodes``
+  and ``runnodes.bat``.
 
-* Machine 1: ``Notary``, ``PartyA``, ``runnodes``, ``runnodes.bat``
-* Machine 2: ``PartyB``, ``PartyC``, ``runnodes``, ``runnodes.bat``
+  For example, you may end up with the following layout:
 
-After starting each node, the nodes will be able to see one another and agree IOUs among themselves.
+  * Machine 1: ``Notary``, ``PartyA``, ``runnodes``, ``runnodes.bat``
+  * Machine 2: ``PartyB``, ``PartyC``, ``runnodes``, ``runnodes.bat``
 
-.. note:: If you are using H2 and wish to use the same ``h2port`` value for all the nodes, then only assign them that
-   value after the nodes have been moved to their machines. The initial bootstrapping process requires access to the nodes'
-   databases and if they share the same H2 port then the process will fail.
+* After starting each node, the nodes will be able to see one another and agree IOUs among themselves
 
-Testing and debugging
----------------------
+.. warning:: The bootstrapper must be run **after** the ``node.conf`` files have been modified, but **before** the nodes 
+   are distributed across machines. Otherwise, the nodes will not be able to communicate.
 
-Testing a CorDapp
-~~~~~~~~~~~~~~~~~
+.. note:: If you are using H2 and wish to use the same ``h2port`` value for two or more nodes, you must only assign them that
+   value after the nodes have been moved to their individual machines. The initial bootstrapping process requires access to the 
+   nodes' databases and if two nodes share the same H2 port, the process will fail.
+
+Testing your CorDapp
+--------------------
+
 Corda provides several frameworks for writing unit and integration tests for CorDapps.
 
 Contract tests
-^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~
 You can run the CorDapp's contract tests by running the ``Run Contract Tests - Kotlin`` run configuration.
 
 Flow tests
-^^^^^^^^^^
+~~~~~~~~~~
 You can run the CorDapp's flow tests by running the ``Run Flow Tests - Kotlin`` run configuration.
 
 Integration tests
-^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~
 You can run the CorDapp's integration tests by running the ``Run Integration Tests - Kotlin`` run configuration.
 
-Debugging Corda nodes
-~~~~~~~~~~~~~~~~~~~~~
-Debugging is done via IntelliJ as follows:
+Debugging your CorDapp
+----------------------
 
-1. Start the nodes using the “Run Example CorDapp” run configuration in IntelliJ
-
-2. IntelliJ will build and run the CorDapp. The remote debug ports for each node will be automatically generated and
-   printed to the terminal. For example:
-
-.. sourcecode:: none
-
-    [INFO ] 15:27:59.533 [main] Node.logStartupInfo - Working Directory: /Users/joeldudley/cordapp-example/build/20170707142746/PartyA
-    [INFO ] 15:27:59.533 [main] Node.logStartupInfo - Debug port: dt_socket:5007
-
-3. Edit the “Debug CorDapp” run configuration with the port of the node you wish to connect to
-
-4. Run the “Debug CorDapp” run configuration
-
-5. Set your breakpoints and interact with the node you've connected to. When the node hits a breakpoint, execution will
-   pause
-
-   * The node webserver runs in a separate process, and is not attached to by the debugger
+See :doc:`debugging-a-cordapp`.

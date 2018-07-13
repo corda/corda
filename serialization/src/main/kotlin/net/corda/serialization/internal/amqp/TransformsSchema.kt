@@ -3,6 +3,10 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformRename
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.trace
+import net.corda.serialization.internal.NotSerializableDetailedException
+import net.corda.serialization.internal.NotSerializableWithReasonException
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
@@ -150,6 +154,7 @@ class EnumDefaultSchemaTransform(val old: String, val new: String) : Transform()
  * @property from the name of the property or constant prior to being changed, i.e. what it was
  * @property to the new name of the property or constant after the change has been made, i.e. what it is now
  */
+@KeepForDJVM
 class RenameSchemaTransform(val from: String, val to: String) : Transform() {
     companion object : DescribedTypeConstructor<RenameSchemaTransform> {
         /**
@@ -192,6 +197,7 @@ class RenameSchemaTransform(val from: String, val to: String) : Transform() {
 data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, MutableList<Transform>>>) : DescribedType {
     companion object : DescribedTypeConstructor<TransformsSchema> {
         val DESCRIPTOR = AMQPDescriptorRegistry.TRANSFORM_SCHEMA.amqpDescriptor
+        private val logger = contextLogger()
 
         /**
          * Takes a class name and either returns a cached instance of the TransformSet for it or, on a cache miss,
@@ -239,10 +245,17 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
                 type: String,
                 sf: SerializerFactory,
                 map: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>) {
-            get(type, sf).apply {
-                if (isNotEmpty()) {
-                    map[type] = this
+            try {
+                get(type, sf).apply {
+                    if (isNotEmpty()) {
+                        map[type] = this
+                    }
                 }
+            } catch (e: NotSerializableWithReasonException) {
+                val message = "Error running transforms for $type: ${e.message}"
+                logger.error(message)
+                logger.trace { e.toString() }
+                throw NotSerializableDetailedException(type, e.message ?: "")
             }
         }
 

@@ -22,11 +22,6 @@ sourceSets {
 
 processResources {
     from file("$rootDir/config/dev/log4j2.xml")
-    from file("$rootDir/config/dev/jolokia-access.xml")
-}
-
-processTestResources {
-    from file("$rootDir/config/test/jolokia-access.xml")
 }
 
 dependencies {

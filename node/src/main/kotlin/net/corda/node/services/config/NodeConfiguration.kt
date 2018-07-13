@@ -4,11 +4,10 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
+import net.corda.core.internal.TimedFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.artemis.CertificateChainCheckPolicy
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
@@ -17,14 +16,17 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
-import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
 import java.util.*
+import javax.security.auth.x500.X500Principal
 
 val Int.MB: Long get() = this * 1024L * 1024L
+
+private val DEFAULT_FLOW_MONITOR_PERIOD_MILLIS: Duration = Duration.ofMinutes(1)
+private val DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS: Duration = Duration.ofMinutes(1)
 
 interface NodeConfiguration : NodeSSLConfiguration {
     val myLegalName: CordaX500Name
@@ -37,6 +39,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val devModeOptions: DevModeOptions?
     val compatibilityZoneURL: URL?
     val networkServices: NetworkServicesConfig?
+    @Suppress("DEPRECATION")
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
     val flowTimeout: FlowTimeoutConfiguration
@@ -60,8 +63,11 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
     val extraNetworkMapKeys: List<UUID>
     val tlsCertCrlDistPoint: URL?
-    val tlsCertCrlIssuer: String?
+    val tlsCertCrlIssuer: X500Principal?
     val effectiveH2Settings: NodeH2Settings?
+    val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
+    val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
+
     fun validate(): List<String>
 
     companion object {
@@ -162,7 +168,7 @@ data class NodeConfigurationImpl(
         override val compatibilityZoneURL: URL? = null,
         override var networkServices: NetworkServicesConfig? = null,
         override val tlsCertCrlDistPoint: URL? = null,
-        override val tlsCertCrlIssuer: String? = null,
+        override val tlsCertCrlIssuer: X500Principal? = null,
         override val rpcUsers: List<User>,
         override val security: SecurityConfiguration? = null,
         override val verifierType: VerifierType,
@@ -173,6 +179,7 @@ data class NodeConfigurationImpl(
         override val messagingServerAddress: NetworkHostAndPort?,
         override val messagingServerExternal: Boolean = (messagingServerAddress != null),
         override val notary: NotaryConfig?,
+        @Suppress("DEPRECATION")
         @Deprecated("Do not configure")
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig> = emptyList(),
         override val devMode: Boolean = false,
@@ -193,41 +200,42 @@ data class NodeConfigurationImpl(
         private val h2port: Int? = null,
         private val h2Settings: NodeH2Settings? = null,
         // do not use or remove (used by Capsule)
-        private val jarDirs: List<String> = emptyList()
+        private val jarDirs: List<String> = emptyList(),
+        override val flowMonitorPeriodMillis: Duration = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS,
+        override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
 ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
 
     }
 
-    override val rpcOptions: NodeRpcOptions = initialiseRpcOptions(rpcAddress, rpcSettings, BrokerRpcSslOptions(baseDirectory / "certificates" / "nodekeystore.jks", keyStorePassword))
+    private val actualRpcSettings: NodeRpcSettings
 
-    private fun initialiseRpcOptions(explicitAddress: NetworkHostAndPort?, settings: NodeRpcSettings, fallbackSslOptions: BrokerRpcSslOptions): NodeRpcOptions {
-        return when {
-            explicitAddress != null -> {
-                require(settings.address == null) { "Can't provide top-level rpcAddress and rpcSettings.address (they control the same property)." }
+    init {
+        actualRpcSettings = when {
+            rpcAddress != null -> {
+                require(rpcSettings.address == null) { "Can't provide top-level rpcAddress and rpcSettings.address (they control the same property)." }
                 logger.warn("Top-level declaration of property 'rpcAddress' is deprecated. Please use 'rpcSettings.address' instead.")
 
-                settings.copy(address = explicitAddress)
+                rpcSettings.copy(address = rpcAddress)
             }
             else -> {
-                settings.address ?: throw ConfigException.Missing("rpcSettings.address")
-                settings
+                rpcSettings.address ?: throw ConfigException.Missing("rpcSettings.address")
+                rpcSettings
             }
-        }.asOptions(fallbackSslOptions)
+        }
     }
 
+    override val rpcOptions: NodeRpcOptions
+        get() {
+            return actualRpcSettings.asOptions()
+        }
 
     private fun validateTlsCertCrlConfig(): List<String> {
         val errors = mutableListOf<String>()
         if (tlsCertCrlIssuer != null) {
             if (tlsCertCrlDistPoint == null) {
                 errors += "tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL"
-            }
-            try {
-                X500Name(tlsCertCrlIssuer)
-            } catch (e: Exception) {
-                errors += "Error when parsing tlsCertCrlIssuer: ${e.message}"
             }
         }
         if (!crlCheckSoftFail && tlsCertCrlDistPoint == null) {
@@ -239,7 +247,12 @@ data class NodeConfigurationImpl(
     override fun validate(): List<String> {
         val errors = mutableListOf<String>()
         errors += validateDevModeOptions()
-        errors += validateRpcOptions(rpcOptions)
+        val rpcSettingsErrors = validateRpcSettings(rpcSettings)
+        errors += rpcSettingsErrors
+        if (rpcSettingsErrors.isEmpty()) {
+            // Forces lazy property to initialise in order to throw exceptions
+            rpcOptions
+        }
         errors += validateTlsCertCrlConfig()
         errors += validateNetworkServices()
         errors += validateH2Settings()
@@ -254,12 +267,13 @@ data class NodeConfigurationImpl(
         return errors
     }
 
-    private fun validateRpcOptions(options: NodeRpcOptions): List<String> {
+    private fun validateRpcSettings(options: NodeRpcSettings): List<String> {
         val errors = mutableListOf<String>()
-        if (options.address != null) {
-            if (!options.useSsl && options.adminAddress == null) {
-                errors += "'rpcSettings.adminAddress': missing. Property is mandatory when 'rpcSettings.useSsl' is false (default)."
-            }
+        if (options.adminAddress == null) {
+            errors += "'rpcSettings.adminAddress': missing"
+        }
+        if (options.useSsl && options.ssl == null) {
+            errors += "'rpcSettings.ssl': missing (rpcSettings.useSsl was set to true)."
         }
         return errors
     }
@@ -311,6 +325,7 @@ data class NodeConfigurationImpl(
         require(security == null || rpcUsers.isEmpty()) {
             "Cannot specify both 'rpcUsers' and 'security' in configuration"
         }
+        @Suppress("DEPRECATION")
         if(certificateChainCheckPolicies.isNotEmpty()) {
             logger.warn("""You are configuring certificateChainCheckPolicies. This is a setting that is not used, and will be removed in a future version.
                 |Please contact the R3 team on the public slack to discuss your use case.
@@ -333,13 +348,13 @@ data class NodeRpcSettings(
         val useSsl: Boolean = false,
         val ssl: BrokerRpcSslOptions?
 ) {
-    fun asOptions(fallbackSslOptions: BrokerRpcSslOptions): NodeRpcOptions {
+    fun asOptions(): NodeRpcOptions {
         return object : NodeRpcOptions {
             override val address = this@NodeRpcSettings.address!!
             override val adminAddress = this@NodeRpcSettings.adminAddress!!
             override val standAloneBroker = this@NodeRpcSettings.standAloneBroker
             override val useSsl = this@NodeRpcSettings.useSsl
-            override val sslConfig = this@NodeRpcSettings.ssl ?: fallbackSslOptions
+            override val sslConfig = this@NodeRpcSettings.ssl
 
             override fun toString(): String {
                 return "address: $address, adminAddress: $adminAddress, standAloneBroker: $standAloneBroker, useSsl: $useSsl, sslConfig: $sslConfig"
@@ -353,8 +368,7 @@ data class NodeH2Settings(
 )
 
 enum class VerifierType {
-    InMemory,
-    OutOfProcess
+    InMemory
 }
 
 enum class CertChainPolicyType {
@@ -366,18 +380,7 @@ enum class CertChainPolicyType {
 }
 
 @Deprecated("Do not use")
-data class CertChainPolicyConfig(val role: String, private val policy: CertChainPolicyType, private val trustedAliases: Set<String>) {
-    val certificateChainCheckPolicy: CertificateChainCheckPolicy
-        get() {
-            return when (policy) {
-                CertChainPolicyType.Any -> CertificateChainCheckPolicy.Any
-                CertChainPolicyType.RootMustMatch -> CertificateChainCheckPolicy.RootMustMatch
-                CertChainPolicyType.LeafMustMatch -> CertificateChainCheckPolicy.LeafMustMatch
-                CertChainPolicyType.MustContainOneOf -> CertificateChainCheckPolicy.MustContainOneOf(trustedAliases)
-                CertChainPolicyType.UsernameMustMatch -> CertificateChainCheckPolicy.UsernameMustMatchCommonName
-            }
-        }
-}
+data class CertChainPolicyConfig(val role: String, private val policy: CertChainPolicyType, private val trustedAliases: Set<String>)
 
 // Supported types of authentication/authorization data providers
 enum class AuthDataSourceType {
@@ -414,8 +417,6 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
             }
         }
 
-        fun copyWithAdditionalUser(user: User) = AuthService(dataSource.copyWithAdditionalUser(user), id, options)
-
         // Optional components: cache
         data class Options(val cache: Options.Cache?) {
 
@@ -442,12 +443,6 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                     AuthDataSourceType.INMEMORY -> require(users != null && connection == null)
                     AuthDataSourceType.DB -> require(users == null && connection != null)
                 }
-            }
-
-            fun copyWithAdditionalUser(user: User): DataSource {
-                val extendedList = this.users?.toMutableList() ?: mutableListOf()
-                extendedList.add(user)
-                return DataSource(this.type, this.passwordEncryption, this.connection, listOf(*extendedList.toTypedArray()))
             }
         }
 

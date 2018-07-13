@@ -4,6 +4,7 @@
 
 import com.typesafe.config.*;
 import sun.misc.Signal;
+
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -20,8 +21,16 @@ public class CordaCaplet extends Capsule {
 
     private Config parseConfigFile(List<String> args) {
         String baseDirOption = getOption(args, "--base-directory");
+        // Ensure consistent behaviour with NodeArgsParser.kt, see CORDA-1598.
+        if (null == baseDirOption || baseDirOption.isEmpty()) {
+            baseDirOption = getOption(args, "-base-directory");
+        }
         this.baseDir = Paths.get((baseDirOption == null) ? "." : baseDirOption).toAbsolutePath().normalize().toString();
         String config = getOption(args, "--config-file");
+        // Same as for baseDirOption.
+        if (null == config || config.isEmpty()) {
+            config = getOption(args, "-config-file");
+        }
         File configFile = (config == null) ? new File(baseDir, "node.conf") : new File(config);
         try {
             ConfigParseOptions parseOptions = ConfigParseOptions.defaults().setAllowMissing(false);
@@ -30,7 +39,7 @@ public class CordaCaplet extends Capsule {
             Config nodeConfig = ConfigFactory.parseFile(configFile, parseOptions);
             return baseDirectoryConfig.withFallback(nodeConfig).withFallback(defaultConfig).resolve();
         } catch (ConfigException e) {
-            log(LOG_QUIET, e);
+            log(LOG_DEBUG, e);
             return ConfigFactory.empty();
         }
     }

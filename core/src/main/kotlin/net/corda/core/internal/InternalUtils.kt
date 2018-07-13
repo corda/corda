@@ -2,25 +2,21 @@
 @file:KeepForDJVM
 package net.corda.core.internal
 
-import com.google.common.hash.Hashing
-import com.google.common.hash.HashingInputStream
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.*
-import net.corda.core.identity.CordaX500Name
+import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.*
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.UntrustworthyData
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.X500NameBuilder
-import org.bouncycastle.asn1.x500.style.BCStyle
 import org.slf4j.Logger
 import org.slf4j.MDC
 import rx.Observable
@@ -45,6 +41,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
+import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.*
@@ -134,9 +131,16 @@ fun InputStream.readFully(): ByteArray = use { it.readBytes() }
 /** Calculate the hash of the remaining bytes in this input stream. The stream is closed at the end. */
 fun InputStream.hash(): SecureHash {
     return use {
-        val his = HashingInputStream(Hashing.sha256(), it)
-        his.copyTo(NullOutputStream)  // To avoid reading in the entire stream into memory just write out the bytes to /dev/null
-        SecureHash.SHA256(his.hash().asBytes())
+        val md = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val count = it.read(buffer)
+            if (count == -1) {
+                break
+            }
+            md.update(buffer, 0, count)
+        }
+        SecureHash.SHA256(md.digest())
     }
 }
 
@@ -385,12 +389,19 @@ fun <T, U : T> uncheckedCast(obj: T) = obj as U
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
-@DeleteForDJVM fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
+@DeleteForDJVM
+fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
     return toWireTransactionWithContext(services, serializationContext)
 }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
-@DeleteForDJVM fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
+@DeleteForDJVM
+fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
+    return toLedgerTransactionWithContext(services, serializationContext)
+}
+
+/** Returns the location of this class. */
+val Class<*>.location: URL get() = protectionDomain.codeSource.location
 
 /** Convenience method to get the package name of a class literal. */
 val KClass<*>.packageName: String get() = java.packageName
@@ -468,27 +479,6 @@ $trustAnchor""", e, this, e.index)
     }
 }
 
-/**
- * Return the underlying X.500 name from this Corda-safe X.500 name. These are guaranteed to have a consistent
- * ordering, such that their `toString()` function returns the same value every time for the same [CordaX500Name].
- */
-val CordaX500Name.x500Name: X500Name
-    get() {
-        return X500NameBuilder(BCStyle.INSTANCE).apply {
-            addRDN(BCStyle.C, country)
-            state?.let { addRDN(BCStyle.ST, it) }
-            addRDN(BCStyle.L, locality)
-            addRDN(BCStyle.O, organisation)
-            organisationUnit?.let { addRDN(BCStyle.OU, it) }
-            commonName?.let { addRDN(BCStyle.CN, it) }
-        }.build()
-    }
-
-@Suppress("unused")
-@VisibleForTesting
-val CordaX500Name.Companion.unspecifiedCountry
-    get() = "ZZ"
-
 inline fun <T : Any> T.signWithCert(signer: (SerializedBytes<T>) -> DigitalSignatureWithCert): SignedDataWithCert<T> {
     val serialised = serialize()
     return SignedDataWithCert(serialised, signer(serialised))
@@ -514,6 +504,11 @@ fun createCordappContext(cordapp: Cordapp, attachmentId: SecureHash?, classLoade
 }
 
 val PublicKey.hash: SecureHash get() = encoded.sha256()
+
+/** Checks if this flow is an idempotent flow. */
+fun Class<out FlowLogic<*>>.isIdempotentFlow(): Boolean {
+    return IdempotentFlow::class.java.isAssignableFrom(this)
+}
 
 /**
  * Extension method for providing a sumBy method that processes and returns a Long

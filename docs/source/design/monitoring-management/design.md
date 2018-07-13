@@ -15,9 +15,9 @@ CorDapp).
 
 ![MonitoringLoggingOverview](./MonitoringLoggingOverview.png)
 
-In the above diagram, the left handside dotted box represents the components within scope for this design. It is
+In the above diagram, the left hand side dotted box represents the components within scope for this design. It is
 anticipated that 3rd party enterprise-wide system management solutions will closely follow the architectural component
-breakdown in the right handside box, and thus seamlessly integrate with the proposed Corda event generation and logging
+breakdown in the right hand side box, and thus seamlessly integrate with the proposed Corda event generation and logging
 design. The interface between the two is de-coupled and based on textual log file parsing and adoption of industry
 standard JMX MBean events.
 
@@ -34,7 +34,7 @@ Corda currently exposes several forms of monitorable content:
 
 * Industry standard exposed JMX-based metrics, both standard JVM and custom application metrics are exposed directly
   using the [Dropwizard.io](http://metrics.dropwizard.io/3.2.3/) *JmxReporter* facility. In addition Corda also uses the
-  [Jolokia](https://jolokia.org/) framework to make these accesible over an HTTP endpoint. Typically, these metrics are
+  [Jolokia](https://jolokia.org/) framework to make these accessible over an HTTP endpoint. Typically, these metrics are
   also collated by 3rd party tools to provide pro-active monitoring, visualisation and re-active management.
 
   A full list of currently exposed metrics can be found in the appendix A.
@@ -48,7 +48,7 @@ The `ProgressTracker` component is used to report the progress of a flow through
 typically configured to report the start of a specific business workflow step (often before and after message send and
 receipt where other participants form part of a multi-staged business workflow).  The progress tracking framework was
 designed to become a vital part of how exceptions, errors, and other faults are surfaced to human operators for
-investigation and resolution. It provides a means of exporting progress as a hierachy of steps in a way that’s both
+investigation and resolution. It provides a means of exporting progress as a hierarchy of steps in a way that’s both
 human readable and machine readable.
 
 In addition, in-house Corda networks at R3 use the following tools:
@@ -129,7 +129,7 @@ design, either directly or through an integrated enterprise-wide systems managem
 The following design decisions are to be confirmed:
 
 1. JMX for metric eventing and SLF4J for logging 
-   Both above are widely adopted mechanisms that enable pluggability and seamless inteoperability with other 3rd party 
+   Both above are widely adopted mechanisms that enable pluggability and seamless interoperability with other 3rd party 
    enterprise-wide system management solutions.
 2. Continue or discontinue usage of Jolokia? (TBC - most likely yes, subject to read-only security lock-down)
 3. Separation of Corda Node and CorDapp log outputs (TBC)
@@ -140,7 +140,7 @@ There are a number of activities and parts to the solution proposal:
 
 1. Extend JMX metric reporting through the Corda Monitoring Service and associated jolokia conversion to REST/JSON) 
    coverage (see implementation details) to include all Corda services (vault, key management, transaction storage, 
-   network map, attachment storage, identity, cordapp provision) & subsytems components (state machine)
+   network map, attachment storage, identity, cordapp provision) & sub-sytems components (state machine)
 
 2. Review and extend Corda log4j2 coverage (see implementation details) to ensure
 
@@ -232,7 +232,7 @@ In general, the requirements outlined in this design are cross-cutting concerns 
             * `FlowErrorAuditEvent` (unused)
             * `SystemAuditEvent` (unused)
 * Modules impacted
-    * All modules packaged and shipped as part of a Corda distribution (as published to Artifactory / Maven): *core, node, node-api, node-driver, finance, confidential-identities, test-common, test-utils, verifier, webserver, jackson, jfx, mock, rpc*
+    * All modules packaged and shipped as part of a Corda distribution (as published to Artifactory / Maven): *core, node, node-api, node-driver, finance, confidential-identities, test-common, test-utils, webserver, jackson, jfx, mock, rpc*
 
 ### Functional
 
@@ -251,7 +251,7 @@ The Health checker is a CorDapp which verifies the health and liveliness of the 
 
 3. Flow framework verification
 
-   Implement a simple flow that performs a simple "in-node" (no external messaging to 3rd party processes) roundtrip, and by doing so, exercises:
+   Implement a simple flow that performs a simple "in-node" (no external messaging to 3rd party processes) round trip, and by doing so, exercises:
 
    - flow checkpointing (including persistence to relational data store)
    - message subsystem verification (creation of a send-to-self queue for purpose of routing)  
@@ -264,16 +264,16 @@ The Health checker is a CorDapp which verifies the health and liveliness of the 
    Autotriggering of above flow using RPC to exercise the following:
 
    - messaging subsystem verification (RPC queuing) 
-   - authenticaton and permissing checking (against underlying configuration)
+   - authenticaton and permissions checking (against underlying configuration)
 
 
-The Health checker may be deployed as part of a Corda distribution and automatically invoked upoin start-up and/or manually triggered via JMX or the nodes associated Crash shell (using the startFlow command)
+The Health checker may be deployed as part of a Corda distribution and automatically invoked upon start-up and/or manually triggered via JMX or the nodes associated Crash shell (using the startFlow command)
 
 Please note that the Health checker application is not responsible for determining the healthiness of a Corda Network. This is the responsibility of the network operator, and may include verification checks such as:
 
 - correct functioning of Network Map Service (registration, discovery)
 - correct functioning of configured Notary 
-- remote messaging subsytem (including bridge creation)
+- remote messaging sub-sytem (including bridge creation)
 
 #### Metrics augmentation within Corda Subsystems and Components
 
@@ -281,7 +281,7 @@ Please note that the Health checker application is not responsible for determini
 
 - Gauge: is an instantaneous measurement of a value.
 - Counter: is a gauge for a numeric value (specifically of type `AtomicLong`) which can be incremented or decremented.
-- Meter: measures mean throughtput (eg. the rate of events over time, e.g., “requests per second”). Also measures one-, five-, and fifteen-minute exponentially-weighted moving average throughputs.
+- Meter: measures mean throughput (eg. the rate of events over time, e.g., “requests per second”). Also measures one-, five-, and fifteen-minute exponentially-weighted moving average throughputs.
 - Histogram: measures the statistical distribution of values in a stream of data (minimum, maximum, mean, median, 75th, 90th, 95th, 98th, 99th, and 99.9th percentiles).
 - Timer: measures both the rate that a particular piece of code is called and the distribution of its duration (eg. rate of requests in requests per second).
 - Health checks: provides a means of centralizing service (database, message broker health checks).
@@ -293,17 +293,17 @@ The following table identifies additional metrics to report for a Corda node:
 | Component / Subsystem                    | Proposed Metric(s)                       |
 | ---------------------------------------- | ---------------------------------------- |
 | Database                                 | Connectivity (health check)              |
-| Corda Persistence                        | Database configuration details: <br />Data source properties: JDBC driver, JDBC driver class name, URL<br />Database properties: isolation level, schema name, init database flag<br />Run-time metrics: total & in flight connection, session, transaction counts; committed / rolledback transaction (counter); transaction durations (metric) |
+| Corda Persistence                        | Database configuration details: <br />Data source properties: JDBC driver, JDBC driver class name, URL<br />Database properties: isolation level, schema name, init database flag<br />Run-time metrics: total & in flight connection, session, transaction counts; committed / rolled back transaction (counter); transaction durations (metric) |
 | Message Broker                           | Connectivity (health check)              |
 | Corda Messaging Client                   |                                          |
 | State Machine                            | Fiber thread pool queue size (counter), Live fibers (counter) , Fibers waiting for ledger commit (counter)<br />Flow Session Messages (counters): init, confirm, received, reject, normal end, error end, total received messages (for a given flow session, Id and state)<br />(in addition to existing metrics captured)<br />Flow error (count) |
-| Flow State Machine                       | Initiated flows (counter)<br />For a given flow session (counters): initiated flows, send, sendAndReceive, receive, receiveAll, retries upon send<br />For flow messaging (timers) to determine roundtrip latencies between send/receive interactions with counterparties.<br />Flow suspension metrics (count, age, wait reason, cordapp) |
-| RPC                                      | For each RPC operation we should export metrics to report: calling user, roundtrip latency (timer), calling frequency (meter). Metric reporting should include the Corda RPC protocol version (should be the same as the node's Platform Version) in play. <br />Failed requests would be of particular interest for alerting. |
-| Vault                                    | Roundtrip latency of Vault Queries (timer)<br />Soft locking counters for reserve, release (counter), elapsed times soft locks are held for per flow id (timer, histogram), list of soft locked flow ids and associated stateRefs.<br />attempt to soft lock fungible states for spending (timer) |
+| Flow State Machine                       | Initiated flows (counter)<br />For a given flow session (counters): initiated flows, send, sendAndReceive, receive, receiveAll, retries upon send<br />For flow messaging (timers) to determine round trip latencies between send/receive interactions with counterparties.<br />Flow suspension metrics (count, age, wait reason, cordapp) |
+| RPC                                      | For each RPC operation we should export metrics to report: calling user, round trip latency (timer), calling frequency (meter). Metric reporting should include the Corda RPC protocol version (should be the same as the node's Platform Version) in play. <br />Failed requests would be of particular interest for alerting. |
+| Vault                                    | round trip latency of Vault Queries (timer)<br />Soft locking counters for reserve, release (counter), elapsed times soft locks are held for per flow id (timer, histogram), list of soft locked flow ids and associated stateRefs.<br />attempt to soft lock fungible states for spending (timer) |
 | Transaction Verification<br />(InMemoryTransactionVerifierService) | worker pool size (counter), verify duration (timer), verify throughput (meter), success (counter), failure counter), in flight (counter) |
 | Notarisation                             | Notary details (type, members in cluster)<br />Counters for success, failures, failure types (conflict, invalid time window, invalid transaction, wrong notary), elapsed time (timer)<br />Ideally provide breakdown of latency across notarisation steps: state ref notary validation, signature checking, from sending to remote notary to receiving response |
 | RAFT Notary Service<br />(awaiting choice of new RAFT implementation) | should include similar metrics to previous RAFT (see appendix). |
-| SimpleNotaryService                      | success/failure uniqueness checking<br />success/failure timewindow checking |
+| SimpleNotaryService                      | success/failure uniqueness checking<br />success/failure time-window checking |
 | ValidatingNotaryService                  | as above plus success/failure of transaction validation |
 | RaftNonValidatingNotaryService           | as `SimpleNotaryService`, plus timer for algorithmic execution latency |
 | RaftValidatingNotaryService              | as `ValidatingNotaryService`, plus timer for algorithmic execution latency |
@@ -423,7 +423,7 @@ Additionally, JMX metrics are also generated within the Corda *node-driver* perf
 
 ## Appendix B - Corda Logging and Reporting coverage
 
-Primary node services exposed publically via ServiceHub (SH) or internally by ServiceHubInternal (SHI):
+Primary node services exposed publicly via ServiceHub (SH) or internally by ServiceHubInternal (SHI):
 
 | Service                                  | Type | Implementation                     | Logging summary                          |
 | ---------------------------------------- | ---- | ---------------------------------- | ---------------------------------------- |
@@ -458,7 +458,6 @@ Corda subsystem components:
 | NotaryService              | RaftNonValidatingNotaryService           | as above                                 |
 | NotaryService              | BFTNonValidatingNotaryService            | Logging coverage (info, debug)           |
 | Doorman                    | DoormanServer (Enterprise only)          | Some logging (info, warn, error), and use of `println` |
-| TransactionVerifierService | OutOfProcessTransactionVerifierService (Enterprise only) | some logging (info)                      |
 |                            |                                          |                                          |
 
 Corda core flows:
@@ -537,7 +536,7 @@ The following table summarised the types of metrics associated with Message Queu
 | count             | total number of messages added to a queue since the server started |
 | countDelta        | number of messages added to the queue *since the last message counter update* |
 | messageCount      | *current* number of messages in the queue |
-| messageCountDelta | *overall* number of messages added/removed from the queue *since the last message counter update*. Positive value indicated more messages were added, negative viceversa. |
+| messageCountDelta | *overall* number of messages added/removed from the queue *since the last message counter update*. Positive value indicated more messages were added, negative vice versa. |
 | lastAddTimestamp  | timestamp of the last time a message was added to the queue |
 | updateTimestamp   | timestamp of the last message counter update |
 

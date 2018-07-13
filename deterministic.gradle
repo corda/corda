@@ -1,0 +1,29 @@
+/*
+ * Gradle script plugin: Configure a module such that the Java and Kotlin
+ * compilers use the deterministic rt.jar instead of the full JDK rt.jar.
+ */
+apply plugin: 'kotlin'
+
+evaluationDependsOn(':jdk8u-deterministic')
+
+def jdk8uDeterministic = project(':jdk8u-deterministic')
+
+ext {
+    jdkTask = jdk8uDeterministic.assemble
+    deterministic_jdk_home = jdk8uDeterministic.jdk_home
+    deterministic_rt_jar = jdk8uDeterministic.rt_jar
+}
+
+tasks.withType(AbstractCompile) {
+    dependsOn jdkTask
+
+    // This is a bit ugly, but Gradle isn't recognising the KotlinCompile task
+    // as it does the built-in JavaCompile task.
+    if (it.class.name.startsWith("org.jetbrains.kotlin.gradle.tasks.KotlinCompile")) {
+        kotlinOptions.jdkHome = deterministic_jdk_home
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << '-bootclasspath' << deterministic_rt_jar
+}

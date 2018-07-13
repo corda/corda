@@ -51,7 +51,7 @@ as part of a separate design effort. Figuring out what you will *not* do is freq
 
 List of design decisions identified in defining the target solution.
 
-For each item, please complete the attached [Design Decision template](decisions/decision.html)
+For each item, please complete the attached [Design Decision template](decisions/decision.md)
 
 Use the ``.. toctree::`` feature to list out the design decision docs here (see the source of this file for an example). 
 

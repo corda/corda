@@ -26,6 +26,8 @@
       <module name="canonicalizer_test" target="1.8" />
       <module name="client_main" target="1.8" />
       <module name="client_test" target="1.8" />
+      <module name="common_main" target="1.8" />
+      <module name="common_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
       <module name="confidential-identities_test" target="1.8" />
       <module name="contracts-states_integrationTest" target="1.8" />
@@ -58,11 +60,15 @@
       <module name="cordformation_main" target="1.8" />
       <module name="cordformation_runnodes" target="1.8" />
       <module name="cordformation_test" target="1.8" />
+      <module name="core-deterministic_main" target="1.8" />
+      <module name="core-deterministic_test" target="1.8" />
       <module name="core_extraResource" target="1.8" />
       <module name="core_integrationTest" target="1.8" />
       <module name="core_main" target="1.8" />
       <module name="core_smokeTest" target="1.8" />
       <module name="core_test" target="1.8" />
+      <module name="data_main" target="1.8" />
+      <module name="data_test" target="1.8" />
       <module name="demobench_main" target="1.8" />
       <module name="demobench_test" target="1.8" />
       <module name="docs_main" target="1.8" />
@@ -73,6 +79,9 @@
       <module name="example-code_integrationTest" target="1.8" />
       <module name="example-code_main" target="1.8" />
       <module name="example-code_test" target="1.8" />
+      <module name="experimental-behave_behave" target="1.8" />
+      <module name="experimental-behave_main" target="1.8" />
+      <module name="experimental-behave_test" target="1.8" />
       <module name="experimental-kryo-hook_main" target="1.8" />
       <module name="experimental-kryo-hook_test" target="1.8" />
       <module name="experimental_main" target="1.8" />
@@ -106,6 +115,10 @@
       <module name="isolated_test" target="1.8" />
       <module name="jackson_main" target="1.8" />
       <module name="jackson_test" target="1.8" />
+      <module name="jarfilter_main" target="1.8" />
+      <module name="jarfilter_test" target="1.8" />
+      <module name="jdk8u-deterministic_main" target="1.8" />
+      <module name="jdk8u-deterministic_test" target="1.8" />
       <module name="jfx_integrationTest" target="1.8" />
       <module name="jfx_main" target="1.8" />
       <module name="jfx_test" target="1.8" />
@@ -117,6 +130,8 @@
       <module name="mock_test" target="1.8" />
       <module name="network-bootstrapper_main" target="1.8" />
       <module name="network-bootstrapper_test" target="1.8" />
+      <module name="network-verifier_main" target="1.8" />
+      <module name="network-verifier_test" target="1.8" />
       <module name="network-visualiser_main" target="1.8" />
       <module name="network-visualiser_test" target="1.8" />
       <module name="node-api_main" target="1.8" />
@@ -148,8 +163,13 @@
       <module name="samples_test" target="1.8" />
       <module name="sandbox_main" target="1.8" />
       <module name="sandbox_test" target="1.8" />
+      <module name="serialization-deterministic_main" target="1.8" />
+      <module name="serialization-deterministic_test" target="1.8" />
       <module name="serialization_main" target="1.8" />
       <module name="serialization_test" target="1.8" />
+      <module name="shell-cli_integrationTest" target="1.8" />
+      <module name="shell-cli_main" target="1.8" />
+      <module name="shell-cli_test" target="1.8" />
       <module name="shell_integrationTest" target="1.8" />
       <module name="shell_main" target="1.8" />
       <module name="shell_test" target="1.8" />
@@ -175,6 +195,8 @@
       <module name="testing-test-common_test" target="1.8" />
       <module name="testing-test-utils_main" target="1.8" />
       <module name="testing-test-utils_test" target="1.8" />
+      <module name="testing_main" target="1.8" />
+      <module name="testing_test" target="1.8" />
       <module name="tools-blobinspector_main" target="1.8" />
       <module name="tools-blobinspector_test" target="1.8" />
       <module name="tools_main" target="1.8" />
@@ -182,6 +204,8 @@
       <module name="trader-demo_integrationTest" target="1.8" />
       <module name="trader-demo_main" target="1.8" />
       <module name="trader-demo_test" target="1.8" />
+      <module name="unwanteds_main" target="1.8" />
+      <module name="unwanteds_test" target="1.8" />
       <module name="verifier_integrationTest" target="1.8" />
       <module name="verifier_main" target="1.8" />
       <module name="verifier_test" target="1.8" />

@@ -23,11 +23,8 @@ class RpcFlowsDrainingModeTest {
 
     @Test
     fun `flows draining mode rejects start flows commands through rpc`() {
-
-        driver(DriverParameters(isDebug = true, startNodesInProcess = false, portAllocation = portAllocation)) {
-
+        driver(DriverParameters(startNodesInProcess = false, portAllocation = portAllocation, notarySpecs = emptyList())) {
             startNode(rpcUsers = users).getOrThrow().rpc.apply {
-
                 setFlowsDrainingModeEnabled(true)
 
                 val error: Throwable? = catchThrowable { startFlow(RpcFlowsDrainingModeTest::NoOpFlow) }
@@ -40,10 +37,8 @@ class RpcFlowsDrainingModeTest {
 
     @StartableByRPC
     class NoOpFlow : FlowLogic<Unit>() {
-
         @Suspendable
         override fun call() {
-
             println("NO OP!")
         }
     }

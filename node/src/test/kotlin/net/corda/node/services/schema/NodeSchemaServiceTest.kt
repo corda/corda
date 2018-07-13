@@ -20,7 +20,6 @@ import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
 import org.junit.Ignore
 import org.junit.Test
-import java.io.Serializable
 import javax.persistence.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -41,7 +40,7 @@ class NodeSchemaServiceTest {
 
     @Test
     fun `check node runs with minimal core schema set`() {
-        val mockNet = InternalMockNetwork(cordappPackages = emptyList())
+        val mockNet = InternalMockNetwork()
         val mockNode = mockNet.createNode()
         val schemaService = mockNode.services.schemaService
 
@@ -53,7 +52,7 @@ class NodeSchemaServiceTest {
 
     @Test
     fun `check node runs inclusive of notary node schema set`() {
-        val mockNet = InternalMockNetwork(cordappPackages = emptyList())
+        val mockNet = InternalMockNetwork()
         val mockNotaryNode = mockNet.notaryNodes.first()
         val schemaService = mockNotaryNode.services.schemaService
 
@@ -142,7 +141,7 @@ object TestSchema : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::clas
     @Suppress("unused")
     @Entity
     @Table(name = "Children")
-    class Child : Serializable {
+    class Child {
         @Id
         @GeneratedValue
         @Column(name = "child_id", unique = true, nullable = false)

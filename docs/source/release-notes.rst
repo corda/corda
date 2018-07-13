@@ -1,6 +1,13 @@
 Release notes
 =============
 
+Unreleased
+----------
+
+Issues Fixed
+~~~~~~~~~~~~
+* Cordform Gradle task (`deployNodes`) doesn't work when `configFile` element was used.
+
 .. _release_notes_v3_1:
 
 Release 3.1
@@ -162,7 +169,7 @@ Significant Changes in 3.0
 
   .. important:: This replaces the Network Map service that was present in Corda 1.0 and Corda 2.0.
 
-  Further information can be found in the :doc:`changelog`, :doc:`network-map` and :doc:`setting-up-a-corda-network` documentation.
+  Further information can be found in the :doc:`changelog`, :doc:`network-map` and :doc:`network-bootstrapper` documentation.
 
 * **Contract Upgrade**
 
@@ -369,7 +376,7 @@ and via the versioning APIs.
 * **Observer Nodes**
 
 Adds the facility for transparent forwarding of transactions to some third party observer, such as a regulator. By having
-that entity simply run an Observer node they can simply recieve a stream of digitally signed, de-duplicated reports that
+that entity simply run an Observer node they can simply receive a stream of digitally signed, de-duplicated reports that
 can be used for reporting.
 
 .. _release_notes_v1_0:

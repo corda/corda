@@ -1,15 +1,15 @@
 package net.corda.client.jfx.model
 
 import javafx.beans.value.ObservableValue
-import javafx.collections.FXCollections
-import javafx.collections.ObservableMap
-import net.corda.client.jfx.utils.*
+import net.corda.client.jfx.utils.distinctBy
+import net.corda.client.jfx.utils.lift
+import net.corda.client.jfx.utils.map
+import net.corda.client.jfx.utils.recordInSequence
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import org.fxmisc.easybind.EasyBind
 
 /**
  * [PartiallyResolvedTransaction] holds a [SignedTransaction] that has zero or more inputs resolved. The intent is
@@ -43,38 +43,36 @@ data class PartiallyResolvedTransaction(
     companion object {
         fun fromSignedTransaction(
                 transaction: SignedTransaction,
-                stateMap: ObservableMap<StateRef, StateAndRef<ContractState>>
-        ) = PartiallyResolvedTransaction(
-                transaction = transaction,
-                inputs = transaction.inputs.map { stateRef ->
-                    EasyBind.map(stateMap.getObservableValue(stateRef)) {
-                        if (it == null) {
+                inputTransactions: Map<StateRef, SignedTransaction?>
+        ): PartiallyResolvedTransaction {
+            return PartiallyResolvedTransaction(
+                    transaction = transaction,
+                    inputs = transaction.inputs.map { stateRef ->
+                        val tx = inputTransactions[stateRef]
+                        if (tx == null) {
                             InputResolution.Unresolved(stateRef)
                         } else {
-                            InputResolution.Resolved(it)
+                            InputResolution.Resolved(tx.coreTransaction.outRef(stateRef.index))
+                        }.lift()
+                    },
+                    outputs = if (transaction.coreTransaction is WireTransaction) {
+                        transaction.tx.outRefsOfType<ContractState>().map {
+                            OutputResolution.Resolved(it).lift()
                         }
-                    }
-                },
-                outputs = if (transaction.coreTransaction is WireTransaction) {
-                    transaction.tx.outRefsOfType<ContractState>().map {
-                        OutputResolution.Resolved(it).lift()
-                    }
-                } else {
-                    // Transaction will have the same number of outputs as inputs
-                    val outputCount = transaction.coreTransaction.inputs.size
-                    val stateRefs = (0 until outputCount).map { StateRef(transaction.id, it) }
-                    stateRefs.map { stateRef ->
-                        EasyBind.map(stateMap.getObservableValue(stateRef)) {
-                            if (it == null) {
+                    } else {
+                        // Transaction will have the same number of outputs as inputs
+                        val outputCount = transaction.coreTransaction.inputs.size
+                        val stateRefs = (0 until outputCount).map { StateRef(transaction.id, it) }
+                        stateRefs.map { stateRef ->
+                            val tx = inputTransactions[stateRef]
+                            if (tx == null) {
                                 OutputResolution.Unresolved(stateRef)
                             } else {
-                                OutputResolution.Resolved(it)
-                            }
+                                OutputResolution.Resolved(tx.coreTransaction.outRef(stateRef.index))
+                            }.lift()
                         }
-                    }
-                }
-
-        )
+                    })
+        }
     }
 }
 
@@ -84,13 +82,13 @@ data class PartiallyResolvedTransaction(
 class TransactionDataModel {
     private val transactions by observable(NodeMonitorModel::transactions)
     private val collectedTransactions = transactions.recordInSequence().distinctBy { it.id }
-    private val vaultUpdates by observable(NodeMonitorModel::vaultUpdates)
-    private val stateMap = vaultUpdates.fold(FXCollections.observableHashMap<StateRef, StateAndRef<ContractState>>()) { map, (consumed, produced) ->
-        val states = consumed + produced
-        states.forEach { map[it.ref] = it }
-    }
+    private val rpcProxy by observableValue(NodeMonitorModel::proxyObservable)
 
+    @Suppress("DEPRECATION")
     val partiallyResolvedTransactions = collectedTransactions.map {
-        PartiallyResolvedTransaction.fromSignedTransaction(it, stateMap)
+        PartiallyResolvedTransaction.fromSignedTransaction(it,
+                it.inputs.map { stateRef ->
+                    stateRef to rpcProxy.value!!.cordaRPCOps.internalFindVerifiedTransaction(stateRef.txhash)
+                }.toMap())
     }
 }

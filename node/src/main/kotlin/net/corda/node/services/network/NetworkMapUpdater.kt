@@ -1,6 +1,7 @@
 package net.corda.node.services.network
 
 import com.google.common.util.concurrent.MoreExecutors
+import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.internal.copyTo
@@ -28,6 +29,7 @@ import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
 
@@ -45,7 +47,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     }
 
     private val parametersUpdatesTrack: PublishSubject<ParametersUpdateInfo> = PublishSubject.create<ParametersUpdateInfo>()
-    private val executor = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("Network Map Updater Thread", Executors.defaultThreadFactory()))
+    private val executor = ScheduledThreadPoolExecutor(1, NamedThreadFactory("Network Map Updater Thread", Executors.defaultThreadFactory()))
     private var newNetworkParameters: Pair<ParametersUpdate, SignedNetworkParameters>? = null
     private var fileWatcherSubscription: Subscription? = null
 
@@ -81,10 +83,11 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         if (networkMapClient == null) return
 
         // Subscribe to remote network map if configured.
+        executor.executeExistingDelayedTasksAfterShutdownPolicy = false
         executor.submit(object : Runnable {
             override fun run() {
                 val nextScheduleDelay = try {
-                    updateNetworkMapCache(networkMapClient)
+                    updateNetworkMapCache()
                 } catch (t: Throwable) {
                     logger.warn("Error encountered while updating network map, will retry in $defaultRetryInterval", t)
                     defaultRetryInterval
@@ -95,7 +98,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         }) // The check may be expensive, so always run it in the background even the first time.
     }
 
-    private fun updateNetworkMapCache(networkMapClient: NetworkMapClient): Duration {
+    fun updateNetworkMapCache(): Duration {
+        if (networkMapClient == null) throw CordaRuntimeException("Network map cache can be updated only if network map/compatibility zone URL is specified")
         val (globalNetworkMap, cacheTimeout) = networkMapClient.getNetworkMap()
         globalNetworkMap.parametersUpdate?.let { handleUpdateNetworkParameters(networkMapClient, it) }
         val additionalHashes = extraNetworkMapKeys.flatMap {
@@ -114,6 +118,15 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         }
 
         val currentNodeHashes = networkMapCache.allNodeHashes
+
+        // Remove node info from network map.
+        (currentNodeHashes - allHashesFromNetworkMap - fileWatcher.processedNodeInfoHashes)
+                .mapNotNull {
+                    if (it != ourNodeInfoHash) {
+                        networkMapCache.getNodeByHash(it)
+                    } else null
+                }.forEach(networkMapCache::removeNode)
+
         (allHashesFromNetworkMap - currentNodeHashes).mapNotNull {
             // Download new node info from network map
             try {
@@ -127,14 +140,6 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             // Add new node info to the network map cache, these could be new node info or modification of node info for existing nodes.
             networkMapCache.addNode(it)
         }
-
-        // Remove node info from network map.
-        (currentNodeHashes - allHashesFromNetworkMap - fileWatcher.processedNodeInfoHashes)
-                .mapNotNull {
-                    if (it != ourNodeInfoHash) {
-                        networkMapCache.getNodeByHash(it)
-                    } else null
-                }.forEach(networkMapCache::removeNode)
 
         return cacheTimeout
     }

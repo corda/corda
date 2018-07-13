@@ -43,7 +43,16 @@ fun Path.exists(vararg options: LinkOption): Boolean = Files.exists(this, *optio
 /** Copy the file into the target directory using [Files.copy]. */
 fun Path.copyToDirectory(targetDir: Path, vararg options: CopyOption): Path {
     require(targetDir.isDirectory()) { "$targetDir is not a directory" }
-    val targetFile = targetDir.resolve(fileName)
+    /*
+     * We must use fileName.toString() here because resolve(Path)
+     * will throw ProviderMismatchException if the Path parameter
+     * and targetDir have different Path providers, e.g. a file
+     * on the filesystem vs an entry in a ZIP file.
+     *
+     * Path.toString() is assumed safe because fileName should
+     * not include any path separator characters.
+     */
+    val targetFile = targetDir.resolve(fileName.toString())
     Files.copy(this, targetFile, *options)
     return targetFile
 }
@@ -71,6 +80,9 @@ fun Path.lastModifiedTime(vararg options: LinkOption): FileTime = Files.getLastM
 
 /** @see Files.isDirectory */
 fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(this, *options)
+
+/** @see Files.isSameFile */
+fun Path.isSameAs(other: Path): Boolean = Files.isSameFile(this, other)
 
 /**
  * Same as [Files.list] except it also closes the [Stream].

@@ -17,7 +17,7 @@ import net.corda.finance.flows.CashPaymentFlow.PaymentRequest
 
 open class EventGenerator(val parties: List<Party>, val currencies: List<Currency>, val notary: Party) {
     protected val partyGenerator = Generator.pickOne(parties)
-    protected val issueRefGenerator = Generator.intRange(0, 1).map { number -> OpaqueBytes(ByteArray(1, { number.toByte() })) }
+    protected val issueRefGenerator = Generator.intRange(0, 1).map { number -> OpaqueBytes.of(number.toByte()) }
     protected val amountGenerator = Generator.longRange(10000, 1000000)
     protected val currencyGenerator = Generator.pickOne(currencies)
     protected val currencyMap: MutableMap<Currency, Long> = mutableMapOf(USD to 0L, GBP to 0L) // Used for estimation of how much money we have in general.
