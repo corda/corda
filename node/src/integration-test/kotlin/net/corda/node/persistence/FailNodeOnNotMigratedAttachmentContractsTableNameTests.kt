@@ -20,15 +20,15 @@ import kotlin.test.*
 class FailNodeOnNotMigratedAttachmentContractsTableNameTests {
     @Test
     fun `node fails when detecting table name not migrated from version 3 dot 0`() {
-        `node uses exisitng table name different from mapping`("NODE_ATTACHMENTS_CONTRACTS", "NODE_ATTACHMENTS_CONTRACT_CLASS_NAME")
+        `node fails when not detecting compatible table name`("NODE_ATTACHMENTS_CONTRACTS", "NODE_ATTACHMENTS_CONTRACT_CLASS_NAME")
     }
 
     @Test
     fun `node fails when detecting table name not migrated from version 3 dot 1`() {
-        `node uses exisitng table name different from mapping`("NODE_ATTACHMENTS_CONTRACTS", "NODE_ATTCHMENTS_CONTRACTS")
+        `node fails when not detecting compatible table name`("NODE_ATTACHMENTS_CONTRACTS", "NODE_ATTCHMENTS_CONTRACTS")
     }
 
-    fun `node uses exisitng table name different from mapping`(tableNameFromMapping: String, tableNameInDB: String) {
+    fun `node fails when not detecting compatible table name`(tableNameFromMapping: String, tableNameInDB: String) {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlow>(), Permissions.invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
         val baseDir: Path = driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(),
@@ -48,7 +48,7 @@ class FailNodeOnNotMigratedAttachmentContractsTableNameTests {
                 it.createStatement().execute("ALTER TABLE $tableNameFromMapping RENAME TO $tableNameInDB")
                 it.commit()
             }
-            assertFailsWith(net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException::class) {
+            assertFailsWith(net.corda.nodeapi.internal.persistence.IncompatibleAttachmentsContractsTableName::class) {
                 val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
                 nodeHandle.stop()
             }
