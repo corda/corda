@@ -23,6 +23,7 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.*
 import rx.Observable
+import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
@@ -203,11 +204,13 @@ interface TestCorDapp {
     companion object {
 
         // TODO sollecitom change this for apparently it doesn't play well with usage from Java...
-        fun builder(name: String, version: String, vendor: String = "R3", title: String = name, classes: Set<Class<*>> = emptySet()): TestCorDapp.Builder {
+        fun builder(name: String, version: String, vendor: String = "R3", title: String = name, classes: Set<Class<*>> = emptySet(), willClassBeAddedBeToCorDapp: (TestCorDapp.ClassJarInfo) -> Boolean = TestCordappBuilder.Companion::filterTestCorDappClass): TestCorDapp.Builder {
 
-            return TestCordappBuilder(name, version, vendor, title, classes)
+            return TestCordappBuilder(name, version, vendor, title, classes, willClassBeAddedBeToCorDapp)
         }
     }
+
+    data class ClassJarInfo(val clazz: Class<*>, val url: URL)
 
     interface Builder : TestCorDapp {
 

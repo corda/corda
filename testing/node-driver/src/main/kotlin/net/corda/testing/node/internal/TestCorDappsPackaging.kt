@@ -1,10 +1,8 @@
 package net.corda.testing.node.internal
 
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
-import net.corda.core.internal.copyTo
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.outputStream
-import net.corda.core.internal.toPath
+import net.corda.core.internal.*
+import net.corda.testing.driver.TestCorDapp
 import java.io.File
 import java.io.OutputStream
 import java.net.URI
@@ -21,16 +19,23 @@ import java.util.zip.ZipOutputStream
 // TODO sollecitom, perhaps create a TestCorDappPackager class, rather than extension functions
 
 // TODO sollecitom
-fun Iterable<Class<*>>.packageToCorDapp(path: Path, name: String, version: String, vendor: String, title: String = name) {
+fun Iterable<Class<*>>.packageToCorDapp(path: Path, name: String, version: String, vendor: String, title: String = name, willClassBeAddedBeToCorDapp: (TestCorDapp.ClassJarInfo) -> Boolean = { true }) {
 
-    packageToCorDapp(path.outputStream(), name, version, vendor, title)
+    var hasContent = false
+    try {
+        hasContent = packageToCorDapp(path.outputStream(), name, version, vendor, title, willClassBeAddedBeToCorDapp)
+    } finally {
+        if (!hasContent) {
+            path.deleteIfExists()
+        }
+    }
 }
 
 // TODO sollecitom - try and remove this ClassLoader argument (it's only used to figure out the out folder)
-fun Iterable<Class<*>>.packageToCorDapp(outputStream: OutputStream, name: String, version: String, vendor: String, title: String = name) {
+fun Iterable<Class<*>>.packageToCorDapp(outputStream: OutputStream, name: String, version: String, vendor: String, title: String = name, willClassBeAddedBeToCorDapp: (TestCorDapp.ClassJarInfo) -> Boolean = { true }): Boolean {
 
     val manifest = createTestManifest(name, title, version, vendor)
-    JarOutputStream(outputStream, manifest).use(::zip)
+    return JarOutputStream(outputStream, manifest).use { jos -> zip(jos, willClassBeAddedBeToCorDapp) }
 }
 
 // TODO sollecitom
@@ -47,13 +52,20 @@ fun allClassesForPackage(targetPackage: String): Set<Class<*>> {
 }
 
 // TODO sollecitom
-private fun Iterable<Class<*>>.zip(outputStream: ZipOutputStream) {
+fun String.packageToPath() = replace(".", File.separator)
 
-    zip(outputStream, map(Class<*>::jarInfo))
+// TODO sollecitom
+private fun Iterable<Class<*>>.zip(outputStream: ZipOutputStream, willClassBeAddedBeToCorDapp: (TestCorDapp.ClassJarInfo) -> Boolean): Boolean {
+
+    val entries = map(Class<*>::jarInfo).filter(willClassBeAddedBeToCorDapp)
+    if (entries.isNotEmpty()) {
+        zip(outputStream, entries)
+    }
+    return entries.isNotEmpty()
 }
 
 // TODO sollecitom - use Maybe here
-private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<ClassJarInfo>) {
+private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<TestCorDapp.ClassJarInfo>) {
 
     val illegal = allInfo.map { it.clazz }.filter { it.protectionDomain?.codeSource?.location == null }
     if (illegal.isNotEmpty()) {
@@ -63,9 +75,11 @@ private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<ClassJarInfo>) 
     allInfo.distinctBy { it.url }.forEach { info ->
 
         val path = info.url.toPath()
-        val packagePath = info.clazz.classFilesDirectoryURL().toPath()
+//        val packagePath = info.clazz.classFilesDirectoryURL().toPath()
         // TODO sollecitom try just `info.clazz.`package`.name.packageToPath()` here :)
-        val entryPath = info.clazz.`package`.name.packageToPath() + File.separator + packagePath.relativize(path).toString()
+        val entryPath = "${info.clazz.name.packageToPath()}.class"
+//        val entryPath = info.clazz.`package`.name.packageToPath() + File.separator + info.clazz
+//        val entryPath = info.clazz.`package`.name.packageToPath() + File.separator + packagePath.relativize(path).toString()
         // TODO sollecitom investigate this replacement
 //        val entryPath = info.clazz.`package`.name.packageToPath() + File.separator +packagePath.relativize(path).toString().replace('\\', '/')
         val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
@@ -78,34 +92,34 @@ private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<ClassJarInfo>) 
 }
 
 // TODO sollecitom
-private fun Class<*>.jarInfo(): ClassJarInfo {
+private fun Class<*>.jarInfo(): TestCorDapp.ClassJarInfo {
 
-    return ClassJarInfo(this, classFileURL())
+    return TestCorDapp.ClassJarInfo(this, classFileURL())
 }
 
 // TODO sollecitom
 private fun Class<*>.classFileURL(): URL {
 
-    return URI.create("${protectionDomain.codeSource.location}/${name.packageToPath()}.class").toURL()
+    // TODO sollecitom whitespace is not supported - fix it
+    return URI.create("${protectionDomain.codeSource.location}/${name.packageToPath()}.class".replace(" ", "%20")).toURL()
 }
 
 // TODO sollecitom
-private fun Class<*>.classFilesDirectoryURL(): URL {
-
-    return `package`.classFilesDirectoryURL(classLoader)
-}
-
-// TODO sollecitom
-private fun Package.classFilesDirectoryURL(classLoader: ClassLoader): URL {
-
-    // TODO sollecitom can this return more than one URL? Investigate
-    return classLoader.getResources(name.packageToPath()).toList().single()
-}
+//private fun Class<*>.classFilesDirectoryURL(): URL {
+//
+//    return `package`.classFilesDirectoryURL(classLoader)
+//}
 
 // TODO sollecitom
-private fun String.packageToPath() = replace(".", File.separator)
-
-data class ClassJarInfo(val clazz: Class<*>, val url: URL)
+//private fun Package.classFilesDirectoryURL(classLoader: ClassLoader): URL {
+//
+//    // TODO sollecitom can this return more than one URL? Investigate
+//    val list = classLoader.getResources(name.packageToPath()).toList()
+//    if (list.size > 1) {
+//        println()
+//    }
+//    return list.single()
+//}
 
 // TODO sollecitom move to utils
 private fun createTestManifest(name: String, title: String, version: String, vendor: String): Manifest {

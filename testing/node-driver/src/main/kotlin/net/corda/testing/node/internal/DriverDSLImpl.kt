@@ -59,6 +59,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Subscription
 import rx.schedulers.Schedulers
+import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL
@@ -97,7 +98,7 @@ class DriverDSLImpl(
         val networkParameters: NetworkParameters,
         val notaryCustomOverrides: Map<String, Any?>,
         val inMemoryDB: Boolean,
-        // TODO sollecitom change this after removing `cordappPackages`
+        // TODO sollecitom change this after removing `cordappPackages`; maybe this can be static rather than dynamic
         val cordappsForAllNodes: (() -> Set<TestCorDapp>)? = { defaultTestCorDappsForAllNodes(getCallerPackage()?.let { extraCordappPackagesToScan + it }?.toSet() ?: extraCordappPackagesToScan.toSet()) }
 ) : InternalDriverDSL {
 
@@ -620,8 +621,7 @@ class DriverDSLImpl(
                 jolokiaJarPath,
                 monitorPort,
                 systemProperties,
-                // TODO sollecitom was `cordappPackages`
-                emptyList(),
+                emptySet(),
                 "512m",
                 *extraCmdLineFlag
         )
@@ -677,7 +677,7 @@ class DriverDSLImpl(
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
-            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize)
+            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, defaultTestCorDappsForAllNodes(cordappPackages.toSet()), maximumHeapSize)
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
             // true because we don't want orphaned processes in the case that the parent process is terminated by the
@@ -816,7 +816,8 @@ class DriverDSLImpl(
                 jolokiaJarPath: String,
                 monitorPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
-                cordappPackages: List<String>,
+                // TODO sollecitom this is wrong, should only contains extra cordapps for this specific node - fix it
+                testCordapps: Set<TestCorDapp>,
                 maximumHeapSize: String,
                 vararg extraCmdLineFlag: String
         ): Process {
@@ -834,9 +835,16 @@ class DriverDSLImpl(
 
             systemProperties += inheritFromParentProcess()
 
-            if (cordappPackages.isNotEmpty()) {
+            if (testCordapps.isNotEmpty()) {
+                // TODO sollecitom check why we don't have configurable cordapps folder
+                val outputDir = config.corda.baseDirectory / "cordapps"
+                // TODO sollecitom improve
+                outputDir.toFile().deleteRecursively()
+                // TODO sollecitom refactor
+                outputDir.toFile().mkdirs()
+                testCordapps.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(outputDir) }
                 // TODO sollecitom remove this and use the test cordapps instead
-                systemProperties += Node.scanPackagesSystemProperty to cordappPackages.joinToString(Node.scanPackagesSeparator)
+//                systemProperties += Node.scanPackagesSystemProperty to cordappPackages.joinToString(Node.scanPackagesSeparator)
             }
 
             systemProperties += overriddenSystemProperties
@@ -1110,17 +1118,38 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
 }
 
 // TODO sollecitom
-internal class TestCordappBuilder(override val name: String, override val version: String, override val vendor: String, override val title: String, override val classes: Set<Class<*>>) : TestCorDapp.Builder {
+internal class TestCordappBuilder(override val name: String, override val version: String, override val vendor: String, override val title: String, override val classes: Set<Class<*>>, private val willClassBeAddedBeToCorDapp: (TestCorDapp.ClassJarInfo) -> Boolean) : TestCorDapp.Builder {
 
-    override fun withName(name: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes)
+    companion object {
+        // TODO sollecitom check for Gradle and add to `productionPathSegments` // "main/${info.clazz.packageName.packageToPath()}"
+        private val productionPathSegments = setOf("out${File.separator}production${File.separator}classes")
+        private val excludedCordaPackages = setOf("net.corda.core", "net.corda.node", "net.corda.finance")
 
-    override fun withTitle(title: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes)
+        fun filterTestCorDappClass(info: TestCorDapp.ClassJarInfo): Boolean {
 
-    override fun withVersion(version: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes)
+            return isTestClass(info.url) || !isInExcludedCordaPackage(info.clazz.packageName)
+        }
 
-    override fun withVendor(vendor: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes)
+        private fun isTestClass(url: URL): Boolean {
 
-    override fun withClasses(classes: Set<Class<*>>): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes)
+            return productionPathSegments.none { url.toString().contains(it) }
+        }
+
+        private fun isInExcludedCordaPackage(packageName: String): Boolean {
+
+            return excludedCordaPackages.any { packageName.startsWith(it) }
+        }
+    }
+
+    override fun withName(name: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes, willClassBeAddedBeToCorDapp)
+
+    override fun withTitle(title: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes, willClassBeAddedBeToCorDapp)
+
+    override fun withVersion(version: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes, willClassBeAddedBeToCorDapp)
+
+    override fun withVendor(vendor: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes, willClassBeAddedBeToCorDapp)
+
+    override fun withClasses(classes: Set<Class<*>>): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes, willClassBeAddedBeToCorDapp)
 
     override fun plusPackages(pckgs: Set<String>): TestCorDapp.Builder {
         // TODO sollecitom perhaps inject the TestCorDappHelper or reference it
@@ -1132,7 +1161,7 @@ internal class TestCordappBuilder(override val name: String, override val versio
         return withClasses(pckgs.map { allClassesForPackage(it) }.fold(classes) { all, packageClasses -> all - packageClasses })
     }
 
-    override fun packageAsJarWithPath(jarFilePath: Path) = classes.packageToCorDapp(jarFilePath, name, version, vendor, title)
+    override fun packageAsJarWithPath(jarFilePath: Path) = classes.packageToCorDapp(jarFilePath, name, version, vendor, title, willClassBeAddedBeToCorDapp)
 }
 
 /**
@@ -1246,7 +1275,7 @@ fun main(args: Array<String>) {
     println(allClassesForPackage)
     println(allClassesForPackage.size)
 
-    val testCordapps = DriverDSLImpl.defaultTestCorDappsForAllNodes(setOf("net.corda.testing.node.internal.network", "net.corda.testing.node.internal.demorun"))
+    val testCordapps = DriverDSLImpl.defaultTestCorDappsForAllNodes(setOf("net.corda.node"))
 
     val outputDir = Paths.get("/home/michele/Desktop")
     testCordapps.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(outputDir) }
