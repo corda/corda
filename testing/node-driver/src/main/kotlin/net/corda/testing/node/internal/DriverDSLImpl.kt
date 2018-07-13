@@ -60,6 +60,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Subscription
 import rx.schedulers.Schedulers
+import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URI
@@ -1210,9 +1211,11 @@ fun main(args: Array<String>) {
     val classURL = CordappLoader::class.java.classFileURL()
     println(classURL)
 
-    val allClassFilesURLs = packages.flatMap(Package::allClassFileURLs)
-    println(allClassFilesURLs)
-    println(allClassFilesURLs.size)
+    val allClassesForPackage = packages.flatMap(Package::allClasses)
+    println(allClassesForPackage)
+    println(allClassesForPackage.size)
+
+    val allClasses = allClassesForPackage
 
     // TODO sollecitom - refactor this mess
     val outputDir = Paths.get("/home/michele/Desktop")
@@ -1222,7 +1225,7 @@ fun main(args: Array<String>) {
     val manifest = createTestManifest("Test CorDapp $packageName", "Test CorDapp $packageName", "test-$uuid", "R3")
 
     JarOutputStream(cordappJar.outputStream(), manifest).use { jos ->
-        zip(jos, allClassFilesURLs) { pkg -> pkg.classFilesDirectoryURL(classLoader).single().toPath() }
+        allClasses.zip(jos) { pkg -> pkg.classFilesDirectoryURL(classLoader).single().toPath() }
     }
 }
 
@@ -1240,9 +1243,9 @@ fun zip(outputStream: ZipOutputStream, allInfo: Iterable<ClassJarInfo>, pathFrom
         val path = info.url.toPath()
         val packagePath = pathFromPackage(info.clazz.`package`)
         // TODO sollecitom use file separator everywhere
-        val entryPath = info.clazz.`package`.name.replace(".", "/") + "/" +packagePath.relativize(path).toString()
+        val entryPath = info.clazz.`package`.name.packageToPath() + File.separator +packagePath.relativize(path).toString()
         // TODO sollecitom investigate this replacement
-//        val entryPath = info.clazz.`package`.name.replace(".", "/") + "/" +packagePath.relativize(path).toString().replace('\\', '/')
+//        val entryPath = info.clazz.`package`.name.packageToPath() + File.separator +packagePath.relativize(path).toString().replace('\\', '/')
         val time = FileTime.from(Instant.EPOCH)
         val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
         outputStream.putNextEntry(entry)
@@ -1262,7 +1265,8 @@ fun Class<*>.jarInfo(): ClassJarInfo {
 // TODO sollecitom
 fun Class<*>.classFileURL(): URL {
 
-    return URI.create("${protectionDomain.codeSource.location}/${name.replace(".", "/")}.class").toURL()
+    // TODO sollecitom codeSource can be null and typically is for types in Java library. Skip and warn if that's the case.
+    return URI.create("${protectionDomain.codeSource.location}/${name.packageToPath()}.class").toURL()
 }
 
 // TODO sollecitom
@@ -1284,6 +1288,15 @@ fun allClassFileURLs(targetPackage: String): List<ClassJarInfo> {
 }
 
 // TODO sollecitom
+fun String.packageToPath() = replace(".", File.separator)
+
+// TODO sollecitom
+fun Package.allClasses(): List<Class<*>> {
+
+    return allClasses(name)
+}
+
+// TODO sollecitom
 fun allClasses(targetPackage: String): List<Class<*>> {
 
     val scanResult = FastClasspathScanner(targetPackage).scan()
@@ -1293,7 +1306,7 @@ fun allClasses(targetPackage: String): List<Class<*>> {
 // TODO sollecitom - this could return more than one match
 fun classFilesDirectoryURL(targetPackage: String, classLoader: ClassLoader): List<URL> {
 
-    val resource = targetPackage.replace('.', '/')
+    val resource = targetPackage.packageToPath()
     return classLoader.getResources(resource).toList()
     // This is to only scan classes from test folders.
 //            .filter { url: URL ->
