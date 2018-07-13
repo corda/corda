@@ -61,6 +61,7 @@ import okhttp3.Request
 import rx.Subscription
 import rx.schedulers.Schedulers
 import java.io.File
+import java.io.OutputStream
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URI
@@ -1222,16 +1223,32 @@ fun main(args: Array<String>) {
     val uuid = UUID.randomUUID()
     val packageName = packages[0].name
     val cordappJar = outputDir / "$packageName-$uuid.jar"
-    val manifest = createTestManifest("Test CorDapp $packageName", "Test CorDapp $packageName", "test-$uuid", "R3")
 
-    JarOutputStream(cordappJar.outputStream(), manifest).use { jos ->
-        allClasses.zip(jos) { pkg -> pkg.classFilesDirectoryURL(classLoader).single().toPath() }
+    allClasses.packageToCorDapp(cordappJar, classLoader, "Test CorDapp $packageName", "test-$uuid", "R3")
+}
+
+// TODO sollecitom
+fun Iterable<Class<*>>.packageToCorDapp(path: Path, classLoader: ClassLoader, name: String, version: String, vendor: String, title: String = name) {
+
+    packageToCorDapp(path.outputStream(), classLoader, name, version, vendor, title)
+}
+
+// TODO sollecitom - try and remove this ClassLoader argument (it's only used to figure out the out folder)
+fun Iterable<Class<*>>.packageToCorDapp(outputStream: OutputStream, classLoader: ClassLoader, name: String, version: String, vendor: String, title: String = name) {
+
+    val manifest = createTestManifest(name, title, version, vendor)
+    JarOutputStream(outputStream, manifest).use { jos ->
+        zip(jos) { pkg -> pkg.classFilesDirectoryURL(classLoader).single().toPath() }
     }
 }
 
 // TODO sollecitom
 fun Iterable<Class<*>>.zip(outputStream: ZipOutputStream, pathFromPackage: (Package) -> Path) {
 
+    val illegal = filter { it.protectionDomain?.codeSource?.location == null }
+    if (illegal.isNotEmpty()) {
+        throw IllegalArgumentException("Some classes do not have a location, typically because they are part of Java or Kotlin. Offending types were: ${illegal.joinToString(", ", "[", "]") { it.simpleName }}")
+    }
     zip(outputStream, map(Class<*>::jarInfo), pathFromPackage)
 }
 
@@ -1265,7 +1282,6 @@ fun Class<*>.jarInfo(): ClassJarInfo {
 // TODO sollecitom
 fun Class<*>.classFileURL(): URL {
 
-    // TODO sollecitom codeSource can be null and typically is for types in Java library. Skip and warn if that's the case.
     return URI.create("${protectionDomain.codeSource.location}/${name.packageToPath()}.class").toURL()
 }
 
