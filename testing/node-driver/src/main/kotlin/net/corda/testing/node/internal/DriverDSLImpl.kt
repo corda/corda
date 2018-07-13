@@ -1222,19 +1222,25 @@ fun main(args: Array<String>) {
     val manifest = createTestManifest("Test CorDapp $packageName", "Test CorDapp $packageName", "test-$uuid", "R3")
 
     val rootDir = Paths.get(packageURLs[0].toPath().toString().replace(packageName.replace(".", "/"), ""))
+
     JarOutputStream(cordappJar.outputStream(), manifest).use { jos ->
+        allClassFilesURLs.packageToJar(jos) { path -> rootDir.relativize(path).toString().replace('\\', '/') }
+    }
+}
 
-        allClassFilesURLs.map { it.toPath() }.distinct().forEach { path ->
+// TODO sollecitom - use Maybe here
+fun Iterable<URL>.packageToJar(jarOutputStream: JarOutputStream, entryNameFromPath: (Path) -> String) {
 
-            val entryPath = rootDir.relativize(path).toString().replace('\\', '/')
-            val time = FileTime.from(Instant.EPOCH)
-            val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
-            jos.putNextEntry(entry)
-            if (path.isRegularFile()) {
-                path.copyTo(jos)
-            }
-            jos.closeEntry()
+    this.map { it.toPath() }.distinct().forEach { path ->
+
+        val entryPath = entryNameFromPath(path)
+        val time = FileTime.from(Instant.EPOCH)
+        val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
+        jarOutputStream.putNextEntry(entry)
+        if (path.isRegularFile()) {
+            path.copyTo(jarOutputStream)
         }
+        jarOutputStream.closeEntry()
     }
 }
 
