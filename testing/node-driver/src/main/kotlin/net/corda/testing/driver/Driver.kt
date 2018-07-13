@@ -7,6 +7,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
@@ -194,6 +195,10 @@ interface TestCorDapp {
     val vendor: String
 
     val classes: Set<Class<*>>
+
+    fun packageAsJarInDirectory(parentDirectory: Path) = packageAsJarWithPath(parentDirectory / name)
+
+    fun packageAsJarWithPath(jarFilePath: Path)
 
     companion object {
 

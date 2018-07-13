@@ -771,8 +771,8 @@ class DriverDSLImpl(
 
         private fun <A> oneOf(array: Array<A>) = array[Random().nextInt(array.size)]
 
-        // TODO sollecitom check
-        private fun defaultTestCorDappsForAllNodes(cordappPackages: Set<String>): Set<TestCorDapp> {
+        // TODO sollecitom check and make private again
+        fun defaultTestCorDappsForAllNodes(cordappPackages: Set<String>): Set<TestCorDapp> {
 
             fun testCorDapp(packageName: String): TestCorDapp {
 
@@ -916,7 +916,8 @@ class DriverDSLImpl(
          * Get the package of the caller to the driver so that it can be added to the list of packages the nodes will scan.
          * This makes the driver automatically pick the CorDapp module that it's run from.
          */
-        private fun getCallerPackage(): String? {
+        // TODO sollecitom make private again
+        fun getCallerPackage(): String? {
             val stackTrace = Throwable().stackTrace
             val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
             // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
@@ -1108,9 +1109,6 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
 }
 
 // TODO sollecitom
-private data class TestCordappImpl(override val name: String, override val title: String, override val version: String, override val vendor: String, override val classes: Set<Class<*>>) : TestCorDapp
-
-// TODO sollecitom
 internal class TestCordappBuilder(override val name: String, override val version: String, override val vendor: String, override val title: String, override val classes: Set<Class<*>>) : TestCorDapp.Builder {
 
     override fun withName(name: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes)
@@ -1132,6 +1130,8 @@ internal class TestCordappBuilder(override val name: String, override val versio
         // TODO sollecitom perhaps inject the TestCorDappHelper or reference it
         return withClasses(pckgs.map { allClassesForPackage(it) }.fold(classes) { all, packageClasses -> all - packageClasses })
     }
+
+    override fun packageAsJarWithPath(jarFilePath: Path) = classes.packageToCorDapp(jarFilePath, name, version, vendor, title)
 }
 
 /**
@@ -1236,7 +1236,7 @@ private fun Config.toNodeOnly(): Config {
     return if (hasPath("webAddress")) withoutPath("webAddress").withoutPath("useHTTPS") else this
 }
 
-// TODO sollecitom - make all these functions reactive, move them into a JarBuilder type
+// TODO sollecitom
 fun main(args: Array<String>) {
 
     val packages = listOf(CordappLoader::class.java.`package`)
@@ -1245,13 +1245,8 @@ fun main(args: Array<String>) {
     println(allClassesForPackage)
     println(allClassesForPackage.size)
 
-    val allClasses = allClassesForPackage + Node::class.java
+    val testCordapps = DriverDSLImpl.defaultTestCorDappsForAllNodes(setOf("net.corda.testing.node.internal.network", "net.corda.testing.node.internal.demorun"))
 
-    // TODO sollecitom - refactor this mess
     val outputDir = Paths.get("/home/michele/Desktop")
-    val uuid = UUID.randomUUID()
-    val packageName = packages[0].name
-    val cordappJar = outputDir / "$packageName-$uuid.jar"
-
-    allClasses.packageToCorDapp(cordappJar, "Test CorDapp $packageName", "test-$uuid", "R3")
+    testCordapps.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(outputDir) }
 }
