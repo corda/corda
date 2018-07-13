@@ -19,27 +19,27 @@ Git, bash and make
 
 In order to build the documentation for Corda you need a ``bash`` emulator with ``make`` installed and accessible from the command prompt. Git for
 Windows ships with a version of MinGW that contains a ``bash`` emulator, to which you can download and add a Windows port of
-make, instructions for which are provided below. Alternatively you can install a full version of MinGW from `here <http://www.mingw.org/>`_.
+``make``, instructions for which are provided below. Alternatively you can install a full version of MinGW from `here <http://www.mingw.org/>`_.
 
 1. Go to `ezwinports <https://sourceforge.net/projects/ezwinports/files/>`_ and click the download for ``make-4.2.1-without-guile-w32-bin.zip``
-2. Navigate to the git installation directory (by default ``C:\Program Files\Git``), open ``mingw64``
+2. Navigate to the Git installation directory (by default ``C:\Program Files\Git``), open ``mingw64``
 3. Unzip the downloaded file into this directory, but do NOT overwrite/replace any existing files
-4. Add the git ``bin`` directory to your system PATH environment variable (by default ``C:\Program Files\Git\bin``)
-5. Open a new command prompt and run ``bash`` to test that you can access the git bash emulator
+4. Add the Git ``bin`` directory to your system PATH environment variable (by default ``C:\Program Files\Git\bin``)
+5. Open a new command prompt and run ``bash`` to test that you can access the Git bash emulator
 6. Type ``make`` to make sure it has been installed successfully (you should get an error
    like ``make: *** No targets specified and no makefile found.  Stop.``)
 
 
-Python, pip and virtualenv
+Python, Pip and VirtualEnv
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Visit https://www.python.org/downloads
 2. Scroll down to the most recent v2 release (tested with v.2.7.15) and click the download link
 3. Download the "Windows x86-64 MSI installer"
-4. Run the installation, making a note of the python installation directory (defaults to ``c:\Python27``)
-5. Add the python installation directory (e.g. ``c:\Python27``) to your system PATH environment variable
-6. Add the python scripts sub-directory (e.g. ``c:\Python27\scripts``) to your System PATH environment variable
-7. Open a new command prompt and check you can run python by running ``python --version``
+4. Run the installation, making a note of the Python installation directory (defaults to ``c:\Python27``)
+5. Add the Python installation directory (e.g. ``c:\Python27``) to your system PATH environment variable
+6. Add the Python scripts sub-directory (e.g. ``c:\Python27\scripts``) to your system PATH environment variable
+7. Open a new command prompt and check you can run Python by running ``python --version``
 8. Check you can run pip by running ``pip --version``
 9. Install ``virtualenv`` by running ``pip install virtualenv`` from the commandline
 10. Check you can run ``virualenv`` by running ``virtualenv --version`` from the commandline.
@@ -90,12 +90,12 @@ the API documentation by running the following script:
     // On Windows
     gradlew buildDocs
 
-    // On Mac
+    // On Mac and Linux
     ./gradlew buildDocs
 
 Alternatively you can build non-HTML formats from the ``docs`` folder.
 
-However, running ``make`` from the command line requires further dependencies to be installed. When building in gradle they
+However, running ``make`` from the command line requires further dependencies to be installed. When building in Gradle they
 are installed in a `python virtualenv <https://virtualenv.pypa.io/en/stable/>`_, so they will need explicitly installing
 by running:
 

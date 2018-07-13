@@ -17,23 +17,19 @@ Java
 6. Add Java to the PATH environment variable by following the instructions at https://docs.oracle.com/javase/7/docs/webnotes/install/windows/jdk-installation-windows.html#path
 7. Open a new command prompt and run ``java -version`` to test that Java is installed correctly
 
-Git, bash and make
-~~~~~~~~~~~~~~~~~~
-
-In order to build Corda you need a ``bash`` emulator with ``make`` installed and accessible from the command prompt. Git for
-Windows ships with a version of MinGW that contains a ``bash`` emulator, to which you can download and add a Windows port of
-make, instructions for which are provided below. Alternatively you can install a full version of MinGW from `here <http://www.mingw.org/>`_.
+Git
+~~~
 
 1. Visit https://git-scm.com/download/win
 2. Click the "64-bit Git for Windows Setup" download link.
 3. Download and run the executable to install Git (use the default installation values) and make a note of the installation directory.
-4. Open a new command prompt and type ``git --version`` to test that git is installed correctly
+4. Open a new command prompt and type ``git --version`` to test that Git is installed correctly
 
 Buillding Corda
 ~~~~~~~~~~~~~~~
 
 1. Open a command prompt
-2. Run ``git clone https://github.com/corda/coda``
+2. Run ``git clone https://github.com/corda/corda.git``
 3. Run ``gradlew build``
 
 
@@ -54,7 +50,7 @@ Building Corda
 ~~~~~~~~~~~~~~
 
 1. Open the terminal
-2. Run ``git clone https://github.com/corda/coda``
+2. Run ``git clone https://github.com/corda/corda.git``
 3. Run ``./gradlew build``
 
 
