@@ -5,8 +5,9 @@ import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
-import net.corda.testMessage.Message
-import net.corda.testMessage.MessageState
+import net.corda.test.node.Message
+import net.corda.test.node.MessageState
+import net.corda.test.node.SendMessageFlow
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
@@ -31,7 +32,7 @@ class FailNodeOnNotMigratedAttachmentContractsTableNameTests {
     fun `node fails when not detecting compatible table name`(tableNameFromMapping: String, tableNameInDB: String) {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlow>(), Permissions.invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val baseDir: Path = driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(),
+        val baseDir: Path = driver(DriverParameters(startNodesInProcess = true,
                 portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
             val (nodeName, baseDir) = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
