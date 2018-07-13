@@ -71,9 +71,21 @@ The name must also obey the following constraints:
 
 * The ``country`` attribute is a valid ISO 3166-1 two letter code in upper-case
 
-* The ``organisation`` field of the name does not allow double-spacing.
+* The ``organisation`` field of the name obeys the following constraints:
 
-.. note:: The network operator of a Corda network may put additional constraints on node naming in place.
+    * Upper-case first letter
+    * Has at least two letters
+    * No leading or trailing whitespace
+    * Does not include the following characters: ``,`` , ``=`` , ``$`` , ``"`` , ``'`` , ``\``
+    * Is in NFKC normalization form
+    * Does not contain the null character
+    * Only the latin, common and inherited unicode scripts are supported
+    * No double-spacing
+
+This is to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and
+character confusability attacks.
+
+.. note:: The network operator of a Corda Network may put additional constraints on node naming in place.
 
 External identifiers
 ^^^^^^^^^^^^^^^^^^^^
