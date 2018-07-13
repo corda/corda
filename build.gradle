@@ -22,7 +22,7 @@ buildscript {
     ext.capsule_version = '1.0.1'
 
     ext.asm_version = '5.0.4'
-    ext.artemis_version = '2.5.0'
+    ext.artemis_version = '2.6.2'
     ext.jackson_version = '2.9.5'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
@@ -64,7 +64,7 @@ buildscript {
     ext.proguard_version = constants.getProperty('proguardVersion')
     ext.jsch_version = '0.1.54'
     ext.commons_cli_version = '1.4'
-    ext.protonj_version = '0.27.1'
+    ext.protonj_version = '0.27.1' // This is now aligned with the Artemis version, but retaining in case we ever need to diverge again for a bug fix.
     ext.snappy_version = '0.4'
     ext.fast_classpath_scanner_version = '2.12.3'
     ext.jcabi_manifests_version = '1.1'
