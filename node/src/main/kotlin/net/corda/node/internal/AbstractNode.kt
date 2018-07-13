@@ -136,7 +136,10 @@ import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.persistence.*
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.nodeapi.internal.storeLegalIdentity
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -311,7 +314,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 schemaService,
                 { name -> identityServiceRef.get().wellKnownPartyFromX500Name(name) },
                 { party -> identityServiceRef.get().wellKnownPartyFromAnonymous(party) })
-
         val identityService = makeIdentityService(identity.certificate, database).also(identityServiceRef::set)
         networkMapClient = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, identityService.trustRoot) }
         val networkParameteresReader = NetworkParametersReader(identityService.trustRoot, networkMapClient, configuration.baseDirectory)
@@ -319,6 +321,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
+
         val (startedImpl, schedulerService) = database.transaction {
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries).start(), identityService, database)
             val (keyPairs, nodeInfo) = updateNodeInfo(networkMapCache, networkMapClient, identity, identityKeyPair)
