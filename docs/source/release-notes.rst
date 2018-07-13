@@ -13,12 +13,12 @@ with with upcoming network offerings from R3 and others who may make broad-acces
 
 * **The Network Bootstrapper**
 
-To support the ongoing move toward usability, testing, and deployment, 3.2 is releasing the
-Network Bootstrapper <docs ref> to facilitate the simple creation of more dynamic ad hoc testing
-environments.
+To support the ongoing move toward usability, testing, and deployment, 3.2 is releasing a
+graphical network bootstrapper tool <docs ref> to facilitate the simple creation of more dynamic ad
+hoc testing environments.
 
 Using a graphical interface you will be able to dynamically create and alter Corda Networks, adding
-nodes and CorDapps with the click of a button!. Additionally, you can leverage its integration
+nodes and CorDapps with the click of a button! Additionally, you can leverage its integration
 with Azure cloud services for remote hosting of Nodes and Docker instances for local testing.
 
 * **Split Compatibility Zone**
@@ -49,10 +49,8 @@ is configured in this manner, the new configuration looks as follows.
 
 * **The Blob Inspector**
 
-Finally, the Blob Inspector brings the ability to unpack serialized Corda Blobs at the
-command line, giving a human readable interpretation of the encoded date. Practically speaking this
-meas the binary Network Parameters and Node Info files used by the nodes are suddenly a lot
-easier to understand and debug.
+Finally, the blob inspector brings the ability to unpack serialized corda blobs at the
+command line, giving a human readable interpretation of the encoded date.
 
 Docuemtation on its use can be found here :doc:blob-inspector
 
