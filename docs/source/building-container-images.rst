@@ -37,6 +37,7 @@ otherwise a new directory will be created by Docker.
 ::
 
         .
+        ├── additional-node-infos
         ├── certificates
         ├── config
         │   └── node.conf
@@ -48,4 +49,6 @@ otherwise a new directory will be created by Docker.
         docker run --rm -it -v ${PWD}/certificates:/certificates \
                             -v ${PWD}/config:/config \
                             -v ${PWD}/network-parameters:/network-parameters \
-                            -v ${PWD}/persistence.mv.db:/persistence.mv.db
+                            -v ${PWD}/persistence.mv.db:/persistence.mv.db \
+                            -v ${PWD}/additional-node-infos:/additional-node-infos \
+                            <registry>/<image>:<tag>
