@@ -1238,6 +1238,7 @@ fun Iterable<Class<*>>.packageToCorDapp(outputStream: OutputStream, classLoader:
 
     val manifest = createTestManifest(name, title, version, vendor)
     JarOutputStream(outputStream, manifest).use { jos ->
+        // TODO sollecitom try and remove this `pkg.classFilesDirectoryURL(classLoader)`, as it requires a classLoader and can explode if more than 1 result is returned
         zip(jos) { pkg -> pkg.classFilesDirectoryURL(classLoader).single().toPath() }
     }
 }
