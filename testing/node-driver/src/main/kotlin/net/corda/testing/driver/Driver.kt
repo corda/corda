@@ -188,6 +188,17 @@ data class NodeParameters(
     fun withLogLevel(logLevel: String?): NodeParameters = copy(logLevel = logLevel)
 }
 
+// TODO sollecitom
+interface TestCorDapp {
+
+    val name: String
+    val title: String
+    val version: String
+    val vendor: String
+
+    val classes: Set<Class<*>>
+}
+
 /**
  * A class containing configuration information for Jolokia JMX, to be used when creating a node via the [driver]
  *
@@ -289,7 +300,9 @@ data class DriverParameters(
         val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         val initialiseSerialization: Boolean = true,
-        val inMemoryDB: Boolean = true
+        val inMemoryDB: Boolean = true,
+        // TODO sollecitom revisit this in terms of API compatibility; document
+        val cordappsForAllNodes: ((DriverParameters) -> Set<TestCorDapp>)? = null
     ) {
     constructor(
             isDebug: Boolean,
@@ -303,7 +316,8 @@ data class DriverParameters(
             notarySpecs: List<NotarySpec>,
             extraCordappPackagesToScan: List<String>,
             jmxPolicy: JmxPolicy,
-            networkParameters: NetworkParameters
+            networkParameters: NetworkParameters,
+            cordappsForAllNodes: ((DriverParameters) -> Set<TestCorDapp>)? = null
     ) : this(
             isDebug,
             driverDirectory,
@@ -319,7 +333,8 @@ data class DriverParameters(
             networkParameters,
             emptyMap(),
             true,
-            true
+            true,
+            cordappsForAllNodes
     )
 
     constructor(
@@ -336,7 +351,8 @@ data class DriverParameters(
             jmxPolicy: JmxPolicy,
             networkParameters: NetworkParameters,
             initialiseSerialization: Boolean,
-            inMemoryDB: Boolean
+            inMemoryDB: Boolean,
+            cordappsForAllNodes: ((DriverParameters) -> Set<TestCorDapp>)? = null
     ) : this(
             isDebug,
             driverDirectory,
@@ -352,7 +368,8 @@ data class DriverParameters(
             networkParameters,
             emptyMap(),
             initialiseSerialization,
-            inMemoryDB
+            inMemoryDB,
+            cordappsForAllNodes
     )
 
     fun withIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)

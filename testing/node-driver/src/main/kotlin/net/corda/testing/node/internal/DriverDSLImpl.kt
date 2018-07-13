@@ -112,7 +112,7 @@ class DriverDSLImpl(
     val executorService get() = _executorService!!
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
-    private val cordappPackages = extraCordappPackagesToScan + getCallerPackage()
+    private val cordappPackages = getCallerPackage()?.let { extraCordappPackagesToScan + it } ?: extraCordappPackagesToScan
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
     private val networkVisibilityController = NetworkVisibilityController()
     /**
@@ -904,17 +904,14 @@ class DriverDSLImpl(
         /**
          * Get the package of the caller to the driver so that it can be added to the list of packages the nodes will scan.
          * This makes the driver automatically pick the CorDapp module that it's run from.
-         *
-         * This returns List<String> rather than String? to make it easier to bolt onto extraCordappPackagesToScan.
          */
-        private fun getCallerPackage(): List<String> {
+        private fun getCallerPackage(): String? {
             val stackTrace = Throwable().stackTrace
             val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
             // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
-            if (index == -1) return emptyList()
-            val callerPackage = Class.forName(stackTrace[index + 1].className).`package`
-                    ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
-            return listOf(callerPackage.name)
+            if (index == -1) return null
+            val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
+            return callerPackage.name
         }
 
         /**
