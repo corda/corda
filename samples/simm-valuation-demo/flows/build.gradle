@@ -1,6 +1,5 @@
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
-apply plugin: 'net.corda.plugins.cordformation'
 
 def strata_version = project(':samples:simm-valuation-demo').strata_version
 
