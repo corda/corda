@@ -26,8 +26,6 @@ configurations {
 
 dependencies {
     compileOnly project(':core')
-    compileOnly "com.google.guava:guava:$guava_version"
-    compileOnly "$quasar_group:quasar-core:$quasar_version:jdk8"
 
     // Configure these by hand. It should be a minimal subset of core's dependencies,
     // and without any obviously non-deterministic ones such as Hibernate.
@@ -37,7 +35,6 @@ dependencies {
     runtimeLibraries "org.bouncycastle:bcprov-jdk15on:$bouncycastle_version"
     runtimeLibraries "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
     runtimeLibraries "com.google.code.findbugs:jsr305:$jsr305_version"
-    runtimeLibraries "com.google.guava:guava:$guava_version"
     runtimeLibraries "net.i2p.crypto:eddsa:$eddsa_version"
     runtimeLibraries "org.slf4j:slf4j-api:$slf4j_version"
 }

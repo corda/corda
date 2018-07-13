@@ -34,7 +34,7 @@ buildscript {
     ext.capsule_version = '1.0.1'
 
     ext.asm_version = '5.0.4'
-    ext.artemis_version = '2.5.0'
+    ext.artemis_version = '2.6.2'
     ext.jackson_version = '2.9.5'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
@@ -79,8 +79,8 @@ buildscript {
     ext.curator_version = '4.0.1'
     ext.proguard_version = constants.getProperty('proguardVersion')
     ext.jsch_version = '0.1.54'
-    ext.protonj_version = '0.27.1'
     ext.commons_cli_version = '1.4'
+    ext.protonj_version = '0.27.1' // This is now aligned with the Artemis version, but retaining in case we ever need to diverge again for a bug fix.
     ext.snappy_version = '0.4'
     ext.fast_classpath_scanner_version = '2.12.3'
     ext.jcabi_manifests_version = '1.1'
@@ -118,7 +118,6 @@ buildscript {
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
         classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
-        classpath "org.ajoberstar:grgit:1.1.0"
         classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
         classpath "org.owasp:dependency-check-gradle:${dependency_checker_version}"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
@@ -133,7 +132,7 @@ plugins {
 }
 
 ext {
-    corda_revision = org.ajoberstar.grgit.Grgit.open(file('.')).head().id
+    corda_revision = "git rev-parse HEAD".execute().text.trim()
 }
 
 apply plugin: 'project-report'

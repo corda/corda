@@ -24,9 +24,9 @@ Please note:
   `here <https://medium.com/@octskyward/why-kotlin-is-my-next-programming-language-c25c001e26e3>`_. If you're
   unfamiliar with Kotlin, there is an official
   `getting started guide <https://kotlinlang.org/docs/tutorials/>`_, and a series of
-  `Kotlin Koans <https://kotlinlang.org/docs/tutorials/koans.html>`_.
+  `Kotlin Koans <https://kotlinlang.org/docs/tutorials/koans.html>`_
 
-* IntelliJ IDEA is recommended due to the strength of its Kotlin integration.
+* IntelliJ IDEA is recommended due to the strength of its Kotlin integration
 
 * If an HA Bridge/Float deployment is required then a ``Zookeeper 3.5.3-Beta`` cluster will be required.
   Refer to :doc:`Hot-cold deployment <hot-cold-deployment>` and :doc:`Bridge configuration <bridge-configuration-file>`
@@ -37,9 +37,9 @@ others to provide support. However, if you do use other tools, we'd be intereste
 
 Set-up instructions
 -------------------
-The instructions below will allow you to set up a Corda development environment and run a basic CorDapp. If you have
-any issues, please consult the :doc:`troubleshooting` page, or reach out on `Slack <http://slack.corda.net/>`_,
-`Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ or the `forums <https://discourse.corda.net/>`_.
+The instructions below will allow you to set up your development environment for running Corda and writing CorDapps. If
+you have any issues, please reach out on `Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ or via
+`our Slack channels <http://slack.corda.net/>`_.
 
 The set-up instructions are available for the following platforms:
 
@@ -250,8 +250,9 @@ The best way to check that everything is working fine is by taking a deeper look
 Next, you should read through :doc:`Corda Key Concepts <key-concepts>` to understand how Corda works.
 
 By then, you'll be ready to start writing your own CorDapps. Learn how to do this in the
-:doc:`Hello, World tutorial <hello-world-introduction>`. You may want to refer to the API documentation, the
-:doc:`flow cookbook <flow-cookbook>` and the `samples <https://www.corda.net/samples/>`_ along the way.
+:doc:`Hello, World tutorial <hello-world-introduction>`. You may want to refer to the
+:doc:`API documentation <corda-api>`, the :doc:`flow cookbook <flow-cookbook>` and the
+`samples <https://www.corda.net/samples/>`_ along the way.
 
-If you encounter any issues, please see the :doc:`troubleshooting` page, or ask on
-`Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ or via `our Slack channels <http://slack.corda.net/>`_.
+If you encounter any issues, please ask on `Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ or via
+`our Slack channels <http://slack.corda.net/>`_.

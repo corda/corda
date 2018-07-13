@@ -230,6 +230,10 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
         TODO("not implemented") 
     }
 
+    override fun refreshNetworkMapCache() {
+        TODO("not implemented")
+    }
+
     private inline fun <reified T : Any> doPost(hostAndPort: NetworkHostAndPort, path: String, payload: ByteArray) : T {
         val url = URL("http://$hostAndPort/rpc/$path")
         val connection = url.openHttpConnection().apply {

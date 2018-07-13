@@ -11,7 +11,7 @@
 package net.corda.node.services.persistence
 
 import net.corda.core.identity.AbstractParty
-import net.corda.core.internal.MigrationHelpers.migrationResourceNameForSchema
+import net.corda.nodeapi.internal.MigrationHelpers.migrationResourceNameForSchema
 import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.schemas.MappedSchema
 import net.corda.nodeapi.internal.persistence.CordaPersistence

@@ -61,7 +61,7 @@ open class MappedSchema(schemaFamily: Class<*>,
      */
     protected open val migrationResource: String? = null
 
-    internal fun getMigrationResource(): String? = migrationResource
+    internal fun internalGetMigrationResource(): String? = migrationResource
 
     override fun toString(): String = "${this.javaClass.simpleName}(name=$name, version=$version)"
 

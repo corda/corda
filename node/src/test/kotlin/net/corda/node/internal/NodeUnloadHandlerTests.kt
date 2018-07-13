@@ -7,43 +7,39 @@
  *
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
+package net.corda.node.internal
 
-package net.corda.node
-
+import net.corda.core.internal.packageName
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.getOrThrow
-import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.driver
-import net.corda.testing.internal.IntegrationTest
-import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
-import org.junit.Assert
-import org.junit.ClassRule
+import net.corda.testing.node.internal.InternalMockNetwork
+import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-class NodeUnloadHandlerTests : IntegrationTest() {
+class NodeUnloadHandlerTests {
     companion object {
-        @ClassRule
-        @JvmField
-        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName() )
-        val latch = CountDownLatch(1)
+        val registerLatch = CountDownLatch(1)
+        val shutdownLatch = CountDownLatch(1)
+    }
+
+    private val mockNet = InternalMockNetwork(cordappPackages = listOf(javaClass.packageName), notarySpecs = emptyList())
+
+    @After
+    fun cleanUp() {
+        mockNet.stopNodes()
     }
 
     @Test
     fun `should be able to register run on stop lambda`() {
-        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.node"), notarySpecs = emptyList())) {
-            startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow()
-            // just want to fall off the end of this for the mo...
-        }
-        assertTrue("Timed out waiting for AbstractNode to invoke the test service shutdown callback", latch.await(30, TimeUnit.SECONDS))
+        val node = mockNet.createNode()
+        registerLatch.await()  // Make sure the handler is registered on node start up
+        node.dispose()
+        assertTrue("Timed out waiting for AbstractNode to invoke the test service shutdown callback", shutdownLatch.await(30, TimeUnit.SECONDS))
     }
 
     @Suppress("unused")
@@ -55,11 +51,12 @@ class NodeUnloadHandlerTests : IntegrationTest() {
 
         init {
             serviceHub.registerUnloadHandler(this::shutdown)
+            registerLatch.countDown()
         }
 
         private fun shutdown() {
             log.info("shutting down")
-            latch.countDown()
+            shutdownLatch.countDown()
         }
     }
 }

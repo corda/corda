@@ -178,6 +178,8 @@ Unreleased
   The log entry starts with `Cross-reference between MappedSchemas.`.
   API: Persistence documentation no longer suggests mapping between different schemas.
 
+* Upgraded Artemis to v2.6.2.
+
 .. _changelog_v3.1:
 
 Version 3.1

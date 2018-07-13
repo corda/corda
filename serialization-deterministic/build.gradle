@@ -26,13 +26,13 @@ configurations {
 
 dependencies {
     compileOnly project(':serialization')
-    compileOnly "$quasar_group:quasar-core:$quasar_version:jdk8"
 
     // Configure these by hand. It should be a minimal subset of dependencies,
     // and without any obviously non-deterministic ones such as Hibernate.
     runtimeLibraries project(path: ':core-deterministic', configuration: 'runtimeArtifacts')
     runtimeLibraries "org.apache.qpid:proton-j:$protonj_version"
     runtimeLibraries "org.iq80.snappy:snappy:$snappy_version"
+    runtimeLibraries "com.google.guava:guava:$guava_version"
 }
 
 jar {
