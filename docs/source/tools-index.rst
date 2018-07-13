@@ -7,7 +7,6 @@ wish to try the :doc:`blob-inspector`.
 .. toctree::
    :maxdepth: 1
 
-   blob-inspector
    network-bootstrapper
    demobench
    node-explorer
