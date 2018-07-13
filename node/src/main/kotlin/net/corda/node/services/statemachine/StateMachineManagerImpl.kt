@@ -454,12 +454,12 @@ class StateMachineManagerImpl(
             } finally {
                 if (result.isSuccess) {
                     fiber.commitTransaction()
+                    totalFinishedFlows.inc()
+                    unfinishedFibers.countDown()
                 } else {
                     fiber.rollbackTransaction()
                 }
                 decrementLiveFibers()
-                totalFinishedFlows.inc()
-                unfinishedFibers.countDown()
             }
         }
         mutex.locked {
