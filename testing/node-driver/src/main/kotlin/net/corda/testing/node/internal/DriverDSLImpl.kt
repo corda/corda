@@ -6,7 +6,6 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
-import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import net.corda.client.rpc.internal.createCordaRPCClientWithInternalSslAndClassLoader
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
@@ -60,16 +59,12 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Subscription
 import rx.schedulers.Schedulers
-import java.io.File
-import java.io.OutputStream
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
-import java.net.URI
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.attribute.FileTime
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
@@ -80,11 +75,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.jar.Attributes
-import java.util.jar.JarOutputStream
-import java.util.jar.Manifest
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.concurrent.thread
@@ -99,19 +89,23 @@ class DriverDSLImpl(
         val isDebug: Boolean,
         val startNodesInProcess: Boolean,
         val waitForAllNodesToFinish: Boolean,
+        // TODO sollecitom remove this completely from here
         extraCordappPackagesToScan: List<String>,
         val jmxPolicy: JmxPolicy,
         val notarySpecs: List<NotarySpec>,
         val compatibilityZone: CompatibilityZoneParams?,
         val networkParameters: NetworkParameters,
         val notaryCustomOverrides: Map<String, Any?>,
-        val inMemoryDB: Boolean
+        val inMemoryDB: Boolean,
+        // TODO sollecitom change this after removing `cordappPackages`
+        val cordappsForAllNodes: (() -> Set<TestCorDapp>)? = { defaultTestCorDappsForAllNodes(getCallerPackage()?.let { extraCordappPackagesToScan + it }?.toSet() ?: extraCordappPackagesToScan.toSet()) }
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
+    // TODO sollecitom remove this
     private val cordappPackages = getCallerPackage()?.let { extraCordappPackagesToScan + it } ?: extraCordappPackagesToScan
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
     private val networkVisibilityController = NetworkVisibilityController()
@@ -777,6 +771,20 @@ class DriverDSLImpl(
 
         private fun <A> oneOf(array: Array<A>) = array[Random().nextInt(array.size)]
 
+        // TODO sollecitom check
+        private fun defaultTestCorDappsForAllNodes(cordappPackages: Set<String>): Set<TestCorDapp> {
+
+            fun testCorDapp(packageName: String): TestCorDapp {
+
+                val uuid = UUID.randomUUID()
+                val name = "$packageName-$uuid"
+                val version = "$uuid"
+                return TestCorDapp.builder(name, version).plusPackage(packageName)
+            }
+
+            return cordappPackages.fold(emptySet()) { all, packageName -> all + testCorDapp(packageName) }
+        }
+
         private fun startInProcessNode(
                 executorService: ScheduledExecutorService,
                 config: NodeConfig,
@@ -800,6 +808,7 @@ class DriverDSLImpl(
             }
         }
 
+        // TODO sollecitom here
         private fun startOutOfProcessNode(
                 config: NodeConfig,
                 quasarJarPath: String,
@@ -1098,6 +1107,33 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
     }
 }
 
+// TODO sollecitom
+private data class TestCordappImpl(override val name: String, override val title: String, override val version: String, override val vendor: String, override val classes: Set<Class<*>>) : TestCorDapp
+
+// TODO sollecitom
+internal class TestCordappBuilder(override val name: String, override val version: String, override val vendor: String, override val title: String, override val classes: Set<Class<*>>) : TestCorDapp.Builder {
+
+    override fun withName(name: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes)
+
+    override fun withTitle(title: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes)
+
+    override fun withVersion(version: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes)
+
+    override fun withVendor(vendor: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes)
+
+    override fun withClasses(classes: Set<Class<*>>): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes)
+
+    override fun plusPackages(pckgs: Set<String>): TestCorDapp.Builder {
+        // TODO sollecitom perhaps inject the TestCorDappHelper or reference it
+        return withClasses(pckgs.map { allClassesForPackage(it) }.fold(classes) { all, packageClasses -> all + packageClasses })
+    }
+
+    override fun minusPackages(pckgs: Set<String>): TestCorDapp.Builder {
+        // TODO sollecitom perhaps inject the TestCorDappHelper or reference it
+        return withClasses(pckgs.map { allClassesForPackage(it) }.fold(classes) { all, packageClasses -> all - packageClasses })
+    }
+}
+
 /**
  * Internal API to enable testing of the network map service and node registration process using the internal driver.
  *
@@ -1218,118 +1254,4 @@ fun main(args: Array<String>) {
     val cordappJar = outputDir / "$packageName-$uuid.jar"
 
     allClasses.packageToCorDapp(cordappJar, "Test CorDapp $packageName", "test-$uuid", "R3")
-}
-
-// TODO sollecitom
-fun Iterable<Class<*>>.packageToCorDapp(path: Path, name: String, version: String, vendor: String, title: String = name) {
-
-    packageToCorDapp(path.outputStream(), name, version, vendor, title)
-}
-
-// TODO sollecitom - try and remove this ClassLoader argument (it's only used to figure out the out folder)
-fun Iterable<Class<*>>.packageToCorDapp(outputStream: OutputStream, name: String, version: String, vendor: String, title: String = name) {
-
-    val manifest = createTestManifest(name, title, version, vendor)
-    JarOutputStream(outputStream, manifest).use(::zip)
-}
-
-// TODO sollecitom
-fun Iterable<Class<*>>.zip(outputStream: ZipOutputStream) {
-
-    zip(outputStream, map(Class<*>::jarInfo))
-}
-
-// TODO sollecitom - use Maybe here
-fun zip(outputStream: ZipOutputStream, allInfo: Iterable<ClassJarInfo>) {
-
-    val illegal = allInfo.map { it.clazz }.filter { it.protectionDomain?.codeSource?.location == null }
-    if (illegal.isNotEmpty()) {
-        throw IllegalArgumentException("Some classes do not have a location, typically because they are part of Java or Kotlin. Offending types were: ${illegal.joinToString(", ", "[", "]") { it.simpleName }}")
-    }
-    allInfo.distinctBy { it.url }.forEach { info ->
-
-        val path = info.url.toPath()
-        val packagePath = info.clazz.classFilesDirectoryURL().toPath()
-        // TODO sollecitom use file separator everywhere
-        val entryPath = info.clazz.`package`.name.packageToPath() + File.separator +packagePath.relativize(path).toString()
-        // TODO sollecitom investigate this replacement
-//        val entryPath = info.clazz.`package`.name.packageToPath() + File.separator +packagePath.relativize(path).toString().replace('\\', '/')
-        val time = FileTime.from(Instant.EPOCH)
-        val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
-        outputStream.putNextEntry(entry)
-        if (path.isRegularFile()) {
-            path.copyTo(outputStream)
-        }
-        outputStream.closeEntry()
-    }
-}
-
-// TODO sollecitom
-fun Class<*>.jarInfo(): ClassJarInfo {
-
-    return ClassJarInfo(this, classFileURL())
-}
-
-// TODO sollecitom
-fun Class<*>.classFileURL(): URL {
-
-    return URI.create("${protectionDomain.codeSource.location}/${name.packageToPath()}.class").toURL()
-}
-
-// TODO sollecitom
-fun Class<*>.classFilesDirectoryURL(): URL {
-
-    return `package`.classFilesDirectoryURL(classLoader)
-}
-
-// TODO sollecitom
-fun Package.classFilesDirectoryURL(classLoader: ClassLoader): URL {
-
-    // TODO sollecitom can this return more than one URL? Investigate
-    return classLoader.getResources(name.packageToPath()).toList().single()
-}
-
-// TODO sollecitom
-fun String.packageToPath() = replace(".", File.separator)
-
-// TODO sollecitom
-fun Package.allClasses(): List<Class<*>> {
-
-    return allClasses(name)
-}
-
-// TODO sollecitom
-fun allClasses(targetPackage: String): List<Class<*>> {
-
-    val scanResult = FastClasspathScanner(targetPackage).scan()
-    return scanResult.namesOfAllClasses.filter { it.startsWith(targetPackage) }.map(scanResult::classNameToClassRef)
-}
-
-data class ClassJarInfo(val clazz: Class<*>, val url: URL)
-
-// TODO sollecitom move to utils
-internal fun createTestManifest(name: String, title: String, version: String, vendor: String): Manifest {
-
-    val manifest = Manifest()
-
-    // Mandatory manifest attribute. If not present, all other entries are silently skipped.
-    manifest.mainAttributes[Attributes.Name.MANIFEST_VERSION] = "1.0"
-
-    manifest["Name"] = name
-
-    manifest["Specification-Title"] = title
-    manifest["Specification-Version"] = version
-    manifest["Specification-Vendor"] = vendor
-
-    manifest["Implementation-Title"] = title
-    manifest["Implementation-Version"] = version
-    manifest["Implementation-Vendor"] = vendor
-
-    return manifest
-}
-
-// TODO sollecitom move to utils
-internal operator fun Manifest.set(key: String, value: String) {
-
-    mainAttributes.putValue(key, value)
 }

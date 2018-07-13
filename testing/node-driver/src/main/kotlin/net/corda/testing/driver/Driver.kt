@@ -20,10 +20,7 @@ import net.corda.testing.driver.PortAllocation.Incremental
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.DriverDSLImpl
-import net.corda.testing.node.internal.genericDriver
-import net.corda.testing.node.internal.getTimestampAsDirectoryName
-import net.corda.testing.node.internal.newContext
+import net.corda.testing.node.internal.*
 import rx.Observable
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -197,6 +194,52 @@ interface TestCorDapp {
     val vendor: String
 
     val classes: Set<Class<*>>
+
+    companion object {
+
+        // TODO sollecitom change this for apparently it doesn't play well with usage from Java...
+        fun builder(name: String, version: String, vendor: String = "R3", title: String = name, classes: Set<Class<*>> = emptySet()): TestCorDapp.Builder {
+
+            return TestCordappBuilder(name, version, vendor, title, classes)
+        }
+    }
+
+    interface Builder : TestCorDapp {
+
+        fun withName(name: String): TestCorDapp.Builder
+
+        fun withTitle(title: String): TestCorDapp.Builder
+
+        fun withVersion(version: String): TestCorDapp.Builder
+
+        fun withVendor(vendor: String): TestCorDapp.Builder
+
+        fun withClasses(classes: Set<Class<*>>): TestCorDapp.Builder
+
+        fun plusPackages(pckgs: Set<String>): TestCorDapp.Builder
+
+        fun minusPackages(pckgs: Set<String>): TestCorDapp.Builder
+
+        fun plusPackage(pckg: String): TestCorDapp.Builder = plusPackages(setOf(pckg))
+
+        fun minusPackage(pckg: String): TestCorDapp.Builder = minusPackages(setOf(pckg))
+
+        fun plusPackage(pckg: Package): TestCorDapp.Builder = plusPackages(pckg.name)
+
+        fun minusPackage(pckg: Package): TestCorDapp.Builder = minusPackages(pckg.name)
+
+        operator fun plus(clazz: Class<*>): TestCorDapp.Builder = withClasses(classes + clazz)
+
+        operator fun minus(clazz: Class<*>): TestCorDapp.Builder = withClasses(classes - clazz)
+
+        fun plusPackages(pckg: String, vararg pckgs: String): TestCorDapp.Builder = plusPackages(setOf(pckg, *pckgs))
+
+        fun plusPackages(pckg: Package, vararg pckgs: Package): TestCorDapp.Builder = minusPackages(setOf(pckg, *pckgs).map { it.name }.toSet())
+
+        fun minusPackages(pckg: String, vararg pckgs: String): TestCorDapp.Builder = minusPackages(setOf(pckg, *pckgs))
+
+        fun minusPackages(pckg: Package, vararg pckgs: Package): TestCorDapp.Builder = minusPackages(setOf(pckg, *pckgs).map { it.name }.toSet())
+    }
 }
 
 /**
@@ -302,7 +345,7 @@ data class DriverParameters(
         val initialiseSerialization: Boolean = true,
         val inMemoryDB: Boolean = true,
         // TODO sollecitom revisit this in terms of API compatibility; document
-        val cordappsForAllNodes: ((DriverParameters) -> Set<TestCorDapp>)? = null
+        val cordappsForAllNodes: (() -> Set<TestCorDapp>)? = null
     ) {
     constructor(
             isDebug: Boolean,
@@ -317,7 +360,7 @@ data class DriverParameters(
             extraCordappPackagesToScan: List<String>,
             jmxPolicy: JmxPolicy,
             networkParameters: NetworkParameters,
-            cordappsForAllNodes: ((DriverParameters) -> Set<TestCorDapp>)? = null
+            cordappsForAllNodes: (() -> Set<TestCorDapp>)? = null
     ) : this(
             isDebug,
             driverDirectory,
@@ -352,7 +395,7 @@ data class DriverParameters(
             networkParameters: NetworkParameters,
             initialiseSerialization: Boolean,
             inMemoryDB: Boolean,
-            cordappsForAllNodes: ((DriverParameters) -> Set<TestCorDapp>)? = null
+            cordappsForAllNodes: (() -> Set<TestCorDapp>)? = null
     ) : this(
             isDebug,
             driverDirectory,
