@@ -1,9 +1,7 @@
-package net.corda.serialization.internal.amqp;
+package net.corda.nodeapi.internal.serialization.amqp;
 
-import kotlin.Suppress;
 import net.corda.core.serialization.SerializedBytes;
-import net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt;
-import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
+import net.corda.nodeapi.internal.serialization.amqp.testutils.AMQPTestUtilsKt;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -25,6 +23,7 @@ public class JavaEvolutionTests {
         public String getWord() { return word; }
     }
     */
+
     // Class as it exists now with the newly added element
     static class N1 {
         private String word;
@@ -69,14 +68,12 @@ public class JavaEvolutionTests {
         // Uncomment to regenerate the base state of the test
         /*
         N1 n = new N1("potato");
-        AMQPTestUtilsKt.writeTestResource(this, new SerializationOutput(factory).serialize(
-                n, TestSerializationContext.testSerializationContext));
+        AMQPTestUtilsKt.writeTestResource(this, new SerializationOutput(factory).serialize(n));
         */
 
         N1 n2 = new DeserializationInput(factory).deserialize(
                 new SerializedBytes<>(AMQPTestUtilsKt.readTestResource(this)),
-                N1.class,
-                TestSerializationContext.testSerializationContext);
+                N1.class);
         assertEquals(n2.getWord(), "potato");
         assertNull(n2.getWibble());
     }
@@ -86,15 +83,12 @@ public class JavaEvolutionTests {
         // Uncomment to regenerate the base state of the test
         /*
         N2 n = new N2("This is only a test");
-
-        AMQPTestUtilsKt.writeTestResource(this, new SerializationOutput(factory).serialize(
-                n, TestSerializationContext.testSerializationContext));
+        AMQPTestUtilsKt.writeTestResource(this, new SerializationOutput(factory).serialize(n));
         */
 
         exception.expect(NotSerializableException.class);
         new DeserializationInput(factory).deserialize(
                 new SerializedBytes<>(AMQPTestUtilsKt.readTestResource(this)),
-                N2.class,
-                TestSerializationContext.testSerializationContext);
+                N2.class);
     }
 }
