@@ -1,5 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testName
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

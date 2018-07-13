@@ -2,6 +2,8 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.*
 import net.corda.nodeapi.internal.serialization.NotSerializableDetailedException
+import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactory
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat

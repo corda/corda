@@ -6,6 +6,7 @@ import net.corda.core.serialization.SerializationCustomSerializer
 import org.assertj.core.api.Assertions
 import java.io.NotSerializableException
 import kotlin.test.assertEquals
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactory
 
 class CorDappSerializerTests {
     data class NeedsProxy (val a: String)

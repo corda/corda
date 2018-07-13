@@ -3,6 +3,8 @@ package net.corda.nodeapi.internal.serialization.amqp
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.SerializedBytes
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactory
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testName
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions
 import org.junit.Test

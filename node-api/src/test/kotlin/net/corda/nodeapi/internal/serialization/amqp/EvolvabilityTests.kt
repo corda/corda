@@ -19,6 +19,9 @@ import java.net.URI
 import java.time.Instant
 import kotlin.test.assertEquals
 import net.corda.nodeapi.internal.serialization.amqp.custom.InstantSerializer
+import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactory
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testName
 
 // To regenerate any of the binary test files do the following
 //

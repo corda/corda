@@ -3,6 +3,9 @@ package net.corda.nodeapi.internal.serialization.amqp
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
+import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testName
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.io.File
@@ -63,7 +66,7 @@ class EnumTests {
     }
 
     @Suppress("NOTHING_TO_INLINE")
-    inline private fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
+    private inline fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
 
     private val sf1 = testDefaultFactoryNoEvolution()
 
