@@ -55,8 +55,10 @@ task shrink(type: ProGuardTask) {
     dontwarn 'org.slf4j.**'
     dontnote
 
+    // We need to preserve our CorDapp's own directory structure so that Corda
+    // can find the contract classes.
+    keepdirectories 'net/corda/**'
     keepattributes '*'
-    keepdirectories
     dontobfuscate
     dontoptimize
     verbose
