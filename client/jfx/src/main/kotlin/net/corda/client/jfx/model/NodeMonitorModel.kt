@@ -3,6 +3,8 @@ package net.corda.client.jfx.model
 import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.CordaRPCConnection
+import net.corda.client.rpc.RPCException
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
@@ -109,6 +111,44 @@ class NodeMonitorModel {
         // Parties on network
         val (parties, futurePartyUpdate) = proxy.networkMapFeed()
         futurePartyUpdate.startWith(parties.map { MapChange.Added(it) }).subscribe(networkMapSubject)
+
+        do {
+            val connection = try {
+                logger.info("Connecting to: $nodeHostAndPort")
+                val client = CordaRPCClient(
+                        nodeHostAndPort,
+                        CordaRPCClientConfiguration.DEFAULT.copy(
+                                connectionMaxRetryInterval = retryInterval
+                        )
+                )
+                val _connection = client.start(username, password)
+                // Check connection is truly operational before returning it.
+                val nodeInfo = _connection.proxy.nodeInfo()
+                require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty())
+                _connection
+            } catch (throwable: Throwable) {
+                when (throwable) {
+                    is ActiveMQException, is RPCException -> {
+                        // Happens when:
+                        // * incorrect credentials provided;
+                        // * incorrect endpoint specified;
+                        // - no point to retry connecting.
+                        throw throwable
+                    }
+                    else -> {
+                        // Deliberately not logging full stack trace as it will be full of internal stacktraces.
+                        logger.info("Exception upon establishing connection: " + throwable.message)
+                        null
+                    }
+                }
+            }
+            if (connection != null) {
+                logger.info("Connection successfully established with: $nodeHostAndPort")
+                return connection
+            }
+            // Could not connect this time round - pause before giving another try.
+            Thread.sleep(retryInterval.toMillis())
+        } while (connection == null)
 
         proxyObservable.set(proxy)
     }
