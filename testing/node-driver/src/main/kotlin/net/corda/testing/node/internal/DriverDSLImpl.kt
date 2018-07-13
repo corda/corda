@@ -1215,7 +1215,7 @@ fun main(args: Array<String>) {
     println(allClassesForPackage)
     println(allClassesForPackage.size)
 
-    val allClasses = allClassesForPackage
+    val allClasses = allClassesForPackage + Node::class.java
 
     // TODO sollecitom - refactor this mess
     val outputDir = Paths.get("/home/michele/Desktop")
