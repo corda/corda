@@ -626,7 +626,8 @@ class DriverDSLImpl(
                 jolokiaJarPath,
                 monitorPort,
                 systemProperties,
-                cordappPackages,
+                // TODO sollecitom was `cordappPackages`
+                emptyList(),
                 "512m",
                 *extraCmdLineFlag
         )
@@ -654,6 +655,7 @@ class DriverDSLImpl(
         val useHTTPS = config.typesafe.run { hasPath("useHTTPS") && getBoolean("useHTTPS") }
 
         if (startInProcess ?: startNodesInProcess) {
+            // TODO sollecitom fix here as well
             val nodeAndThreadFuture = startInProcessNode(executorService, config, cordappPackages)
             shutdownManager.registerShutdown(
                     nodeAndThreadFuture.map { (node, thread) ->
