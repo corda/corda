@@ -1213,7 +1213,6 @@ fun main(args: Array<String>) {
     println(allClassFilesURLs)
     println(allClassFilesURLs.size)
 
-
     // TODO sollecitom - refactor this mess
     val outputDir = Paths.get("/home/michele/Desktop")
     val uuid = UUID.randomUUID()
