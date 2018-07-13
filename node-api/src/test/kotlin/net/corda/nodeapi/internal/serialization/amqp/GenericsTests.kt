@@ -9,6 +9,10 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.transactions.WireTransaction
+import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactory
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testName
 import net.corda.testing.core.TestIdentity
 import org.hibernate.Transaction
 import java.io.File

@@ -49,10 +49,6 @@ open class SerializerFactory(
     private val customSerializers = CopyOnWriteArrayList<SerializerFor>()
     private val transformsCache = ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>()
 
-    init {
-        fingerPrinter.setOwner(this)
-    }
-
     open val classCarpenter = ClassCarpenter(cl, whitelist)
 
     val classloader: ClassLoader

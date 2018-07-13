@@ -31,7 +31,7 @@ open class SerializationOutput(internal val serializerFactory: SerializerFactory
      * of AMQP serialization constructed the serialized form.
      */
     @Throws(NotSerializableException::class)
-    fun <T : Any> serialize(obj: T): SerializedBytes<T> {
+    open fun <T : Any> serialize(obj: T): SerializedBytes<T> {
         try {
             return _serialize(obj)
         } finally {

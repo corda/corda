@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.ConstructorForDeserialization
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
 import org.assertj.core.api.Assertions
 import org.junit.Test
 

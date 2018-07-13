@@ -1,6 +1,8 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.ConstructorForDeserialization
+import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
 import org.junit.Test
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals

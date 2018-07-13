@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 import junit.framework.TestCase.assertTrue
 import junit.framework.TestCase.assertEquals
 import net.corda.core.serialization.ConstructorForDeserialization
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
 import org.junit.Test
 import org.apache.qpid.proton.amqp.Symbol
 import org.assertj.core.api.Assertions
