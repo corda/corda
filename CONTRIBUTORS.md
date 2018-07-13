@@ -59,6 +59,7 @@ see changes to this list.
 * Clay Ratliff (Thoughtworks)
 * Clemens Wan (R3)
 * Clinton Alexander (R3)
+* Clyde D'Cruz (Persistent Systems Limited)
 * cncorda
 * Credit Suisse
 * cyrsis
