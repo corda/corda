@@ -9,7 +9,7 @@ Release 3.2
 As we see more Corda deployments in production this minor release of the open source platform brings
 several fixes that make it easier for a node to to join Corda Networks broader than those used when
 operating as part of an internal testing deployment. This will ensure Corda nodes will be free to interact
-with with upcoming network offerings from R3 and others who may make broad-access Corda networks available
+with with upcoming network offerings from R3 and others who may make broad-access Corda networks available.
 
 * **The Network Bootstrapper**
 
@@ -34,7 +34,7 @@ of its identity as well as the Network Map service where it would publish it's s
 retrieve the Network Map.
 
 Compatibility Zones can now, however, be configured with the two disparate services, Doorman and
-Netowrk Map, running on different URLs. If the compatibility zone your node is connecting to
+Network Map, running on different URLs. If the compatibility zone your node is connecting to
 is configured in this manner, the new configuration looks as follows.
 
 .. sourcecode:: shell
@@ -54,10 +54,18 @@ command line, giving a human readable interpretation of the encoded date. Practi
 meas the binary Network Parameters and Node Info files used by the nodes are suddenly a lot
 easier to understand and debug.
 
+* **The Event Horizen**
+
 Issues Fixed
 ~~~~~~~~~~~~
 
-<fill me in>
+* Update Jolokia to a more secure version [`CORDA-1744 <https://r3-cev.atlassian.net/browse/CORDA-1744>`_]
+* Add the Blob Inspector [`CORDA-1709 <https://r3-cev.atlassian.net/browse/CORDA-1709>`_]
+* Add support for the ``Event Horizen`` Network Parameter [`CORDA-866 <https://r3-cev.atlassian.net/browse/CORDA-866>`_]
+* Add the Network Bootstrapper [`CORDA-1717 <https://r3-cev.atlassian.net/browse/CORDA-1717>`_]
+* Fixes for the finance CordApp[`CORDA-1711 <https://r3-cev.atlassian.net/browse/CORDA-1711>`_]
+* Allow Doorman and NetworkMap to be configured independently [`CORDA-1510 <https://r3-cev.atlassian.net/browse/CORDA-1510>`_]
+* Serialization fix for generics when evolving a class [`CORDA-1530  <https://r3-cev.atlassian.net/browse/CORDA-1530>`_]
 
 .. _release_notes_v3_1:
 
