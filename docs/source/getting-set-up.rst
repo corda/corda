@@ -5,8 +5,8 @@ Software requirements
 ---------------------
 Corda uses industry-standard tools:
 
-* **Oracle JDK 8 JVM** - minimum supported version **8u131**
-* **IntelliJ IDEA** - supported versions **2017.x** and **2018.x**
+* **Oracle JDK 8 JVM** - minimum supported version **8u171**
+* **IntelliJ IDEA** - supported versions **2017.x** and **2018.x** (with Kotlin plugin version |kotlin_version|)
 * **Git**
 
 We also use Gradle and Kotlin, but you do not need to install them. A standalone Gradle wrapper is provided, and it
@@ -71,6 +71,7 @@ IntelliJ
 ^^^^^^^^
 1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?code=IIC
 2. Download and run the executable to install IntelliJ Community Edition (use the default settings)
+3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version|
 
 Download a sample project
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -125,6 +126,7 @@ IntelliJ
 ^^^^^^^^
 1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?platform=mac&code=IIC
 2. Download and run the executable to install IntelliJ Community Edition (use the default settings)
+3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version|
 
 Download a sample project
 ^^^^^^^^^^^^^^^^^^^^^^^^^
