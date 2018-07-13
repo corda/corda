@@ -82,6 +82,7 @@ import java.util.jar.Attributes
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.concurrent.thread
@@ -1221,14 +1222,20 @@ fun main(args: Array<String>) {
     val manifest = createTestManifest("Test CorDapp $packageName", "Test CorDapp $packageName", "test-$uuid", "R3")
 
     JarOutputStream(cordappJar.outputStream(), manifest).use { jos ->
-        allClassFilesURLs.packageToJar(jos) { pkg -> pkg.classFilesDirectoryURL(classLoader).single().toPath() }
+        zip(jos, allClassFilesURLs) { pkg -> pkg.classFilesDirectoryURL(classLoader).single().toPath() }
     }
 }
 
-// TODO sollecitom - use Maybe here
-fun Iterable<ClassJarInfo>.packageToJar(jarOutputStream: JarOutputStream, pathFromPackage: (Package) -> Path) {
+// TODO sollecitom
+fun Iterable<Class<*>>.zip(outputStream: ZipOutputStream, pathFromPackage: (Package) -> Path) {
 
-    this.distinctBy { it.url }.forEach { info ->
+    zip(outputStream, map(Class<*>::jarInfo), pathFromPackage)
+}
+
+// TODO sollecitom - use Maybe here
+fun zip(outputStream: ZipOutputStream, allInfo: Iterable<ClassJarInfo>, pathFromPackage: (Package) -> Path) {
+
+    allInfo.distinctBy { it.url }.forEach { info ->
 
         val path = info.url.toPath()
         val packagePath = pathFromPackage(info.clazz.`package`)
@@ -1238,11 +1245,11 @@ fun Iterable<ClassJarInfo>.packageToJar(jarOutputStream: JarOutputStream, pathFr
 //        val entryPath = info.clazz.`package`.name.replace(".", "/") + "/" +packagePath.relativize(path).toString().replace('\\', '/')
         val time = FileTime.from(Instant.EPOCH)
         val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
-        jarOutputStream.putNextEntry(entry)
+        outputStream.putNextEntry(entry)
         if (path.isRegularFile()) {
-            path.copyTo(jarOutputStream)
+            path.copyTo(outputStream)
         }
-        jarOutputStream.closeEntry()
+        outputStream.closeEntry()
     }
 }
 
