@@ -1287,6 +1287,12 @@ fun Class<*>.classFileURL(): URL {
 }
 
 // TODO sollecitom
+fun Class<*>.classFilesDirectoryURL(): List<URL> {
+
+    return `package`.classFilesDirectoryURL(classLoader)
+}
+
+// TODO sollecitom
 fun Package.classFilesDirectoryURL(classLoader: ClassLoader): List<URL> {
 
     return classFilesDirectoryURL(name, classLoader)
