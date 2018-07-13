@@ -18,7 +18,7 @@ import joptsimple.OptionException
 import joptsimple.OptionParser
 import joptsimple.OptionSet
 import joptsimple.util.EnumConverter
-import net.corda.core.internal.MigrationHelpers
+import net.corda.nodeapi.internal.MigrationHelpers
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.schemas.MappedSchema

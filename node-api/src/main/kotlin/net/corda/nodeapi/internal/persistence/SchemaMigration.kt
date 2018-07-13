@@ -20,7 +20,7 @@ import liquibase.database.core.MSSQLDatabase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.lockservice.LockServiceFactory
 import liquibase.resource.ClassLoaderResourceAccessor
-import net.corda.core.internal.MigrationHelpers.getMigrationResource
+import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import java.io.ByteArrayInputStream

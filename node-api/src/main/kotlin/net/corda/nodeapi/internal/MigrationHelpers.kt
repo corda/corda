@@ -8,9 +8,10 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
-package net.corda.core.internal
+package net.corda.nodeapi.internal
 
 import com.google.common.base.CaseFormat
+import net.corda.core.internal.getMigrationResource
 import net.corda.core.schemas.MappedSchema
 
 object MigrationHelpers {

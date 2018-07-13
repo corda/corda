@@ -20,6 +20,7 @@ import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.*
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -542,3 +543,8 @@ fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): Untrustworthy
     return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) }
             ?: throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a ${payloadData.javaClass.name} ($payloadData)")
 }
+
+/**
+ * Extension method to make this method visible to nodeapi module.
+ */
+fun MappedSchema.getMigrationResource(): String? = this.internalGetMigrationResource()
