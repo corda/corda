@@ -49,10 +49,12 @@ is configured in this manner, the new configuration looks as follows.
 
 * **The Blob Inspector**
 
-Finally, the Blob Inspector <docs ref> brings the ability to unpack serialized Corda Blobs at the
+Finally, the Blob Inspector brings the ability to unpack serialized Corda Blobs at the
 command line, giving a human readable interpretation of the encoded date. Practically speaking this
 meas the binary Network Parameters and Node Info files used by the nodes are suddenly a lot
 easier to understand and debug.
+
+Docuemtation on its use can be found here :doc:blob-inspector
 
 * **The Event Horizen**
 
