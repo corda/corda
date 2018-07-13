@@ -375,7 +375,7 @@ class FlowFrameworkTests {
                 .withMessage("Nothing useful")
                 .withStackTraceContaining(ReceiveFlow::class.java.name)  // Make sure the stack trace is that of the receiving flow
         bobNode.database.transaction {
-            assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
+            assertThat(bobNode.checkpointStorage.checkpoints()).isNotEmpty()
         }
 
         assertThat(receivingFiber.isTerminated).isTrue()
