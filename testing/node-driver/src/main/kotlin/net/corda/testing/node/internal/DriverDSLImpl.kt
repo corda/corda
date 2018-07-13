@@ -1246,16 +1246,16 @@ fun Iterable<Class<*>>.packageToCorDapp(outputStream: OutputStream, classLoader:
 // TODO sollecitom
 fun Iterable<Class<*>>.zip(outputStream: ZipOutputStream, pathFromPackage: (Package) -> Path) {
 
-    val illegal = filter { it.protectionDomain?.codeSource?.location == null }
-    if (illegal.isNotEmpty()) {
-        throw IllegalArgumentException("Some classes do not have a location, typically because they are part of Java or Kotlin. Offending types were: ${illegal.joinToString(", ", "[", "]") { it.simpleName }}")
-    }
     zip(outputStream, map(Class<*>::jarInfo), pathFromPackage)
 }
 
 // TODO sollecitom - use Maybe here
 fun zip(outputStream: ZipOutputStream, allInfo: Iterable<ClassJarInfo>, pathFromPackage: (Package) -> Path) {
 
+    val illegal = allInfo.map { it.clazz }.filter { it.protectionDomain?.codeSource?.location == null }
+    if (illegal.isNotEmpty()) {
+        throw IllegalArgumentException("Some classes do not have a location, typically because they are part of Java or Kotlin. Offending types were: ${illegal.joinToString(", ", "[", "]") { it.simpleName }}")
+    }
     allInfo.distinctBy { it.url }.forEach { info ->
 
         val path = info.url.toPath()
