@@ -1274,8 +1274,14 @@ fun Package.allClassFileURLs(): List<ClassJarInfo> {
 // TODO sollecitom
 fun allClassFileURLs(targetPackage: String): List<ClassJarInfo> {
 
+    return allClasses(targetPackage).map(Class<*>::jarInfo)
+}
+
+// TODO sollecitom
+fun allClasses(targetPackage: String): List<Class<*>> {
+
     val scanResult = FastClasspathScanner(targetPackage).scan()
-    return scanResult.namesOfAllClasses.filter { it.startsWith(targetPackage) }.map(scanResult::classNameToClassRef).map(Class<*>::jarInfo)
+    return scanResult.namesOfAllClasses.filter { it.startsWith(targetPackage) }.map(scanResult::classNameToClassRef)
 }
 
 // TODO sollecitom - this could return more than one match
