@@ -75,7 +75,6 @@ UNRELEASED
 
   Corda will continue to work with the older table name, however for it's advisable to change the table name.
 
-
 v3.0 to v3.1
 ------------
 
