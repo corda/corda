@@ -1221,19 +1221,22 @@ fun main(args: Array<String>) {
     val cordappJar = outputDir / "$packageName-$uuid.jar"
     val manifest = createTestManifest("Test CorDapp $packageName", "Test CorDapp $packageName", "test-$uuid", "R3")
 
-    val rootDir = Paths.get(packageURLs[0].toPath().toString().replace(packageName.replace(".", "/"), ""))
-
     JarOutputStream(cordappJar.outputStream(), manifest).use { jos ->
-        allClassFilesURLs.packageToJar(jos) { path -> rootDir.relativize(path).toString().replace('\\', '/') }
+        allClassFilesURLs.packageToJar(jos) { pkg -> pkg.classFilesDirectoryURL(classLoader).single().toPath() }
     }
 }
 
 // TODO sollecitom - use Maybe here
-fun Iterable<URL>.packageToJar(jarOutputStream: JarOutputStream, entryNameFromPath: (Path) -> String) {
+fun Iterable<ClassJarInfo>.packageToJar(jarOutputStream: JarOutputStream, pathFromPackage: (Package) -> Path) {
 
-    this.map { it.toPath() }.distinct().forEach { path ->
+    this.distinctBy { it.url }.forEach { info ->
 
-        val entryPath = entryNameFromPath(path)
+        val path = info.url.toPath()
+        val packagePath = pathFromPackage(info.clazz.`package`)
+        // TODO sollecitom use file separator everywhere
+        val entryPath = info.clazz.`package`.name.replace(".", "/") + "/" +packagePath.relativize(path).toString()
+        // TODO sollecitom investigate this replacement
+//        val entryPath = info.clazz.`package`.name.replace(".", "/") + "/" +packagePath.relativize(path).toString().replace('\\', '/')
         val time = FileTime.from(Instant.EPOCH)
         val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
         jarOutputStream.putNextEntry(entry)
@@ -1242,6 +1245,12 @@ fun Iterable<URL>.packageToJar(jarOutputStream: JarOutputStream, entryNameFromPa
         }
         jarOutputStream.closeEntry()
     }
+}
+
+// TODO sollecitom
+fun Class<*>.jarInfo(): ClassJarInfo {
+
+    return ClassJarInfo(this, classFileURL())
 }
 
 // TODO sollecitom
@@ -1257,16 +1266,16 @@ fun Package.classFilesDirectoryURL(classLoader: ClassLoader): List<URL> {
 }
 
 // TODO sollecitom
-fun Package.allClassFileURLs(): List<URL> {
+fun Package.allClassFileURLs(): List<ClassJarInfo> {
 
     return allClassFileURLs(name)
 }
 
 // TODO sollecitom
-fun allClassFileURLs(targetPackage: String): List<URL> {
+fun allClassFileURLs(targetPackage: String): List<ClassJarInfo> {
 
     val scanResult = FastClasspathScanner(targetPackage).scan()
-    return scanResult.namesOfAllClasses.filter { it.startsWith(targetPackage) }.map(scanResult::classNameToClassRef).map(Class<*>::classFileURL)
+    return scanResult.namesOfAllClasses.filter { it.startsWith(targetPackage) }.map(scanResult::classNameToClassRef).map(Class<*>::jarInfo)
 }
 
 // TODO sollecitom - this could return more than one match
@@ -1279,6 +1288,8 @@ fun classFilesDirectoryURL(targetPackage: String, classLoader: ClassLoader): Lis
 //                !url.toString().contains("main/$resource")  || listOf("net.corda.core", "net.corda.node", "net.corda.finance").none { targetPackage.startsWith(it) }
 //            }
 }
+
+data class ClassJarInfo(val clazz: Class<*>, val url: URL)
 
 // TODO sollecitom move to utils
 internal fun createTestManifest(name: String, title: String, version: String, vendor: String): Manifest {
