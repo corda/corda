@@ -7,7 +7,7 @@ Release 3.2
 -----------
 
 As we see more Corda deployments in production this minor release of the open source platform brings
-several fixes that make it easier for a node to to join Corda Networks broader than those used when
+several fixes that make it easier for a node to join Corda networks broader than those used when
 operating as part of an internal testing deployment. This will ensure Corda nodes will be free to interact
 with with upcoming network offerings from R3 and others who may make broad-access Corda networks available.
 
@@ -17,7 +17,7 @@ To support the ongoing move toward usability, testing, and deployment, 3.2 is re
 graphical network bootstrapper tool <docs ref> to facilitate the simple creation of more dynamic ad
 hoc testing environments.
 
-Using a graphical interface you will be able to dynamically create and alter Corda Networks, adding
+Using a graphical interface you can dynamically create and alter Corda Networks, adding
 nodes and CorDapps with the click of a button! Additionally, you can leverage its integration
 with Azure cloud services for remote hosting of Nodes and Docker instances for local testing.
 
@@ -30,7 +30,7 @@ Prior to this release compatibility zone membership was denoted with a single co
     compatibilityZoneURL : "http://<host>(:<port>)"
 
 That would indicate both the location of the Doorman service the node should use for registration
-of its identity as well as the Network Map service where it would publish it's signed Node Info and
+of its identity as well as the Network Map service where it would publish its signed Node Info and
 retrieve the Network Map.
 
 Compatibility Zones can now, however, be configured with the two disparate services, Doorman and
@@ -49,23 +49,35 @@ is configured in this manner, the new configuration looks as follows.
 
 * **The Blob Inspector**
 
-Finally, the blob inspector brings the ability to unpack serialized corda blobs at the
+Finally, the blob inspector brings the ability to unpack serialized Corda blobs at the
 command line, giving a human readable interpretation of the encoded date.
 
-Docuemtation on its use can be found here :doc:blob-inspector
+Documentation on its use can be found here :doc:blob-inspector
 
-* **The Event Horizen**
+* **The Event Horizon**
+
+A part of joining a node to a Corda network is agreeing to the rules that govern that network and the
+framework surrounding the governance of it. An important aspect of that is the ability for the network
+operator to change and evole the parameters that control aspects of the network (:docs:network-map).
+
+This setting impacts the operator of a node that is itself a member of a Corda network. The Event Horizon
+paramter determines how long a node can remain on a network without accepting the new version of these
+parameters.
 
 Issues Fixed
 ~~~~~~~~~~~~
 
 * Update Jolokia to a more secure version [`CORDA-1744 <https://r3-cev.atlassian.net/browse/CORDA-1744>`_]
 * Add the Blob Inspector [`CORDA-1709 <https://r3-cev.atlassian.net/browse/CORDA-1709>`_]
-* Add support for the ``Event Horizen`` Network Parameter [`CORDA-866 <https://r3-cev.atlassian.net/browse/CORDA-866>`_]
+* Add support for the ``Event Horizon`` Network Parameter [`CORDA-866 <https://r3-cev.atlassian.net/browse/CORDA-866>`_]
 * Add the Network Bootstrapper [`CORDA-1717 <https://r3-cev.atlassian.net/browse/CORDA-1717>`_]
 * Fixes for the finance CordApp[`CORDA-1711 <https://r3-cev.atlassian.net/browse/CORDA-1711>`_]
 * Allow Doorman and NetworkMap to be configured independently [`CORDA-1510 <https://r3-cev.atlassian.net/browse/CORDA-1510>`_]
 * Serialization fix for generics when evolving a class [`CORDA-1530  <https://r3-cev.atlassian.net/browse/CORDA-1530>`_]
+* Correct typo in an internal databse table make [`CORDA-1499 <https://r3-cev.atlassian.net/browse/CORDA-1499>`_] and [`CORDA-1804 <https://r3-cev.atlassian.net/browse/CORDA-1804>`_]
+* Hibernate session not flushed before handing over raw JDBC session to user code [`CORDA-1548 <https://r3-cev.atlassian.net/browse/CORDA-1548>`_]
+* Fix Postgres db bloat issue [`CORDA-1812  <https://r3-cev.atlassian.net/browse/CORDA-1812>`_]
+* Roll back flow transaction on exception [`CORDA-1790 <https://r3-cev.atlassian.net/browse/CORDA-1790>`_]
 
 .. _release_notes_v3_1:
 
