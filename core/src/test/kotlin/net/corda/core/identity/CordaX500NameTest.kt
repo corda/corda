@@ -75,7 +75,7 @@ class CordaX500NameTest {
             CordaX500Name.parse("O=Bཛྷa, L=New York, C=DE, OU=Org Unit, CN=Service Name")
         }
         // doesn't throw
-        checkLocalityAndOrganisationalUnitAndCommonName("Bཛྷa")
+        validateLocalityAndOrganisationalUnitAndCommonName("Bཛྷa")
     }
 
     @Test
@@ -87,32 +87,32 @@ class CordaX500NameTest {
             CordaX500Name.parse("O=, L=New York, C=DE, OU=Org Unit, CN=Service Name")
         }
         // doesn't throw
-        checkLocalityAndOrganisationalUnitAndCommonName("B")
-        checkLocalityAndOrganisationalUnitAndCommonName("")
+        validateLocalityAndOrganisationalUnitAndCommonName("B")
+        validateLocalityAndOrganisationalUnitAndCommonName("")
     }
 
     @Test
     fun `accepts attributes starting with lower case letter`() {
         CordaX500Name.parse("O=bank A, L=New York, C=DE, OU=Org Unit, CN=Service Name")
-        checkLocalityAndOrganisationalUnitAndCommonName("bank")
+        validateLocalityAndOrganisationalUnitAndCommonName("bank")
     }
 
     @Test
     fun `accepts attributes starting with numeric character`() {
             CordaX500Name.parse("O=8Bank A, L=New York, C=DE, OU=Org Unit, CN=Service Name")
-            checkLocalityAndOrganisationalUnitAndCommonName("8bank")
+            validateLocalityAndOrganisationalUnitAndCommonName("8bank")
     }
 
     @Test
     fun `accepts attributes with leading whitespace`() {
         CordaX500Name.parse("O= VALID, L=VALID, C=DE, OU=VALID, CN=VALID")
-        checkLocalityAndOrganisationalUnitAndCommonName(" VALID")
+        validateLocalityAndOrganisationalUnitAndCommonName(" VALID")
     }
 
     @Test
     fun `accepts attributes with trailing whitespace`() {
         CordaX500Name.parse("O=VALID , L=VALID, C=DE, OU=VALID, CN=VALID")
-        checkLocalityAndOrganisationalUnitAndCommonName("VALID ")
+        validateLocalityAndOrganisationalUnitAndCommonName("VALID ")
     }
 
     @Test
@@ -131,7 +131,7 @@ class CordaX500NameTest {
     @Test
     fun `accepts organisation with dollar sign`() {
         CordaX500Name.parse("O=VA\$LID, L=VALID, C=DE, OU=VALID, CN=VALID")
-        checkLocalityAndOrganisationalUnitAndCommonName("VA\$LID")
+        validateLocalityAndOrganisationalUnitAndCommonName("VA\$LID")
     }
     @Test
     fun `rejects attributes with double quotation mark`() {
@@ -144,7 +144,7 @@ class CordaX500NameTest {
     @Test
     fun `accepts organisation with single quotation mark`() {
         CordaX500Name.parse("O=VA'LID, L=VALID, C=DE, OU=VALID, CN=VALID")
-        checkLocalityAndOrganisationalUnitAndCommonName("VA'LID")
+        validateLocalityAndOrganisationalUnitAndCommonName("VA'LID")
     }
     @Test
     fun `rejects organisation with backslash`() {
@@ -159,14 +159,14 @@ class CordaX500NameTest {
         assertFailsWith(IllegalArgumentException::class) {
             CordaX500Name.parse("O=IN  VALID , L=VALID, C=DE, OU=VALID, CN=VALID")
         }
-        checkLocalityAndOrganisationalUnitAndCommonName("VA  LID")
+        validateLocalityAndOrganisationalUnitAndCommonName("VA  LID")
     }
     @Test
     fun `rejects organisation (but not other attributes) containing the null character`() {
         assertFailsWith(IllegalArgumentException::class) {
             CordaX500Name.parse("O=IN${NULLCHAR}VALID , L=VALID, C=DE, OU=VALID, CN=VALID")
         }
-        checkLocalityAndOrganisationalUnitAndCommonName("VA${NULLCHAR}LID")
+        validateLocalityAndOrganisationalUnitAndCommonName("VA${NULLCHAR}LID")
     }
 
     fun checkLocalityAndOrganisationalUnitAndCommonNameReject(invalid: String) {
@@ -181,7 +181,7 @@ class CordaX500NameTest {
         }
     }
 
-    fun checkLocalityAndOrganisationalUnitAndCommonName(valid: String) {
+    fun validateLocalityAndOrganisationalUnitAndCommonName(valid: String) {
         CordaX500Name.parse("O=VALID, L=${valid}, C=DE, OU=VALID, CN=VALID")
         CordaX500Name.parse("O=VALID, L=VALID, C=DE, OU=${valid}, CN=VALID")
         CordaX500Name.parse("O=VALID, L=VALID, C=DE, OU=VALID, CN=${valid}")
