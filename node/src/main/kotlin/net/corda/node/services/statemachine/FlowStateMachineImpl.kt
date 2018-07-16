@@ -147,6 +147,19 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
     }
 
+    internal fun rollbackTransaction() {
+        val transaction = contextTransaction
+        try {
+            logger.trace { "Rolling back transaction $transaction on ${Strand.currentStrand()}." }
+            transaction.rollback()
+        } catch (e: SQLException) {
+            logger.error("Transaction rollback failed: ${e.message}", e)
+            System.exit(1)
+        } finally {
+            transaction.close()
+        }
+    }
+
     @Suspendable
     override fun initiateFlow(otherParty: Party, sessionFlow: FlowLogic<*>): FlowSession {
         val sessionKey = Pair(sessionFlow, otherParty)
