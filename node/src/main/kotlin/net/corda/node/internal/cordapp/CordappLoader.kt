@@ -20,6 +20,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.serialization.internal.DefaultWhitelist
 import org.apache.commons.collections4.map.LRUMap
+import java.io.File
 import java.lang.reflect.Modifier
 import java.net.JarURLConnection
 import java.net.URL
@@ -78,7 +79,19 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          * @param baseDir The directory that this node is running in. Will use this to resolve the cordapps directory
          *                  for classpath scanning.
          */
-        fun createDefault(baseDir: Path) = CordappLoader(getNodeCordappURLs(baseDir))
+//        fun createDefault(corDappDirectories: Iterable<Path>): CordappLoader {
+//
+//            logger.info("Looking for CorDapps in ${corDappDirectories.joinToString(File.pathSeparator, "[", "]")}")
+//            // TODO sollecitom distinct here
+//            return CordappLoader(corDappDirectories.flatMap(this::getNodeCordappURLs).toList())
+//        }
+
+        fun createDefault(corDappDirectories: Iterable<Path>): CordappLoader {
+
+            logger.info("Looking for CorDapps in ${corDappDirectories.distinct().joinToString(File.pathSeparator, "[", "]")}")
+            // TODO sollecitom distinct here should be at JAR level rather than Path level
+            return CordappLoader(corDappDirectories.distinct().flatMap(this::getNodeCordappURLs))
+        }
 
         // Cache for CordappLoaders to avoid costly classpath scanning
         private val cordappLoadersCache = Caffeine.newBuilder().softValues().build<List<RestrictedURL>, CordappLoader>()
@@ -100,12 +113,13 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          *
          * @param testPackages See [createWithTestPackages]
          */
+        // TODO sollecitom remove
         @VisibleForTesting
         fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>): CordappLoader {
             if (!configuration.devMode) {
                 logger.warn("Package scanning should only occur in dev mode!")
             }
-            val urls = getNodeCordappURLs(configuration.baseDirectory) + simplifyScanPackages(testPackages).flatMap(this::getPackageURLs)
+            val urls = configuration.cordappDirectories.distinct().flatMap(this::getNodeCordappURLs) + simplifyScanPackages(testPackages).flatMap(this::getPackageURLs)
             return cordappLoadersCache.asMap().computeIfAbsent(urls, ::CordappLoader)
         }
 
@@ -116,6 +130,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          * @param testPackages List of package names that contain CorDapp classes that can be automatically turned into
          * CorDapps.
          */
+        // TODO sollecitom remove
         @VisibleForTesting
         fun createWithTestPackages(testPackages: List<String>): CordappLoader {
             val urls = simplifyScanPackages(testPackages).flatMap(this::getPackageURLs)
@@ -127,6 +142,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          *
          * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection
          */
+        // TODO sollecitom remove
         @VisibleForTesting
         fun createDevMode(scanJars: List<URL>) = CordappLoader(scanJars.map { RestrictedURL(it, null) })
 
@@ -176,8 +192,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
             }
         }
 
-        private fun getNodeCordappURLs(baseDir: Path): List<RestrictedURL> {
-            val cordappsDir = baseDir / CORDAPPS_DIR_NAME
+        private fun getNodeCordappURLs(cordappsDir: Path): List<RestrictedURL> {
             return if (!cordappsDir.exists()) {
                 emptyList()
             } else {

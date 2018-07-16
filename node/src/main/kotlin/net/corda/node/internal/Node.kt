@@ -116,10 +116,11 @@ open class Node(configuration: NodeConfiguration,
         private val sameVmNodeCounter = AtomicInteger()
         const val scanPackagesSystemProperty = "net.corda.node.cordapp.scan.packages"
         const val scanPackagesSeparator = ","
+        // TODO sollecitom remove this scanPackagesSystemProperty
         private fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
             return System.getProperty(scanPackagesSystemProperty)?.let { scanPackages ->
                 CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator))
-            } ?: CordappLoader.createDefault(configuration.baseDirectory)
+            } ?: CordappLoader.createDefault(configuration.cordappDirectories)
         }
         // TODO: make this configurable.
         const val MAX_RPC_MESSAGE_SIZE = 10485760

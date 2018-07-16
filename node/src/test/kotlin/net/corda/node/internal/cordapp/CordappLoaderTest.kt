@@ -40,7 +40,7 @@ class CordappLoaderTest {
     @Test
     fun `test that classes that aren't in cordapps aren't loaded`() {
         // Basedir will not be a corda node directory so the dummy flow shouldn't be recognised as a part of a cordapp
-        val loader = CordappLoader.createDefault(Paths.get("."))
+        val loader = CordappLoader.createDefault(listOf(Paths.get(".")))
         assertThat(loader.cordapps).containsOnly(CordappLoader.coreCordapp)
     }
 
