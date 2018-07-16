@@ -3,6 +3,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
@@ -16,26 +17,22 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
-import org.junit.After
-import org.junit.Before
+import org.junit.AfterClass
 import org.junit.Test
 import java.io.ByteArrayOutputStream
+import java.util.*
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class AttachmentTests {
-    lateinit var mockNet: InternalMockNetwork
+    companion object {
+        val mockNet = InternalMockNetwork()
 
-    @Before
-    fun setUp() {
-        mockNet = InternalMockNetwork()
-    }
-
-    @After
-    fun cleanUp() {
-        mockNet.stopNodes()
+        @JvmStatic
+        @AfterClass
+        fun cleanUp() = mockNet.stopNodes()
     }
 
     private fun fakeAttachment(): ByteArray {
@@ -48,10 +45,14 @@ class AttachmentTests {
         return bs.toByteArray()
     }
 
+    private fun createAlice() = mockNet.createPartyNode(randomiseName(ALICE_NAME))
+    private fun createBob() = mockNet.createPartyNode(randomiseName(BOB_NAME))
+    private fun randomiseName(name: CordaX500Name) = name.copy(commonName = "${name.commonName}_${UUID.randomUUID()}")
+
     @Test
     fun `download and store`() {
-        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
-        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        val aliceNode = createAlice()
+        val bobNode = createBob()
         val alice = aliceNode.info.singleIdentity()
         aliceNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
@@ -82,8 +83,8 @@ class AttachmentTests {
 
     @Test
     fun missing() {
-        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
-        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        val aliceNode = createAlice()
+        val bobNode = createBob()
         aliceNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         // Get node one to fetch a non-existent attachment.
@@ -98,12 +99,12 @@ class AttachmentTests {
     @Test
     fun maliciousResponse() {
         // Make a node that doesn't do sanity checking at load time.
-        val aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME), nodeFactory = { args ->
+        val aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = randomiseName(ALICE_NAME)), nodeFactory = { args ->
             object : InternalMockNetwork.MockNode(args) {
                 override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
             }
         })
-        val bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
+        val bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = randomiseName(BOB_NAME)))
         val alice = aliceNode.info.singleIdentity()
         aliceNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         bobNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
