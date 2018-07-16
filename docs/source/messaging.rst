@@ -31,10 +31,10 @@ regular time interval for network map and applies any related changes locally.
 Nodes do not automatically deregister themselves, so (for example) nodes going offline briefly for maintenance are retained
 in the network map, and messages for them will be queued, minimising disruption.
 
-Additionally, on every restart and on daily basis nodes submit signed `NodeInfo`s to the map service. When network map gets
-signed, these changes are distributed as new network data. `NodeInfo` republishing is treated as a heartbeat from the node,
+Additionally, on every restart and on daily basis nodes submit signed ``NodeInfo`` s to the map service. When network map gets
+signed, these changes are distributed as new network data. ``NodeInfo`` republishing is treated as a heartbeat from the node,
 based on that network map service is able to figure out which nodes can be considered as stale and removed from the network
-map document after `eventHorizon` time.
+map document after ``eventHorizon`` time.
 
 Message queues
 --------------
@@ -61,10 +61,10 @@ for maintenance and other minor purposes.
    corresponding bridge is used to forward the message to an advertising peer's p2p queue. Once a peer is picked the
    session continues on as normal.
 
-:``rpc.requests``:
+:``rpc.server``:
    RPC clients send their requests here, and it's only open for sending by clients authenticated as RPC users.
 
-:``clients.$user.rpc.$random``:
+:``rpc.client.$user.$random``:
    RPC clients are given permission to create a temporary queue incorporating their username (``$user``) and sole
    permission to receive messages from it. RPC requests are required to include a random number (``$random``) from
    which the node is able to construct the queue the user is listening on and send the response to that. This mechanism
@@ -80,7 +80,7 @@ Clients attempting to connect to the node's broker fall in one of four groups:
    they are given full access to all valid queues, otherwise they are rejected.
 
 #. Anyone connecting with the username ``SystemUsers/Peer`` is treated as a peer on the same Corda network as the node. Their
-   TLS root CA must be the same as the node's root CA - the root CA is the doorman of the network and having the same root CA
+   TLS root CA must be the same as the node's root CA -- the root CA is the doorman of the network and having the same root CA
    implies we've been let in by the same doorman. If they are part of the same network then they are only given permission
    to send to our ``p2p.inbound.$identity`` queue, otherwise they are rejected.
 
@@ -98,20 +98,19 @@ this to determine what permissions the user has.
 The broker also does host verification when connecting to another peer. It checks that the TLS certificate subject matches
 with the advertised X.500 legal name from the network map service.
 
-
 Implementation details
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 The components of the system that need to communicate and authenticate each other are:
-   - The Artemis P2P broker (Currently runs inside the Nodes JVM process, but in the future it will be able to run as a separate server)
-      * opens Acceptor configured with the doorman's certificate in the truststore and the node's ssl certificate in the keystore
-   - The Artemis RPC broker (Currently runs inside the Nodes JVM process, but in the future it will be able to run as a separate server)
-      * opens "Admin" Acceptor configured with the doorman's certificate in the truststore and the node's ssl certificate in the keystore
-      * opens "Client" Acceptor with the ssl settings configurable. This acceptor does not require ssl client-auth.
-   - The current node hosting the brokers
-      * connects to the P2P broker using the ``SystemUsers/Node`` user and the node's keystore and trustore
-      * connects to the "Admin" Acceptor of the RPC broker using the ``SystemUsers/NodeRPC`` user and the node's keystore and trustore
-   - RPC clients ( Third party applications that need to communicate with the Node. )
-      * connect to the "Client" Acceptor of the RPC broker using the username/password provided by the node's admin. The client verifies the node's certificate using a truststore provided by the node's admin.
-   - Peer nodes (Other nodes on the network)
-      * connect to the P2P broker using the ``SystemUsers/Peer`` user and a doorman signed certificate. The authentication is performed based on the root CA.
+   - The Artemis P2P broker (currently runs inside the node's JVM process, but in the future it will be able to run as a separate server):
+      * Opens Acceptor configured with the doorman's certificate in the trustStore and the node's SSL certificate in the keyStore.
+   - The Artemis RPC broker (currently runs inside the node's JVM process, but in the future it will be able to run as a separate server):
+      * Opens "Admin" Acceptor configured with the doorman's certificate in the trustStore and the node's SSL certificate in the keyStore.
+      * Opens "Client" Acceptor with the SSL settings configurable. This acceptor does not require SSL client-auth.
+   - The current node hosting the brokers:
+      * Connects to the P2P broker using the ``SystemUsers/Node`` user and the node's keyStore and trustStore.
+      * Connects to the "Admin" Acceptor of the RPC broker using the ``SystemUsers/NodeRPC`` user and the node's keyStore and trustStore.
+   - RPC clients (third party applications that need to communicate with the node):
+      * Connect to the "Client" Acceptor of the RPC broker using the username/password provided by the node's admin. The client verifies the node's certificate using a trustStore provided by the node's admin.
+   - Peer nodes (other nodes on the network):
+      * Connect to the P2P broker using the ``SystemUsers/Peer`` user and a doorman signed certificate. The authentication is performed based on the root CA.
