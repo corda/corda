@@ -43,7 +43,7 @@ You will need to update the ``corda_release_version`` identifier in your project
 Database schema changes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-* Database upgrade - the table name has been corrected to ``NODE_ATTACHMENTS_CONTRACTS``.
+* Database upgrade - a typo has been corrected in the ``NODE_ATTACHMENTS_CONTRACTS`` table name.
 When upgrading from version 3.1, run the following command:
 
 .. sourcecode:: sql
@@ -58,7 +58,8 @@ When upgrading from version 3.0, run the following command:
 
 Schema name is optional, run SQL when the node is not running.
 
-Corda node will fail on startup if the correct table name is not present.
+  .. note::
+     Corda node will fail on startup if the correct table name is not present.
 
 * Postgres database upgrade - Change the type of the ``checkpoint_value`` column to ``bytea``.
 This will address the issue that the `vacuum` function is unable to clean up deleted checkpoints as they are still referenced from the ``pg_shdepend`` table.
