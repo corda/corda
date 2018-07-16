@@ -200,6 +200,8 @@ interface TestCorDapp {
 
     val classes: Set<Class<*>>
 
+    val resources: Set<URL>
+
     fun packageAsJarInDirectory(parentDirectory: Path)
 
     fun packageAsJarWithPath(jarFilePath: Path)
@@ -207,13 +209,11 @@ interface TestCorDapp {
     companion object {
 
         // TODO sollecitom change this for apparently it doesn't play well with usage from Java...
-        fun builder(name: String, version: String, vendor: String = "R3", title: String = name, classes: Set<Class<*>> = emptySet(), willClassBeAddedBeToCorDapp: (TestCorDapp.JarEntryInfo) -> Boolean = TestCordappBuilder.Companion::filterTestCorDappClass): TestCorDapp.Builder {
+        fun builder(name: String, version: String, vendor: String = "R3", title: String = name, classes: Set<Class<*>> = emptySet(), willResourceBeAddedBeToCorDapp: (fullyQualifiedName: String, url: URL) -> Boolean = TestCordappBuilder.Companion::filterTestCorDappClass): TestCorDapp.Builder {
 
-            return TestCordappBuilder(name, version, vendor, title, classes, willClassBeAddedBeToCorDapp)
+            return TestCordappBuilder(name, version, vendor, title, classes, willResourceBeAddedBeToCorDapp)
         }
     }
-
-    data class JarEntryInfo(val fullyQualifiedName: String, val url: URL)
 
     interface Builder : TestCorDapp {
 

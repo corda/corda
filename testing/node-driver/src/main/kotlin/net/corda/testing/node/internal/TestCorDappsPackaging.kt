@@ -2,7 +2,6 @@ package net.corda.testing.node.internal
 
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import net.corda.core.internal.*
-import net.corda.testing.driver.TestCorDapp
 import java.io.File
 import java.io.OutputStream
 import java.net.URI
@@ -19,11 +18,11 @@ import java.util.zip.ZipOutputStream
 // TODO sollecitom, perhaps create a TestCorDappPackager class, rather than extension functions
 
 // TODO sollecitom
-fun Iterable<Class<*>>.packageToCorDapp(path: Path, name: String, version: String, vendor: String, title: String = name, willClassBeAddedBeToCorDapp: (TestCorDapp.JarEntryInfo) -> Boolean = { true }) {
+internal fun Iterable<TestCordappBuilder.JarEntryInfo>.packageToCorDapp(path: Path, name: String, version: String, vendor: String, title: String = name, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean = { _, _ -> true }) {
 
     var hasContent = false
     try {
-        hasContent = packageToCorDapp(path.outputStream(), name, version, vendor, title, willClassBeAddedBeToCorDapp)
+        hasContent = packageToCorDapp(path.outputStream(), name, version, vendor, title, willResourceBeAddedBeToCorDapp)
     } finally {
         if (!hasContent) {
             path.deleteIfExists()
@@ -32,10 +31,10 @@ fun Iterable<Class<*>>.packageToCorDapp(path: Path, name: String, version: Strin
 }
 
 // TODO sollecitom - try and remove this ClassLoader argument (it's only used to figure out the out folder)
-fun Iterable<Class<*>>.packageToCorDapp(outputStream: OutputStream, name: String, version: String, vendor: String, title: String = name, willClassBeAddedBeToCorDapp: (TestCorDapp.JarEntryInfo) -> Boolean = { true }): Boolean {
+internal fun Iterable<TestCordappBuilder.JarEntryInfo>.packageToCorDapp(outputStream: OutputStream, name: String, version: String, vendor: String, title: String = name, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean = { _, _ -> true }): Boolean {
 
     val manifest = createTestManifest(name, title, version, vendor)
-    return JarOutputStream(outputStream, manifest).use { jos -> zip(jos, willClassBeAddedBeToCorDapp) }
+    return JarOutputStream(outputStream, manifest).use { jos -> zip(jos, willResourceBeAddedBeToCorDapp) }
 }
 
 // TODO sollecitom
@@ -55,13 +54,9 @@ fun allClassesForPackage(targetPackage: String): Set<Class<*>> {
 fun String.packageToPath() = replace(".", File.separator)
 
 // TODO sollecitom
-private fun Iterable<Class<*>>.zip(outputStream: ZipOutputStream, willClassBeAddedBeToCorDapp: (TestCorDapp.JarEntryInfo) -> Boolean): Boolean {
+private fun Iterable<TestCordappBuilder.JarEntryInfo>.zip(outputStream: ZipOutputStream, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean): Boolean {
 
-    val illegal = filter { it.protectionDomain?.codeSource?.location == null }
-    if (illegal.isNotEmpty()) {
-        throw IllegalArgumentException("Some classes do not have a location, typically because they are part of Java or Kotlin. Offending types were: ${illegal.joinToString(", ", "[", "]") { it.simpleName }}")
-    }
-    val entries = map(Class<*>::jarInfo).filter(willClassBeAddedBeToCorDapp)
+    val entries = filter { (fullyQualifiedName, url) -> willResourceBeAddedBeToCorDapp(fullyQualifiedName, url) }
     if (entries.isNotEmpty()) {
         zip(outputStream, entries)
     }
@@ -69,7 +64,7 @@ private fun Iterable<Class<*>>.zip(outputStream: ZipOutputStream, willClassBeAdd
 }
 
 // TODO sollecitom
-private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<TestCorDapp.JarEntryInfo>) {
+private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<TestCordappBuilder.JarEntryInfo>) {
 
     val time = FileTime.from(Instant.now())
     allInfo.distinctBy { it.url }.forEach { info ->
@@ -86,14 +81,15 @@ private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<TestCorDapp.Jar
 }
 
 // TODO sollecitom
-private fun Class<*>.jarInfo(): TestCorDapp.JarEntryInfo {
+internal fun Class<*>.jarEntryInfo(): TestCordappBuilder.JarEntryInfo {
 
-    return TestCorDapp.JarEntryInfo(name, classFileURL())
+    return TestCordappBuilder.JarEntryInfo.ClassJarEntryInfo(this)
 }
 
 // TODO sollecitom
-private fun Class<*>.classFileURL(): URL {
+fun Class<*>.classFileURL(): URL {
 
+    require(protectionDomain?.codeSource?.location != null) { "Invalid class $name for test CorDapp. Classes without protection domain cannot be referenced. This typically happens for Java / Kotlin types." }
     // TODO sollecitom refactor the whitespace fix not to hardcode strings
     return URI.create("${protectionDomain.codeSource.location}/${name.packageToPath()}.class".replace(" ", "%20")).toURL()
 }
