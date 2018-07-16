@@ -633,6 +633,20 @@ class DriverDSLImpl(
         }
     }
 
+    private val sharedCorDappsDirectory: Path by lazy {
+
+        // TODO sollecitom take care of the cordapps' config files as well
+        val corDappsDirectory = driverDirectory / "sharedCordapps"
+        log.info("Writing test CorDapps for all nodes in $corDappsDirectory.")
+        val cordappsForAllNodes = cordappsForAllNodes()
+        if (corDappsDirectory.exists()) {
+            corDappsDirectory.toFile().deleteRecursively()
+        }
+        corDappsDirectory.toFile().mkdirs()
+        cordappsForAllNodes.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(corDappsDirectory) }
+        corDappsDirectory
+    }
+
     private fun startNodeInternal(config: NodeConfig,
                                   webAddress: NetworkHostAndPort,
                                   startInProcess: Boolean?,
@@ -677,10 +691,16 @@ class DriverDSLImpl(
             }
             return nodeFuture
         } else {
+            // TODO sollecitom refactor how this NodeConfig is passed and generated
+            val existingCorDappDirectoriesOption = if (config.typesafe.hasPath("cordappDirectories")) config.typesafe.getStringList("cordappDirectories") else emptyList()
+            // TODO sollecitom add individual folder for the node
+            val cordappDirectories = existingCorDappDirectoriesOption + sharedCorDappsDirectory.toString()
+            val specificConfig = NodeConfig(config.typesafe.withValue("cordappDirectories", ConfigValueFactory.fromIterable(cordappDirectories)))
+
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
             // TODO sollecitom change here to pass shared + individual CorDapp directories as config
-            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappsForAllNodes(), maximumHeapSize)
+            val process = startOutOfProcessNode(specificConfig, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappsForAllNodes(), maximumHeapSize)
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
             // true because we don't want orphaned processes in the case that the parent process is terminated by the
@@ -820,7 +840,7 @@ class DriverDSLImpl(
                 monitorPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
                 // TODO sollecitom this is wrong, should only contains extra cordapps for this specific node - fix it
-                testCordapps: Set<TestCorDapp>,
+                additionalCordapps: Set<TestCorDapp>,
                 maximumHeapSize: String,
                 vararg extraCmdLineFlag: String
         ): Process {
@@ -838,18 +858,16 @@ class DriverDSLImpl(
 
             systemProperties += inheritFromParentProcess()
 
-            if (testCordapps.isNotEmpty()) {
-                // TODO sollecitom check why we don't have configurable cordapps folder
-                val outputDir = config.corda.baseDirectory / "cordapps"
-                // TODO sollecitom improve
-                if (outputDir.exists()) {
-                    outputDir.toFile().deleteRecursively()
-                }
-                outputDir.toFile().mkdirs()
-                testCordapps.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(outputDir) }
-                // TODO sollecitom remove this and use the test cordapps instead
-//                systemProperties += Node.scanPackagesSystemProperty to cordappPackages.joinToString(Node.scanPackagesSeparator)
-            }
+//            if (testCordapps.isNotEmpty()) {
+//                // TODO sollecitom check why we don't have configurable cordapps folder
+//                val outputDir = config.corda.baseDirectory / "cordapps"
+//                // TODO sollecitom improve
+//                if (outputDir.exists()) {
+//                    outputDir.toFile().deleteRecursively()
+//                }
+//                outputDir.toFile().mkdirs()
+//                testCordapps.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(outputDir) }
+//            }
 
             systemProperties += overriddenSystemProperties
 
