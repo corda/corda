@@ -3,6 +3,7 @@ package net.corda.node.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
@@ -56,11 +57,11 @@ class AsymmetricCorDappsTests {
     @Test
     fun sharedCorDappsWithAsymmetricSpecificClasses() {
 
-        val cordapp = TestCorDapp.builder("Szymon CorDapp", "1.0", classes = setOf(Ping::class.java))
-        driver(DriverParameters(startNodesInProcess = false, corDappsForAllNodes = setOf(cordapp))) {
+        val sharedCordapp = TestCorDapp.builder("shared", "1.0", classes = setOf(Ping::class.java))
+        val cordappForNodeB = TestCorDapp.builder("nodeB_only", "1.0", classes = setOf(Pong::class.java))
+        driver(DriverParameters(startNodesInProcess = false, corDappsForAllNodes = setOf(sharedCordapp))) {
 
-            val nodeA = startNode().getOrThrow()
-            val nodeB = startNode(additionalCorDapps = setOf(TestCorDapp.builder("Szymon CorDapp", "1.0", classes = setOf(Pong::class.java)))).getOrThrow()
+            val (nodeA, nodeB) = listOf(startNode(), startNode(additionalCorDapps = setOf(cordappForNodeB))).transpose().getOrThrow()
             nodeA.rpc.startFlow(::Ping, nodeB.nodeInfo.singleIdentity(), 1).returnValue.getOrThrow()
         }
     }
