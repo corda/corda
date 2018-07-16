@@ -99,7 +99,7 @@ class DriverDSLImpl(
         val notaryCustomOverrides: Map<String, Any?>,
         val inMemoryDB: Boolean,
         // TODO sollecitom change this after removing `cordappPackages`; maybe this can be static rather than dynamic
-        val cordappsForAllNodes: (() -> Set<TestCorDapp>)? = { defaultTestCorDappsForAllNodes(getCallerPackage()?.let { extraCordappPackagesToScan + it }?.toSet() ?: extraCordappPackagesToScan.toSet()) }
+        val cordappsForAllNodes: (() -> Set<TestCorDapp>) = { defaultTestCorDappsForAllNodes(getCallerPackage()?.let { extraCordappPackagesToScan + it }?.toSet() ?: extraCordappPackagesToScan.toSet()) }
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -679,7 +679,8 @@ class DriverDSLImpl(
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
-            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, defaultTestCorDappsForAllNodes(cordappPackages.toSet()), maximumHeapSize)
+            // TODO sollecitom change here to pass shared + individual CorDapp directories as config
+            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappsForAllNodes(), maximumHeapSize)
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
             // true because we don't want orphaned processes in the case that the parent process is terminated by the
