@@ -5,7 +5,6 @@ import net.corda.cordform.CordformNode
 import net.corda.core.internal.deleteRecursively
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.internal.internalDriver
 
@@ -57,7 +56,7 @@ class CordformNodeRunner(private val cordformDefinition: CordformDefinition) {
                 .mapNotNull { address -> address?.let { NetworkHostAndPort.parse(it).port } }
                 .max()!!
         internalDriver(
-                jmxPolicy = JmxPolicy(true),
+                startJmxHttpServer = true,
                 driverDirectory = cordformDefinition.nodesDirectory,
                 extraCordappPackagesToScan = extraPackagesToScan,
                 // Notaries are manually specified in Cordform so we don't want the driver automatically starting any

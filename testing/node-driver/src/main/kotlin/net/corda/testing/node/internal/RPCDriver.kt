@@ -27,6 +27,8 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.testDebugPortAllocation
+import net.corda.testing.driver.internal.testPortAllocation
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -95,16 +97,11 @@ data class RpcServerHandle(
 val rpcTestUser = User("user1", "test", permissions = emptySet())
 val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality = "Nowhere", country = "GB")
 
-// Use a global pool so that we can run RPC tests in parallel
-private val globalPortAllocation = PortAllocation.Incremental(10000)
-private val globalDebugPortAllocation = PortAllocation.Incremental(5005)
-private val globalMonitorPortAllocation = PortAllocation.Incremental(7005)
-
 fun <A> rpcDriver(
         isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-        portAllocation: PortAllocation = globalPortAllocation,
-        debugPortAllocation: PortAllocation = globalDebugPortAllocation,
+        portAllocation: PortAllocation = testPortAllocation(),
+        debugPortAllocation: PortAllocation = testDebugPortAllocation(),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         startNodesInProcess: Boolean = false,

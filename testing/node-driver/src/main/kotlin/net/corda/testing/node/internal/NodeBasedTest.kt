@@ -16,7 +16,7 @@ import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.testPortAllocation
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.User
 import org.apache.logging.log4j.Level
@@ -45,7 +45,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     private lateinit var defaultNetworkParameters: NetworkParametersCopier
     private val nodes = mutableListOf<StartedNode<Node>>()
     private val nodeInfos = mutableListOf<NodeInfo>()
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = testPortAllocation()
 
     init {
         System.setProperty("consoleLogLevel", Level.DEBUG.name().toLowerCase())

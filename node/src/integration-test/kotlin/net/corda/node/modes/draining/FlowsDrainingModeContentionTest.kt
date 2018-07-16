@@ -1,10 +1,8 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.testMessage.MESSAGE_CONTRACT_PROGRAM_ID
-import net.corda.testMessage.Message
-import net.corda.testMessage.MessageContract
-import net.corda.testMessage.MessageState
+import net.corda.RpcInfo
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.flows.*
@@ -15,14 +13,15 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.RpcInfo
-import net.corda.client.rpc.CordaRPCClient
 import net.corda.node.services.Permissions.Companion.all
+import net.corda.testMessage.MESSAGE_CONTRACT_PROGRAM_ID
+import net.corda.testMessage.Message
+import net.corda.testMessage.MessageContract
+import net.corda.testMessage.MessageState
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
@@ -33,8 +32,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
 class FlowsDrainingModeContentionTest {
-
-    private val portAllocation = PortAllocation.Incremental(10000)
     private val user = User("mark", "dadada", setOf(all()))
     private val users = listOf(user)
 
@@ -53,7 +50,7 @@ class FlowsDrainingModeContentionTest {
     @Test
     fun `draining mode does not deadlock with acks between 2 nodes`() {
         val message = "Ground control to Major Tom"
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
+        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
 

@@ -17,7 +17,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.testPortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.SharedCompatibilityZoneParams
@@ -56,7 +56,7 @@ class NodeRegistrationTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
-    private val portAllocation = PortAllocation.Incremental(13000)
+    private val portAllocation = testPortAllocation()
     private val registrationHandler = RegistrationHandler(DEV_ROOT_CA)
     private lateinit var server: NetworkMapServer
     private lateinit var serverHostAndPort: NetworkHostAndPort

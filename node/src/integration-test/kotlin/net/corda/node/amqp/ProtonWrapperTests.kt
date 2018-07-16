@@ -26,7 +26,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.testPortAllocation
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -47,7 +47,7 @@ class ProtonWrapperTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = testPortAllocation()
     private val serverPort = portAllocation.nextPort()
     private val serverPort2 = portAllocation.nextPort()
     private val artemisPort = portAllocation.nextPort()

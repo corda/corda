@@ -14,7 +14,6 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
@@ -29,8 +28,6 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.fail
 
 class P2PFlowsDrainingModeTest {
-
-    private val portAllocation = PortAllocation.Incremental(10000)
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val users = listOf(user)
 
@@ -52,7 +49,7 @@ class P2PFlowsDrainingModeTest {
 
     @Test
     fun `flows draining mode suspends consumption of initial session messages`() {
-        driver(DriverParameters(startNodesInProcess = false, portAllocation = portAllocation, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = false, notarySpecs = emptyList())) {
             val initiatedNode = startNode(providedName = ALICE_NAME).getOrThrow()
             val initiating = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow().rpc
             val counterParty = initiatedNode.nodeInfo.singleIdentity()
@@ -82,7 +79,7 @@ class P2PFlowsDrainingModeTest {
 
     @Test
     fun `clean shutdown by draining`() {
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
             var successful = false
