@@ -72,8 +72,8 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
 
     override fun writeClassInfo(output: SerializationOutput) = ifThrowsAppend({ declaredType.typeName }) {
         if (output.writeTypeNotations(typeNotation)) {
-            output.requireSerializer(declaredType.actualTypeArguments[0])
-            output.requireSerializer(declaredType.actualTypeArguments[1])
+            output.requireSerializer(resolveTypeVariables(declaredType.actualTypeArguments[0], null))
+            output.requireSerializer(resolveTypeVariables(declaredType.actualTypeArguments[1], null))
         }
     }
 
@@ -91,8 +91,8 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
             data.putMap()
             data.enter()
             for ((key, value) in obj as Map<*, *>) {
-                output.writeObjectOrNull(key, data, declaredType.actualTypeArguments[0], context, debugIndent)
-                output.writeObjectOrNull(value, data, declaredType.actualTypeArguments[1], context, debugIndent)
+                output.writeObjectOrNull(key, data, resolveTypeVariables(declaredType.actualTypeArguments[0], null), context, debugIndent)
+                output.writeObjectOrNull(value, data, resolveTypeVariables(declaredType.actualTypeArguments[1], null), context, debugIndent)
             }
             data.exit() // exit map
         }

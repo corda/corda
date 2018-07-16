@@ -65,7 +65,7 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
 
     override fun writeClassInfo(output: SerializationOutput) = ifThrowsAppend({ declaredType.typeName }) {
         if (output.writeTypeNotations(typeNotation)) {
-            output.requireSerializer(declaredType.actualTypeArguments[0])
+            output.requireSerializer(resolveTypeVariables(declaredType.actualTypeArguments[0], null))
         }
     }
 
@@ -80,7 +80,7 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
         data.withDescribed(typeNotation.descriptor) {
             withList {
                 for (entry in obj as Collection<*>) {
-                    output.writeObjectOrNull(entry, this, declaredType.actualTypeArguments[0], context, debugIndent)
+                    output.writeObjectOrNull(entry, this, resolveTypeVariables(declaredType.actualTypeArguments[0], null), context, debugIndent)
                 }
             }
         }
