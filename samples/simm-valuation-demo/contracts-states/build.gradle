@@ -2,7 +2,6 @@ apply plugin: 'net.corda.plugins.cordapp'
 
 def javaHome = System.getProperty('java.home')
 def shrinkJar = file("$buildDir/libs/${project.name}-${project.version}-tiny.jar")
-def strata_version = project(':samples:simm-valuation-demo').strata_version
 
 cordapp {
     info {
