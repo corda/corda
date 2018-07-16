@@ -310,6 +310,7 @@ class DriverDSLImpl(
         NON_VALIDATING_BFT(false, CordaX500Name("BFT", "Zurich", "CH"))
     }
 
+    // TODO sollecitom remove this or at least remove startCordformNode
     internal fun startCordformNodes(cordforms: List<CordformNode>): CordaFuture<*> {
         check(notarySpecs.isEmpty()) { "Specify notaries in the CordformDefinition" }
         check(compatibilityZone == null) { "Cordform nodes cannot be run with compatibilityZoneURL" }
@@ -367,6 +368,7 @@ class DriverDSLImpl(
         }.transpose()
     }
 
+    // TODO sollecitom remove this
     private fun startCordformNode(cordform: CordformNode, localNetworkMap: LocalNetworkMap): CordaFuture<NodeHandle> {
         val name = CordaX500Name.parse(cordform.name)
         // TODO We shouldn't have to allocate an RPC or web address if they're not specified. We're having to do this because of startNodeInternal
