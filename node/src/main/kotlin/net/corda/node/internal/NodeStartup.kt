@@ -17,7 +17,7 @@ import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.internal.persistence.IncompatibleAttachmentsContractsTableName
+import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -114,7 +114,7 @@ open class NodeStartup(val args: Array<String>) {
         try {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
-        } catch (e: IncompatibleAttachmentsContractsTableName) {
+        } catch (e: DatabaseIncompatibleException) {
             e.message?.let { Node.printWarning(it) }
             logger.error(e.message)
             return false
