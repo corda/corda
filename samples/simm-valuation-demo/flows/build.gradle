@@ -11,7 +11,6 @@ cordapp {
 
 dependencies {
     cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    cordaCompile "org.slf4j:slf4j-api:$slf4j_version"
 
     // The SIMM demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance')
@@ -24,26 +23,12 @@ dependencies {
     // Specify your cordapp's dependencies below, including dependent cordapps
     compile "com.opengamma.strata:strata-basics:$strata_version"
     compile "com.opengamma.strata:strata-product:$strata_version"
-    compile("com.opengamma.strata:strata-data:$strata_version") {
-        exclude group: 'org.slf4j', module: 'slf4j-api'
-    }
-    compile("com.opengamma.strata:strata-calc:$strata_version") {
-        exclude group: 'org.slf4j', module: 'slf4j-api'
-    }
-    compile("com.opengamma.strata:strata-pricer:$strata_version") {
-        exclude group: 'org.slf4j', module: 'slf4j-api'
-    }
-    compile("com.opengamma.strata:strata-report:$strata_version") {
-        exclude group: 'org.slf4j', module: 'slf4j-api'
-    }
-    compile("com.opengamma.strata:strata-market:$strata_version") {
-        exclude group: 'org.slf4j', module: 'slf4j-api'
-    }
-    compile("com.opengamma.strata:strata-collect:$strata_version")
-    compile("com.opengamma.strata:strata-loader:$strata_version") {
-        exclude group: 'org.slf4j', module: 'slf4j-api'
-    }
-    compile("com.opengamma.strata:strata-math:$strata_version") {
-        exclude group: 'org.slf4j', module: 'slf4j-api'
-    }
+    compile "com.opengamma.strata:strata-data:$strata_version"
+    compile "com.opengamma.strata:strata-calc:$strata_version"
+    compile "com.opengamma.strata:strata-pricer:$strata_version"
+    compile "com.opengamma.strata:strata-report:$strata_version"
+    compile "com.opengamma.strata:strata-market:$strata_version"
+    compile "com.opengamma.strata:strata-collect:$strata_version"
+    compile "com.opengamma.strata:strata-loader:$strata_version"
+    compile "com.opengamma.strata:strata-math:$strata_version"
 }
