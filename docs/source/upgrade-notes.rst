@@ -31,17 +31,34 @@ We also strongly recommend cross referencing with the :doc:`changelog` to confir
 v3.1 to v3.2
 ------------
 
+Gradle Plugin Version
+^^^^^^^^^^^^^^^^^^^^^
+
 You will need to update the ``corda_release_version`` identifier in your project gradle file.
 
 .. sourcecode:: shell
 
   ext.corda_release_version = '3.2-corda'
 
-
 Database schema changes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Postgres database upgrade - Change the type of the ``checkpoint_value`` column to ``bytea``.
+* Database upgrade - a typo has been corrected in the ``NODE_ATTACHMENTS_CONTRACTS`` table name.
+When upgrading from version 3.1, run the following command:
+
+.. sourcecode:: sql
+
+   ALTER TABLE [schema].NODE_ATTCHMENTS_CONTRACTS RENAME TO NODE_ATTACHMENTS_CONTRACTS;
+
+When upgrading from version 3.0, run the following command:
+
+.. sourcecode:: sql
+
+   ALTER TABLE [schema].NODE_ATTACHMENTS_CONTRACT_CLASS_NAME RENAME TO NODE_ATTACHMENTS_CONTRACTS;
+
+Schema name is optional, run SQL when the node is not running.
+
+* Postgres database upgrade - Change the type of the ``checkpoint_value`` column to ``bytea``.
 This will address the issue that the `vacuum` function is unable to clean up deleted checkpoints as they are still referenced from the ``pg_shdepend`` table.
 
   .. sourcecode:: sql
@@ -51,28 +68,8 @@ This will address the issue that the `vacuum` function is unable to clean up del
   .. note::
     This change will also need to be run when migrating from version 3.0.
 
-v3.0 to v3.2
-------------
-
-You will need to update the ``corda_release_version`` identifier in your project gradle file.
-
-.. sourcecode:: shell
-
-  ext.corda_release_version = '3.2-corda'
-
-Database schema changes
-^^^^^^^^^^^^^^^^^^^^^^^
-
-H2 database upgrade - the ``NODE_ATTACHMENTS_CONTRACT_CLASS_NAME`` table name was changed, for each database instance and schema run the following SQL statement:
-
-  .. sourcecode:: sql
-
-     ALTER TABLE [schema].NODE_ATTACHMENTS_CONTRACT_CLASS_NAME RENAME TO NODE_ATTCHMENTS_CONTRACTS;
-
-Schema is optional, run SQL when the node is not running.
-
-Note: the table was changed in version ``3.1`` but not mentioned in ``3.1`` Upgrade Notes.
-
+.. note::
+   The Corda node will fail on startup if the database was not updated with the above commands.
 
 v3.0 to v3.1
 ------------
