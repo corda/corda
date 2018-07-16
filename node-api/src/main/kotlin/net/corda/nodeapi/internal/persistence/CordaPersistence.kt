@@ -248,16 +248,6 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence?
     }
 }
 
-/** Check if any nested cause is of [SQLException] type. */
-private fun Throwable.hasSQLExceptionCause(): Boolean =
-        when (cause) {
-            null -> false
-            is SQLException -> true
-            else -> cause?.hasSQLExceptionCause() ?: false
-        }
-
-class CouldNotCreateDataSourceException(override val message: String?, override val cause: Throwable? = null) : Exception()
-
 class IncompatibleAttachmentsContractsTableName(override val message: String?, override val cause: Throwable? = null) : Exception()
 
 private fun checkCorrectAttachmentsContractsTableName(connection: Connection) {
