@@ -14,6 +14,7 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.toFuture
@@ -157,7 +158,7 @@ class ProtonWrapperTests {
         val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
         trustMgrFactory.init(trustStore)
         val trustManagers = trustMgrFactory.trustManagers
-        context.init(keyManagers, trustManagers, SecureRandom())
+        context.init(keyManagers, trustManagers, newSecureRandom())
 
         val serverSocketFactory = context.serverSocketFactory
 

@@ -33,6 +33,7 @@ import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
 import java.util.*
+import javax.security.auth.x500.X500Principal
 
 val Int.MB: Long get() = this * 1024L * 1024L
 
@@ -78,7 +79,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
     val extraNetworkMapKeys: List<UUID>
     val tlsCertCrlDistPoint: URL?
-    val tlsCertCrlIssuer: String?
+    val tlsCertCrlIssuer: X500Principal?
     val effectiveH2Settings: NodeH2Settings?
     val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
     val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
@@ -222,7 +223,7 @@ data class NodeConfigurationImpl(
         override val compatibilityZoneURL: URL? = null,
         override var networkServices: NetworkServicesConfig? = null,
         override val tlsCertCrlDistPoint: URL? = null,
-        override val tlsCertCrlIssuer: String? = null,
+        override val tlsCertCrlIssuer: X500Principal? = null,
         override val rpcUsers: List<User>,
         override val security: SecurityConfiguration? = null,
         override val verifierType: VerifierType,
@@ -295,11 +296,6 @@ data class NodeConfigurationImpl(
         if (tlsCertCrlIssuer != null) {
             if (tlsCertCrlDistPoint == null) {
                 errors += "tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL"
-            }
-            try {
-                X500Name(tlsCertCrlIssuer)
-            } catch (e: Exception) {
-                errors += "Error when parsing tlsCertCrlIssuer: ${e.message}"
             }
         }
         if (!crlCheckSoftFail && tlsCertCrlDistPoint == null) {

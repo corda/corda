@@ -40,7 +40,7 @@ fun loadOrCreateKeyStore(keyStoreFilePath: Path, storePassword: String): KeyStor
         keyStoreFilePath.read { keyStore.load(it, pass) }
     } else {
         keyStore.load(null, pass)
-        keyStoreFilePath.parent.createDirectories()
+        keyStoreFilePath.toAbsolutePath().parent?.createDirectories()
         keyStoreFilePath.write { keyStore.store(it, pass) }
     }
     return keyStore

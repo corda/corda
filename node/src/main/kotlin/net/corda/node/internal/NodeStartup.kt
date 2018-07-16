@@ -45,6 +45,7 @@ import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.DatabaseMigrationException
 import net.corda.nodeapi.internal.persistence.oracleJdbcDriverSerialFilter
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
+import net.corda.nodeapi.internal.persistence.IncompatibleAttachmentsContractsTableName
 import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -176,6 +177,10 @@ open class NodeStartup(val args: Array<String>) {
             logger.error(e.message)
             return false
         } catch (e: NetworkParametersReader.Error) {
+            logger.error(e.message)
+            return false
+        } catch (e: IncompatibleAttachmentsContractsTableName) {
+            e.message?.let { Node.printWarning(it) }
             logger.error(e.message)
             return false
         } catch (e: Exception) {

@@ -10,6 +10,8 @@
 
 package net.corda.bank.api
 
+import net.corda.bank.BOC_RPC_PWD
+import net.corda.bank.BOC_RPC_USER
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.startFlow
@@ -41,7 +43,7 @@ object BankOfCordaClientApi {
     fun requestRPCIssue(rpcAddress: NetworkHostAndPort, params: IssueRequestParams): SignedTransaction {
         val client = CordaRPCClient(rpcAddress)
         // TODO: privileged security controls required
-        client.start("bankUser", "test").use { connection ->
+        client.start(BOC_RPC_USER, BOC_RPC_PWD).use { connection ->
             val rpc = connection.proxy
             rpc.waitUntilNetworkReady().getOrThrow()
 
