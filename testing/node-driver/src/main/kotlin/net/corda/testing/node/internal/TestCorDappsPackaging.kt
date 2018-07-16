@@ -34,19 +34,18 @@ internal fun Iterable<JarEntryInfo>.packageToCorDapp(outputStream: OutputStream,
     return JarOutputStream(outputStream, manifest).use { jos -> zip(jos, willResourceBeAddedBeToCorDapp) }
 }
 
-fun Package.allClasses(): Set<Class<*>> {
+internal fun Class<*>.jarEntryInfo(): JarEntryInfo {
 
-    return allClassesForPackage(name)
+    return JarEntryInfo.ClassJarEntryInfo(this)
 }
 
-// TODO sollecitom create new function to find all resources
 fun allClassesForPackage(targetPackage: String): Set<Class<*>> {
 
     val scanResult = FastClasspathScanner(targetPackage).scan()
     return scanResult.namesOfAllClasses.filter { it.startsWith(targetPackage) }.map(scanResult::classNameToClassRef).toSet()
 }
 
-fun String.packageToPath() = replace(".", File.separator)
+private fun String.packageToPath() = replace(".", File.separator)
 
 private fun Iterable<JarEntryInfo>.zip(outputStream: ZipOutputStream, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean): Boolean {
 
@@ -73,18 +72,6 @@ private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<JarEntryInfo>) 
     }
 }
 
-internal fun Class<*>.jarEntryInfo(): JarEntryInfo {
-
-    return JarEntryInfo.ClassJarEntryInfo(this)
-}
-
-fun Class<*>.classFileURL(): URL {
-
-    require(protectionDomain?.codeSource?.location != null) { "Invalid class $name for test CorDapp. Classes without protection domain cannot be referenced. This typically happens for Java / Kotlin types." }
-    // TODO sollecitom refactor the whitespace fix not to hardcode strings
-    return URI.create("${protectionDomain.codeSource.location}/${name.packageToPath()}.class".replace(" ", "%20")).toURL()
-}
-
 internal sealed class JarEntryInfo(val fullyQualifiedName: String, val url: URL) {
 
     class ClassJarEntryInfo(val clazz: Class<*>) : JarEntryInfo(clazz.name, clazz.classFileURL())
@@ -94,4 +81,14 @@ internal sealed class JarEntryInfo(val fullyQualifiedName: String, val url: URL)
     operator fun component1(): String = fullyQualifiedName
 
     operator fun component2(): URL = url
+
+    private companion object {
+
+        private fun Class<*>.classFileURL(): URL {
+
+            require(protectionDomain?.codeSource?.location != null) { "Invalid class $name for test CorDapp. Classes without protection domain cannot be referenced. This typically happens for Java / Kotlin types." }
+            // TODO sollecitom refactor the whitespace fix not to hardcode strings
+            return URI.create("${protectionDomain.codeSource.location}/${name.packageToPath()}.class".replace(" ", "%20")).toURL()
+        }
+    }
 }
