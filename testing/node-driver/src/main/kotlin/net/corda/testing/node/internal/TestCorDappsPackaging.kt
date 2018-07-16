@@ -64,7 +64,7 @@ private fun Iterable<Class<*>>.zip(outputStream: ZipOutputStream, willClassBeAdd
     return entries.isNotEmpty()
 }
 
-// TODO sollecitom - use Maybe here
+// TODO sollecitom
 private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<TestCorDapp.ClassJarInfo>) {
 
     val illegal = allInfo.map { it.clazz }.filter { it.protectionDomain?.codeSource?.location == null }
@@ -75,13 +75,7 @@ private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<TestCorDapp.Cla
     allInfo.distinctBy { it.url }.forEach { info ->
 
         val path = info.url.toPath()
-//        val packagePath = info.clazz.classFilesDirectoryURL().toPath()
-        // TODO sollecitom try just `info.clazz.`package`.name.packageToPath()` here :)
         val entryPath = "${info.clazz.name.packageToPath()}.class"
-//        val entryPath = info.clazz.`package`.name.packageToPath() + File.separator + info.clazz
-//        val entryPath = info.clazz.`package`.name.packageToPath() + File.separator + packagePath.relativize(path).toString()
-        // TODO sollecitom investigate this replacement
-//        val entryPath = info.clazz.`package`.name.packageToPath() + File.separator +packagePath.relativize(path).toString().replace('\\', '/')
         val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
         outputStream.putNextEntry(entry)
         if (path.isRegularFile()) {
@@ -100,26 +94,9 @@ private fun Class<*>.jarInfo(): TestCorDapp.ClassJarInfo {
 // TODO sollecitom
 private fun Class<*>.classFileURL(): URL {
 
-    // TODO sollecitom whitespace is not supported - fix it
+    // TODO sollecitom refactor the whitespace fix not to hardcode strings
     return URI.create("${protectionDomain.codeSource.location}/${name.packageToPath()}.class".replace(" ", "%20")).toURL()
 }
-
-// TODO sollecitom
-//private fun Class<*>.classFilesDirectoryURL(): URL {
-//
-//    return `package`.classFilesDirectoryURL(classLoader)
-//}
-
-// TODO sollecitom
-//private fun Package.classFilesDirectoryURL(classLoader: ClassLoader): URL {
-//
-//    // TODO sollecitom can this return more than one URL? Investigate
-//    val list = classLoader.getResources(name.packageToPath()).toList()
-//    if (list.size > 1) {
-//        println()
-//    }
-//    return list.single()
-//}
 
 // TODO sollecitom move to utils
 private fun createTestManifest(name: String, title: String, version: String, vendor: String): Manifest {

@@ -68,24 +68,12 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
 
     companion object {
         private val logger = contextLogger()
-        /**
-         * Default cordapp dir name
-         */
-        private const val CORDAPPS_DIR_NAME = "cordapps"
 
         /**
          * Creates a default CordappLoader intended to be used in non-dev or non-test environments.
          *
-         * @param baseDir The directory that this node is running in. Will use this to resolve the cordapps directory
-         *                  for classpath scanning.
+         * @param corDappDirectories Directories used to scan for CorDapp JARs.
          */
-//        fun createDefault(corDappDirectories: Iterable<Path>): CordappLoader {
-//
-//            logger.info("Looking for CorDapps in ${corDappDirectories.joinToString(File.pathSeparator, "[", "]")}")
-//            // TODO sollecitom distinct here
-//            return CordappLoader(corDappDirectories.flatMap(this::getNodeCordappURLs).toList())
-//        }
-
         fun createDefault(corDappDirectories: Iterable<Path>): CordappLoader {
 
             logger.info("Looking for CorDapps in ${corDappDirectories.distinct().joinToString(File.pathSeparator, "[", "]")}")
@@ -307,9 +295,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
     private val cachedScanResult = LRUMap<RestrictedURL, RestrictedScanResult>(1000)
     private fun scanCordapp(cordappJarPath: RestrictedURL): RestrictedScanResult {
         logger.info("Scanning CorDapp in ${cordappJarPath.url}")
-        return cachedScanResult.computeIfAbsent(cordappJarPath, {
+        return cachedScanResult.computeIfAbsent(cordappJarPath) {
             RestrictedScanResult(FastClasspathScanner().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).scan(), cordappJarPath.qualifiedNamePrefix)
-        })
+        }
     }
 
     private class FlowTypeHierarchyComparator(val initiatingFlow: Class<out FlowLogic<*>>) : Comparator<Class<out FlowLogic<*>>> {

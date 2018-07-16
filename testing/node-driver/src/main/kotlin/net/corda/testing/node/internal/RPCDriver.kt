@@ -110,6 +110,7 @@ fun <A> rpcDriver(
         useTestClock: Boolean = false,
         startNodesInProcess: Boolean = false,
         waitForNodesToFinish: Boolean = false,
+        // TODO sollecitom remove this, it's internal
         extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,

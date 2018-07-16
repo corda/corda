@@ -191,7 +191,7 @@ data class NodeParameters(
     fun withLogLevel(logLevel: String?): NodeParameters = copy(logLevel = logLevel)
 }
 
-// TODO sollecitom
+// TODO sollecitom - move to proper place and ensure it has support for resource files
 interface TestCorDapp {
 
     val name: String
@@ -201,8 +201,7 @@ interface TestCorDapp {
 
     val classes: Set<Class<*>>
 
-    // TODO sollecitom refactor to avoid whitespace in JAR names
-    fun packageAsJarInDirectory(parentDirectory: Path) = packageAsJarWithPath(parentDirectory / "$name.jar")
+    fun packageAsJarInDirectory(parentDirectory: Path)
 
     fun packageAsJarWithPath(jarFilePath: Path)
 
@@ -215,6 +214,7 @@ interface TestCorDapp {
         }
     }
 
+    // TODO sollecitom make it work for resource files as well - produce a Path to the corresponding file (either .class or whatever for resources)
     data class ClassJarInfo(val clazz: Class<*>, val url: URL)
 
     interface Builder : TestCorDapp {
@@ -297,6 +297,7 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     startNodesInProcess = defaultParameters.startNodesInProcess,
                     waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
                     notarySpecs = defaultParameters.notarySpecs,
+                    // TODO sollecitom remove this, by substituting it with the function that computes the cordappForAllNodes based on extraCordappPackagesToScan in DriverDSLImpl
                     extraCordappPackagesToScan = defaultParameters.extraCordappPackagesToScan,
                     jmxPolicy = defaultParameters.jmxPolicy,
                     compatibilityZone = null,

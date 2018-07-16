@@ -206,7 +206,6 @@ data class NodeConfigurationImpl(
         private val jarDirs: List<String> = emptyList(),
         override val flowMonitorPeriodMillis: Duration = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS,
         override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS,
-        // TODO sollecitom
         override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 ) : NodeConfiguration {
     companion object {

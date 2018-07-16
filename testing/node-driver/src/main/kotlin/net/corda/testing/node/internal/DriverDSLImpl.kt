@@ -26,7 +26,6 @@ import net.corda.node.NodeRegistrationOption
 import net.corda.node.VersionInfo
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
@@ -65,7 +64,6 @@ import java.net.ConnectException
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
@@ -712,7 +710,6 @@ class DriverDSLImpl(
 
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
-            // TODO sollecitom change here to pass shared + individual CorDapp directories as config
             val process = startOutOfProcessNode(specificConfig, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, maximumHeapSize)
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
@@ -807,8 +804,7 @@ class DriverDSLImpl(
 
         private fun <A> oneOf(array: Array<A>) = array[Random().nextInt(array.size)]
 
-        // TODO sollecitom check and make private again
-        fun defaultTestCorDappsForAllNodes(cordappPackages: Set<String>): Set<TestCorDapp> {
+        private fun defaultTestCorDappsForAllNodes(cordappPackages: Set<String>): Set<TestCorDapp> {
 
             fun testCorDapp(packageName: String): TestCorDapp {
 
@@ -844,7 +840,6 @@ class DriverDSLImpl(
             }
         }
 
-        // TODO sollecitom here
         private fun startOutOfProcessNode(
                 config: NodeConfig,
                 quasarJarPath: String,
@@ -947,8 +942,7 @@ class DriverDSLImpl(
          * Get the package of the caller to the driver so that it can be added to the list of packages the nodes will scan.
          * This makes the driver automatically pick the CorDapp module that it's run from.
          */
-        // TODO sollecitom make private again
-        fun getCallerPackage(): String? {
+        private fun getCallerPackage(): String? {
             val stackTrace = Throwable().stackTrace
             val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
             // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
@@ -1116,6 +1110,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     isDebug = defaultParameters.isDebug,
                     startNodesInProcess = defaultParameters.startNodesInProcess,
                     waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
+                    // TODO sollecitom remove this
                     extraCordappPackagesToScan = defaultParameters.extraCordappPackagesToScan,
                     jmxPolicy = defaultParameters.jmxPolicy,
                     notarySpecs = defaultParameters.notarySpecs,
@@ -1140,7 +1135,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
     }
 }
 
-// TODO sollecitom
+// TODO sollecitom move to proper location and cover support for resource files
 internal class TestCordappBuilder(override val name: String, override val version: String, override val vendor: String, override val title: String, override val classes: Set<Class<*>>, private val willClassBeAddedBeToCorDapp: (TestCorDapp.ClassJarInfo) -> Boolean) : TestCorDapp.Builder {
 
     companion object {
@@ -1185,6 +1180,11 @@ internal class TestCordappBuilder(override val name: String, override val versio
     }
 
     override fun packageAsJarWithPath(jarFilePath: Path) = classes.packageToCorDapp(jarFilePath, name, version, vendor, title, willClassBeAddedBeToCorDapp)
+
+    override fun packageAsJarInDirectory(parentDirectory: Path) = packageAsJarWithPath(parentDirectory / defaultJarName())
+
+    // TODO sollecitom change so that whitespaces are avoided inside the JAR's name
+    private fun defaultJarName(): String = "$name.jar"
 }
 
 /**
@@ -1244,6 +1244,7 @@ fun <A> internalDriver(
         startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
         waitForAllNodesToFinish: Boolean = DriverParameters().waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
+        // TODO sollecitom remove this, it's internal
         extraCordappPackagesToScan: List<String> = DriverParameters().extraCordappPackagesToScan,
         jmxPolicy: JmxPolicy = DriverParameters().jmxPolicy,
         networkParameters: NetworkParameters = DriverParameters().networkParameters,
@@ -1289,19 +1290,4 @@ fun writeConfig(path: Path, filename: String, config: Config) {
 
 private fun Config.toNodeOnly(): Config {
     return if (hasPath("webAddress")) withoutPath("webAddress").withoutPath("useHTTPS") else this
-}
-
-// TODO sollecitom
-fun main(args: Array<String>) {
-
-    val packages = listOf(CordappLoader::class.java.`package`)
-
-    val allClassesForPackage = packages.flatMap(Package::allClasses)
-    println(allClassesForPackage)
-    println(allClassesForPackage.size)
-
-    val testCordapps = DriverDSLImpl.defaultTestCorDappsForAllNodes(setOf("net.corda.node"))
-
-    val outputDir = Paths.get("/home/michele/Desktop")
-    testCordapps.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(outputDir) }
 }
