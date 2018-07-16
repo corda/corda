@@ -99,7 +99,7 @@ class DriverDSLImpl(
         val notaryCustomOverrides: Map<String, Any?>,
         val inMemoryDB: Boolean,
         // TODO sollecitom change this after removing `cordappPackages`; maybe this can be static rather than dynamic
-        val cordappsForAllNodes: (() -> Set<TestCorDapp>) = { defaultTestCorDappsForAllNodes(getCallerPackage()?.let { extraCordappPackagesToScan + it }?.toSet() ?: extraCordappPackagesToScan.toSet()) }
+        val cordappsForAllNodes: Set<TestCorDapp> = defaultTestCorDappsForAllNodes(getCallerPackage()?.let { extraCordappPackagesToScan + it }?.toSet() ?: extraCordappPackagesToScan.toSet())
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -638,7 +638,6 @@ class DriverDSLImpl(
         // TODO sollecitom take care of the cordapps' config files as well
         val corDappsDirectory = driverDirectory / "sharedCordapps"
         log.info("Writing test CorDapps for all nodes in $corDappsDirectory.")
-        val cordappsForAllNodes = cordappsForAllNodes()
         if (corDappsDirectory.exists()) {
             corDappsDirectory.toFile().deleteRecursively()
         }
@@ -697,10 +696,13 @@ class DriverDSLImpl(
             val cordappDirectories = existingCorDappDirectoriesOption + sharedCorDappsDirectory.toString() + (config.corda.baseDirectory / "cordapps").toString()
             val specificConfig = NodeConfig(config.typesafe.withValue("cordappDirectories", ConfigValueFactory.fromIterable(cordappDirectories)))
 
+            // TODO sollecitom fix this
+            val additionalCordapps: Set<TestCorDapp> = emptySet()
+
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
             // TODO sollecitom change here to pass shared + individual CorDapp directories as config
-            val process = startOutOfProcessNode(specificConfig, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappsForAllNodes(), maximumHeapSize)
+            val process = startOutOfProcessNode(specificConfig, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, additionalCordapps, maximumHeapSize)
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
             // true because we don't want orphaned processes in the case that the parent process is terminated by the
