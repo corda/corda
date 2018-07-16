@@ -11,6 +11,11 @@
 package net.corda.core.crypto
 
 import com.google.common.collect.Sets
+import net.corda.core.identity.CordaX500Name
+import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
+import net.corda.nodeapi.internal.DEV_ROOT_CA
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.i2p.crypto.eddsa.EdDSAKey
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -901,5 +906,14 @@ class CryptoUtilsTest {
         assertEquals("DL3Wr5EQGrMTaKBy5XMvG8rvSfKX1AYZLCRU8kixGbxt1E", keyPairBiggerThan512bits.public.toStringShort())
         val keyPairBiggerThan258bits = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("2").pow(259).plus(BigInteger.ONE))
         assertEquals("DL7NbssqvuuJ4cqFkkaVYu9j1MsVswESGgCfbqBS9ULwuM", keyPairBiggerThan258bits.public.toStringShort())
+    }
+
+    @Test
+    fun `crl distribution point is blacklisted`() {
+        val intermediateCert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, DEV_ROOT_CA.certificate, DEV_ROOT_CA.keyPair, DEV_INTERMEDIATE_CA.certificate.subjectX500Principal, DEV_INTERMEDIATE_CA.keyPair.public, crlDistPoint = "http://r3-test.com/certificate-revocation-list/root")
+        val nodeCA = X509Utilities.createCertificate(CertificateType.NODE_CA, intermediateCert, DEV_INTERMEDIATE_CA.keyPair, CordaX500Name("Test", "London", "GB").x500Principal, generateKeyPair().public)
+        assertTrue {
+            isCRLDistributionPointBlacklisted(listOf(nodeCA, intermediateCert, DEV_ROOT_CA.certificate))
+        }
     }
 }
