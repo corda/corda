@@ -16,7 +16,6 @@ import java.util.zip.ZipOutputStream
 
 // TODO sollecitom, perhaps create a TestCorDappPackager class, rather than extension functions
 
-// TODO sollecitom
 internal fun Iterable<JarEntryInfo>.packageToCorDapp(path: Path, name: String, version: String, vendor: String, title: String = name, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean = { _, _ -> true }) {
 
     var hasContent = false
@@ -29,14 +28,12 @@ internal fun Iterable<JarEntryInfo>.packageToCorDapp(path: Path, name: String, v
     }
 }
 
-// TODO sollecitom - try and remove this ClassLoader argument (it's only used to figure out the out folder)
 internal fun Iterable<JarEntryInfo>.packageToCorDapp(outputStream: OutputStream, name: String, version: String, vendor: String, title: String = name, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean = { _, _ -> true }): Boolean {
 
     val manifest = createTestManifest(name, title, version, vendor)
     return JarOutputStream(outputStream, manifest).use { jos -> zip(jos, willResourceBeAddedBeToCorDapp) }
 }
 
-// TODO sollecitom
 fun Package.allClasses(): Set<Class<*>> {
 
     return allClassesForPackage(name)
@@ -49,10 +46,8 @@ fun allClassesForPackage(targetPackage: String): Set<Class<*>> {
     return scanResult.namesOfAllClasses.filter { it.startsWith(targetPackage) }.map(scanResult::classNameToClassRef).toSet()
 }
 
-// TODO sollecitom
 fun String.packageToPath() = replace(".", File.separator)
 
-// TODO sollecitom
 private fun Iterable<JarEntryInfo>.zip(outputStream: ZipOutputStream, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean): Boolean {
 
     val entries = filter { (fullyQualifiedName, url) -> willResourceBeAddedBeToCorDapp(fullyQualifiedName, url) }
@@ -62,7 +57,6 @@ private fun Iterable<JarEntryInfo>.zip(outputStream: ZipOutputStream, willResour
     return entries.isNotEmpty()
 }
 
-// TODO sollecitom
 private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<JarEntryInfo>) {
 
     val time = FileTime.from(Instant.now())
@@ -79,13 +73,11 @@ private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<JarEntryInfo>) 
     }
 }
 
-// TODO sollecitom
 internal fun Class<*>.jarEntryInfo(): JarEntryInfo {
 
     return JarEntryInfo.ClassJarEntryInfo(this)
 }
 
-// TODO sollecitom
 fun Class<*>.classFileURL(): URL {
 
     require(protectionDomain?.codeSource?.location != null) { "Invalid class $name for test CorDapp. Classes without protection domain cannot be referenced. This typically happens for Java / Kotlin types." }
