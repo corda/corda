@@ -31,25 +31,34 @@ We also strongly recommend cross referencing with the :doc:`changelog` to confir
 v3.1 to v3.2
 ------------
 
+Gradle Plugin Version
+^^^^^^^^^^^^^^^^^^^^^
+
 You will need to update the ``corda_release_version`` identifier in your project gradle file.
 
 .. sourcecode:: shell
 
   ext.corda_release_version = '3.2-corda'
 
-
 Database schema changes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-* Database upgrade - the table with a typo has been change, for each database instance and schema run the following SQL statement:
+* Database upgrade - the table name has been corrected to ``NODE_ATTACHMENTS_CONTRACTS``.
+When upgrading from version 3.1, run the following command:
 
 .. sourcecode:: sql
 
-     ALTER TABLE [schema].NODE_ATTCHMENTS_CONTRACTS RENAME TO NODE_ATTACHMENTS_CONTRACTS;
+   ALTER TABLE [schema].NODE_ATTCHMENTS_CONTRACTS RENAME TO NODE_ATTACHMENTS_CONTRACTS;
 
-  Schema is optional, run SQL when the node is not running.
+When upgrading from version 3.0, run the following command:
 
-  Corda node will fail on startup if the correct table name is not present.
+.. sourcecode:: sql
+
+   ALTER TABLE [schema].NODE_ATTACHMENTS_CONTRACT_CLASS_NAME RENAME TO NODE_ATTACHMENTS_CONTRACTS;
+
+Schema name is optional, run SQL when the node is not running.
+
+Corda node will fail on startup if the correct table name is not present.
 
 * Postgres database upgrade - Change the type of the ``checkpoint_value`` column to ``bytea``.
 This will address the issue that the `vacuum` function is unable to clean up deleted checkpoints as they are still referenced from the ``pg_shdepend`` table.
@@ -60,32 +69,6 @@ This will address the issue that the `vacuum` function is unable to clean up del
 
   .. note::
     This change will also need to be run when migrating from version 3.0.
-
-v3.0 to v3.2
-------------
-
-You will need to update the ``corda_release_version`` identifier in your project gradle file.
-
-.. sourcecode:: shell
-
-  ext.corda_release_version = '3.2-corda'
-
-Database schema changes
-^^^^^^^^^^^^^^^^^^^^^^^
-
-* Database upgrade - the ``NODE_ATTACHMENTS_CONTRACT_CLASS_NAME`` table name was changed, for each database instance and schema run the following SQL statement:
-
-  .. sourcecode:: sql
-
-     ALTER TABLE [schema].NODE_ATTACHMENTS_CONTRACT_CLASS_NAME RENAME TO NODE_ATTCHMENTS_CONTRACTS;
-
-  Schema is optional, run SQL when the node is not running.
-
-  Corda node will fail on startup if the correct table name is not present.
-
-Note: the table was changed in version ``3.1`` but not mentioned in ``3.1`` Upgrade Notes.
-
-* Postgres database upgrade - also follow the additional step as described in ``v3.1 to v3.2`` upgrade notes for Postgres database.
 
 v3.0 to v3.1
 ------------
