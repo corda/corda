@@ -43,7 +43,7 @@ fun Package.allClasses(): Set<Class<*>> {
     return allClassesForPackage(name)
 }
 
-// TODO sollecitom
+// TODO sollecitom create new function to find all resources
 fun allClassesForPackage(targetPackage: String): Set<Class<*>> {
 
     val scanResult = FastClasspathScanner(targetPackage).scan()
