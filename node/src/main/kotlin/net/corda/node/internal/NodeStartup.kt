@@ -39,6 +39,7 @@ import org.fusesource.jansi.AnsiConsole
 import org.slf4j.bridge.SLF4JBridgeHandler
 import sun.misc.VMSupport
 import java.io.Console
+import java.io.File
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
@@ -53,7 +54,9 @@ open class NodeStartup(val args: Array<String>) {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         const val LOGS_DIRECTORY_NAME = "logs"
         const val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
+        private const val INITIAL_REGISTRATION_MARKER = ".initialregistration"
     }
+
 
     /**
      * @return true if the node startup was successful. This value is intended to be the exit code of the process.
@@ -65,13 +68,27 @@ open class NodeStartup(val args: Array<String>) {
             println("Corda will now exit...")
             return false
         }
-        val cmdlineOptions = NodeArgsParser().parseOrExit(*args)
+
+        val cmdlineOptions: CmdLineOptions
+
+        // Parse the command line args just to get the base directory.
+        if (nodeRegistrationMarkerExists(NodeArgsParser().parseOrExit(*args).baseDirectory)) {
+            // If the marker file exists, that means the node was started before with `--initial-registration`,
+            // but the registration has not completed. So we pretend that the node was started with `--initial-registration`
+            logger.info("Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.")
+            cmdlineOptions = NodeArgsParser().parseOrExit(*args.plus("--initial-registration"))
+        } else {
+            cmdlineOptions = NodeArgsParser().parseOrExit(*args)
+        }
+        // If the node was started with `--initial-registration`, create marker file.
+        if (cmdlineOptions.nodeRegistrationOption != null) {
+            createNodeRegistrationMarker(cmdlineOptions.baseDirectory)
+        }
         // We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
         enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
 
         initLogging(cmdlineOptions)
-
         // Register all cryptography [Provider]s.
         // Required to install our [SecureRandom] before e.g., UUID asks for one.
         // This needs to go after initLogging(netty clashes with our logging).
@@ -133,6 +150,8 @@ open class NodeStartup(val args: Array<String>) {
             if (cmdlineOptions.nodeRegistrationOption != null) {
                 // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
                 registerWithNetwork(conf, versionInfo, cmdlineOptions.nodeRegistrationOption)
+                // At this point the node registration was succesfull. We can delete the marker file.
+                deleteNodeRegistrationMarker(cmdlineOptions.baseDirectory)
                 return true
             }
             logStartupInfo(versionInfo, cmdlineOptions, conf)
@@ -182,6 +201,33 @@ open class NodeStartup(val args: Array<String>) {
 
         logger.info("Node exiting successfully")
         return true
+    }
+
+    private fun deleteNodeRegistrationMarker(baseDir: Path) {
+        try {
+            val marker = File((baseDir / INITIAL_REGISTRATION_MARKER).toUri())
+            if (!marker.exists()) {
+                marker.delete()
+            }
+        } catch (e: Exception) {
+            logger.warn("Could not delete the marker file that was created for `--initial-registration`.", e)
+        }
+    }
+
+    private fun nodeRegistrationMarkerExists(baseDir: Path): Boolean {
+        val marker = File((baseDir / INITIAL_REGISTRATION_MARKER).toUri())
+        return marker.exists()
+    }
+
+    private fun createNodeRegistrationMarker(baseDir: Path) {
+        try {
+            val marker = File((baseDir / INITIAL_REGISTRATION_MARKER).toUri())
+            if (!marker.exists()) {
+                marker.createNewFile()
+            }
+        } catch (e: Exception) {
+            logger.warn("Could not create marker file for `--initial-registration`.", e)
+        }
     }
 
     protected open fun preNetworkRegistration(conf: NodeConfiguration) = Unit
