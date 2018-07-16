@@ -58,9 +58,6 @@ When upgrading from version 3.0, run the following command:
 
 Schema name is optional, run SQL when the node is not running.
 
-  .. note::
-     Corda node will fail on startup if the correct table name is not present.
-
 * Postgres database upgrade - Change the type of the ``checkpoint_value`` column to ``bytea``.
 This will address the issue that the `vacuum` function is unable to clean up deleted checkpoints as they are still referenced from the ``pg_shdepend`` table.
 
@@ -70,6 +67,9 @@ This will address the issue that the `vacuum` function is unable to clean up del
 
   .. note::
     This change will also need to be run when migrating from version 3.0.
+
+.. note::
+   The Corda node will fail on startup if the database was not updated with the above commands.
 
 v3.0 to v3.1
 ------------
