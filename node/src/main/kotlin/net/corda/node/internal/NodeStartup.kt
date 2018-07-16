@@ -5,6 +5,8 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
+import joptsimple.OptionParser
+import joptsimple.util.PathConverter
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
@@ -69,21 +71,17 @@ open class NodeStartup(val args: Array<String>) {
             return false
         }
 
+        val registrationMode = checkRegistrationMode()
         val cmdlineOptions: CmdLineOptions
-
-        // Parse the command line args just to get the base directory.
-        if (nodeRegistrationMarkerExists(NodeArgsParser().parseOrExit(*args).baseDirectory)) {
-            // If the marker file exists, that means the node was started before with `--initial-registration`,
-            // but the registration has not completed. So we pretend that the node was started with `--initial-registration`
+        if (registrationMode && !args.contains("--initial-registration")) {
+            // The node was started before with `--initial-registration`, but the registration has not completed.
+            // So we pretend that the node was started with `--initial-registration`
             logger.info("Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.")
             cmdlineOptions = NodeArgsParser().parseOrExit(*args.plus("--initial-registration"))
         } else {
             cmdlineOptions = NodeArgsParser().parseOrExit(*args)
         }
-        // If the node was started with `--initial-registration`, create marker file.
-        if (cmdlineOptions.nodeRegistrationOption != null) {
-            createNodeRegistrationMarker(cmdlineOptions.baseDirectory)
-        }
+
         // We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
         enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
@@ -201,6 +199,32 @@ open class NodeStartup(val args: Array<String>) {
 
         logger.info("Node exiting successfully")
         return true
+    }
+
+    private fun checkRegistrationMode(): Boolean {
+        // Parse the command line args just to get the base directory. The base directory is needed to determine
+        // if the node registration marker file exists, _before_ we call NodeArgsParser.parse().
+        // If it does exist, we call NodeArgsParser with `--initial-registration` added to the argument list. This way
+        // we make sure that the initial registration is completed, even if the node was restarted before the first
+        // attempt to register succeeded and the node administrator forgets to specify `--initial-registration` upon
+        // restart.
+        val optionParser = OptionParser()
+        optionParser.allowsUnrecognizedOptions()
+        val baseDirectoryArg = optionParser
+                .accepts("base-directory", "The node working directory where all the files are kept")
+                .withRequiredArg()
+                .withValuesConvertedBy(PathConverter())
+                .defaultsTo(Paths.get("."))
+        val isRegistrationArg =
+                optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
+        val optionSet = optionParser.parse(*args)
+        val baseDirectory = optionSet.valueOf(baseDirectoryArg).normalize().toAbsolutePath()
+        // If the node was started with `--initial-registration`, create marker file.
+        // We do this here to ensure the marker is created even if parsing the args with NodeArgsParser fails.
+        if (optionSet.has(isRegistrationArg)) {
+            createNodeRegistrationMarker(baseDirectory)
+        }
+        return nodeRegistrationMarkerExists(baseDirectory)
     }
 
     private fun deleteNodeRegistrationMarker(baseDir: Path) {
