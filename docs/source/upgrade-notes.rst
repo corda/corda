@@ -41,7 +41,7 @@ You will need to update the ``corda_release_version`` identifier in your project
 Database schema changes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Postgres database upgrade - Change the type of the ``checkpoint_value`` column to bytea.
+Postgres database upgrade - Change the type of the ``checkpoint_value`` column to ``bytea``.
 This will address the issue that the `vacuum` function is unable to clean up deleted checkpoints as they are still referenced from the ``pg_shdepend`` table.
 
   .. sourcecode:: sql
