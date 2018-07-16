@@ -16,6 +16,7 @@ import java.util.*;
 import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactory;
 import static org.jgroups.util.Util.assertEquals;
 
+@SuppressWarnings("unchecked")
 public class JavaGenericsTest {
     private static class Inner {
         private final Integer v;
@@ -150,6 +151,7 @@ public class JavaGenericsTest {
     }
 
     @Test
+
     public void shouldSupportNestedGenericsFromJavaWithCollections() throws NotSerializableException {
         ConcreteClass concreteClass = new ConcreteClass("How to make concrete, $99/class");
         HolderOfGeneric<GenericClassWithList<ConcreteClass>> genericList = new HolderOfGeneric<>(new GenericClassWithList<>(Collections.singletonList(concreteClass)));
@@ -170,6 +172,9 @@ public class JavaGenericsTest {
         factory.register(BigIntegerSerializer.INSTANCE);
         SerializationOutput ser = new SerializationOutput(factory);
         SerializedBytes<?> bytes = ser.serialize(genericMap, TestSerializationContext.testSerializationContext);
+        DeserializationInput des = new DeserializationInput(factory);
+        GenericClassWithMap<ConcreteClass, BigInteger> genericMap2 = des.deserialize(bytes, GenericClassWithMap.class, TestSerializationContext.testSerializationContext);
+        Assert.assertThat(genericMap2, CoreMatchers.is(CoreMatchers.equalTo(genericMap2)));
     }
 
     @Test
