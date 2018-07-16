@@ -197,7 +197,8 @@ interface TestCorDapp {
 
     val classes: Set<Class<*>>
 
-    fun packageAsJarInDirectory(parentDirectory: Path) = packageAsJarWithPath(parentDirectory / name)
+    // TODO sollecitom refactor
+    fun packageAsJarInDirectory(parentDirectory: Path) = packageAsJarWithPath(parentDirectory / "$name.jar")
 
     fun packageAsJarWithPath(jarFilePath: Path)
 

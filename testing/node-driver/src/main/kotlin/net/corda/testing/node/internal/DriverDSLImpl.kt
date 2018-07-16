@@ -839,8 +839,9 @@ class DriverDSLImpl(
                 // TODO sollecitom check why we don't have configurable cordapps folder
                 val outputDir = config.corda.baseDirectory / "cordapps"
                 // TODO sollecitom improve
-                outputDir.toFile().deleteRecursively()
-                // TODO sollecitom refactor
+                if (outputDir.exists()) {
+                    outputDir.toFile().deleteRecursively()
+                }
                 outputDir.toFile().mkdirs()
                 testCordapps.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(outputDir) }
                 // TODO sollecitom remove this and use the test cordapps instead
