@@ -693,8 +693,8 @@ class DriverDSLImpl(
         } else {
             // TODO sollecitom refactor how this NodeConfig is passed and generated
             val existingCorDappDirectoriesOption = if (config.typesafe.hasPath("cordappDirectories")) config.typesafe.getStringList("cordappDirectories") else emptyList()
-            // TODO sollecitom add individual folder for the node
-            val cordappDirectories = existingCorDappDirectoriesOption + sharedCorDappsDirectory.toString()
+            // TODO sollecitom refactor this
+            val cordappDirectories = existingCorDappDirectoriesOption + sharedCorDappsDirectory.toString() + (config.corda.baseDirectory / "cordapps").toString()
             val specificConfig = NodeConfig(config.typesafe.withValue("cordappDirectories", ConfigValueFactory.fromIterable(cordappDirectories)))
 
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
