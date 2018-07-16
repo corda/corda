@@ -98,9 +98,12 @@ class DriverDSLImpl(
         val networkParameters: NetworkParameters,
         val notaryCustomOverrides: Map<String, Any?>,
         val inMemoryDB: Boolean,
-        // TODO sollecitom change this after removing `cordappPackages`; maybe this can be static rather than dynamic
-        val cordappsForAllNodes: Set<TestCorDapp> = defaultTestCorDappsForAllNodes(getCallerPackage()?.let { extraCordappPackagesToScan + it }?.toSet() ?: extraCordappPackagesToScan.toSet())
+        // TODO sollecitom change this after removing `cordappPackages`;
+        // TODO sollecitom see if you can make it work without the arg / field duo
+        cordappsForAllNodesArg: Set<TestCorDapp>?
 ) : InternalDriverDSL {
+
+    private val cordappsForAllNodes: Set<TestCorDapp> = cordappsForAllNodesArg ?: defaultTestCorDappsForAllNodes(getCallerPackage()?.let { extraCordappPackagesToScan + it }?.toSet() ?: extraCordappPackagesToScan.toSet())
 
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
@@ -1118,7 +1121,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     compatibilityZone = null,
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
-                    inMemoryDB = defaultParameters.inMemoryDB
+                    inMemoryDB = defaultParameters.inMemoryDB,
+                    cordappsForAllNodesArg = defaultParameters.cordappsForAllNodes
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1245,6 +1249,7 @@ fun <A> internalDriver(
         compatibilityZone: CompatibilityZoneParams? = null,
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
         inMemoryDB: Boolean = DriverParameters().inMemoryDB,
+        cordappsForAllNodes: Set<TestCorDapp>? = DriverParameters().cordappsForAllNodes,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1263,7 +1268,8 @@ fun <A> internalDriver(
                     compatibilityZone = compatibilityZone,
                     networkParameters = networkParameters,
                     notaryCustomOverrides = notaryCustomOverrides,
-                    inMemoryDB = inMemoryDB
+                    inMemoryDB = inMemoryDB,
+                    cordappsForAllNodesArg = cordappsForAllNodes
             ),
             coerce = { it },
             dsl = dsl,

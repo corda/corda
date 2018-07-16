@@ -27,6 +27,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.TestCorDapp
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -116,6 +117,7 @@ fun <A> rpcDriver(
         networkParameters: NetworkParameters = testNetworkParameters(),
         notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         inMemoryDB: Boolean = true,
+        cordappsForAllNodes: Set<TestCorDapp>? = null,
         dsl: RPCDriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -135,7 +137,8 @@ fun <A> rpcDriver(
                             compatibilityZone = null,
                             networkParameters = networkParameters,
                             notaryCustomOverrides = notaryCustomOverrides,
-                            inMemoryDB = inMemoryDB
+                            inMemoryDB = inMemoryDB,
+                            cordappsForAllNodesArg = cordappsForAllNodes
                     ), externalTrace
             ),
             coerce = { it },

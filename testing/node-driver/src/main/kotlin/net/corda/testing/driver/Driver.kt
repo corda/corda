@@ -201,7 +201,7 @@ interface TestCorDapp {
 
     val classes: Set<Class<*>>
 
-    // TODO sollecitom refactor
+    // TODO sollecitom refactor to avoid whitespace in JAR names
     fun packageAsJarInDirectory(parentDirectory: Path) = packageAsJarWithPath(parentDirectory / "$name.jar")
 
     fun packageAsJarWithPath(jarFilePath: Path)
@@ -302,7 +302,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     compatibilityZone = null,
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
-                    inMemoryDB = defaultParameters.inMemoryDB
+                    inMemoryDB = defaultParameters.inMemoryDB,
+                    cordappsForAllNodesArg = defaultParameters.cordappsForAllNodes
             ),
             coerce = { it },
             dsl = dsl,
@@ -358,7 +359,7 @@ data class DriverParameters(
         val initialiseSerialization: Boolean = true,
         val inMemoryDB: Boolean = true,
         // TODO sollecitom revisit this in terms of API compatibility; document
-        val cordappsForAllNodes: (() -> Set<TestCorDapp>)? = null
+        val cordappsForAllNodes: Set<TestCorDapp>? = null
     ) {
     constructor(
             isDebug: Boolean,
@@ -373,7 +374,7 @@ data class DriverParameters(
             extraCordappPackagesToScan: List<String>,
             jmxPolicy: JmxPolicy,
             networkParameters: NetworkParameters,
-            cordappsForAllNodes: (() -> Set<TestCorDapp>)? = null
+            cordappsForAllNodes: Set<TestCorDapp>? = null
     ) : this(
             isDebug,
             driverDirectory,
@@ -408,7 +409,7 @@ data class DriverParameters(
             networkParameters: NetworkParameters,
             initialiseSerialization: Boolean,
             inMemoryDB: Boolean,
-            cordappsForAllNodes: (() -> Set<TestCorDapp>)? = null
+            cordappsForAllNodes: Set<TestCorDapp>? = null
     ) : this(
             isDebug,
             driverDirectory,
