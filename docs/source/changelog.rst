@@ -66,6 +66,8 @@ Version 3.2
   the same server. Current ``compatibilityZoneURL`` configurations remain valid. See both :doc:`corda-configuration-file`
   and :doc:`permissioning` for details.
 
+* Table name with a typo changed from ``NODE_ATTCHMENTS_CONTRACTS`` to ``NODE_ATTACHMENTS_CONTRACTS``.
+
 .. _changelog_v3.1:
 
 Version 3.1
