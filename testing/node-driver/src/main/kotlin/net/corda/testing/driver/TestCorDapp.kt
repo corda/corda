@@ -30,7 +30,6 @@ interface TestCorDapp {
         }
     }
 
-    // TODO sollecitom add support for resource files
     interface Mutable : TestCorDapp {
 
         fun withName(name: String): TestCorDapp.Mutable
@@ -66,5 +65,9 @@ interface TestCorDapp {
         fun minusPackages(pckg: String, vararg pckgs: String): TestCorDapp.Mutable = minusPackages(setOf(pckg, *pckgs))
 
         fun minusPackages(pckg: Package, vararg pckgs: Package): TestCorDapp.Mutable = minusPackages(setOf(pckg, *pckgs).map { it.name }.toSet())
+
+        fun plusResource(fullyQualifiedName: String, url: URL): TestCorDapp.Mutable
+
+        fun minusResource(fullyQualifiedName: String, url: URL): TestCorDapp.Mutable
     }
 }

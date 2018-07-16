@@ -62,8 +62,7 @@ private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<JarEntryInfo>) 
     allInfo.distinctBy { it.url }.forEach { info ->
 
         val path = info.url.toPath()
-        val entryPath = "${info.fullyQualifiedName.packageToPath()}.class"
-        val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
+        val entry = ZipEntry(info.entryName).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
         outputStream.putNextEntry(entry)
         if (path.isRegularFile()) {
             path.copyTo(outputStream)
@@ -74,9 +73,23 @@ private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<JarEntryInfo>) 
 
 internal sealed class JarEntryInfo(val fullyQualifiedName: String, val url: URL) {
 
-    class ClassJarEntryInfo(val clazz: Class<*>) : JarEntryInfo(clazz.name, clazz.classFileURL())
+    abstract val entryName: String
 
-    class ResourceJarEntryInfo(fullyQualifiedName: String, url: URL) : JarEntryInfo(fullyQualifiedName, url)
+    class ClassJarEntryInfo(val clazz: Class<*>) : JarEntryInfo(clazz.name, clazz.classFileURL()) {
+
+        // TODO sollecitom refactor .class into a constant
+        override val entryName = "${fullyQualifiedName.packageToPath()}.class"
+    }
+
+    class ResourceJarEntryInfo(fullyQualifiedName: String, url: URL) : JarEntryInfo(fullyQualifiedName, url) {
+
+        override val entryName: String
+            get() {
+                // TODO sollecitom refactor the dot into a constant
+                val extensionIndex = fullyQualifiedName.lastIndexOf(".")
+                return "${fullyQualifiedName.substring(0 until extensionIndex).packageToPath()}${fullyQualifiedName.substring(extensionIndex)}"
+            }
+    }
 
     operator fun component1(): String = fullyQualifiedName
 

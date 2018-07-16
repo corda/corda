@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
@@ -57,7 +58,9 @@ class AsymmetricCorDappsTests {
     @Test
     fun sharedCorDappsWithAsymmetricSpecificClasses() {
 
-        val sharedCordapp = TestCorDapp.Factory.create("shared", "1.0", classes = setOf(Ping::class.java))
+        val resourceName = "cordapp.properties"
+        val cordappPropertiesResource = this::class.java.getResource(resourceName)
+        val sharedCordapp = TestCorDapp.Factory.create("shared", "1.0", classes = setOf(Ping::class.java)).plusResource("${AsymmetricCorDappsTests::class.java.packageName}.$resourceName", cordappPropertiesResource)
         val cordappForNodeB = TestCorDapp.Factory.create("nodeB_only", "1.0", classes = setOf(Pong::class.java))
         driver(DriverParameters(startNodesInProcess = false, corDappsForAllNodes = setOf(sharedCordapp))) {
 

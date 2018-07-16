@@ -77,7 +77,6 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         fun createDefault(corDappDirectories: Iterable<Path>): CordappLoader {
 
             logger.info("Looking for CorDapps in ${corDappDirectories.distinct().joinToString(File.pathSeparator, "[", "]")}")
-            // TODO sollecitom distinct here should be at JAR level rather than Path level
             return CordappLoader(corDappDirectories.distinct().flatMap(this::getNodeCordappURLs))
         }
 

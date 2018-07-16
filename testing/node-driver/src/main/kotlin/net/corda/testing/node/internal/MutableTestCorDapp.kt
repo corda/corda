@@ -64,6 +64,10 @@ internal class MutableTestCorDapp private constructor(override val name: String,
         return withClasses(pckgs.map { allClassesForPackage(it) }.fold(classes) { all, packageClasses -> all - packageClasses })
     }
 
+    override fun plusResource(fullyQualifiedName: String, url: URL): TestCorDapp.Mutable = MutableTestCorDapp(name, version, vendor, title, willResourceBeAddedToCorDapp, jarEntries + JarEntryInfo.ResourceJarEntryInfo(fullyQualifiedName, url))
+
+    override fun minusResource(fullyQualifiedName: String, url: URL): TestCorDapp.Mutable = MutableTestCorDapp(name, version, vendor, title, willResourceBeAddedToCorDapp, jarEntries - JarEntryInfo.ResourceJarEntryInfo(fullyQualifiedName, url))
+
     override fun packageAsJarWithPath(jarFilePath: Path) = jarEntries.packageToCorDapp(jarFilePath, name, version, vendor, title, willResourceBeAddedToCorDapp)
 
     override fun packageAsJarInDirectory(parentDirectory: Path) = packageAsJarWithPath(parentDirectory / defaultJarName())
