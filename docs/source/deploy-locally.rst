@@ -26,12 +26,7 @@ wish to run Corda on your local machine then you will need to
 configure your network to enable the Corda node to be reachable from
 the internet.
 
-The following steps will explain some of the steps you may need to
-perform to enable this.
-
-.. note:: You will need access to your network router/gateway to the
-	  internet. If you do not have direct access then contact your
-	  administrator.
+.. note:: You will need access to your network router/gateway to the internet. If you do not have direct access then contact your administrator.
 
 The following steps will describe how to use port forwarding on your
 router to make sure packets intended for Corda are routed to the right
@@ -63,8 +58,7 @@ documentation for your specific make and model.
 Log in to the admin page of your router (often ``192.168.0.1``) in your
 browser bar.
 
-.. note:: Router administration IP and log in credentials are usually
-	  on the bottom or side of your router.
+.. note:: Router administration IP and log in credentials are usually on the bottom or side of your router.
 
 Navigate to the ``port forwarding`` section of the admin console.
 
@@ -109,7 +103,7 @@ therefore your Corda node will change its address on the Testnet.
 You can request a static IP address from your ISP however this may
 incur a cost.
 
-If the IP address does change then this doesnt cause issues but it
+If the IP address does change then this doesn't cause issues but it
 will result in an update to the network map which then needs to be
 propagated to all peers in the network. There may be some delay in the
 ability to transact while this happens.
@@ -124,7 +118,7 @@ ability to transact while this happens.
 	     occur.
 
 	     
-Test is the ports are open
+Test if the ports are open
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can use a port checking tool to make sure the ports are open
