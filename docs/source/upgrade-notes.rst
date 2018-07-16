@@ -69,7 +69,17 @@ UNRELEASED
 
 * H2 database upgrade - the table with a typo has been change, for each database instance and schema run the following SQL statement:
 
-    ALTER TABLE [schema].NODE_ATTCHMENTS_CONTRACTS RENAME TO NODE_ATTACHMENTS_CONTRACTS;
+  Upgrade from ``v3.0``:
+
+  .. sourcecode:: sql
+
+     ALTER TABLE [schema].NODE_ATTACHMENTS_CONTRACT_CLASS_NAME RENAME TO NODE_ATTACHMENTS_CONTRACTS;
+
+  Upgrade from ``v3.1``:
+
+  .. sourcecode:: sql
+
+     ALTER TABLE [schema].NODE_ATTCHMENTS_CONTRACTS RENAME TO NODE_ATTACHMENTS_CONTRACTS;
 
   Schema is optional, run SQL when the node is not running.
 
