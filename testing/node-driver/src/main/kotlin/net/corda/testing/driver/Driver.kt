@@ -303,7 +303,7 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodesArg = defaultParameters.cordappsForAllNodes
+                    cordappsForAllNodesArg = defaultParameters.corDappsForAllNodes
             ),
             coerce = { it },
             dsl = dsl,
@@ -359,7 +359,7 @@ data class DriverParameters(
         val initialiseSerialization: Boolean = true,
         val inMemoryDB: Boolean = true,
         // TODO sollecitom revisit this in terms of API compatibility; document
-        val cordappsForAllNodes: Set<TestCorDapp>? = null
+        val corDappsForAllNodes: Set<TestCorDapp>? = null
     ) {
     constructor(
             isDebug: Boolean,
@@ -374,7 +374,7 @@ data class DriverParameters(
             extraCordappPackagesToScan: List<String>,
             jmxPolicy: JmxPolicy,
             networkParameters: NetworkParameters,
-            cordappsForAllNodes: Set<TestCorDapp>? = null
+            corDappsForAllNodes: Set<TestCorDapp>? = null
     ) : this(
             isDebug,
             driverDirectory,
@@ -391,7 +391,7 @@ data class DriverParameters(
             emptyMap(),
             true,
             true,
-            cordappsForAllNodes
+            corDappsForAllNodes
     )
 
     constructor(
@@ -409,7 +409,7 @@ data class DriverParameters(
             networkParameters: NetworkParameters,
             initialiseSerialization: Boolean,
             inMemoryDB: Boolean,
-            cordappsForAllNodes: Set<TestCorDapp>? = null
+            corDappsForAllNodes: Set<TestCorDapp>? = null
     ) : this(
             isDebug,
             driverDirectory,
@@ -426,7 +426,7 @@ data class DriverParameters(
             emptyMap(),
             initialiseSerialization,
             inMemoryDB,
-            cordappsForAllNodes
+            corDappsForAllNodes
     )
 
     fun withIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)

@@ -1123,7 +1123,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodesArg = defaultParameters.cordappsForAllNodes
+                    cordappsForAllNodesArg = defaultParameters.corDappsForAllNodes
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1250,7 +1250,7 @@ fun <A> internalDriver(
         compatibilityZone: CompatibilityZoneParams? = null,
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
         inMemoryDB: Boolean = DriverParameters().inMemoryDB,
-        cordappsForAllNodes: Set<TestCorDapp>? = DriverParameters().cordappsForAllNodes,
+        cordappsForAllNodes: Set<TestCorDapp>? = DriverParameters().corDappsForAllNodes,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
