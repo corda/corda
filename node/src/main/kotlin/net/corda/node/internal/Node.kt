@@ -2,6 +2,7 @@ package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
@@ -72,6 +73,13 @@ open class Node(configuration: NodeConfiguration,
             val msg = if (info == null) description else "${description.padEnd(40)}: $info"
             val loggerName = if (renderBasicInfoToConsole) "BasicInfo" else "Main"
             LoggerFactory.getLogger(loggerName).info(msg)
+        }
+
+        fun printWarning(message: String) {
+            Emoji.renderIfSupported {
+                println("ATTENTION: $message")
+            }
+            staticLog.warn(message)
         }
 
         internal fun failStartUp(message: String): Nothing {
