@@ -200,7 +200,8 @@ class DriverDSLImpl(
             verifierType: VerifierType,
             customOverrides: Map<String, Any?>,
             startInSameProcess: Boolean?,
-            maximumHeapSize: String
+            maximumHeapSize: String,
+            additionalCorDapps: Set<TestCorDapp>
     ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
@@ -216,7 +217,7 @@ class DriverDSLImpl(
         return registrationFuture.flatMap {
             networkMapAvailability.flatMap {
                 // But starting the node proper does require the network map
-                startRegisteredNode(name, it, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, p2pAddress)
+                startRegisteredNode(name, it, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, p2pAddress, additionalCorDapps)
             }
         }
     }
@@ -228,7 +229,9 @@ class DriverDSLImpl(
                                     customOverrides: Map<String, Any?>,
                                     startInSameProcess: Boolean? = null,
                                     maximumHeapSize: String = "512m",
-                                    p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort()): CordaFuture<NodeHandle> {
+                                    p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort(),
+                                    // TODO sollecitom see if default value is needed
+                                    additionalCorDapps: Set<TestCorDapp> = emptySet()): CordaFuture<NodeHandle> {
         val rpcAddress = portAllocation.nextHostAndPort()
         val rpcAdminAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
@@ -256,7 +259,7 @@ class DriverDSLImpl(
                 allowMissingConfig = true,
                 configOverrides = if (overrides.hasPath("devMode")) overrides else overrides + mapOf("devMode" to true)
         )).checkAndOverrideForInMemoryDB()
-        return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap)
+        return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap, additionalCorDapps)
     }
 
     private fun startNodeRegistration(providedName: CordaX500Name, rootCert: X509Certificate, compatibilityZoneURL: URL): CordaFuture<NodeConfig> {
@@ -623,7 +626,6 @@ class DriverDSLImpl(
                 jolokiaJarPath,
                 monitorPort,
                 systemProperties,
-                emptySet(),
                 "512m",
                 *extraCmdLineFlag
         )
@@ -650,7 +652,9 @@ class DriverDSLImpl(
                                   webAddress: NetworkHostAndPort,
                                   startInProcess: Boolean?,
                                   maximumHeapSize: String,
-                                  localNetworkMap: LocalNetworkMap?): CordaFuture<NodeHandle> {
+                                  localNetworkMap: LocalNetworkMap?,
+                                  // TODO sollecitom see if default value is needed
+                                  additionalCorDapps: Set<TestCorDapp> = emptySet()): CordaFuture<NodeHandle> {
         val visibilityHandle = networkVisibilityController.register(config.corda.myLegalName)
         val baseDirectory = config.corda.baseDirectory.createDirectories()
         localNetworkMap?.networkParametersCopier?.install(baseDirectory)
@@ -693,16 +697,19 @@ class DriverDSLImpl(
             // TODO sollecitom refactor how this NodeConfig is passed and generated
             val existingCorDappDirectoriesOption = if (config.typesafe.hasPath("cordappDirectories")) config.typesafe.getStringList("cordappDirectories") else emptyList()
             // TODO sollecitom refactor this
-            val cordappDirectories = existingCorDappDirectoriesOption + sharedCorDappsDirectory.toString() + (config.corda.baseDirectory / "cordapps").toString()
+            val individualCorDappsDirectory = config.corda.baseDirectory / "cordapps"
+            val cordappDirectories = existingCorDappDirectoriesOption + sharedCorDappsDirectory.toString() + individualCorDappsDirectory.toString()
             val specificConfig = NodeConfig(config.typesafe.withValue("cordappDirectories", ConfigValueFactory.fromIterable(cordappDirectories)))
 
-            // TODO sollecitom fix this
-            val additionalCordapps: Set<TestCorDapp> = emptySet()
+            if (!individualCorDappsDirectory.exists()) {
+                individualCorDappsDirectory.toFile().mkdirs()
+                additionalCorDapps.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(individualCorDappsDirectory) }
+            }
 
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
             // TODO sollecitom change here to pass shared + individual CorDapp directories as config
-            val process = startOutOfProcessNode(specificConfig, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, additionalCordapps, maximumHeapSize)
+            val process = startOutOfProcessNode(specificConfig, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, maximumHeapSize)
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
             // true because we don't want orphaned processes in the case that the parent process is terminated by the
@@ -841,8 +848,6 @@ class DriverDSLImpl(
                 jolokiaJarPath: String,
                 monitorPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
-                // TODO sollecitom this is wrong, should only contains extra cordapps for this specific node - fix it
-                additionalCordapps: Set<TestCorDapp>,
                 maximumHeapSize: String,
                 vararg extraCmdLineFlag: String
         ): Process {
@@ -859,17 +864,6 @@ class DriverDSLImpl(
             )
 
             systemProperties += inheritFromParentProcess()
-
-//            if (testCordapps.isNotEmpty()) {
-//                // TODO sollecitom check why we don't have configurable cordapps folder
-//                val outputDir = config.corda.baseDirectory / "cordapps"
-//                // TODO sollecitom improve
-//                if (outputDir.exists()) {
-//                    outputDir.toFile().deleteRecursively()
-//                }
-//                outputDir.toFile().mkdirs()
-//                testCordapps.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(outputDir) }
-//            }
 
             systemProperties += overriddenSystemProperties
 

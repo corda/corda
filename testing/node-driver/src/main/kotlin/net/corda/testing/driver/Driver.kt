@@ -144,7 +144,9 @@ data class NodeParameters(
         val customOverrides: Map<String, Any?> = emptyMap(),
         val startInSameProcess: Boolean? = null,
         val maximumHeapSize: String = "512m",
-        val logLevel: String? = null
+        val logLevel: String? = null,
+        // TODO sollecitom revisit for API compatibility
+        val additionalCorDapps: Set<TestCorDapp> = emptySet()
 ) {
     constructor(
             providedName: CordaX500Name?,
@@ -152,7 +154,8 @@ data class NodeParameters(
             verifierType: VerifierType,
             customOverrides: Map<String, Any?>,
             startInSameProcess: Boolean?,
-            maximumHeapSize: String
+            maximumHeapSize: String,
+            additionalCorDapps: Set<TestCorDapp> = emptySet()
     ) : this(
             providedName,
             rpcUsers,
@@ -160,7 +163,8 @@ data class NodeParameters(
             customOverrides,
             startInSameProcess,
             maximumHeapSize,
-            null)
+            null,
+            additionalCorDapps)
 
     fun copy(
             providedName: CordaX500Name?,
