@@ -65,10 +65,10 @@ Corda is using a patent-pending approach using nested Merkle trees per component
 is generated for each component type (i.e., inputs, outputs, attachments). Then, the roots of these sub-trees
 form the leaves of the top Merkle tree and finally the root of this tree represents the transaction id.
 
-Another important feature is that a nonce is deterministically generated for each component (using the privacy salt) in
-a way that each nonce is independent. Then, we use the nonces along with their corresponding components to calculate
-the component hash, which is the actual Merkle tree leaf. Nonces are required to protect against brute force attacks that
-otherwise would reveal the content of low-entropy hashed values (i.e., a single-word text attachment).
+Another important feature is that a nonce is deterministically generated for each component in a way that each nonce
+is independent. Then, we use the nonces along with their corresponding components to calculate the component hash,
+which is the actual Merkle tree leaf. Nonces are required to protect against brute force attacks that otherwise would
+reveal the content of low-entropy hashed values (i.e., a single-word text attachment).
 
 After computing the leaves, each Merkle tree is built in the normal way by hashing the concatenation of nodes’ hashes
 below the current one together. It’s visible on the example image below, where ``H`` denotes sha256 function, "+" - concatenation.
