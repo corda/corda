@@ -72,11 +72,8 @@ The name must also obey the following constraints:
 * The ``country`` attribute is a valid ISO 3166-1 two letter code in upper-case
 
 * The ``organisation`` field of the name obeys the following constraints:
-
-    * Upper-case first letter
     * Has at least two letters
-    * No leading or trailing whitespace
-    * Does not include the following characters: ``,`` , ``=`` , ``$`` , ``"`` , ``'`` , ``\``
+    * Does not include the following characters: ``,`` , ``"``, ``\``
     * Is in NFKC normalization form
     * Does not contain the null character
     * Only the latin, common and inherited unicode scripts are supported
