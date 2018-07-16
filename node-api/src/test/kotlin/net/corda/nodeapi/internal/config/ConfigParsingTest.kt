@@ -116,6 +116,22 @@ class ConfigParsingTest {
         assertThat(data.toConfig()).isEqualTo(config)
     }
 
+
+    @Test
+    fun `different boolean casings`() {
+        assertThat(config(Pair("value", "false")).parseAs<BooleanData>().value).isEqualTo(false)
+        assertThat(config(Pair("value", "False")).parseAs<BooleanData>().value).isEqualTo(false)
+        assertThat(config(Pair("value", "FALSE")).parseAs<BooleanData>().value).isEqualTo(false)
+        assertThat(config(Pair("value", "true")).parseAs<BooleanData>().value).isEqualTo(true)
+        assertThat(config(Pair("value", "True")).parseAs<BooleanData>().value).isEqualTo(true)
+        assertThat(config(Pair("value", "TRUE")).parseAs<BooleanData>().value).isEqualTo(true)
+    }
+
+    @Test
+    fun `invalid boolean throws error`() {
+        assertThatThrownBy { config(Pair("value", "stilton")).parseAs<BooleanData>().value }.hasMessageContaining("stilton")
+    }
+
     @Test
     fun `Properties key with dot`() {
         val config = config("value" to mapOf("key.key2" to "prop"))

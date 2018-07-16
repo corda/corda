@@ -121,7 +121,7 @@ private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set
             Int::class -> getInt(path)
             Long::class -> getLong(path)
             Double::class -> getDouble(path)
-            Boolean::class -> getBoolean(path)
+            Boolean::class -> getBooleanCaseInsensitive(path)
             LocalDate::class -> LocalDate.parse(getString(path))
             Duration::class -> getDuration(path)
             Instant::class -> Instant.parse(getString(path))
@@ -274,6 +274,15 @@ private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
             map { it?.toConfigMap() }
         }
     }
+}
+
+// The typesafe .getBoolean function is case sensitive, this is a case insensitve version
+private fun Config.getBooleanCaseInsensitive(path: String): Boolean {
+    val stringVal = getString(path).toLowerCase()
+    if (stringVal == "true" || stringVal == "false") {
+        return stringVal.toBoolean()
+    }
+    throw ConfigException.BadValue(stringVal, "Boolean values must be true or false")
 }
 
 private val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.config")
