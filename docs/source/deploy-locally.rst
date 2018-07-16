@@ -136,10 +136,12 @@ Download and install your node
 
 Navigate to https://testnet.corda.network/platform.
 
-Click on the ``Download`` button and wait a few seconds for the ZIP
+Click on the ``Download`` button and wait for the ZIP
 file to download:
 
 .. image:: resources/testnet-download.png
+
+.. note: This may take several seconds. 
 
 Unzip the file in your Corda root directory:
 
