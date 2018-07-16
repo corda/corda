@@ -19,7 +19,7 @@ import java.util.zip.ZipOutputStream
 // TODO sollecitom, perhaps create a TestCorDappPackager class, rather than extension functions
 
 // TODO sollecitom
-fun Iterable<Class<*>>.packageToCorDapp(path: Path, name: String, version: String, vendor: String, title: String = name, willClassBeAddedBeToCorDapp: (TestCorDapp.ClassJarInfo) -> Boolean = { true }) {
+fun Iterable<Class<*>>.packageToCorDapp(path: Path, name: String, version: String, vendor: String, title: String = name, willClassBeAddedBeToCorDapp: (TestCorDapp.JarEntryInfo) -> Boolean = { true }) {
 
     var hasContent = false
     try {
@@ -32,7 +32,7 @@ fun Iterable<Class<*>>.packageToCorDapp(path: Path, name: String, version: Strin
 }
 
 // TODO sollecitom - try and remove this ClassLoader argument (it's only used to figure out the out folder)
-fun Iterable<Class<*>>.packageToCorDapp(outputStream: OutputStream, name: String, version: String, vendor: String, title: String = name, willClassBeAddedBeToCorDapp: (TestCorDapp.ClassJarInfo) -> Boolean = { true }): Boolean {
+fun Iterable<Class<*>>.packageToCorDapp(outputStream: OutputStream, name: String, version: String, vendor: String, title: String = name, willClassBeAddedBeToCorDapp: (TestCorDapp.JarEntryInfo) -> Boolean = { true }): Boolean {
 
     val manifest = createTestManifest(name, title, version, vendor)
     return JarOutputStream(outputStream, manifest).use { jos -> zip(jos, willClassBeAddedBeToCorDapp) }
@@ -55,8 +55,12 @@ fun allClassesForPackage(targetPackage: String): Set<Class<*>> {
 fun String.packageToPath() = replace(".", File.separator)
 
 // TODO sollecitom
-private fun Iterable<Class<*>>.zip(outputStream: ZipOutputStream, willClassBeAddedBeToCorDapp: (TestCorDapp.ClassJarInfo) -> Boolean): Boolean {
+private fun Iterable<Class<*>>.zip(outputStream: ZipOutputStream, willClassBeAddedBeToCorDapp: (TestCorDapp.JarEntryInfo) -> Boolean): Boolean {
 
+    val illegal = filter { it.protectionDomain?.codeSource?.location == null }
+    if (illegal.isNotEmpty()) {
+        throw IllegalArgumentException("Some classes do not have a location, typically because they are part of Java or Kotlin. Offending types were: ${illegal.joinToString(", ", "[", "]") { it.simpleName }}")
+    }
     val entries = map(Class<*>::jarInfo).filter(willClassBeAddedBeToCorDapp)
     if (entries.isNotEmpty()) {
         zip(outputStream, entries)
@@ -65,17 +69,13 @@ private fun Iterable<Class<*>>.zip(outputStream: ZipOutputStream, willClassBeAdd
 }
 
 // TODO sollecitom
-private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<TestCorDapp.ClassJarInfo>) {
+private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<TestCorDapp.JarEntryInfo>) {
 
-    val illegal = allInfo.map { it.clazz }.filter { it.protectionDomain?.codeSource?.location == null }
-    if (illegal.isNotEmpty()) {
-        throw IllegalArgumentException("Some classes do not have a location, typically because they are part of Java or Kotlin. Offending types were: ${illegal.joinToString(", ", "[", "]") { it.simpleName }}")
-    }
     val time = FileTime.from(Instant.now())
     allInfo.distinctBy { it.url }.forEach { info ->
 
         val path = info.url.toPath()
-        val entryPath = "${info.clazz.name.packageToPath()}.class"
+        val entryPath = "${info.fullyQualifiedName.packageToPath()}.class"
         val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
         outputStream.putNextEntry(entry)
         if (path.isRegularFile()) {
@@ -86,9 +86,9 @@ private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<TestCorDapp.Cla
 }
 
 // TODO sollecitom
-private fun Class<*>.jarInfo(): TestCorDapp.ClassJarInfo {
+private fun Class<*>.jarInfo(): TestCorDapp.JarEntryInfo {
 
-    return TestCorDapp.ClassJarInfo(this, classFileURL())
+    return TestCorDapp.JarEntryInfo(name, classFileURL())
 }
 
 // TODO sollecitom

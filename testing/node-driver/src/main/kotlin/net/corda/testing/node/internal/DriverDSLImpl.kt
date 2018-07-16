@@ -1136,16 +1136,16 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
 }
 
 // TODO sollecitom move to proper location and cover support for resource files
-internal class TestCordappBuilder(override val name: String, override val version: String, override val vendor: String, override val title: String, override val classes: Set<Class<*>>, private val willClassBeAddedBeToCorDapp: (TestCorDapp.ClassJarInfo) -> Boolean) : TestCorDapp.Builder {
+internal class TestCordappBuilder(override val name: String, override val version: String, override val vendor: String, override val title: String, override val classes: Set<Class<*>>, private val willClassBeAddedBeToCorDapp: (TestCorDapp.JarEntryInfo) -> Boolean) : TestCorDapp.Builder {
 
     companion object {
         // TODO sollecitom check for Gradle and add to `productionPathSegments` // "main/${info.clazz.packageName.packageToPath()}"
         private val productionPathSegments = setOf("out${File.separator}production${File.separator}classes")
         private val excludedCordaPackages = setOf("net.corda.core", "net.corda.node", "net.corda.finance")
 
-        fun filterTestCorDappClass(info: TestCorDapp.ClassJarInfo): Boolean {
+        fun filterTestCorDappClass(info: TestCorDapp.JarEntryInfo): Boolean {
 
-            return isTestClass(info.url) || !isInExcludedCordaPackage(info.clazz.packageName)
+            return isTestClass(info.url) || !isInExcludedCordaPackage(info.fullyQualifiedName)
         }
 
         private fun isTestClass(url: URL): Boolean {

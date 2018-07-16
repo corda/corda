@@ -7,7 +7,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
@@ -208,14 +207,13 @@ interface TestCorDapp {
     companion object {
 
         // TODO sollecitom change this for apparently it doesn't play well with usage from Java...
-        fun builder(name: String, version: String, vendor: String = "R3", title: String = name, classes: Set<Class<*>> = emptySet(), willClassBeAddedBeToCorDapp: (TestCorDapp.ClassJarInfo) -> Boolean = TestCordappBuilder.Companion::filterTestCorDappClass): TestCorDapp.Builder {
+        fun builder(name: String, version: String, vendor: String = "R3", title: String = name, classes: Set<Class<*>> = emptySet(), willClassBeAddedBeToCorDapp: (TestCorDapp.JarEntryInfo) -> Boolean = TestCordappBuilder.Companion::filterTestCorDappClass): TestCorDapp.Builder {
 
             return TestCordappBuilder(name, version, vendor, title, classes, willClassBeAddedBeToCorDapp)
         }
     }
 
-    // TODO sollecitom make it work for resource files as well - produce a Path to the corresponding file (either .class or whatever for resources)
-    data class ClassJarInfo(val clazz: Class<*>, val url: URL)
+    data class JarEntryInfo(val fullyQualifiedName: String, val url: URL)
 
     interface Builder : TestCorDapp {
 
