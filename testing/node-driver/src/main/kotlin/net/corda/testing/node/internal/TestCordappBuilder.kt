@@ -70,15 +70,4 @@ internal class TestCordappBuilder private constructor(override val name: String,
 
     // TODO sollecitom change so that whitespaces are avoided inside the JAR's name
     private fun defaultJarName(): String = "$name.jar"
-
-    sealed class JarEntryInfo(val fullyQualifiedName: String, val url: URL) {
-
-        class ClassJarEntryInfo(val clazz: Class<*>) : JarEntryInfo(clazz.name, clazz.classFileURL())
-
-        class ResourceJarEntryInfo(fullyQualifiedName: String, url: URL) : JarEntryInfo(fullyQualifiedName, url)
-
-        operator fun component1(): String = fullyQualifiedName
-
-        operator fun component2(): URL = url
-    }
 }

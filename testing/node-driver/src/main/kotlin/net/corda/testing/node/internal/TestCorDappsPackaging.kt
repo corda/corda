@@ -18,7 +18,7 @@ import java.util.zip.ZipOutputStream
 // TODO sollecitom, perhaps create a TestCorDappPackager class, rather than extension functions
 
 // TODO sollecitom
-internal fun Iterable<TestCordappBuilder.JarEntryInfo>.packageToCorDapp(path: Path, name: String, version: String, vendor: String, title: String = name, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean = { _, _ -> true }) {
+internal fun Iterable<JarEntryInfo>.packageToCorDapp(path: Path, name: String, version: String, vendor: String, title: String = name, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean = { _, _ -> true }) {
 
     var hasContent = false
     try {
@@ -31,7 +31,7 @@ internal fun Iterable<TestCordappBuilder.JarEntryInfo>.packageToCorDapp(path: Pa
 }
 
 // TODO sollecitom - try and remove this ClassLoader argument (it's only used to figure out the out folder)
-internal fun Iterable<TestCordappBuilder.JarEntryInfo>.packageToCorDapp(outputStream: OutputStream, name: String, version: String, vendor: String, title: String = name, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean = { _, _ -> true }): Boolean {
+internal fun Iterable<JarEntryInfo>.packageToCorDapp(outputStream: OutputStream, name: String, version: String, vendor: String, title: String = name, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean = { _, _ -> true }): Boolean {
 
     val manifest = createTestManifest(name, title, version, vendor)
     return JarOutputStream(outputStream, manifest).use { jos -> zip(jos, willResourceBeAddedBeToCorDapp) }
@@ -54,7 +54,7 @@ fun allClassesForPackage(targetPackage: String): Set<Class<*>> {
 fun String.packageToPath() = replace(".", File.separator)
 
 // TODO sollecitom
-private fun Iterable<TestCordappBuilder.JarEntryInfo>.zip(outputStream: ZipOutputStream, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean): Boolean {
+private fun Iterable<JarEntryInfo>.zip(outputStream: ZipOutputStream, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean): Boolean {
 
     val entries = filter { (fullyQualifiedName, url) -> willResourceBeAddedBeToCorDapp(fullyQualifiedName, url) }
     if (entries.isNotEmpty()) {
@@ -64,7 +64,7 @@ private fun Iterable<TestCordappBuilder.JarEntryInfo>.zip(outputStream: ZipOutpu
 }
 
 // TODO sollecitom
-private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<TestCordappBuilder.JarEntryInfo>) {
+private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<JarEntryInfo>) {
 
     val time = FileTime.from(Instant.now())
     allInfo.distinctBy { it.url }.forEach { info ->
@@ -81,9 +81,9 @@ private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<TestCordappBuil
 }
 
 // TODO sollecitom
-internal fun Class<*>.jarEntryInfo(): TestCordappBuilder.JarEntryInfo {
+internal fun Class<*>.jarEntryInfo(): JarEntryInfo {
 
-    return TestCordappBuilder.JarEntryInfo.ClassJarEntryInfo(this)
+    return JarEntryInfo.ClassJarEntryInfo(this)
 }
 
 // TODO sollecitom
@@ -119,4 +119,15 @@ private fun createTestManifest(name: String, title: String, version: String, ven
 private operator fun Manifest.set(key: String, value: String) {
 
     mainAttributes.putValue(key, value)
+}
+
+internal sealed class JarEntryInfo(val fullyQualifiedName: String, val url: URL) {
+
+    class ClassJarEntryInfo(val clazz: Class<*>) : JarEntryInfo(clazz.name, clazz.classFileURL())
+
+    class ResourceJarEntryInfo(fullyQualifiedName: String, url: URL) : JarEntryInfo(fullyQualifiedName, url)
+
+    operator fun component1(): String = fullyQualifiedName
+
+    operator fun component2(): URL = url
 }
