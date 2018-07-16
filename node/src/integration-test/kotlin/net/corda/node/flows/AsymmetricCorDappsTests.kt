@@ -3,7 +3,6 @@ package net.corda.node.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
@@ -14,7 +13,7 @@ import net.corda.testing.driver.driver
 import org.junit.Test
 import kotlin.test.assertEquals
 
-// TODO sollecitom refactor or remove
+// TODO sollecitom refactor
 class AsymmetricCorDappsTests {
 
     @StartableByRPC
@@ -44,11 +43,24 @@ class AsymmetricCorDappsTests {
     }
 
     @Test
-    fun sharedCorDappsWithSpecificClasses() {
+    fun noSharedCorDappsWithAsymmetricSpecificClasses() {
 
-        driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = setOf(TestCorDapp.builder("Szymon CorDapp", "1.0", classes = setOf(Ping::class.java, Pong::class.java))))) {
+        driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = emptySet())) {
 
-            val (nodeA, nodeB) = listOf(startNode(), startNode()).transpose().getOrThrow()
+            val nodeA = startNode(additionalCorDapps = setOf(TestCorDapp.builder("Szymon CorDapp", "1.0", classes = setOf(Ping::class.java)))).getOrThrow()
+            val nodeB = startNode(additionalCorDapps = setOf(TestCorDapp.builder("Szymon CorDapp", "1.0", classes = setOf(Ping::class.java, Pong::class.java)))).getOrThrow()
+            nodeA.rpc.startFlow(::Ping, nodeB.nodeInfo.singleIdentity(), 1).returnValue.getOrThrow()
+        }
+    }
+
+    @Test
+    fun sharedCorDappsWithAsymmetricSpecificClasses() {
+
+        val cordapp = TestCorDapp.builder("Szymon CorDapp", "1.0", classes = setOf(Ping::class.java))
+        driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = setOf(cordapp))) {
+
+            val nodeA = startNode().getOrThrow()
+            val nodeB = startNode(additionalCorDapps = setOf(TestCorDapp.builder("Szymon CorDapp", "1.0", classes = setOf(Pong::class.java)))).getOrThrow()
             nodeA.rpc.startFlow(::Ping, nodeB.nodeInfo.singleIdentity(), 1).returnValue.getOrThrow()
         }
     }

@@ -700,6 +700,7 @@ class DriverDSLImpl(
             // TODO sollecitom refactor how this NodeConfig is passed and generated
             val existingCorDappDirectoriesOption = if (config.typesafe.hasPath("cordappDirectories")) config.typesafe.getStringList("cordappDirectories") else emptyList()
             // TODO sollecitom refactor this
+            // TODO sollecitom create a cache, so that individual cordapps are not re-generated each time
             val individualCorDappsDirectory = config.corda.baseDirectory / "cordapps"
             val cordappDirectories = existingCorDappDirectoriesOption + sharedCorDappsDirectory.toString() + individualCorDappsDirectory.toString()
             val specificConfig = NodeConfig(config.typesafe.withValue("cordappDirectories", ConfigValueFactory.fromIterable(cordappDirectories)))
