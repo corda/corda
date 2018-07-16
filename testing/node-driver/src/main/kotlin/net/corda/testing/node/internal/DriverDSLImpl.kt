@@ -810,7 +810,7 @@ class DriverDSLImpl(
                 val uuid = UUID.randomUUID()
                 val name = "$packageName-$uuid"
                 val version = "$uuid"
-                return TestCorDapp.builder(name, version).plusPackage(packageName)
+                return TestCorDapp.Factory.create(name, version).plusPackage(packageName)
             }
 
             return cordappPackages.fold(emptySet()) { all, packageName -> all + testCorDapp(packageName) }

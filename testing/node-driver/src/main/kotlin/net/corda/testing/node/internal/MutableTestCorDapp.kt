@@ -6,7 +6,7 @@ import java.io.File
 import java.net.URL
 import java.nio.file.Path
 
-internal class TestCordappBuilder private constructor(override val name: String, override val version: String, override val vendor: String, override val title: String, private val willResourceBeAddedToCorDapp: (String, URL) -> Boolean, private val jarEntries: Set<JarEntryInfo>) : TestCorDapp.Builder {
+internal class MutableTestCorDapp private constructor(override val name: String, override val version: String, override val vendor: String, override val title: String, private val willResourceBeAddedToCorDapp: (String, URL) -> Boolean, private val jarEntries: Set<JarEntryInfo>) : TestCorDapp.Mutable {
 
     constructor(name: String, version: String, vendor: String, title: String, classes: Set<Class<*>>, willResourceBeAddedToCorDapp: (String, URL) -> Boolean) : this(name, version, vendor, title, willResourceBeAddedToCorDapp, jarEntriesFromClasses(classes))
 
@@ -44,22 +44,22 @@ internal class TestCordappBuilder private constructor(override val name: String,
 
     override val resources: Set<URL> = jarEntries.map(JarEntryInfo::url).toSet()
 
-    override fun withName(name: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
+    override fun withName(name: String): TestCorDapp.Mutable = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
 
-    override fun withTitle(title: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
+    override fun withTitle(title: String): TestCorDapp.Mutable = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
 
-    override fun withVersion(version: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
+    override fun withVersion(version: String): TestCorDapp.Mutable = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
 
-    override fun withVendor(vendor: String): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
+    override fun withVendor(vendor: String): TestCorDapp.Mutable = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
 
-    override fun withClasses(classes: Set<Class<*>>): TestCorDapp.Builder = TestCordappBuilder(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
+    override fun withClasses(classes: Set<Class<*>>): TestCorDapp.Mutable = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
 
-    override fun plusPackages(pckgs: Set<String>): TestCorDapp.Builder {
+    override fun plusPackages(pckgs: Set<String>): TestCorDapp.Mutable {
         // TODO sollecitom perhaps inject the TestCorDappHelper or reference it
         return withClasses(pckgs.map { allClassesForPackage(it) }.fold(classes) { all, packageClasses -> all + packageClasses })
     }
 
-    override fun minusPackages(pckgs: Set<String>): TestCorDapp.Builder {
+    override fun minusPackages(pckgs: Set<String>): TestCorDapp.Mutable {
         // TODO sollecitom perhaps inject the TestCorDappHelper or reference it
         return withClasses(pckgs.map { allClassesForPackage(it) }.fold(classes) { all, packageClasses -> all - packageClasses })
     }

@@ -48,8 +48,8 @@ class AsymmetricCorDappsTests {
 
         driver(DriverParameters(startNodesInProcess = false, corDappsForAllNodes = emptySet())) {
 
-            val nodeA = startNode(additionalCorDapps = setOf(TestCorDapp.builder("Szymon CorDapp", "1.0", classes = setOf(Ping::class.java)))).getOrThrow()
-            val nodeB = startNode(additionalCorDapps = setOf(TestCorDapp.builder("Szymon CorDapp", "1.0", classes = setOf(Ping::class.java, Pong::class.java)))).getOrThrow()
+            val nodeA = startNode(additionalCorDapps = setOf(TestCorDapp.Factory.create("Szymon CorDapp", "1.0", classes = setOf(Ping::class.java)))).getOrThrow()
+            val nodeB = startNode(additionalCorDapps = setOf(TestCorDapp.Factory.create("Szymon CorDapp", "1.0", classes = setOf(Ping::class.java, Pong::class.java)))).getOrThrow()
             nodeA.rpc.startFlow(::Ping, nodeB.nodeInfo.singleIdentity(), 1).returnValue.getOrThrow()
         }
     }
@@ -57,8 +57,8 @@ class AsymmetricCorDappsTests {
     @Test
     fun sharedCorDappsWithAsymmetricSpecificClasses() {
 
-        val sharedCordapp = TestCorDapp.builder("shared", "1.0", classes = setOf(Ping::class.java))
-        val cordappForNodeB = TestCorDapp.builder("nodeB_only", "1.0", classes = setOf(Pong::class.java))
+        val sharedCordapp = TestCorDapp.Factory.create("shared", "1.0", classes = setOf(Ping::class.java))
+        val cordappForNodeB = TestCorDapp.Factory.create("nodeB_only", "1.0", classes = setOf(Pong::class.java))
         driver(DriverParameters(startNodesInProcess = false, corDappsForAllNodes = setOf(sharedCordapp))) {
 
             val (nodeA, nodeB) = listOf(startNode(), startNode(additionalCorDapps = setOf(cordappForNodeB))).transpose().getOrThrow()
