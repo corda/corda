@@ -116,7 +116,6 @@ As well as input states and output states, transactions contain:
 * Attachments
 * Time-Window
 * Notary
-* PrivacySalt
 
 For example, a transaction which should be notarised by NotaryClusterA only if received inside the predefined time-window
 where Alice pays off £5 of an IOU with Bob using a £5 cash payment, supported by two
@@ -197,12 +196,3 @@ The notary cluster provides the point of finality in the system.
 Note that if the notary entity is absent then the transaction is not notarised at all. This is intended for
 issuance/genesis transactions that don't consume any other states and thus can't double spend anything.
 For more information on the notary services, see :doc:`key-concepts-notaries`.
-
-Privacy-salt
-^^^^^^^^^^^^
-The privacy salt is a 256-bit random value required to compute nonces per transaction component in order to ensure that
-an adversary cannot use brute force techniques and reveal the content of hashed values in filtered transactions
-(tear-offs). We elaborate more on transaction tear-offs in :doc:`key-concepts-oracles`.
-
-Note that if a privacy-salt is not given as input during transaction building, then it is automatically
-set to a new 256-bit random value.
