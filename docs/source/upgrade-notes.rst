@@ -37,6 +37,20 @@ You will need to update the ``corda_release_version`` identifier in your project
 
   ext.corda_release_version = '3.2-corda'
 
+
+Database schema changes
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Postgres database upgrade - Change the type of the ``checkpoint_value`` column to bytea.
+This will address the issue that the `vacuum` function is unable to clean up deleted checkpoints as they are still referenced from the ``pg_shdepend`` table.
+
+  .. sourcecode:: sql
+
+    ALTER TABLE node_checkpoints ALTER COLUMN checkpoint_value set data type bytea using null;
+
+  .. note::
+    This change will also need to be run when migrating from version 3.0.
+
 v3.0 to v3.2
 ------------
 
