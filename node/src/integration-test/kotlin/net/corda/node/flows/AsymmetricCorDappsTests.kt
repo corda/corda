@@ -14,6 +14,7 @@ import net.corda.testing.driver.driver
 import org.junit.Test
 import kotlin.test.assertEquals
 
+// TODO sollecitom refactor or remove
 class AsymmetricCorDappsTests {
 
     @StartableByRPC
