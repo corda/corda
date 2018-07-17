@@ -6,6 +6,8 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* Change type of the `checkpoint_value` column. Please check the upgrade-notes on how to update your database.
+
 * Docs for IdentityService. assertOwnership updated to correctly state that an UnknownAnonymousPartyException is thrown
   rather than IllegalStateException.
 
