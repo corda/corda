@@ -94,6 +94,11 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
             }
         }
 
+        @VisibleForTesting
+        fun invalidateCache() {
+            cordappLoadersCache.invalidateAll()
+            generatedCordapps.clear()
+        }
         /**
          * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath
          * and cordapps directory. This is intended mostly for use by the driver.
@@ -101,11 +106,11 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          * @param testPackages See [createWithTestPackages]
          */
         @VisibleForTesting
-        fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>): CordappLoader {
+        fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>, testPackageToGeneratedJarName: Map<String, String?> = emptyMap()): CordappLoader {
             if (!configuration.devMode) {
                 logger.warn("Package scanning should only occur in dev mode!")
             }
-            val urls = getNodeCordappURLs(configuration.baseDirectory) + simplifyScanPackages(testPackages).flatMap(this::getPackageURLs)
+            val urls = getNodeCordappURLs(configuration.baseDirectory) + simplifyScanPackages(testPackages).flatMap { testPackage -> getPackageURLs(testPackage, testPackageToGeneratedJarName[testPackage]) }
             return cordappLoadersCache.asMap().computeIfAbsent(urls, ::CordappLoader)
         }
 
@@ -118,7 +123,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          */
         @VisibleForTesting
         fun createWithTestPackages(testPackages: List<String>): CordappLoader {
-            val urls = simplifyScanPackages(testPackages).flatMap(this::getPackageURLs)
+            val urls = simplifyScanPackages(testPackages).flatMap{ name -> getPackageURLs(name) }
             return cordappLoadersCache.asMap().computeIfAbsent(urls, ::CordappLoader)
         }
 
@@ -130,7 +135,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         @VisibleForTesting
         fun createDevMode(scanJars: List<URL>) = CordappLoader(scanJars.map { RestrictedURL(it, null) })
 
-        private fun getPackageURLs(scanPackage: String): List<RestrictedURL> {
+        private fun getPackageURLs(scanPackage: String, generatedJarName: String? = null): List<RestrictedURL> {
             val resource = scanPackage.replace('.', '/')
             return this::class.java.classLoader.getResources(resource)
                     .asSequence()
@@ -144,18 +149,18 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                             RestrictedURL((url.openConnection() as JarURLConnection).jarFileURL, scanPackage)
                         } else {
                             // No need to restrict as createDevCordappJar has already done that:
-                            RestrictedURL(createDevCordappJar(scanPackage, url, resource).toUri().toURL(), null)
+                            RestrictedURL(createDevCordappJar(scanPackage, url, resource, generatedJarName).toUri().toURL(), null)
                         }
                     }
                     .toList()
         }
 
         /** Takes a package of classes and creates a JAR from them - only use in tests. */
-        private fun createDevCordappJar(scanPackage: String, url: URL, resource: String): Path {
+        private fun createDevCordappJar(scanPackage: String, url: URL, resource: String, generatedJarName: String? = null): Path {
             return generatedCordapps.computeIfAbsent(url) {
                 // TODO Using the driver in out-of-process mode causes each node to have their own copy of the same dev CorDapps
                 val cordappDir = (Paths.get("build") / "tmp" / "generated-test-cordapps").createDirectories()
-                val cordappJar = cordappDir / "$scanPackage-${UUID.randomUUID()}.jar"
+                val cordappJar = cordappDir / if( generatedJarName != null) "$generatedJarName.jar" else "$scanPackage-${UUID.randomUUID()}.jar"
                 logger.info("Generating a test-only CorDapp of classes discovered for package $scanPackage in $url: $cordappJar")
                 JarOutputStream(cordappJar.outputStream()).use { jos ->
                     val scanDir = url.toPath()

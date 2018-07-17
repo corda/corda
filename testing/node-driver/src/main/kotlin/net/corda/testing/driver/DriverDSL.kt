@@ -77,7 +77,8 @@ interface DriverDSL {
             verifierType: VerifierType = defaultParameters.verifierType,
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
-            maximumHeapSize: String = defaultParameters.maximumHeapSize
+            maximumHeapSize: String = defaultParameters.maximumHeapSize,
+            packageToGeneratedJarName: Map<String,String?> = emptyMap()
     ): CordaFuture<NodeHandle>
 
     /**
