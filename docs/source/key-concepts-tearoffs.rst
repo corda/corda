@@ -24,13 +24,10 @@ to the oracle cannot later be changed without also invalidating the oracle's dig
 Transaction Merkle trees
 ^^^^^^^^^^^^^^^^^^^^^^^^
 A Merkle tree is constructed from a transaction by splitting the transaction into leaves, where each leaf contains
-either an input, an output, a command data, or an attachment. The final nested tree structure also contains the
-other fields of the ``WireTransaction``, such as the time-window the notary and the command signers.
-
-As noticed, the only component type that is requiring two trees instead of one is the command, which is split into
-command data and command signers for visibility purposes. It is also highlighted that the privacy salt
-(see :doc:`key-concepts-transactions` for more) is not having its own sub-tree, but it is indirectly involved in the
-Merkle tree construction via the nonces as described below.
+either an input, an output, a command, or an attachment. The final nested tree structure also contains the
+other fields of the transaction, such as the time-window, the notary and the required signers. As shown in the picture
+below, the only component type that is requiring two trees instead of one is the command, which is split into
+command data and required signers for visibility purposes.
 
 Corda is using a patent-pending approach using nested Merkle trees per component type. Briefly, a component sub-tree
 is generated for each component type (i.e., inputs, outputs, attachments). Then, the roots of these sub-trees
@@ -66,7 +63,7 @@ Let's assume that only the first command should be visible to an Oracle. We shou
 the commands requiring a signature from this oracle should be visible to the oracle entity, but not the rest. Here is how
 this filtered transaction will be represented in the Merkle tree structure.
 
-.. image:: resources/merkleTreePartial_Oracle.png
+.. image:: resources/SubMerkleTree_Oracle.png
    :scale: 35%
    :align: center
 
@@ -85,6 +82,6 @@ apart from input states, time-window and the notary information. This data is en
 input states should be checked for double-spending, if the time-window is valid and if this transaction should be
 notarised by this notary.
 
-.. image:: resources/merkleTreePartial_Notary.png
+.. image:: resources/SubMerkleTree_Notary.png
    :scale: 35%
    :align: center
