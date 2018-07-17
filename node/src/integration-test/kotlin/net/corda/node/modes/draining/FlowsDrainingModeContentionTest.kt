@@ -44,13 +44,13 @@ class FlowsDrainingModeContentionTest {
 
     @After
     fun cleanUp() {
-        executor!!.shutdown()
+        executor?.shutdown()
     }
 
     @Test
     fun `draining mode does not deadlock with acks between 2 nodes`() {
         val message = "Ground control to Major Tom"
-        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
+        driver(DriverParameters(extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
 

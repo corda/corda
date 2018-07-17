@@ -114,7 +114,7 @@ class AttachmentLoadingTests {
     @Test
     fun `test that attachments retrieved over the network are not used for code`() {
         withoutTestSerialization {
-            driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+            driver(DriverParameters(notarySpecs = emptyList())) {
                 installIsolatedCordappTo(bankAName)
                 val (bankA, bankB) = createTwoNodes()
                 assertFailsWith<CordaRuntimeException>("Party C=CH,L=Zurich,O=BankB rejected session request: Don't know net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator") {

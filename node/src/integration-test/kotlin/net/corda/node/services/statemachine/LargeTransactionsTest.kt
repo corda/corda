@@ -74,7 +74,6 @@ class LargeTransactionsTest {
         val bigFile3 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 2)
         val bigFile4 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 3)
         driver(DriverParameters(
-                startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.testing.contracts"),
                 networkParameters = testNetworkParameters(maxMessageSize = 15.MB.toInt(), maxTransactionSize = 13.MB.toInt())
         )) {

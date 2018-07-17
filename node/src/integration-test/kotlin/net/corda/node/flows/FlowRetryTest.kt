@@ -16,7 +16,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import org.junit.Before
 import org.junit.Test
-import java.lang.management.ManagementFactory
 import java.sql.SQLException
 import java.util.*
 import kotlin.test.assertEquals
@@ -34,10 +33,7 @@ class FlowRetryTest {
         val numSessions = 2
         val numIterations = 10
         val user = User("mark", "dadada", setOf(Permissions.startFlow<InitiatorFlow>()))
-        val result: Any? = driver(DriverParameters(
-                startNodesInProcess = isQuasarAgentSpecified(),
-                notarySpecs = emptyList()
-        )) {
+        val result: Any? = driver(DriverParameters(notarySpecs = emptyList())) {
             val nodeAHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
             val nodeBHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
 
@@ -49,11 +45,6 @@ class FlowRetryTest {
         assertNotNull(result)
         assertEquals("$numSessions:$numIterations", result)
     }
-}
-
-fun isQuasarAgentSpecified(): Boolean {
-    val jvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments
-    return jvmArgs.any { it.startsWith("-javaagent:") && it.contains("quasar") }
 }
 
 class ExceptionToCauseRetry : SQLException("deadlock")

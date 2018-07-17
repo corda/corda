@@ -14,8 +14,6 @@ import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.InProcess
-import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.poll
@@ -34,12 +32,12 @@ class TraderDemoTest {
                 startFlow<CashPaymentFlow>(),
                 startFlow<CommercialPaperIssueFlow>(),
                 all()))
-        driver(DriverParameters(startNodesInProcess = true, inMemoryDB = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        driver(DriverParameters(inMemoryDB = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = BOC_NAME, rpcUsers = listOf(bankUser))
-            ).map { (it.getOrThrow() as InProcess) }
+            ).map { it.getOrThrow() }
             val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
                 val client = CordaRPCClient(it.rpcAddress)
                 client.start(demoUser.username, demoUser.password).proxy
@@ -57,8 +55,8 @@ class TraderDemoTest {
             val expectedBCash = clientB.cashCount + 1
             val expectedPaper = listOf(clientA.commercialPaperCount + 1, clientB.commercialPaperCount)
 
-            clientBank.runIssuer(amount = 100.DOLLARS, buyerName = nodeA.services.myInfo.singleIdentity().name, sellerName = nodeB.services.myInfo.singleIdentity().name)
-            clientB.runSeller(buyerName = nodeA.services.myInfo.singleIdentity().name, amount = 5.DOLLARS)
+            clientBank.runIssuer(amount = 100.DOLLARS, buyerName = nodeA.nodeInfo.singleIdentity().name, sellerName = nodeB.nodeInfo.singleIdentity().name)
+            clientB.runSeller(buyerName = nodeA.nodeInfo.singleIdentity().name, amount = 5.DOLLARS)
 
             assertThat(clientA.cashCount).isGreaterThan(originalACash)
             assertThat(clientB.cashCount).isEqualTo(expectedBCash)
@@ -76,14 +74,14 @@ class TraderDemoTest {
 
     @Test
     fun `Tudor test`() {
-        driver(DriverParameters(startNodesInProcess = false, inMemoryDB = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        driver(DriverParameters(inMemoryDB = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
             val demoUser = User("demo", "demo", setOf(startFlow<SellerFlow>(), all()))
             val bankUser = User("user1", "test", permissions = setOf(all()))
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = BOC_NAME, rpcUsers = listOf(bankUser))
-            ).map { (it.getOrThrow() as OutOfProcess) }
+            ).map { it.getOrThrow() }
 
             val nodeBRpc = CordaRPCClient(nodeB.rpcAddress).start(demoUser.username, demoUser.password).proxy
             val nodeARpc = CordaRPCClient(nodeA.rpcAddress).start(demoUser.username, demoUser.password).proxy
