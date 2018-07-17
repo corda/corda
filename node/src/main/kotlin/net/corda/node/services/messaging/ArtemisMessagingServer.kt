@@ -140,6 +140,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         journalBufferSize_AIO = maxMessageSize + JOURNAL_HEADER_SIZE // Required to address IllegalArgumentException (when Artemis uses Linux Async IO): Record is too large to store.
         journalFileSize = maxMessageSize + JOURNAL_HEADER_SIZE// The size of each journal file in bytes. Artemis default is 10MiB.
         managementNotificationAddress = SimpleString(NOTIFICATIONS_ADDRESS)
+        connectionTtlCheckInterval = config.enterpriseConfiguration.tuning.brokerConnectionTtlCheckIntervalMs
 
         // JMX enablement
         if (config.jmxMonitoringHttpPort != null) {
