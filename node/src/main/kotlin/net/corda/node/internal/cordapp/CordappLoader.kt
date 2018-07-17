@@ -16,7 +16,6 @@ import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.classloading.requireAnnotation
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.serialization.internal.DefaultWhitelist
 import org.apache.commons.collections4.map.LRUMap
@@ -32,6 +31,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.JarOutputStream
+import java.util.stream.Collectors
 import java.util.zip.ZipEntry
 import kotlin.reflect.KClass
 import kotlin.streams.toList
@@ -87,22 +87,6 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection.
          */
         fun fromJarUrls(scanJars: List<URL>) = CordappLoader(scanJars.map { it.restricted() })
-
-        /**
-         * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath
-         * and cordapps directory. This is intended mostly for use by the driver.
-         *
-         * @param testPackages See [createWithTestPackages]
-         */
-        // TODO sollecitom remove
-        @VisibleForTesting
-        fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>): CordappLoader {
-            if (!configuration.devMode) {
-                logger.warn("Package scanning should only occur in dev mode!")
-            }
-            val urls = configuration.cordappDirectories.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() } + simplifyScanPackages(testPackages).flatMap(this::getPackageURLs)
-            return cordappLoadersCache.asMap().computeIfAbsent(urls, ::CordappLoader)
-        }
 
         /**
          * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath.
@@ -186,7 +170,8 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                 emptyList()
             } else {
                 directory.list { paths ->
-                    paths.filter { path -> path.toFile().extension == "jar" }.map { it.toUri().toURL() }.toList()
+                    // `toFile()` can't be used here...
+                    paths.filter { it.toString().endsWith(".jar") }.map { it.toUri().toURL() }.toList()
                 }
             }
         }
