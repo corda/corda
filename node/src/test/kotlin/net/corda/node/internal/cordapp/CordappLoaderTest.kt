@@ -2,6 +2,7 @@ package net.corda.node.internal.cordapp
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
+import net.corda.testing.node.MockServices
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.nio.file.Paths
@@ -65,13 +66,11 @@ class CordappLoaderTest {
 
     @Test
     fun `flows are loaded by loader`() {
-        val loader = CordappLoader.createWithTestPackages(listOf(testScanPackage))
+        val loader = MockServices.corDappLoaderForPackages(listOf(testScanPackage))
 
         val actual = loader.cordapps.toTypedArray()
-        // One core cordapp, one cordapp from this source tree, and two others due to identically named locations
-        // in resources and the non-test part of node. This is okay due to this being test code. In production this
-        // cannot happen. In gradle it will also pick up the node jar. 
-        assertThat(actual.size == 4 || actual.size == 5).isTrue()
+        // One core cordapp, one cordapp from this source tree. In gradle it will also pick up the node jar.
+        assertThat(actual.size == 2 || actual.size == 3).isTrue()
 
         val actualCordapp = actual.single { !it.initiatedFlows.isEmpty() }
         assertThat(actualCordapp.initiatedFlows).first().hasSameClassAs(DummyFlow::class.java)
@@ -81,14 +80,14 @@ class CordappLoaderTest {
 
     @Test
     fun `duplicate packages are ignored`() {
-        val loader = CordappLoader.createWithTestPackages(listOf(testScanPackage, testScanPackage))
+        val loader = MockServices.corDappLoaderForPackages(listOf(testScanPackage, testScanPackage))
         val cordapps = loader.cordapps.filter { LoaderTestFlow::class.java in it.initiatedFlows }
         assertThat(cordapps).hasSize(1)
     }
 
     @Test
     fun `sub-packages are ignored`() {
-        val loader = CordappLoader.createWithTestPackages(listOf("net.corda", testScanPackage))
+        val loader = MockServices.corDappLoaderForPackages(listOf("net.corda", testScanPackage))
         val cordapps = loader.cordapps.filter { LoaderTestFlow::class.java in it.initiatedFlows }
         assertThat(cordapps).hasSize(1)
     }

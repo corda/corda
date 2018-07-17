@@ -11,7 +11,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -19,6 +18,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.MockCordappConfigProvider
+import net.corda.testing.node.MockServices
 import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Assert.*
 import org.junit.Rule
@@ -60,7 +60,7 @@ class AttachmentsClassLoaderStaticContractTests {
     }
 
     private val serviceHub = rigorousMock<ServicesForResolution>().also {
-        doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.nodeapi.internal")), MockCordappConfigProvider(), MockAttachmentStorage(), testNetworkParameters().whitelistedContractImplementations)).whenever(it).cordappProvider
+        doReturn(CordappProviderImpl(MockServices.corDappLoaderForPackages(listOf("net.corda.nodeapi.internal")), MockCordappConfigProvider(), MockAttachmentStorage(), testNetworkParameters().whitelistedContractImplementations)).whenever(it).cordappProvider
         doReturn(testNetworkParameters()).whenever(it).networkParameters
     }
 

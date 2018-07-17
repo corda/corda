@@ -41,8 +41,10 @@ internal fun Class<*>.jarEntryInfo(): JarEntryInfo {
 
 fun allClassesForPackage(targetPackage: String): Set<Class<*>> {
 
-    val scanResult = FastClasspathScanner(targetPackage).scan()
-    return scanResult.namesOfAllClasses.filter { it.startsWith(targetPackage) }.map(scanResult::classNameToClassRef).toSet()
+    // TODO sollecitom check `strictWhitelist()`
+    val scanResult = FastClasspathScanner(targetPackage).strictWhitelist().scan()
+    return scanResult.namesOfAllClasses.filter { className -> className.startsWith(targetPackage) }.map(scanResult::classNameToClassRef).toSet()
+//    return scanResult.namesOfAllClasses.filter { className -> className.startsWith(targetPackage) }.map(scanResult::classNameToClassRef).toSet()
 }
 
 private fun String.packageToPath() = replace(".", File.separator)

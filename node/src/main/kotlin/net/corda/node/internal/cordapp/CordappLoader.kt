@@ -1,6 +1,5 @@
 package net.corda.node.internal.cordapp
 
-import com.github.benmanes.caffeine.cache.Caffeine
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.cordapp.Cordapp
@@ -21,18 +20,10 @@ import net.corda.serialization.internal.DefaultWhitelist
 import org.apache.commons.collections4.map.LRUMap
 import java.io.File
 import java.lang.reflect.Modifier
-import java.net.JarURLConnection
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.attribute.FileTime
-import java.time.Instant
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.jar.JarOutputStream
-import java.util.stream.Collectors
-import java.util.zip.ZipEntry
 import kotlin.reflect.KClass
 import kotlin.streams.toList
 
@@ -88,81 +79,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          */
         fun fromJarUrls(scanJars: List<URL>) = CordappLoader(scanJars.map { it.restricted() })
 
-        /**
-         * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath.
-         * This is intended for use in unit and integration tests.
-         *
-         * @param testPackages List of package names that contain CorDapp classes that can be automatically turned into
-         * CorDapps.
-         */
-        // TODO sollecitom remove
-        @VisibleForTesting
-        fun createWithTestPackages(testPackages: List<String>): CordappLoader {
-            val urls = simplifyScanPackages(testPackages).flatMap(this::getPackageURLs)
-            return cordappLoadersCache.asMap().computeIfAbsent(urls, ::CordappLoader)
-        }
-
-        // Cache for CordappLoaders to avoid costly classpath scanning
-        private val cordappLoadersCache = Caffeine.newBuilder().softValues().build<List<RestrictedURL>, CordappLoader>()
-        private val generatedCordapps = ConcurrentHashMap<URL, Path>()
-
-        private fun simplifyScanPackages(scanPackages: List<String>): List<String> {
-            return scanPackages.sorted().fold(emptyList()) { listSoFar, packageName ->
-                when {
-                    listSoFar.isEmpty() -> listOf(packageName)
-                    packageName.startsWith(listSoFar.last()) -> listSoFar  // Squash ["com.foo", "com.foo.bar"] into just ["com.foo"]
-                    else -> listSoFar + packageName
-                }
-            }
-        }
-
         private fun URL.restricted(rootPackageName: String? = null) =  RestrictedURL(this, rootPackageName)
-
-        private fun getPackageURLs(scanPackage: String): List<RestrictedURL> {
-            val resource = scanPackage.replace('.', '/')
-            return this::class.java.classLoader.getResources(resource)
-                    .asSequence()
-                    // This is to only scan classes from test folders.
-                    .filter { url ->
-                         !url.toString().contains("main/$resource")  || listOf("net.corda.core", "net.corda.node", "net.corda.finance").none { scanPackage.startsWith(it) }
-                    }
-                    .map { url ->
-                        if (url.protocol == "jar") {
-                            // When running tests from gradle this may be a corda module jar, so restrict to scanPackage:
-                            RestrictedURL((url.openConnection() as JarURLConnection).jarFileURL, scanPackage)
-                        } else {
-                            // No need to restrict as createDevCordappJar has already done that:
-                            RestrictedURL(createDevCordappJar(scanPackage, url, resource).toUri().toURL(), null)
-                        }
-                    }
-                    .toList()
-        }
-
-        /** Takes a package of classes and creates a JAR from them - only use in tests. */
-        private fun createDevCordappJar(scanPackage: String, url: URL, resource: String): Path {
-            return generatedCordapps.computeIfAbsent(url) {
-                // TODO Using the driver in out-of-process mode causes each node to have their own copy of the same dev CorDapps
-                val cordappDir = (Paths.get("build") / "tmp" / "generated-test-cordapps").createDirectories()
-                val cordappJar = cordappDir / "$scanPackage-${UUID.randomUUID()}.jar"
-                logger.info("Generating a test-only CorDapp of classes discovered for package $scanPackage in $url: $cordappJar")
-                JarOutputStream(cordappJar.outputStream()).use { jos ->
-                    val scanDir = url.toPath()
-                    scanDir.walk {
-                        it.forEach {
-                            val entryPath = "$resource/${scanDir.relativize(it).toString().replace('\\', '/')}"
-                            val time = FileTime.from(Instant.EPOCH)
-                            val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
-                            jos.putNextEntry(entry)
-                            if (it.isRegularFile()) {
-                                it.copyTo(jos)
-                            }
-                            jos.closeEntry()
-                        }
-                    }
-                }
-                cordappJar
-            }
-        }
 
         private fun jarUrlsInDirectory(directory: Path): List<URL> {
 
@@ -201,22 +118,25 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
     }
 
     private fun loadCordapps(): List<Cordapp> {
-        return cordappJarPaths.map {
-            val scanResult = scanCordapp(it)
-            CordappImpl(findContractClassNames(scanResult),
-                    findInitiatedFlows(scanResult),
-                    findRPCFlows(scanResult),
-                    findServiceFlows(scanResult),
-                    findSchedulableFlows(scanResult),
-                    findServices(scanResult),
-                    findPlugins(it),
-                    findSerializers(scanResult),
-                    findCustomSchemas(scanResult),
-                    findAllFlows(scanResult),
-                    it.url,
-                    getJarHash(it.url)
-            )
-        }
+        return cordappJarPaths.map { scanCordapp(it).toCordapp(it) }
+    }
+
+    private fun RestrictedScanResult.toCordapp(url: RestrictedURL): Cordapp {
+
+        return CordappImpl(
+                findContractClassNames(this),
+                findInitiatedFlows(this),
+                findRPCFlows(this),
+                findServiceFlows(this),
+                findSchedulableFlows(this),
+                findServices(this),
+                findPlugins(url),
+                findSerializers(this),
+                findCustomSchemas(this),
+                findAllFlows(this),
+                url.url,
+                getJarHash(url.url)
+        )
     }
 
     private fun getJarHash(url: URL): SecureHash.SHA256 = url.openStream().readFully().sha256()
