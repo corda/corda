@@ -127,7 +127,7 @@ class DriverDSLImpl(
     private val quasarJarPath: String by lazy { resolveJar(".*quasar.*\\.jar$").getOrThrow() }
 
     private val bytemanJarPath: String? by lazy {
-        val maybeResolvedJar = resolveJar(".*byteman-\\d.*\\.jar$")
+        val maybeResolvedJar = resolveJar(".*byteman-\\d.*\\.jar$", verbose = false)
         when (maybeResolvedJar) {
             is Try.Success -> maybeResolvedJar.getOrThrow()
             is Try.Failure -> null
@@ -144,7 +144,7 @@ class DriverDSLImpl(
         }
     }
 
-    private fun resolveJar(jarNamePattern: String): Try<String> {
+    private fun resolveJar(jarNamePattern: String, verbose: Boolean = true): Try<String> {
         return try {
             val cl = ClassLoader.getSystemClassLoader()
             val urls = (cl as URLClassLoader).urLs
@@ -152,7 +152,11 @@ class DriverDSLImpl(
             val jarFileUrl = urls.first { jarPattern.matches(it.path) }
             Try.Success(jarFileUrl.toPath().toString())
         } catch (e: Exception) {
-            log.warn("Unable to locate JAR `$jarNamePattern` on classpath: ${e.message}", e)
+            if(verbose) {
+                log.warn("Unable to locate JAR `$jarNamePattern` on classpath: ${e.message}", e)
+            } else {
+                log.info("Unable to locate JAR `$jarNamePattern` on classpath")
+            }
             Try.Failure(e)
         }
     }
