@@ -52,7 +52,7 @@ Set up port forwarding on your router
 Port forwarding is a method of making a computer on your network
 accessible to computers on the Internet, even though it is behind a router.
 
-.. note:: All routers are slightly different and you will need to  consult the documentation for your specific make and model.
+.. note:: All routers are slightly different and you will need to consult the documentation for your specific make and model.
 
 Log in to the admin page of your router (often ``192.168.0.1``) in your
 browser bar.
