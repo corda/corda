@@ -61,7 +61,7 @@ abstract class IntegrationTest {
         @BeforeClass
         @JvmStatic
         fun globalSetUp() {
-            if (dbProvider.isNotEmpty()) {
+            if (isRemoteDatabaseMode()) {
                 runDbScript(dbProvider,"$testDbScriptDir/db-global-cleanup.sql", databaseSchemas)
                 runDbScript(dbProvider,"$testDbScriptDir/db-global-setup.sql", databaseSchemas)
             }
@@ -69,23 +69,25 @@ abstract class IntegrationTest {
         @AfterClass
         @JvmStatic
         fun globalTearDown() {
-            if (dbProvider.isNotEmpty()) {
+            if (isRemoteDatabaseMode()) {
                 runDbScript(dbProvider,"$testDbScriptDir/db-global-cleanup.sql", databaseSchemas)
             }
         }
+
+        fun isRemoteDatabaseMode() = dbProvider.isNotEmpty()
     }
 
     @Before
     @Throws(Exception::class)
     open fun setUp() {
-        if (dbProvider.isNotEmpty()) {
+        if (isRemoteDatabaseMode()) {
             runDbScript(dbProvider,"$testDbScriptDir/db-setup.sql", databaseSchemas)
         }
     }
 
     @After
     open fun tearDown() {
-        if (dbProvider.isNotEmpty()) {
+        if (isRemoteDatabaseMode()) {
            runDbScript(dbProvider,"$testDbScriptDir/db-cleanup.sql", databaseSchemas)
         }
     }

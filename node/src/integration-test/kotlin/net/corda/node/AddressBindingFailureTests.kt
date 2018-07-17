@@ -3,18 +3,30 @@ package net.corda.node
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.internal.errors.AddressBindingException
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Assume.assumeTrue
+import org.junit.ClassRule
 import org.junit.Test
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 
-class AddressBindingFailureTests {
+class AddressBindingFailureTests: IntegrationTest() {
 
     companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_BANK_A_NAME.toDatabaseSchemaName())
+
         private val portAllocation = PortAllocation.Incremental(20_000)
     }
 
@@ -28,7 +40,10 @@ class AddressBindingFailureTests {
     fun `rpc admin address`() = assertBindExceptionForOverrides { address -> mapOf("rpcSettings" to mapOf("adminAddress" to address.toString())) }
 
     @Test
-    fun `H2 address`() = assertBindExceptionForOverrides { address -> mapOf("h2Settings" to mapOf("address" to address.toString())) }
+    fun `H2 address`() {
+        assumeTrue(!IntegrationTest.isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database
+        assertBindExceptionForOverrides { address -> mapOf("h2Settings" to mapOf("address" to address.toString())) }
+    }
 
     private fun assertBindExceptionForOverrides(overrides: (NetworkHostAndPort) -> Map<String, Any?>) {
 
