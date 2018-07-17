@@ -705,6 +705,8 @@ class DriverDSLImpl(
             if (!individualCorDappsDirectory.exists()) {
                 individualCorDappsDirectory.toFile().mkdirs()
                 additionalCorDapps.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(individualCorDappsDirectory) }
+            } else {
+                log.info("Node's specific CorDapps directory $individualCorDappsDirectory already exists, skipping CorDapps packaging for node ${config.corda.myLegalName}.")
             }
 
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
