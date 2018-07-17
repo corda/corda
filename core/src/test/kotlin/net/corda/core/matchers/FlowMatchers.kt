@@ -24,7 +24,7 @@ fun <T> succeedsWith(successMatcher: Matcher<T>) = object : Matcher<FlowStateMac
  */
 inline fun <reified E: Exception> failsWith(failureMatcher: Matcher<E>) = object : Matcher<FlowStateMachine<*>> {
     override val description: String
-        get() = "A flow that fails with a ${E::class.java} that ${failureMatcher.description}"
+        get() = "A flow that fails with a ${E::class.java.simpleName} that ${failureMatcher.description}"
 
     override fun invoke(actual: FlowStateMachine<*>): MatchResult = try {
         actual.resultFuture.getOrThrow()
