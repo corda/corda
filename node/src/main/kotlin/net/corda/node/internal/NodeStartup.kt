@@ -72,16 +72,16 @@ open class NodeStartup(val args: Array<String>) {
         }
 
         val registrationMode = checkRegistrationMode()
-        val cmdlineOptions: CmdLineOptions
-        if (registrationMode && !args.contains("--initial-registration")) {
-            // The node was started before with `--initial-registration`, but the registration has not completed.
-            // So we pretend that the node was started with `--initial-registration`
-            logger.info("Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.")
-            cmdlineOptions = NodeArgsParser().parseOrExit(*args.plus("--initial-registration"))
+        val cmdlineOptions: CmdLineOptions = if (registrationMode && !args.contains("--initial-registration")) {
+            "Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.".let {
+                println(it)
+                logger.info(it)
+            }
+            // Pretend that the node was started with `--initial-registration` to help prevent user error.
+            NodeArgsParser().parseOrExit(*args.plus("--initial-registration"))
         } else {
-            cmdlineOptions = NodeArgsParser().parseOrExit(*args)
+            NodeArgsParser().parseOrExit(*args)
         }
-
         // We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
         enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
@@ -221,10 +221,16 @@ open class NodeStartup(val args: Array<String>) {
         val baseDirectory = optionSet.valueOf(baseDirectoryArg).normalize().toAbsolutePath()
         // If the node was started with `--initial-registration`, create marker file.
         // We do this here to ensure the marker is created even if parsing the args with NodeArgsParser fails.
-        if (optionSet.has(isRegistrationArg)) {
-            createNodeRegistrationMarker(baseDirectory)
+        val marker = File((baseDirectory / INITIAL_REGISTRATION_MARKER).toUri())
+        if (!optionSet.has(isRegistrationArg) && !marker.exists()) {
+            return false
         }
-        return nodeRegistrationMarkerExists(baseDirectory)
+        try {
+            marker.createNewFile()
+        } catch (e: Exception) {
+            logger.warn("Could not create marker file for `--initial-registration`.", e)
+        }
+        return true
     }
 
     private fun deleteNodeRegistrationMarker(baseDir: Path) {
@@ -235,22 +241,6 @@ open class NodeStartup(val args: Array<String>) {
             }
         } catch (e: Exception) {
             logger.warn("Could not delete the marker file that was created for `--initial-registration`.", e)
-        }
-    }
-
-    private fun nodeRegistrationMarkerExists(baseDir: Path): Boolean {
-        val marker = File((baseDir / INITIAL_REGISTRATION_MARKER).toUri())
-        return marker.exists()
-    }
-
-    private fun createNodeRegistrationMarker(baseDir: Path) {
-        try {
-            val marker = File((baseDir / INITIAL_REGISTRATION_MARKER).toUri())
-            if (!marker.exists()) {
-                marker.createNewFile()
-            }
-        } catch (e: Exception) {
-            logger.warn("Could not create marker file for `--initial-registration`.", e)
         }
     }
 
