@@ -95,15 +95,13 @@ class SandboxClassLoader(
         val readClassName = reader.className
         if (!configuration.analysisConfiguration.whitelist.matches(readClassName)) {
             logger.trace("Class {} does not match with the whitelist", source.qualifiedClassName)
-            if (configuration.analysisConfiguration.analyzePinnedClasses || !pinnedClasses.matches(readClassName)) {
-                logger.trace("Analyzing class {}...", source.qualifiedClassName)
-                analyzer.analyze(reader, context)
-            }
+            logger.trace("Analyzing class {}...", source.qualifiedClassName)
+            analyzer.analyze(reader, context)
         }
 
         // Check if the class should be left untouched.
         val qualifiedName = name.replace('.', '/')
-        if (pinnedClasses.matches(qualifiedName)) {
+        if (qualifiedName in pinnedClasses) {
             logger.trace("Class {} is marked as pinned", source.qualifiedClassName)
             val pinnedClasses = LoadedClass(
                     supportingClassLoader.loadClass(name),
@@ -123,7 +121,11 @@ class SandboxClassLoader(
         val byteCode = rewriter.rewrite(reader, context)
 
         // Try to define the transformed class.
-        val clazz = defineClass(resolvedName, byteCode.bytes, 0, byteCode.bytes.size)
+        val clazz = try {
+            defineClass(resolvedName, byteCode.bytes, 0, byteCode.bytes.size)
+        } catch (exception: SecurityException) {
+            supportingClassLoader.loadClass(name)
+        }
 
         // Cache transformed class.
         val classWithByteCode = LoadedClass(clazz, byteCode)

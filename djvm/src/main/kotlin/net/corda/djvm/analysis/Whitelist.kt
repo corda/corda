@@ -95,10 +95,18 @@ open class Whitelist private constructor(
     companion object {
         private val everythingRegex = setOf(".*".toRegex())
 
+        // TODO Refine to contain only the bare minimum of classes needed from java/lang
+        private val minimumSet = setOf("^java/lang/.*$".toRegex())
+
         /**
          * Empty whitelist.
          */
         val EMPTY: Whitelist = Whitelist(null, emptySet(), emptySet())
+
+        /**
+         * The minimum set of classes that needs to be pinned from standard Java libraries.
+         */
+        val MINIMAL: Whitelist = Whitelist(Whitelist(null, minimumSet, emptySet()), minimumSet, emptySet())
 
         /**
          * Whitelist everything.
@@ -112,7 +120,7 @@ open class Whitelist private constructor(
         /**
          * Default whitelist.
          */
-        val DEFAULT: Whitelist
+        val DETERMINISTIC_RUNTIME: Whitelist
             get() {
                 // TODO This is a snapshot of what's currently in our deterministic rt.jar build
                 // The plan is to strip down this to [Whitelist.MINIMAL] and fully rely on sandbox rule verification and
@@ -121,24 +129,6 @@ open class Whitelist private constructor(
                 val kotlin = Whitelist.fromResource("kotlin-deterministic.dat.gz")
                 return jdk + kotlin
             }
-
-        /**
-         * Classes and packages that should be left untouched.
-         */
-        val PINNED_CLASSES = setOf(
-                "^sandbox/java/lang/Object$".toRegex(),
-                "^${RuntimeCostAccounter.TYPE_NAME}$".toRegex()
-        )
-
-        private val minimumSet = setOf(
-                // TODO Refine to contain only the bare minimum of classes needed from java/lang
-                "^java/lang/.*$".toRegex()
-        )
-
-        /**
-         * The minimum set of classes that needs to be pinned from standard Java libraries.
-         */
-        val MINIMAL: Whitelist = Whitelist(Whitelist(null, minimumSet, emptySet()), minimumSet, emptySet())
 
         /**
          * Load a whitelist from a resource stream.

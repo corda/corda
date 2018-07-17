@@ -43,9 +43,9 @@ open class RuleContext(
         get() = analysisContext.configuration.whitelist
 
     /**
-     * Classes and packages that should be left untouched.
+     * Classes that has been explicitly defined in the sandbox namespace.
      */
-    val pinnedClasses: Whitelist
+    val pinnedClasses: Set<String>
         get() = analysisContext.configuration.pinnedClasses
 
     /**

@@ -207,7 +207,7 @@ abstract class CommandBase : Callable<Boolean> {
                     throw Exception("Failed to load whitelist '$it'", exception)
                 }
             }
-        } ?: Whitelist.DEFAULT
+        } ?: Whitelist.DETERMINISTIC_RUNTIME
     }
 
     private fun Int.countOf(suffix: String): String {

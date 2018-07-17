@@ -5,7 +5,7 @@ import org.junit.Test
 
 class ClassResolverTest {
 
-    private val resolver = ClassResolver(Whitelist.DEFAULT, Whitelist.DEFAULT + Whitelist.PINNED_CLASSES, "sandbox/")
+    private val resolver = ClassResolver(Whitelist.DETERMINISTIC_RUNTIME, emptySet(), "sandbox/")
 
     @Test
     fun `can resolve class name`() {

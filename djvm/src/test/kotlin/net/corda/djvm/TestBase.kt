@@ -35,12 +35,6 @@ open class TestBase {
         val DEFAULT = (ALL_RULES + ALL_EMITTERS + ALL_DEFINITION_PROVIDERS)
                 .toSet().distinctBy { it.javaClass }
 
-        // Ignoring these as there's not much point instrumenting the test libraries.
-        val PINNED_CLASSES_FOR_TEST = setOf(
-                Regex("org/junit/.*"),
-                Regex("org/assertj/.*")
-        )
-
         /**
          * Get the full name of type [T].
          */
@@ -52,7 +46,7 @@ open class TestBase {
     /**
      * Default analysis configuration.
      */
-    val configuration = AnalysisConfiguration(Whitelist.DEFAULT)
+    val configuration = AnalysisConfiguration(Whitelist.DETERMINISTIC_RUNTIME)
 
     /**
      * Default analysis context
@@ -102,7 +96,7 @@ open class TestBase {
         val definitionProviders = mutableListOf<DefinitionProvider>()
         val classSources = mutableListOf<ClassSource>()
         var executionProfile = ExecutionProfile.UNLIMITED
-        var whitelist = Whitelist.DEFAULT
+        var whitelist = Whitelist.DETERMINISTIC_RUNTIME
         for (option in options) {
             when (option) {
                 is Rule -> rules.add(option)
@@ -121,12 +115,10 @@ open class TestBase {
         var thrownException: Throwable? = null
         Thread {
             try {
-                val pinnedTestClasses = pinnedClasses
-                        .map { Regex(it.name.replace('.', '/').replace("$", "\\\$")) }
-                        .toSet() + PINNED_CLASSES_FOR_TEST
+                val pinnedTestClasses = pinnedClasses.map { it.name.replace('.', '/') }.toSet()
                 val analysisConfiguration = AnalysisConfiguration(
                         whitelist = whitelist,
-                        pinnedClasses = whitelist + Whitelist.PINNED_CLASSES + pinnedTestClasses,
+                        additionalPinnedClasses = pinnedTestClasses,
                         minimumSeverityLevel = minimumSeverityLevel
                 )
                 SandboxRuntimeContext(SandboxConfiguration.of(

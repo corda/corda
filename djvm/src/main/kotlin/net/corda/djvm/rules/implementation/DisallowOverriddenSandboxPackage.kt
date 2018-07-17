@@ -12,7 +12,7 @@ class DisallowOverriddenSandboxPackage : ClassRule() {
 
     override fun validate(context: RuleContext, clazz: ClassRepresentation) = context.validate {
         fail("Cannot load class explicitly defined in the 'sandbox' root package; ${clazz.name}") given
-                (!context.pinnedClasses.matches(clazz.name) && clazz.name.startsWith("sandbox/"))
+                (clazz.name !in context.pinnedClasses && clazz.name.startsWith("sandbox/"))
     }
 
 }

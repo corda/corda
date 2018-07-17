@@ -3,21 +3,16 @@ package net.corda.djvm.analysis
 /**
  * Functionality for resolving the class name of a sandboxed or sandboxable class.
  *
- * @param whitelist Whitelisted classes and members.
- * @property pinnedClasses Classes and packages that should be left untouched.
+ * @property whitelist Whitelisted classes and members.
+ * @property pinnedClasses Classes that have already been declared in the sandbox namespace and that should be made
+ * available inside the sandboxed environment.
  * @property sandboxPrefix The package name prefix to use for classes loaded into a sandbox.
  */
 class ClassResolver(
-        whitelist: Whitelist,
-        private val pinnedClasses: Whitelist,
+        private val whitelist: Whitelist,
+        private val pinnedClasses: Set<String>,
         private val sandboxPrefix: String
 ) {
-
-    /**
-     * Classes and packages that are either pinned or already in the sandbox.
-     */
-    private val pinnedClassesAndSandbox =
-            whitelist + pinnedClasses + Regex("^$sandboxPrefix.*$")
 
     /**
      * Resolve the class name from a fully qualified name.
@@ -72,7 +67,7 @@ class ClassResolver(
      * Reverse the resolution of a class name.
      */
     fun reverse(resolvedClassName: String): String {
-        if (pinnedClasses.matches(resolvedClassName)) {
+        if (resolvedClassName in pinnedClasses) {
             return resolvedClassName
         }
         if (resolvedClassName.startsWith(sandboxPrefix)) {
@@ -95,6 +90,7 @@ class ClassResolver(
      * Resolve class name from a fully qualified name.
      */
     private fun resolveName(name: String): String {
+        // Currently, whitelisted classes are not transformed and put into the sandbox namespace.
         return if (name.isBlank() || isPinnedClass(name)) {
             name
         } else {
@@ -105,8 +101,9 @@ class ClassResolver(
     /**
      * Check if class is pinned.
      */
-    private fun isPinnedClass(name: String): Boolean =
-            pinnedClassesAndSandbox.matches(name)
+    private fun isPinnedClass(name: String): Boolean = whitelist.matches(name) || name in pinnedClasses || sandboxRegex.matches(name)
+
+    private val sandboxRegex = "^$sandboxPrefix.*$".toRegex()
 
     companion object {
         private val complexArrayTypeRegex = "^(\\[+)L(.*);$".toRegex()

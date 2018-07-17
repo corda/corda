@@ -49,10 +49,6 @@ abstract class ClassCommand : CommandBase() {
     @Option(names = ["--disable-tracing"], description = ["Disable tracing in the sandbox."])
     var disableTracing: Boolean = false
 
-    @Option(names = ["--analyze-pinned-classes"], description = ["Analyze all pinned classes as well, unless covered " +
-            "by the provided whitelist."])
-    var analyzePinnedClasses: Boolean = false
-
     @Option(names = ["--analyze-annotations"], description = ["Analyze all annotations even if they are not " +
             "explicitly referenced."])
     var analyzeAnnotations: Boolean = false
@@ -72,7 +68,7 @@ abstract class ClassCommand : CommandBase() {
 
     protected var executor = SandboxExecutor<Any, Any>()
 
-    private var derivedWhitelist: Whitelist = Whitelist.DEFAULT
+    private var derivedWhitelist: Whitelist = Whitelist.DETERMINISTIC_RUNTIME
 
     abstract fun processClasses(classes: List<Class<*>>)
 
@@ -201,7 +197,6 @@ abstract class ClassCommand : CommandBase() {
                         whitelist = whitelist,
                         minimumSeverityLevel = level,
                         classPath = getClasspath(),
-                        analyzePinnedClasses = analyzePinnedClasses,
                         analyzeAnnotations = analyzeAnnotations,
                         prefixFilters = prefixFilters.toList()
                 )

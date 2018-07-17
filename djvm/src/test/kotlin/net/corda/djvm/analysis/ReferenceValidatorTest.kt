@@ -7,18 +7,17 @@ import net.corda.djvm.execution.SandboxedRunnable
 import net.corda.djvm.validation.ReferenceValidator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import java.net.URLClassLoader
 import java.util.*
 
 class ReferenceValidatorTest : TestBase() {
 
-    private fun validator(whitelist: Whitelist = Whitelist.DEFAULT) =
+    private fun validator(whitelist: Whitelist = Whitelist.DETERMINISTIC_RUNTIME) =
             ReferenceValidator(AnalysisConfiguration(whitelist))
 
     @Test
     fun `can validate when there are no references`() = analyze { context ->
         analyze<EmptyRunnable>(context)
-        val (_, messages) = validator(Whitelist.DEFAULT).validate(context, this)
+        val (_, messages) = validator(Whitelist.DETERMINISTIC_RUNTIME).validate(context, this)
         assertThat(messages.count).isEqualTo(0)
     }
 
@@ -32,7 +31,7 @@ class ReferenceValidatorTest : TestBase() {
     fun `can validate when there are references`() = analyze { context ->
         analyze<RunnableWithReferences>(context)
         analyze<Random>(context)
-        val (_, messages) = validator(Whitelist.DEFAULT).validate(context, this)
+        val (_, messages) = validator(Whitelist.DETERMINISTIC_RUNTIME).validate(context, this)
         assertThat(messages.sorted())
                 .hasSize(3)
                 .withMessage("Invalid reference to class java.util.Random, entity is not whitelisted")
@@ -51,7 +50,7 @@ class ReferenceValidatorTest : TestBase() {
     fun `can validate when there are transient references`() = analyze { context ->
         analyze<RunnableWithTransientReferences>(context)
         analyze<Random>(context)
-        val (_, messages) = validator(Whitelist.DEFAULT).validate(context, this)
+        val (_, messages) = validator(Whitelist.DETERMINISTIC_RUNTIME).validate(context, this)
         assertThat(messages.sorted())
                 .withMessage("Invalid reference to class java.util.WeakHashMap, entity is not whitelisted")
     }
