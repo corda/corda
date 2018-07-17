@@ -13,13 +13,13 @@ package net.corda.node.services.rpc
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.RPCException
 import net.corda.core.internal.div
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all
-import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
+import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -27,7 +27,6 @@ import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
@@ -55,7 +54,7 @@ class RpcSslTest : IntegrationTest() {
     @JvmField
     val tempFolder = TemporaryFolder()
 
-    val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
+    private val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
 
     @Test
     fun `RPC client using ssl is able to run a command`() {
@@ -70,7 +69,7 @@ class RpcSslTest : IntegrationTest() {
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val node = startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow()
             val client = CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions)
             val connection = client.start(user.username, user.password)
@@ -108,7 +107,7 @@ class RpcSslTest : IntegrationTest() {
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert1)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val node = startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow()
             Assertions.assertThatThrownBy {
                 val connection = CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, user.password)
@@ -128,7 +127,7 @@ class RpcSslTest : IntegrationTest() {
     fun `RPC client not using ssl can run commands`() {
         val user = User("mark", "dadada", setOf(all()))
         var successful = false
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val node = startNode(rpcUsers = listOf(user)).getOrThrow()
             val connection = CordaRPCClient(node.rpcAddress).start(user.username, user.password)
             connection.proxy.apply {
@@ -148,7 +147,7 @@ class RpcSslTest : IntegrationTest() {
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val node = startNode(customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow()
             val client = CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions)
 

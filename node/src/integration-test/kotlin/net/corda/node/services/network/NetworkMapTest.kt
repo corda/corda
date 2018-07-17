@@ -25,8 +25,8 @@ import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.NodeHandleInternal
-import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
@@ -52,7 +52,7 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
     val testSerialization = SerializationEnvironmentRule(true)
 
     private val cacheTimeout = 1.seconds
-    private val portAllocation = RandomFree
+    private val portAllocation = PortAllocation.Incremental(10000)
 
     private lateinit var networkMapServer: NetworkMapServer
     private lateinit var compatibilityZone: CompatibilityZoneParams

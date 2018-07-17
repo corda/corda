@@ -13,4 +13,5 @@ Networks
    azure-vm-explore
    aws-vm-explore
    gcp-vm
+   deploy-locally
    cipher-suites

@@ -15,16 +15,16 @@ import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import net.corda.client.rpc.RPCException
 import net.corda.core.internal.div
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.shell.toShellConfig
-import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
+import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -32,7 +32,6 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.NodeHandleInternal
-import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
@@ -67,7 +66,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
     @Test
     fun `shell should not log in with invalid credentials`() {
         val user = User("u", "p", setOf())
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
 
@@ -108,7 +107,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                 val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
@@ -136,7 +135,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert1)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                 val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
@@ -153,7 +152,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
 
     @Test
     fun `internal shell user should not be able to connect if node started with devMode=false`() {
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             startNode().getOrThrow().use { node ->
                 val conf = (node as NodeHandleInternal).configuration.toShellConfig()
                 InteractiveShell.startShellInternal(conf)
@@ -219,7 +218,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
         var successful = false
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                 val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),

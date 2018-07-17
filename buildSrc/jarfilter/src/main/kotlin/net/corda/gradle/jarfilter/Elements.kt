@@ -13,18 +13,19 @@ import org.objectweb.asm.Opcodes.ACC_SYNTHETIC
 import java.util.*
 
 private const val DEFAULT_CONSTRUCTOR_MARKER = "ILkotlin/jvm/internal/DefaultConstructorMarker;"
+private const val DEFAULT_FUNCTION_MARKER = "ILjava/lang/Object;"
 private const val DUMMY_PASSES = 1
 
 private val DECLARES_DEFAULT_VALUE_MASK: Int = DECLARES_DEFAULT_VALUE.toFlags(true).inv()
 
-internal abstract class Element(val name: String, val descriptor: String) {
+abstract class Element(val name: String, val descriptor: String) {
     private var lifetime: Int = DUMMY_PASSES
 
     open val isExpired: Boolean get() = --lifetime < 0
 }
 
 
-internal class MethodElement(name: String, descriptor: String, val access: Int = 0) : Element(name, descriptor) {
+class MethodElement(name: String, descriptor: String, val access: Int = 0) : Element(name, descriptor) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other?.javaClass != javaClass) return false
@@ -65,7 +66,7 @@ internal class MethodElement(name: String, descriptor: String, val access: Int =
  * A class cannot have two fields with the same name but different types. However,
  * it can define extension functions and properties.
  */
-internal class FieldElement(name: String, descriptor: String = "?", val extension: String = "()") : Element(name, descriptor) {
+class FieldElement(name: String, descriptor: String = "?", val extension: String = "()") : Element(name, descriptor) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other?.javaClass != javaClass) return false
@@ -78,6 +79,30 @@ internal class FieldElement(name: String, descriptor: String = "?", val extensio
 }
 
 val String.extensionType: String get() = substring(0, 1 + indexOf(')'))
+
+/**
+ * Returns a fully-qualified class name as it would exist
+ * in the byte-code, e.g. as "a/b/c/ClassName$Nested".
+ */
+fun NameResolver.getClassInternalName(idx: Int): String
+    = getQualifiedClassName(idx).replace('.', '$')
+
+/**
+ * Construct the signatures of the synthetic methods that
+ * Kotlin would create to handle default parameter values.
+ */
+fun String.toKotlinDefaultConstructor(): String {
+    val closer = lastIndexOf(')')
+    return substring(0, closer) + DEFAULT_CONSTRUCTOR_MARKER + substring(closer)
+}
+
+fun String.toKotlinDefaultFunction(classDescriptor: String): String {
+    val opener = indexOf('(')
+    val closer = lastIndexOf(')')
+    return (substring(0, opener) + "\$default("
+               + classDescriptor + substring(opener + 1, closer) + DEFAULT_FUNCTION_MARKER
+               + substring(closer))
+}
 
 /**
  * Convert Kotlin getter/setter method data to [MethodElement] objects.
@@ -124,11 +149,20 @@ internal fun JvmProtoBuf.JvmPropertySignature.toFieldElement(property: ProtoBuf.
 }
 
 /**
- * Rewrites metadata for constructor parameters.
+ * Rewrites metadata for function and constructor parameters.
  */
 internal fun ProtoBuf.Constructor.Builder.updateValueParameters(
     updater: (ProtoBuf.ValueParameter) -> ProtoBuf.ValueParameter
 ): ProtoBuf.Constructor.Builder {
+    for (idx in 0 until valueParameterList.size) {
+        setValueParameter(idx, updater(valueParameterList[idx]))
+    }
+    return this
+}
+
+internal fun ProtoBuf.Function.Builder.updateValueParameters(
+    updater: (ProtoBuf.ValueParameter) -> ProtoBuf.ValueParameter
+): ProtoBuf.Function.Builder {
     for (idx in 0 until valueParameterList.size) {
         setValueParameter(idx, updater(valueParameterList[idx]))
     }
@@ -142,3 +176,6 @@ internal fun ProtoBuf.ValueParameter.clearDeclaresDefaultValue(): ProtoBuf.Value
         this
     }
 }
+
+internal val List<ProtoBuf.ValueParameter>.hasAnyDefaultValues
+    get() = any { DECLARES_DEFAULT_VALUE.get(it.flags) }

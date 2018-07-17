@@ -22,11 +22,8 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.OutOfProcess
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.User
 import rx.Observable
-import java.net.InetSocketAddress
-import java.net.ServerSocket
 import java.nio.file.Path
 
 interface NodeHandleInternal : NodeHandle {
@@ -88,12 +85,3 @@ data class InProcessImpl(
 }
 
 val InProcess.internalServices: StartedNodeServices get() = services as StartedNodeServices
-
-object RandomFree : PortAllocation() {
-    override fun nextPort(): Int {
-        return ServerSocket().use {
-            it.bind(InetSocketAddress(0))
-            it.localPort
-        }
-    }
-}
