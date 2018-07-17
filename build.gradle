@@ -279,6 +279,13 @@ jar {
     enabled = false
 }
 
+gradle.taskGraph.whenReady { graph ->
+    def enabled = graph.allTasks.any { it instanceof JacocoReport }
+    tasks.withType(Test) {
+        jacoco.enabled = enabled
+    }
+}
+
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
     dependsOn = subprojects.test
     additionalSourceDirs = files(subprojects.sourceSets.main.allSource.srcDirs)
