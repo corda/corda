@@ -141,7 +141,6 @@ targetCompatibility = 1.8
 
 allprojects {
     apply plugin: 'kotlin'
-    apply plugin: 'jacoco'
     apply plugin: 'org.owasp.dependencycheck'
     apply plugin: 'kotlin-allopen'
 
@@ -282,34 +281,6 @@ dependencies {
 jar {
     // Prevent the root project from building an unwanted dummy CorDapp.
     enabled = false
-}
-
-gradle.taskGraph.whenReady { graph ->
-    def enabled = graph.allTasks.any { it instanceof JacocoReport }
-    tasks.withType(Test) {
-        jacoco.enabled = enabled
-    }
-}
-
-task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
-    dependsOn = subprojects.test
-    additionalSourceDirs = files(subprojects.sourceSets.main.allSource.srcDirs)
-    sourceDirectories = files(subprojects.sourceSets.main.allSource.srcDirs)
-    classDirectories = files(subprojects.sourceSets.main.output)
-    executionData = files(subprojects.jacocoTestReport.executionData)
-    reports {
-        html.enabled = true
-        xml.enabled = true
-        csv.enabled = false
-    }
-    onlyIf = {
-        true
-    }
-    doFirst {
-        executionData = files(executionData.findAll {
-            it.exists()
-        })
-    }
 }
 
 tasks.withType(Test) {

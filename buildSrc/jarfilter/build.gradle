@@ -1,6 +1,5 @@
 plugins {
     id 'java-gradle-plugin'
-    id 'jacoco'
 }
 apply plugin: 'kotlin'
 
@@ -19,17 +18,9 @@ gradlePlugin {
     }
 }
 
-configurations {
-    jacocoRuntime
-}
-
 processTestResources {
     filesMatching('**/build.gradle') {
         expand(['kotlin_version': kotlin_version])
-    }
-    filesMatching('gradle.properties') {
-        expand(['jacocoAgent': configurations.jacocoRuntime.asPath.replace('\\', '/'),
-                'buildDir': buildDir])
     }
 }
 
@@ -42,5 +33,4 @@ dependencies {
     testImplementation "org.assertj:assertj-core:$assertj_version"
     testImplementation "junit:junit:$junit_version"
     testImplementation project(':jarfilter:unwanteds')
-    jacocoRuntime "org.jacoco:org.jacoco.agent:${jacoco.toolVersion}:runtime"
 }
