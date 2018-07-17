@@ -308,6 +308,15 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
         }
     }
 
+    override fun onLinkRemoteClose(e: Event) {
+        val link = e.link
+        if(link.remoteCondition is ErrorCondition) {
+            transport.condition = link.condition
+            transport.close_tail()
+            transport.pop(Math.max(0, transport.pending())) // Force generation of TRANSPORT_HEAD_CLOSE (not in C code)
+        }
+    }
+
     override fun onLinkFinal(event: Event) {
         val link = event.link
         if (link is Sender) {

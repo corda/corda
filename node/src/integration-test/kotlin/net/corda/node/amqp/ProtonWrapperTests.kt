@@ -32,7 +32,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.security.KeyStore
-import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl.*
 import kotlin.concurrent.thread
@@ -356,6 +355,31 @@ class ProtonWrapperTests {
             sharedThreads.shutdownGracefully()
             sharedThreads.terminationFuture().sync()
         }
+    }
+
+    @Test
+    fun `client sends to inexistent queue`() {
+        val (server, artemisClient) = createArtemisServerAndClient()
+        val amqpClient = createClient()
+        var connected = false
+        amqpClient.onConnection.subscribe { change ->
+            connected = change.connected
+        }
+        val clientConnected = amqpClient.onConnection.toFuture()
+        amqpClient.start()
+        assertEquals(true, clientConnected.get().connected)
+        assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
+        val sendAddress = P2P_PREFIX + "Test"
+        val testData = "Test".toByteArray()
+        val testProperty = mutableMapOf<String, Any?>()
+        testProperty["TestProp"] = "1"
+        val message = amqpClient.createMessage(testData, sendAddress, CHARLIE_NAME.toString(), testProperty)
+        amqpClient.write(message)
+        assertEquals(MessageStatus.Rejected, message.onComplete.get())
+        assertEquals(false, connected)
+        amqpClient.stop()
+        artemisClient.stop()
+        server.stop()
     }
 
     private fun createArtemisServerAndClient(maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
