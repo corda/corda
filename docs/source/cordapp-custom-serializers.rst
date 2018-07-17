@@ -182,6 +182,9 @@ In the above examples
 - ``ExampleSerializer`` is the actual serializer that will be loaded by the framework to serialize instances of the ``Example`` type.
 - ``ExampleSerializer.Proxy``, in the Kotlin example, and ``ExampleProxy`` in the Java example, is the intermediate representation used by the framework to represent instances of ``Example`` within the wire format.
 
+.. note:: Once discovered custom serializers are cached, the size of the cache can be controlled with ``amqp.customSerial.cache.size``
+        system property, default value is: 200.
+
 The Proxy Object
 ----------------
 
