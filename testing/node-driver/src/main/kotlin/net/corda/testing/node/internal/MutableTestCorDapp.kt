@@ -13,7 +13,7 @@ internal class MutableTestCorDapp private constructor(override val name: String,
     companion object {
         // TODO sollecitom check for Gradle and add to `productionPathSegments` // "main/${info.clazz.packageName.packageToPath()}"
         private val productionPathSegments = setOf("out${File.separator}production${File.separator}classes")
-        private val excludedCordaPackages = setOf("net.corda.core", "net.corda.node", "net.corda.finance")
+        private val excludedCordaPackages = setOf("net.corda.core", "net.corda.node")
 
         fun filterTestCorDappClass(fullyQualifiedName: String, url: URL): Boolean {
 

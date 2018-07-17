@@ -106,8 +106,6 @@ class DriverDSLImpl(
     val executorService get() = _executorService!!
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
-    // TODO sollecitom remove this
-    private val cordappPackages = getCallerPackage()?.let { extraCordappPackagesToScan + it } ?: extraCordappPackagesToScan
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
     private val networkVisibilityController = NetworkVisibilityController()
     /**
@@ -686,7 +684,7 @@ class DriverDSLImpl(
 
         if (startInProcess ?: startNodesInProcess) {
             // TODO sollecitom fix here as well
-            val nodeAndThreadFuture = startInProcessNode(executorService, config, cordappPackages)
+            val nodeAndThreadFuture = startInProcessNode(executorService, config)
             shutdownManager.registerShutdown(
                     nodeAndThreadFuture.map { (node, thread) ->
                         {
@@ -807,7 +805,7 @@ class DriverDSLImpl(
 
         private fun <A> oneOf(array: Array<A>) = array[Random().nextInt(array.size)]
 
-        private fun defaultTestCorDappsForAllNodes(cordappPackages: Set<String>): Set<TestCorDapp> {
+        internal fun defaultTestCorDappsForAllNodes(cordappPackages: Set<String>): Set<TestCorDapp> {
 
             fun testCorDapp(packageName: String): TestCorDapp {
 
@@ -822,8 +820,7 @@ class DriverDSLImpl(
 
         private fun startInProcessNode(
                 executorService: ScheduledExecutorService,
-                config: NodeConfig,
-                cordappPackages: List<String>
+                config: NodeConfig
         ): CordaFuture<Pair<StartedNode<Node>, Thread>> {
             return executorService.fork {
                 log.info("Starting in-process Node ${config.corda.myLegalName.organisation}")
@@ -833,7 +830,7 @@ class DriverDSLImpl(
                 // Write node.conf
                 writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe.toNodeOnly())
                 // TODO pass the version in?
-                val node = InProcessNode(config.corda, MOCK_VERSION_INFO, cordappPackages).start()
+                val node = InProcessNode(config.corda, MOCK_VERSION_INFO).start()
                 val nodeThread = thread(name = config.corda.myLegalName.organisation) {
                     node.internals.run()
                 }

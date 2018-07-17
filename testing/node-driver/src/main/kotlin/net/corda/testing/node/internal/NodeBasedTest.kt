@@ -1,16 +1,20 @@
 package net.corda.testing.node.internal
 
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.internal.exists
+import net.corda.core.internal.packageName
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -19,6 +23,7 @@ import net.corda.testing.node.User
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.getFreeLocalPorts
 import net.corda.testing.internal.testThreadFactory
+import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
 import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Before
@@ -33,6 +38,8 @@ import kotlin.concurrent.thread
 abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyList()) {
     companion object {
         private val WHITESPACE = "\\s++".toRegex()
+
+        private val logger = loggerFor<NodeBasedTest>()
     }
 
     @Rule
@@ -99,14 +106,35 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 ) + configOverrides
         )
 
-        val parsedConfig = config.parseAsNodeConfiguration().also { nodeConfiguration ->
+        // TODO sollecitom perhaps improve this
+        val cordapps =  defaultTestCorDappsForAllNodes(getCallerPackage()?.let { cordappPackages + it }?.toSet() ?: cordappPackages.toSet())
+
+        // TODO sollecitom refactor how this NodeConfig is passed and generated
+        val existingCorDappDirectoriesOption = if (config.hasPath("cordappDirectories")) config.getStringList("cordappDirectories") else emptyList()
+        // TODO sollecitom refactor this
+
+        // TODO sollecitom create a cache, so that individual cordapps are not re-generated each time
+        val individualCorDappsDirectory = config.parseAsNodeConfiguration().baseDirectory / "cordapps"
+        val cordappDirectories = existingCorDappDirectoriesOption + individualCorDappsDirectory.toString()
+
+        val specificConfig = config.withValue("cordappDirectories", ConfigValueFactory.fromIterable(cordappDirectories))
+
+        val parsedConfig = specificConfig.parseAsNodeConfiguration().also { nodeConfiguration ->
             val errors = nodeConfiguration.validate()
             if (errors.isNotEmpty()) {
                 throw IllegalStateException("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
             }
         }
+
+        if (!individualCorDappsDirectory.exists()) {
+            individualCorDappsDirectory.toFile().mkdirs()
+            cordapps.forEach { cordapp -> cordapp.packageAsJarInDirectory(individualCorDappsDirectory) }
+        } else {
+            logger.info("Node's specific CorDapps directory $individualCorDappsDirectory already exists, skipping CorDapps packaging for node ${parsedConfig.myLegalName}.")
+        }
+
         defaultNetworkParameters.install(baseDirectory)
-        val node = InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion), cordappPackages).start()
+        val node = InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion)).start()
         nodes += node
         ensureAllNetworkMapCachesHaveAllNodeInfos()
         thread(name = legalName.organisation) {
@@ -128,10 +156,19 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 node.services.networkMapCache.addNode(nodeInfo)
             }
     }
+
+    // TODO this needs to be duplicated, for it's call-site based - NodeBasedTest shouldn't exist anyway
+    private fun getCallerPackage(): String? {
+
+        val stackTrace = Throwable().stackTrace
+        val index = stackTrace.indexOfLast { it.className == NodeBasedTest::class.java.name }
+        if (index == -1) return null
+        val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
+        return callerPackage.name
+    }
 }
 
-class InProcessNode(
-        configuration: NodeConfiguration, versionInfo: VersionInfo, cordappPackages: List<String>) : Node(
-        configuration, versionInfo, false, CordappLoader.createDefaultWithTestPackages(configuration, cordappPackages)) {
+class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo) : Node(configuration, versionInfo, false) {
+
     override fun getRxIoScheduler() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
 }
