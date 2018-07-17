@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
 import net.corda.core.DeleteForDJVM
@@ -96,6 +97,12 @@ open class SerializerFactory(
     }
 
     val classloader: ClassLoader get() = classCarpenter.classloader
+
+    private data class CustomSerializersCacheKey(val clazz: Class<*>, val declaredType: Type)
+
+    private val customSerializersCache = Caffeine.newBuilder()
+            .maximumSize(System.getProperty("amqp.customSerial.cache.size", "200").toLong())
+            .build(::doFindCustomSerializer)
 
     private fun getEvolutionSerializer(typeNotation: TypeNotation,
                                        newSerializer: AMQPSerializer<Any>,
@@ -377,6 +384,13 @@ open class SerializerFactory(
     }
 
     internal fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
+        return customSerializersCache[CustomSerializersCacheKey(clazz, declaredType)]
+    }
+
+    private fun doFindCustomSerializer(key: CustomSerializersCacheKey): AMQPSerializer<Any>? {
+
+        val (clazz, declaredType) = key
+
         // e.g. Imagine if we provided a Map serializer this way, then it won't work if the declared type is
         // AbstractMap, only Map. Otherwise it needs to inject additional schema for a RestrictedType source of the
         // super type.  Could be done, but do we need it?
@@ -389,7 +403,7 @@ open class SerializerFactory(
                         || !customSerializer.isSerializerFor(declaredSuperClass)
                         || !customSerializer.revealSubclassesInSchema
                 ) {
-                    logger.info ("action=\"Using custom serializer\", class=${clazz.typeName}, " +
+                    logger.debug("action=\"Using custom serializer\", class=${clazz.typeName}, " +
                             "declaredType=${declaredType.typeName}")
 
                     @Suppress("UNCHECKED_CAST")
