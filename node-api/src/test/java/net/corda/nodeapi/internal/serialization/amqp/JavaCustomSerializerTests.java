@@ -1,8 +1,7 @@
-package net.corda.serialization.internal.amqp;
+package net.corda.nodeapi.internal.serialization.amqp;
 
 import net.corda.core.serialization.SerializationCustomSerializer;
-import net.corda.serialization.internal.AllWhitelist;
-import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
+import net.corda.nodeapi.internal.serialization.AllWhitelist;
 import org.junit.Test;
 
 import java.io.NotSerializableException;
@@ -87,10 +86,12 @@ public class JavaCustomSerializerTests {
     }
 
     @Test
-    public void serializeExample() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+    public void serializeExample() throws NotSerializableException {
+        SerializerFactory factory = new SerializerFactory(
+                AllWhitelist.INSTANCE,
+                ClassLoader.getSystemClassLoader(),
+                new EvolutionSerializerGetter());
+
         SerializationOutput ser = new SerializationOutput(factory);
 
         List<Integer> l = new ArrayList<Integer>(2);
@@ -101,8 +102,6 @@ public class JavaCustomSerializerTests {
         CorDappCustomSerializer ccs = new CorDappCustomSerializer(new ExampleSerializer(), factory);
         factory.registerExternal(ccs);
 
-        ser.serialize(e, TestSerializationContext.testSerializationContext);
-
-
+        ser.serialize(e);
     }
 }
