@@ -11,13 +11,13 @@ several fixes that make it easier for a node to join Corda networks broader than
 operating as part of an internal testing deployment. This will ensure Corda nodes will be free to interact
 with upcoming network offerings from R3 and others who may make broad-access Corda networks available.
 
-* **The Network Bootstrapper**
+* **The Corda Network Builder**
 
-To support the ongoing move toward usability, testing, and deployment, 3.2 is releasing a
-graphical network bootstrapper tool <docs ref> to facilitate the simple creation of more dynamic ad
-hoc testing environments.
+To make it easier to create more dynamic, flexible, networks for testing and deployment,
+with the 3.2 release of Corda we are shipping a graphical network bootsrapping tool <docs ref>
+to facilitate the simple creation of more dynamic ad hoc dev-mode environments.
 
-Using a graphical interface you can dynamically create and alter Corda Networks, adding
+Using a graphical interface you can dynamically create and alter Corda test networks, adding
 nodes and CorDapps with the click of a button! Additionally, you can leverage its integration
 with Azure cloud services for remote hosting of Nodes and Docker instances for local testing.
 
@@ -49,8 +49,11 @@ is configured in this manner, the new configuration looks as follows.
 
 * **The Blob Inspector**
 
-Finally, the blob inspector brings the ability to unpack serialized Corda blobs at the
+The blob inspector brings the ability to unpack serialized Corda blobs at the
 command line, giving a human readable interpretation of the encoded date.
+
+.. note:: This tool has been shipped as a serparte Jar previously, we are now including it
+    as part of an official release.
 
 Documentation on its use can be found here :doc:blob-inspector
 
@@ -81,7 +84,7 @@ Issues Fixed
 * Fixes for the finance CordApp[`CORDA-1711 <https://r3-cev.atlassian.net/browse/CORDA-1711>`_]
 * Allow Doorman and NetworkMap to be configured independently [`CORDA-1510 <https://r3-cev.atlassian.net/browse/CORDA-1510>`_]
 * Serialization fix for generics when evolving a class [`CORDA-1530  <https://r3-cev.atlassian.net/browse/CORDA-1530>`_]
-* Correct typo in an internal databse table make [`CORDA-1499 <https://r3-cev.atlassian.net/browse/CORDA-1499>`_] and [`CORDA-1804 <https://r3-cev.atlassian.net/browse/CORDA-1804>`_]
+* Correct typo in an internal database table name [`CORDA-1499 <https://r3-cev.atlassian.net/browse/CORDA-1499>`_] and [`CORDA-1804 <https://r3-cev.atlassian.net/browse/CORDA-1804>`_]
 * Hibernate session not flushed before handing over raw JDBC session to user code [`CORDA-1548 <https://r3-cev.atlassian.net/browse/CORDA-1548>`_]
 * Fix Postgres db bloat issue [`CORDA-1812  <https://r3-cev.atlassian.net/browse/CORDA-1812>`_]
 * Roll back flow transaction on exception [`CORDA-1790 <https://r3-cev.atlassian.net/browse/CORDA-1790>`_]
