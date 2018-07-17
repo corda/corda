@@ -132,7 +132,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String> = empty
     }
     private val sharedUserCount = AtomicInteger(0)
 
-    private val cordappsForAllNodes: Set<TestCorDapp> = cordappsForAllNodesArg ?: defaultTestCorDappsForAllNodes(getCallerPackage()?.let { cordappPackages + it }?.toSet() ?: cordappPackages.toSet())
+    private val cordappsForAllNodes: Set<TestCorDapp> = cordappsForAllNodesArg ?: defaultTestCorDappsForAllNodes(cordappPackages.toSet())
 
     private val sharedCorDappsDirectory: Path by lazy {
 
