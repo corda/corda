@@ -33,6 +33,7 @@ class CollectSignaturesFlowTests {
         private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
         private val miniCorpServices = MockServices(listOf("net.corda.testing.contracts"), miniCorp, rigorousMock())
         private val mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.core.flows"))
+        private const val MAGIC_NUMBER = 1337
 
         @JvmStatic
         @AfterClass
@@ -46,7 +47,6 @@ class CollectSignaturesFlowTests {
     private val alice = aliceNode.info.singleIdentity()
     private val bob = bobNode.info.singleIdentity()
     private val charlie = charlieNode.info.singleIdentity()
-    private val notary = mockNet.defaultNotaryIdentity
 
     @Test
     fun `successfully collects three signatures`() {
@@ -61,7 +61,7 @@ class CollectSignaturesFlowTests {
 
     @Test
     fun `no need to collect any signatures`() {
-        val ptx = aliceNode.signDummyContract(alice)
+        val ptx = aliceNode.signDummyContract(alice.ref(1))
 
         assert.that(
                 aliceNode.collectSignatures(ptx),
@@ -71,20 +71,17 @@ class CollectSignaturesFlowTests {
 
     @Test
     fun `fails when not signed by initiator`() {
-        val ptx = miniCorpServices.signDummyContract(alice)
+        val ptx = miniCorpServices.signDummyContract(alice.ref(1))
 
         assert.that(
                 aliceNode.collectSignatures(ptx),
-                failsWith(has(
-                        Exception::message,
-                        equalTo("The Initiator of CollectSignaturesFlow must have signed the transaction.")))
-        )
+                failsWith(errorMessage("The Initiator of CollectSignaturesFlow must have signed the transaction.")))
     }
 
     @Test
     fun `passes with multiple initial signatures`() {
         val signedByA = aliceNode.signDummyContract(
-                alice,
+                alice.ref(1),
                 bob.ref(2),
                 bob.ref(3))
         val signedByBoth = bobNode.addSignatureTo(signedByA)
@@ -126,7 +123,7 @@ class CollectSignaturesFlowTests {
                         "There should only be one output state" using (tx.outputs.size == 1)
                         "There should only be one output state" using (tx.inputs.isEmpty())
                         val magicNumberState = ltx.outputsOfType<DummyContract.MultiOwnerState>().single()
-                        "Must be 1337 or greater" using (magicNumberState.magicNumber >= 1337)
+                        "Must be $MAGIC_NUMBER or greater" using (magicNumberState.magicNumber >= MAGIC_NUMBER)
                     }
                 }
 
@@ -156,21 +153,22 @@ class CollectSignaturesFlowTests {
     private fun StartedNode<*>.startTestFlow(vararg party: Party) =
         services.startFlow(
             TestFlow.Initiator(DummyContract.MultiOwnerState(
-                1337,
-                listOf(*party)), notary))
+                MAGIC_NUMBER,
+                listOf(*party)),
+            mockNet.defaultNotaryIdentity))
         .andRunNetwork()
 
-    private fun createDummyContract(owner: Party, vararg others: PartyAndReference) =
+    private fun createDummyContract(owner: PartyAndReference, vararg others: PartyAndReference) =
             DummyContract.generateInitial(
-                    1337,
-                    notary,
-                    owner.ref(1),
+                    MAGIC_NUMBER,
+                    mockNet.defaultNotaryIdentity,
+                    owner,
                     *others)
 
-    private fun StartedNode<*>.signDummyContract(owner: Party, vararg others: PartyAndReference) =
+    private fun StartedNode<*>.signDummyContract(owner: PartyAndReference, vararg others: PartyAndReference) =
             services.signDummyContract(owner, *others).andRunNetwork()
 
-    private fun ServiceHub.signDummyContract(owner: Party, vararg others: PartyAndReference) =
+    private fun ServiceHub.signDummyContract(owner: PartyAndReference, vararg others: PartyAndReference) =
             signInitialTransaction(createDummyContract(owner, *others))
 
     private fun StartedNode<*>.collectSignatures(ptx: SignedTransaction) =
@@ -197,5 +195,9 @@ class CollectSignaturesFlowTests {
             MatchResult.Mismatch("$e")
         }
     }
-    //
+
+    private fun errorMessage(expected: String) = has(
+        Exception::message,
+        equalTo(expected))
+    //endregion
 }
