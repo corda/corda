@@ -293,20 +293,20 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
     }
 
     override fun validateAndGetTlsCrlIssuerCert(): X509Certificate? {
-        config.tlsCertCrlIssuer ?: return null
-        val tlsCertCrlIssuerPrincipal = X500Principal(config.tlsCertCrlIssuer)
-        if (principalMatchesCertificatePrincipal(tlsCertCrlIssuerPrincipal, rootCert)) {
+        val tlsCertCrlIssuer = config.tlsCertCrlIssuer
+        tlsCertCrlIssuer ?: return null
+        if (principalMatchesCertificatePrincipal(tlsCertCrlIssuer, rootCert)) {
             return rootCert
         }
         return if (config.trustStoreFile.exists()) {
-            findMatchingCertificate(tlsCertCrlIssuerPrincipal, config.loadTrustStore())
+            findMatchingCertificate(tlsCertCrlIssuer, config.loadTrustStore())
         } else {
             null
         }
     }
 
     override fun isTlsCrlIssuerCertRequired(): Boolean {
-        return !config.tlsCertCrlIssuer.isNullOrEmpty()
+        return config.tlsCertCrlIssuer != null
     }
 
     private fun findMatchingCertificate(principal: X500Principal, trustStore: X509KeyStore): X509Certificate? {

@@ -24,6 +24,7 @@ import java.nio.file.Path
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
+import javax.security.auth.x500.X500Principal
 import kotlin.reflect.full.primaryConstructor
 
 class ConfigParsingTest {
@@ -92,6 +93,11 @@ class ConfigParsingTest {
     @Test
     fun URL() {
         testPropertyType<URLData, URLListData, URL>(URL("http://localhost:1234"), URL("http://localhost:1235"), valuesToString = true)
+    }
+
+    @Test
+    fun X500Principal() {
+        testPropertyType<X500PrincipalData, X500PrincipalListData, X500Principal>(X500Principal("C=US, L=New York, CN=Corda Root CA, OU=Corda, O=R3 HoldCo LLC"), X500Principal("O=Bank A,L=London,C=GB"), valuesToString = true)
     }
 
     @Test
@@ -334,6 +340,8 @@ class ConfigParsingTest {
     data class PathListData(override val values: List<Path>) : ListData<Path>
     data class URLData(override val value: URL) : SingleData<URL>
     data class URLListData(override val values: List<URL>) : ListData<URL>
+    data class X500PrincipalData(override val value: X500Principal) : SingleData<X500Principal>
+    data class X500PrincipalListData(override val values: List<X500Principal>) : ListData<X500Principal>
     data class UUIDData(override val value: UUID) : SingleData<UUID>
     data class UUIDListData(override val values: List<UUID>) : ListData<UUID>
     data class CordaX500NameData(override val value: CordaX500Name) : SingleData<CordaX500Name>

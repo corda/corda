@@ -48,10 +48,14 @@ fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>): Amount<Is
 }
 
 /** Sums the asset states in the list, returning null if there are none. */
-fun <T : Any> Iterable<ContractState>.sumFungibleOrNull() = filterIsInstance<FungibleAsset<T>>().map { it.amount }.sumOrNull()
+fun <T : Any> Iterable<ContractState>.sumFungibleOrNull(): Amount<Issued<T>>? {
+    return filterIsInstance<FungibleAsset<T>>().map { it.amount }.sumOrNull()
+}
 
 /** Sums the asset states in the list, returning zero of the given token if there are none. */
-fun <T : Any> Iterable<ContractState>.sumFungibleOrZero(token: Issued<T>) = filterIsInstance<FungibleAsset<T>>().map { it.amount }.sumOrZero(token)
+fun <T : Any> Iterable<ContractState>.sumFungibleOrZero(token: Issued<T>): Amount<Issued<T>> {
+    return filterIsInstance<FungibleAsset<T>>().map { it.amount }.sumOrZero(token)
+}
 
 /**
  * Sums the obligation states in the list, throwing an exception if there are none. All state objects in the

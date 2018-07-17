@@ -8,7 +8,7 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
-package net.corda.node
+package net.corda.node.internal.cordapp
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
@@ -16,7 +16,6 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.core.internal.div
 import net.corda.core.internal.writeText
-import net.corda.node.internal.cordapp.CordappConfigFileProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.nio.file.Paths

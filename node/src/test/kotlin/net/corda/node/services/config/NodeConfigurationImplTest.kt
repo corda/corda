@@ -28,6 +28,7 @@ import java.net.InetAddress
 import java.net.URL
 import java.net.URI
 import java.nio.file.Paths
+import javax.security.auth.x500.X500Principal
 import java.util.*
 import kotlin.test.*
 
@@ -46,13 +47,6 @@ class NodeConfigurationImplTest {
         val configValidationResult = configTlsCertCrlOptions(null, "C=US, L=New York, OU=Corda, O=R3 HoldCo LLC, CN=Corda Root CA").validate()
         assertTrue { configValidationResult.isNotEmpty() }
         assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL")
-    }
-
-    @Test
-    fun `tlsCertCrlIssuer validation fails when misconfigured`() {
-        val configValidationResult = configTlsCertCrlOptions(URL("http://test.com/crl"), "Corda Root CA").validate()
-        assertTrue { configValidationResult.isNotEmpty() }
-        assertThat(configValidationResult.first()).contains("Error when parsing tlsCertCrlIssuer:")
     }
 
     @Test
@@ -265,7 +259,7 @@ class NodeConfigurationImplTest {
     }
 
     private fun configTlsCertCrlOptions(tlsCertCrlDistPoint: URL?, tlsCertCrlIssuer: String?, crlCheckSoftFail: Boolean = true): NodeConfiguration {
-        return testConfiguration.copy(tlsCertCrlDistPoint = tlsCertCrlDistPoint, tlsCertCrlIssuer = tlsCertCrlIssuer, crlCheckSoftFail = crlCheckSoftFail)
+        return testConfiguration.copy(tlsCertCrlDistPoint = tlsCertCrlDistPoint, tlsCertCrlIssuer = tlsCertCrlIssuer?.let { X500Principal(it) }, crlCheckSoftFail = crlCheckSoftFail)
     }
 
     private fun testConfiguration(dataSourceProperties: Properties): NodeConfigurationImpl {
