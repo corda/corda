@@ -9,7 +9,7 @@ Release 3.2
 As we see more Corda deployments in production this minor release of the open source platform brings
 several fixes that make it easier for a node to join Corda networks broader than those used when
 operating as part of an internal testing deployment. This will ensure Corda nodes will be free to interact
-with with upcoming network offerings from R3 and others who may make broad-access Corda networks available.
+with upcoming network offerings from R3 and others who may make broad-access Corda networks available.
 
 * **The Network Bootstrapper**
 
@@ -56,13 +56,20 @@ Documentation on its use can be found here :doc:blob-inspector
 
 * **The Event Horizon**
 
-A part of joining a node to a Corda network is agreeing to the rules that govern that network and the
-framework surrounding the governance of it. An important aspect of that is the ability for the network
-operator to change and evole the parameters that control aspects of the network (:docs:network-map).
+One part of joining a node to a Corda network is agreeing to the rules that govern that network as set out
+by the network operator. A nodes membership of a network is communicated to other nodes through the network
+map, the service with which the node will have published its Node Info to and through which it receives the
+set of NodeInfos currently present on the network. Membership of that list is a finite thing determined by
+the network operator.
 
-This setting impacts the operator of a node that is itself a member of a Corda network. The Event Horizon
-paramter determines how long a node can remain on a network without accepting the new version of these
-parameters.
+Periodically a node will republish its NodeInfo to the Nework Map service. The Network Map uses this as a
+heartbeat to determine the status of nodes registered with it. Those that don't "beep" within the
+determined interval are removed from the list of registered nodes. The ``Event Horizon`` network parameter
+sets the upper limit within which a node must respond or be considered inactive.
+
+.. important:: This does not mean a node is unregistered from the Doorman, only that its NodeInfo is
+    removed from the Network Map. Should the node come back online having been pruned it can simply
+    re-register with the Network Map.
 
 Issues Fixed
 ~~~~~~~~~~~~
