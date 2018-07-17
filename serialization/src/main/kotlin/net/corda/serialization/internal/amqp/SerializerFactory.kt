@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp
 
-import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
 import net.corda.core.DeleteForDJVM
@@ -26,6 +25,8 @@ import javax.annotation.concurrent.ThreadSafe
 data class SerializationSchemas(val schema: Schema, val transforms: TransformsSchema)
 @KeepForDJVM
 data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typeDescriptor: Any)
+@KeepForDJVM
+data class CustomSerializersCacheKey(val clazz: Class<*>, val declaredType: Type)
 
 /**
  * Factory of serializers designed to be shared across threads and invocations.
@@ -57,6 +58,7 @@ open class SerializerFactory(
         private val serializersByType: MutableMap<Type, AMQPSerializer<Any>>,
         val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>>,
         private val customSerializers: MutableList<SerializerFor>,
+        private val customSerializersCache: MutableMap<CustomSerializersCacheKey, AMQPSerializer<Any>?>,
         val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>,
         private val onlyCustomSerializers: Boolean = false
 ) {
@@ -74,6 +76,7 @@ open class SerializerFactory(
             ConcurrentHashMap(),
             ConcurrentHashMap(),
             CopyOnWriteArrayList(),
+            ConcurrentHashMap(),
             ConcurrentHashMap(),
             onlyCustomSerializers
     )
@@ -97,12 +100,6 @@ open class SerializerFactory(
     }
 
     val classloader: ClassLoader get() = classCarpenter.classloader
-
-    private data class CustomSerializersCacheKey(val clazz: Class<*>, val declaredType: Type)
-
-    private val customSerializersCache = Caffeine.newBuilder()
-            .maximumSize(System.getProperty("amqp.customSerial.cache.size", "200").toLong())
-            .build(::doFindCustomSerializer)
 
     private fun getEvolutionSerializer(typeNotation: TypeNotation,
                                        newSerializer: AMQPSerializer<Any>,
@@ -384,7 +381,7 @@ open class SerializerFactory(
     }
 
     internal fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
-        return customSerializersCache[CustomSerializersCacheKey(clazz, declaredType)]
+        return customSerializersCache.computeIfAbsent(CustomSerializersCacheKey(clazz, declaredType), ::doFindCustomSerializer)
     }
 
     private fun doFindCustomSerializer(key: CustomSerializersCacheKey): AMQPSerializer<Any>? {
