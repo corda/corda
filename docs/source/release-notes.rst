@@ -71,8 +71,8 @@ determined interval are removed from the list of registered nodes. The ``Event H
 sets the upper limit within which a node must respond or be considered inactive.
 
 .. important:: This does not mean a node is unregistered from the Doorman, only that its NodeInfo is
-    removed from the Network Map. Should the node come back online having been pruned it can simply
-    re-register with the Network Map.
+    removed from the Network Map. Should the node come back online it will be re-added to the published
+    set of NodeInfos
 
 Issues Fixed
 ~~~~~~~~~~~~
