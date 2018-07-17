@@ -115,7 +115,7 @@ open class Node(configuration: NodeConfiguration,
 
         private val sameVmNodeCounter = AtomicInteger()
         private fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
-            return CordappLoader.createDefault(configuration.cordappDirectories)
+            return CordappLoader.fromDirectories(configuration.cordappDirectories)
         }
         // TODO: make this configurable.
         const val MAX_RPC_MESSAGE_SIZE = 10485760

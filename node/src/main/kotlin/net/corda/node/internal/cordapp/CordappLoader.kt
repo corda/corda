@@ -42,6 +42,7 @@ import kotlin.streams.toList
  * @property cordappJarPaths The classpath of cordapp JARs
  */
 class CordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>) {
+
     val cordapps: List<Cordapp> by lazy { loadCordapps() + coreCordapp }
     val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
 
@@ -70,15 +71,22 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         private val logger = contextLogger()
 
         /**
-         * Creates a default CordappLoader intended to be used in non-dev or non-test environments.
+         * Creates a CordappLoader from multiple directories.
          *
          * @param corDappDirectories Directories used to scan for CorDapp JARs.
          */
-        fun createDefault(corDappDirectories: Iterable<Path>): CordappLoader {
+        fun fromDirectories(corDappDirectories: Iterable<Path>): CordappLoader {
 
             logger.info("Looking for CorDapps in ${corDappDirectories.distinct().joinToString(File.pathSeparator, "[", "]")}")
-            return CordappLoader(corDappDirectories.distinct().flatMap(this::getNodeCordappURLs))
+            return CordappLoader(corDappDirectories.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() })
         }
+
+        /**
+         * Creates a CordappLoader loader out of a list of JAR URLs.
+         *
+         * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection.
+         */
+        fun fromJarUrls(scanJars: List<URL>) = CordappLoader(scanJars.map { it.restricted() })
 
         // Cache for CordappLoaders to avoid costly classpath scanning
         private val cordappLoadersCache = Caffeine.newBuilder().softValues().build<List<RestrictedURL>, CordappLoader>()
@@ -106,7 +114,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
             if (!configuration.devMode) {
                 logger.warn("Package scanning should only occur in dev mode!")
             }
-            val urls = configuration.cordappDirectories.distinct().flatMap(this::getNodeCordappURLs) + simplifyScanPackages(testPackages).flatMap(this::getPackageURLs)
+            val urls = configuration.cordappDirectories.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() } + simplifyScanPackages(testPackages).flatMap(this::getPackageURLs)
             return cordappLoadersCache.asMap().computeIfAbsent(urls, ::CordappLoader)
         }
 
@@ -124,14 +132,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
             return cordappLoadersCache.asMap().computeIfAbsent(urls, ::CordappLoader)
         }
 
-        /**
-         * Creates a dev mode CordappLoader intended only to be used in test environments
-         *
-         * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection
-         */
-        // TODO sollecitom remove
-        @VisibleForTesting
-        fun createDevMode(scanJars: List<URL>) = CordappLoader(scanJars.map { RestrictedURL(it, null) })
+        private fun URL.restricted(rootPackageName: String? = null) =  RestrictedURL(this, rootPackageName)
 
         private fun getPackageURLs(scanPackage: String): List<RestrictedURL> {
             val resource = scanPackage.replace('.', '/')
@@ -179,12 +180,13 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
             }
         }
 
-        private fun getNodeCordappURLs(cordappsDir: Path): List<RestrictedURL> {
-            return if (!cordappsDir.exists()) {
+        private fun jarUrlsInDirectory(directory: Path): List<URL> {
+
+            return if (!directory.exists()) {
                 emptyList()
             } else {
-                cordappsDir.list {
-                    it.filter { it.toString().endsWith(".jar") }.map { RestrictedURL(it.toUri().toURL(), null) }.toList()
+                directory.list { paths ->
+                    paths.filter { path -> path.toFile().extension == "jar" }.map { it.toUri().toURL() }.toList()
                 }
             }
         }
@@ -292,6 +294,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
     }
 
     private val cachedScanResult = LRUMap<RestrictedURL, RestrictedScanResult>(1000)
+
     private fun scanCordapp(cordappJarPath: RestrictedURL): RestrictedScanResult {
         logger.info("Scanning CorDapp in ${cordappJarPath.url}")
         return cachedScanResult.computeIfAbsent(cordappJarPath) {

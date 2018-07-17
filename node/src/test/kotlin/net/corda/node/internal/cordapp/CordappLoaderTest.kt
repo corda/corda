@@ -40,14 +40,14 @@ class CordappLoaderTest {
     @Test
     fun `test that classes that aren't in cordapps aren't loaded`() {
         // Basedir will not be a corda node directory so the dummy flow shouldn't be recognised as a part of a cordapp
-        val loader = CordappLoader.createDefault(listOf(Paths.get(".")))
+        val loader = CordappLoader.fromDirectories(listOf(Paths.get(".")))
         assertThat(loader.cordapps).containsOnly(CordappLoader.coreCordapp)
     }
 
     @Test
     fun `isolated JAR contains a CorDapp with a contract and plugin`() {
         val isolatedJAR = CordappLoaderTest::class.java.getResource("isolated.jar")!!
-        val loader = CordappLoader.createDevMode(listOf(isolatedJAR))
+        val loader = CordappLoader.fromJarUrls(listOf(isolatedJAR))
 
         val actual = loader.cordapps.toTypedArray()
         assertThat(actual).hasSize(2)
@@ -98,7 +98,7 @@ class CordappLoaderTest {
     @Test
     fun `cordapp classloader can load cordapp classes`() {
         val isolatedJAR = CordappLoaderTest::class.java.getResource("isolated.jar")!!
-        val loader = CordappLoader.createDevMode(listOf(isolatedJAR))
+        val loader = CordappLoader.fromJarUrls(listOf(isolatedJAR))
 
         loader.appClassLoader.loadClass(isolatedContractId)
         loader.appClassLoader.loadClass(isolatedFlowName)
