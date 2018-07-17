@@ -627,8 +627,6 @@ class DriverDSLImpl(
                 monitorPort,
                 systemProperties,
                 "512m",
-                emptySet(),
-                null,
                 *extraCmdLineFlag
         )
 
@@ -650,15 +648,15 @@ class DriverDSLImpl(
         corDappsDirectory
     }
 
-    private fun startNodeInternal(config: NodeConfig,
+    private fun startNodeInternal(specifiedConfig: NodeConfig,
                                   webAddress: NetworkHostAndPort,
                                   startInProcess: Boolean?,
                                   maximumHeapSize: String,
                                   localNetworkMap: LocalNetworkMap?,
                                   // TODO sollecitom see if default value is needed
                                   additionalCorDapps: Set<TestCorDapp> = emptySet()): CordaFuture<NodeHandle> {
-        val visibilityHandle = networkVisibilityController.register(config.corda.myLegalName)
-        val baseDirectory = config.corda.baseDirectory.createDirectories()
+        val visibilityHandle = networkVisibilityController.register(specifiedConfig.corda.myLegalName)
+        val baseDirectory = specifiedConfig.corda.baseDirectory.createDirectories()
         localNetworkMap?.networkParametersCopier?.install(baseDirectory)
         localNetworkMap?.nodeInfosCopier?.addConfig(baseDirectory)
 
@@ -667,7 +665,24 @@ class DriverDSLImpl(
             visibilityHandle.close()
         }
 
-        val useHTTPS = config.typesafe.run { hasPath("useHTTPS") && getBoolean("useHTTPS") }
+        val useHTTPS = specifiedConfig.typesafe.run { hasPath("useHTTPS") && getBoolean("useHTTPS") }
+
+        // TODO sollecitom refactor how this NodeConfig is passed and generated
+        val existingCorDappDirectoriesOption = if (specifiedConfig.typesafe.hasPath("cordappDirectories")) specifiedConfig.typesafe.getStringList("cordappDirectories") else emptyList()
+        // TODO sollecitom refactor this
+
+        // TODO sollecitom create a cache, so that individual cordapps are not re-generated each time
+        val individualCorDappsDirectory = specifiedConfig.corda.baseDirectory / "cordapps"
+        val cordappDirectories = existingCorDappDirectoriesOption + sharedCorDappsDirectory.toString() + individualCorDappsDirectory.toString()
+
+        val config = NodeConfig(specifiedConfig.typesafe.withValue("cordappDirectories", ConfigValueFactory.fromIterable(cordappDirectories)))
+
+        if (!individualCorDappsDirectory.exists()) {
+            individualCorDappsDirectory.toFile().mkdirs()
+            additionalCorDapps.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(individualCorDappsDirectory) }
+        } else {
+            log.info("Node's specific CorDapps directory $individualCorDappsDirectory already exists, skipping CorDapps packaging for node ${specifiedConfig.corda.myLegalName}.")
+        }
 
         if (startInProcess ?: startNodesInProcess) {
             // TODO sollecitom fix here as well
@@ -698,7 +713,7 @@ class DriverDSLImpl(
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
-            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, maximumHeapSize, additionalCorDapps, sharedCorDappsDirectory)
+            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, maximumHeapSize)
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
             // true because we don't want orphaned processes in the case that the parent process is terminated by the
@@ -829,38 +844,15 @@ class DriverDSLImpl(
         }
 
         private fun startOutOfProcessNode(
-                specifiedConfig: NodeConfig,
+                config: NodeConfig,
                 quasarJarPath: String,
                 debugPort: Int?,
                 jolokiaJarPath: String,
                 monitorPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
                 maximumHeapSize: String,
-                additionalCorDapps: Iterable<TestCorDapp>,
-                sharedCorDappsDirectory: Path?,
                 vararg extraCmdLineFlag: String
         ): Process {
-
-            // TODO sollecitom refactor how this NodeConfig is passed and generated
-            val existingCorDappDirectoriesOption = if (specifiedConfig.typesafe.hasPath("cordappDirectories")) specifiedConfig.typesafe.getStringList("cordappDirectories") else emptyList()
-            // TODO sollecitom refactor this
-
-            // TODO sollecitom create a cache, so that individual cordapps are not re-generated each time
-            val individualCorDappsDirectory = specifiedConfig.corda.baseDirectory / "cordapps"
-            var cordappDirectories = existingCorDappDirectoriesOption
-            if (sharedCorDappsDirectory != null) {
-                cordappDirectories = cordappDirectories + sharedCorDappsDirectory.toString()
-            }
-            cordappDirectories = cordappDirectories + individualCorDappsDirectory.toString()
-
-            val config = NodeConfig(specifiedConfig.typesafe.withValue("cordappDirectories", ConfigValueFactory.fromIterable(cordappDirectories)))
-
-            if (!individualCorDappsDirectory.exists()) {
-                individualCorDappsDirectory.toFile().mkdirs()
-                additionalCorDapps.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(individualCorDappsDirectory) }
-            } else {
-                log.info("Node's specific CorDapps directory $individualCorDappsDirectory already exists, skipping CorDapps packaging for node ${specifiedConfig.corda.myLegalName}.")
-            }
 
             log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, " +
                     "debug port is " + (debugPort ?: "not enabled") + ", " +

@@ -68,4 +68,18 @@ class AsymmetricCorDappsTests {
             nodeA.rpc.startFlow(::Ping, nodeB.nodeInfo.singleIdentity(), 1).returnValue.getOrThrow()
         }
     }
+
+    @Test
+    fun sharedCorDappsWithAsymmetricSpecificClassesInProcess() {
+
+        val resourceName = "cordapp.properties"
+        val cordappPropertiesResource = this::class.java.getResource(resourceName)
+        val sharedCordapp = TestCorDapp.Factory.create("shared", "1.0", classes = setOf(Ping::class.java)).plusResource("${AsymmetricCorDappsTests::class.java.packageName}.$resourceName", cordappPropertiesResource)
+        val cordappForNodeB = TestCorDapp.Factory.create("nodeB_only", "1.0", classes = setOf(Pong::class.java))
+        driver(DriverParameters(startNodesInProcess = true, corDappsForAllNodes = setOf(sharedCordapp))) {
+
+            val (nodeA, nodeB) = listOf(startNode(), startNode(additionalCorDapps = setOf(cordappForNodeB))).transpose().getOrThrow()
+            nodeA.rpc.startFlow(::Ping, nodeB.nodeInfo.singleIdentity(), 1).returnValue.getOrThrow()
+        }
+    }
 }

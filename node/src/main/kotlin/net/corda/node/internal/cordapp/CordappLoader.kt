@@ -88,20 +88,6 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          */
         fun fromJarUrls(scanJars: List<URL>) = CordappLoader(scanJars.map { it.restricted() })
 
-        // Cache for CordappLoaders to avoid costly classpath scanning
-        private val cordappLoadersCache = Caffeine.newBuilder().softValues().build<List<RestrictedURL>, CordappLoader>()
-        private val generatedCordapps = ConcurrentHashMap<URL, Path>()
-
-        private fun simplifyScanPackages(scanPackages: List<String>): List<String> {
-            return scanPackages.sorted().fold(emptyList()) { listSoFar, packageName ->
-                when {
-                    listSoFar.isEmpty() -> listOf(packageName)
-                    packageName.startsWith(listSoFar.last()) -> listSoFar  // Squash ["com.foo", "com.foo.bar"] into just ["com.foo"]
-                    else -> listSoFar + packageName
-                }
-            }
-        }
-
         /**
          * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath
          * and cordapps directory. This is intended mostly for use by the driver.
@@ -130,6 +116,20 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         fun createWithTestPackages(testPackages: List<String>): CordappLoader {
             val urls = simplifyScanPackages(testPackages).flatMap(this::getPackageURLs)
             return cordappLoadersCache.asMap().computeIfAbsent(urls, ::CordappLoader)
+        }
+
+        // Cache for CordappLoaders to avoid costly classpath scanning
+        private val cordappLoadersCache = Caffeine.newBuilder().softValues().build<List<RestrictedURL>, CordappLoader>()
+        private val generatedCordapps = ConcurrentHashMap<URL, Path>()
+
+        private fun simplifyScanPackages(scanPackages: List<String>): List<String> {
+            return scanPackages.sorted().fold(emptyList()) { listSoFar, packageName ->
+                when {
+                    listSoFar.isEmpty() -> listOf(packageName)
+                    packageName.startsWith(listSoFar.last()) -> listSoFar  // Squash ["com.foo", "com.foo.bar"] into just ["com.foo"]
+                    else -> listSoFar + packageName
+                }
+            }
         }
 
         private fun URL.restricted(rootPackageName: String? = null) =  RestrictedURL(this, rootPackageName)
