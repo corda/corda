@@ -49,13 +49,17 @@ import java.util.concurrent.atomic.AtomicInteger
 fun generateStateRef(): StateRef = StateRef(SecureHash.randomSHA256(), 0)
 
 private val freePortCounter = AtomicInteger(30000)
+
 /**
  * Returns a localhost address with a free port.
  *
  * Unsafe for getting multiple ports!
  * Use [getFreeLocalPorts] for getting multiple ports.
  */
-fun freeLocalHostAndPort() = NetworkHostAndPort("localhost", freePort())
+@Suppress("DEPRECATION")
+@Deprecated("Returned port is not guaranteed to be free when used, which can result in flaky tests. Instead use a port " +
+        "range that's unlikely to be used by the rest of the system, such as PortAllocation.Incremental(10000).")
+fun freeLocalHostAndPort(): NetworkHostAndPort = NetworkHostAndPort("localhost", freePort())
 
 /**
  * Returns a free port.
@@ -63,6 +67,8 @@ fun freeLocalHostAndPort() = NetworkHostAndPort("localhost", freePort())
  * Unsafe for getting multiple ports!
  * Use [getFreeLocalPorts] for getting multiple ports.
  */
+@Deprecated("Returned port is not guaranteed to be free when used, which can result in flaky tests. Instead use a port " +
+        "range that's unlikely to be used by the rest of the system, such as PortAllocation.Incremental(10000).")
 fun freePort(): Int = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + 1) % 10000 }
 
 /**
@@ -71,6 +77,8 @@ fun freePort(): Int = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (
  * Unlikely, but in the time between running this function and handing the ports
  * to the Node, some other process else could allocate the returned ports.
  */
+@Deprecated("Returned port is not guaranteed to be free when used, which can result in flaky tests. Instead use a port " +
+        "range that's unlikely to be used by the rest of the system, such as PortAllocation.Incremental(10000).")
 fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAndPort> {
     val freePort = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
     return (0 until numberToAlloc).map { NetworkHostAndPort(hostName, freePort + it) }
