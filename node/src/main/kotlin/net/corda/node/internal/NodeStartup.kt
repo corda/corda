@@ -230,7 +230,7 @@ open class NodeStartup(val args: Array<String>) {
     private fun deleteNodeRegistrationMarker(baseDir: Path) {
         try {
             val marker = File((baseDir / INITIAL_REGISTRATION_MARKER).toUri())
-            if (!marker.exists()) {
+            if (marker.exists()) {
                 marker.delete()
             }
         } catch (e: Exception) {
