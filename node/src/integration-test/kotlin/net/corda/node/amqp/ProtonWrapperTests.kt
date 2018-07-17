@@ -22,7 +22,11 @@ import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.MAX_MESSAGE_SIZE
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -32,7 +36,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.security.KeyStore
-import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl.*
 import kotlin.concurrent.thread
@@ -44,9 +47,10 @@ class ProtonWrapperTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val serverPort = freePort()
-    private val serverPort2 = freePort()
-    private val artemisPort = freePort()
+    private val portAllocation = PortAllocation.Incremental(10000)
+    private val serverPort = portAllocation.nextPort()
+    private val serverPort2 = portAllocation.nextPort()
+    private val artemisPort = portAllocation.nextPort()
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 
