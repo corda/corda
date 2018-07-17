@@ -61,3 +61,15 @@ include 'samples:cordapp-configuration'
 include 'samples:network-verifier'
 include 'serialization'
 include 'serialization-deterministic'
+
+buildCache {
+    local {
+        enabled = false
+    }
+    remote(HttpBuildCache) {
+//        url = 'http://localhost:5071/cache/'
+        // CI server: gradle-build-cache
+        url = 'http://40.114.193.246:80/cache/'
+        push = true
+    }
+}
