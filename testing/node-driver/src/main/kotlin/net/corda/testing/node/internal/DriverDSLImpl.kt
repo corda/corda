@@ -627,6 +627,8 @@ class DriverDSLImpl(
                 monitorPort,
                 systemProperties,
                 "512m",
+                emptySet(),
+                null,
                 *extraCmdLineFlag
         )
 
@@ -694,24 +696,9 @@ class DriverDSLImpl(
             }
             return nodeFuture
         } else {
-            // TODO sollecitom refactor how this NodeConfig is passed and generated
-            val existingCorDappDirectoriesOption = if (config.typesafe.hasPath("cordappDirectories")) config.typesafe.getStringList("cordappDirectories") else emptyList()
-            // TODO sollecitom refactor this
-            // TODO sollecitom create a cache, so that individual cordapps are not re-generated each time
-            val individualCorDappsDirectory = config.corda.baseDirectory / "cordapps"
-            val cordappDirectories = existingCorDappDirectoriesOption + sharedCorDappsDirectory.toString() + individualCorDappsDirectory.toString()
-            val specificConfig = NodeConfig(config.typesafe.withValue("cordappDirectories", ConfigValueFactory.fromIterable(cordappDirectories)))
-
-            if (!individualCorDappsDirectory.exists()) {
-                individualCorDappsDirectory.toFile().mkdirs()
-                additionalCorDapps.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(individualCorDappsDirectory) }
-            } else {
-                log.info("Node's specific CorDapps directory $individualCorDappsDirectory already exists, skipping CorDapps packaging for node ${config.corda.myLegalName}.")
-            }
-
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
-            val process = startOutOfProcessNode(specificConfig, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, maximumHeapSize)
+            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, maximumHeapSize, additionalCorDapps, sharedCorDappsDirectory)
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
             // true because we don't want orphaned processes in the case that the parent process is terminated by the
@@ -842,15 +829,39 @@ class DriverDSLImpl(
         }
 
         private fun startOutOfProcessNode(
-                config: NodeConfig,
+                specifiedConfig: NodeConfig,
                 quasarJarPath: String,
                 debugPort: Int?,
                 jolokiaJarPath: String,
                 monitorPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
                 maximumHeapSize: String,
+                additionalCorDapps: Iterable<TestCorDapp>,
+                sharedCorDappsDirectory: Path?,
                 vararg extraCmdLineFlag: String
         ): Process {
+
+            // TODO sollecitom refactor how this NodeConfig is passed and generated
+            val existingCorDappDirectoriesOption = if (specifiedConfig.typesafe.hasPath("cordappDirectories")) specifiedConfig.typesafe.getStringList("cordappDirectories") else emptyList()
+            // TODO sollecitom refactor this
+
+            // TODO sollecitom create a cache, so that individual cordapps are not re-generated each time
+            val individualCorDappsDirectory = specifiedConfig.corda.baseDirectory / "cordapps"
+            var cordappDirectories = existingCorDappDirectoriesOption
+            if (sharedCorDappsDirectory != null) {
+                cordappDirectories = cordappDirectories + sharedCorDappsDirectory.toString()
+            }
+            cordappDirectories = cordappDirectories + individualCorDappsDirectory.toString()
+
+            val config = NodeConfig(specifiedConfig.typesafe.withValue("cordappDirectories", ConfigValueFactory.fromIterable(cordappDirectories)))
+
+            if (!individualCorDappsDirectory.exists()) {
+                individualCorDappsDirectory.toFile().mkdirs()
+                additionalCorDapps.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(individualCorDappsDirectory) }
+            } else {
+                log.info("Node's specific CorDapps directory $individualCorDappsDirectory already exists, skipping CorDapps packaging for node ${specifiedConfig.corda.myLegalName}.")
+            }
+
             log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, " +
                     "debug port is " + (debugPort ?: "not enabled") + ", " +
                     "jolokia monitoring port is " + (monitorPort ?: "not enabled"))
@@ -864,7 +875,6 @@ class DriverDSLImpl(
             )
 
             systemProperties += inheritFromParentProcess()
-
             systemProperties += overriddenSystemProperties
 
             // See experimental/quasar-hook/README.md for how to generate.
