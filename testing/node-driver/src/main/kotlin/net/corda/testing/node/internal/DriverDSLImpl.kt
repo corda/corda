@@ -807,7 +807,7 @@ class DriverDSLImpl(
 
         private fun <A> oneOf(array: Array<A>) = array[Random().nextInt(array.size)]
 
-        internal fun defaultTestCorDappsForAllNodes(cordappPackages: Set<String>): Set<TestCorDapp> {
+        fun defaultTestCorDappsForAllNodes(cordappPackages: Set<String>): Set<TestCorDapp> {
 
             fun testCorDapp(packageName: String): TestCorDapp {
 

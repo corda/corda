@@ -16,6 +16,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.TestCorDapp
 import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
 import rx.Observable
 import java.math.BigInteger
 import java.nio.file.Path
@@ -213,12 +214,13 @@ open class MockNetwork(
         val threadPerNode: Boolean = defaultParameters.threadPerNode,
         val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
         val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
-        val networkParameters: NetworkParameters = defaultParameters.networkParameters) {
+        val networkParameters: NetworkParameters = defaultParameters.networkParameters,
+        val cordappsForAllNodes: Set<TestCorDapp> = defaultTestCorDappsForAllNodes(cordappPackages.toSet())) {
     @JvmOverloads
     constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(cordappPackages, defaultParameters = parameters)
 
     // TODO sollecitom remove cordappPackages from here (it's internal) - should stay where it is in MockNetwork (just add the sharedCordapps bit)
-    private val internalMockNetwork: InternalMockNetwork = InternalMockNetwork(cordappPackages, defaultParameters, networkSendManuallyPumped, threadPerNode, servicePeerAllocationStrategy, notarySpecs, networkParameters = networkParameters, cordappsForAllNodesArg = null)
+    private val internalMockNetwork: InternalMockNetwork = InternalMockNetwork(defaultParameters, networkSendManuallyPumped, threadPerNode, servicePeerAllocationStrategy, notarySpecs, networkParameters = networkParameters, cordappsForAllNodes = cordappsForAllNodes)
 
     /** In a mock network, nodes have an incrementing integer ID. Real networks do not have this. Returns the next ID that will be used. */
     val nextNodeId get(): Int = internalMockNetwork.nextNodeId
