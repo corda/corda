@@ -14,7 +14,7 @@ with upcoming network offerings from R3 and others who may make broad-access Cor
 * **The Corda Network Builder**
 
 To make it easier to create more dynamic, flexible, networks for testing and deployment,
-with the 3.2 release of Corda we are shipping a graphical network bootsrapping tool <docs ref>
+with the 3.2 release of Corda we are shipping a graphical network bootsrapping tool (see :doc:`network-builder`)
 to facilitate the simple creation of more dynamic ad hoc dev-mode environments.
 
 Using a graphical interface you can dynamically create and alter Corda test networks, adding
@@ -55,7 +55,7 @@ command line, giving a human readable interpretation of the encoded date.
 .. note:: This tool has been shipped as a serparte Jar previously, we are now including it
     as part of an official release.
 
-Documentation on its use can be found here :doc:blob-inspector
+Documentation on its use can be found here :doc:`blob-inspector`
 
 * **The Event Horizon**
 
