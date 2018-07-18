@@ -1,6 +1,8 @@
 package net.corda.testing.driver.internal
 
 import net.corda.core.flows.FlowLogic
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
@@ -9,11 +11,14 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.testing.common.internal.ProjectStructure
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.OutOfProcess
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.User
 import rx.Observable
+import java.io.RandomAccessFile
 import java.nio.file.Path
 
 interface NodeHandleInternal : NodeHandle {
@@ -75,3 +80,36 @@ data class InProcessImpl(
 }
 
 val InProcess.internalServices: StartedNodeServices get() = services as StartedNodeServices
+
+fun testPortAllocation(): PortAllocation = testPortAllocation(FileLockPortAllocation.MAIN, 10000)
+fun testDebugPortAllocation(): PortAllocation = testPortAllocation(FileLockPortAllocation.DEBUG, 5005)
+
+private fun testPortAllocation(fileLockPortAllocation: FileLockPortAllocation, defaultPort: Int): PortAllocation {
+    return if (fileLockPortAllocation.file.exists()) {
+        fileLockPortAllocation
+    } else {
+        PortAllocation.Incremental(defaultPort)
+    }
+}
+
+class FileLockPortAllocation(val file: Path) : PortAllocation() {
+    companion object {
+        val MAIN = FileLockPortAllocation(ProjectStructure.projectRootDir / "build" / "portAllocation-main")
+        val DEBUG = FileLockPortAllocation(ProjectStructure.projectRootDir / "build" / "portAllocation-debug")
+    }
+
+    override fun nextPort(): Int {
+        val start = System.currentTimeMillis()
+        return synchronized(this) {  // To avoid OverlappingFileLockException
+            RandomAccessFile(file.toFile(), "rw").use { raf ->
+                raf.channel.lock()
+                val nextPort = raf.readLine().toInt()
+                val duration = System.currentTimeMillis() - start
+                println("Grabbed port $nextPort in $duration ms")
+                raf.seek(0)
+                raf.writeBytes((nextPort + 1).toString())
+                nextPort
+            }
+        }
+    }
+}

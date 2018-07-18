@@ -23,6 +23,7 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.testPortAllocation
 import net.corda.testing.internal.createNodeSslConfig
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
@@ -35,7 +36,7 @@ import java.nio.file.Path
 import javax.security.auth.x500.X500Principal
 
 class ArtemisRpcTests {
-    private val ports: PortAllocation = PortAllocation.Incremental(10000)
+    private val ports: PortAllocation = testPortAllocation()
 
     private val user = User("mark", "dadada", setOf(all()))
     private val users = listOf(user)

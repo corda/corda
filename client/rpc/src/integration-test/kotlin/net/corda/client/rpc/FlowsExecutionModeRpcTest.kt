@@ -22,7 +22,6 @@ import org.junit.Before
 import org.junit.Test
 
 class FlowsExecutionModeRpcTest {
-
     @Test
     fun `persistent state survives node restart`() {
         // Temporary disable this test when executed on Windows. It is known to be sporadically failing.
@@ -30,7 +29,7 @@ class FlowsExecutionModeRpcTest {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
 
         val user = User("mark", "dadada", setOf(invokeRpc("setFlowsDrainingModeEnabled"), invokeRpc("isFlowsDrainingModeEnabled")))
-        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(inMemoryDB = false, notarySpecs = emptyList())) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.chooseIdentity().name

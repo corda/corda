@@ -69,7 +69,7 @@ class NodeSchemaServiceTest {
      */
     @Test
     fun `auto scanning of custom schemas for testing with Driver`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver {
             val result = defaultNotaryNode.getOrThrow().rpc.startFlow(::MappedSchemasFlow)
             val mappedSchemas = result.returnValue.getOrThrow()
             assertTrue(mappedSchemas.contains(TestSchema.name))
@@ -92,7 +92,7 @@ class NodeSchemaServiceTest {
     fun `check node runs with minimal core schema set using driverDSL`() {
         // TODO: driver limitation: cannot restrict CorDapps that get automatically created by default,
         //       can ONLY specify additional ones using `extraCordappPackagesToScan` constructor argument.
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode().getOrThrow()
             val result = node.rpc.startFlow(::MappedSchemasFlow)
             val mappedSchemas = result.returnValue.getOrThrow()
@@ -105,7 +105,7 @@ class NodeSchemaServiceTest {
 
     @Test
     fun `check node runs inclusive of notary node schema set using driverDSL`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver {
             val notary = defaultNotaryNode.getOrThrow()
             val mappedSchemas = notary.rpc.startFlow(::MappedSchemasFlow).returnValue.getOrThrow()
             // check against NodeCore + NodeNotary Schemas

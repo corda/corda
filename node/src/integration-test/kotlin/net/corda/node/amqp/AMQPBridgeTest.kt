@@ -18,7 +18,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.testPortAllocation
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -40,7 +40,7 @@ class AMQPBridgeTest {
 
     private val BOB = TestIdentity(BOB_NAME)
 
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = testPortAllocation()
     private val artemisAddress = portAllocation.nextHostAndPort()
     private val amqpAddress = portAllocation.nextHostAndPort()
 

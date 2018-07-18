@@ -27,7 +27,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import org.junit.Assume.assumeFalse
 import org.junit.Test
-import java.lang.management.ManagementFactory
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -38,7 +37,6 @@ class NodeStatePersistenceTests {
         val message = Message("Hello world!")
         val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(
                 inMemoryDB = false,
-                startNodesInProcess = isQuasarAgentSpecified(),
                 extraCordappPackagesToScan = listOf(MessageState::class.packageName)
         )) {
             val nodeName = {
@@ -74,7 +72,6 @@ class NodeStatePersistenceTests {
         val message = Message("Hello world!")
         val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(
                 inMemoryDB = false,
-                startNodesInProcess = isQuasarAgentSpecified(),
                 extraCordappPackagesToScan = listOf(MessageState::class.packageName)
         )) {
             val nodeName = {
@@ -99,11 +96,6 @@ class NodeStatePersistenceTests {
         val retrievedMessage = stateAndRef!!.state.data.message
         assertEquals(message, retrievedMessage)
     }
-}
-
-fun isQuasarAgentSpecified(): Boolean {
-    val jvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments
-    return jvmArgs.any { it.startsWith("-javaagent:") && it.contains("quasar") }
 }
 
 @StartableByRPC

@@ -197,6 +197,15 @@ allprojects {
         }
     }
 
+    it.afterEvaluate {
+        if (it.tasks.findByName("integrationTest") != null) {
+            integrationTest {
+                maxParallelForks = 3
+                dependsOn portAllocation
+            }
+        }
+    }
+
     group 'net.corda'
     version "$corda_release_version"
 
@@ -393,6 +402,15 @@ artifactory {
 
 task generateApi(type: net.corda.plugins.GenerateApi) {
     baseName = "api-corda"
+}
+
+task portAllocation {
+    doLast {
+        project.buildDir.mkdirs() // TODO This can't be the answer!!
+        new File(project.buildDir, 'portAllocation-main').text = "10000"
+        new File(project.buildDir, 'portAllocation-debug').text = "5005"
+
+    }
 }
 
 // This exists to reduce CI build time when the envvar is set (can save up to 40 minutes)

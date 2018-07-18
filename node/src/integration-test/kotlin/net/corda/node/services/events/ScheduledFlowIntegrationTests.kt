@@ -76,10 +76,7 @@ class ScheduledFlowIntegrationTests {
 
     @Test
     fun `test that when states are being spent at the same time that schedules trigger everything is processed`() {
-        driver(DriverParameters(
-                startNodesInProcess = true,
-                extraCordappPackagesToScan = listOf("net.corda.testing.contracts", "net.corda.testMessage")
-        )) {
+        driver(DriverParameters(extraCordappPackagesToScan = listOf("net.corda.testing.contracts", "net.corda.testMessage"))) {
             val N = 23
             val rpcUser = User("admin", "admin", setOf("ALL"))
             val (alice, bob) = listOf(ALICE_NAME, BOB_NAME).map { startNode(providedName = it, rpcUsers = listOf(rpcUser)) }.transpose().getOrThrow()

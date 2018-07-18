@@ -29,37 +29,35 @@ class RpcExceptionHandlingTest {
 
     @Test
     fun `rpc client handles exceptions thrown on node side`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
 
-            assertThatThrownBy { node.rpc.startFlow(::Flow).returnValue.getOrThrow() }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
-
-                assertThat(exception).hasNoCause()
-                assertThat(exception.stackTrace).isEmpty()
-            }
+            assertThatThrownBy { node.rpc.startFlow(::Flow).returnValue.getOrThrow() }
+                    .isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
+                        assertThat(exception).hasNoCause()
+                        assertThat(exception.stackTrace).isEmpty()
+                    }
         }
     }
 
     @Test
     fun `rpc client handles client-relevant exceptions thrown on node side`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
             val clientRelevantMessage = "This is for the players!"
 
-            assertThatThrownBy { node.rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow() }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
-
-                assertThat(exception).hasNoCause()
-                assertThat(exception.stackTrace).isEmpty()
-                assertThat(exception.message).isEqualTo(clientRelevantMessage)
-            }
+            assertThatThrownBy { node.rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow() }
+                    .isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
+                        assertThat(exception).hasNoCause()
+                        assertThat(exception.stackTrace).isEmpty()
+                        assertThat(exception.message).isEqualTo(clientRelevantMessage)
+                    }
         }
     }
 
     @Test
     fun `FlowException is received by the RPC client`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
             val exceptionMessage = "Flow error!"
             assertThatThrownBy { node.rpc.startFlow(::FlowExceptionFlow, exceptionMessage).returnValue.getOrThrow() }
@@ -73,16 +71,15 @@ class RpcExceptionHandlingTest {
 
     @Test
     fun `rpc client handles exceptions thrown on counter-party side`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val nodeA = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = users)).getOrThrow()
             val nodeB = startNode(NodeParameters(providedName = BOB_NAME, rpcUsers = users)).getOrThrow()
 
-            assertThatThrownBy { nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow() }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
-
-                assertThat(exception).hasNoCause()
-                assertThat(exception.stackTrace).isEmpty()
-            }
+            assertThatThrownBy { nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow() }
+                    .isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
+                        assertThat(exception).hasNoCause()
+                        assertThat(exception.stackTrace).isEmpty()
+                    }
         }
     }
 }

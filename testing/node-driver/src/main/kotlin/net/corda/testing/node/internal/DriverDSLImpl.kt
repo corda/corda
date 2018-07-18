@@ -48,6 +48,7 @@ import net.corda.testing.driver.VerifierType
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
+import net.corda.testing.driver.internal.testDebugPortAllocation
 import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
@@ -1145,7 +1146,7 @@ fun <A> internalDriver(
         waitForAllNodesToFinish: Boolean = DriverParameters().waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
         extraCordappPackagesToScan: List<String> = DriverParameters().extraCordappPackagesToScan,
-        jmxPolicy: JmxPolicy = DriverParameters().jmxPolicy,
+        startJmxHttpServer: Boolean = false,
         networkParameters: NetworkParameters = DriverParameters().networkParameters,
         compatibilityZone: CompatibilityZoneParams? = null,
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
@@ -1164,7 +1165,7 @@ fun <A> internalDriver(
                     waitForAllNodesToFinish = waitForAllNodesToFinish,
                     notarySpecs = notarySpecs,
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
-                    jmxPolicy = jmxPolicy,
+                    jmxPolicy = JmxPolicy(startJmxHttpServer, if (startJmxHttpServer) testDebugPortAllocation() else null),
                     compatibilityZone = compatibilityZone,
                     networkParameters = networkParameters,
                     notaryCustomOverrides = notaryCustomOverrides,

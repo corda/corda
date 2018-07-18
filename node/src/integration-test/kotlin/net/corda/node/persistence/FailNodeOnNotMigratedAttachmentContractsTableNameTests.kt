@@ -34,7 +34,7 @@ class FailNodeOnNotMigratedAttachmentContractsTableNameTests {
         val message = Message("Hello world!")
         val baseDir: Path = driver(DriverParameters(
                 inMemoryDB = false,
-                startNodesInProcess = isQuasarAgentSpecified(),
+                startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf(MessageState::class.packageName)
         )) {
             val (nodeName, baseDir) = {

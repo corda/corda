@@ -80,7 +80,7 @@ class DriverTests {
     fun `default notary is visible when the startNode future completes`() {
         // Based on local testing, running this 3 times gives us a high confidence that we'll spot if the feature is not working
         repeat(3) {
-            driver(DriverParameters(startNodesInProcess = true)) {
+            driver {
                 val bob = startNode(providedName = BOB_NAME).getOrThrow()
                 assertThat(bob.rpc.networkMapSnapshot().flatMap { it.legalIdentities }).contains(defaultNotaryIdentity)
             }
@@ -106,7 +106,7 @@ class DriverTests {
 
     @Test
     fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
-        driver(DriverParameters(startNodesInProcess = false, notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             // start another node so we gain access to node JMX metrics
             val webAddress = NetworkHostAndPort("localhost", 7006)
             startNode(providedName = DUMMY_REGULATOR_NAME,
@@ -135,7 +135,7 @@ class DriverTests {
 
     @Test
     fun `driver rejects multiple nodes with the same name`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             assertThatThrownBy {
                 listOf(
                         newNode(DUMMY_BANK_A_NAME)(),
@@ -148,7 +148,7 @@ class DriverTests {
 
     @Test
     fun `driver rejects multiple nodes with the same name parallel`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val nodes = listOf(newNode(DUMMY_BANK_A_NAME), newNode(DUMMY_BANK_B_NAME), newNode(DUMMY_BANK_A_NAME))
             assertThatThrownBy {
                 nodes.parallelStream().map { it.invoke() }.toList().transpose().getOrThrow()
@@ -158,7 +158,7 @@ class DriverTests {
 
     @Test
     fun `driver allows reusing names of nodes that have been stopped`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val nodeA = newNode(DUMMY_BANK_A_NAME)().getOrThrow()
             nodeA.stop()
             assertThatCode { newNode(DUMMY_BANK_A_NAME)().getOrThrow() }.doesNotThrowAnyException()

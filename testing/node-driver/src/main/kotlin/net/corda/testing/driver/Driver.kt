@@ -18,6 +18,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.PortAllocation.Incremental
 import net.corda.testing.driver.internal.internalServices
+import net.corda.testing.driver.internal.testPortAllocation
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl
@@ -277,8 +278,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
 data class DriverParameters(
         val isDebug: Boolean = false,
         val driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-        val portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-        val debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        val portAllocation: PortAllocation = testPortAllocation(),
+        val debugPortAllocation: PortAllocation = net.corda.testing.driver.internal.testDebugPortAllocation(),
         val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
         val startNodesInProcess: Boolean = false,

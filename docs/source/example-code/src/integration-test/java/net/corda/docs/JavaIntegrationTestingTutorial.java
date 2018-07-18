@@ -38,10 +38,7 @@ public class JavaIntegrationTestingTutorial {
     @Test
     public void aliceBobCashExchangeExample() {
         // START 1
-        driver(new DriverParameters()
-                .withStartNodesInProcess(true)
-                .withExtraCordappPackagesToScan(singletonList("net.corda.finance.contracts.asset")), dsl -> {
-
+        driver(new DriverParameters().withExtraCordappPackagesToScan(singletonList("net.corda.finance.contracts.asset")), dsl -> {
             User aliceUser = new User("aliceUser", "testPassword1", new HashSet<>(asList(
                     startFlow(CashIssueAndPaymentFlow.class),
                     invokeRpc("vaultTrack")

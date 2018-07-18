@@ -1,7 +1,6 @@
 package net.corda.client.rpc
 
 import co.paralleluniverse.fibers.Suspendable
-import com.esotericsoftware.kryo.KryoException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
@@ -29,7 +28,7 @@ class BlacklistKotlinClosureTest {
 
     @Test
     fun `closure sent via RPC`() {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val rpc = startNode(providedName = ALICE_NAME).getOrThrow().rpc
             val packet = Packet { EVIL }
             assertThatExceptionOfType(RPCException::class.java)
