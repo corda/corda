@@ -78,7 +78,8 @@ interface DriverDSL {
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
             maximumHeapSize: String = defaultParameters.maximumHeapSize,
-            additionalCorDapps: Set<TestCorDapp> = defaultParameters.additionalCorDapps
+            additionalCorDapps: Set<TestCorDapp> = defaultParameters.additionalCorDapps,
+            reuseAdditionalCorDapps: Boolean = defaultParameters.reuseAdditionalCorDapps
     ): CordaFuture<NodeHandle>
 
     /**

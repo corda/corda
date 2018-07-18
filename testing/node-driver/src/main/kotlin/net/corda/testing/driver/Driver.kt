@@ -144,7 +144,8 @@ data class NodeParameters(
         val maximumHeapSize: String = "512m",
         val logLevel: String? = null,
         // TODO sollecitom revisit for API compatibility
-        val additionalCorDapps: Set<TestCorDapp> = emptySet()
+        val additionalCorDapps: Set<TestCorDapp> = emptySet(),
+        val reuseAdditionalCorDapps: Boolean = true
 ) {
     constructor(
             providedName: CordaX500Name?,
