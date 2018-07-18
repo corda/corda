@@ -61,6 +61,8 @@ private fun Iterable<JarEntryInfo>.zip(outputStream: ZipOutputStream, willResour
     return entries.isNotEmpty()
 }
 
+private const val archiveUrlDelimiter = "!"
+
 private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<JarEntryInfo>) {
 
     val time = FileTime.from(Instant.now())
@@ -68,8 +70,8 @@ private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<JarEntryInfo>) 
 
         var fileSystem: FileSystem? = null
         try {
-            val path = if (info.url.toString().contains("!")) {
-                val parts = info.url.toString().split("!")
+            val path = if (info.url.toString().contains(archiveUrlDelimiter)) {
+                val parts = info.url.toString().split(archiveUrlDelimiter)
                 fileSystem = FileSystems.newFileSystem(URI.create(parts[0]), mutableMapOf<String, String>())
                 fileSystem.getPath(parts[1])
             } else {
