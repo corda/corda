@@ -54,6 +54,7 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
+import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Subscription
@@ -87,20 +88,14 @@ class DriverDSLImpl(
         val isDebug: Boolean,
         val startNodesInProcess: Boolean,
         val waitForAllNodesToFinish: Boolean,
-        // TODO sollecitom remove this completely from here
-        extraCordappPackagesToScan: List<String>,
         val jmxPolicy: JmxPolicy,
         val notarySpecs: List<NotarySpec>,
         val compatibilityZone: CompatibilityZoneParams?,
         val networkParameters: NetworkParameters,
         val notaryCustomOverrides: Map<String, Any?>,
         val inMemoryDB: Boolean,
-        // TODO sollecitom change this after removing `cordappPackages`;
-        // TODO sollecitom see if you can make it work without the arg / field duo
-        cordappsForAllNodesArg: Set<TestCorDapp>?
+        val cordappsForAllNodes: Set<TestCorDapp>
 ) : InternalDriverDSL {
-
-    private val cordappsForAllNodes: Set<TestCorDapp> = cordappsForAllNodesArg ?: defaultTestCorDappsForAllNodes(getCallerPackage()?.let { extraCordappPackagesToScan + it }?.toSet() ?: extraCordappPackagesToScan.toSet())
 
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
@@ -818,6 +813,8 @@ class DriverDSLImpl(
             return cordappPackages.fold(emptySet()) { all, packageName -> all + testCorDapp(packageName) }
         }
 
+        fun cordappsInCurrentAndAdditionalPackages(packagesToScan: Iterable<String> = emptySet()): Set<TestCorDapp> = defaultTestCorDappsForAllNodes(getCallerPackage()?.let { packagesToScan + it }?.toSet() ?: packagesToScan.toSet())
+
         private fun startInProcessNode(
                 executorService: ScheduledExecutorService,
                 config: NodeConfig
@@ -1110,15 +1107,13 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     isDebug = defaultParameters.isDebug,
                     startNodesInProcess = defaultParameters.startNodesInProcess,
                     waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
-                    // TODO sollecitom remove this
-                    extraCordappPackagesToScan = defaultParameters.extraCordappPackagesToScan,
                     jmxPolicy = defaultParameters.jmxPolicy,
                     notarySpecs = defaultParameters.notarySpecs,
                     compatibilityZone = null,
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodesArg = defaultParameters.corDappsForAllNodes
+                    cordappsForAllNodes = defaultParameters.cordappsForAllNodes()
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1192,14 +1187,12 @@ fun <A> internalDriver(
         startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
         waitForAllNodesToFinish: Boolean = DriverParameters().waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
-        // TODO sollecitom remove this, it's internal
-        extraCordappPackagesToScan: List<String> = DriverParameters().extraCordappPackagesToScan,
         jmxPolicy: JmxPolicy = DriverParameters().jmxPolicy,
         networkParameters: NetworkParameters = DriverParameters().networkParameters,
         compatibilityZone: CompatibilityZoneParams? = null,
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
         inMemoryDB: Boolean = DriverParameters().inMemoryDB,
-        cordappsForAllNodes: Set<TestCorDapp>? = DriverParameters().corDappsForAllNodes,
+        cordappsForAllNodes: Set<TestCorDapp> = DriverParameters().cordappsForAllNodes(),
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1213,13 +1206,12 @@ fun <A> internalDriver(
                     startNodesInProcess = startNodesInProcess,
                     waitForAllNodesToFinish = waitForAllNodesToFinish,
                     notarySpecs = notarySpecs,
-                    extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
                     compatibilityZone = compatibilityZone,
                     networkParameters = networkParameters,
                     notaryCustomOverrides = notaryCustomOverrides,
                     inMemoryDB = inMemoryDB,
-                    cordappsForAllNodesArg = cordappsForAllNodes
+                    cordappsForAllNodes = cordappsForAllNodes
             ),
             coerce = { it },
             dsl = dsl,
@@ -1239,3 +1231,5 @@ fun writeConfig(path: Path, filename: String, config: Config) {
 private fun Config.toNodeOnly(): Config {
     return if (hasPath("webAddress")) withoutPath("webAddress").withoutPath("useHTTPS") else this
 }
+
+internal fun DriverParameters.cordappsForAllNodes(): Set<TestCorDapp> = corDappsForAllNodes ?: cordappsInCurrentAndAdditionalPackages(extraCordappPackagesToScan)
