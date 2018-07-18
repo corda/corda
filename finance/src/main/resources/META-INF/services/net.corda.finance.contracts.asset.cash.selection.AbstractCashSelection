@@ -1,3 +1,3 @@
 net.corda.finance.contracts.asset.cash.selection.CashSelectionH2Impl
 net.corda.finance.contracts.asset.cash.selection.CashSelectionPostgreSQLImpl
-net.corda.finance.contracts.asset.cash.selection.CashSelectionMSSQLImpl
+net.corda.finance.contracts.asset.cash.selection.CashSelectionSQLServerImpl

@@ -12,7 +12,7 @@ import java.sql.DatabaseMetaData
 import java.sql.ResultSet
 import java.util.*
 
-class CashSelectionMSSQLImpl : AbstractCashSelection() {
+class CashSelectionSQLServerImpl : AbstractCashSelection() {
     companion object {
         val JDBC_DRIVER_NAME_REGEX = """Microsoft JDBC Driver (\w+.\w+) for SQL Server""".toRegex()
         private val log = contextLogger()
