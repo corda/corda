@@ -20,6 +20,7 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.startFlow
@@ -44,7 +45,7 @@ class CollectSignaturesFlowTests {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.core.flows"))
+        mockNet = InternalMockNetwork(cordappsForAllNodes = defaultTestCorDappsForAllNodes(setOf("net.corda.testing.contracts", "net.corda.core.flows")))
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bobNode = mockNet.createPartyNode(BOB_NAME)
         charlieNode = mockNet.createPartyNode(CHARLIE_NAME)

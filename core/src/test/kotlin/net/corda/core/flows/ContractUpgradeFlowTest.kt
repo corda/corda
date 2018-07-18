@@ -27,6 +27,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import org.junit.After
 import org.junit.Before
@@ -46,7 +47,7 @@ class ContractUpgradeFlowTest {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
+        mockNet = InternalMockNetwork(cordappsForAllNodes = defaultTestCorDappsForAllNodes(setOf("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows")))
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bobNode = mockNet.createPartyNode(BOB_NAME)
         notary = mockNet.defaultNotaryIdentity

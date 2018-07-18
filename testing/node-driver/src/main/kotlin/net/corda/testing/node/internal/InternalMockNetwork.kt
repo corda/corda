@@ -49,7 +49,6 @@ import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
 import rx.internal.schedulers.CachedThreadScheduler
@@ -94,8 +93,7 @@ data class InternalMockNodeParameters(
 }
 
 // TODO sollecitom fix `cordappPackages`
-open class InternalMockNetwork(private val cordappPackages: List<String> = emptyList(),
-                               defaultParameters: MockNetworkParameters = MockNetworkParameters(),
+open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParameters(),
                                val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
                                val threadPerNode: Boolean = defaultParameters.threadPerNode,
                                servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
@@ -103,7 +101,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String> = empty
                                val testDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
                                networkParameters: NetworkParameters = testNetworkParameters(),
                                val defaultFactory: (MockNodeArgs) -> MockNode = InternalMockNetwork::MockNode,
-                               cordappsForAllNodesArg: Set<TestCorDapp>? = null) {
+                               val cordappsForAllNodes: Set<TestCorDapp> = emptySet()) {
     init {
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
         // This SFTP support loads BouncyCastle, which we want to avoid.
@@ -131,8 +129,6 @@ open class InternalMockNetwork(private val cordappPackages: List<String> = empty
         throw IllegalStateException("Using more than one InternalMockNetwork simultaneously is not supported.", e)
     }
     private val sharedUserCount = AtomicInteger(0)
-
-    private val cordappsForAllNodes: Set<TestCorDapp> = cordappsForAllNodesArg ?: defaultTestCorDappsForAllNodes(cordappPackages.toSet())
 
     private val sharedCorDappsDirectory: Path by lazy {
 
