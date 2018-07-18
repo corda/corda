@@ -28,6 +28,49 @@ versions you are currently using are still in force.
 
 We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes.
 
+v3.1 to v3.2
+------------
+
+Gradle Plugin Version
+^^^^^^^^^^^^^^^^^^^^^
+
+You will need to update the ``corda_release_version`` identifier in your project gradle file.
+
+.. sourcecode:: shell
+
+  ext.corda_release_version = '3.2-corda'
+
+Database schema changes
+^^^^^^^^^^^^^^^^^^^^^^^
+
+* Database upgrade - a typo has been corrected in the ``NODE_ATTACHMENTS_CONTRACTS`` table name.
+When upgrading from version 3.1, run the following command:
+
+.. sourcecode:: sql
+
+   ALTER TABLE [schema].NODE_ATTCHMENTS_CONTRACTS RENAME TO NODE_ATTACHMENTS_CONTRACTS;
+
+When upgrading from version 3.0, run the following command:
+
+.. sourcecode:: sql
+
+   ALTER TABLE [schema].NODE_ATTACHMENTS_CONTRACT_CLASS_NAME RENAME TO NODE_ATTACHMENTS_CONTRACTS;
+
+Schema name is optional, run SQL when the node is not running.
+
+* Postgres database upgrade - Change the type of the ``checkpoint_value`` column to ``bytea``.
+This will address the issue that the `vacuum` function is unable to clean up deleted checkpoints as they are still referenced from the ``pg_shdepend`` table.
+
+  .. sourcecode:: sql
+
+    ALTER TABLE node_checkpoints ALTER COLUMN checkpoint_value set data type bytea using null;
+
+  .. note::
+    This change will also need to be run when migrating from version 3.0.
+
+.. note::
+   The Corda node will fail on startup if the database was not updated with the above commands.
+
 v3.0 to v3.1
 ------------
 
