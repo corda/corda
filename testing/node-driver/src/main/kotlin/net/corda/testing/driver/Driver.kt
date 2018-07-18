@@ -145,7 +145,7 @@ data class NodeParameters(
         val logLevel: String? = null,
         // TODO sollecitom revisit for API compatibility
         val additionalCorDapps: Set<TestCorDapp> = emptySet(),
-        val reuseAdditionalCorDapps: Boolean = true
+        val deleteExistingCordappsDirectory: Boolean = false
 ) {
     constructor(
             providedName: CordaX500Name?,

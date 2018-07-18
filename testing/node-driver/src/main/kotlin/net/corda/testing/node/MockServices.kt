@@ -196,13 +196,13 @@ open class MockServices private constructor(
      * (you can get one from [makeTestIdentityService]) and represents the given identity.
      */
     @JvmOverloads
-    constructor(cordappPackages: List<String>,
+    constructor(cordappPackages: Iterable<String>,
                 initialIdentity: TestIdentity,
                 identityService: IdentityService = makeTestIdentityService(),
                 vararg moreKeys: KeyPair) :
             this(corDappLoaderForPackages(cordappPackages), identityService, testNetworkParameters(), initialIdentity, moreKeys)
 
-    constructor(cordappPackages: List<String>,
+    constructor(cordappPackages: Iterable<String>,
                 initialIdentity: TestIdentity,
                 identityService: IdentityService,
                 networkParameters: NetworkParameters,
@@ -214,7 +214,7 @@ open class MockServices private constructor(
      * (you can get one from [makeTestIdentityService]) and represents the given identity.
      */
     @JvmOverloads
-    constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService(), key: KeyPair, vararg moreKeys: KeyPair) :
+    constructor(cordappPackages: Iterable<String>, initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService(), key: KeyPair, vararg moreKeys: KeyPair) :
             this(cordappPackages, TestIdentity(initialIdentityName, key), identityService, *moreKeys)
 
     /**
@@ -222,13 +222,13 @@ open class MockServices private constructor(
      * (you can get one from [makeTestIdentityService]) and which represents the given identity.
      */
     @JvmOverloads
-    constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService()) :
+    constructor(cordappPackages: Iterable<String>, initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService()) :
             this(cordappPackages, TestIdentity(initialIdentityName), identityService)
 
     /**
      * Create a mock [ServiceHub] that can't load CorDapp code, and which uses a default service identity.
      */
-    constructor(cordappPackages: List<String>) : this(cordappPackages, CordaX500Name("TestIdentity", "", "GB"), makeTestIdentityService())
+    constructor(cordappPackages: Iterable<String>) : this(cordappPackages, CordaX500Name("TestIdentity", "", "GB"), makeTestIdentityService())
 
     /**
      * Create a mock [ServiceHub] which uses the package of the caller to find CorDapp code. It uses the provided identity service

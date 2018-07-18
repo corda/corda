@@ -36,6 +36,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.TestClock
+import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
 import net.corda.testing.node.internal.InMemoryMessage
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
@@ -62,7 +63,7 @@ class ValidatingNotaryServiceTests {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(cordappsForAllNodes = defaultTestCorDappsForAllNodes(setOf("net.corda.testing.contracts")))
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         notaryNode = mockNet.defaultNotaryNode
         notary = mockNet.defaultNotaryIdentity

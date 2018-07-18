@@ -6,11 +6,7 @@ import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.crypto.sha256
+import net.corda.core.crypto.*
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
@@ -37,6 +33,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.TestClock
+import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
@@ -50,18 +47,8 @@ import java.nio.file.Paths
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ExecutionException
-import kotlin.collections.List
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlin.collections.distinct
-import kotlin.collections.forEach
-import kotlin.collections.last
-import kotlin.collections.listOf
-import kotlin.collections.map
-import kotlin.collections.mapIndexedNotNull
-import kotlin.collections.plus
-import kotlin.collections.single
-import kotlin.collections.zip
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -75,7 +62,7 @@ class BFTNotaryServiceTests {
         @BeforeClass
         @JvmStatic
         fun before() {
-            mockNet = InternalMockNetwork(listOf("net.corda.testing.contracts"))
+            mockNet = InternalMockNetwork(cordappsForAllNodes = defaultTestCorDappsForAllNodes(setOf("net.corda.testing.contracts")))
             val clusterSize = minClusterSize(1)
             val started = startBftClusterAndNode(clusterSize, mockNet)
             notary = started.first

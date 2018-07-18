@@ -36,6 +36,7 @@ import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -68,7 +69,7 @@ class FlowFrameworkTests {
         @JvmStatic
         fun beforeClass() {
             mockNet = InternalMockNetwork(
-                    cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                    cordappsForAllNodes = defaultTestCorDappsForAllNodes(setOf("net.corda.finance.contracts", "net.corda.testing.contracts")),
                     servicePeerAllocationStrategy = RoundRobin()
             )
 
@@ -481,7 +482,7 @@ class FlowFrameworkTripartyTests {
         @JvmStatic
         fun beforeClass() {
             mockNet = InternalMockNetwork(
-                    cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                    cordappsForAllNodes = defaultTestCorDappsForAllNodes(setOf("net.corda.finance.contracts", "net.corda.testing.contracts")),
                     servicePeerAllocationStrategy = RoundRobin()
             )
 
@@ -645,7 +646,7 @@ class FlowFrameworkPersistenceTests {
     @Before
     fun start() {
         mockNet = InternalMockNetwork(
-                cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                cordappsForAllNodes = defaultTestCorDappsForAllNodes(setOf("net.corda.finance.contracts", "net.corda.testing.contracts")),
                 servicePeerAllocationStrategy = RoundRobin()
         )
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))

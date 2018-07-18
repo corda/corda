@@ -27,7 +27,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
-class FlowCheckpointVersionNodeStartupCheck {
+class FlowCheckpointVersionNodeStartupCheckTest {
     companion object {
         val message = Message("Hello world!")
         val classes = setOf(net.corda.testMessage.MessageState::class.java,
@@ -38,11 +38,11 @@ class FlowCheckpointVersionNodeStartupCheck {
     }
 
     @Test
-    fun `restart node sucesfully with sunspended flow`() {
+    fun `restart node successfully with suspended flow`() {
 
         val cordapps = setOf(TestCorDapp.Factory.create("testJar", "1.0", classes = classes))
 
-        return driver(DriverParameters(isDebug = true,  startNodesInProcess = false, inMemoryDB = false, portAllocation = RandomFree, corDappsForAllNodes = cordapps)) {
+        return driver(DriverParameters(isDebug = true, startNodesInProcess = false, inMemoryDB = false, portAllocation = RandomFree, corDappsForAllNodes = cordapps)) {
             {
                 val alice = startNode(rpcUsers = listOf(user), providedName = ALICE_NAME).getOrThrow()
                 val bob = startNode(rpcUsers = listOf(user), providedName = BOB_NAME).getOrThrow()
@@ -74,7 +74,7 @@ class FlowCheckpointVersionNodeStartupCheck {
     }
 
     private fun assertNodeRestartFailure(
-            cordapps:Set<TestCorDapp>?,
+            cordapps: Set<TestCorDapp>?,
             cordappsVersionAtStartup: Set<TestCorDapp>,
             cordappsVersionAtRestart: Set<TestCorDapp>,
             reuseAdditionalCorDappsAtRestart: Boolean,
@@ -103,11 +103,11 @@ class FlowCheckpointVersionNodeStartupCheck {
             }()
 
             startNode(rpcUsers = listOf(user), providedName = ALICE_NAME, customOverrides = mapOf("devMode" to false),
-                    additionalCorDapps = cordappsVersionAtRestart, reuseAdditionalCorDapps = reuseAdditionalCorDappsAtRestart).getOrThrow()
+                    additionalCorDapps = cordappsVersionAtRestart, deleteExistingCordappsDirectory = !reuseAdditionalCorDappsAtRestart).getOrThrow()
 
             assertFailsWith(ListenProcessDeathException::class) {
                 startNode(providedName = BOB_NAME, rpcUsers = listOf(user), customOverrides = mapOf("devMode" to false),
-                        additionalCorDapps = cordappsVersionAtRestart, reuseAdditionalCorDapps = reuseAdditionalCorDappsAtRestart).getOrThrow()
+                        additionalCorDapps = cordappsVersionAtRestart, deleteExistingCordappsDirectory = !reuseAdditionalCorDappsAtRestart).getOrThrow()
             }
 
             val logFile = bobLogFolder.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }
@@ -117,18 +117,18 @@ class FlowCheckpointVersionNodeStartupCheck {
     }
 
     @Test
-    fun `restart nodes with incompatible version of sunspended flow due to different jar name`() {
+    fun `restart nodes with incompatible version of suspended flow due to different jar name`() {
 
         assertNodeRestartFailure(
                 null,
                 setOf(TestCorDapp.Factory.create("testJar", "1.0", classes = classes)),
                 setOf(TestCorDapp.Factory.create("testJar2", "1.0", classes = classes)),
                 false,
-                 CheckpointIncompatibleException.FlowNotInstalledException(SendMessageFlow::class.java).message)
+                CheckpointIncompatibleException.FlowNotInstalledException(SendMessageFlow::class.java).message)
     }
 
     @Test
-    fun `restart nodes with incompatible version of sunspended flow`() {
+    fun `restart nodes with incompatible version of suspended flow`() {
 
         assertNodeRestartFailure(
                 null,
@@ -140,7 +140,7 @@ class FlowCheckpointVersionNodeStartupCheck {
     }
 
     @Test
-    fun `restart nodes with incompatible version of sunspended flow due to different timestamps only`() {
+    fun `restart nodes with incompatible version of suspended flow due to different timestamps only`() {
 
         assertNodeRestartFailure(
                 null,

@@ -14,6 +14,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
+import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
@@ -24,7 +25,7 @@ import java.util.concurrent.CountDownLatch
 
 class ServiceHubConcurrentUsageTest {
 
-    private val mockNet = InternalMockNetwork(listOf(Cash::class.packageName))
+    private val mockNet = InternalMockNetwork(cordappsForAllNodes = defaultTestCorDappsForAllNodes(setOf(Cash::class.packageName)))
 
     @After
     fun stopNodes() {
