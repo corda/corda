@@ -221,6 +221,7 @@ data class JmxPolicy(val startJmxHttpServer: Boolean = false,
  * @return The value returned in the [dsl] closure.
  */
 fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: DriverDSL.() -> A): A {
+
     return genericDriver(
             driverDsl = DriverDSLImpl(
                     portAllocation = defaultParameters.portAllocation,
@@ -232,14 +233,12 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     startNodesInProcess = defaultParameters.startNodesInProcess,
                     waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
                     notarySpecs = defaultParameters.notarySpecs,
-                    // TODO sollecitom remove this, by substituting it with the function that computes the cordappForAllNodes based on extraCordappPackagesToScan in DriverDSLImpl
-                    extraCordappPackagesToScan = defaultParameters.extraCordappPackagesToScan,
                     jmxPolicy = defaultParameters.jmxPolicy,
                     compatibilityZone = null,
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodesArg = defaultParameters.corDappsForAllNodes
+                    cordappsForAllNodes = defaultParameters.cordappsForAllNodes()
             ),
             coerce = { it },
             dsl = dsl,
