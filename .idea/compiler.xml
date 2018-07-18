@@ -137,6 +137,7 @@
       <module name="gradle-plugins-cordapp_test" target="1.8" />
       <module name="graphs_main" target="1.8" />
       <module name="graphs_test" target="1.8" />
+      <module name="ha-testing_integrationTest" target="1.8" />
       <module name="ha-testing_main" target="1.8" />
       <module name="ha-testing_test" target="1.8" />
       <module name="hsm-tool_main" target="1.8" />

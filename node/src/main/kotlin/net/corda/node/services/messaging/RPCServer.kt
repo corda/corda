@@ -337,6 +337,7 @@ class RPCServer(
                     context.invocation.pushToLoggingContext()
                     when (arguments) {
                         is Try.Success -> {
+                            log.debug { "Arguments: ${arguments.value.toTypedArray().contentDeepToString()}" }
                             rpcExecutor!!.submit {
                                 val result = invokeRpc(context, clientToServer.methodName, arguments.value)
                                 sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
