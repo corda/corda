@@ -59,7 +59,7 @@ class ReceiveMultipleFlowTests : WithMockNet {
         }
 
         assert.that(
-                nodes[0].startFlow(initiatingFlow).andRunNetwork(),
+                nodes[0].startFlowAndRunNetwork(initiatingFlow),
                 succeedsWith(isA(equalTo(answer))))
     }
 
@@ -71,8 +71,7 @@ class ReceiveMultipleFlowTests : WithMockNet {
         nodes[2].registerAnswer(AlgorithmDefinition::class, stringValue)
 
         assert.that(
-                nodes[0].startFlow(ParallelAlgorithmMap(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity()))
-                        .andRunNetwork(),
+                nodes[0].startFlowAndRunNetwork(ParallelAlgorithmMap(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity())),
                 succeedsWith(equalTo(doubleValue * stringValue.length)))
     }
 
@@ -84,8 +83,7 @@ class ReceiveMultipleFlowTests : WithMockNet {
         nodes[2].registerAnswer(ParallelAlgorithmList::class, value2)
 
         assert.that(
-                nodes[0].startFlow(ParallelAlgorithmList(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity()))
-                        .andRunNetwork(),
+                nodes[0].startFlowAndRunNetwork(ParallelAlgorithmList(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity())),
                 succeedsWith(equalTo(listOf(value1, value2))))
     }
 
