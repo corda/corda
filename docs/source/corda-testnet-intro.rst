@@ -30,7 +30,7 @@ Fill in the form with your details.
 
 .. note::
 
-   Testnet is currently invitation only. If your request is approved you will receive an email. Please fill in as many details as possible as it helps us proritise requests.
+   Testnet is currently invitation only. If your request is approved you will receive an email. Please fill in as many details as possible as it helps us proritise requests. The approval process will take place daily by a member of the r3 operations team reviewing all invite requests and making a decision based on current rate of onboarding of new customers.
 
 .. image:: resources/testnet-form.png 
 
