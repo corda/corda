@@ -10,10 +10,10 @@
 
 package net.corda.serialization.internal.carpenter
 
-import jdk.internal.org.objectweb.asm.Opcodes.*
 import net.corda.core.DeleteForDJVM
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 
 abstract class Field(val field: Class<out Any?>) {
