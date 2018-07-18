@@ -32,7 +32,6 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
@@ -65,7 +64,7 @@ class TimedFlowMultiThreadedSMMTests : IntegrationTest() {
     @Test
     fun `timed flow is retried`() {
         val user = User("test", "pwd", setOf(Permissions.startFlow<TimedInitiatorFlow>(), Permissions.startFlow<SuperFlow>()))
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree)) {
+        driver(DriverParameters(startNodesInProcess = true)) {
             val configOverrides = mapOf("flowTimeout" to mapOf(
                     "timeout" to Duration.ofSeconds(3),
                     "maxRestartCount" to 2,
@@ -86,7 +85,7 @@ class TimedFlowMultiThreadedSMMTests : IntegrationTest() {
     @Test
     fun `progress tracker is preserved after flow is retried`() {
         val user = User("test", "pwd", setOf(Permissions.startFlow<TimedInitiatorFlow>(), Permissions.startFlow<SuperFlow>()))
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree)) {
+        driver(DriverParameters(startNodesInProcess = true)) {
 
             val configOverrides = mapOf("flowTimeout" to mapOf(
                     "timeout" to Duration.ofSeconds(2),

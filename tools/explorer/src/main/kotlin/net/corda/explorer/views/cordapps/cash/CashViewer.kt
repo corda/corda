@@ -314,12 +314,17 @@ class CashViewer : CordaView("Cash") {
                 tickLabelFormatter = stringConverter {
                     Instant.ofEpochMilli(it.toLong()).atZone(TimeZone.getDefault().toZoneId()).toLocalTime().toString()
                 }
+                label= "Timeline"
+                style = "-fx-font-size: 10px;"
+
             }
             val yAxis = NumberAxis().apply {
                 isAutoRanging = true
                 isMinorTickVisible = false
                 isForceZeroInRange = false
                 tickLabelFormatter = stringConverter { it.toStringWithSuffix() }
+                label= "Cash"
+                style = "-fx-font-size: 10px;"
             }
             linechart(null, xAxis, yAxis) {
                 series("USD") {

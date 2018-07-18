@@ -82,7 +82,9 @@ dependencies {
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Quasar, for suspendable fibres.
-    compileOnly "$quasar_group:quasar-core:$quasar_version:jdk8"
+    compileOnly("$quasar_group:quasar-core:$quasar_version:jdk8") {
+        transitive = false
+    }
 
     // Thread safety annotations
     compile "com.google.code.findbugs:jsr305:$jsr305_version"

@@ -10,10 +10,6 @@
 package net.corda.node.persistence
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.testMessage.MESSAGE_CONTRACT_PROGRAM_ID
-import net.corda.testMessage.Message
-import net.corda.testMessage.MessageContract
-import net.corda.testMessage.MessageState
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
@@ -30,11 +26,14 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.testMessage.MESSAGE_CONTRACT_PROGRAM_ID
+import net.corda.testMessage.Message
+import net.corda.testMessage.MessageContract
+import net.corda.testMessage.MessageState
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.node.User
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -57,8 +56,11 @@ class NodeStatePersistenceTests : IntegrationTest() {
     fun `persistent state survives node restart`() {
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(),
-                portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
+        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(
+                inMemoryDB = false,
+                startNodesInProcess = isQuasarAgentSpecified(),
+                extraCordappPackagesToScan = listOf(MessageState::class.packageName)
+        )) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
@@ -90,7 +92,11 @@ class NodeStatePersistenceTests : IntegrationTest() {
 
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
+        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(
+                inMemoryDB = false,
+                startNodesInProcess = isQuasarAgentSpecified(),
+                extraCordappPackagesToScan = listOf(MessageState::class.packageName)
+        )) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name

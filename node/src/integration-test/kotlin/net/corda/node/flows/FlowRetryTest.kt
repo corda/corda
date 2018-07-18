@@ -13,7 +13,6 @@ import net.corda.node.services.Permissions
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
@@ -48,7 +47,6 @@ class FlowRetryTest : IntegrationTest() {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<InitiatorFlow>()))
         val result: Any? = driver(DriverParameters(
                 startNodesInProcess = isQuasarAgentSpecified(),
-                portAllocation = RandomFree,
                 notarySpecs = emptyList()
         )) {
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()

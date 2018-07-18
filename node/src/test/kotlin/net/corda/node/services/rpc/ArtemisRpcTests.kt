@@ -33,7 +33,6 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.internal.createNodeSslConfig
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
@@ -46,7 +45,7 @@ import java.nio.file.Path
 import javax.security.auth.x500.X500Principal
 
 class ArtemisRpcTests {
-    private val ports: PortAllocation = RandomFree
+    private val ports: PortAllocation = PortAllocation.Incremental(10000)
 
     private val user = User("mark", "dadada", setOf(all()))
     private val users = listOf(user)
@@ -106,8 +105,14 @@ class ArtemisRpcTests {
         }.isInstanceOf(RPCException::class.java)
     }
 
-    private fun testSslCommunication(nodeSSlconfig: SSLConfiguration, brokerSslOptions: BrokerRpcSslOptions?, useSslForBroker: Boolean, clientSslOptions: ClientRpcSslOptions?, address: NetworkHostAndPort = ports.nextHostAndPort(),
-                                     adminAddress: NetworkHostAndPort = ports.nextHostAndPort(), baseDirectory: Path = tempFolder.root.toPath()) {
+    private fun testSslCommunication(nodeSSlconfig: SSLConfiguration,
+                                     brokerSslOptions: BrokerRpcSslOptions?,
+                                     useSslForBroker: Boolean,
+                                     clientSslOptions: ClientRpcSslOptions?,
+                                     address: NetworkHostAndPort = ports.nextHostAndPort(),
+                                     adminAddress: NetworkHostAndPort = ports.nextHostAndPort(),
+                                     baseDirectory: Path = tempFolder.root.toPath()
+    ) {
         val maxMessageSize = 10000
         val jmxEnabled = false
 

@@ -200,7 +200,7 @@ internal abstract class MetadataTransformer<out T : MessageLite>(
         var count = 0
         var idx = 0
         while (idx < sealedSubclassNames.size) {
-            val subclassName = nameResolver.getString(sealedSubclassNames[idx]).replace('.', '$')
+            val subclassName = nameResolver.getClassInternalName(sealedSubclassNames[idx])
             if (deletedClasses.contains(subclassName)) {
                 logger.info("-- removing sealed subclass: {}", subclassName)
                 sealedSubclassNames.removeAt(idx)
@@ -248,7 +248,7 @@ internal class ClassMetadataTransformer(
     ProtoBuf.Class::parseFrom
 ) {
     override val typeTable = TypeTable(message.typeTable)
-    override val className = nameResolver.getString(message.fqName)
+    override val className = nameResolver.getClassInternalName(message.fqName)
     override val nestedClassNames = mutableList(message.nestedClassNameList)
     override val sealedSubclassNames = mutableList(message.sealedSubclassFqNameList)
     override val properties = mutableList(message.propertyList)
