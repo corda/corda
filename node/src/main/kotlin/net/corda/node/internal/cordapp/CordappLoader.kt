@@ -18,7 +18,6 @@ import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.serialization.internal.DefaultWhitelist
 import org.apache.commons.collections4.map.LRUMap
-import java.io.File
 import java.lang.reflect.Modifier
 import java.net.URL
 import java.net.URLClassLoader
@@ -68,7 +67,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          */
         fun fromDirectories(corDappDirectories: Iterable<Path>): CordappLoader {
 
-            logger.info("Looking for CorDapps in ${corDappDirectories.distinct().joinToString(File.pathSeparator, "[", "]")}")
+            logger.info("Looking for CorDapps in ${corDappDirectories.distinct().joinToString(", ", "[", "]")}")
             return CordappLoader(corDappDirectories.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() })
         }
 
