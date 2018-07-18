@@ -75,14 +75,21 @@ open class MockServices private constructor(
         @JvmStatic
         fun corDappLoaderForPackages(packages: Iterable<String>): CordappLoader {
 
-            val cordappsDirectory = testCorDappsDirectory()
+            val cordapps = corDappsFromPackages(packages)
+            return corDappLoaderForCorDapps(cordapps)
+        }
 
-            val cordapps: Set<TestCorDapp> = defaultTestCorDappsForAllNodes(simplifyScanPackages(packages).toSet())
+        // TODO sollecitom maybe move
+        private fun corDappLoaderForCorDapps(cordapps: Set<TestCorDapp>, cordappsDirectory: Path = testCorDappsDirectory()): CordappLoader {
+
             cordapps.forEach { cordapp -> cordapp.packageAsJarInDirectory(cordappsDirectory) }
-
             return CordappLoader.fromDirectories(listOf(cordappsDirectory))
         }
 
+        // TODO sollecitom maybe move
+        private fun corDappsFromPackages(packages: Iterable<String>): Set<TestCorDapp> = defaultTestCorDappsForAllNodes(simplifyScanPackages(packages).toSet())
+
+        // TODO sollecitom maybe move
         private fun simplifyScanPackages(scanPackages: Iterable<String>): List<String> {
 
             return scanPackages.sorted().fold(emptyList()) { listSoFar, packageName ->
@@ -131,7 +138,6 @@ open class MockServices private constructor(
          */
         @JvmStatic
         @JvmOverloads
-        // TODO sollecitom fix here
         fun makeTestDatabaseAndMockServices(cordappPackages: List<String>,
                                             identityService: IdentityService,
                                             initialIdentity: TestIdentity,
