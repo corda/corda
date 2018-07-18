@@ -88,6 +88,9 @@ buildscript {
         maven {
             url "$artifactory_contextUrl/corda-releases"
         }
+        maven {
+            url 'https://plugins.gradle.org/m2/'
+        }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
@@ -107,6 +110,8 @@ buildscript {
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
 
         classpath "com.vanniktech:gradle-dependency-graph-generator-plugin:0.5.0"
+
+        classpath 'com.gradle:build-scan-plugin:1.15.1'
     }
 }
 
@@ -129,6 +134,8 @@ apply plugin: 'com.jfrog.artifactory'
 
 apply plugin: 'project-report'
 apply plugin: "com.vanniktech.dependency.graph.generator"
+
+apply plugin: 'com.gradle.build-scan'
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
 // IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
@@ -427,4 +434,12 @@ def cordaGenerator = new Generator(
 
 dependencyGraphGenerator {
     generators = [ Generator.ALL, cordaGenerator ]
+}
+
+buildScan {
+    termsOfServiceUrl = 'https://gradle.com/terms-of-service'
+    termsOfServiceAgree = 'yes'
+
+//    publishAlways()
+//    publishAlwaysIf(System.getenv('CI'))
 }
