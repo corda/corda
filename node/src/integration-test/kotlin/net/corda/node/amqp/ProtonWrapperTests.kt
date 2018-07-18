@@ -362,6 +362,31 @@ class ProtonWrapperTests {
         }
     }
 
+    @Test
+    fun `Message sent from AMQP to non-existent Artemis inbox is rejected and client disconnects`() {
+        val (server, artemisClient) = createArtemisServerAndClient()
+        val amqpClient = createClient()
+        var connected = false
+        amqpClient.onConnection.subscribe { change ->
+            connected = change.connected
+        }
+        val clientConnected = amqpClient.onConnection.toFuture()
+        amqpClient.start()
+        assertEquals(true, clientConnected.get().connected)
+        assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
+        val sendAddress = P2P_PREFIX + "Test"
+        val testData = "Test".toByteArray()
+        val testProperty = mutableMapOf<String, Any?>()
+        testProperty["TestProp"] = "1"
+        val message = amqpClient.createMessage(testData, sendAddress, CHARLIE_NAME.toString(), testProperty)
+        amqpClient.write(message)
+        assertEquals(MessageStatus.Rejected, message.onComplete.get())
+        assertEquals(false, connected)
+        amqpClient.stop()
+        artemisClient.stop()
+        server.stop()
+    }
+
     private fun createArtemisServerAndClient(maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "artemis").whenever(it).baseDirectory
