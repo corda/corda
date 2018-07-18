@@ -94,26 +94,19 @@ shadowJar {
     // systems, the folder and file end up clashing, causing an error when trying to build the JAR.
     relocate 'META-INF/LICENSE', 'META-INF/LICENCE-2'
     dependencies {
+        // Apache Curator 4.0.1 already contains a shaded copy of Guava 20.0
         include(dependency("org.apache.curator:curator-client:${curator_version}"))
         include(dependency("org.apache.curator:curator-recipes:${curator_version}"))
         include(dependency("org.apache.curator:curator-framework:${curator_version}"))
         include(dependency('org.apache.zookeeper:zookeeper:3.5.3-beta'))
         include(dependency('commons-cli:commons-cli:1.2'))
         include(dependency('io.netty:netty:3.10.5.Final'))
-        include(dependency('com.google.guava:guava:20.0'))
     }
     relocate 'org.apache.curator.', 'net.corda.shaded.org.apache.curator.'
     relocate 'org.apache.zookeeper.', 'net.corda.shaded.org.apache.zookeeper.'
     relocate 'org.apache.jute.', 'net.corda.shaded.org.apache.jute.'
     relocate 'org.apache.commons.', 'net.corda.shaded.org.apache.commons.'
     relocate 'org.jboss.netty.', 'net.corda.shaded.org.jboss.netty.'
-    relocate ('com.google.', 'net.corda.shaded.com.google.') {
-        // This JAR uses annotations from these packages. However,
-        // the annotation classes themselves are not included here
-        // and so we cannot relocate their references.
-        exclude 'com.google.errorprone.**'
-        exclude 'com.google.j2objc.**'
-    }
 }
 
 task testJar(type: Jar) {
