@@ -39,40 +39,37 @@ class NodeInstantiator(val instantiator: Instantiator,
     }
 
     fun instantiateNodeInstance(request: Context.PersistableNodeInstance): CompletableFuture<InstanceInfo> {
-        return instantiateNodeInstance(request.remoteImageName, request.rpcPort!!, request.instanceName, request.fqdn, request.instanceX500).thenApplyAsync {
+        return instantiateNodeInstance(request.remoteImageName, request.instanceName, request.fqdn, request.instanceX500).thenApplyAsync {
             InstanceInfo(request.groupName, request.instanceName, request.fqdn, it.first, it.second)
         }
     }
 
     fun instantiateNodeInstance(request: NodeInstanceRequest): CompletableFuture<NodeInstance> {
-        return instantiateNodeInstance(request.remoteImageName, request.nodeConfig.rpcOptions.address!!.port, request.nodeInstanceName, request.expectedFqName, request.actualX500)
+        return instantiateNodeInstance(request.remoteImageName, request.nodeInstanceName, request.expectedFqName, request.actualX500)
                 .thenApplyAsync { (reachableName, portMapping) ->
                     request.toNodeInstance(reachableName, portMapping)
                 }
     }
 
     fun instantiateNotaryInstance(request: NodeInstanceRequest): CompletableFuture<NodeInstance> {
-        return instantiateNotaryInstance(request.remoteImageName, request.nodeConfig.rpcOptions.address!!.port, request.nodeInstanceName, request.expectedFqName)
+        return instantiateNotaryInstance(request.remoteImageName, request.nodeInstanceName, request.expectedFqName)
                 .thenApplyAsync { (reachableName, portMapping) ->
                     request.toNodeInstance(reachableName, portMapping)
                 }
     }
 
     private fun instantiateNotaryInstance(remoteImageName: String,
-                                          rpcPort: Int,
                                           nodeInstanceName: String,
                                           expectedFqName: String): CompletableFuture<Pair<String, Map<Int, Int>>> {
         return instantiator.instantiateContainer(
                 remoteImageName,
                 listOf(Constants.NODE_P2P_PORT, Constants.NODE_RPC_PORT, Constants.NODE_SSHD_PORT),
                 nodeInstanceName,
-                mapOf("OUR_NAME" to expectedFqName,
-                        "OUR_PORT" to Constants.NODE_P2P_PORT.toString())
+                mapOf("OUR_NAME" to expectedFqName, "OUR_PORT" to Constants.NODE_P2P_PORT.toString())
         )
     }
 
     private fun instantiateNodeInstance(remoteImageName: String,
-                                        rpcPort: Int,
                                         nodeInstanceName: String,
                                         expectedFqName: String,
                                         actualX500: String): CompletableFuture<Pair<String, Map<Int, Int>>> {

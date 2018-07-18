@@ -150,7 +150,6 @@ class EnumEvolveTests {
     // Finally, the version we're using to test with
     enum class DeserializeWithRename { A, B, C }
 
-    @Ignore("https://r3-cev.atlassian.net/browse/CORDA-1498")
     @Test
     fun deserializeWithRename() {
         val resource = "${javaClass.simpleName}.${testName()}"

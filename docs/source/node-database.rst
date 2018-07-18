@@ -41,7 +41,7 @@ PostgreSQL
 ----------
 Nodes can also be configured to use PostgreSQL 9.6, using PostgreSQL JDBC Driver 42.1.4.
 
-.. warning:: This is an experimental community contribution. The Corda continuous integration pipeline does not run unit
+.. warning:: This is an experimental community contribution. The Corda continuous integration pipeline does not run unit 
    tests or integration tests of this feature.
 
 Configuration
@@ -101,3 +101,5 @@ Note that:
 * The ``database.schema`` property is optional and is ignored as of release 3.1.
 * Ensure the directory referenced by jarDirs contains only one JDBC driver JAR file; by the default,
   sqljdbc_6.2/enu/contains two JDBC JAR file for different Java versions.
+=======
+

@@ -6,7 +6,7 @@ import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.debug
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.ReceivedMessageImpl
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
@@ -23,7 +23,7 @@ import org.apache.qpid.proton.amqp.transport.SenderSettleMode
 import org.apache.qpid.proton.engine.*
 import org.apache.qpid.proton.message.Message
 import org.apache.qpid.proton.message.ProtonJMessage
-import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.util.*
@@ -35,7 +35,7 @@ import java.util.*
  * but this threading lock is managed by the EventProcessor class that calls this.
  * It ultimately posts application packets to/from from the netty transport pipeline.
  */
-internal class ConnectionStateMachine(serverMode: Boolean,
+internal class ConnectionStateMachine(private val serverMode: Boolean,
                                       collector: Collector,
                                       private val localLegalName: String,
                                       private val remoteLegalName: String,
@@ -43,10 +43,34 @@ internal class ConnectionStateMachine(serverMode: Boolean,
                                       password: String?) : BaseHandler() {
     companion object {
         private const val IDLE_TIMEOUT = 10000
+        private val log = contextLogger()
     }
 
+    private fun withMDC(block: () -> Unit) {
+        val oldMDC = MDC.getCopyOfContextMap()
+        try {
+            MDC.put("serverMode", serverMode.toString())
+            MDC.put("localLegalName", localLegalName)
+            MDC.put("remoteLegalName", remoteLegalName)
+            block()
+        } finally {
+            MDC.setContextMap(oldMDC)
+        }
+    }
+
+    private fun logDebugWithMDC(msg: () -> String) {
+        if (log.isDebugEnabled) {
+            withMDC { log.debug(msg()) }
+        }
+    }
+
+    private fun logInfoWithMDC(msg: String) = withMDC { log.info(msg) }
+
+    private fun logWarnWithMDC(msg: String, ex: Throwable? = null) = withMDC { log.warn(msg, ex) }
+
+    private fun logErrorWithMDC(msg: String, ex: Throwable? = null) = withMDC { log.error(msg, ex) }
+
     val connection: Connection
-    private val log = LoggerFactory.getLogger(localLegalName)
     private val transport: Transport
     private val id = UUID.randomUUID().toString()
     private var session: Session? = null
@@ -93,12 +117,12 @@ internal class ConnectionStateMachine(serverMode: Boolean,
 
     override fun onConnectionInit(event: Event) {
         val connection = event.connection
-        log.debug { "Connection init $connection" }
+        logDebugWithMDC { "Connection init $connection" }
     }
 
     override fun onConnectionLocalOpen(event: Event) {
         val connection = event.connection
-        log.info("Connection local open $connection")
+        logInfoWithMDC("Connection local open $connection")
         val session = connection.session()
         session.open()
         this.session = session
@@ -109,7 +133,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
 
     override fun onConnectionLocalClose(event: Event) {
         val connection = event.connection
-        log.info("Connection local close $connection")
+        logInfoWithMDC("Connection local close $connection")
         connection.close()
         connection.free()
     }
@@ -127,7 +151,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
 
     override fun onConnectionFinal(event: Event) {
         val connection = event.connection
-        log.debug { "Connection final $connection" }
+        logDebugWithMDC { "Connection final $connection" }
         if (connection == this.connection) {
             this.connection.context = null
             for (queue in messageQueues.values) {
@@ -167,21 +191,21 @@ internal class ConnectionStateMachine(serverMode: Boolean,
 
     override fun onTransportHeadClosed(event: Event) {
         val transport = event.transport
-        log.debug { "Transport Head Closed $transport" }
+        logDebugWithMDC { "Transport Head Closed $transport" }
         transport.close_tail()
         onTransportInternal(transport)
     }
 
     override fun onTransportTailClosed(event: Event) {
         val transport = event.transport
-        log.debug { "Transport Tail Closed $transport" }
+        logDebugWithMDC { "Transport Tail Closed $transport" }
         transport.close_head()
         onTransportInternal(transport)
     }
 
     override fun onTransportClosed(event: Event) {
         val transport = event.transport
-        log.debug { "Transport Closed $transport" }
+        logDebugWithMDC { "Transport Closed $transport" }
         if (transport == this.transport) {
             transport.unbind()
             transport.free()
@@ -191,19 +215,19 @@ internal class ConnectionStateMachine(serverMode: Boolean,
 
     override fun onTransportError(event: Event) {
         val transport = event.transport
-        log.info("Transport Error $transport")
+        logInfoWithMDC("Transport Error $transport")
         val condition = event.transport.condition
         if (condition != null) {
-            log.info("Error: ${condition.description}")
+            logInfoWithMDC("Error: ${condition.description}")
         } else {
-            log.info("Error (no description returned).")
+            logInfoWithMDC("Error (no description returned).")
         }
         onTransportInternal(transport)
     }
 
     override fun onTransport(event: Event) {
         val transport = event.transport
-        log.debug { "Transport $transport" }
+        logDebugWithMDC { "Transport $transport" }
         onTransportInternal(transport)
     }
 
@@ -220,12 +244,12 @@ internal class ConnectionStateMachine(serverMode: Boolean,
 
     override fun onSessionInit(event: Event) {
         val session = event.session
-        log.debug { "Session init $session" }
+        logDebugWithMDC { "Session init $session" }
     }
 
     override fun onSessionLocalOpen(event: Event) {
         val session = event.session
-        log.debug { "Session local open $session" }
+        logDebugWithMDC { "Session local open $session" }
     }
 
     private fun getSender(target: String): Sender {
@@ -251,14 +275,14 @@ internal class ConnectionStateMachine(serverMode: Boolean,
 
     override fun onSessionLocalClose(event: Event) {
         val session = event.session
-        log.debug { "Session local close $session" }
+        logDebugWithMDC { "Session local close $session" }
         session.close()
         session.free()
     }
 
     override fun onSessionFinal(event: Event) {
         val session = event.session
-        log.debug { "Session final $session" }
+        logDebugWithMDC { "Session final $session" }
         if (session == this.session) {
             this.session = null
         }
@@ -267,12 +291,12 @@ internal class ConnectionStateMachine(serverMode: Boolean,
     override fun onLinkLocalOpen(event: Event) {
         val link = event.link
         if (link is Sender) {
-            log.debug { "Sender Link local open ${link.name} ${link.source} ${link.target}" }
+            logDebugWithMDC { "Sender Link local open ${link.name} ${link.source} ${link.target}" }
             senders[link.target.address] = link
             transmitMessages(link)
         }
         if (link is Receiver) {
-            log.debug { "Receiver Link local open ${link.name} ${link.source} ${link.target}" }
+            logDebugWithMDC { "Receiver Link local open ${link.name} ${link.source} ${link.target}" }
             receivers[link.target.address] = link
         }
     }
@@ -281,19 +305,29 @@ internal class ConnectionStateMachine(serverMode: Boolean,
         val link = event.link
         if (link is Receiver) {
             if (link.remoteTarget is Coordinator) {
-                log.debug { "Coordinator link received" }
+                logDebugWithMDC { "Coordinator link received" }
             }
+        }
+    }
+
+    override fun onLinkRemoteClose(e: Event) {
+        val link = e.link
+        if(link.remoteCondition != null) {
+            logWarnWithMDC("Connection closed due to error on remote side: `${link.remoteCondition.description}`")
+            transport.condition = link.condition
+            transport.close_tail()
+            transport.pop(Math.max(0, transport.pending())) // Force generation of TRANSPORT_HEAD_CLOSE (not in C code)
         }
     }
 
     override fun onLinkFinal(event: Event) {
         val link = event.link
         if (link is Sender) {
-            log.debug { "Sender Link final ${link.name} ${link.source} ${link.target}" }
+            logDebugWithMDC { "Sender Link final ${link.name} ${link.source} ${link.target}" }
             senders.remove(link.target.address)
         }
         if (link is Receiver) {
-            log.debug { "Receiver Link final ${link.name} ${link.source} ${link.target}" }
+            logDebugWithMDC { "Receiver Link final ${link.name} ${link.source} ${link.target}" }
             receivers.remove(link.target.address)
         }
     }
@@ -301,12 +335,12 @@ internal class ConnectionStateMachine(serverMode: Boolean,
     override fun onLinkFlow(event: Event) {
         val link = event.link
         if (link is Sender) {
-            log.debug { "Sender Flow event: ${link.name} ${link.source} ${link.target}" }
+            logDebugWithMDC { "Sender Flow event: ${link.name} ${link.source} ${link.target}" }
             if (senders.containsKey(link.target.address)) {
                 transmitMessages(link)
             }
         } else if (link is Receiver) {
-            log.debug { "Receiver Flow event: ${link.name} ${link.source} ${link.target}" }
+            logDebugWithMDC { "Receiver Flow event: ${link.name} ${link.source} ${link.target}" }
         }
     }
 
@@ -317,7 +351,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
     private fun transmitMessages(sender: Sender) {
         val messageQueue = messageQueues.getOrPut(sender.target.address, { LinkedList() })
         while (sender.credit > 0) {
-            log.debug { "Sender credit: ${sender.credit}" }
+            logDebugWithMDC { "Sender credit: ${sender.credit}" }
             val nextMessage = messageQueue.poll()
             if (nextMessage != null) {
                 try {
@@ -328,7 +362,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
                     delivery.context = nextMessage
                     sender.send(messageBuf.array(), messageBuf.arrayOffset() + messageBuf.readerIndex(), messageBuf.readableBytes())
                     nextMessage.status = MessageStatus.Sent
-                    log.debug { "Put tag ${javax.xml.bind.DatatypeConverter.printHexBinary(delivery.tag)} on wire uuid: ${nextMessage.applicationProperties["_AMQ_DUPL_ID"]}" }
+                    logDebugWithMDC { "Put tag ${javax.xml.bind.DatatypeConverter.printHexBinary(delivery.tag)} on wire uuid: ${nextMessage.applicationProperties["_AMQ_DUPL_ID"]}" }
                     unackedQueue.offer(nextMessage)
                     sender.advance()
                 } finally {
@@ -342,7 +376,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
 
     override fun onDelivery(event: Event) {
         val delivery = event.delivery
-        log.debug { "Delivery $delivery" }
+        logDebugWithMDC { "Delivery $delivery" }
         val link = delivery.link
         if (link is Receiver) {
             if (delivery.isReadable && !delivery.isPartial) {
@@ -366,7 +400,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
                             appProperties,
                             channel,
                             delivery)
-                    log.debug { "Full message received uuid: ${appProperties["_AMQ_DUPL_ID"]}" }
+                    logDebugWithMDC { "Full message received uuid: ${appProperties["_AMQ_DUPL_ID"]}" }
                     channel.writeAndFlush(receivedMessage)
                     if (link.current() == delivery) {
                         link.advance()
@@ -377,7 +411,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
                 }
             }
         } else if (link is Sender) {
-            log.debug { "Sender delivery confirmed tag ${javax.xml.bind.DatatypeConverter.printHexBinary(delivery.tag)}" }
+            logDebugWithMDC { "Sender delivery confirmed tag ${javax.xml.bind.DatatypeConverter.printHexBinary(delivery.tag)}" }
             val ok = delivery.remotelySettled() && delivery.remoteState == Accepted.getInstance()
             val sourceMessage = delivery.context as? SendableMessageImpl
             unackedQueue.remove(sourceMessage)
@@ -395,7 +429,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
                 buffer.readBytes(bytes)
                 return Unpooled.wrappedBuffer(bytes)
             } catch (ex: Exception) {
-                log.error("Unable to encode message as AMQP packet", ex)
+                logErrorWithMDC("Unable to encode message as AMQP packet", ex)
                 throw ex
             }
         } finally {

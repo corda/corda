@@ -5,9 +5,9 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.CordaSerializationTransformRename
+import net.corda.serialization.internal.NotSerializableWithReasonException
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
-import java.io.NotSerializableException
 
 /**
  * Enumerated type that represents each transform that can be applied to a class. Used as the key type in
@@ -47,25 +47,12 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
          */
         override fun validate(list: List<Transform>, constants: Map<String, Int>) {
             uncheckedCast<List<Transform>, List<EnumDefaultSchemaTransform>>(list).forEach {
-                if (!constants.contains(it.new)) {
-                    throw NotSerializableException("Unknown enum constant ${it.new}")
-                }
-
-                if (!constants.contains(it.old)) {
-                    throw NotSerializableException(
-                            "Enum extension defaults must be to a valid constant: ${it.new} -> ${it.old}. ${it.old} " +
-                                    "doesn't exist in constant set $constants")
-                }
-
-                if (it.old == it.new) {
-                    throw NotSerializableException("Enum extension ${it.new} cannot default to itself")
-                }
-
-                if (constants[it.old]!! >= constants[it.new]!!) {
-                    throw NotSerializableException(
-                            "Enum extensions must default to older constants. ${it.new}[${constants[it.new]}] " +
-                                    "defaults to ${it.old}[${constants[it.old]}] which is greater")
-                }
+                requireThat(constants.contains(it.new)) {"Unknown enum constant ${it.new}"}
+                requireThat(constants.contains(it.old)) { "Enum extension defaults must be to a valid constant: ${it.new} -> ${it.old}. ${it.old} " +
+                        "doesn't exist in constant set $constants" }
+                requireThat(it.old != it.new) { "Enum extension ${it.new} cannot default to itself" }
+                requireThat(constants[it.old]!! < constants[it.new]!!) { "Enum extensions must default to older constants. ${it.new}[${constants[it.new]}] " +
+                        "defaults to ${it.old}[${constants[it.old]}] which is greater" }
             }
         }
     },
@@ -83,21 +70,57 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
          * @param constants The list of enum constants on the type the transforms are being applied to
          */
         override fun validate(list: List<Transform>, constants: Map<String, Int>) {
-            object : Any() {
-                val from: MutableSet<String> = mutableSetOf()
-                val to: MutableSet<String> = mutableSetOf()
-            }.apply {
-                @Suppress("UNCHECKED_CAST") (list as List<RenameSchemaTransform>).forEach { rename ->
-                    if (rename.to in this.to || rename.from in this.from) {
-                        throw NotSerializableException("Cyclic renames are not allowed (${rename.to})")
-                    }
+            @KeepForDJVM
+            data class Node(val transform: RenameSchemaTransform, var next: Node?, var prev: Node?, var visitedBy: Node? = null) {
+                fun visit(visitedBy: Node) {
+                    this.visitedBy = visitedBy
+                }
+                val visited get() = visitedBy != null
+            }
 
-                    this.to.add(rename.from)
-                    this.from.add(rename.to)
+            val graph = mutableListOf<Node>()
+            // Keep two maps of forward links and back links in order to build the graph in one pass
+            val forwardLinks = hashMapOf<String, Node>()
+            val reverseLinks = hashMapOf<String, Node>()
+
+            // build a dependency graph
+            val transforms: List<RenameSchemaTransform> = uncheckedCast(list)
+            transforms.forEach { rename ->
+                requireThat(!forwardLinks.contains(rename.from)) { "There are multiple transformations from ${rename.from}, which is not allowed" }
+                requireThat(!reverseLinks.contains(rename.to)) { "There are multiple transformations to ${rename.to}, which is not allowed" }
+                val node = Node(rename, forwardLinks[rename.to], reverseLinks[rename.from])
+                graph.add(node)
+                node.next?.prev = node
+                node.prev?.next = node
+                forwardLinks[rename.from] = node
+                reverseLinks[rename.to] = node
+            }
+
+            // Check that every property in the current type is at the end of a renaming chain, if it is in one
+            constants.keys.forEach {
+                requireThat(reverseLinks[it]?.next == null) { "$it is specified as a previously evolved type, but it also exists in the current type" }
+            }
+
+            // Check for cyclic dependencies
+            graph.forEach {
+                if (it.visited) return@forEach
+                // Find an unvisited node
+                var currentNode = it
+                currentNode.visit(it)
+                while (currentNode.next != null) {
+                    currentNode = currentNode.next!!
+                    if (currentNode.visited) {
+                        requireThat(currentNode.visitedBy != it) { "Cyclic renames are not allowed (${currentNode.transform.from})" }
+                        // we have found the start of another non-cyclic chain of dependencies
+                        // if they were cyclic we would have gone round in a loop and already thrown
+                        break
+                    }
+                    currentNode.visit(it)
                 }
             }
         }
     }
+
     // Transform used to test the unknown handler, leave this at as the final constant, uncomment
     // when regenerating test cases - if Java had a pre-processor this would be much neater
     //
@@ -121,9 +144,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
         override fun newInstance(obj: Any?): TransformTypes {
             val describedType = obj as DescribedType
 
-            if (describedType.descriptor != DESCRIPTOR) {
-                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
-            }
+            requireThat(describedType.descriptor == DESCRIPTOR) { "Unexpected descriptor ${describedType.descriptor}." }
 
             return try {
                 values()[describedType.described as Int]
@@ -133,5 +154,11 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
         }
 
         override fun getTypeClass(): Class<*> = TransformTypes::class.java
+
+        protected inline fun requireThat(expr: Boolean, errorMessage: () -> String) {
+            if (!expr) {
+                throw NotSerializableWithReasonException(errorMessage())
+            }
+        }
     }
 }

@@ -1,12 +1,14 @@
 package net.corda.testing.internal
 
-import com.nhaarman.mockito_kotlin.doAnswer
+import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.configureDevKeyAndTrustStores
@@ -19,7 +21,6 @@ import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
-import java.security.cert.X509Certificate
 import javax.security.auth.x500.X500Principal
 
 @Suppress("unused")
@@ -142,23 +143,14 @@ fun createNodeSslConfig(path: Path, name: CordaX500Name = CordaX500Name("MegaCor
     return sslConfig
 }
 
-fun createKeyPairAndSelfSignedCertificate(): Pair<KeyPair, X509Certificate> {
-    val rpcKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
-    val selfSignCert = X509Utilities.createSelfSignedCACertificate(testName, rpcKeyPair)
-    return Pair(rpcKeyPair, selfSignCert)
-}
-
-fun saveToKeyStore(keyStorePath: Path, rpcKeyPair: KeyPair, selfSignCert: X509Certificate, password: String = "password"): Path {
-    val keyStore = loadOrCreateKeyStore(keyStorePath, password)
-    keyStore.addOrReplaceKey("Key", rpcKeyPair.private, password.toCharArray(), arrayOf(selfSignCert))
-    keyStore.save(keyStorePath, password)
-    return keyStorePath
-}
-
-fun saveToTrustStore(trustStorePath: Path, selfSignCert: X509Certificate, password: String = "password"): Path {
-    val trustStore = loadOrCreateKeyStore(trustStorePath, password)
-    trustStore.addOrReplaceCertificate("Key", selfSignCert)
-    trustStore.save(trustStorePath, password)
-    return trustStorePath
+/** This is the same as the deprecated [WireTransaction] c'tor but avoids the deprecation warning. */
+fun createWireTransaction(inputs: List<StateRef>,
+                          attachments: List<SecureHash>,
+                          outputs: List<TransactionState<*>>,
+                          commands: List<Command<*>>,
+                          notary: Party?,
+                          timeWindow: TimeWindow?,
+                          privacySalt: PrivacySalt = PrivacySalt()): WireTransaction {
+    val componentGroups = WireTransaction.createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow)
+    return WireTransaction(componentGroups, privacySalt)
 }

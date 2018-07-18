@@ -26,7 +26,7 @@ def originalJar = configurations.proguard.files.find { it.name.startsWith("kotli
 
 import proguard.gradle.ProGuardTask
 task metadata(type: ProGuardTask) {
-    injars originalJar, filter: '!META-INF/native/**'
+    injars originalJar, filter: 'META-INF/MANIFEST.MF,META-INF/metadata*.kotlin_module,**.class'
     outjars "$buildDir/libs/${project.name}-${kotlin_version}.jar"
 
     libraryjars "$javaHome/lib/rt.jar"
@@ -39,7 +39,6 @@ task metadata(type: ProGuardTask) {
 
     keepattributes '*'
     dontoptimize
-    printseeds
     verbose
 
     dontwarn 'com.sun.jna.**'
@@ -47,9 +46,13 @@ task metadata(type: ProGuardTask) {
     dontwarn 'org.jetbrains.kotlin.com.intellij.**'
     dontwarn 'org.jetbrains.kotlin.com.google.j2objc.annotations.**'
     dontwarn 'org.jetbrains.kotlin.com.google.errorprone.annotations.**'
+    dontnote
 
     keep 'class org.jetbrains.kotlin.load.java.JvmAnnotationNames { *; }'
-    keep 'class org.jetbrains.kotlin.metadata.** { *; }', includedescriptorclasses: true
+    keep 'class org.jetbrains.kotlin.metadata.ProtoBuf { *; }', includedescriptorclasses: true
+    keep 'class org.jetbrains.kotlin.metadata.ProtoBuf$* { *; }', includedescriptorclasses: true
+    keep 'class org.jetbrains.kotlin.metadata.deserialization.** { *; }', includedescriptorclasses: true
+    keep 'class org.jetbrains.kotlin.metadata.jvm.** { *; }', includedescriptorclasses: true
     keep 'class org.jetbrains.kotlin.protobuf.** { *; }', includedescriptorclasses: true
 }
 def metadataJar = metadata.outputs.files.singleFile
@@ -68,6 +71,7 @@ task validate(type: ProGuardTask) {
     verbose
 
     dontwarn 'org.jetbrains.kotlin.com.google.errorprone.annotations.**'
+    dontnote
 
     keep 'class *'
 }
@@ -77,5 +81,4 @@ artifacts {
 }
 
 defaultTasks "metadata"
-assemble.dependsOn metadata
 metadata.finalizedBy validate

@@ -1,15 +1,12 @@
 package net.corda.node.services.identity
 
-import net.corda.core.contracts.PartyAndReference
-import net.corda.core.crypto.toStringShort
-import net.corda.core.identity.*
-import net.corda.core.internal.CertRole
-import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.UnknownAnonymousPartyException
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
-import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
@@ -22,10 +19,9 @@ import javax.annotation.concurrent.ThreadSafe
  *
  * @param identities initial set of identities for the service, typically only used for unit tests.
  */
-// TODO There is duplicated logic between this and PersistentIdentityService
 @ThreadSafe
-class InMemoryIdentityService(identities: List<out PartyAndCertificate> = emptyList(),
-                              override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
+class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(),
+                              override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityServiceInternal {
     companion object {
         private val log = contextLogger()
     }
@@ -44,29 +40,10 @@ class InMemoryIdentityService(identities: List<out PartyAndCertificate> = emptyL
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
-        // Validate the chain first, before we do anything clever with it
+    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? = verifyAndRegisterIdentity(trustAnchor, identity)
+
+    override fun registerIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         val identityCertChain = identity.certPath.x509Certificates
-        try {
-            identity.verify(trustAnchor)
-        } catch (e: CertPathValidatorException) {
-            log.warn("Certificate validation failed for ${identity.name} against trusted root ${trustAnchor.trustedCert.subjectX500Principal}.")
-            log.warn("Certificate path :")
-            identityCertChain.reversed().forEachIndexed { index, certificate ->
-                val space = (0 until index).joinToString("") { "   " }
-                log.warn("$space${certificate.subjectX500Principal}")
-            }
-            throw e
-        }
-
-        // Ensure we record the first identity of the same name, first
-        val wellKnownCert = identityCertChain.single { CertRole.extract(it)?.isWellKnown ?: false }
-        if (wellKnownCert != identity.certificate) {
-            val idx = identityCertChain.lastIndexOf(wellKnownCert)
-            val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
-            verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
-        }
-
         log.trace { "Registering identity $identity" }
         keyToParties[identity.owningKey] = identity
         // Always keep the first party we registered, as that's the well known identity
@@ -79,26 +56,7 @@ class InMemoryIdentityService(identities: List<out PartyAndCertificate> = emptyL
     // We give the caller a copy of the data set to avoid any locking problems
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToParties.values)
 
-    override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]?.party
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = principalToParties[name]?.party
-    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
-        // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
-        // into a party, and from there figure out the well known party.
-        val candidate = partyFromKey(party.owningKey)
-        // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
-        return if (candidate != null) {
-            require(party.nameOrNull() == null || party.nameOrNull() == candidate.name) { "Candidate party $candidate does not match expected $party" }
-            wellKnownPartyFromX500Name(candidate.name)
-        } else {
-            null
-        }
-    }
-
-    override fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference) = wellKnownPartyFromAnonymous(partyRef.party)
-    override fun requireWellKnownPartyFromAnonymous(party: AbstractParty): Party {
-        return wellKnownPartyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
-    }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         val results = LinkedHashSet<Party>()
@@ -106,15 +64,5 @@ class InMemoryIdentityService(identities: List<out PartyAndCertificate> = emptyL
             partiesFromName(query, exactMatch, x500name, results, partyAndCertificate.party)
         }
         return results
-    }
-
-    @Throws(UnknownAnonymousPartyException::class)
-    override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
-        val anonymousIdentity = keyToParties[anonymousParty.owningKey] ?:
-                throw UnknownAnonymousPartyException("Unknown $anonymousParty")
-        val issuingCert = anonymousIdentity.certPath.certificates[1]
-        require(issuingCert.publicKey == party.owningKey) {
-            "Issuing certificate's public key must match the party key ${party.owningKey.toStringShort()}."
-        }
     }
 }

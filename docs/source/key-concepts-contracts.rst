@@ -24,7 +24,7 @@ transaction gathers all the required signatures, it is only valid if it is also 
 
 **Contract validity** is defined as follows:
 
-* Each state points to a *contract*
+* Each transaction state specifies a *contract* type
 * A *contract* takes a transaction as input, and states whether the transaction is considered valid based on the
   contract's rules
 * A transaction is only valid if the contract of **every input state** and **every output state** considers it to be
@@ -56,11 +56,14 @@ given transaction. For example, transaction validity cannot depend on the time a
 the amount of information the peer running the contract holds. This is a necessary condition to ensure that all peers
 on the network reach consensus regarding the validity of a given ledger update.
 
-To achieve this, contracts evaluate transactions in a deterministic sandbox. The sandbox has a whitelist that
+Future versions of Corda will evaluate transactions in a strictly deterministic sandbox. The sandbox has a whitelist that
 prevents the contract from importing libraries that could be a source of non-determinism. This includes libraries
 that provide the current time, random number generators, libraries that provide filesystem access or networking
 libraries, for example. Ultimately, the only information available to the contract when verifying the transaction is
 the information included in the transaction itself.
+
+Developers can pre-verify their CorDapps are determinsitic by linking their CorDapps against the deterministic modules
+(see the :doc:`Deterministic Corda Modules <deterministic-modules>`).
 
 Contract limitations
 --------------------

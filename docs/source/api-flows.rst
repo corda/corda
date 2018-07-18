@@ -583,7 +583,7 @@ Only one party has to call ``FinalityFlow`` for a given transaction to be record
 
 Because the transaction has already been notarised and the input states consumed, if the participants when receiving the
 transaction fail to verify it, or the receiving flow (the finality handler) fails due to some other error, we then have
-the scenerio where not all parties have the correct up to date view of the ledger. To recover from this the finality handler
+the scenario where not all parties have the correct up to date view of the ledger. To recover from this the finality handler
 is automatically sent to the flow hospital where it's suspended and retried from its last checkpoint on node restart.
 This gives the node operator the opportunity to recover from the error. Until the issue is resolved the node will continue
 to retry the flow on each startup.

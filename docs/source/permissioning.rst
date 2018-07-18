@@ -13,14 +13,15 @@ Every Corda node is a part of a network (also called a zone), and networks are *
 zone, a node needs a signed X.509 certificate from the network operator. Production deployments require a secure certificate authority.
 The issued certificates take the form of three keystores in a node's ``<workspace>/certificates/`` folder:
 
-* ``network-root-truststore.jks``, which stores the network/zone operator's public keys and certificates
+* ``network-root-truststore.jks``, the network/zone operator's public keys and certificates as provided by them with a standard password. Can be deleted after initial registration
+* ``truststore.jks``, the network/zone operator's public keys and certificates in keystore with a locally configurable password as protection against certain attacks
 * ``nodekeystore.jks``, which stores the node’s identity keypairs and certificates
 * ``sslkeystore.jks``, which stores the node’s TLS keypairs and certificates
 
 Most users will join an existing network such as the main Corda network or the Corda TestNet. You can also build your
 own networks. During development, no network is required because you can use the included tools to pre-create
 and pre-distribute the certificates and map files that would normally be provided dynamically by the network. Effectively
-the bootstrapper tool creates a private semi-static network for you.
+the :doc:`bootstrapper tool <network-bootstrapper>` creates a private semi-static network for you.
 
 Certificate hierarchy
 ---------------------
@@ -72,9 +73,8 @@ certificates must obey the following restrictions:
 
 The required identity and TLS keys/certificates will be automatically generated for you by the node on first run.
 However, you can also generate them manually for more control. The ``X509Utilities`` class shows how to generate the
-required public/private keypairs and certificates using Bouncy Castle. You can find the ``X509Utilities`` in the `Corda
-repository <https://github.com/corda/corda>`__, under
-``/node-api/src/main/kotlin/net/corda/nodeapi/internal/crypto/X509Utilities.kt``.
+required public/private keypairs and certificates using Bouncy Castle. You can find it in the `Corda repository
+<https://github.com/corda/corda/blob/master/node-api/src/main/kotlin/net/corda/nodeapi/internal/crypto/X509Utilities.kt>`__.
 
 Certificate role extension
 --------------------------
@@ -140,7 +140,7 @@ The following information from the node configuration file is needed to generate
 
 * **devMode** must be set to false
 
-* **networkServices or compatibilityZoneURL** The Corda compatibility zone services must be configured. This must be either:
+* **networkServices** or **compatibilityZoneURL** The Corda compatibility zone services must be configured. This must be either:
 
   * **compatibilityZoneURL** The Corda compatibility zone network management service root URL.
   * **networkServices** Replaces the ``compatibilityZoneURL`` when the doorman and network map services
@@ -172,7 +172,7 @@ Think twice before going down this route:
 1. It isn't necessary for testing.
 2. It isn't necessary for adding another layer of permissioning or 'know your customer' requirements onto your app.
 
-**Testing.** Creating a production-ready zone isn't necessary for testing as you can use the *network bootstrapper*
+**Testing.** Creating a production-ready zone isn't necessary for testing as you can use the :doc:`network bootstrapper <network-bootstrapper>`
 tool to create all the certificates, keys, and distribute the needed map files to run many nodes. The bootstrapper can
 create a network locally on your desktop/laptop but it also knows how to automate cloud providers via their APIs and
 using Docker. In this way you can bring up a simulation of a real Corda network with different nodes on different
@@ -230,7 +230,7 @@ It can be thought of as a DNS equivalent. If you want to de-list a user, you wou
 It is very likely that your map server won't be entirely standalone, but rather, integrated with whatever your master
 user database is.
 
-The network map server also distributes signed network parameter files and controls the rollout schedule for when they
+The network map server also distributes signed network parameter files and controls the roll-out schedule for when they
 become available for download and opt-in, and when they become enforced. This is again a policy decision you will
 probably choose to place some simple UI or workflow tooling around, in particular to enforce restrictions on who can
 edit the map or the parameters.
@@ -277,8 +277,9 @@ Setting zone parameters
 Zone parameters are stored in a file containing a Corda AMQP serialised ``SignedDataWithCert<NetworkParameters>``
 object. It is easy to create such a file with a small Java or Kotlin program. The ``NetworkParameters`` object is a
 simple data holder that could be read from e.g. a config file, or settings from a database. Signing and saving the
-resulting file is just a few lines of code. A full example can be found in ``NetworkParametersCopier.kt`` in the source
-tree, but a flavour of it looks like this:
+resulting file is just a few lines of code. A full example can be found in `NetworkParametersCopier.kt
+<https://github.com/corda/corda/blob/master/node-api/src/main/kotlin/net/corda/nodeapi/internal/network/NetworkParametersCopier.kt>`__,
+but a flavour of it looks like this:
 
 .. container:: codeset
 
@@ -322,7 +323,7 @@ Selecting parameter values
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 How to choose the parameters? This is the most complex question facing you as a new zone operator. Some settings may seem
-straightforward and others may involve cost/benefit tradeoffs specific to your business. For example, you could choose
+straightforward and others may involve cost/benefit trade-offs specific to your business. For example, you could choose
 to run a validating notary yourself, in which case you would (in the absence of SGX) see all the users' data. Or you could
 run a non-validating notary, with BFT fault tolerance, which implies recruiting others to take part in the cluster.
 

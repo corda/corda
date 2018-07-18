@@ -1,33 +1,48 @@
-Running a notary service
-------------------------
+Setting up a notary service
+---------------------------
 
-At present we have several notary implementations:
+Corda comes with several notary implementations built-in:
 
-1. ``SimpleNotaryService`` (single node) -- commits the provided transaction input states without any validation.
-2. ``ValidatingNotaryService`` (single node) -- retrieves and validates the whole transaction history
-   (including the given transaction) before committing.
-3. ``RaftNonValidatingNotaryService`` (distributed) -- functionally equivalent to ``SimpleNotaryService``, but stores
-   the committed states in a distributed collection replicated and persisted in a Raft cluster. For the consensus layer
-   we are using the `Copycat <http://atomix.io/copycat/>`_ framework.
-4. ``RaftValidatingNotaryService`` (distributed) -- as above, but performs validation on the transactions received.
+1. **Single-node**: a simple notary service that persists notarisation requests in the node's database. It is easy to set up
+   and is recommended for testing, and production networks that do not have strict availability requirements.
+2. **Crash fault-tolerant** *(experimental)*: a highly available notary service operated by a single party.
+3. **Byzantine fault-tolerant** *(experimental)*: a decentralised highly available notary service operated by a group of parties.
 
-To have a node run a notary service, you need to set appropriate ``notary`` configuration before starting it
-(see :doc:`corda-configuration-file` for reference).
+Single-node
+===========
 
-For ``SimpleNotaryService`` the config is simply:
+To have a regular Corda node provide a notary service you simply need to set appropriate ``notary`` configuration values
+before starting it:
 
 .. parsed-literal::
 
     notary : { validating : false }
 
-For ``ValidatingNotaryService``, it is:
+For a validating notary service specify:
 
 .. parsed-literal::
 
     notary : { validating : true }
 
-Setting up a Raft notary is currently slightly more involved and is not recommended for prototyping purposes. There is
-work in progress to simplify it. To see it in action, however, you can try out the :ref:`notary-demo`.
 
-Use the `--bootstrap-raft-cluster` command line argument when starting the first node of a notary cluster for the first
-time. When the flag is set, the node will act as a seed for the cluster that other members can join.
+See :ref:`key_concepts_notaries_validation` for more details about validating versus non-validating notaries.
+
+For clients to be able to use the notary service, its identity must be added to the network parameters. This will be
+done automatically when creating the network, if using :doc:`network-bootstrapper`. See :doc:`setting-up-a-corda-network`
+for more details.
+
+Crash fault-tolerant (experimental)
+===================================
+
+Corda provides a prototype `Raft-based <http://atomix.io/>`_ highly available notary implementation. You can try it out on our
+`notary demo <https://github.com/corda/corda/tree/release-V3.1/samples/notary-demo>`_ page. Note that it has known limitations
+and is not recommended for production use.
+
+Byzantine fault-tolerant (experimental)
+=======================================
+
+A prototype BFT notary implementation based on `BFT-Smart <https://github.com/bft-smart/library>`_ is available. You can
+try it out on our `notary demo <https://github.com/corda/corda/tree/release-V3.1/samples/notary-demo>`_ page. Note that it
+is still experimental and there is active work ongoing for a production ready solution.
+
+We do not recommend using it in any long-running test or production deployments.

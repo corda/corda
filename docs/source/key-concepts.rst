@@ -23,6 +23,7 @@ This section should be read in order:
    key-concepts-time-windows
    key-concepts-oracles
    key-concepts-node
+   key-concepts-tearoffs
    key-concepts-tradeoffs
 
 The detailed thinking and rationale behind these concepts are presented in two white papers:

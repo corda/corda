@@ -1,15 +1,16 @@
 package net.corda.serialization.internal.amqp;
 
 import net.corda.core.serialization.SerializedBytes;
-import net.corda.serialization.internal.AllWhitelist;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 import java.io.NotSerializableException;
 import java.util.ArrayList;
 import java.util.List;
+
+import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactory;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertEquals;
 
 public class SetterConstructorTests {
 
@@ -119,13 +120,7 @@ public class SetterConstructorTests {
     // despite having no constructor we should still be able to serialise an instance of C
     @Test
     public void serialiseC() throws NotSerializableException {
-        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
-        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
-        SerializerFactory factory1 = new SerializerFactory(
-                AllWhitelist.INSTANCE,
-                ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter,
-                fingerPrinter);
+        SerializerFactory factory1 = testDefaultFactory();
 
         SerializationOutput ser = new SerializationOutput(factory1);
 
@@ -195,13 +190,7 @@ public class SetterConstructorTests {
 
     @Test
     public void deserialiseC() throws NotSerializableException {
-        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
-        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
-        SerializerFactory factory1 = new SerializerFactory(
-                AllWhitelist.INSTANCE,
-                ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter,
-                fingerPrinter);
+        SerializerFactory factory1 = testDefaultFactory();
 
         C cPre1 = new C();
 
@@ -268,13 +257,7 @@ public class SetterConstructorTests {
 
     @Test
     public void serialiseOuterAndInner() throws NotSerializableException {
-        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
-        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
-        SerializerFactory factory1 = new SerializerFactory(
-                AllWhitelist.INSTANCE,
-                ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter,
-                fingerPrinter);
+        SerializerFactory factory1 = testDefaultFactory();
 
         Inner1 i1 = new Inner1("Hello");
         Inner2 i2 = new Inner2();
@@ -298,38 +281,26 @@ public class SetterConstructorTests {
 
     @Test
     public void typeMistmatch() {
-        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
-        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
-        SerializerFactory factory1 = new SerializerFactory(
-                AllWhitelist.INSTANCE,
-                ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter,
-                fingerPrinter);
+        SerializerFactory factory1 = testDefaultFactory();
 
         TypeMismatch tm = new TypeMismatch();
         tm.setA(10);
         assertEquals("10", tm.getA());
 
-        Assertions.assertThatThrownBy(() -> new SerializationOutput(factory1).serialize(tm,
+        assertThatThrownBy(() -> new SerializationOutput(factory1).serialize(tm,
                 TestSerializationContext.testSerializationContext)).isInstanceOf (
                 NotSerializableException.class);
     }
 
     @Test
     public void typeMistmatch2() {
-        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
-        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
-        SerializerFactory factory1 = new SerializerFactory(
-                AllWhitelist.INSTANCE,
-                ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter,
-                fingerPrinter);
+        SerializerFactory factory1 = testDefaultFactory();
 
         TypeMismatch2 tm = new TypeMismatch2();
         tm.setA("10");
         assertEquals((Integer)10, tm.getA());
 
-        Assertions.assertThatThrownBy(() -> new SerializationOutput(factory1).serialize(tm,
+        assertThatThrownBy(() -> new SerializationOutput(factory1).serialize(tm,
                 TestSerializationContext.testSerializationContext)).isInstanceOf(
                 NotSerializableException.class);
     }
@@ -346,13 +317,7 @@ public class SetterConstructorTests {
 
         cil.setL(l);
 
-        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
-        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
-        SerializerFactory factory1 = new SerializerFactory(
-                AllWhitelist.INSTANCE,
-                ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter,
-                fingerPrinter);
+        SerializerFactory factory1 = testDefaultFactory();
 
         // if we've got super / sub types on the setter vs the underlying type the wrong way around this will
         // explode. See CORDA-1229 (https://r3-cev.atlassian.net/browse/CORDA-1229)

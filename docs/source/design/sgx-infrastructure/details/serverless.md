@@ -5,7 +5,7 @@ layer which hides the infrastructure details. Users provide "lambdas", which are
 other lambdas, access other AWS services etc. Because Lambdas are inherently stateless (any state they need must be
 accessed through a service) they may be loaded and executed on demand. This is in contrast with microservices, which 
 are inherently stateful. Internally AWS caches the lambda images and even caches JIT compiled/warmed up code in order 
-to reduce latency. Furthermore the lambda invokation interface provides a convenient way to scale these lambdas: as the 
+to reduce latency. Furthermore the lambda invocation interface provides a convenient way to scale these lambdas: as the 
 functions are statelesss AWS can spin up new VMs to push lambda functions to. The user simply pays for CPU usage, all 
 the infrastructure pain is hidden by Amazon.
 

@@ -12,5 +12,5 @@ Nodes
    clientrpc
    shell
    node-database
+   node-database-access-h2
    node-administration
-   out-of-process-verification

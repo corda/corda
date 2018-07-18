@@ -99,7 +99,7 @@ Let's add a ``CommercialPaper`` transaction:
         }
 
 We can add a transaction to the ledger using the ``transaction`` primitive. The transaction in turn may be defined by
-specifying ``input``-s, ``output``-s, ``command``-s and ``attachment``-s.
+specifying ``input``s, ``output``s, ``command``s and ``attachment``s.
 
 The above ``input`` call is a bit special; transactions don't actually contain input states, just references
 to output states of other transactions. Under the hood the above ``input`` call creates a dummy transaction in the

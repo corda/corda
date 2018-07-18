@@ -1,5 +1,7 @@
-buildscript {
-    ext.strata_version = '1.1.2'
+allprojects {
+    ext {
+        strata_version = '1.1.2'
+    }
 }
 
 apply plugin: 'java'
@@ -29,7 +31,7 @@ dependencies {
 
     // The SIMM demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance')
-    cordapp project(':samples:simm-valuation-demo:contracts-states')
+    cordapp project(path: ':samples:simm-valuation-demo:contracts-states', configuration: 'shrinkArtifacts')
     cordapp project(':samples:simm-valuation-demo:flows')
 
     // Corda integration dependencies
@@ -39,25 +41,25 @@ dependencies {
     cordaCompile project(':webserver')
 
     // Javax is required for webapis
-    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    compile "org.glassfish.jersey.core:jersey-server:$jersey_version"
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
-    compile "com.opengamma.strata:strata-basics:${strata_version}"
-    compile "com.opengamma.strata:strata-product:${strata_version}"
-    compile "com.opengamma.strata:strata-data:${strata_version}"
-    compile "com.opengamma.strata:strata-calc:${strata_version}"
-    compile "com.opengamma.strata:strata-pricer:${strata_version}"
-    compile "com.opengamma.strata:strata-report:${strata_version}"
-    compile "com.opengamma.strata:strata-market:${strata_version}"
-    compile "com.opengamma.strata:strata-collect:${strata_version}"
-    compile "com.opengamma.strata:strata-loader:${strata_version}"
-    compile "com.opengamma.strata:strata-math:${strata_version}"
+    compile "com.opengamma.strata:strata-basics:$strata_version"
+    compile "com.opengamma.strata:strata-product:$strata_version"
+    compile "com.opengamma.strata:strata-data:$strata_version"
+    compile "com.opengamma.strata:strata-calc:$strata_version"
+    compile "com.opengamma.strata:strata-pricer:$strata_version"
+    compile "com.opengamma.strata:strata-report:$strata_version"
+    compile "com.opengamma.strata:strata-market:$strata_version"
+    compile "com.opengamma.strata:strata-collect:$strata_version"
+    compile "com.opengamma.strata:strata-loader:$strata_version"
+    compile "com.opengamma.strata:strata-math:$strata_version"
 
     // Test dependencies
     testCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"
-    testCompile "org.assertj:assertj-core:${assertj_version}"
+    testCompile "org.assertj:assertj-core:$assertj_version"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {

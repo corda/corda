@@ -13,7 +13,6 @@ import net.corda.node.services.Permissions
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.node.User
 import org.junit.Before
 import org.junit.Test
@@ -22,7 +21,6 @@ import java.sql.SQLException
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-
 
 class FlowRetryTest {
     @Before
@@ -36,9 +34,10 @@ class FlowRetryTest {
         val numSessions = 2
         val numIterations = 10
         val user = User("mark", "dadada", setOf(Permissions.startFlow<InitiatorFlow>()))
-        val result: Any? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(),
-                portAllocation = RandomFree)) {
-
+        val result: Any? = driver(DriverParameters(
+                startNodesInProcess = isQuasarAgentSpecified(),
+                notarySpecs = emptyList()
+        )) {
             val nodeAHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
             val nodeBHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
 

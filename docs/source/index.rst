@@ -40,8 +40,9 @@ We look forward to seeing what you can do with Corda!
    tools-index.rst
    node-internals-index.rst
    component-library-index.rst
-   troubleshooting.rst
+   serialization-index.rst
    json.rst
+   troubleshooting.rst
 
 .. toctree::
    :caption: Operations
@@ -52,6 +53,16 @@ We look forward to seeing what you can do with Corda!
    azure-vm.rst
    aws-vm.rst
    loadtesting.rst
+
+.. Documentation is not included in the pdf unless it is included in a toctree somewhere
+.. only:: pdfmode
+
+   .. toctree::
+      :caption: Other documentation
+
+      deterministic-modules.rst
+      release-notes.rst
+      changelog.rst
 
 .. only:: htmlmode
 
@@ -67,12 +78,15 @@ We look forward to seeing what you can do with Corda!
       design/kafka-notary/design.md
       design/monitoring-management/design.md
       design/sgx-integration/design.md
+      design/sgx-infrastructure/design.md
 
    .. toctree::
       :caption: Participate
       :maxdepth: 2
 
+      building-corda.rst
       release-process-index.rst
       corda-repo-layout.rst
       deterministic-modules.rst
       building-the-docs.rst
+      building-container-images.rst

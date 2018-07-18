@@ -112,25 +112,28 @@ class AttachmentLoadingTests {
     }
 
     @Test
-    fun `test that attachments retrieved over the network are not used for code`() = withoutTestSerialization {
-        driver(DriverParameters(startNodesInProcess = true)) {
-            installIsolatedCordappTo(bankAName)
-            val (bankA, bankB) = createTwoNodes()
-            assertFailsWith<CordaRuntimeException>("Party C=CH,L=Zurich,O=BankB rejected session request: Don't know net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator") {
-                bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
+    fun `test that attachments retrieved over the network are not used for code`() {
+        withoutTestSerialization {
+            driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+                installIsolatedCordappTo(bankAName)
+                val (bankA, bankB) = createTwoNodes()
+                assertFailsWith<CordaRuntimeException>("Party C=CH,L=Zurich,O=BankB rejected session request: Don't know net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator") {
+                    bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
+                }
             }
+            Unit
         }
-        Unit
     }
 
     @Test
-    fun `tests that if the attachment is loaded on both sides already that a flow can run`() = withoutTestSerialization {
-        driver {
-            installIsolatedCordappTo(bankAName)
-            installIsolatedCordappTo(bankBName)
-            val (bankA, bankB) = createTwoNodes()
-            bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
+    fun `tests that if the attachment is loaded on both sides already that a flow can run`() {
+        withoutTestSerialization {
+            driver {
+                installIsolatedCordappTo(bankAName)
+                installIsolatedCordappTo(bankBName)
+                val (bankA, bankB) = createTwoNodes()
+                bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
+            }
         }
-        Unit
     }
 }

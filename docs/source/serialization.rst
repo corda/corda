@@ -79,8 +79,6 @@ Corda serialisation is currently used for:
     #.  Peer-to-peer networking.
     #.  Persisted messages, like signed transactions and states.
 
-.. note:: At present, the Kryo-based format is still used by the RPC framework on both the client and server side. However, it is planned that the RPC framework will move to the AMQP framework soon.
-
 For the checkpointing of flows Corda uses a private scheme that is subject to change. It is currently based on the Kryo
 framework, but this may not be true in future.
 
@@ -556,6 +554,11 @@ Corda serialization supports dynamically synthesising classes from the supplied 
 without the supporting classes being present on the classpath.  This can be useful where generic code might expect to
 be able to use reflection over the deserialized data, for scripting languages that run on the JVM, and also for
 ensuring classes not on the classpath can be deserialized without loading potentially malicious code.
+
+If the original class implements some interfaces then the carpenter will make sure that all of the interface methods are
+backed by feilds. If that's not the case then an exception will be thrown during deserialization. This check can
+be turned off with ``SerializationContext.withLenientCarpenter``. This can be useful if only the field getters are needed,
+say in an object viewer.
 
 Possible future enhancements include:
 

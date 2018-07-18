@@ -4,25 +4,29 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.CIPHER_SUITES
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
+import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.MAX_MESSAGE_SIZE
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -31,7 +35,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.security.SecureRandom
+import java.security.KeyStore
 import java.security.cert.X509Certificate
 import javax.net.ssl.*
 import kotlin.concurrent.thread
@@ -43,9 +47,10 @@ class ProtonWrapperTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val serverPort = freePort()
-    private val serverPort2 = freePort()
-    private val artemisPort = freePort()
+    private val portAllocation = PortAllocation.Incremental(10000)
+    private val serverPort = portAllocation.nextPort()
+    private val serverPort2 = portAllocation.nextPort()
+    private val artemisPort = portAllocation.nextPort()
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 
@@ -129,7 +134,7 @@ class ProtonWrapperTests {
         val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
         trustMgrFactory.init(trustStore)
         val trustManagers = trustMgrFactory.trustManagers
-        context.init(keyManagers, trustManagers, SecureRandom())
+        context.init(keyManagers, trustManagers, newSecureRandom())
 
         val serverSocketFactory = context.serverSocketFactory
 
@@ -357,6 +362,31 @@ class ProtonWrapperTests {
         }
     }
 
+    @Test
+    fun `Message sent from AMQP to non-existent Artemis inbox is rejected and client disconnects`() {
+        val (server, artemisClient) = createArtemisServerAndClient()
+        val amqpClient = createClient()
+        var connected = false
+        amqpClient.onConnection.subscribe { change ->
+            connected = change.connected
+        }
+        val clientConnected = amqpClient.onConnection.toFuture()
+        amqpClient.start()
+        assertEquals(true, clientConnected.get().connected)
+        assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
+        val sendAddress = P2P_PREFIX + "Test"
+        val testData = "Test".toByteArray()
+        val testProperty = mutableMapOf<String, Any?>()
+        testProperty["TestProp"] = "1"
+        val message = amqpClient.createMessage(testData, sendAddress, CHARLIE_NAME.toString(), testProperty)
+        amqpClient.write(message)
+        assertEquals(MessageStatus.Rejected, message.onComplete.get())
+        assertEquals(false, connected)
+        amqpClient.stop()
+        artemisClient.stop()
+        server.stop()
+    }
+
     private fun createArtemisServerAndClient(maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "artemis").whenever(it).baseDirectory
@@ -388,18 +418,19 @@ class ProtonWrapperTests {
 
         val clientTruststore = clientConfig.loadTrustStore().internal
         val clientKeystore = clientConfig.loadSslKeyStore().internal
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = clientKeystore
+            override val keyStorePrivateKeyPassword: CharArray = clientConfig.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = clientTruststore
+            override val trace: Boolean = true
+            override val maxMessageSize: Int = maxMessageSize
+        }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort),
                         NetworkHostAndPort("localhost", serverPort2),
                         NetworkHostAndPort("localhost", artemisPort)),
                 setOf(ALICE_NAME, CHARLIE_NAME),
-                PEER_USER,
-                PEER_USER,
-                clientKeystore,
-                clientConfig.keyStorePassword,
-                clientTruststore,
-                true,
-                maxMessageSize = maxMessageSize)
+                amqpConfig)
     }
 
     private fun createSharedThreadsClient(sharedEventGroup: EventLoopGroup, id: Int, maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPClient {
@@ -414,17 +445,18 @@ class ProtonWrapperTests {
 
         val clientTruststore = clientConfig.loadTrustStore().internal
         val clientKeystore = clientConfig.loadSslKeyStore().internal
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = clientKeystore
+            override val keyStorePrivateKeyPassword: CharArray = clientConfig.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = clientTruststore
+            override val trace: Boolean = true
+            override val maxMessageSize: Int = maxMessageSize
+        }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort)),
                 setOf(ALICE_NAME),
-                PEER_USER,
-                PEER_USER,
-                clientKeystore,
-                clientConfig.keyStorePassword,
-                clientTruststore,
-                true,
-                sharedThreadPool = sharedEventGroup,
-                maxMessageSize = maxMessageSize)
+                amqpConfig,
+                sharedThreadPool = sharedEventGroup)
     }
 
     private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME, maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPServer {
@@ -439,15 +471,16 @@ class ProtonWrapperTests {
 
         val serverTruststore = serverConfig.loadTrustStore().internal
         val serverKeystore = serverConfig.loadSslKeyStore().internal
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = serverKeystore
+            override val keyStorePrivateKeyPassword: CharArray = serverConfig.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = serverTruststore
+            override val trace: Boolean = true
+            override val maxMessageSize: Int = maxMessageSize
+        }
         return AMQPServer(
                 "0.0.0.0",
                 port,
-                PEER_USER,
-                PEER_USER,
-                serverKeystore,
-                serverConfig.keyStorePassword,
-                serverTruststore,
-                crlCheckSoftFail = true,
-                maxMessageSize = maxMessageSize)
+                amqpConfig)
     }
 }

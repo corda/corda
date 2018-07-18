@@ -1,15 +1,13 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.CordaSerializable
-import net.corda.serialization.internal.carpenter.*
 import net.corda.serialization.internal.AllWhitelist
-import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
-import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
-import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryWithWhitelist
-import net.corda.serialization.internal.amqp.testutils.serialize
-import net.corda.serialization.internal.amqp.testutils.deserialize
+import net.corda.serialization.internal.amqp.testutils.*
+import net.corda.serialization.internal.carpenter.*
 import org.junit.Test
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 @CordaSerializable
 interface I {

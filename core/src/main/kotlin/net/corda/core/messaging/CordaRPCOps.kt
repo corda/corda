@@ -1,5 +1,6 @@
 package net.corda.core.messaging
 
+import net.corda.core.CordaInternal
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.ContractState
@@ -33,13 +34,13 @@ import java.time.Instant
  */
 @CordaSerializable
 data class StateMachineInfo @JvmOverloads constructor(
-        /** A univerally unique ID ([java.util.UUID]) representing this particular instance of the named flow. */
+        /** A universally unique ID ([java.util.UUID]) representing this particular instance of the named flow. */
         val id: StateMachineRunId,
         /** The JVM class name of the flow code. */
         val flowLogicClassName: String,
         /**
          * An object representing information about the initiator of the flow. Note that this field is
-         * superceded by the [invocationContext] property, which has more detail.
+         * superseded by the [invocationContext] property, which has more detail.
          */
         @Deprecated("There is more info available using 'context'") val initiator: FlowInitiator,
         /** A [DataFeed] of the current progress step as a human readable string, and updates to that string. */
@@ -193,6 +194,15 @@ interface CordaRPCOps : RPCOps {
      */
     @Deprecated("This method is intended only for internal use and will be removed from the public API soon.")
     fun internalVerifiedTransactionsSnapshot(): List<SignedTransaction>
+
+    /**
+     * @suppress Returns the full transaction for the provided ID
+     *
+     * TODO This method should be removed once SGX work is finalised and the design of the corresponding API using [FilteredTransaction] can be started
+     */
+    @CordaInternal
+    @Deprecated("This method is intended only for internal use and will be removed from the public API soon.")
+    fun internalFindVerifiedTransaction(txnId: SecureHash): SignedTransaction?
 
     /**
      * @suppress Returns a data feed of all recorded transactions and an observable of future recorded ones.
@@ -358,8 +368,23 @@ interface CordaRPCOps : RPCOps {
      */
     fun nodeInfoFromParty(party: AbstractParty): NodeInfo?
 
-    /** Clear all network map data from local node cache. */
+    /**
+     * Clear all network map data from local node cache. Notice that after invoking this method your node will lose
+     * network map data and effectively won't be able to start any flow with the peers until network map is downloaded
+     * again on next poll - from `additional-node-infos` directory or from network map server. It depends on the
+     * polling interval when it happens. You can also use [refreshNetworkMapCache] to force next fetch from network map server
+     * (not from directory - it will happen automatically).
+     * If you run local test deployment and want clear view of the network, you may want to clear also `additional-node-infos`
+     * directory, because cache can be repopulated from there.
+     */
     fun clearNetworkMapCache()
+
+    /**
+     * Poll network map server if available for the network map. Notice that you need to have `compatibilityZone`
+     * or `networkServices` configured. This is normally done automatically on the regular time interval, but you may wish to
+     * have the fresh view of network earlier.
+     */
+    fun refreshNetworkMapCache()
 
     /** Sets the value of the node's flows draining mode.
      * If this mode is [enabled], the node will reject new flows through RPC, ignore scheduled flows, and do not process
