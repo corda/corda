@@ -84,6 +84,8 @@ interface NodeConfiguration : NodeSSLConfiguration {
 
         val defaultAttachmentContentCacheSize: Long = 10.MB
         const val defaultAttachmentCacheBound = 1024L
+
+        const val cordappDirectoriesKey = "cordappDirectories"
     }
 }
 

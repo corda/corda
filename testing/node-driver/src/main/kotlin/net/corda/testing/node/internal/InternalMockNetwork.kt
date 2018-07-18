@@ -92,7 +92,6 @@ data class InternalMockNodeParameters(
     )
 }
 
-// TODO sollecitom fix `cordappPackages`
 open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParameters(),
                                val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
                                val threadPerNode: Boolean = defaultParameters.threadPerNode,
@@ -132,7 +131,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
 
     private val sharedCorDappsDirectory: Path by lazy {
 
-        // TODO sollecitom take care of the cordapps' config files as well
         val corDappsDirectory = testDirectory / "sharedCordapps"
         DriverDSLImpl.log.info("Writing test CorDapps for all nodes in $corDappsDirectory.")
         if (corDappsDirectory.exists()) {
@@ -392,14 +390,9 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             parameters.configOverrides(it)
         }
 
-        // TODO sollecitom refactor how this NodeConfig is passed and generated
-        // TODO sollecitom refactor this
-
-        // TODO sollecitom create a cache, so that individual cordapps are not re-generated each time
+        // TODO caching here doesn't help too much - investigate caching on disk at test or better at test suite level
         val cordappsDirectory = config.baseDirectory / "cordapps"
         val cordappDirectories = listOf(sharedCorDappsDirectory, cordappsDirectory)
-
-        // TODO sollecitom create a cache, so that individual cordapps are not re-generated each time
 
         doReturn(cordappDirectories).whenever(config).cordappDirectories
 

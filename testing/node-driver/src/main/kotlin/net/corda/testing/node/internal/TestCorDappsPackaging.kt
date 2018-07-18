@@ -41,10 +41,8 @@ internal fun Class<*>.jarEntryInfo(): JarEntryInfo {
 
 fun allClassesForPackage(targetPackage: String): Set<Class<*>> {
 
-    // TODO sollecitom check `strictWhitelist()`
     val scanResult = FastClasspathScanner(targetPackage).strictWhitelist().scan()
     return scanResult.namesOfAllClasses.filter { className -> className.startsWith(targetPackage) }.map(scanResult::classNameToClassRef).toSet()
-//    return scanResult.namesOfAllClasses.filter { className -> className.startsWith(targetPackage) }.map(scanResult::classNameToClassRef).toSet()
 }
 
 private fun String.packageToPath() = replace(".", File.separator)
@@ -79,16 +77,14 @@ internal sealed class JarEntryInfo(val fullyQualifiedName: String, val url: URL)
 
     class ClassJarEntryInfo(val clazz: Class<*>) : JarEntryInfo(clazz.name, clazz.classFileURL()) {
 
-        // TODO sollecitom refactor .class into a constant
-        override val entryName = "${fullyQualifiedName.packageToPath()}.class"
+        override val entryName = "${fullyQualifiedName.packageToPath()}$fileExtensionSeparator$classFileExtension"
     }
 
     class ResourceJarEntryInfo(fullyQualifiedName: String, url: URL) : JarEntryInfo(fullyQualifiedName, url) {
 
         override val entryName: String
             get() {
-                // TODO sollecitom refactor the dot into a constant
-                val extensionIndex = fullyQualifiedName.lastIndexOf(".")
+                val extensionIndex = fullyQualifiedName.lastIndexOf(fileExtensionSeparator)
                 return "${fullyQualifiedName.substring(0 until extensionIndex).packageToPath()}${fullyQualifiedName.substring(extensionIndex)}"
             }
     }
@@ -99,11 +95,17 @@ internal sealed class JarEntryInfo(val fullyQualifiedName: String, val url: URL)
 
     private companion object {
 
+        private const val classFileExtension = "class"
+        private const val fileExtensionSeparator = "."
+        private const val whitespace = " "
+        private const val whitespaceReplacement = "%20"
+
         private fun Class<*>.classFileURL(): URL {
 
             require(protectionDomain?.codeSource?.location != null) { "Invalid class $name for test CorDapp. Classes without protection domain cannot be referenced. This typically happens for Java / Kotlin types." }
-            // TODO sollecitom refactor the whitespace fix not to hardcode strings
-            return URI.create("${protectionDomain.codeSource.location}/${name.packageToPath()}.class".replace(" ", "%20")).toURL()
+            return URI.create("${protectionDomain.codeSource.location}/${name.packageToPath()}$fileExtensionSeparator$classFileExtension".escaped()).toURL()
         }
+
+        private fun String.escaped(): String = this.replace(whitespace, whitespaceReplacement)
     }
 }

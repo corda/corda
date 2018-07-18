@@ -104,14 +104,10 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 ) + configOverrides
         )
 
-        // TODO sollecitom perhaps improve this
         val cordapps =  defaultTestCorDappsForAllNodes(getCallerPackage()?.let { cordappPackages + it }?.toSet() ?: cordappPackages.toSet())
 
-        // TODO sollecitom refactor how this NodeConfig is passed and generated
-        val existingCorDappDirectoriesOption = if (config.hasPath("cordappDirectories")) config.getStringList("cordappDirectories") else emptyList()
-        // TODO sollecitom refactor this
+        val existingCorDappDirectoriesOption = if (config.hasPath(NodeConfiguration.cordappDirectoriesKey)) config.getStringList(NodeConfiguration.cordappDirectoriesKey) else emptyList()
 
-        // TODO sollecitom create a cache, so that individual cordapps are not re-generated each time
         val individualCorDappsDirectory = config.parseAsNodeConfiguration().baseDirectory / "cordapps"
         val cordappDirectories = existingCorDappDirectoriesOption + individualCorDappsDirectory.toString()
 

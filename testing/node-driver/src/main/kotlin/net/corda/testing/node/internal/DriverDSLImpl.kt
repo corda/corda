@@ -225,7 +225,6 @@ class DriverDSLImpl(
                                     startInSameProcess: Boolean? = null,
                                     maximumHeapSize: String = "512m",
                                     p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort(),
-                                    // TODO sollecitom see if default value is needed
                                     additionalCorDapps: Set<TestCorDapp> = emptySet(),
                                     deleteExistingCordappsDirectory: Boolean = false): CordaFuture<NodeHandle> {
         val rpcAddress = portAllocation.nextHostAndPort()
@@ -309,7 +308,7 @@ class DriverDSLImpl(
         NON_VALIDATING_BFT(false, CordaX500Name("BFT", "Zurich", "CH"))
     }
 
-    // TODO sollecitom remove this or at least remove startCordformNode
+    // TODO remove this
     internal fun startCordformNodes(cordforms: List<CordformNode>): CordaFuture<*> {
         check(notarySpecs.isEmpty()) { "Specify notaries in the CordformDefinition" }
         check(compatibilityZone == null) { "Cordform nodes cannot be run with compatibilityZoneURL" }
@@ -367,7 +366,7 @@ class DriverDSLImpl(
         }.transpose()
     }
 
-    // TODO sollecitom remove this
+    // TODO remove this
     private fun startCordformNode(cordform: CordformNode, localNetworkMap: LocalNetworkMap): CordaFuture<NodeHandle> {
         val name = CordaX500Name.parse(cordform.name)
         // TODO We shouldn't have to allocate an RPC or web address if they're not specified. We're having to do this because of startNodeInternal
@@ -398,7 +397,7 @@ class DriverDSLImpl(
         )
         val cordaConfig = typesafe.parseAsNodeConfiguration()
         val config = NodeConfig(rawConfig, cordaConfig).checkAndOverrideForInMemoryDB()
-        return startNodeInternal(config, webAddress, null, "512m", localNetworkMap)
+        return startNodeInternal(config, webAddress, null, "512m", localNetworkMap, emptySet())
     }
 
     @Suppress("DEPRECATION")
@@ -633,14 +632,13 @@ class DriverDSLImpl(
 
     private val sharedCorDappsDirectory: Path by lazy {
 
-        // TODO sollecitom take care of the cordapps' config files as well
         val corDappsDirectory = driverDirectory / "sharedCordapps"
         log.info("Writing test CorDapps for all nodes in $corDappsDirectory.")
         if (corDappsDirectory.exists()) {
             corDappsDirectory.toFile().deleteRecursively()
         }
         corDappsDirectory.toFile().mkdirs()
-        cordappsForAllNodes.forEach { testCorDapp -> testCorDapp.packageAsJarInDirectory(corDappsDirectory) }
+        cordappsForAllNodes.forEach { cordapp -> cordapp.packageAsJarInDirectory(corDappsDirectory) }
         corDappsDirectory
     }
 
@@ -649,8 +647,7 @@ class DriverDSLImpl(
                                   startInProcess: Boolean?,
                                   maximumHeapSize: String,
                                   localNetworkMap: LocalNetworkMap?,
-                                  // TODO sollecitom see if default value is needed
-                                  additionalCorDapps: Set<TestCorDapp> = emptySet(),
+                                  additionalCorDapps: Set<TestCorDapp>,
                                   deleteExistingCordappsDirectory: Boolean = false): CordaFuture<NodeHandle> {
         val visibilityHandle = networkVisibilityController.register(specifiedConfig.corda.myLegalName)
         val baseDirectory = specifiedConfig.corda.baseDirectory.createDirectories()
@@ -664,11 +661,9 @@ class DriverDSLImpl(
 
         val useHTTPS = specifiedConfig.typesafe.run { hasPath("useHTTPS") && getBoolean("useHTTPS") }
 
-        // TODO sollecitom refactor how this NodeConfig is passed and generated
-        val existingCorDappDirectoriesOption = if (specifiedConfig.typesafe.hasPath("cordappDirectories")) specifiedConfig.typesafe.getStringList("cordappDirectories") else emptyList()
-        // TODO sollecitom refactor this
+        val existingCorDappDirectoriesOption = if (specifiedConfig.typesafe.hasPath(NodeConfiguration.cordappDirectoriesKey)) specifiedConfig.typesafe.getStringList(NodeConfiguration.cordappDirectoriesKey) else emptyList()
 
-        // TODO sollecitom create a cache, so that individual cordapps are not re-generated each time
+        // TODO caching here doesn't help too much - investigate caching on disk at test or better at test suite level
         val individualCorDappsDirectory = specifiedConfig.corda.baseDirectory / "cordapps"
         val cordappDirectories = existingCorDappDirectoriesOption + sharedCorDappsDirectory.toString() + individualCorDappsDirectory.toString()
 
@@ -688,7 +683,6 @@ class DriverDSLImpl(
         }
 
         if (startInProcess ?: startNodesInProcess) {
-            // TODO sollecitom fix here as well
             val nodeAndThreadFuture = startInProcessNode(executorService, config)
             shutdownManager.registerShutdown(
                     nodeAndThreadFuture.map { (node, thread) ->
