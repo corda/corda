@@ -92,6 +92,8 @@ Quickstart Remote Azure
 2. ``cd samples/bank-of-corda-demo/build/nodes``
 3. ``java -jar <network-builder-jar> -b AZURE -d .``
 
+.. note:: Azure configuration is handled per the az-cli utility, see pre-reqs at the start of the document
+
 Graphical User Mode
 ~~~~~~~~~~~~~~~~~~~
 

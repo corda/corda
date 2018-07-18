@@ -52,7 +52,7 @@ is configured in this manner, the new configuration looks as follows.
 The blob inspector brings the ability to unpack serialized Corda blobs at the
 command line, giving a human readable interpretation of the encoded date.
 
-.. note:: This tool has been shipped as a serparte Jar previously, we are now including it
+.. note:: This tool has been shipped as a separate Jar previously. We are now including it
     as part of an official release.
 
 Documentation on its use can be found here :doc:`blob-inspector`
@@ -60,8 +60,8 @@ Documentation on its use can be found here :doc:`blob-inspector`
 * **The Event Horizon**
 
 One part of joining a node to a Corda network is agreeing to the rules that govern that network as set out
-by the network operator. A nodes membership of a network is communicated to other nodes through the network
-map, the service with which the node will have published its Node Info to and through which it receives the
+by the network operator. A node's membership of a network is communicated to other nodes through the network
+map, the service to which the node will have published its Node Info, and through which it receives the
 set of NodeInfos currently present on the network. Membership of that list is a finite thing determined by
 the network operator.
 
