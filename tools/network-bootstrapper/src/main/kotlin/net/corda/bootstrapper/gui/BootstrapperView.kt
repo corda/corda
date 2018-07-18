@@ -20,6 +20,7 @@ import net.corda.bootstrapper.backends.Backend
 import net.corda.bootstrapper.context.Context
 import net.corda.bootstrapper.nodes.*
 import net.corda.bootstrapper.notaries.NotaryFinder
+import net.corda.core.identity.CordaX500Name
 import org.apache.commons.lang3.RandomStringUtils
 import org.controlsfx.control.SegmentedButton
 import tornadofx.*
@@ -69,7 +70,6 @@ class BootstrapperView : View("Corda Network Builder") {
                     }
                 }
 
-                val nodeCount = controller.foundNodes.map { it.id to it.count }.toMap()
                 val result = NetworkBuilder.instance()
                         .withBasedir(controller.baseDir.get())
                         .withNetworkName(networkName)
@@ -80,7 +80,6 @@ class BootstrapperView : View("Corda Network Builder") {
                         .onNodeInstancesRequested(controller::addInstanceRequests)
                         .onNodeInstance(controller::addInstance)
                         .withBackend(selectedBackEnd)
-                        .withNodeCounts(nodeCount)
                         .withBackendOptions(backendParams)
                         .build()
 
@@ -117,6 +116,10 @@ class BootstrapperView : View("Corda Network Builder") {
             enableWhen { controller.networkContext.isNotNull }
             action {
                 templateChoiceBox.selectionModel.selectedItem?.let { nodeToAdd ->
+
+                    val textInputDialog = TextInputDialog("O=Bank A, L=New York, C=US, OU=Org Unit, CN=Service Name")
+                    textInputDialog.title = "X500 of node to add"
+                    val x500ToUse = textInputDialog.showAndWait().orElseGet { null }
                     val context = controller.networkContext.value
                     runLater {
                         val (_, instantiator, _) = Backend.fromContext(
@@ -124,7 +127,7 @@ class BootstrapperView : View("Corda Network Builder") {
                                 File(controller.baseDir.get(), Constants.BOOTSTRAPPER_DIR_NAME))
                         val nodeAdder = NodeAdder(context, NodeInstantiator(instantiator, context))
                         controller.addInstanceRequest(nodeToAdd)
-                        nodeAdder.addNode(context, nodeToAdd).handleAsync { instanceInfo, t ->
+                        nodeAdder.addNode(context, nodeToAdd, x500ToUse?.let { CordaX500Name.parse(it) }).handleAsync { instanceInfo, t ->
                             t?.let {
                                 GuiUtils.showException("Failed", "Failed to add node", it)
                             }
@@ -255,10 +258,6 @@ class BootstrapperView : View("Corda Network Builder") {
         val sortedNodes = SortedList(unsortedNodes, Comparator<NodeTemplateInfo> { o1, o2 ->
             compareValues(o1.nodeType.toString() + o1.templateId, o2.nodeType.toString() + o2.templateId) * -1
         })
-
-        fun clear() {
-            networkContext.set(null)
-        }
 
         fun clearAll() {
             networkContext.set(null)
