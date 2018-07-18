@@ -1,44 +1,42 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.natpryce.hamkrest.*
+import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.requireThat
-import net.corda.core.identity.*
-import net.corda.core.matchers.succeedsWith
+import net.corda.core.flows.matchers.fails
+import net.corda.core.flows.matchers.succeedsWith
+import net.corda.core.flows.mixins.WithContracts
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.identity.excludeHostNode
+import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.internal.StartedNode
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.CHARLIE_NAME
-import net.corda.testing.core.TestIdentity
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.startFlow
 import org.junit.AfterClass
 import org.junit.Test
-import java.util.*
-import com.natpryce.hamkrest.assertion.assert
-import net.corda.core.contracts.PartyAndReference
-import net.corda.core.matchers.failsWith
-import net.corda.core.node.ServiceHub
 
-class CollectSignaturesFlowTests {
+class CollectSignaturesFlowTests : WithContracts {
     companion object {
         private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
         private val miniCorpServices = MockServices(listOf("net.corda.testing.contracts"), miniCorp, rigorousMock())
-        private val mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.core.flows"))
+        private val classMockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.core.flows"))
         private const val MAGIC_NUMBER = 1337
 
         @JvmStatic
         @AfterClass
-        fun tearDown() = mockNet.stopNodes()
+        fun tearDown() = classMockNet.stopNodes()
     }
+
+    override val magicNumber = MAGIC_NUMBER
+    override val mockNet = classMockNet
 
     private val aliceNode = makeNode(ALICE_NAME)
     private val bobNode = makeNode(BOB_NAME)
@@ -75,7 +73,7 @@ class CollectSignaturesFlowTests {
 
         assert.that(
                 aliceNode.collectSignatures(ptx),
-                failsWith(errorMessage("The Initiator of CollectSignaturesFlow must have signed the transaction.")))
+                fails(errorMessage("The Initiator of CollectSignaturesFlow must have signed the transaction.")))
     }
 
     @Test
@@ -91,6 +89,15 @@ class CollectSignaturesFlowTests {
                 succeedsWith(requiredSignatures(2))
         )
     }
+
+    //region Operators
+    private fun StartedNode<*>.startTestFlow(vararg party: Party) =
+            startFlow(
+                TestFlow.Initiator(DummyContract.MultiOwnerState(
+                    magicNumber,
+                    listOf(*party)),
+                    mockNet.defaultNotaryIdentity))
+            .andRunNetwork()
 
     //region Test Flow
     // With this flow, the initiator starts the "CollectTransactionFlow". It is then the responders responsibility to
@@ -133,71 +140,4 @@ class CollectSignaturesFlowTests {
         }
     }
     //region
-
-    //region Generators
-    private fun makeNode(name: CordaX500Name) = mockNet.createPartyNode(randomise(name))
-    private fun randomise(name: CordaX500Name) = name.copy(commonName = "${name.commonName}_${UUID.randomUUID()}")
-    //endregion
-
-    //region Operations
-    private fun StartedNode<*>.createConfidentialIdentity(party: Party) = database.transaction {
-        services.keyManagementService.freshKeyAndCert(
-            services.myInfo.legalIdentitiesAndCerts.single { it.name == party.name },
-            false)
-    }
-
-    private fun StartedNode<*>.verifyAndRegister(identity: PartyAndCertificate) = database.transaction {
-        services.identityService.verifyAndRegisterIdentity(identity)
-    }
-
-    private fun StartedNode<*>.startTestFlow(vararg party: Party) =
-        services.startFlow(
-            TestFlow.Initiator(DummyContract.MultiOwnerState(
-                MAGIC_NUMBER,
-                listOf(*party)),
-            mockNet.defaultNotaryIdentity))
-        .andRunNetwork()
-
-    private fun createDummyContract(owner: PartyAndReference, vararg others: PartyAndReference) =
-            DummyContract.generateInitial(
-                    MAGIC_NUMBER,
-                    mockNet.defaultNotaryIdentity,
-                    owner,
-                    *others)
-
-    private fun StartedNode<*>.signDummyContract(owner: PartyAndReference, vararg others: PartyAndReference) =
-            services.signDummyContract(owner, *others).andRunNetwork()
-
-    private fun ServiceHub.signDummyContract(owner: PartyAndReference, vararg others: PartyAndReference) =
-            signInitialTransaction(createDummyContract(owner, *others))
-
-    private fun StartedNode<*>.collectSignatures(ptx: SignedTransaction) =
-            services.startFlow(CollectSignaturesFlow(ptx, emptySet()))
-                    .andRunNetwork()
-
-    private fun StartedNode<*>.addSignatureTo(ptx: SignedTransaction) =
-            services.addSignature(ptx).andRunNetwork()
-
-    private fun <T: Any> T.andRunNetwork(): T {
-        mockNet.runNetwork()
-        return this
-    }
-    //endregion
-
-    //region Matchers
-    private fun requiredSignatures(count: Int = 1) = object : Matcher<SignedTransaction> {
-        override val description: String = "A transaction with valid required signatures"
-
-        override fun invoke(actual: SignedTransaction): MatchResult = try {
-            actual.verifyRequiredSignatures()
-            has(SignedTransaction::sigs, hasSize(equalTo(count)))(actual)
-        } catch (e: Exception) {
-            MatchResult.Mismatch("$e")
-        }
-    }
-
-    private fun errorMessage(expected: String) = has(
-        Exception::message,
-        equalTo(expected))
-    //endregion
 }
