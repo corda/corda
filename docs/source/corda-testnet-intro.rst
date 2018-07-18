@@ -26,21 +26,23 @@ This will create you an account with the Testnet onboarding application which wi
 
 .. image:: resources/testnet-account-type.png 
 
-Fill in the form with your details. This helps prioritise requests to join the private beta.
+Fill in the form with your details.
 
+.. note::
+
+   Testnet is currently invitation only. If your request is approved you will receive an email. Please fill in as many details as possible as it helps us proritise requests.
 
 .. image:: resources/testnet-form.png 
 
-Note we currently only support federated login using either Google email accounts or Github enabled email accounts. Please ensure the email you use to register is either set up as a Google or Github account and that you use this email to log in with the appropriate service.
+.. note::
 
-To enable your email for Google please see https://support.google.com/accounts/answer/176347?hl=en
+   We currently only support federated login using Google email accounts. Please ensure the email you use to register is a Gmail account or is set up as a Google account and that you use this email to log in.
 
-To set up a Github account please see https://github.com/join
-
+Gmail is recommended. If you want to use a non-Gmail account you can enable your email for Google: https://support.google.com/accounts/answer/176347?hl=en
 	   
-Once you have been approved to join the beta you will receive an email. Follow the link in the email to sign in or click on "I have an invitation" on the https://testnet.corda.network
+Once you have been approved, navigate to https://testnet.corda.network and click on "I have an invitation".
 
-Sign in using either the Google or Github login services:
+Sign in using the Google login service:
 
 .. image:: resources/testnet-signin.png 
 
@@ -48,7 +50,9 @@ When prompted approve the Testnet application:
 
 .. image:: resources/testnet-signin-auth.png 
 
-At this point you may need to verify your email address is valid. If prompted check your email and click on the link to validate then return to the sign in page and sign in again.
+..  note::
+
+    At this point you may need to verify your email address is valid (if you are not using a Gmail address). If prompted check your email and click on the link to validate then return to the sign in page and sign in again.
 
 Next agree to the terms of service:
 
@@ -56,17 +60,18 @@ Next agree to the terms of service:
 
 You can now choose how to deploy your Corda node to the Corda Testnet. We strongly recommend hosting your Corda node on a public cloud resource. 
 
-.. note:: If you host your node on your own machine or a corporate server you must ensure it is reachable from the public internet at a specific IP address. This will typically require port forwarding on your router. 
-
 Select the cloud provider you wish to use for documentation on how to specifically configure Corda for that environment. 
 
 .. image:: resources/testnet-platform-clean.png 
 
-Once your cloud instance is set up you can install and run your Testnet pre-provisioned Corda node by clicking on "Copy" and pasting the one time link into your cloud shell. 
+Once your cloud instance is set up you can install and run your Testnet pre-provisioned Corda node by clicking on "Copy" and pasting the one time link into your remote cloud terminal.
 	   
 The installation script will download the Corda binaries as well as your PKI certificates, private keys and suporting files and will install and run Corda on your fresh cloud VM. Your node will register itself with the Corda Testnet when it first runs and be added to the global network map and be visible to counterparties after approximately 5 minutes. 
 
 Hosting a Corda node locally is possible but will require manually configuring firewall and port forwarding on your local router. If you want this option then click on the "Download" button to download a Zip file with a pre-configured Corda node.
+
+.. note:: If you host your node on your own machine or a corporate server you must ensure it is reachable from the public internet at a specific IP address. Please follow the instructions here: :doc:`deploy-locally`.
+
 
 A note on identities on Corda Testnet
 -------------------------------------
