@@ -2,11 +2,14 @@ package net.corda.testing.node.internal
 
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import net.corda.core.internal.*
+import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.cordapp.createTestManifest
 import java.io.File
 import java.io.OutputStream
 import java.net.URI
 import java.net.URL
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 import java.time.Instant
@@ -14,6 +17,8 @@ import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
+
+private val logger = loggerFor<JarEntryInfo>()
 // TODO sollecitom, perhaps create a TestCorDappPackager class, rather than extension functions
 
 internal fun Iterable<JarEntryInfo>.packageToCorDapp(path: Path, name: String, version: String, vendor: String, title: String = name, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean = { _, _ -> true }) {
@@ -61,13 +66,25 @@ private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<JarEntryInfo>) 
     val time = FileTime.from(Instant.now())
     allInfo.distinctBy { it.url }.forEach { info ->
 
-        val path = info.url.toPath()
-        val entry = ZipEntry(info.entryName).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
-        outputStream.putNextEntry(entry)
-        if (path.isRegularFile()) {
-            path.copyTo(outputStream)
+        var fileSystem: FileSystem? = null
+        try {
+            val path = if (info.url.toString().contains("!")) {
+                val parts = info.url.toString().split("!")
+                fileSystem = FileSystems.newFileSystem(URI.create(parts[0]), mutableMapOf<String, String>())
+                fileSystem.getPath(parts[1])
+            } else {
+                info.url.toPath()
+            }
+
+            val entry = ZipEntry(info.entryName).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
+            outputStream.putNextEntry(entry)
+            if (path.isRegularFile()) {
+                path.copyTo(outputStream)
+            }
+        } finally {
+            fileSystem?.close()
+            outputStream.closeEntry()
         }
-        outputStream.closeEntry()
     }
 }
 
