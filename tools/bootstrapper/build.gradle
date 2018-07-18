@@ -1,4 +1,6 @@
 apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
 
 description 'Network bootstrapper'
 
@@ -30,4 +32,16 @@ task buildBootstrapperJar(type: FatCapsule, dependsOn: project(':node-api').comp
 
 artifacts {
     runtimeArtifacts buildBootstrapperJar
+}
+
+def artifact = file(buildBootstrapperJar.archivePath)
+def bootstrapperArtifact = artifacts.add("publish", artifact) {
+    type "jar"
+    classifier "executable"
+    builtBy(buildBootstrapperJar)
+}
+
+publish {
+    name 'corda-network-bootstrapper'
+    disableDefaultJar = true
 }

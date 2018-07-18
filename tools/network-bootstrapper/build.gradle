@@ -29,6 +29,9 @@ apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
 
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
 dependencies {
     compile "com.microsoft.azure:azure:1.8.0"
     compile "com.github.docker-java:docker-java:3.0.6"
@@ -66,4 +69,17 @@ task buildNetworkBootstrapper(dependsOn: shadowJar) {
 configurations {
     compile.exclude group: "log4j", module: "log4j"
     compile.exclude group: "org.apache.logging.log4j"
+}
+
+
+def artifact = file(shadowJar.archivePath)
+def bootstrapperArtifact = artifacts.add("publish", artifact) {
+    type "jar"
+    classifier "executable"
+    builtBy(buildNetworkBootstrapper)
+}
+
+publish {
+    name 'corda-network-builder'
+    disableDefaultJar = true
 }
