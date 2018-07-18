@@ -358,7 +358,7 @@ class ProtonWrapperTests {
     }
 
     @Test
-    fun `client sends to non-existent queue`() {
+    fun `Message sent from AMQP to non-existent Artemis inbox is rejected and client disconnects`() {
         val (server, artemisClient) = createArtemisServerAndClient()
         val amqpClient = createClient()
         var connected = false
