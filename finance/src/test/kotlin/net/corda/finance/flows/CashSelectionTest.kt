@@ -12,7 +12,7 @@ import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.issuedBy
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
+import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
@@ -20,7 +20,7 @@ import org.junit.After
 import org.junit.Test
 
 class CashSelectionTest {
-    private val mockNet = InternalMockNetwork(cordappsForAllNodes = defaultTestCorDappsForAllNodes(setOf("net.corda.finance")), threadPerNode = true)
+    private val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(setOf("net.corda.finance")), threadPerNode = true)
 
     @After
     fun cleanUp() {

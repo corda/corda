@@ -132,13 +132,11 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     private val sharedCorDappsDirectory: Path by lazy {
 
         val corDappsDirectory = testDirectory / "sharedCordapps"
-        DriverDSLImpl.log.info("Writing test CorDapps for all nodes in $corDappsDirectory.")
-        if (corDappsDirectory.exists()) {
-            corDappsDirectory.toFile().deleteRecursively()
+        logger.info("Writing test CorDapps for all nodes in $corDappsDirectory.")
+        corDappsDirectory.apply {
+            deleteRecursively()
+            cordappsForAllNodes.packageInDirectory(this)
         }
-        corDappsDirectory.toFile().mkdirs()
-        cordappsForAllNodes.forEach { cordapp -> cordapp.packageAsJarInDirectory(corDappsDirectory) }
-        corDappsDirectory
     }
 
     /** A read only view of the current set of nodes. */
@@ -399,8 +397,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         val cordapps: Set<TestCorDapp> = parameters.additionalCorDapps ?: emptySet()
 
         if (!cordappsDirectory.exists()) {
-            cordappsDirectory.createDirectories()
-            cordapps.forEach { cordapp -> cordapp.packageAsJarInDirectory(cordappsDirectory) }
+            cordapps.packageInDirectory(cordappsDirectory)
         } else {
             logger.info("Node's specific CorDapps directory $cordappsDirectory already exists, skipping CorDapps packaging for node ${config.myLegalName}.")
         }

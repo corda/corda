@@ -35,8 +35,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetworkParameters
-import net.corda.testing.node.internal.DriverDSLImpl
-import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
+import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
@@ -47,7 +46,6 @@ import org.junit.Test
 import org.slf4j.MDC
 import java.security.PublicKey
 import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertNotEquals
 
@@ -70,7 +68,7 @@ class TimedFlowTests {
         @JvmStatic
         fun setup() {
             mockNet = InternalMockNetwork(
-                    cordappsForAllNodes = defaultTestCorDappsForAllNodes(setOf("net.corda.testing.contracts", "net.corda.node.services")),
+                    cordappsForAllNodes = cordappsForPackages(setOf("net.corda.testing.contracts", "net.corda.node.services")),
                     defaultParameters = MockNetworkParameters().withServicePeerAllocationStrategy(InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin()),
                     threadPerNode = true
             )

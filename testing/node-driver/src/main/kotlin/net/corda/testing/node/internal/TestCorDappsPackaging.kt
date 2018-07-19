@@ -1,9 +1,11 @@
 package net.corda.testing.node.internal
 
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
+import net.corda.core.internal.createDirectories
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.outputStream
 import net.corda.node.internal.cordapp.createTestManifest
+import net.corda.testing.driver.TestCorDapp
 import org.apache.commons.io.IOUtils
 import java.io.File
 import java.io.OutputStream
@@ -12,6 +14,7 @@ import java.net.URL
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 import java.time.Instant
+import java.util.*
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -41,10 +44,45 @@ internal fun Class<*>.jarEntryInfo(): JarEntryInfo {
     return JarEntryInfo.ClassJarEntryInfo(this)
 }
 
+fun Iterable<TestCorDapp>.packageInDirectory(directory: Path) {
+
+    directory.createDirectories()
+    forEach { cordapp -> cordapp.packageAsJarInDirectory(directory) }
+}
+
 fun allClassesForPackage(targetPackage: String): Set<Class<*>> {
 
     val scanResult = FastClasspathScanner(targetPackage).strictWhitelist().scan()
     return scanResult.namesOfAllClasses.filter { className -> className.startsWith(targetPackage) }.map(scanResult::classNameToClassRef).toSet()
+}
+
+fun cordappsForPackages(packages: Iterable<String>): Set<TestCorDapp> {
+
+    return simplifyScanPackages(packages).toSet().fold(emptySet()) { all, packageName -> all + testCorDapp(packageName) }
+}
+
+fun cordappsForPackages(firstPackage: String, vararg otherPackages: String): Set<TestCorDapp> {
+
+    return cordappsForPackages(setOf(*otherPackages) + firstPackage)
+}
+
+private fun testCorDapp(packageName: String): TestCorDapp {
+
+    val uuid = UUID.randomUUID()
+    val name = "$packageName-$uuid"
+    val version = "$uuid"
+    return TestCorDapp.Factory.create(name, version).plusPackage(packageName)
+}
+
+private fun simplifyScanPackages(scanPackages: Iterable<String>): List<String> {
+
+    return scanPackages.sorted().fold(emptyList()) { listSoFar, packageName ->
+        when {
+            listSoFar.isEmpty() -> listOf(packageName)
+            packageName.startsWith(listSoFar.last()) -> listSoFar  // Squash ["com.foo", "com.foo.bar"] into just ["com.foo"]
+            else -> listSoFar + packageName
+        }
+    }
 }
 
 private fun String.packageToPath() = replace(".", File.separator)

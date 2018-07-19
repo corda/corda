@@ -29,7 +29,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
+import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
@@ -81,7 +81,7 @@ class VaultSoftLockManagerTest {
     private val mockVault = rigorousMock<VaultServiceInternal>().also {
         doNothing().whenever(it).softLockRelease(any(), anyOrNull())
     }
-    private val mockNet = InternalMockNetwork(cordappsForAllNodes = defaultTestCorDappsForAllNodes(setOf(ContractImpl::class.packageName)), defaultFactory = { args ->
+    private val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(setOf(ContractImpl::class.packageName)), defaultFactory = { args ->
         object : InternalMockNetwork.MockNode(args) {
             override fun makeVaultService(keyManagementService: KeyManagementService, services: ServicesForResolution, hibernateConfig: HibernateConfiguration, database: CordaPersistence): VaultServiceInternal {
                 val node = this

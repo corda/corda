@@ -21,7 +21,6 @@ import net.corda.testing.node.User
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.getFreeLocalPorts
 import net.corda.testing.internal.testThreadFactory
-import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
 import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Before
@@ -104,14 +103,14 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 ) + configOverrides
         )
 
-        val cordapps =  defaultTestCorDappsForAllNodes(getCallerPackage()?.let { cordappPackages + it }?.toSet() ?: cordappPackages.toSet())
+        val cordapps =  cordappsForPackages(getCallerPackage()?.let { cordappPackages + it } ?: cordappPackages)
 
         val existingCorDappDirectoriesOption = if (config.hasPath(NodeConfiguration.cordappDirectoriesKey)) config.getStringList(NodeConfiguration.cordappDirectoriesKey) else emptyList()
 
         val individualCorDappsDirectory = config.parseAsNodeConfiguration().baseDirectory / "cordapps"
         val cordappDirectories = existingCorDappDirectoriesOption + individualCorDappsDirectory.toString()
 
-        val specificConfig = config.withValue("cordappDirectories", ConfigValueFactory.fromIterable(cordappDirectories))
+        val specificConfig = config.withValue(NodeConfiguration.cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories))
 
         val parsedConfig = specificConfig.parseAsNodeConfiguration().also { nodeConfiguration ->
             val errors = nodeConfiguration.validate()
@@ -121,8 +120,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
         }
 
         if (!individualCorDappsDirectory.exists()) {
-            individualCorDappsDirectory.toFile().mkdirs()
-            cordapps.forEach { cordapp -> cordapp.packageAsJarInDirectory(individualCorDappsDirectory) }
+            cordapps.packageInDirectory(individualCorDappsDirectory)
         } else {
             logger.info("Node's specific CorDapps directory $individualCorDappsDirectory already exists, skipping CorDapps packaging for node ${parsedConfig.myLegalName}.")
         }
@@ -151,6 +149,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
             }
     }
 
+    // TODO sollecitom try and remove this duplicated thing
     // TODO this needs to be duplicated, for it's call-site based - NodeBasedTest shouldn't exist anyway
     private fun getCallerPackage(): String? {
 

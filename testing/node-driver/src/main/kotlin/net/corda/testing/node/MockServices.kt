@@ -9,7 +9,10 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.deleteRecursively
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
@@ -33,12 +36,12 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.driver.TestCorDapp
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.MockCordappProvider
-import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
 import net.corda.testing.node.internal.MockKeyManagementService
 import net.corda.testing.node.internal.MockTransactionStorage
+import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.packageInDirectory
 import net.corda.testing.services.MockAttachmentStorage
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -71,33 +74,13 @@ open class MockServices private constructor(
 ) : ServiceHub {
     companion object {
 
-        @VisibleForTesting
         @JvmStatic
-        fun corDappLoaderForPackages(packages: Iterable<String>): CordappLoader {
+        fun cordappLoaderForPackages(packages: Iterable<String>): CordappLoader {
 
-            val cordapps = corDappsFromPackages(packages)
-            return corDappLoaderForCorDapps(cordapps)
-        }
-
-        // TODO sollecitom maybe move
-        private fun corDappLoaderForCorDapps(cordapps: Set<TestCorDapp>, cordappsDirectory: Path = testCorDappsDirectory()): CordappLoader {
-
-            cordapps.forEach { cordapp -> cordapp.packageAsJarInDirectory(cordappsDirectory) }
-            return CordappLoader.fromDirectories(listOf(cordappsDirectory))
-        }
-
-        // TODO sollecitom maybe move
-        private fun corDappsFromPackages(packages: Iterable<String>): Set<TestCorDapp> = defaultTestCorDappsForAllNodes(simplifyScanPackages(packages).toSet())
-
-        // TODO sollecitom maybe move
-        private fun simplifyScanPackages(scanPackages: Iterable<String>): List<String> {
-
-            return scanPackages.sorted().fold(emptyList()) { listSoFar, packageName ->
-                when {
-                    listSoFar.isEmpty() -> listOf(packageName)
-                    packageName.startsWith(listSoFar.last()) -> listSoFar  // Squash ["com.foo", "com.foo.bar"] into just ["com.foo"]
-                    else -> listSoFar + packageName
-                }
+            val cordapps = cordappsForPackages(packages)
+            return testCorDappsDirectory().let { directory ->
+                cordapps.packageInDirectory(directory)
+                CordappLoader.fromDirectories(listOf(directory))
             }
         }
 
@@ -143,7 +126,7 @@ open class MockServices private constructor(
                                             initialIdentity: TestIdentity,
                                             networkParameters: NetworkParameters = testNetworkParameters(),
                                             vararg moreKeys: KeyPair): Pair<CordaPersistence, MockServices> {
-            val cordappLoader = corDappLoaderForPackages(cordappPackages)
+            val cordappLoader = cordappLoaderForPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
@@ -200,14 +183,20 @@ open class MockServices private constructor(
                 initialIdentity: TestIdentity,
                 identityService: IdentityService = makeTestIdentityService(),
                 vararg moreKeys: KeyPair) :
-            this(corDappLoaderForPackages(cordappPackages), identityService, testNetworkParameters(), initialIdentity, moreKeys)
+            this(cordappLoaderForPackages(cordappPackages), identityService, testNetworkParameters(), initialIdentity, moreKeys) {
+
+        cordappPackages.forEach { addMockCordapp(it) }
+    }
 
     constructor(cordappPackages: Iterable<String>,
                 initialIdentity: TestIdentity,
                 identityService: IdentityService,
                 networkParameters: NetworkParameters,
                 vararg moreKeys: KeyPair) :
-            this(corDappLoaderForPackages(cordappPackages), identityService, networkParameters, initialIdentity, moreKeys)
+            this(cordappLoaderForPackages(cordappPackages), identityService, networkParameters, initialIdentity, moreKeys) {
+
+        cordappPackages.forEach { addMockCordapp(it) }
+    }
 
     /**
      * Create a mock [ServiceHub] that looks for app code in the given package names, uses the provided identity service

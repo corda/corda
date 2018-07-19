@@ -16,11 +16,9 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.TestCorDapp
 import net.corda.testing.node.internal.*
-import net.corda.testing.node.internal.DriverDSLImpl.Companion.defaultTestCorDappsForAllNodes
 import rx.Observable
 import java.math.BigInteger
 import java.nio.file.Path
-import java.nio.file.Paths
 
 /**
  * Immutable builder for configuring a [StartedMockNode] or an [UnstartedMockNode] via [MockNetwork.createNode] and
@@ -215,7 +213,7 @@ open class MockNetwork(
         val servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
         val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
         val networkParameters: NetworkParameters = defaultParameters.networkParameters,
-        val cordappsForAllNodes: Set<TestCorDapp> = defaultTestCorDappsForAllNodes(cordappPackages.toSet())) {
+        val cordappsForAllNodes: Set<TestCorDapp> = cordappsForPackages(cordappPackages)) {
     @JvmOverloads
     constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(cordappPackages, defaultParameters = parameters)
 

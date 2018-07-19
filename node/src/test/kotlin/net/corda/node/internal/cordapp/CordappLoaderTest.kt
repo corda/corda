@@ -66,7 +66,7 @@ class CordappLoaderTest {
 
     @Test
     fun `flows are loaded by loader`() {
-        val loader = MockServices.corDappLoaderForPackages(listOf(testScanPackage))
+        val loader = MockServices.cordappLoaderForPackages(listOf(testScanPackage))
 
         val actual = loader.cordapps.toTypedArray()
         // One core cordapp, one cordapp from this source tree. In gradle it will also pick up the node jar.
@@ -80,14 +80,14 @@ class CordappLoaderTest {
 
     @Test
     fun `duplicate packages are ignored`() {
-        val loader = MockServices.corDappLoaderForPackages(listOf(testScanPackage, testScanPackage))
+        val loader = MockServices.cordappLoaderForPackages(listOf(testScanPackage, testScanPackage))
         val cordapps = loader.cordapps.filter { LoaderTestFlow::class.java in it.initiatedFlows }
         assertThat(cordapps).hasSize(1)
     }
 
     @Test
     fun `sub-packages are ignored`() {
-        val loader = MockServices.corDappLoaderForPackages(listOf("net.corda", testScanPackage))
+        val loader = MockServices.cordappLoaderForPackages(listOf("net.corda", testScanPackage))
         val cordapps = loader.cordapps.filter { LoaderTestFlow::class.java in it.initiatedFlows }
         assertThat(cordapps).hasSize(1)
     }
