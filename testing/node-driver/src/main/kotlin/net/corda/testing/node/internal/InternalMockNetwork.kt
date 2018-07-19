@@ -479,17 +479,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     fun waitQuiescent() {
         busyLatch.await()
     }
-
-    // TODO this duplication is needed
-    private fun getCallerPackage(): String? {
-        val stackTrace = Throwable().stackTrace
-        val index = stackTrace.indexOfLast { it.className == InternalMockNetwork::class.java.name }
-        // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
-        if (index == -1) return null
-        val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
-        return callerPackage.name
-    }
-
 }
 
 open class MessagingServiceSpy(val messagingService: MessagingService) : MessagingService by messagingService

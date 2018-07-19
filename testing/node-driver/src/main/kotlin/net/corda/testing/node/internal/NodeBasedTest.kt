@@ -165,3 +165,25 @@ class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo) 
 
     override fun getRxIoScheduler() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
 }
+
+class A {
+
+    fun hey() {
+
+        val trace = Thread.currentThread().stackTrace
+        val element = trace[2]
+        println()
+    }
+}
+class B {
+
+    fun doStuff() {
+
+        A().hey()
+    }
+}
+
+fun main(args: Array<String>) {
+
+    B().doStuff()
+}
