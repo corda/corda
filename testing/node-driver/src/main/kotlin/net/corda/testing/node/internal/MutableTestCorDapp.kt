@@ -11,6 +11,10 @@ internal class MutableTestCorDapp private constructor(override val name: String,
     constructor(name: String, version: String, vendor: String, title: String, classes: Set<Class<*>>, willResourceBeAddedToCorDapp: (String, URL) -> Boolean) : this(name, version, vendor, title, willResourceBeAddedToCorDapp, jarEntriesFromClasses(classes))
 
     companion object {
+
+        private const val jarExtension = ".jar"
+        private const val whitespace = " "
+        private const val whitespaceReplacement = "_"
         // TODO sollecitom check for Gradle and add to `productionPathSegments` // "main/${info.clazz.packageName.packageToPath()}"
         private val productionPathSegments = setOf("out${File.separator}production${File.separator}classes")
         private val excludedCordaPackages = setOf("net.corda.core", "net.corda.node")
@@ -44,25 +48,19 @@ internal class MutableTestCorDapp private constructor(override val name: String,
 
     override val resources: Set<URL> = jarEntries.map(JarEntryInfo::url).toSet()
 
-    override fun withName(name: String): TestCorDapp.Mutable = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
+    override fun withName(name: String) = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
 
-    override fun withTitle(title: String): TestCorDapp.Mutable = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
+    override fun withTitle(title: String) = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
 
-    override fun withVersion(version: String): TestCorDapp.Mutable = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
+    override fun withVersion(version: String) = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
 
-    override fun withVendor(vendor: String): TestCorDapp.Mutable = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
+    override fun withVendor(vendor: String) = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
 
-    override fun withClasses(classes: Set<Class<*>>): TestCorDapp.Mutable = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
+    override fun withClasses(classes: Set<Class<*>>) = MutableTestCorDapp(name, version, vendor, title, classes, willResourceBeAddedToCorDapp)
 
-    override fun plusPackages(pckgs: Set<String>): TestCorDapp.Mutable {
-        // TODO sollecitom perhaps inject the TestCorDappHelper or reference it
-        return withClasses(pckgs.map { allClassesForPackage(it) }.fold(classes) { all, packageClasses -> all + packageClasses })
-    }
+    override fun plusPackages(pckgs: Set<String>) = withClasses(pckgs.map { allClassesForPackage(it) }.fold(classes) { all, packageClasses -> all + packageClasses })
 
-    override fun minusPackages(pckgs: Set<String>): TestCorDapp.Mutable {
-        // TODO sollecitom perhaps inject the TestCorDappHelper or reference it
-        return withClasses(pckgs.map { allClassesForPackage(it) }.fold(classes) { all, packageClasses -> all - packageClasses })
-    }
+    override fun minusPackages(pckgs: Set<String>) = withClasses(pckgs.map { allClassesForPackage(it) }.fold(classes) { all, packageClasses -> all - packageClasses })
 
     override fun plusResource(fullyQualifiedName: String, url: URL): TestCorDapp.Mutable = MutableTestCorDapp(name, version, vendor, title, willResourceBeAddedToCorDapp, jarEntries + JarEntryInfo.ResourceJarEntryInfo(fullyQualifiedName, url))
 
@@ -72,5 +70,5 @@ internal class MutableTestCorDapp private constructor(override val name: String,
 
     override fun packageAsJarInDirectory(parentDirectory: Path) = packageAsJarWithPath(parentDirectory / defaultJarName())
 
-    private fun defaultJarName(): String = "${name.replace(" ", "_")}.jar"
+    private fun defaultJarName(): String = "${name.replace(whitespace, whitespaceReplacement)}$jarExtension"
 }

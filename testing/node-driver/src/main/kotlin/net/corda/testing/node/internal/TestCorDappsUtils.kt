@@ -19,8 +19,6 @@ import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-// TODO sollecitom, perhaps create a TestCorDappPackager class, rather than extension functions
-
 internal fun Iterable<JarEntryInfo>.packageToCorDapp(path: Path, name: String, version: String, vendor: String, title: String = name, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean = { _, _ -> true }) {
 
     var hasContent = false
