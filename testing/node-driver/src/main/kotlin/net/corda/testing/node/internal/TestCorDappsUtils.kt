@@ -18,6 +18,7 @@ import java.util.*
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.reflect.KClass
 
 internal fun Iterable<JarEntryInfo>.packageToCorDapp(path: Path, name: String, version: String, vendor: String, title: String = name, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean = { _, _ -> true }) {
 
@@ -62,6 +63,24 @@ fun cordappsForPackages(packages: Iterable<String>): Set<TestCorDapp> {
 fun cordappsForPackages(firstPackage: String, vararg otherPackages: String): Set<TestCorDapp> {
 
     return cordappsForPackages(setOf(*otherPackages) + firstPackage)
+}
+
+fun getCallerClass(directCallerClass: KClass<*>): Class<*>? {
+
+    val stackTrace = Throwable().stackTrace
+    val index = stackTrace.indexOfLast { it.className == directCallerClass.java.name }
+    if (index == -1) return null
+    val callerClass: Class<*>? = try {
+        Class.forName(stackTrace[index + 1].className)
+    } catch (e: ClassNotFoundException) {
+        null
+    }
+    return callerClass
+}
+
+fun getCallerPackage(directCallerClass: KClass<*>): String? {
+
+    return getCallerClass(directCallerClass)?.`package`?.name
 }
 
 private fun testCorDapp(packageName: String): TestCorDapp {

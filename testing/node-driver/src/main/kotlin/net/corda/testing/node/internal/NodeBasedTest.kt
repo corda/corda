@@ -30,6 +30,7 @@ import rx.internal.schedulers.CachedThreadScheduler
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
+import kotlin.reflect.KClass
 
 // TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't support this, and it's a property of the Corda JAR)
 abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyList()) {
@@ -103,7 +104,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 ) + configOverrides
         )
 
-        val cordapps =  cordappsForPackages(getCallerPackage()?.let { cordappPackages + it } ?: cordappPackages)
+        val cordapps =  cordappsForPackages(getCallerPackage(NodeBasedTest::class)?.let { cordappPackages + it } ?: cordappPackages)
 
         val existingCorDappDirectoriesOption = if (config.hasPath(NodeConfiguration.cordappDirectoriesKey)) config.getStringList(NodeConfiguration.cordappDirectoriesKey) else emptyList()
 
@@ -148,42 +149,9 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 node.services.networkMapCache.addNode(nodeInfo)
             }
     }
-
-    // TODO sollecitom try and remove this duplicated thing
-    // TODO this needs to be duplicated, for it's call-site based - NodeBasedTest shouldn't exist anyway
-    private fun getCallerPackage(): String? {
-
-        val stackTrace = Throwable().stackTrace
-        val index = stackTrace.indexOfLast { it.className == NodeBasedTest::class.java.name }
-        if (index == -1) return null
-        val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
-        return callerPackage.name
-    }
 }
 
 class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo) : Node(configuration, versionInfo, false) {
 
     override fun getRxIoScheduler() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
-}
-
-class A {
-
-    fun hey() {
-
-        val trace = Thread.currentThread().stackTrace
-        val element = trace[2]
-        println()
-    }
-}
-class B {
-
-    fun doStuff() {
-
-        A().hey()
-    }
-}
-
-fun main(args: Array<String>) {
-
-    B().doStuff()
 }
