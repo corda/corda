@@ -50,12 +50,6 @@ When upgrading from versions 3.0 or 3.1, run the following command:
 
    ALTER TABLE [schema].NODE_ATTCHMENTS_CONTRACTS RENAME TO NODE_ATTACHMENTS_CONTRACTS;
 
-When upgrading from release candidates RC01 and RC02 for version 3.0 (tags M18-RC01 and M18-RC02), run the following command:
-
-.. sourcecode:: sql
-
-   ALTER TABLE [schema].NODE_ATTACHMENTS_CONTRACT_CLASS_NAME RENAME TO NODE_ATTACHMENTS_CONTRACTS;
-
 Schema name is optional, run SQL when the node is not running.
 
 * Postgres database upgrade - Change the type of the ``checkpoint_value`` column to ``bytea``.
