@@ -28,7 +28,7 @@ interface WithFinality : WithMockNet {
     //endregion
 
     //region Matchers
-    fun transactionVisibleTo(other: StartedNode<*>) = object : Matcher<SignedTransaction> {
+    fun visibleTo(other: StartedNode<*>) = object : Matcher<SignedTransaction> {
         override val description = "has a transaction visible to ${other.info.singleIdentity()}"
         override fun invoke(actual: SignedTransaction) =
                 equalTo(actual)(other.getValidatedTransaction(actual))

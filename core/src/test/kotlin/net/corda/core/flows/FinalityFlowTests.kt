@@ -44,7 +44,7 @@ class FinalityFlowTests : WithFinality {
             aliceNode.finalise(stx),
                 willReturn(
                         requiredSignatures(1)
-                                and transactionVisibleTo(bobNode)))
+                                and visibleTo(bobNode)))
     }
 
     @Test
