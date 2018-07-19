@@ -326,7 +326,8 @@ bintrayConfig {
             'corda-confidential-identities',
             'corda-network-builder',
             'corda-blob-inspector',
-            'corda-network-bootstrapper'
+            'corda-network-bootstrapper',
+            'corda-tools-explorer'
     ]
     license {
         name = 'Apache-2.0'
