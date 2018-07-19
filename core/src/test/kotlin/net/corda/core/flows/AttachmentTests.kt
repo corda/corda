@@ -2,8 +2,12 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.*
+import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.matchers.flow.willReturn
+import net.corda.core.flows.matchers.flow.willThrow
+import net.corda.core.flows.mixins.WithMockNet
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
@@ -16,24 +20,22 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.startFlow
 import org.junit.AfterClass
 import org.junit.Test
 import java.io.ByteArrayOutputStream
-import java.util.*
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
-import com.natpryce.hamkrest.assertion.assert
-import net.corda.core.matchers.*
 
-class AttachmentTests {
+class AttachmentTests : WithMockNet {
     companion object {
-        val mockNet = InternalMockNetwork()
+        val classMockNet = InternalMockNetwork()
 
         @JvmStatic
         @AfterClass
-        fun cleanUp() = mockNet.stopNodes()
+        fun cleanUp() = classMockNet.stopNodes()
     }
+
+    override val mockNet = classMockNet
 
     // Test nodes
     private val aliceNode = makeNode(ALICE_NAME)
@@ -48,7 +50,7 @@ class AttachmentTests {
         // Get node one to run a flow to fetch it and insert it.
         assert.that(
             bobNode.startAttachmentFlow(id, alice),
-            succeedsWith(noAttachments()))
+                willReturn(noAttachments()))
 
         // Verify it was inserted into node one's store.
         val attachment = bobNode.getAttachmentWithId(id)
@@ -59,7 +61,7 @@ class AttachmentTests {
 
         assert.that(
             bobNode.startAttachmentFlow(id, alice),
-            succeedsWith(soleAttachment(attachment)))
+                willReturn(soleAttachment(attachment)))
     }
 
     @Test
@@ -69,9 +71,13 @@ class AttachmentTests {
         // Get node one to fetch a non-existent attachment.
         assert.that(
             bobNode.startAttachmentFlow(hash, alice),
-            failsWith<FetchDataFlow.HashNotFound>(
-                has("requested hash", { it.requested }, equalTo(hash))))
+                willThrow(withRequestedHash(hash)))
     }
+
+    fun withRequestedHash(expected: SecureHash) = has(
+            "requested hash",
+            FetchDataFlow.HashNotFound::requested,
+            equalTo(expected))
 
     @Test
     fun maliciousResponse() {
@@ -93,7 +99,7 @@ class AttachmentTests {
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
         assert.that(
             bobNode.startAttachmentFlow(id, badAlice),
-            failsWith<FetchDataFlow.DownloadedVsRequestedDataMismatch>()
+                willThrow<FetchDataFlow.DownloadedVsRequestedDataMismatch>()
         )
     }
 
@@ -113,21 +119,19 @@ class AttachmentTests {
     }
 
     //region Generators
-    private fun makeNode(name: CordaX500Name) =
-        mockNet.createPartyNode(randomiseName(name)).apply {
+    override fun makeNode(name: CordaX500Name) =
+        mockNet.createPartyNode(randomise(name)).apply {
             registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         }
 
     // Makes a node that doesn't do sanity checking at load time.
     private fun makeBadNode(name: CordaX500Name) = mockNet.createNode(
-            InternalMockNodeParameters(legalName = randomiseName(name)),
+            InternalMockNodeParameters(legalName = randomise(name)),
             nodeFactory = { args ->
                 object : InternalMockNetwork.MockNode(args) {
                     override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
                 }
             }).apply { registerInitiatedFlow(FetchAttachmentsResponse::class.java) }
-
-    private fun randomiseName(name: CordaX500Name) = name.copy(commonName = "${name.commonName}_${UUID.randomUUID()}")
 
     private fun fakeAttachment(): ByteArray =
         ByteArrayOutputStream().use { baos ->
@@ -144,24 +148,19 @@ class AttachmentTests {
     //endregion
 
     //region Operations
-    private fun StartedNode<*>.importAttachment(attachment: ByteArray) = database.transaction {
+    private fun StartedNode<*>.importAttachment(attachment: ByteArray) =
         attachments.importAttachment(attachment.inputStream(), "test", null)
+            .andRunNetwork()
+
+    private fun StartedNode<*>.updateAttachment(attachment:  NodeAttachmentService.DBAttachment) = database.transaction {
+        session.update(attachment)
     }.andRunNetwork()
 
-    private fun StartedNode<*>.updateAttachment(attachment:  NodeAttachmentService.DBAttachment) =
-            database.transaction { session.update(attachment) }.andRunNetwork()
+    private fun StartedNode<*>.startAttachmentFlow(hash: SecureHash, otherSide: Party) = startFlowAndRunNetwork(
+            InitiatingFetchAttachmentsFlow(otherSide, setOf(hash)))
 
-    private fun StartedNode<*>.startAttachmentFlow(hash: SecureHash, otherSide: Party) = services.startFlow(
-            InitiatingFetchAttachmentsFlow(otherSide, setOf(hash))).andRunNetwork()
-
-    private fun StartedNode<*>.getAttachmentWithId(id: SecureHash) = database.transaction {
+    private fun StartedNode<*>.getAttachmentWithId(id: SecureHash) =
         attachments.openAttachment(id)!!
-    }
-
-    private fun <T : Any> T.andRunNetwork(): T {
-        mockNet.runNetwork()
-        return this
-    }
     //endregion
 
     //region Matchers
