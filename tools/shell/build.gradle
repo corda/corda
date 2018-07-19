@@ -39,7 +39,6 @@ dependencies {
     // Jackson support: serialisation to/from JSON, YAML, etc.
     compile project(':client:jackson')
 
-
     // JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
@@ -56,9 +55,6 @@ dependencies {
 
     // JAnsi: for drawing things to the terminal in nicely coloured ways.
     compile "org.fusesource.jansi:jansi:$jansi_version"
-
-    // Manifests: for reading stuff from the manifest file.
-    compile "com.jcabi:jcabi-manifests:1.1"
     
     // For logging, required for ANSIProgressRenderer.
     compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
