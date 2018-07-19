@@ -1,11 +1,10 @@
 package net.corda.core.flows.matchers.flow
 
 import com.natpryce.hamkrest.Matcher
+import com.natpryce.hamkrest.equalTo
 import com.natpryce.hamkrest.has
-import net.corda.core.flows.matchers.willFailWithException
-import net.corda.core.flows.matchers.willReturn
-import net.corda.core.flows.matchers.willSucceedWithResult
 import net.corda.core.flows.matchers.willThrow
+import net.corda.core.flows.matchers.willReturn
 import net.corda.core.internal.FlowStateMachine
 
 /**
@@ -13,19 +12,21 @@ import net.corda.core.internal.FlowStateMachine
  */
 fun <T> willReturn() = has(FlowStateMachine<T>::resultFuture, willReturn())
 
+fun <T> willReturn(expected: T): Matcher<FlowStateMachine<out T?>> = net.corda.core.flows.matchers.flow.willReturn(equalTo(expected))
+
 /**
  * Matches a Flow that succeeds with a result matched by the given matcher
  */
 fun <T> willReturn(successMatcher: Matcher<T>) = has(
         FlowStateMachine<out T>::resultFuture,
-        willSucceedWithResult(successMatcher))
+        willReturn(successMatcher))
 
 /**
  * Matches a Flow that fails, with an exception matched by the given matcher.
  */
 inline fun <reified E: Exception> willThrow(failureMatcher: Matcher<E>) = has(
         FlowStateMachine<*>::resultFuture,
-        willFailWithException(failureMatcher))
+        willThrow(failureMatcher))
 
 /**
  * Matches a Flow that fails, with an exception of the specified type.
