@@ -15,7 +15,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
-import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsForPackages
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType

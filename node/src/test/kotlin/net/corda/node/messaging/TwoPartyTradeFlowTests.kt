@@ -50,7 +50,7 @@ import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsForPackages
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.pumpReceive

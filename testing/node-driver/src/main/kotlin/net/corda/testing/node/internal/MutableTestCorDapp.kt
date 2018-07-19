@@ -72,6 +72,5 @@ internal class MutableTestCorDapp private constructor(override val name: String,
 
     override fun packageAsJarInDirectory(parentDirectory: Path) = packageAsJarWithPath(parentDirectory / defaultJarName())
 
-    // TODO sollecitom change so that whitespaces are avoided inside the JAR's name
-    private fun defaultJarName(): String = "$name.jar"
+    private fun defaultJarName(): String = "${name.replace(" ", "_")}.jar"
 }
