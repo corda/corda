@@ -354,9 +354,76 @@ data class DriverParameters(
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         val initialiseSerialization: Boolean = true,
         val inMemoryDB: Boolean = true,
-        // TODO sollecitom revisit this in terms of API compatibility; document
+        // TODO sollecitom document
         val cordappsForAllNodes: Set<TestCorDapp>? = null
     ) {
+    constructor(
+            isDebug: Boolean = false,
+            driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
+            portAllocation: PortAllocation = PortAllocation.Incremental(10000),
+            debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+            systemProperties: Map<String, String> = emptyMap(),
+            useTestClock: Boolean = false,
+            startNodesInProcess: Boolean = false,
+            waitForAllNodesToFinish: Boolean = false,
+            notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
+            extraCordappPackagesToScan: List<String> = emptyList(),
+            jmxPolicy: JmxPolicy = JmxPolicy(),
+            networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
+            notaryCustomOverrides: Map<String, Any?> = emptyMap(),
+            initialiseSerialization: Boolean = true,
+            inMemoryDB: Boolean = true
+    ) : this(
+            isDebug,
+            driverDirectory,
+            portAllocation,
+            debugPortAllocation,
+            systemProperties,
+            useTestClock,
+            startNodesInProcess,
+            waitForAllNodesToFinish,
+            notarySpecs,
+            extraCordappPackagesToScan,
+            jmxPolicy,
+            networkParameters,
+            notaryCustomOverrides,
+            initialiseSerialization,
+            inMemoryDB,
+            cordappsForAllNodes = null
+    )
+
+    constructor(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters
+    ) : this(
+            isDebug,
+            driverDirectory,
+            portAllocation,
+            debugPortAllocation,
+            systemProperties,
+            useTestClock,
+            startNodesInProcess,
+            waitForAllNodesToFinish,
+            notarySpecs,
+            extraCordappPackagesToScan,
+            jmxPolicy,
+            networkParameters,
+            emptyMap(),
+            true,
+            true,
+            cordappsForAllNodes = null
+    )
+
     constructor(
             isDebug: Boolean,
             driverDirectory: Path,
@@ -388,6 +455,40 @@ data class DriverParameters(
             true,
             true,
             cordappsForAllNodes
+    )
+
+    constructor(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters,
+            initialiseSerialization: Boolean,
+            inMemoryDB: Boolean
+    ) : this(
+            isDebug,
+            driverDirectory,
+            portAllocation,
+            debugPortAllocation,
+            systemProperties,
+            useTestClock,
+            startNodesInProcess,
+            waitForAllNodesToFinish,
+            notarySpecs,
+            extraCordappPackagesToScan,
+            jmxPolicy,
+            networkParameters,
+            emptyMap(),
+            initialiseSerialization,
+            inMemoryDB,
+            cordappsForAllNodes = null
     )
 
     constructor(
@@ -440,6 +541,7 @@ data class DriverParameters(
     fun withNetworkParameters(networkParameters: NetworkParameters): DriverParameters = copy(networkParameters = networkParameters)
     fun withNotaryCustomOverrides(notaryCustomOverrides: Map<String, Any?>): DriverParameters = copy(notaryCustomOverrides = notaryCustomOverrides)
     fun withInMemoryDB(inMemoryDB: Boolean): DriverParameters = copy(inMemoryDB = inMemoryDB)
+    fun withCordappsForAllNodes(cordappsForAllNodes: Set<TestCorDapp>?): DriverParameters = copy(cordappsForAllNodes = cordappsForAllNodes)
 
     fun copy(
             isDebug: Boolean,
@@ -500,5 +602,70 @@ data class DriverParameters(
             networkParameters = networkParameters,
             notaryCustomOverrides = emptyMap(),
             initialiseSerialization = initialiseSerialization
+    )
+
+    fun copy(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters,
+            cordappsForAllNodes: Set<TestCorDapp>?
+    ) = this.copy(
+            isDebug = isDebug,
+            driverDirectory = driverDirectory,
+            portAllocation = portAllocation,
+            debugPortAllocation = debugPortAllocation,
+            systemProperties = systemProperties,
+            useTestClock = useTestClock,
+            startNodesInProcess = startNodesInProcess,
+            waitForAllNodesToFinish = waitForAllNodesToFinish,
+            notarySpecs = notarySpecs,
+            extraCordappPackagesToScan = extraCordappPackagesToScan,
+            jmxPolicy = jmxPolicy,
+            networkParameters = networkParameters,
+            notaryCustomOverrides = emptyMap(),
+            initialiseSerialization = true,
+            cordappsForAllNodes = cordappsForAllNodes
+    )
+
+    fun copy(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters,
+            initialiseSerialization: Boolean,
+            cordappsForAllNodes: Set<TestCorDapp>?
+    ) = this.copy(
+            isDebug = isDebug,
+            driverDirectory = driverDirectory,
+            portAllocation = portAllocation,
+            debugPortAllocation = debugPortAllocation,
+            systemProperties = systemProperties,
+            useTestClock = useTestClock,
+            startNodesInProcess = startNodesInProcess,
+            waitForAllNodesToFinish = waitForAllNodesToFinish,
+            notarySpecs = notarySpecs,
+            extraCordappPackagesToScan = extraCordappPackagesToScan,
+            jmxPolicy = jmxPolicy,
+            networkParameters = networkParameters,
+            notaryCustomOverrides = emptyMap(),
+            initialiseSerialization = initialiseSerialization,
+            cordappsForAllNodes = cordappsForAllNodes
     )
 }
