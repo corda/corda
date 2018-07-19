@@ -10,13 +10,12 @@
 
 package net.corda.node.services.rpc
 
-import io.netty.channel.unix.Errors
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.artemis.*
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_SECURITY_CONFIG
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.RPC_SECURITY_CONFIG
-import net.corda.core.internal.errors.AddressBindingException
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
@@ -30,7 +29,7 @@ import java.nio.file.Path
 import java.security.KeyStoreException
 import javax.security.auth.login.AppConfigurationEntry
 
-internal class ArtemisRpcBroker internal constructor(
+class ArtemisRpcBroker internal constructor(
         address: NetworkHostAndPort,
         private val adminAddressOptional: NetworkHostAndPort?,
         private val sslOptions: BrokerRpcSslOptions?,

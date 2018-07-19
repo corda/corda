@@ -21,6 +21,7 @@ private class DeterministicSerializerFactoryFactory : SerializerFactoryFactory {
             serializersByType = mutableMapOf(),
             serializersByDescriptor = mutableMapOf(),
             customSerializers = ArrayList(),
+            customSerializersCache = mutableMapOf(),
             transformsCache = mutableMapOf()
         )
 }

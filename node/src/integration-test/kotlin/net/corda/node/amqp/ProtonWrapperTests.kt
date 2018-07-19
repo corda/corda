@@ -34,7 +34,11 @@ import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.MAX_MESSAGE_SIZE
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -44,7 +48,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.security.KeyStore
-import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl.*
 import kotlin.concurrent.thread
@@ -56,9 +59,10 @@ class ProtonWrapperTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val serverPort = freePort()
-    private val serverPort2 = freePort()
-    private val artemisPort = freePort()
+    private val portAllocation = PortAllocation.Incremental(10000)
+    private val serverPort = portAllocation.nextPort()
+    private val serverPort2 = portAllocation.nextPort()
+    private val artemisPort = portAllocation.nextPort()
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 
@@ -384,6 +388,31 @@ class ProtonWrapperTests {
             sharedThreads.shutdownGracefully()
             sharedThreads.terminationFuture().sync()
         }
+    }
+
+    @Test
+    fun `Message sent from AMQP to non-existent Artemis inbox is rejected and client disconnects`() {
+        val (server, artemisClient) = createArtemisServerAndClient()
+        val amqpClient = createClient()
+        var connected = false
+        amqpClient.onConnection.subscribe { change ->
+            connected = change.connected
+        }
+        val clientConnected = amqpClient.onConnection.toFuture()
+        amqpClient.start()
+        assertEquals(true, clientConnected.get().connected)
+        assertEquals(CHARLIE_NAME, CordaX500Name.build(clientConnected.get().remoteCert!!.subjectX500Principal))
+        val sendAddress = P2P_PREFIX + "Test"
+        val testData = "Test".toByteArray()
+        val testProperty = mutableMapOf<String, Any?>()
+        testProperty["TestProp"] = "1"
+        val message = amqpClient.createMessage(testData, sendAddress, CHARLIE_NAME.toString(), testProperty)
+        amqpClient.write(message)
+        assertEquals(MessageStatus.Rejected, message.onComplete.get())
+        assertEquals(false, connected)
+        amqpClient.stop()
+        artemisClient.stop()
+        server.stop()
     }
 
     private fun createArtemisServerAndClient(maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {

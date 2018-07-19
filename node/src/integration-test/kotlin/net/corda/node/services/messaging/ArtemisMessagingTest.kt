@@ -25,6 +25,7 @@ import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -61,7 +62,9 @@ class ArtemisMessagingTest {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val serverPort = freePort()
+    // THe
+    private val portAllocation = PortAllocation.Incremental(10000)
+    private val serverPort = portAllocation.nextPort()
     private val identity = generateKeyPair()
 
     private lateinit var config: NodeConfiguration
@@ -107,7 +110,7 @@ class ArtemisMessagingTest {
 
     @Test
     fun `client should connect to remote server`() {
-        val remoteServerAddress = freeLocalHostAndPort()
+        val remoteServerAddress = portAllocation.nextHostAndPort()
 
         createMessagingServer(remoteServerAddress.port).start()
         createMessagingClient(server = remoteServerAddress)
@@ -116,8 +119,8 @@ class ArtemisMessagingTest {
 
     @Test
     fun `client should throw if remote server not found`() {
-        val serverAddress = freeLocalHostAndPort()
-        val invalidServerAddress = freeLocalHostAndPort()
+        val serverAddress = portAllocation.nextHostAndPort()
+        val invalidServerAddress = portAllocation.nextHostAndPort()
 
         createMessagingServer(serverAddress.port).start()
 

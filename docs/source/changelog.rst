@@ -7,6 +7,10 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* ``freeLocalHostAndPort``, ``freePort``, and ``getFreeLocalPorts`` from ``TestUtils`` have been deprecated as they
+  don't provide any guarantee the returned port will be available which can result in flaky tests. Use ``PortAllocation.Incremental``
+  instead.
+
 * The ``corda-bridgserver.jar`` has been renamed to ``corda-firewall.jar`` to be more consistent
   with marketing materials and purpose of the jar. Further to this we have also renamed ``bridge.conf`` to ``firewall.conf``
   and within that file the ``bridgeMode`` propety has been modified to ``firewallMode`` for overall consistency.

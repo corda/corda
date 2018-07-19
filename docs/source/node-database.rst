@@ -9,6 +9,7 @@ stored states, transactions and attachments as follows:
 * Enable the H2 database access in the node configuration using the following syntax:
 
   .. sourcecode:: groovy
+
     h2Settings {
         address: "localhost:0"
     }

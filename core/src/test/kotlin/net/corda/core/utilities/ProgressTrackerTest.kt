@@ -10,12 +10,12 @@
 
 package net.corda.core.utilities
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
-import org.assertj.core.api.Assertions.*
 
 class ProgressTrackerTest {
     object SimpleSteps {

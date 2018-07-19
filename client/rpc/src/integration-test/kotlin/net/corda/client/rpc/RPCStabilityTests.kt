@@ -23,7 +23,7 @@ import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.eventually
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.core.freePort
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.internal.*
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
@@ -47,7 +47,10 @@ class RPCStabilityTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
+
     private val pool = Executors.newFixedThreadPool(10, testThreadFactory())
+    private val portAllocation = PortAllocation.Incremental(10000)
+
     @After
     fun shutdown() {
         pool.shutdown()
@@ -87,7 +90,6 @@ class RPCStabilityTests {
 
     private fun runBlockAndCheckThreads(block: () -> Unit) {
         val executor = Executors.newScheduledThreadPool(1)
-
         try {
             // Warm-up so that all the thread pools & co. created
             block()
@@ -100,7 +102,7 @@ class RPCStabilityTests {
             // This is a less than check because threads from other tests may be shutting down while this test is running.
             // This is therefore a "best effort" check. When this test is run on its own this should be a strict equality.
             // In case of failure we output the threads along with their stacktraces to get an idea what was running at a time.
-            require(threadsBefore.keys.size >= threadsAfter.keys.size, { "threadsBefore: $threadsBefore\nthreadsAfter: $threadsAfter" })
+            require(threadsBefore.keys.size >= threadsAfter.keys.size) { "threadsBefore: $threadsBefore\nthreadsAfter: $threadsAfter" }
         } finally {
             executor.shutdownNow()
         }
@@ -337,7 +339,7 @@ class RPCStabilityTests {
 
     @Test
     fun `client throws RPCException after initial connection attempt fails`() {
-        val client = CordaRPCClient(NetworkHostAndPort("localhost", freePort()))
+        val client = CordaRPCClient(portAllocation.nextHostAndPort())
         var exceptionMessage: String? = null
         try {
            client.start("user", "pass").proxy
