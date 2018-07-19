@@ -65,22 +65,16 @@ class CashSelectionSQLServerImpl : AbstractCashSelection() {
               AND vs.notary_name = ?
             """)
         if (onlyFromIssuerParties.isNotEmpty()) {
+            val repeats = generateSequence { "?" }.take(onlyFromIssuerParties.size).joinToString(",")
             sb.append("""
-              AND ccs.issuer_key_hash IN (
+              AND ccs.issuer_key_hash IN ($repeats)
             """)
-            sb.append("?,".repeat(onlyFromIssuerParties.size))
-            // delete the last ","
-            sb.deleteCharAt(sb.length - 1)
-            sb.append(")")
         }
         if (withIssuerRefs.isNotEmpty()) {
+            val repeats = generateSequence { "?" }.take(withIssuerRefs.size).joinToString(",")
             sb.append("""
-              AND ccs.issuer_ref IN (
+              AND ccs.issuer_ref IN ($repeats)
             """)
-            sb.append("?,".repeat(withIssuerRefs.size))
-            // delete the last ","
-            sb.deleteCharAt(sb.length - 1)
-            sb.append(")")
         }
         sb.append(
             """
