@@ -22,7 +22,7 @@ class FilterTransformer private constructor (
     private val removeAnnotations: Set<String>,
     private val deleteAnnotations: Set<String>,
     private val stubAnnotations: Set<String>,
-    private val unwantedClasses: MutableSet<String>,
+    private val unwantedElements: UnwantedCache,
     private val unwantedFields: MutableSet<FieldElement>,
     private val deletedMethods: MutableSet<MethodElement>,
     private val stubbedMethods: MutableSet<MethodElement>
@@ -33,7 +33,7 @@ class FilterTransformer private constructor (
         removeAnnotations: Set<String>,
         deleteAnnotations: Set<String>,
         stubAnnotations: Set<String>,
-        unwantedClasses: MutableSet<String>
+        unwantedElements: UnwantedCache
     ) : this(
         visitor = visitor,
         logger = logger,
@@ -41,7 +41,7 @@ class FilterTransformer private constructor (
         removeAnnotations = removeAnnotations,
         deleteAnnotations = deleteAnnotations,
         stubAnnotations = stubAnnotations,
-        unwantedClasses = unwantedClasses,
+        unwantedElements = unwantedElements,
         unwantedFields = mutableSetOf(),
         deletedMethods = mutableSetOf(),
         stubbedMethods = mutableSetOf()
@@ -57,7 +57,7 @@ class FilterTransformer private constructor (
                   || stubbedMethods.isNotEmpty()
                   || super.hasUnwantedElements
 
-    private fun isUnwantedClass(name: String): Boolean = unwantedClasses.contains(name)
+    private fun isUnwantedClass(name: String): Boolean = unwantedElements.containsClass(name)
     private fun hasDeletedSyntheticMethod(name: String): Boolean = deletedMethods.any { method ->
         name.startsWith("$className\$${method.visibleName}\$")
     }
@@ -69,7 +69,7 @@ class FilterTransformer private constructor (
         removeAnnotations = removeAnnotations,
         deleteAnnotations = deleteAnnotations,
         stubAnnotations = stubAnnotations,
-        unwantedClasses = unwantedClasses,
+        unwantedElements = unwantedElements,
         unwantedFields = unwantedFields,
         deletedMethods = deletedMethods,
         stubbedMethods = stubbedMethods
@@ -86,7 +86,7 @@ class FilterTransformer private constructor (
             logger.info("- Removing annotation {}", descriptor)
             return null
         } else if (deleteAnnotations.contains(descriptor)) {
-            if (unwantedClasses.add(className)) {
+            if (unwantedElements.addClass(className)) {
                 logger.info("- Identified class {} as unwanted", className)
             }
         }
@@ -110,6 +110,7 @@ class FilterTransformer private constructor (
         logger.debug("--- method ---> {}", method)
         if (deletedMethods.contains(method)) {
             logger.info("- Deleted method {}{}", method.name, method.descriptor)
+            unwantedElements.addMethod(className, method)
             deletedMethods.remove(method)
             return null
         }
@@ -131,7 +132,7 @@ class FilterTransformer private constructor (
     override fun visitInnerClass(clsName: String, outerName: String?, innerName: String?, access: Int) {
         logger.debug("--- inner class {} [outer: {}, inner: {}]", clsName, outerName, innerName)
         if (isUnwantedClass || hasDeletedSyntheticMethod(clsName)) {
-            if (unwantedClasses.add(clsName)) {
+            if (unwantedElements.addClass(clsName)) {
                 logger.info("- Deleted inner class {}", clsName)
             }
         } else if (isUnwantedClass(clsName)) {
@@ -143,8 +144,10 @@ class FilterTransformer private constructor (
 
     override fun visitOuterClass(outerName: String, methodName: String?, methodDescriptor: String?) {
         logger.debug("--- outer class {} [enclosing method {},{}]", outerName, methodName, methodDescriptor)
-        if (isUnwantedClass(outerName)) {
-            logger.info("- Deleted reference to outer class {}", outerName)
+        if (unwantedElements.containsMethod(outerName, methodName, methodDescriptor)) {
+            if (unwantedElements.addClass(className)) {
+                logger.info("- Identified class {} as unwanted by its outer class", className)
+            }
         } else {
             super.visitOuterClass(outerName, methodName, methodDescriptor)
         }
@@ -180,8 +183,8 @@ class FilterTransformer private constructor (
                 deletedFields = unwantedFields,
                 deletedFunctions = partitioned[false] ?: emptyList(),
                 deletedConstructors = partitioned[true] ?: emptyList(),
-                deletedNestedClasses = unwantedClasses.filter { it.startsWith(prefix) }.map { it.drop(prefix.length) },
-                deletedClasses = unwantedClasses,
+                deletedNestedClasses = unwantedElements.classes.filter { it.startsWith(prefix) }.map { it.drop(prefix.length) },
+                deletedClasses = unwantedElements.classes,
                 handleExtraMethod = ::delete,
                 d1 = d1,
                 d2 = d2)

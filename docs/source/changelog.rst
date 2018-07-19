@@ -6,6 +6,10 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* ``freeLocalHostAndPort``, ``freePort``, and ``getFreeLocalPorts`` from ``TestUtils`` have been deprecated as they
+  don't provide any guarantee the returned port will be available which can result in flaky tests. Use ``PortAllocation.Incremental``
+  instead.
+
 * Docs for IdentityService. assertOwnership updated to correctly state that an UnknownAnonymousPartyException is thrown
   rather than IllegalStateException.
 
@@ -169,6 +173,8 @@ Unreleased
 * Node logs a warning for any ``MappedSchema`` containing a JPA entity referencing another JPA entity from a different ``MappedSchema`.
   The log entry starts with `Cross-reference between MappedSchemas.`.
   API: Persistence documentation no longer suggests mapping between different schemas.
+
+* Upgraded Artemis to v2.6.2.
 
 .. _changelog_v3.1:
 

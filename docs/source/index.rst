@@ -84,7 +84,9 @@ We look forward to seeing what you can do with Corda!
       :caption: Participate
       :maxdepth: 2
 
+      building-corda.rst
       release-process-index.rst
       corda-repo-layout.rst
       deterministic-modules.rst
       building-the-docs.rst
+      building-container-images.rst

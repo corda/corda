@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.crypto
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.generateKeyPair
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
@@ -238,7 +239,7 @@ class X509UtilitiesTest {
         val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
         trustMgrFactory.init(trustStore)
         val trustManagers = trustMgrFactory.trustManagers
-        context.init(keyManagers, trustManagers, SecureRandom())
+        context.init(keyManagers, trustManagers, newSecureRandom())
 
         val serverSocketFactory = context.serverSocketFactory
         val clientSocketFactory = context.socketFactory

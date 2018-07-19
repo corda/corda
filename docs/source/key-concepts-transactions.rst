@@ -115,9 +115,11 @@ As well as input states and output states, transactions contain:
 * Commands
 * Attachments
 * Time-Window
+* Notary
 
-For example, a transaction where Alice pays off £5 of an IOU with Bob using a £5 cash payment, supported by two
-attachments and a time-window, may look as follows:
+For example, suppose we have a transaction where Alice uses a £5 cash payment to pay off £5 of an IOU with Bob.
+This transaction has two supporting attachments and will only be notarised by NotaryClusterA if the notary pool
+receives it within the specified time-window. This transaction would look as follows:
 
 .. image:: resources/full-tx.png
    :scale: 25%
@@ -184,3 +186,13 @@ In some cases, we want a transaction proposed to only be approved during a certa
 
 In such cases, we can add a *time-window* to the transaction. Time-windows specify the time window during which the
 transaction can be committed. We discuss time-windows in the section on :doc:`key-concepts-time-windows`.
+
+Notary
+^^^^^^
+A notary pool is a network service that provides uniqueness consensus by attesting that, for a given transaction,
+it has not already signed other transactions that consume any of the proposed transaction’s input states.
+The notary pool provides the point of finality in the system.
+
+Note that if the notary entity is absent then the transaction is not notarised at all. This is intended for
+issuance/genesis transactions that don't consume any other states and thus can't double spend anything.
+For more information on the notary services, see :doc:`key-concepts-notaries`.

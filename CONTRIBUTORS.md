@@ -59,6 +59,7 @@ see changes to this list.
 * Clay Ratliff (Thoughtworks)
 * Clemens Wan (R3)
 * Clinton Alexander (R3)
+* Clyde D'Cruz (Persistent Systems Limited)
 * cncorda
 * Credit Suisse
 * cyrsis
@@ -69,6 +70,7 @@ see changes to this list.
 * David Lee (BCS)
 * Dinesh Rivankar (Persistent Systems Limited)
 * Dirk Hermans (KBC)
+* dmytrobr
 * Edward Greenwood (State Street)
 * Elendu Uche (APPZONE)
 * Farzad Pezeshkpour (RBS)

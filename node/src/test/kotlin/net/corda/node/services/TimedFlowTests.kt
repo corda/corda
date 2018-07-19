@@ -198,7 +198,7 @@ class TimedFlowTests {
             val stx = requestPayload.signedTransaction
             subFlow(ResolveTransactionsFlow(stx, otherSideSession))
 
-            if (TimedFlowTests.requestsReceived.getAndIncrement() == 0) {
+            if (requestsReceived.getAndIncrement() == 0) {
                 logger.info("Ignoring")
                 // Waiting forever
                 stateMachine.suspend(FlowIORequest.WaitForLedgerCommit(SecureHash.randomSHA256()), false)

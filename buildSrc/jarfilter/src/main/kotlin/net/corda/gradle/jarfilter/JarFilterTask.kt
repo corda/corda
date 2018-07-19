@@ -138,7 +138,7 @@ open class JarFilterTask : DefaultTask() {
     }
 
     private inner class Filter(inFile: File) {
-        private val unwantedClasses: MutableSet<String> = mutableSetOf()
+        private val unwantedElements = UnwantedCache()
         private val source: Path = inFile.toPath()
         private val target: Path = toFiltered(inFile).toPath()
 
@@ -251,7 +251,7 @@ open class JarFilterTask : DefaultTask() {
                     removeAnnotations = descriptorsForRemove,
                     deleteAnnotations = descriptorsForDelete,
                     stubAnnotations = descriptorsForStub,
-                    unwantedClasses = unwantedClasses
+                    unwantedElements = unwantedElements
                 )
 
                 /*

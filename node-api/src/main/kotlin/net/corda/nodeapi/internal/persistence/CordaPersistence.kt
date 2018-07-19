@@ -80,6 +80,8 @@ class CordaPersistence(
         // Check not in read-only mode.
         transaction {
             check(!connection.metaData.isReadOnly) { "Database should not be readonly." }
+
+            checkCorrectAttachmentsContractsTableName(connection)
         }
     }
 
@@ -267,3 +269,18 @@ private fun Throwable.hasSQLExceptionCause(): Boolean =
         }
 
 class CouldNotCreateDataSourceException(override val message: String?, override val cause: Throwable? = null) : Exception()
+
+class IncompatibleAttachmentsContractsTableName(override val message: String?, override val cause: Throwable? = null) : Exception()
+
+private fun checkCorrectAttachmentsContractsTableName(connection: Connection) {
+    val correctName = "NODE_ATTACHMENTS_CONTRACTS"
+    val incorrectV30Name = "NODE_ATTACHMENTS_CONTRACT_CLASS_NAME"
+    val incorrectV31Name = "NODE_ATTCHMENTS_CONTRACTS"
+
+    fun warning(incorrectName: String, version: String) = "The database contains the older table name $incorrectName instead of $correctName, see upgrade notes to migrate from Corda database version $version https://docs.corda.net/head/upgrade-notes.html."
+
+    if (!connection.metaData.getTables(null, null, correctName, null).next()) {
+        if (connection.metaData.getTables(null, null, incorrectV30Name, null).next()) { throw IncompatibleAttachmentsContractsTableName(warning(incorrectV30Name, "3.0")) }
+        if (connection.metaData.getTables(null, null, incorrectV31Name, null).next()) { throw IncompatibleAttachmentsContractsTableName(warning(incorrectV31Name, "3.1")) }
+    }
+}
