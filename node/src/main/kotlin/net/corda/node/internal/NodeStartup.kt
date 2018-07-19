@@ -3,6 +3,8 @@ package net.corda.node.internal
 import com.jcabi.manifests.Manifests
 import io.netty.channel.unix.Errors
 import joptsimple.OptionException
+import joptsimple.OptionParser
+import joptsimple.util.PathConverter
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.createDirectories
@@ -22,6 +24,7 @@ import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.bridge.SLF4JBridgeHandler
 import sun.misc.VMSupport
+import java.io.File
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
@@ -36,6 +39,7 @@ open class NodeStartup(val args: Array<String>) {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         val LOGS_DIRECTORY_NAME = "logs"
         val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
+        private val INITIAL_REGISTRATION_MARKER = ".initialregistration"
     }
 
     /**
@@ -48,8 +52,8 @@ open class NodeStartup(val args: Array<String>) {
             println("Corda will now exit...")
             return false
         }
-        val (argsParser, cmdlineOptions) = parseArguments()
-
+        val registrationMode = checkRegistrationMode()
+        val (argsParser, cmdlineOptions) = parseArguments(registrationMode)
         // We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
         enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
@@ -103,6 +107,8 @@ open class NodeStartup(val args: Array<String>) {
             if (cmdlineOptions.nodeRegistrationConfig != null) {
                 // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
                 registerWithNetwork(conf, cmdlineOptions.nodeRegistrationConfig)
+                // At this point the node registration was succesfull. We can delete the marker file.
+                deleteNodeRegistrationMarker(cmdlineOptions.baseDirectory)
                 return true
             }
             logStartupInfo(versionInfo, cmdlineOptions, conf)
@@ -134,6 +140,49 @@ open class NodeStartup(val args: Array<String>) {
 
         logger.info("Node exiting successfully")
         return true
+    }
+
+    private fun checkRegistrationMode(): Boolean {
+        // Parse the command line args just to get the base directory. The base directory is needed to determine
+        // if the node registration marker file exists, _before_ we call NodeArgsParser.parse().
+        // If it does exist, we call NodeArgsParser with `--initial-registration` added to the argument list. This way
+        // we make sure that the initial registration is completed, even if the node was restarted before the first
+        // attempt to register succeeded and the node administrator forgets to specify `--initial-registration` upon
+        // restart.
+        val optionParser = OptionParser()
+        optionParser.allowsUnrecognizedOptions()
+        val baseDirectoryArg = optionParser
+                .accepts("base-directory", "The node working directory where all the files are kept")
+                .withRequiredArg()
+                .withValuesConvertedBy(PathConverter())
+                .defaultsTo(Paths.get("."))
+        val isRegistrationArg =
+                optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
+        val optionSet = optionParser.parse(*args)
+        val baseDirectory = optionSet.valueOf(baseDirectoryArg).normalize().toAbsolutePath()
+        // If the node was started with `--initial-registration`, create marker file.
+        // We do this here to ensure the marker is created even if parsing the args with NodeArgsParser fails.
+        val marker = File((baseDirectory / INITIAL_REGISTRATION_MARKER).toUri())
+        if (!optionSet.has(isRegistrationArg) && !marker.exists()) {
+            return false
+        }
+        try {
+            marker.createNewFile()
+        } catch (e: Exception) {
+            logger.warn("Could not create marker file for `--initial-registration`.", e)
+        }
+        return true
+    }
+
+    private fun deleteNodeRegistrationMarker(baseDir: Path) {
+        try {
+            val marker = File((baseDir / INITIAL_REGISTRATION_MARKER).toUri())
+            if (marker.exists()) {
+                marker.delete()
+            }
+        } catch (e: Exception) {
+            logger.warn("Could not delete the marker file that was created for `--initial-registration`.", e)
+        }
     }
 
     open protected fun preNetworkRegistration(conf: NodeConfiguration) = Unit
@@ -247,16 +296,25 @@ open class NodeStartup(val args: Array<String>) {
         pidFileRw.write(ourProcessID.toByteArray())
     }
 
-    private fun parseArguments(): Pair<ArgsParser, CmdLineOptions> {
+    private fun parseArguments(registrationMode: Boolean): Pair<ArgsParser, CmdLineOptions> {
         val argsParser = ArgsParser()
-        val cmdlineOptions = try {
-            argsParser.parse(*args)
+        val cmdLineOptions = try {
+            if (registrationMode && !args.contains("--initial-registration")) {
+                "Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.".let {
+                    println(it)
+                    logger.info(it)
+                }
+                // Pretend that the node was started with `--initial-registration` to help prevent user error.
+                argsParser.parse(*args.plus("--initial-registration"))
+            } else {
+                argsParser.parse(*args)
+            }
         } catch (ex: OptionException) {
             println("Invalid command line arguments: ${ex.message}")
             argsParser.printHelp(System.out)
             exitProcess(1)
         }
-        return Pair(argsParser, cmdlineOptions)
+        return Pair(argsParser, cmdLineOptions)
     }
 
     open protected fun initLogging(cmdlineOptions: CmdLineOptions) {
