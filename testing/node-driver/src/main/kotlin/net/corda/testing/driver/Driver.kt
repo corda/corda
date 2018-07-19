@@ -143,7 +143,7 @@ data class NodeParameters(
         val startInSameProcess: Boolean? = null,
         val maximumHeapSize: String = "512m",
         val logLevel: String? = null,
-        // TODO sollecitom revisit for API compatibility
+        // TODO sollecitom document
         val additionalCorDapps: Set<TestCorDapp> = emptySet(),
         val deleteExistingCordappsDirectory: Boolean = false
 ) {
@@ -154,7 +154,26 @@ data class NodeParameters(
             customOverrides: Map<String, Any?>,
             startInSameProcess: Boolean?,
             maximumHeapSize: String,
-            additionalCorDapps: Set<TestCorDapp> = emptySet()
+            logLevel: String? = null
+    ) : this(
+            providedName,
+            rpcUsers,
+            verifierType,
+            customOverrides,
+            startInSameProcess,
+            maximumHeapSize,
+            logLevel,
+            additionalCorDapps = emptySet(),
+            deleteExistingCordappsDirectory = false
+    )
+
+    constructor(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String
     ) : this(
             providedName,
             rpcUsers,
@@ -163,7 +182,28 @@ data class NodeParameters(
             startInSameProcess,
             maximumHeapSize,
             null,
-            additionalCorDapps)
+            additionalCorDapps = emptySet(),
+            deleteExistingCordappsDirectory = false)
+
+    constructor(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            additionalCorDapps: Set<TestCorDapp> = emptySet(),
+            deleteExistingCordappsDirectory: Boolean = false
+    ) : this(
+            providedName,
+            rpcUsers,
+            verifierType,
+            customOverrides,
+            startInSameProcess,
+            maximumHeapSize,
+            null,
+            additionalCorDapps,
+            deleteExistingCordappsDirectory)
 
     fun copy(
             providedName: CordaX500Name?,
@@ -181,6 +221,25 @@ data class NodeParameters(
             maximumHeapSize,
             null)
 
+    fun copy(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            logLevel: String?
+    ) = this.copy(
+            providedName,
+            rpcUsers,
+            verifierType,
+            customOverrides,
+            startInSameProcess,
+            maximumHeapSize,
+            logLevel,
+            additionalCorDapps = additionalCorDapps,
+            deleteExistingCordappsDirectory = deleteExistingCordappsDirectory)
+
     fun withProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
     fun withRpcUsers(rpcUsers: List<User>): NodeParameters = copy(rpcUsers = rpcUsers)
     fun withVerifierType(verifierType: VerifierType): NodeParameters = copy(verifierType = verifierType)
@@ -188,6 +247,8 @@ data class NodeParameters(
     fun withStartInSameProcess(startInSameProcess: Boolean?): NodeParameters = copy(startInSameProcess = startInSameProcess)
     fun withMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
     fun withLogLevel(logLevel: String?): NodeParameters = copy(logLevel = logLevel)
+    fun withAdditionalCorDapps(additionalCorDapps: Set<TestCorDapp>): NodeParameters = copy(additionalCorDapps = additionalCorDapps)
+    fun withDeleteExistingCordappsDirectory(deleteExistingCordappsDirectory: Boolean): NodeParameters = copy(deleteExistingCordappsDirectory = deleteExistingCordappsDirectory)
 }
 
 /**
