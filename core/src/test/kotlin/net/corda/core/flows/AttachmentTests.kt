@@ -5,8 +5,8 @@ import com.natpryce.hamkrest.*
 import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.matchers.fails
-import net.corda.core.flows.matchers.succeedsWith
+import net.corda.core.flows.matchers.flow.willThrow
+import net.corda.core.flows.matchers.flow.willReturn
 import net.corda.core.flows.mixins.WithMockNet
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -51,7 +51,7 @@ class AttachmentTests : WithMockNet {
         // Get node one to run a flow to fetch it and insert it.
         assert.that(
             bobNode.startAttachmentFlow(id, alice),
-            succeedsWith(noAttachments()))
+                willReturn(noAttachments()))
 
         // Verify it was inserted into node one's store.
         val attachment = bobNode.getAttachmentWithId(id)
@@ -62,7 +62,7 @@ class AttachmentTests : WithMockNet {
 
         assert.that(
             bobNode.startAttachmentFlow(id, alice),
-            succeedsWith(soleAttachment(attachment)))
+                willReturn(soleAttachment(attachment)))
     }
 
     @Test
@@ -72,9 +72,13 @@ class AttachmentTests : WithMockNet {
         // Get node one to fetch a non-existent attachment.
         assert.that(
             bobNode.startAttachmentFlow(hash, alice),
-            fails<FetchDataFlow.HashNotFound>(
-                has("requested hash", { it.requested }, equalTo(hash))))
+                willThrow(withRequestedHash(hash)))
     }
+
+    fun withRequestedHash(expected: SecureHash) = has(
+            "requested hash",
+            FetchDataFlow.HashNotFound::requested,
+            equalTo(expected))
 
     @Test
     fun maliciousResponse() {
@@ -96,7 +100,7 @@ class AttachmentTests : WithMockNet {
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
         assert.that(
             bobNode.startAttachmentFlow(id, badAlice),
-            fails<FetchDataFlow.DownloadedVsRequestedDataMismatch>()
+                willThrow<FetchDataFlow.DownloadedVsRequestedDataMismatch>()
         )
     }
 

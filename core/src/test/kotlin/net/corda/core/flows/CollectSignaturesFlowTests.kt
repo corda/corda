@@ -5,8 +5,8 @@ import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.requireThat
-import net.corda.core.flows.matchers.fails
-import net.corda.core.flows.matchers.succeedsWith
+import net.corda.core.flows.matchers.flow.willThrow
+import net.corda.core.flows.matchers.flow.willReturn
 import net.corda.core.flows.mixins.WithContracts
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -28,6 +28,7 @@ class CollectSignaturesFlowTests : WithContracts {
         private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
         private val miniCorpServices = MockServices(listOf("net.corda.testing.contracts"), miniCorp, rigorousMock())
         private val classMockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.core.flows"))
+
         private const val MAGIC_NUMBER = 1337
 
         @JvmStatic
@@ -35,7 +36,6 @@ class CollectSignaturesFlowTests : WithContracts {
         fun tearDown() = classMockNet.stopNodes()
     }
 
-    override val magicNumber = MAGIC_NUMBER
     override val mockNet = classMockNet
 
     private val aliceNode = makeNode(ALICE_NAME)
@@ -53,7 +53,7 @@ class CollectSignaturesFlowTests : WithContracts {
 
         assert.that(
             aliceNode.startTestFlow(alice, bConfidentialIdentity.party, charlie),
-            succeedsWith(requiredSignatures(3))
+                willReturn(requiredSignatures(3))
         )
     }
 
@@ -63,7 +63,7 @@ class CollectSignaturesFlowTests : WithContracts {
 
         assert.that(
                 aliceNode.collectSignatures(ptx),
-                succeedsWith(requiredSignatures(1))
+                willReturn(requiredSignatures(1))
         )
     }
 
@@ -73,20 +73,21 @@ class CollectSignaturesFlowTests : WithContracts {
 
         assert.that(
                 aliceNode.collectSignatures(ptx),
-                fails(errorMessage("The Initiator of CollectSignaturesFlow must have signed the transaction.")))
+                willThrow(errorMessage("The Initiator of CollectSignaturesFlow must have signed the transaction.")))
     }
 
     @Test
     fun `passes with multiple initial signatures`() {
         val signedByA = aliceNode.signDummyContract(
                 alice.ref(1),
+                MAGIC_NUMBER,
                 bob.ref(2),
                 bob.ref(3))
         val signedByBoth = bobNode.addSignatureTo(signedByA)
 
         assert.that(
                 aliceNode.collectSignatures(signedByBoth),
-                succeedsWith(requiredSignatures(2))
+                willReturn(requiredSignatures(2))
         )
     }
 
@@ -94,7 +95,7 @@ class CollectSignaturesFlowTests : WithContracts {
     private fun StartedNode<*>.startTestFlow(vararg party: Party) =
             startFlow(
                 TestFlow.Initiator(DummyContract.MultiOwnerState(
-                    magicNumber,
+                    MAGIC_NUMBER,
                     listOf(*party)),
                     mockNet.defaultNotaryIdentity))
             .andRunNetwork()

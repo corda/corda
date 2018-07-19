@@ -21,10 +21,8 @@ import kotlin.reflect.KClass
  */
 interface WithContracts : WithMockNet {
 
-    val magicNumber: Int
-
     //region Generators
-    fun createDummyContract(owner: PartyAndReference, vararg others: PartyAndReference) =
+    fun createDummyContract(owner: PartyAndReference, magicNumber: Int = 0, vararg others: PartyAndReference) =
             DummyContract.generateInitial(
                     magicNumber,
                     mockNet.defaultNotaryIdentity,
@@ -33,21 +31,11 @@ interface WithContracts : WithMockNet {
     //region
 
     //region Operations
-    fun StartedNode<*>.createConfidentialIdentity(party: Party) = database.transaction {
-        services.keyManagementService.freshKeyAndCert(
-                services.myInfo.legalIdentitiesAndCerts.single { it.name == party.name },
-                false)
-    }
+    fun StartedNode<*>.signDummyContract(owner: PartyAndReference, magicNumber: Int = 0, vararg others: PartyAndReference) =
+            services.signDummyContract(owner, magicNumber, *others).andRunNetwork()
 
-    fun StartedNode<*>.verifyAndRegister(identity: PartyAndCertificate) = database.transaction {
-        services.identityService.verifyAndRegisterIdentity(identity)
-    }
-
-    fun StartedNode<*>.signDummyContract(owner: PartyAndReference, vararg others: PartyAndReference) =
-            services.signDummyContract(owner, *others).andRunNetwork()
-
-    fun ServiceHub.signDummyContract(owner: PartyAndReference, vararg others: PartyAndReference) =
-            signInitialTransaction(createDummyContract(owner, *others))
+    fun ServiceHub.signDummyContract(owner: PartyAndReference, magicNumber: Int = 0, vararg others: PartyAndReference) =
+            signInitialTransaction(createDummyContract(owner, magicNumber, *others))
 
     fun StartedNode<*>.collectSignatures(ptx: SignedTransaction) =
             startFlowAndRunNetwork(CollectSignaturesFlow(ptx, emptySet()))

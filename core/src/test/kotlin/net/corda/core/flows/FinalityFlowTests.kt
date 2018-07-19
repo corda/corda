@@ -2,8 +2,8 @@ package net.corda.core.flows
 
 import com.natpryce.hamkrest.and
 import com.natpryce.hamkrest.assertion.assert
-import net.corda.core.flows.matchers.fails
-import net.corda.core.flows.matchers.succeedsWith
+import net.corda.core.flows.matchers.flow.willThrow
+import net.corda.core.flows.matchers.flow.willReturn
 import net.corda.core.flows.mixins.WithFinality
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
@@ -42,9 +42,9 @@ class FinalityFlowTests : WithFinality {
 
         assert.that(
             aliceNode.finalise(stx),
-            succeedsWith(
-                requiredSignatures(1)
-                and transactionVisibleTo(bobNode)))
+                willReturn(
+                        requiredSignatures(1)
+                                and transactionVisibleTo(bobNode)))
     }
 
     @Test
@@ -54,7 +54,7 @@ class FinalityFlowTests : WithFinality {
 
         assert.that(
             aliceNode.finalise(stx),
-            fails<IllegalArgumentException>())
+                willThrow<IllegalArgumentException>())
     }
 
     private fun StartedNode<*>.signCashTransactionWith(other: Party): SignedTransaction {

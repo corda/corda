@@ -4,6 +4,8 @@ import com.natpryce.hamkrest.*
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -33,10 +35,7 @@ interface WithMockNet {
     /**
      * Run the mock network before proceeding
      */
-    fun <T: Any> T.andRunNetwork(): T {
-        mockNet.runNetwork()
-        return this
-    }
+    fun <T: Any> T.andRunNetwork(): T = apply { mockNet.runNetwork() }
 
     //region Operations
     /**
@@ -62,6 +61,16 @@ interface WithMockNet {
      */
     fun <T> StartedNode<*>.startFlowAndRunNetwork(logic: FlowLogic<T>): FlowStateMachine<T> =
             startFlow(logic).andRunNetwork()
+
+    fun StartedNode<*>.createConfidentialIdentity(party: Party) = database.transaction {
+        services.keyManagementService.freshKeyAndCert(
+                services.myInfo.legalIdentitiesAndCerts.single { it.name == party.name },
+                false)
+    }
+
+    fun StartedNode<*>.verifyAndRegister(identity: PartyAndCertificate) = database.transaction {
+        services.identityService.verifyAndRegisterIdentity(identity)
+    }
     //endregion
 
     //region Matchers

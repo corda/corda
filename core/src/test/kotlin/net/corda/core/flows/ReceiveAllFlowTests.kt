@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.assertion.assert
 import com.natpryce.hamkrest.equalTo
 import com.natpryce.hamkrest.isA
-import net.corda.core.flows.matchers.succeedsWith
+import net.corda.core.flows.matchers.flow.willReturn
 import net.corda.core.flows.mixins.WithMockNet
 import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
@@ -60,7 +60,7 @@ class ReceiveMultipleFlowTests : WithMockNet {
 
         assert.that(
                 nodes[0].startFlowAndRunNetwork(initiatingFlow),
-                succeedsWith(isA(equalTo(answer))))
+                willReturn(isA(equalTo(answer))))
     }
 
     @Test
@@ -72,7 +72,7 @@ class ReceiveMultipleFlowTests : WithMockNet {
 
         assert.that(
                 nodes[0].startFlowAndRunNetwork(ParallelAlgorithmMap(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity())),
-                succeedsWith(equalTo(doubleValue * stringValue.length)))
+                willReturn(equalTo(doubleValue * stringValue.length)))
     }
 
     @Test
@@ -84,7 +84,7 @@ class ReceiveMultipleFlowTests : WithMockNet {
 
         assert.that(
                 nodes[0].startFlowAndRunNetwork(ParallelAlgorithmList(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity())),
-                succeedsWith(equalTo(listOf(value1, value2))))
+                willReturn(equalTo(listOf(value1, value2))))
     }
 
     class ParallelAlgorithmMap(doubleMember: Party, stringMember: Party) : AlgorithmDefinition(doubleMember, stringMember) {

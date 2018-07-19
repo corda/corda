@@ -3,9 +3,9 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.*
 import com.natpryce.hamkrest.assertion.assert
-import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.*
-import net.corda.core.flows.matchers.*
+import net.corda.core.flows.matchers.flow.willThrow
+import net.corda.core.flows.matchers.flow.willReturn
 import net.corda.core.flows.mixins.WithContracts
 import net.corda.core.flows.mixins.WithFinality
 import net.corda.core.identity.AbstractParty
@@ -48,7 +48,6 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
     }
 
     override val mockNet = classMockNet
-    override val magicNumber = 0
 
     private val aliceNode = makeNode(ALICE_NAME)
     private val bobNode = makeNode(BOB_NAME)
@@ -60,7 +59,7 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
     @Test
     fun `2 parties contract upgrade`() {
         // Create dummy contract.
-        val signedByA = aliceNode.signDummyContract(alice.ref(1), bob.ref(1))
+        val signedByA = aliceNode.signDummyContract(alice.ref(1),0, bob.ref(1))
         val stx = bobNode.addSignatureTo(signedByA)
 
         aliceNode.finalise(stx, bob)
@@ -71,63 +70,24 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
         // The request is expected to be rejected because party B hasn't authorised the upgrade yet.
         assert.that(
             aliceNode.initiateDummyContractUpgrade(atx),
-            fails<UnexpectedFlowEndException>())
+                willThrow<UnexpectedFlowEndException>())
 
         // Party B authorise the contract state upgrade, and immediately deauthorise the same.
-        assert.that(bobNode.authoriseDummyContractUpgrade(btx), succeeds())
-        assert.that(bobNode.deauthoriseContractUpgrade(btx), succeeds())
+        assert.that(bobNode.authoriseDummyContractUpgrade(btx), willReturn())
+        assert.that(bobNode.deauthoriseContractUpgrade(btx), willReturn())
 
         // The request is expected to be rejected because party B has subsequently deauthorised a previously authorised upgrade.
         assert.that(
             aliceNode.initiateDummyContractUpgrade(atx),
-            fails<UnexpectedFlowEndException>())
+                willThrow<UnexpectedFlowEndException>())
 
         // Party B authorise the contract state upgrade
-        assert.that(bobNode.authoriseDummyContractUpgrade(btx), succeeds())
+        assert.that(bobNode.authoriseDummyContractUpgrade(btx), willReturn())
 
         // Party A initiates contract upgrade flow, expected to succeed this time.
         assert.that(
             aliceNode.initiateDummyContractUpgrade(atx),
-            succeedsWith(
-                aliceNode.hasDummyContractUpgradeTransaction()
-                and bobNode.hasDummyContractUpgradeTransaction()))
-    }
-
-    @Test
-    fun `2 parties contract upgrade using RPC`() = rpcDriver {
-        val testUser = createTestUser()
-        val rpcA = startProxy(aliceNode, testUser)
-        val rpcB = startProxy(bobNode, testUser)
-
-        // Create, sign and finalise dummy contract.
-        val signedByA = aliceNode.signDummyContract(alice.ref(1), bob.ref(1))
-        val stx = bobNode.addSignatureTo(signedByA)
-        assert.that(rpcA.finalise(stx, bob), rpcSucceeds())
-
-        val atx = aliceNode.getValidatedTransaction(stx)
-        val btx = bobNode.getValidatedTransaction(stx)
-
-        // Cannot upgrade contract without prior authorisation from counterparty
-        assert.that(
-                rpcA.initiateDummyContractUpgrade(atx),
-                rpcFails<CordaRuntimeException>())
-
-        // Party B authorises the contract state upgrade, and immediately deauthorises the same.
-        assert.that(rpcB.authoriseDummyContractUpgrade(btx), rpcSucceeds())
-        assert.that(rpcB.deauthoriseContractUpgrade(btx), rpcSucceeds())
-
-        // Cannot upgrade contract if counterparty has deauthorised a previously-given authority
-        assert.that(
-                rpcA.initiateDummyContractUpgrade(atx),
-                rpcFails<CordaRuntimeException>())
-
-        // Party B authorise the contract state upgrade.
-        assert.that(rpcB.authoriseDummyContractUpgrade(btx), rpcSucceeds())
-
-        // Party A initiates contract upgrade flow, expected to succeed this time.
-        assert.that(
-            rpcA.initiateDummyContractUpgrade(atx),
-            rpcSucceedsWith(
+            willReturn(
                 aliceNode.hasDummyContractUpgradeTransaction()
                 and bobNode.hasDummyContractUpgradeTransaction()))
     }
@@ -164,7 +124,7 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
         assert.that(aliceNode.getBaseStateFromVault(), hasContractState(isA<Cash.State>(anything)))
 
         // Starts contract upgrade flow.
-        assert.that(aliceNode.initiateContractUpgrade(stateAndRef, CashV2::class), succeeds())
+        assert.that(aliceNode.initiateContractUpgrade(stateAndRef, CashV2::class), willReturn())
 
         // Get contract state from the vault.
         val upgradedState = aliceNode.getCashStateFromVault()
@@ -182,7 +142,7 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
             addCommand(CashV2.Move(), alice.owningKey)
         }
 
-        assert.that(aliceNode.finalise(spendUpgradedTx), succeeds())
+        assert.that(aliceNode.finalise(spendUpgradedTx), willReturn())
         assert.that(aliceNode.getCashStateFromVault(), hasContractState(equalTo(movedState)))
     }
 
@@ -208,44 +168,11 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
         override fun verify(tx: LedgerTransaction) {}
     }
 
-    @StartableByRPC
-    class FinalityInvoker(private val transaction: SignedTransaction,
-                          private val extraRecipients: Set<Party>) : FlowLogic<SignedTransaction>() {
-        @Suspendable
-        override fun call(): SignedTransaction = subFlow(FinalityFlow(transaction, extraRecipients))
-    }
-
-    //region RPC DSL
-    private fun RPCDriverDSL.startProxy(node: StartedNode<MockNode>, user: User): CordaRPCOps {
-        return startRpcClient<CordaRPCOps>(
-                rpcAddress = startRpcServer(
-                        rpcUser = user,
-                        ops = node.rpcOps
-                ).get().broker.hostAndPort!!,
-                username = user.username,
-                password = user.password
-        ).get()
-    }
-
-    private fun RPCDriverDSL.createTestUser() = rpcTestUser.copy(permissions = setOf(
-            startFlow<FinalityInvoker>(),
-            startFlow<ContractUpgradeFlow.Initiate<*, *>>(),
-            startFlow<ContractUpgradeFlow.Authorise>(),
-            startFlow<ContractUpgradeFlow.Deauthorise>()
-    ))
-    //endregion
-
     //region Operations
     private fun StartedNode<*>.initiateDummyContractUpgrade(tx: SignedTransaction) =
             initiateContractUpgrade(tx, DummyContractV2::class)
 
     private fun StartedNode<*>.authoriseDummyContractUpgrade(tx: SignedTransaction) =
-            authoriseContractUpgrade(tx, DummyContractV2::class)
-
-    private fun CordaRPCOps.initiateDummyContractUpgrade(tx: SignedTransaction) =
-            initiateContractUpgrade(tx, DummyContractV2::class)
-
-    private fun CordaRPCOps.authoriseDummyContractUpgrade(tx: SignedTransaction) =
             authoriseContractUpgrade(tx, DummyContractV2::class)
     //endregion
 
