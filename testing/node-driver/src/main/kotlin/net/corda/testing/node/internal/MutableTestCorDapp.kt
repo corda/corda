@@ -15,18 +15,17 @@ internal class MutableTestCorDapp private constructor(override val name: String,
         private const val jarExtension = ".jar"
         private const val whitespace = " "
         private const val whitespaceReplacement = "_"
-        // TODO sollecitom check for Gradle and add to `productionPathSegments` // "main/${info.clazz.packageName.packageToPath()}"
-        private val productionPathSegments = setOf("out${File.separator}production${File.separator}classes")
+        private val productionPathSegments = setOf<(String) -> String>({ "out${File.separator}production${File.separator}classes" }, { fullyQualifiedName -> "main/${fullyQualifiedName.packageToPath()}" })
         private val excludedCordaPackages = setOf("net.corda.core", "net.corda.node")
 
         fun filterTestCorDappClass(fullyQualifiedName: String, url: URL): Boolean {
 
-            return isTestResource(url) || !isInExcludedCordaPackage(fullyQualifiedName)
+            return isTestResource(fullyQualifiedName, url) || !isInExcludedCordaPackage(fullyQualifiedName)
         }
 
-        private fun isTestResource(url: URL): Boolean {
+        private fun isTestResource(fullyQualifiedName: String, url: URL): Boolean {
 
-            return productionPathSegments.none { url.toString().contains(it) }
+            return productionPathSegments.map { it.invoke(fullyQualifiedName) }.none { url.toString().contains(it) }
         }
 
         private fun isInExcludedCordaPackage(packageName: String): Boolean {

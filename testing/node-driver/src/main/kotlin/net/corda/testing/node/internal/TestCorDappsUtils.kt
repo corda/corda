@@ -83,7 +83,7 @@ private fun simplifyScanPackages(scanPackages: Iterable<String>): List<String> {
     }
 }
 
-private fun String.packageToPath() = replace(".", File.separator)
+internal fun String.packageToPath() = replace(".", File.separator)
 
 private fun Iterable<JarEntryInfo>.zip(outputStream: ZipOutputStream, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean): Boolean {
 
