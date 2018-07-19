@@ -1,22 +1,20 @@
 package net.corda.core.flows
 
-import co.paralleluniverse.fibers.Suspendable
-import com.natpryce.hamkrest.*
+import com.natpryce.hamkrest.and
+import com.natpryce.hamkrest.anything
 import com.natpryce.hamkrest.assertion.assert
+import com.natpryce.hamkrest.has
+import com.natpryce.hamkrest.isA
 import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.*
-import net.corda.core.flows.matchers.rpc.willThrow
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.matchers.rpc.willReturn
+import net.corda.core.flows.matchers.rpc.willThrow
 import net.corda.core.flows.mixins.WithContracts
 import net.corda.core.flows.mixins.WithFinality
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.Party
-import net.corda.core.internal.Emoji
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
-import net.corda.finance.contracts.asset.Cash
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.contracts.DummyContract
@@ -127,10 +125,9 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
             { getContractUpgradeTransaction(it) },
             isUpgrade<FROM, TO>())
 
-    private fun StartedNode<*>.getContractUpgradeTransaction(state: StateAndRef<ContractState>) = database.transaction {
+    private fun StartedNode<*>.getContractUpgradeTransaction(state: StateAndRef<ContractState>) =
         services.validatedTransactions.getTransaction(state.ref.txhash)!!
                 .resolveContractUpgradeTransaction(services)
-    }
 
     private inline fun <reified FROM : Any, reified TO : Any> isUpgrade() =
             isUpgradeFrom<FROM>() and isUpgradeTo<TO>()

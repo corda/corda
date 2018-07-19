@@ -1,17 +1,14 @@
 package net.corda.core.flows
 
-import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.*
 import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.contracts.*
-import net.corda.core.flows.matchers.flow.willThrow
 import net.corda.core.flows.matchers.flow.willReturn
+import net.corda.core.flows.matchers.flow.willThrow
 import net.corda.core.flows.mixins.WithContracts
 import net.corda.core.flows.mixins.WithFinality
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -22,15 +19,13 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.User
-import net.corda.testing.node.internal.*
-import net.corda.testing.node.internal.InternalMockNetwork.MockNode
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.startFlow
 import org.junit.AfterClass
 import org.junit.Test
 import java.util.*
@@ -186,10 +181,9 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
             { getContractUpgradeTransaction(it) },
             isUpgrade<FROM, TO>())
 
-    private fun StartedNode<*>.getContractUpgradeTransaction(state: StateAndRef<ContractState>) = database.transaction {
+    private fun StartedNode<*>.getContractUpgradeTransaction(state: StateAndRef<ContractState>) =
         services.validatedTransactions.getTransaction(state.ref.txhash)!!
                 .resolveContractUpgradeTransaction(services)
-    }
 
     private inline fun <reified FROM : Any, reified TO : Any> isUpgrade() =
             isUpgradeFrom<FROM>() and isUpgradeTo<TO>()

@@ -5,8 +5,8 @@ import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.requireThat
-import net.corda.core.flows.matchers.flow.willThrow
 import net.corda.core.flows.matchers.flow.willReturn
+import net.corda.core.flows.matchers.flow.willThrow
 import net.corda.core.flows.mixins.WithContracts
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -93,12 +93,11 @@ class CollectSignaturesFlowTests : WithContracts {
 
     //region Operators
     private fun StartedNode<*>.startTestFlow(vararg party: Party) =
-            startFlow(
+            startFlowAndRunNetwork(
                 TestFlow.Initiator(DummyContract.MultiOwnerState(
                     MAGIC_NUMBER,
                     listOf(*party)),
                     mockNet.defaultNotaryIdentity))
-            .andRunNetwork()
 
     //region Test Flow
     // With this flow, the initiator starts the "CollectTransactionFlow". It is then the responders responsibility to

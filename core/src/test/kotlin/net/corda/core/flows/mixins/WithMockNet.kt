@@ -47,9 +47,8 @@ interface WithMockNet {
     /**
      * Retrieve the sole instance of a state of a particular class from the node's vault
      */
-    fun <S: ContractState> StartedNode<*>.getStateFromVault(stateClass: KClass<S>) = database.transaction {
+    fun <S: ContractState> StartedNode<*>.getStateFromVault(stateClass: KClass<S>) =
         services.vaultService.queryBy(stateClass.java).states.single()
-    }
 
     /**
      * Start a flow
@@ -62,15 +61,14 @@ interface WithMockNet {
     fun <T> StartedNode<*>.startFlowAndRunNetwork(logic: FlowLogic<T>): FlowStateMachine<T> =
             startFlow(logic).andRunNetwork()
 
-    fun StartedNode<*>.createConfidentialIdentity(party: Party) = database.transaction {
+    fun StartedNode<*>.createConfidentialIdentity(party: Party) =
         services.keyManagementService.freshKeyAndCert(
                 services.myInfo.legalIdentitiesAndCerts.single { it.name == party.name },
                 false)
-    }
 
-    fun StartedNode<*>.verifyAndRegister(identity: PartyAndCertificate) = database.transaction {
+    fun StartedNode<*>.verifyAndRegister(identity: PartyAndCertificate) =
         services.identityService.verifyAndRegisterIdentity(identity)
-    }
+
     //endregion
 
     //region Matchers

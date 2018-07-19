@@ -3,7 +3,6 @@ package net.corda.core.flows.mixins
 import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.Matcher
 import com.natpryce.hamkrest.equalTo
-import net.corda.core.flows.ContractUpgradeFlowTest
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
@@ -20,9 +19,8 @@ interface WithFinality : WithMockNet {
     fun StartedNode<*>.finalise(stx: SignedTransaction, vararg additionalParties: Party) =
         startFlowAndRunNetwork(FinalityFlow(stx, additionalParties.toSet()))
 
-    fun StartedNode<*>.getValidatedTransaction(stx: SignedTransaction) = database.transaction {
+    fun StartedNode<*>.getValidatedTransaction(stx: SignedTransaction) =
         services.validatedTransactions.getTransaction(stx.id)!!
-    }
 
     fun CordaRPCOps.finalise(stx: SignedTransaction, vararg parties: Party) =
         startFlow(::FinalityInvoker, stx, parties.toSet())

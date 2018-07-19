@@ -6,8 +6,6 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
 import net.corda.core.flows.CollectSignaturesFlow
 import net.corda.core.flows.ContractUpgradeFlow
-import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.ServiceHub

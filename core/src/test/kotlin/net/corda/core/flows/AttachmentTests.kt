@@ -5,8 +5,8 @@ import com.natpryce.hamkrest.*
 import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.matchers.flow.willThrow
 import net.corda.core.flows.matchers.flow.willReturn
+import net.corda.core.flows.matchers.flow.willThrow
 import net.corda.core.flows.mixins.WithMockNet
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -20,7 +20,6 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.startFlow
 import org.junit.AfterClass
 import org.junit.Test
 import java.io.ByteArrayOutputStream
@@ -149,19 +148,19 @@ class AttachmentTests : WithMockNet {
     //endregion
 
     //region Operations
-    private fun StartedNode<*>.importAttachment(attachment: ByteArray) = database.transaction {
+    private fun StartedNode<*>.importAttachment(attachment: ByteArray) =
         attachments.importAttachment(attachment.inputStream(), "test", null)
-    }.andRunNetwork()
+            .andRunNetwork()
 
-    private fun StartedNode<*>.updateAttachment(attachment:  NodeAttachmentService.DBAttachment) =
-            database.transaction { session.update(attachment) }.andRunNetwork()
-
-    private fun StartedNode<*>.startAttachmentFlow(hash: SecureHash, otherSide: Party) = services.startFlow(
-            InitiatingFetchAttachmentsFlow(otherSide, setOf(hash))).andRunNetwork()
-
-    private fun StartedNode<*>.getAttachmentWithId(id: SecureHash) = database.transaction {
-        attachments.openAttachment(id)!!
+    private fun StartedNode<*>.updateAttachment(attachment:  NodeAttachmentService.DBAttachment) = database.transaction {
+        session.update(attachment).andRunNetwork()
     }
+
+    private fun StartedNode<*>.startAttachmentFlow(hash: SecureHash, otherSide: Party) = startFlowAndRunNetwork(
+            InitiatingFetchAttachmentsFlow(otherSide, setOf(hash)))
+
+    private fun StartedNode<*>.getAttachmentWithId(id: SecureHash) =
+        attachments.openAttachment(id)!!
     //endregion
 
     //region Matchers
