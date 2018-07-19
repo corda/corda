@@ -20,11 +20,11 @@ import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import net.corda.testing.node.internal.startFlow
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.*
 import org.junit.After
 import org.junit.Test
 import java.nio.file.Path
+import java.time.Instant
 import kotlin.test.assertFails
 
 class NetworkParametersTest {
@@ -72,6 +72,19 @@ class NetworkParametersTest {
         assertFails {
             alice.services.startFlow(CashIssueFlow(500.DOLLARS, OpaqueBytes.of(0x01), fakeNotaryId)).resultFuture.getOrThrow()
         }
+    }
+
+    @Test
+    fun `maxTransactionSize must be bigger than maxMesssageSize`() {
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
+            NetworkParameters(1,
+                    emptyList(),
+                    2000,
+                    2001,
+                    Instant.now(),
+                    1,
+                    emptyMap())
+        }.withMessage("maxTransactionSize cannot be bigger than maxMessageSize")
     }
 
     // Helpers

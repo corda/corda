@@ -66,6 +66,8 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
 
     private fun logInfoWithMDC(msg: String) = withMDC { log.info(msg) }
 
+    private fun logWarnWithMDC(msg: String, ex: Throwable? = null) = withMDC { log.warn(msg, ex) }
+
     private fun logErrorWithMDC(msg: String, ex: Throwable? = null) = withMDC { log.error(msg, ex) }
 
     val connection: Connection
@@ -305,6 +307,16 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
             if (link.remoteTarget is Coordinator) {
                 logDebugWithMDC { "Coordinator link received" }
             }
+        }
+    }
+
+    override fun onLinkRemoteClose(e: Event) {
+        val link = e.link
+        if(link.remoteCondition != null) {
+            logWarnWithMDC("Connection closed due to error on remote side: `${link.remoteCondition.description}`")
+            transport.condition = link.condition
+            transport.close_tail()
+            transport.pop(Math.max(0, transport.pending())) // Force generation of TRANSPORT_HEAD_CLOSE (not in C code)
         }
     }
 
