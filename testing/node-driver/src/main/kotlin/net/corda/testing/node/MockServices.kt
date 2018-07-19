@@ -65,7 +65,7 @@ fun makeTestIdentityService(vararg identities: PartyAndCertificate) = InMemoryId
  * must have at least an identity of its own. The other components have defaults that work in most situations.
  */
 open class MockServices private constructor(
-        cordappLoader: CordappLoader,
+        private val cordappLoader: CordappLoader,
         override val validatedTransactions: TransactionStorage,
         override val identityService: IdentityService,
         final override val networkParameters: NetworkParameters,
@@ -185,7 +185,7 @@ open class MockServices private constructor(
                 vararg moreKeys: KeyPair) :
             this(cordappLoaderForPackages(cordappPackages), identityService, testNetworkParameters(), initialIdentity, moreKeys) {
 
-        cordappPackages.forEach { addMockCordapp(it) }
+        cordappLoader.cordapps.flatMap { it.contractClassNames }.forEach { addMockCordapp(it) }
     }
 
     constructor(cordappPackages: Iterable<String>,
@@ -195,7 +195,7 @@ open class MockServices private constructor(
                 vararg moreKeys: KeyPair) :
             this(cordappLoaderForPackages(cordappPackages), identityService, networkParameters, initialIdentity, moreKeys) {
 
-        cordappPackages.forEach { addMockCordapp(it) }
+        cordappLoader.cordapps.flatMap { it.contractClassNames }.forEach { addMockCordapp(it) }
     }
 
     /**
