@@ -798,7 +798,7 @@ class DriverDSLImpl(
 
         private fun <A> oneOf(array: Array<A>) = array[Random().nextInt(array.size)]
 
-        fun cordappsInCurrentAndAdditionalPackages(packagesToScan: Iterable<String> = emptySet()): Set<TestCorDapp> = cordappsForPackages(getCallerPackage()?.let { packagesToScan + it } ?: packagesToScan)
+        fun cordappsInCurrentAndAdditionalPackages(packagesToScan: Iterable<String> = emptySet()): Set<TestCorDapp> = cordappsForPackages(getCallerPackage(DriverDSLImpl.Companion::class)?.let { packagesToScan + it } ?: packagesToScan)
 
         private fun startInProcessNode(
                 executorService: ScheduledExecutorService,
@@ -919,19 +919,6 @@ class DriverDSLImpl(
         }
 
         private operator fun Config.plus(property: Pair<String, Any>) = withValue(property.first, ConfigValueFactory.fromAnyRef(property.second))
-
-        /**
-         * Get the package of the caller to the driver so that it can be added to the list of packages the nodes will scan.
-         * This makes the driver automatically pick the CorDapp module that it's run from.
-         */
-        private fun getCallerPackage(): String? {
-            val stackTrace = Throwable().stackTrace
-            val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
-            // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
-            if (index == -1) return null
-            val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
-            return callerPackage.name
-        }
 
         /**
          * We have an alternative way of specifying classpath for spawned process: by using "-cp" option. So duplicating the setting of this

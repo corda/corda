@@ -70,12 +70,11 @@ fun getCallerClass(directCallerClass: KClass<*>): Class<*>? {
     val stackTrace = Throwable().stackTrace
     val index = stackTrace.indexOfLast { it.className == directCallerClass.java.name }
     if (index == -1) return null
-    val callerClass: Class<*>? = try {
+    return try {
         Class.forName(stackTrace[index + 1].className)
     } catch (e: ClassNotFoundException) {
         null
     }
-    return callerClass
 }
 
 fun getCallerPackage(directCallerClass: KClass<*>): String? {

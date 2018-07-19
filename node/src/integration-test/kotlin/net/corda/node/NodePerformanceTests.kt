@@ -93,7 +93,7 @@ class NodePerformanceTests {
     }
 
     @Test
-    fun `self pay rate`() {
+    fun `self pay Trate`() {
         val user = User("A", "A", setOf(startFlow<CashIssueFlow>(), startFlow<CashPaymentFlow>()))
         internalDriver(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(user))),
