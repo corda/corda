@@ -30,7 +30,6 @@ import rx.internal.schedulers.CachedThreadScheduler
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
-import kotlin.reflect.KClass
 
 // TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't support this, and it's a property of the Corda JAR)
 abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyList()) {
