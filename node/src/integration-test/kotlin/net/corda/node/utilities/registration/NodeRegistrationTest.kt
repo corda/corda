@@ -88,7 +88,7 @@ class NodeRegistrationTest {
                 compatibilityZone = compatibilityZone,
                 initialiseSerialization = false,
                 notarySpecs = listOf(NotarySpec(notaryName)),
-                cordappsForAllNodes = cordappsInCurrentAndAdditionalPackages(listOf("net.corda.finance")),
+                cordappsForAllNodes = cordappsInCurrentAndAdditionalPackages("net.corda.finance"),
                 notaryCustomOverrides = mapOf("devMode" to false)
         ) {
             val (alice, genevieve) = listOf(

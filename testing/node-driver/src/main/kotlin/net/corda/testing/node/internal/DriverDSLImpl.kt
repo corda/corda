@@ -798,6 +798,7 @@ class DriverDSLImpl(
         private fun <A> oneOf(array: Array<A>) = array[Random().nextInt(array.size)]
 
         fun cordappsInCurrentAndAdditionalPackages(packagesToScan: Iterable<String> = emptySet()): Set<TestCorDapp> = cordappsForPackages(getCallerPackage() + packagesToScan)
+        fun cordappsInCurrentAndAdditionalPackages(firstPackage: String, vararg otherPackages: String): Set<TestCorDapp> = cordappsInCurrentAndAdditionalPackages(otherPackages.toList() + firstPackage)
 
         private fun startInProcessNode(
                 executorService: ScheduledExecutorService,
@@ -1219,4 +1220,4 @@ private fun Config.toNodeOnly(): Config {
     return if (hasPath("webAddress")) withoutPath("webAddress").withoutPath("useHTTPS") else this
 }
 
-internal fun DriverParameters.cordappsForAllNodes(): Set<TestCorDapp> = corDappsForAllNodes ?: cordappsInCurrentAndAdditionalPackages(extraCordappPackagesToScan)
+internal fun DriverParameters.cordappsForAllNodes(): Set<TestCorDapp> = cordappsForAllNodes ?: cordappsInCurrentAndAdditionalPackages(extraCordappPackagesToScan)

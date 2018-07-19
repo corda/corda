@@ -294,7 +294,7 @@ data class DriverParameters(
         val initialiseSerialization: Boolean = true,
         val inMemoryDB: Boolean = true,
         // TODO sollecitom revisit this in terms of API compatibility; document
-        val corDappsForAllNodes: Set<TestCorDapp>? = null
+        val cordappsForAllNodes: Set<TestCorDapp>? = null
     ) {
     constructor(
             isDebug: Boolean,
@@ -309,7 +309,7 @@ data class DriverParameters(
             extraCordappPackagesToScan: List<String>,
             jmxPolicy: JmxPolicy,
             networkParameters: NetworkParameters,
-            corDappsForAllNodes: Set<TestCorDapp>? = null
+            cordappsForAllNodes: Set<TestCorDapp>? = null
     ) : this(
             isDebug,
             driverDirectory,
@@ -326,7 +326,7 @@ data class DriverParameters(
             emptyMap(),
             true,
             true,
-            corDappsForAllNodes
+            cordappsForAllNodes
     )
 
     constructor(
@@ -344,7 +344,7 @@ data class DriverParameters(
             networkParameters: NetworkParameters,
             initialiseSerialization: Boolean,
             inMemoryDB: Boolean,
-            corDappsForAllNodes: Set<TestCorDapp>? = null
+            cordappsForAllNodes: Set<TestCorDapp>? = null
     ) : this(
             isDebug,
             driverDirectory,
@@ -361,7 +361,7 @@ data class DriverParameters(
             emptyMap(),
             initialiseSerialization,
             inMemoryDB,
-            corDappsForAllNodes
+            cordappsForAllNodes
     )
 
     fun withIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)

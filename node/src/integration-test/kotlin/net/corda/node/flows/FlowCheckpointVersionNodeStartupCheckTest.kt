@@ -41,7 +41,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
 
         val cordapps = setOf(TestCorDapp.Factory.create("testJar", "1.0", classes = classes))
 
-        return driver(DriverParameters(isDebug = true, startNodesInProcess = false, inMemoryDB = false, corDappsForAllNodes = cordapps)) {
+        return driver(DriverParameters(isDebug = true, startNodesInProcess = false, inMemoryDB = false, cordappsForAllNodes = cordapps)) {
             {
                 val alice = startNode(rpcUsers = listOf(user), providedName = ALICE_NAME).getOrThrow()
                 val bob = startNode(rpcUsers = listOf(user), providedName = BOB_NAME).getOrThrow()
@@ -83,7 +83,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
         return driver(DriverParameters(
                 startNodesInProcess = false, // start nodes in separate processes to ensure CordappLoader is not shared between restarts
                 inMemoryDB = false, // ensure database is persisted between node restarts so we can keep suspended flow in Bob's node
-                corDappsForAllNodes = cordapps)
+                cordappsForAllNodes = cordapps)
         ) {
             val bobLogFolder = {
                 val alice = startNode(rpcUsers = listOf(user), providedName = ALICE_NAME, additionalCorDapps = cordappsVersionAtStartup).getOrThrow()
