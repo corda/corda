@@ -44,13 +44,13 @@ Database schema changes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 * Database upgrade - a typo has been corrected in the ``NODE_ATTACHMENTS_CONTRACTS`` table name.
-When upgrading from version 3.1, run the following command:
+When upgrading from versions 3.0 or 3.1, run the following command:
 
 .. sourcecode:: sql
 
    ALTER TABLE [schema].NODE_ATTCHMENTS_CONTRACTS RENAME TO NODE_ATTACHMENTS_CONTRACTS;
 
-When upgrading from version 3.0, run the following command:
+When upgrading from release candidates RC01 and RC02 for version 3.0 (tags M18-RC01 and M18-RC02) run the following command:
 
 .. sourcecode:: sql
 
