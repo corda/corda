@@ -14,6 +14,8 @@ dependencies {
 
     compile "org.ow2.asm:asm:$asm_version"
 
+    compile "com.google.guava:guava:$guava_version"
+
     // For AMQP serialisation.
     compile "org.apache.qpid:proton-j:$protonj_version"
 

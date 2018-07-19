@@ -4,7 +4,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.x500Name
+import net.corda.core.internal.toX500Name
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import org.bouncycastle.asn1.x509.GeneralName
@@ -83,7 +83,7 @@ fun createDevNetworkMapCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): Certific
 fun createDevNodeCa(intermediateCa: CertificateAndKeyPair,
                     legalName: CordaX500Name,
                     nodeKeyPair: KeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)): CertificateAndKeyPair {
-    val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.x500Name))), arrayOf())
+    val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.toX500Name()))), arrayOf())
     val cert = X509Utilities.createCertificate(
             CertificateType.NODE_CA,
             intermediateCa.certificate,

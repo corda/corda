@@ -22,15 +22,29 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.Temporal
 import java.util.*
+import javax.security.auth.x500.X500Principal
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
+import kotlin.reflect.full.createInstance
+import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.jvmErasure
 
 @Target(AnnotationTarget.PROPERTY)
 annotation class OldConfig(val value: String)
+
+/**
+ * This annotation can be used to provide ConfigParser for the class,
+ * the [parseAs] method will use the provided parser instead of data class constructs to parse the object.
+ */
+@Target(AnnotationTarget.CLASS)
+annotation class CustomConfigParser(val parser:  KClass<out ConfigParser<*>>)
+
+interface ConfigParser<T> {
+    fun parse(config: Config): T
+}
 
 const val CUSTOM_NODE_PROPERTIES_ROOT = "custom"
 
@@ -40,7 +54,10 @@ operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T
 }
 
 fun <T : Any> Config.parseAs(clazz: KClass<T>, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle, nestedPath: String? = null): T {
-    require(clazz.isData) { "Only Kotlin data classes can be parsed. Offending: ${clazz.qualifiedName}" }
+    // Use custom parser if provided, instead of treating the object as data class.
+    clazz.findAnnotation<CustomConfigParser>()?.let { return uncheckedCast(it.parser.createInstance().parse(this)) }
+
+    require(clazz.isData) { "Only Kotlin data classes or class annotated with CustomConfigParser can be parsed. Offending: ${clazz.qualifiedName}" }
     val constructor = clazz.primaryConstructor!!
     val parameters = constructor.parameters
     val parameterNames = parameters.flatMap { param ->
@@ -112,6 +129,7 @@ private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set
             Path::class -> Paths.get(getString(path))
             URL::class -> URL(getString(path))
             UUID::class -> UUID.fromString(getString(path))
+            X500Principal::class -> X500Principal(getString(path))
             CordaX500Name::class -> {
                 when (getValue(path).valueType()) {
                     ConfigValueType.OBJECT -> getConfig(path).parseAs(onUnknownKeys)
@@ -157,6 +175,7 @@ private fun Config.getCollectionValue(path: String, type: KType, onUnknownKeys: 
             NetworkHostAndPort::class -> getStringList(path).map(NetworkHostAndPort.Companion::parse)
             Path::class -> getStringList(path).map { Paths.get(it) }
             URL::class -> getStringList(path).map(::URL)
+            X500Principal::class -> getStringList(path).map(::X500Principal)
             UUID::class -> getStringList(path).map { UUID.fromString(it) }
             CordaX500Name::class -> getStringList(path).map(CordaX500Name.Companion::parse)
             Properties::class -> getConfigList(path).map(Config::toProperties)
@@ -210,7 +229,7 @@ private fun Any.toConfigMap(): Map<String, Any> {
         val configValue = if (value is String || value is Boolean || value is Number) {
             // These types are supported by Config as use as is
             value
-        } else if (value is Temporal || value is NetworkHostAndPort || value is CordaX500Name || value is Path || value is URL || value is UUID) {
+        } else if (value is Temporal || value is NetworkHostAndPort || value is CordaX500Name || value is Path || value is URL || value is UUID || value is X500Principal) {
             // These types make sense to be represented as Strings and the exact inverse parsing function for use in parseAs
             value.toString()
         } else if (value is Enum<*>) {
@@ -245,6 +264,7 @@ private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
         NetworkHostAndPort::class.java -> map(Any?::toString)
         Path::class.java -> map(Any?::toString)
         URL::class.java -> map(Any?::toString)
+        X500Principal::class.java -> map(Any?::toString)
         UUID::class.java -> map(Any?::toString)
         CordaX500Name::class.java -> map(Any?::toString)
         Properties::class.java -> map { ConfigFactory.parseMap(uncheckedCast(it)).root() }

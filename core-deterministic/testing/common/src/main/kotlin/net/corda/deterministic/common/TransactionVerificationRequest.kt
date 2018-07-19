@@ -19,7 +19,7 @@ class TransactionVerificationRequest(val wtxToVerify: SerializedBytes<WireTransa
         val deps = dependencies.map { it.deserialize() }.associateBy(WireTransaction::id)
         val attachments = attachments.map { it.deserialize<Attachment>() }
         val attachmentMap = attachments.mapNotNull { it as? MockContractAttachment }
-                .associateBy(Attachment::id, { ContractAttachment(it, it.contract, uploader=TEST_UPLOADER) })
+                .associateBy(Attachment::id) { ContractAttachment(it, it.contract, uploader=TEST_UPLOADER) }
         val contractAttachmentMap = emptyMap<ContractClassName, ContractAttachment>()
         @Suppress("DEPRECATION")
         return wtxToVerify.deserialize().toLedgerTransaction(

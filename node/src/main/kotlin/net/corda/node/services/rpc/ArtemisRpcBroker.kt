@@ -1,5 +1,6 @@
 package net.corda.node.services.rpc
 
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.artemis.*
@@ -18,7 +19,7 @@ import java.nio.file.Path
 import java.security.KeyStoreException
 import javax.security.auth.login.AppConfigurationEntry
 
-internal class ArtemisRpcBroker internal constructor(
+class ArtemisRpcBroker internal constructor(
         address: NetworkHostAndPort,
         private val adminAddressOptional: NetworkHostAndPort?,
         private val sslOptions: BrokerRpcSslOptions?,
@@ -44,7 +45,15 @@ internal class ArtemisRpcBroker internal constructor(
 
     override fun start() {
         logger.debug("Artemis RPC broker is starting.")
-        server.start()
+        try {
+            server.start()
+        } catch (e: java.io.IOException) {
+            if (e.isBindingError()) {
+                throw AddressBindingException(adminAddressOptional?.let { setOf(it, addresses.primary) } ?: setOf(addresses.primary))
+            } else {
+                throw e
+            }
+        }
         logger.debug("Artemis RPC broker is started.")
     }
 

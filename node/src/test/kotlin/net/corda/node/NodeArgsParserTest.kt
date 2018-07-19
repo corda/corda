@@ -42,6 +42,7 @@ class NodeArgsParserTest {
                 noLocalShell = false,
                 sshdServer = false,
                 justGenerateNodeInfo = false,
+                justGenerateRpcSslCerts = false,
                 bootstrapRaftCluster = false,
                 unknownConfigKeysPolicy = UnknownConfigKeysPolicy.FAIL,
                 devMode = false,
@@ -177,5 +178,19 @@ class NodeArgsParserTest {
             val cmdLineOptions = parser.parse("--on-unknown-config-keys", onUnknownConfigKeyPolicy.name)
             assertThat(cmdLineOptions.unknownConfigKeysPolicy).isEqualTo(onUnknownConfigKeyPolicy)
         }
+    }
+
+    @Test
+    fun `invalid argument`() {
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
+            parser.parse("foo")
+        }.withMessageContaining("Unrecognized argument(s): foo")
+    }
+
+    @Test
+    fun `invalid arguments`() {
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
+            parser.parse("foo", "bar")
+        }.withMessageContaining("Unrecognized argument(s): foo, bar")
     }
 }

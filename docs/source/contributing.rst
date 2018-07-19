@@ -28,6 +28,10 @@ Making the required changes
 2. Clone the fork to your local machine
 3. Make the changes, in accordance with the :doc:`code style guide </codestyle>`
 
+Extending the flow state machine
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+You can find instructions on how to extend the flow state machine :doc:`here </contributing-flow-state-machines>`
+
 Things to check
 ^^^^^^^^^^^^^^^
 
@@ -106,7 +110,6 @@ Running the API scanner
 ^^^^^^^^^^^^^^^^^^^^^^^
 Your changes must also not break compatibility with existing public API. We have an API scanning tool which runs as part of the build
 process which can be used to flag up any accidental changes, which is detailed :doc:`here </api-scanner>`.
-
 
 Updating the docs
 -----------------

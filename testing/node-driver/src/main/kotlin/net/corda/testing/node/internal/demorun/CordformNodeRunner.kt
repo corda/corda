@@ -17,7 +17,7 @@ fun CordformDefinition.nodeRunner() = CordformNodeRunner(this)
 /**
  * A node runner creates and runs nodes for a given [[CordformDefinition]].
  */
-class CordformNodeRunner(val cordformDefinition: CordformDefinition) {
+class CordformNodeRunner(private val cordformDefinition: CordformDefinition) {
     private var extraPackagesToScan = emptyList<String>()
 
     /**
@@ -45,7 +45,7 @@ class CordformNodeRunner(val cordformDefinition: CordformDefinition) {
      * Deploy the nodes specified in the given [CordformDefinition] and then execute the given [block] once all the nodes
      * and webservers are up. After execution all these processes will be terminated.
      */
-    fun deployAndRunNodesThen(block: () -> Unit) {
+    fun deployAndRunNodesAndThen(block: () -> Unit) {
         runNodes(waitForAllNodesToFinish = false, block = block)
     }
 
@@ -57,7 +57,6 @@ class CordformNodeRunner(val cordformDefinition: CordformDefinition) {
                 .mapNotNull { address -> address?.let { NetworkHostAndPort.parse(it).port } }
                 .max()!!
         internalDriver(
-                isDebug = true,
                 jmxPolicy = JmxPolicy(true),
                 driverDirectory = cordformDefinition.nodesDirectory,
                 extraCordappPackagesToScan = extraPackagesToScan,

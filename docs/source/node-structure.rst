@@ -15,7 +15,7 @@ A Corda node has the following structure:
     ├── corda-webserver.jar     // The built-in node webserver
     ├── corda.jar               // The core Corda libraries
     ├── cordapps                // The CorDapp JARs installed on the node
-    ├── drivers                 // Contains a Jolokia driver used to export JMX metrics
+    ├── drivers                 // Contains a Jolokia driver used to export JMX metrics, the node loads any additional JAR files from this directory at startup.
     ├── logs                    // The node logs
     ├── network-parameters      // The network parameters automatically downloaded from the network map server
     ├── node.conf               // The node's configuration files
@@ -71,22 +71,18 @@ The name must also obey the following constraints:
 
 * The ``country`` attribute is a valid ISO 3166-1 two letter code in upper-case
 
-* All attributes must obey the following constraints:
-
-    * Upper-case first letter
+* The ``organisation`` field of the name obeys the following constraints:
     * Has at least two letters
-    * No leading or trailing whitespace
-    * Does not include the following characters: ``,`` , ``=`` , ``$`` , ``"`` , ``'`` , ``\``
+    * Does not include the following characters: ``,`` , ``"``, ``\``
     * Is in NFKC normalization form
     * Does not contain the null character
     * Only the latin, common and inherited unicode scripts are supported
-
-* The ``organisation`` field of the name also obeys the following constraints:
-
     * No double-spacing
 
-        * This is to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and
-          character confusability attacks
+This is to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and
+character confusability attacks.
+
+.. note:: The network operator of a Corda Network may put additional constraints on node naming in place.
 
 External identifiers
 ^^^^^^^^^^^^^^^^^^^^

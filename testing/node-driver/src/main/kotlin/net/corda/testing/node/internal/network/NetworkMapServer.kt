@@ -8,8 +8,6 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -38,7 +36,7 @@ import javax.ws.rs.core.Response.ok
 import javax.ws.rs.core.Response.status
 
 class NetworkMapServer(private val pollInterval: Duration,
-                       hostAndPort: NetworkHostAndPort,
+                       hostAndPort: NetworkHostAndPort = NetworkHostAndPort("localhost", 0),
                        private val networkMapCertAndKeyPair: CertificateAndKeyPair = createDevNetworkMapCa(),
                        private val myHostNameValue: String = "test.host.name",
                        vararg additionalServices: Any) : Closeable {
@@ -128,7 +126,12 @@ class NetworkMapServer(private val pollInterval: Duration,
                 val hash = signedNodeInfo.raw.hash
                 val nodeInfo = signedNodeInfo.verified()
                 val privateNetwork = nodeNamesUUID[nodeInfo.legalIdentities[0].name]
-                networkMaps.computeIfAbsent(privateNetwork, { mutableSetOf() }).add(hash)
+                val map = networkMaps.computeIfAbsent(privateNetwork) { mutableSetOf() }
+                map.add(hash)
+                nodeInfoMap.filter { it.value.verified().legalIdentities.first().name == signedNodeInfo.verified().legalIdentities.first().name }.forEach { t, _ ->
+                    nodeInfoMap.remove(t)
+                    map.remove(t)
+                }
                 nodeInfoMap[hash] = signedNodeInfo
                 ok()
             } catch (e: Exception) {

@@ -50,6 +50,8 @@ In particular, notary clusters may differ in terms of:
 * **Consensus algorithm** - a notary cluster may choose to run a high-speed, high-trust algorithm such as RAFT, a
   low-speed, low-trust algorithm such as BFT, or any other consensus algorithm it chooses
 
+.. _key_concepts_notaries_validation:
+
 Validation
 ^^^^^^^^^^
 A notary cluster must also decide whether or not to provide **validity consensus** by validating each transaction
@@ -119,7 +121,7 @@ These include:
 * When a node would prefer to use a different notary cluster for a given transaction due to privacy or efficiency
   concerns
 
-Before these transactions can be created, the states must first all be repointed to the same notary cluster. This is
+Before these transactions can be created, the states must first all be re-pointed to the same notary cluster. This is
 achieved using a special notary-change transaction that takes:
 
 * A single input state

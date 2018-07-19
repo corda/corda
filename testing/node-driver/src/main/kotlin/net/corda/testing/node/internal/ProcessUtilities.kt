@@ -1,41 +1,32 @@
 package net.corda.testing.node.internal
 
 import net.corda.core.internal.div
-import net.corda.core.internal.exists
-import java.io.File.pathSeparator
+import java.io.File
 import java.nio.file.Path
 
 object ProcessUtilities {
     inline fun <reified C : Any> startJavaProcess(
             arguments: List<String>,
+            classPath: List<String> = defaultClassPath,
+            workingDirectory: Path? = null,
             jdwpPort: Int? = null,
-            extraJvmArguments: List<String> = emptyList()
+            extraJvmArguments: List<String> = emptyList(),
+            maximumHeapSize: String? = null
     ): Process {
-        return startJavaProcessImpl(C::class.java.name, arguments, defaultClassPath, jdwpPort, extraJvmArguments, null, null)
+        return startJavaProcess(C::class.java.name, arguments, classPath, workingDirectory, jdwpPort, extraJvmArguments, maximumHeapSize)
     }
 
-    fun startCordaProcess(
+    fun startJavaProcess(
             className: String,
             arguments: List<String>,
-            jdwpPort: Int?,
-            extraJvmArguments: List<String>,
-            workingDirectory: Path?,
-            maximumHeapSize: String
-    ): Process {
-        return startJavaProcessImpl(className, arguments, defaultClassPath, jdwpPort, extraJvmArguments, workingDirectory, maximumHeapSize)
-    }
-
-    fun startJavaProcessImpl(
-            className: String,
-            arguments: List<String>,
-            classpath: String,
-            jdwpPort: Int?,
-            extraJvmArguments: List<String>,
-            workingDirectory: Path?,
-            maximumHeapSize: String?
+            classPath: List<String> = defaultClassPath,
+            workingDirectory: Path? = null,
+            jdwpPort: Int? = null,
+            extraJvmArguments: List<String> = emptyList(),
+            maximumHeapSize: String? = null
     ): Process {
         val command = mutableListOf<String>().apply {
-            add((System.getProperty("java.home") / "bin" / "java").toString())
+            add(javaPath)
             (jdwpPort != null) && add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$jdwpPort")
             if (maximumHeapSize != null) add("-Xmx$maximumHeapSize")
             add("-XX:+UseG1GC")
@@ -45,7 +36,7 @@ object ProcessUtilities {
         }
         return ProcessBuilder(command).apply {
             inheritIO()
-            environment()["CLASSPATH"] = classpath
+            environment()["CLASSPATH"] = classPath.joinToString(File.pathSeparator)
             if (workingDirectory != null) {
                 redirectError((workingDirectory / "$className.stderr.log").toFile())
                 redirectOutput((workingDirectory / "$className.stdout.log").toFile())
@@ -54,5 +45,7 @@ object ProcessUtilities {
         }.start()
     }
 
-    val defaultClassPath: String get() = System.getProperty("java.class.path")
+    private val javaPath = (System.getProperty("java.home") / "bin" / "java").toString()
+
+    val defaultClassPath: List<String> = System.getProperty("java.class.path").split(File.pathSeparator)
 }

@@ -30,7 +30,7 @@ Storage of messages by the message broker has implications for replication techn
 
 #### Disadvantages
 
-1. Doesn’t work on H2, or SQL Server. From my own testing LargeObject support is broken. The current Artemis code base does allow somepluggability, but not of the large object implementation, only of the SQLstatements. We should lobby for someone to fix the implementations for SQLServer and H2.
+1. Doesn’t work on H2, or SQL Server. From my own testing LargeObject support is broken. The current Artemis code base does allow some pluggability, but not of the large object implementation, only of the SQL statements. We should lobby for someone to fix the implementations for SQLServer and H2.
 2. Probably much slower, although this needs measuring.
 
 ## Recommendation and justification

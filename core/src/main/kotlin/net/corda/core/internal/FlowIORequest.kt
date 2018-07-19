@@ -9,6 +9,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
 import java.time.Instant
 
+// DOCSTART FlowIORequest
 /**
  * A [FlowIORequest] represents an IO request of a flow when it suspends. It is persisted in checkpoints.
  */
@@ -85,4 +86,12 @@ sealed class FlowIORequest<out R : Any> {
      * Execute the specified [operation], suspend the flow until completion.
      */
     data class ExecuteAsyncOperation<T : Any>(val operation: FlowAsyncOperation<T>) : FlowIORequest<T>()
+
+    /**
+     * Indicates that no actual IO request occurred, and the flow should be resumed immediately.
+     * This is used for performing explicit checkpointing anywhere in a flow.
+     */
+    // TODO: consider using an empty FlowAsyncOperation instead
+    object ForceCheckpoint : FlowIORequest<Unit>()
 }
+// DOCSEND FlowIORequest

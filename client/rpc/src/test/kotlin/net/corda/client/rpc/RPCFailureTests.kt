@@ -3,7 +3,7 @@ package net.corda.client.rpc
 import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.messaging.*
+import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.node.internal.rpcDriver
@@ -60,10 +60,10 @@ class RPCFailureTests {
     }
 
     @Test
-    fun `unserializable`() = rpc {
+    fun unserializable() = rpc {
         assertThatThrownBy { it.getUnserializable() }.isInstanceOf(CordaRuntimeException::class.java)
                 .hasMessageContaining("java.io.NotSerializableException:")
-                .hasMessageContaining("Unserializable is not on the whitelist or annotated with @CordaSerializable.")
+                .hasMessageContaining("Unserializable\" is not on the whitelist or annotated with @CordaSerializable.")
     }
 
     @Test
@@ -71,6 +71,6 @@ class RPCFailureTests {
         val future = it.getUnserializableAsync()
         assertThatThrownBy { future.getOrThrow() }.isInstanceOf(CordaRuntimeException::class.java)
                 .hasMessageContaining("java.io.NotSerializableException:")
-                .hasMessageContaining("Unserializable is not on the whitelist or annotated with @CordaSerializable.")
+                .hasMessageContaining("Unserializable\" is not on the whitelist or annotated with @CordaSerializable.")
     }
 }

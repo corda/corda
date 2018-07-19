@@ -276,7 +276,7 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
                                 "in the Java compiler. Alternately, provide a proxy serializer " +
                                 "(SerializationCustomSerializer) if recompiling isn't an option")
 
-                Pair(PrivatePropertyReader(field, type), field.genericType)
+                Pair(PrivatePropertyReader(field, type), resolveTypeVariables(field.genericType, type))
             }
 
             this += PropertyAccessorConstructor(
@@ -427,7 +427,7 @@ fun Data.writeReferencedObject(refObject: ReferencedObject) {
     exit() // exit described
 }
 
-private fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
+fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
     val resolvedType = if (contextType != null) TypeToken.of(contextType).resolveType(actualType).type else actualType
     // TODO: surely we check it is concrete at this point with no TypeVariables
     return if (resolvedType is TypeVariable<*>) {
@@ -524,7 +524,7 @@ private fun Throwable.setMessage(newMsg: String) {
 
 fun ClassWhitelist.requireWhitelisted(type: Type) {
     if (!this.isWhitelisted(type.asClass()!!)) {
-        throw NotSerializableException("Class $type is not on the whitelist or annotated with @CordaSerializable.")
+        throw NotSerializableException("Class \"$type\" is not on the whitelist or annotated with @CordaSerializable.")
     }
 }
 
@@ -539,4 +539,19 @@ fun hasCordaSerializable(type: Class<*>): Boolean {
     return type.isAnnotationPresent(CordaSerializable::class.java)
             || type.interfaces.any(::hasCordaSerializable)
             || (type.superclass != null && hasCordaSerializable(type.superclass))
+}
+
+fun isJavaPrimitive(type: Class<*>) = type in JavaPrimitiveTypes.primativeTypes
+
+private object JavaPrimitiveTypes {
+    val primativeTypes = hashSetOf<Class<*>>(
+    Boolean::class.java,
+    Char::class.java,
+    Byte::class.java,
+    Short::class.java,
+    Int::class.java,
+    Long::class.java,
+    Float::class.java,
+    Double::class.java,
+    Void::class.java)
 }

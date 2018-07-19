@@ -17,7 +17,7 @@ the `CRaSH`_ shell and supports many of the same features. These features includ
 * Uploading and downloading attachments
 * Issuing SQL queries to the underlying database
 * Viewing JMX metrics and monitoring exports
-* UNIX style pipes for both text and objects, an ``egrep`` command and a command for working with columnular data
+* UNIX style pipes for both text and objects, an ``egrep`` command and a command for working with columnar data
 * Shutting the node down.
 
 Permissions
@@ -33,8 +33,10 @@ with the node using RPC calls.
 The shell via the local terminal
 --------------------------------
 
-In development mode, the shell will display in the node's terminal window.
-The shell connects to the node as 'shell' user with password 'shell' which is only available in dev mode.
+.. note::  Local terminal shell works only in development mode!
+
+The shell will display in the node's terminal window. It connects to the node as 'shell' user with password 'shell'
+(which is only available in dev mode).
 It may be disabled by passing the ``--no-local-shell`` flag when running the node.
 
 The shell via SSH
@@ -106,7 +108,7 @@ Linux and MacOS
 
 .. code:: bash
 
-    ./shell [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
+    java -jar corda-tools-shell-cli-VERSION_NUMBER.jar [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
              --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
              --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
 
@@ -115,7 +117,7 @@ Windows
 
 .. code:: bash
 
-    shell.bat [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
+    java -jar corda-tools-shell-cli-VERSION_NUMBER.jar [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
              --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
              --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
 
@@ -310,24 +312,24 @@ Examples
 Starting a flow
 ~~~~~~~~~~~~~~~
 
-We would start the ``CashIssue`` flow as follows:
+We would start the ``CashIssueFlow`` flow as follows:
 
 ``flow start CashIssueFlow amount: $1000, issuerBankPartyRef: 1234, notary: "O=Controller, L=London, C=GB"``
 
 This breaks down as follows:
 
 * ``flow start`` is a shell command for starting a flow
-* ``CashIssue`` is the flow we want to start
+* ``CashIssueFlow`` is the flow we want to start
 * Each ``name: value`` pair after that is a flow constructor argument
 
-This command invokes the following ``CashIssue`` constructor:
+This command invokes the following ``CashIssueFlow`` constructor:
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
       class CashIssueFlow(val amount: Amount<Currency>,
-                          val issueRef: OpaqueBytes,
+                          val issuerBankPartyRef: OpaqueBytes,
                           val recipient: Party,
                           val notary: Party) : AbstractCashFlow(progressTracker)
 

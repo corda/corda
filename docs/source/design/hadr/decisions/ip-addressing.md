@@ -2,7 +2,7 @@
 
 ## Background / Context
 
-End-to-end encryption is a desirable potential design feature for the [high availability support](design).
+End-to-end encryption is a desirable potential design feature for the [high availability support](../design.md).
 
 ## Options Analysis
 
@@ -30,7 +30,7 @@ End-to-end encryption is a desirable potential design feature for the [high avai
 #### Disadvantages
 
 1. Have to write code to support it.
-2. Configuration more complicated and now the nodesare non-equivalent, so you can’t just copy the config to the backup.
+2. Configuration more complicated and now the nodes are non-equivalent, so you can’t just copy the config to the backup.
 3. Artemis has round robin and automatic failover, so we may have to expose a vendor specific config flag in the network map.
 
 ## Recommendation and justification

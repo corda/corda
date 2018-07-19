@@ -14,6 +14,7 @@ import org.junit.Test
 import java.net.URI
 import java.net.URL
 import java.nio.file.Paths
+import javax.security.auth.x500.X500Principal
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -32,13 +33,6 @@ class NodeConfigurationImplTest {
         val configValidationResult = configTlsCertCrlOptions(null, "C=US, L=New York, OU=Corda, O=R3 HoldCo LLC, CN=Corda Root CA").validate()
         assertTrue { configValidationResult.isNotEmpty() }
         assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL")
-    }
-
-    @Test
-    fun `tlsCertCrlIssuer validation fails when misconfigured`() {
-        val configValidationResult = configTlsCertCrlOptions(URL("http://test.com/crl"), "Corda Root CA").validate()
-        assertTrue { configValidationResult.isNotEmpty() }
-        assertThat(configValidationResult.first()).contains("Error when parsing tlsCertCrlIssuer:")
     }
 
     @Test
@@ -192,6 +186,16 @@ class NodeConfigurationImplTest {
     }
 
     @Test
+    fun `missing rpcSettings_adminAddress cause a graceful failure`() {
+        var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+        rawConfig = rawConfig.withoutPath("rpcSettings.adminAddress")
+
+        val config = rawConfig.parseAsNodeConfiguration()
+
+        assertThat(config.validate().filter { it.contains("rpcSettings.adminAddress") }).isNotEmpty
+    }
+
+    @Test
     fun `compatiilityZoneURL populates NetworkServices`() {
         val compatibilityZoneURL = URI.create("https://r3.com").toURL()
         val configuration = testConfiguration.copy(
@@ -208,7 +212,7 @@ class NodeConfigurationImplTest {
     }
 
     private fun configTlsCertCrlOptions(tlsCertCrlDistPoint: URL?, tlsCertCrlIssuer: String?, crlCheckSoftFail: Boolean = true): NodeConfiguration {
-        return testConfiguration.copy(tlsCertCrlDistPoint = tlsCertCrlDistPoint, tlsCertCrlIssuer = tlsCertCrlIssuer, crlCheckSoftFail = crlCheckSoftFail)
+        return testConfiguration.copy(tlsCertCrlDistPoint = tlsCertCrlDistPoint, tlsCertCrlIssuer = tlsCertCrlIssuer?.let { X500Principal(it) }, crlCheckSoftFail = crlCheckSoftFail)
     }
 
     private val testConfiguration = testNodeConfiguration()

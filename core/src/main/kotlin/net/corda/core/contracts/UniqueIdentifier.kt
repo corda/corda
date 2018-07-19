@@ -20,10 +20,7 @@ import java.util.*
  */
 @CordaSerializable
 @KeepForDJVM
-data class UniqueIdentifier(val externalId: String?, val id: UUID) : Comparable<UniqueIdentifier> {
-    @DeleteForDJVM constructor(externalId: String?) : this(externalId, UUID.randomUUID())
-    @DeleteForDJVM constructor() : this(null)
-
+data class UniqueIdentifier @JvmOverloads @DeleteForDJVM constructor(val externalId: String? = null, val id: UUID = UUID.randomUUID()) : Comparable<UniqueIdentifier> {
     override fun toString(): String = if (externalId != null) "${externalId}_$id" else id.toString()
 
     companion object {

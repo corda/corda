@@ -10,7 +10,6 @@ import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.Serializable
 import java.util.*
 import java.util.stream.Stream
 import javax.persistence.Column
@@ -34,7 +33,7 @@ class DBCheckpointStorage : CheckpointStorage {
             @Lob
             @Column(name = "checkpoint_value", nullable = false)
             var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
-    ) : Serializable
+    )
 
     override fun addCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>) {
         currentDBSession().saveOrUpdate(DBCheckpoint().apply {

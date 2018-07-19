@@ -10,7 +10,7 @@ class InternalMockNetworkIntegrationTests {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
-            InternalMockNetwork(emptyList()).run {
+            InternalMockNetwork().run {
                 repeat(2) { createNode() }
                 runNetwork()
                 stopNodes()

@@ -1,5 +1,7 @@
-Network Map
+Network map
 ===========
+
+.. contents::
 
 The network map is a collection of signed ``NodeInfo`` objects. Each NodeInfo is signed by the node it represents and
 thus cannot be tampered with. It forms the set of reachable nodes in a compatibility zone. A node can receive these
@@ -72,7 +74,7 @@ the network, along with the network parameters file and identity certificates. G
 online at once - an offline node that isn't being interacted with doesn't impact the network in any way. So a test
 cluster generated like this can be sized for the maximum size you may need, and then scaled up and down as necessary.
 
-More information can be found in :doc:`setting-up-a-corda-network`.
+More information can be found in :doc:`network-bootstrapper`.
 
 Network parameters
 ------------------
@@ -122,10 +124,8 @@ The current set of network parameters:
 :eventHorizon: Time after which nodes are considered to be unresponsive and removed from network map. Nodes republish their
         ``NodeInfo`` on a regular interval. Network map treats that as a heartbeat from the node.
 
-More parameters will be added in future releases to regulate things like allowed port numbers, how long a node can be
-offline before it is evicted from the zone, whether or not IPv6 connectivity is required for zone members, required
-cryptographic algorithms and rollout schedules (e.g. for moving to post quantum cryptography), parameters related to
-SGX and so on.
+More parameters will be added in future releases to regulate things like allowed port numbers, whether or not IPv6 
+connectivity is required for zone members, required cryptographic algorithms and roll-out schedules (e.g. for moving to post quantum cryptography), parameters related to SGX and so on.
 
 Network parameters update process
 ---------------------------------
@@ -134,7 +134,7 @@ In case of the need to change network parameters Corda zone operator will start 
 that may lead to this decision: adding a notary, setting new fields that were added to enable smooth network interoperability,
 or a change of the existing compatibility constants is required, for example.
 
-.. note:: A future release may support the notion of phased rollout of network parameter changes.
+.. note:: A future release may support the notion of phased roll-out of network parameter changes.
 
 To synchronize all nodes in the compatibility zone to use the new set of the network parameters two RPC methods are
 provided. The process requires human interaction and approval of the change, so node operators can review the

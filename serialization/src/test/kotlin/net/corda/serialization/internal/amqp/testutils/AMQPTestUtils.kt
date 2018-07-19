@@ -1,16 +1,30 @@
 package net.corda.serialization.internal.amqp.testutils
 
+import net.corda.core.internal.copyTo
+import net.corda.core.internal.div
+import net.corda.core.internal.packageName
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
-import org.apache.qpid.proton.codec.Data
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.EmptyWhitelist
 import net.corda.serialization.internal.amqp.*
+import net.corda.testing.common.internal.ProjectStructure
+import org.apache.qpid.proton.codec.Data
+import org.junit.Test
+import java.io.File.separatorChar
 import java.io.NotSerializableException
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
 fun testDefaultFactory() = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-fun testDefaultFactoryNoEvolution() = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader(),
-        EvolutionSerializerGetterTesting())
+
+fun testDefaultFactoryNoEvolution(): SerializerFactory {
+    return SerializerFactory(
+            AllWhitelist,
+            ClassLoader.getSystemClassLoader(),
+            evolutionSerializerGetter = EvolutionSerializerGetterTesting())
+}
+
 fun testDefaultFactoryWithWhitelist() = SerializerFactory(EmptyWhitelist, ClassLoader.getSystemClassLoader())
 
 class TestSerializationOutput(
@@ -41,8 +55,25 @@ class TestSerializationOutput(
     }
 }
 
-fun testName(): String = Thread.currentThread().stackTrace[2].methodName
+fun testName(): String {
+    val classLoader = Thread.currentThread().contextClassLoader
+    return Thread.currentThread().stackTrace.first {
+        try {
+            classLoader.loadClass(it.className).getMethod(it.methodName).isAnnotationPresent(Test::class.java)
+        } catch (e: Exception) {
+            false
+        }
+    }.methodName
+}
 
+fun Any.testResourceName(): String = "${javaClass.simpleName}.${testName()}"
+
+fun Any.writeTestResource(bytes: OpaqueBytes) {
+    val dir = ProjectStructure.projectRootDir / "serialization" / "src" / "test" / "resources" / javaClass.packageName.replace('.', separatorChar)
+    bytes.open().copyTo(dir / testResourceName(), REPLACE_EXISTING)
+}
+
+fun Any.readTestResource(): ByteArray = javaClass.getResourceAsStream(testResourceName()).readBytes()
 
 @Throws(NotSerializableException::class)
 inline fun <reified T : Any> DeserializationInput.deserializeAndReturnEnvelope(

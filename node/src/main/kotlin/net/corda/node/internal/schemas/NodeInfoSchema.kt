@@ -10,7 +10,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.persistence.NodePropertiesPersistentStore
-import java.io.Serializable
 import javax.persistence.*
 
 object NodeInfoSchema
@@ -53,7 +52,7 @@ object NodeInfoSchemaV1 : MappedSchema(
              */
             @Column(name = "serial", nullable = false)
             val serial: Long
-    ) : Serializable {
+    ) {
         fun toNodeInfo(): NodeInfo {
             return NodeInfo(
                     this.addresses.map { it.toHostAndPort() },
@@ -73,7 +72,7 @@ object NodeInfoSchemaV1 : MappedSchema(
             var id: Int,
             val host: String? = null,
             val port: Int? = null
-    ) : Serializable {
+    ) {
         companion object {
             fun fromHostAndPort(hostAndPort: NetworkHostAndPort) = DBHostAndPort(
                     0, hostAndPort.host, hostAndPort.port
@@ -106,7 +105,7 @@ object NodeInfoSchemaV1 : MappedSchema(
 
             @ManyToMany(mappedBy = "legalIdentitiesAndCerts", cascade = [(CascadeType.ALL)]) // ManyToMany because of distributed services.
             private val persistentNodeInfos: Set<PersistentNodeInfo> = emptySet()
-    ) : Serializable {
+    ) {
         constructor(partyAndCert: PartyAndCertificate, isMain: Boolean = false)
                 : this(partyAndCert.name.toString(),
                 partyAndCert.party.owningKey.toStringShort(),

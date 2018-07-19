@@ -4,19 +4,21 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.div
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
-import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.bridging.AMQPBridgeManager
 import net.corda.nodeapi.internal.bridging.BridgeManager
+import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.MAX_MESSAGE_SIZE
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -25,6 +27,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.security.KeyStore
 import java.util.*
 import kotlin.test.assertEquals
 
@@ -37,11 +40,9 @@ class AMQPBridgeTest {
 
     private val BOB = TestIdentity(BOB_NAME)
 
-    private val artemisPort = freePort()
-    private val artemisPort2 = freePort()
-    private val amqpPort = freePort()
-    private val artemisAddress = NetworkHostAndPort("localhost", artemisPort)
-    private val amqpAddress = NetworkHostAndPort("localhost", amqpPort)
+    private val portAllocation = PortAllocation.Incremental(10000)
+    private val artemisAddress = portAllocation.nextHostAndPort()
+    private val amqpAddress = portAllocation.nextHostAndPort()
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 
@@ -177,7 +178,7 @@ class AMQPBridgeTest {
             doReturn(null).whenever(it).jmxMonitoringHttpPort
         }
         artemisConfig.configureWithDevSSLCertificate()
-        val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", artemisPort), MAX_MESSAGE_SIZE)
+        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisAddress.copy(host = "0.0.0.0"), MAX_MESSAGE_SIZE)
         val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress, MAX_MESSAGE_SIZE)
         artemisServer.start()
         artemisClient.start()
@@ -201,16 +202,16 @@ class AMQPBridgeTest {
         }
         serverConfig.configureWithDevSSLCertificate()
 
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = serverConfig.loadSslKeyStore().internal
+            override val keyStorePrivateKeyPassword: CharArray = serverConfig.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = serverConfig.loadTrustStore().internal
+            override val trace: Boolean = true
+            override val maxMessageSize: Int = maxMessageSize
+        }
         return AMQPServer("0.0.0.0",
-                amqpPort,
-                ArtemisMessagingComponent.PEER_USER,
-                ArtemisMessagingComponent.PEER_USER,
-                serverConfig.loadSslKeyStore().internal,
-                serverConfig.keyStorePassword,
-                serverConfig.loadTrustStore().internal,
-                crlCheckSoftFail = true,
-                trace = true,
-                maxMessageSize = maxMessageSize
+                amqpAddress.port,
+                amqpConfig
         )
     }
 }

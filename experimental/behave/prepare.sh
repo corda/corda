@@ -31,5 +31,5 @@ curl "https://search.maven.org/remotecontent?filepath=com/h2database/h2/1.4.196/
 curl -L "http://central.maven.org/maven2/org/postgresql/postgresql/42.1.4/postgresql-42.1.4.jar" > ${DRIVERS_DIR}/postgresql-42.1.4.jar
 
 # Build Network Bootstrapper
-./gradlew buildBootstrapperJar
+./gradlew tools:bootstrapper:jar
 cp -v $(ls tools/bootstrapper/build/libs/*.jar | tail -n1) ${CORDA_DIR}/network-bootstrapper.jar

@@ -16,10 +16,12 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.nodeapi.internal.NodeInfoAndSigned
-import net.corda.nodeapi.internal.network.*
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
+import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned
@@ -59,9 +61,9 @@ class NetworkMapUpdaterTest {
 
     @Before
     fun setUp() {
-        server = NetworkMapServer(cacheExpiryMs.millis, PortAllocation.Incremental(10000).nextHostAndPort())
-        val hostAndPort = server.start()
-        networkMapClient = NetworkMapClient(URL("http://${hostAndPort.host}:${hostAndPort.port}"), DEV_ROOT_CA.certificate)
+        server = NetworkMapServer(cacheExpiryMs.millis)
+        val address = server.start()
+        networkMapClient = NetworkMapClient(URL("http://$address"), DEV_ROOT_CA.certificate)
     }
 
     @After
@@ -186,7 +188,7 @@ class NetworkMapUpdaterTest {
             sequence(
                     expect { update: ParametersUpdateInfo ->
                         assertEquals(update.updateDeadline, updateDeadline)
-                        assertEquals(update.description,"Test update")
+                        assertEquals(update.description, "Test update")
                         assertEquals(update.hash, newParameters.serialize().hash)
                         assertEquals(update.parameters, newParameters)
                     }
@@ -204,7 +206,7 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
         val newHash = newParameters.serialize().hash
         val keyPair = Crypto.generateKeyPair()
-        updater.acceptNewNetworkParameters(newHash, { hash -> hash.serialize().sign(keyPair)})
+        updater.acceptNewNetworkParameters(newHash, { hash -> hash.serialize().sign(keyPair) })
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
         val paramsFromFile = signedNetworkParams.verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
@@ -297,6 +299,38 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, never()).removeNode(myInfo)
         assertThat(server.networkMapHashes()).containsOnly(signedOtherInfo.raw.hash)
         assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(signedMyInfo.raw.hash, signedOtherInfo.raw.hash)
+    }
+
+    @Test
+    fun `network map updater removes the correct node info after node info changes`() {
+        setUpdater()
+
+        val builder = TestNodeInfoBuilder()
+
+        builder.addLegalIdentity(CordaX500Name("Test", "London", "GB"))
+
+        val signedNodeInfo1 = builder.buildWithSigned(1).signed
+        val signedNodeInfo2 = builder.buildWithSigned(2).signed
+
+        // Test adding new node.
+        networkMapClient.publish(signedNodeInfo1)
+        // Not subscribed yet.
+        verify(networkMapCache, times(0)).addNode(any())
+
+        updater.subscribeToNetworkMap()
+
+        // TODO: Remove sleep in unit test.
+        Thread.sleep(2L * cacheExpiryMs)
+        verify(networkMapCache, times(1)).addNode(signedNodeInfo1.verified())
+        assert(networkMapCache.allNodeHashes.size == 1)
+        networkMapClient.publish(signedNodeInfo2)
+        Thread.sleep(2L * cacheExpiryMs)
+        scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
+
+        verify(networkMapCache, times(1)).addNode(signedNodeInfo2.verified())
+        verify(networkMapCache, times(1)).removeNode(signedNodeInfo1.verified())
+
+        assert(networkMapCache.allNodeHashes.size == 1)
     }
 
     private fun createMockNetworkMapCache(): NetworkMapCacheInternal {

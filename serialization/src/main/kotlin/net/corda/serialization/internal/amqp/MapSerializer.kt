@@ -70,10 +70,15 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
 
     private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(declaredType), null, emptyList(), "map", Descriptor(typeDescriptor), emptyList())
 
+    private val inboundKeyType = declaredType.actualTypeArguments[0]
+    private val outboundKeyType = resolveTypeVariables(inboundKeyType, null)
+    private val inboundValueType = declaredType.actualTypeArguments[1]
+    private val outboundValueType = resolveTypeVariables(inboundValueType, null)
+
     override fun writeClassInfo(output: SerializationOutput) = ifThrowsAppend({ declaredType.typeName }) {
         if (output.writeTypeNotations(typeNotation)) {
-            output.requireSerializer(declaredType.actualTypeArguments[0])
-            output.requireSerializer(declaredType.actualTypeArguments[1])
+            output.requireSerializer(outboundKeyType)
+            output.requireSerializer(outboundValueType)
         }
     }
 
@@ -91,8 +96,8 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
             data.putMap()
             data.enter()
             for ((key, value) in obj as Map<*, *>) {
-                output.writeObjectOrNull(key, data, declaredType.actualTypeArguments[0], context, debugIndent)
-                output.writeObjectOrNull(value, data, declaredType.actualTypeArguments[1], context, debugIndent)
+                output.writeObjectOrNull(key, data, outboundKeyType, context, debugIndent)
+                output.writeObjectOrNull(value, data, outboundValueType, context, debugIndent)
             }
             data.exit() // exit map
         }
@@ -108,8 +113,8 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
 
     private fun readEntry(schemas: SerializationSchemas, input: DeserializationInput, entry: Map.Entry<Any?, Any?>,
                           context: SerializationContext
-    ) = input.readObjectOrNull(entry.key, schemas, declaredType.actualTypeArguments[0], context) to
-            input.readObjectOrNull(entry.value, schemas, declaredType.actualTypeArguments[1], context)
+    ) = input.readObjectOrNull(entry.key, schemas, inboundKeyType, context) to
+            input.readObjectOrNull(entry.value, schemas, inboundValueType, context)
 
     // Cannot use * as a bound for EnumMap and EnumSet since * is not an enum.  So, we use a sample enum instead.
     // We don't actually care about the type, we just need to make the compiler happier.

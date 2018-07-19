@@ -1,3 +1,15 @@
+// Import private compile time constants
+buildscript {
+    def properties = new Properties()
+    file("$projectDir/src/main/resources/build.properties").withInputStream { properties.load(it) }
+
+    ext.jolokia_version = properties.getProperty('jolokiaAgentVersion')
+}
+
+plugins {
+    id 'com.google.cloud.tools.jib' version '0.9.4'
+}
+
 apply plugin: 'kotlin'
 // Java Persistence API support: create no-arg constructor
 // see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
@@ -8,14 +20,6 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda node modules'
-
-// Import private compile time constants
-buildscript {
-    def properties = new Properties()
-    file("$projectDir/src/main/resources/build.properties").withInputStream { properties.load(it) }
-
-    ext.jolokia_version = properties.getProperty('jolokiaAgentVersion')
-}
 
 //noinspection GroovyAssignabilityCheck
 configurations {
@@ -41,6 +45,12 @@ sourceSets {
     }
 }
 
+jib.container {
+  mainClass = "net.corda.node.Corda"
+  args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
+  jvmFlags = ['-Xmx1g', '-javaagent:/app/libs/quasar-core-0.7.10.jar']
+}
+
 // Use manual resource copying of log4j2.xml rather than source sets.
 // This prevents problems in IntelliJ with regard to duplicate source roots.
 processResources {
@@ -61,6 +71,8 @@ dependencies {
     compile project(':client:rpc')
     compile project(':tools:shell')
     compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
+
+    compile group: 'co.paralleluniverse', name: 'quasar-core', version: '0.7.10:jdk8@jar'
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"

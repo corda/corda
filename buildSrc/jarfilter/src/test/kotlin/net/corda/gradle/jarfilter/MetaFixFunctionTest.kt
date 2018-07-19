@@ -15,11 +15,7 @@ class MetaFixFunctionTest {
     companion object {
         private val logger: Logger = StdOutLogging(MetaFixFunctionTest::class)
         private val longData = isFunction("longData", Long::class)
-        private val unwantedFun = isFunction(
-            name = "unwantedFun",
-            returnType = String::class,
-            parameters = *arrayOf(String::class)
-        )
+        private val unwantedFun = isFunction("unwantedFun", String::class, String::class)
     }
 
     @Test
@@ -31,15 +27,19 @@ class MetaFixFunctionTest {
         // added to the metadata, and that the class is valid.
         val sourceObj = sourceClass.newInstance()
         assertEquals(BIG_NUMBER, sourceObj.longData())
-        assertThat("unwantedFun(String) not found", sourceClass.kotlin.declaredFunctions, hasItem(unwantedFun))
-        assertThat("longData not found", sourceClass.kotlin.declaredFunctions, hasItem(longData))
+        with(sourceClass.kotlin.declaredFunctions) {
+            assertThat("unwantedFun(String) not found", this, hasItem(unwantedFun))
+            assertThat("longData not found", this, hasItem(longData))
+        }
 
         // Rewrite the metadata according to the contents of the bytecode.
         val fixedClass = bytecode.fixMetadata(logger, pathsOf(WithFunction::class)).toClass<WithFunction, HasLong>()
         val fixedObj = fixedClass.newInstance()
         assertEquals(BIG_NUMBER, fixedObj.longData())
-        assertThat("unwantedFun(String) still exists", fixedClass.kotlin.declaredFunctions, not(hasItem(unwantedFun)))
-        assertThat("longData not found", fixedClass.kotlin.declaredFunctions, hasItem(longData))
+        with(fixedClass.kotlin.declaredFunctions) {
+            assertThat("unwantedFun(String) still exists", this, not(hasItem(unwantedFun)))
+            assertThat("longData not found", this, hasItem(longData))
+        }
     }
 
     class MetadataTemplate : HasLong {

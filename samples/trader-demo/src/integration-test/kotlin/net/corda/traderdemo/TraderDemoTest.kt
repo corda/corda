@@ -34,7 +34,7 @@ class TraderDemoTest {
                 startFlow<CashPaymentFlow>(),
                 startFlow<CommercialPaperIssueFlow>(),
                 all()))
-        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        driver(DriverParameters(startNodesInProcess = true, inMemoryDB = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),
@@ -76,7 +76,7 @@ class TraderDemoTest {
 
     @Test
     fun `Tudor test`() {
-        driver(DriverParameters(isDebug = true, startNodesInProcess = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        driver(DriverParameters(startNodesInProcess = false, inMemoryDB = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
             val demoUser = User("demo", "demo", setOf(startFlow<SellerFlow>(), all()))
             val bankUser = User("user1", "test", permissions = setOf(all()))
             val (nodeA, nodeB, bankNode) = listOf(

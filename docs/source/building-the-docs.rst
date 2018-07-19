@@ -7,44 +7,109 @@ is pre-generated, as well as code documentation, and this can be done automatica
 Requirements
 ------------
 
-To build the documentation, you will need:
+In order to build the documentation you will need a development environment set up as described under :doc:`building-corda`.
 
-* GNU Make
-* Python and pip (tested with Python 2.7.10)
-* Sphinx: http://www.sphinx-doc.org/
-* sphinx_rtd_theme: https://github.com/snide/sphinx_rtd_theme
+You will also need additional dependencies based on your O/S which are detailed below.
 
-Note that to install under OS X El Capitan, you will need to tell pip to install under ``/usr/local``, which can be
-done by specifying the installation target on the command line:
+Windows
+-------
 
-.. sourcecode:: shell
+Git, bash and make
+~~~~~~~~~~~~~~~~~~
 
-    sudo -H pip install --install-option '--install-data=/usr/local' Sphinx
-    sudo -H pip install --install-option '--install-data=/usr/local' sphinx_rtd_theme
-    
-.. warning:: When installing Sphinx, you may see the following error message: "Found existing installation: six 1.4.1
-   Cannot uninstall 'six'. It is a distutils installed project and thus we cannot accurately determine which files
-   belong to it which would lead to only a partial uninstall.". If so, run the install with the 
-   ``--ignore-installed six`` flag.
+In order to build the documentation for Corda you need a ``bash`` emulator with ``make`` installed and accessible from the command prompt. Git for
+Windows ships with a version of MinGW that contains a ``bash`` emulator, to which you can download and add a Windows port of
+``make``, instructions for which are provided below. Alternatively you can install a full version of MinGW from `here <http://www.mingw.org/>`_.
+
+1. Go to `ezwinports <https://sourceforge.net/projects/ezwinports/files/>`_ and click the download for ``make-4.2.1-without-guile-w32-bin.zip``
+2. Navigate to the Git installation directory (by default ``C:\Program Files\Git``), open ``mingw64``
+3. Unzip the downloaded file into this directory, but do NOT overwrite/replace any existing files
+4. Add the Git ``bin`` directory to your system PATH environment variable (by default ``C:\Program Files\Git\bin``)
+5. Open a new command prompt and run ``bash`` to test that you can access the Git bash emulator
+6. Type ``make`` to make sure it has been installed successfully (you should get an error
+   like ``make: *** No targets specified and no makefile found.  Stop.``)
+
+
+Python, Pip and VirtualEnv
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Visit https://www.python.org/downloads
+2. Scroll down to the most recent v2 release (tested with v.2.7.15) and click the download link
+3. Download the "Windows x86-64 MSI installer"
+4. Run the installation, making a note of the Python installation directory (defaults to ``c:\Python27``)
+5. Add the Python installation directory (e.g. ``c:\Python27``) to your system PATH environment variable
+6. Add the Python scripts sub-directory (e.g. ``c:\Python27\scripts``) to your system PATH environment variable
+7. Open a new command prompt and check you can run Python by running ``python --version``
+8. Check you can run pip by running ``pip --version``
+9. Install ``virtualenv`` by running ``pip install virtualenv`` from the commandline
+10. Check you can run ``virualenv`` by running ``virtualenv --version`` from the commandline.
+
+LaTeX
+~~~~~
+
+Corda requires LaTeX to be available for building the documentation. The instructions below are for installing TeX Live
+but other distributions are available.
+
+1. Visit https://tug.org/texlive/
+2. Click download
+3. Download and run ``install-tl-windows.exe``
+4. Keep the default options (simple installation is fine)
+5. Open a new command prompt and check you can run ``pdflatex`` by running ``pdflatex --version``
+
+
+Debian/Ubuntu Linux
+-------------------
+
+These instructions were tested on Ubuntu Server 18.04 LTS. This distribution includes ``git`` and ``python`` so only the following steps are required:
+
+Pip/VirtualEnv
+~~~~~~~~~~~~~~
+
+1. Run ``sudo apt-get install python-pip``
+2. Run ``pip install virtualenv``
+3. Run ``pip --version`` to verify that pip is installed correctly
+4. Run ``virtualenv --version`` to verify that virtualenv is installed correctly
+
+LaTeX
+~~~~~
+
+Corda requires LaTeX to be available for building the documentation. The instructions below are for installing TeX Live
+but other distributions are available.
+
+1. Run ``sudo apt-get install texlive-full``
+
 
 Build
 -----
 
-Once the requirements are installed, you can automatically build the HTML format user documentation and the API
-documentation by running the following script:
+Once the requirements are installed, you can automatically build the HTML format user documentation, PDF, and
+the API documentation by running the following script:
 
 .. sourcecode:: shell
 
+    // On Windows
+    gradlew buildDocs
+
+    // On Mac and Linux
     ./gradlew buildDocs
 
-Alternatively you can build non-HTML formats from the ``docs`` folder. Change directory to the folder and then run the
-following to see a list of all available formats:
+Alternatively you can build non-HTML formats from the ``docs`` folder.
+
+However, running ``make`` from the command line requires further dependencies to be installed. When building in Gradle they
+are installed in a `python virtualenv <https://virtualenv.pypa.io/en/stable/>`_, so they will need explicitly installing
+by running:
+
+.. sourcecode:: shell
+
+    pip install -r requirements.txt
+
+Change directory to the ``docs`` folder and then run the following to see a list of all available formats:
 
 .. sourcecode:: shell
 
     make
 
-For example to produce the documentation in HTML format:
+For example to produce the documentation in HTML format run:
 
 .. sourcecode:: shell
 

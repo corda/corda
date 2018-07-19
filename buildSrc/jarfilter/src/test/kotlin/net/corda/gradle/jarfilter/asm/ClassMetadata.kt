@@ -1,6 +1,7 @@
 package net.corda.gradle.jarfilter.asm
 
 import net.corda.gradle.jarfilter.MetadataTransformer
+import net.corda.gradle.jarfilter.getClassInternalName
 import net.corda.gradle.jarfilter.toPackageFormat
 import net.corda.gradle.jarfilter.mutableList
 import org.gradle.api.logging.Logger
@@ -24,7 +25,7 @@ internal class ClassMetadata(
     ProtoBuf.Class::parseFrom
 ) {
     override val typeTable = TypeTable(message.typeTable)
-    override val className = nameResolver.getString(message.fqName)
+    override val className = nameResolver.getClassInternalName(message.fqName)
     override val nestedClassNames = mutableList(message.nestedClassNameList)
     override val properties = mutableList(message.propertyList)
     override val functions = mutableList(message.functionList)
@@ -35,13 +36,13 @@ internal class ClassMetadata(
     override fun rebuild(): ProtoBuf.Class = message
 
     val sealedSubclasses: List<String> = sealedSubclassNames.map {
-        // Transform "a/b/c/BaseName.SubclassName" -> "a.b.c.BaseName$SubclassName"
-        nameResolver.getString(it).replace('.', '$').toPackageFormat }.toList()
+        // Transform "a/b/c/BaseName$SubclassName" -> "a.b.c.BaseName$SubclassName"
+        nameResolver.getClassInternalName(it).toPackageFormat }.toList()
 
     val nestedClasses: List<String>
 
     init {
         val internalClassName = className.toPackageFormat
-        nestedClasses = nestedClassNames.map { "$internalClassName\$${nameResolver.getString(it)}" }.toList()
+        nestedClasses = nestedClassNames.map { "$internalClassName\$${nameResolver.getClassInternalName(it)}" }.toList()
     }
 }

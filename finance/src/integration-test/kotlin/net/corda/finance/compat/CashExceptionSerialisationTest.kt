@@ -16,7 +16,7 @@ import org.junit.Test
 class CashExceptionSerialisationTest {
     @Test
     fun `cash exception with a cause can be serialised with AMQP`() {
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val node = startNode(rpcUsers = listOf(User("mark", "dadada", setOf(all())))).getOrThrow()
             val action = { node.rpc.startFlow(::CashExceptionThrowingFlow).returnValue.getOrThrow() }
             assertThatThrownBy(action).isInstanceOfSatisfying(CashException::class.java) { thrown ->

@@ -1,16 +1,14 @@
 description 'Corda serialization (deterministic)'
 
-apply plugin: 'kotlin'
+apply from: '../deterministic.gradle'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'idea'
 
-evaluationDependsOn(':jdk8u-deterministic')
 evaluationDependsOn(":serialization")
 
 def javaHome = System.getProperty('java.home')
 def jarBaseName = "corda-${project.name}".toString()
-def jdkTask = project(':jdk8u-deterministic').assemble
-def deterministic_jdk_home = project(':jdk8u-deterministic').jdk_home
 
 configurations {
     runtimeLibraries
@@ -19,26 +17,13 @@ configurations {
 
 dependencies {
     compileOnly project(':serialization')
-    compileOnly "$quasar_group:quasar-core:$quasar_version:jdk8"
 
     // Configure these by hand. It should be a minimal subset of dependencies,
     // and without any obviously non-deterministic ones such as Hibernate.
     runtimeLibraries project(path: ':core-deterministic', configuration: 'runtimeArtifacts')
-    runtimeLibraries "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
     runtimeLibraries "org.apache.qpid:proton-j:$protonj_version"
     runtimeLibraries "org.iq80.snappy:snappy:$snappy_version"
-}
-
-tasks.withType(AbstractCompile) {
-    dependsOn jdkTask
-}
-
-tasks.withType(JavaCompile) {
-    options.compilerArgs << "-bootclasspath" << "$deterministic_jdk_home/jre/lib/rt.jar".toString()
-}
-
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
-    kotlinOptions.jdkHome = deterministic_jdk_home
+    runtimeLibraries "com.google.guava:guava:$guava_version"
 }
 
 jar {
@@ -64,6 +49,7 @@ task patchSerialization(type: Zip, dependsOn: serializationJarTask) {
         exclude 'net/corda/serialization/internal/DefaultWhitelist*'
         exclude 'net/corda/serialization/internal/amqp/AMQPSerializerFactories*'
         exclude 'net/corda/serialization/internal/amqp/AMQPStreams*'
+        exclude 'net/corda/serialization/internal/amqp/AMQPSerializationThreadContext*'
     }
 
     reproducibleFileOrder = true
@@ -89,6 +75,7 @@ task predeterminise(type: ProGuardTask, dependsOn: project(':core-deterministic'
     dontpreverify
     dontobfuscate
     dontoptimize
+    dontnote
     printseeds
     verbose
 
@@ -108,6 +95,9 @@ task jarFilter(type: JarFilterTask) {
         ]
         forRemove = [
             "co.paralleluniverse.fibers.Suspendable"
+        ]
+        forSanitise = [
+            "net.corda.core.DeleteForDJVM"
         ]
     }
 }
@@ -129,6 +119,7 @@ task determinise(type: ProGuardTask) {
     keepattributes '*'
     keepdirectories
     dontobfuscate
+    dontnote
     printseeds
     verbose
 
@@ -149,7 +140,7 @@ task metafix(type: MetaFixerTask) {
 task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
     injars metafix
 
-    libraryjars "$deterministic_jdk_home/jre/lib/rt.jar"
+    libraryjars deterministic_rt_jar
 
     configurations.runtimeLibraries.forEach {
         libraryjars it.path, filter: '!META-INF/versions/**'
@@ -184,3 +175,11 @@ publish {
 
 // Must be after publish {} so that the previous install task exists for overwriting.
 task install(overwrite: true, dependsOn: 'publishToMavenLocal')
+
+idea {
+    module {
+        if (project.hasProperty("deterministic_idea_sdk")) {
+            jdkName project.property("deterministic_idea_sdk") as String
+        }
+    }
+}
