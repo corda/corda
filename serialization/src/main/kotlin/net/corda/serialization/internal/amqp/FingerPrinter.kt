@@ -100,11 +100,12 @@ class SerializerFingerPrinter : FingerPrinter {
         return if ((type in alreadySeen)
                 && (type !== SerializerFactory.AnyType)
                 && (type !is TypeVariable<*>)
-                && (type !is WildcardType)) {
+                && (type !is WildcardType)
+        ) {
             hasher.putUnencodedChars(ALREADY_SEEN_HASH)
         } else {
             alreadySeen += type
-            try {
+            ifThrowsAppend<Hasher>({ type.typeName }) {
                 when (type) {
                     is ParameterizedType -> {
                         // Hash the rawType + params
@@ -158,8 +159,8 @@ class SerializerFingerPrinter : FingerPrinter {
                         } else {
                             hasher.fingerprintWithCustomSerializerOrElse(factory!!, type, type) {
                                 if (type.kotlinObjectInstance != null) {
-                                    // TODO: name collision is too likely for kotlin objects, we need to introduce some reference
-                                    // to the CorDapp but maybe reference to the JAR in the short term.
+                                    // TODO: name collision is too likely for kotlin objects, we need to introduce some
+                                    //    reference to the CorDapp but maybe reference to the JAR in the short term.
                                     hasher.putUnencodedChars(type.name)
                                 } else {
                                     fingerprintForObject(type, type, alreadySeen, hasher, factory!!, debugIndent + 1)
@@ -172,12 +173,8 @@ class SerializerFingerPrinter : FingerPrinter {
                         fingerprintForType(type.genericComponentType, contextType, alreadySeen,
                                 hasher, debugIndent + 1).putUnencodedChars(ARRAY_HASH)
                     }
-                    else -> throw NotSerializableException("Don't know how to hash")
+                    else -> throw AMQPNotSerializableException(type, "Don't know how to hash")
                 }
-            } catch (e: NotSerializableException) {
-                val msg = "${e.message} -> $type"
-                logger.error(msg, e)
-                throw NotSerializableException(msg)
             }
         }
     }
@@ -191,7 +188,7 @@ class SerializerFingerPrinter : FingerPrinter {
             debugIndent: Int = 0): Hasher {
         // Hash the class + properties + interfaces
         val name = type.asClass()?.name
-                ?: throw NotSerializableException("Expected only Class or ParameterizedType but found $type")
+                ?: throw AMQPNotSerializableException(type, "Expected only Class or ParameterizedType but found $type")
 
         propertiesForSerialization(constructorForDeserialization(type), contextType ?: type, factory)
                 .serializationOrder

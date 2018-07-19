@@ -5,9 +5,6 @@ import org.slf4j.Logger
 import java.io.NotSerializableException
 import java.lang.reflect.Type
 
-class SyntheticParameterException(val type: Type) : NotSerializableException("Type '${type.typeName} has synthetic "
-        + "fields and is likely a nested inner class. This is not support by the Corda AMQP serialization framework")
-
 /**
  * Not a public property so will have to use reflection
  */
@@ -61,7 +58,7 @@ open class AMQPNotSerializableException(
         val classHierarchy : MutableList<String> = mutableListOf(type.typeName)
 ) : NotSerializableException(msg) {
     @Suppress("Unused")
-    constructor(type: Type) : this (type, "$type is not serializable")
+    constructor(type: Type) : this (type, "type=${type.typeName} is not serializable")
 
     @VisibleForTesting
     fun errorMessage(direction: String) : String {
@@ -78,3 +75,8 @@ open class AMQPNotSerializableException(
         logger.debug("", cause)
     }
 }
+
+class SyntheticParameterException(type: Type) : AMQPNotSerializableException(
+        type,
+        "Type '${type.typeName} has synthetic "
+        + "fields and is likely a nested inner class. This is not support by the Corda AMQP serialization framework")
