@@ -17,7 +17,6 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.TestCorDapp
 import net.corda.testing.driver.driver
-import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.ListenProcessDeathException
 import net.test.cordapp.v1.SendMessageFlow
@@ -42,7 +41,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
 
         val cordapps = setOf(TestCorDapp.Factory.create("testJar", "1.0", classes = classes))
 
-        return driver(DriverParameters(isDebug = true, startNodesInProcess = false, inMemoryDB = false, portAllocation = RandomFree, corDappsForAllNodes = cordapps)) {
+        return driver(DriverParameters(isDebug = true, startNodesInProcess = false, inMemoryDB = false, corDappsForAllNodes = cordapps)) {
             {
                 val alice = startNode(rpcUsers = listOf(user), providedName = ALICE_NAME).getOrThrow()
                 val bob = startNode(rpcUsers = listOf(user), providedName = BOB_NAME).getOrThrow()
@@ -84,7 +83,6 @@ class FlowCheckpointVersionNodeStartupCheckTest {
         return driver(DriverParameters(
                 startNodesInProcess = false, // start nodes in separate processes to ensure CordappLoader is not shared between restarts
                 inMemoryDB = false, // ensure database is persisted between node restarts so we can keep suspended flow in Bob's node
-                portAllocation = RandomFree,
                 corDappsForAllNodes = cordapps)
         ) {
             val bobLogFolder = {
