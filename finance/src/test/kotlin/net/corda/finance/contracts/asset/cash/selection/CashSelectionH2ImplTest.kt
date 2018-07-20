@@ -1,5 +1,6 @@
 package net.corda.finance.contracts.asset.cash.selection
 
+import junit.framework.Assert
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -35,6 +36,15 @@ class CashSelectionH2ImplTest {
         }.transpose().getOrThrow()
         // The spend must be more than the size of a single cash state to force the accumulator onto the second state.
         node.startFlow(CashPaymentFlow((Integer.MAX_VALUE + 1L).POUNDS, node.info.legalIdentities[0])).getOrThrow()
+    }
+
+    @Test
+    fun `multiple issuers in issuerConstraint condition`() {
+        val node = mockNet.createNode()
+        node.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(1), mockNet.defaultNotaryIdentity)).getOrThrow()
+        val request = CashPaymentFlow.PaymentRequest(1.POUNDS, node.info.legalIdentities[0], true, setOf(node.info.legalIdentities[0], mockNet.defaultNotaryIdentity))
+        val paymentResult = node.startFlow(CashPaymentFlow(request)).getOrThrow()
+        assertNotNull(paymentResult.recipient)
     }
 
     @Test
