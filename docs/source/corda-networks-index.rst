@@ -14,4 +14,5 @@ Networks
    aws-vm-explore
    gcp-vm
    deploy-locally
+   testnet-explorer-corda
    cipher-suites
