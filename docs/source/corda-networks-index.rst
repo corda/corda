@@ -10,8 +10,6 @@ Networks
    network-map
    versioning
    corda-testnet-intro
-   azure-vm-explore
-   aws-vm-explore
-   gcp-vm
-   deploy-locally
+   azure-template-guide
+   testnet-explorer
    cipher-suites

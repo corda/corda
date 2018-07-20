@@ -1,7 +1,7 @@
 Using the Node Explorer to test a Corda Enterprise node on Corda Testnet
 ========================================================================
 
-This document will explain how to test the installation of a Corda Enterprise node on Azure or AWS.
+This document will explain how to test the installation of a Corda Enterprise node on Corda Testnet.
 
 
 Prerequisites
@@ -18,6 +18,7 @@ This guide assumes you have deployed a Corda Enterprise node to either Azure or 
 It also assumes your node is provisioned and connected to the Corda Testnet although the instructions below should work
 for any Corda Enterprise node connected to any Corda network.
 
+.. note:: If you need to set up a Corda Enterprise node using the Cloud templates, see: :doc:`azure-template-guide`.
 
 Get the testing tools
 ---------------------
@@ -36,18 +37,25 @@ couple of resources.
        
    .. warning:: If this is an HA node, make sure to stop both the hot and cold nodes before proceeding. Any database migration should be performed whilst both nodes are offline.
 
-3. Copy the finance CorDapp from ``/home/ubuntu/apps/`` to ``/opt/corda/cordapps/``. 
+
+3. Download the Resources:
+
+   Download the finance CorDapp and database manager to your VM instance:
+
+   .. code:: bash
+
+       wget http://downloads.corda.net/cordapps/net/corda/finance/ENT-3.1/corda-finance-3.1.jar \
+            http://downloads.corda.net/cordapps/net/corda/finance/ENT-3.1/corda-finance-3.1-sources.jar \
+            http://downloads.corda.net/tools/database-manager/corda-tools-database-manager-3.1.jar
+
+   Copy the downloads from ``/home/<USER>/`` to ``/opt/corda/cordapps/``.
 
    This is required to run some flows to check your connections, and to issue/transfer cash to counterparties.
 
    .. code:: bash
 
-       sudo cp /home/ubuntu/apps/*.jar /opt/corda/cordapps/
-    
-   .. note:: 
+       sudo cp /home/<USER>/corda-finance-*.jar /opt/corda/cordapps/
 
-    If you are not using a cloud template then you will need to download and manually install these files to the default install location. 
-     
 4. Create a symbolic link to the shared database driver folder
 
    .. code:: bash
@@ -59,9 +67,9 @@ couple of resources.
    .. code:: bash
    
        cd /opt/corda
-       sudo java -jar /home/ubuntu/tools/corda-tools-database-manager-3.0.jar --base-directory /opt/corda --execute-migration
+       sudo java -jar /home/<USER>/corda-tools-database-manager-3.0.jar --base-directory /opt/corda --execute-migration
 
-6. Add the following line to your ``node.conf``:
+6. Add the following line to the bottom of your ``node.conf``:
 
    .. code:: bash
    
@@ -77,23 +85,21 @@ couple of resources.
 
    Your node is now running the Finance Cordapp.
    
-   .. note:: You can double-check that the CorDapp is loaded in the log file ``/opt/corda/logs/node-<VM-NAME>.log``. This file will list installed apps at startup.
+   .. note:: You can double-check that the CorDapp is loaded in the log file ``/opt/corda/logs/node-<VM-NAME>.log``. This file will list installed apps at startup. Search for ``Loaded CorDapps`` in the logs.
 
-8. Now download the Node Explorer to your local machine:
-
-   A copy of the Enterprise node explorer is included in the ``/home/ubuntu/tools/`` directory of the VM. Run the following command from your local machine.
+8. Now download the Node Explorer to your **LOCAL** machine:
 
    .. code:: bash
 
-       scp ubuntu@<IP>:tools/corda-tools-node-explorer-<VERSION>.jar .
+       wget http://downloads.corda.net/tools/explorer/ENT-3.1/corda-tools-explorer-3.1.jar
 
-   .. note:: The Enterprise Node Explorer is incompatible with open source versions of Corda and vice versa as they currently use different serialisation schemes (Kryo vs AMQP).
+   .. warning:: The Enterprise Node Explorer is incompatible with open source versions of Corda and vice versa as they currently use different serialisation schemes (Kryo vs AMQP).
 
-9. Run the Node Explorer tool on your local machine.
+9. Run the Node Explorer tool on your **LOCAL** machine.
 
    .. code:: bash
 
-       java -jar corda-tools-explorer-<VERSION>.jar
+       java -jar corda-tools-explorer-3.1.jar
 
    .. image:: resources/explorer-login.png
 
