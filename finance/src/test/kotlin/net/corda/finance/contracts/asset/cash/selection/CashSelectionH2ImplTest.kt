@@ -1,6 +1,5 @@
 package net.corda.finance.contracts.asset.cash.selection
 
-import junit.framework.Assert
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -77,6 +76,6 @@ class CashSelectionH2ImplTest {
         node.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(1), mockNet.defaultNotaryIdentity)).getOrThrow()
         val request = CashPaymentFlow.PaymentRequest(1.POUNDS, node.info.legalIdentities[0], true, setOf(node.info.legalIdentities[0], mockNet.defaultNotaryIdentity))
         val paymentResult = node.startFlow(CashPaymentFlow(request)).getOrThrow()
-        Assert.assertNotNull(paymentResult.recipient)
+        assertNotNull(paymentResult.recipient)
     }
 }
