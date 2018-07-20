@@ -131,5 +131,21 @@ your unique Corda node:
 
 .. warning:: This command will execute the install script as ROOT on your cloud instance. You may wish to examine the script prior to executing it on your machine. 
 
-You can now navigate to the external web address of the instance and
-see any cordapps running on port 8080 (if you have any installed). 
+You can follow the progress of the installation by typing the following command in your terminal:
+
+.. code:: bash
+
+    tail -f /opt/corda/logs/node-<VM-NAME>.log
+
+Once the node has booted up you can navigate to the external web address of the instance on port 8080. If everything is working you should see the following:
+
+.. image:: resources/installed-cordapps.png
+
+
+Testing your deployment
+-----------------------
+
+To test your deployment is working correctly follow the instructions in :doc:`testnet-explorer-corda` to set up the Finance CorDapp and issue cash to a counterparty.
+
+This will also demonstrate how to install a custom CorDapp.
+
