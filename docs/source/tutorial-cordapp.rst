@@ -36,44 +36,24 @@ We need to download the example CorDapp from GitHub.
 
 * Change directories to the freshly cloned repo: ``cd cordapp-example``
 
-.. note:: If you wish to build off the latest, unstable version of the codebase, follow the instructions in
-   :doc:`building against Master <building-against-master>` instead.
-
 Opening the example CorDapp in IntelliJ
 ---------------------------------------
-Let's open the example CorDapp in IntelliJ IDEA.
-
-**If opening a fresh IntelliJ instance**
+Let's open the example CorDapp in IntelliJ IDEA:
 
 * Open IntelliJ
-* A dialogue box will appear:
 
-  .. image:: resources/intellij-welcome.png
-     :width: 400
+* A splash screen will appear. Click ``open``, navigate to the folder where you cloned the ``cordapp-example``, and
+  click ``OK``
 
-* Click open, navigate to the folder where you cloned the ``cordapp-example``, and click OK
+* Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
+  clicking ``New...``, clicking ``JDK``, and navigating to ``C:\Program Files\Java\jdk1.8.0_XXX`` (where ``XXX`` is the
+  latest minor version number). Click ``OK``
 
-* IntelliJ will show several pop-up windows, one of which requires our attention:
+* Again under ``File`` then ``Project Structure``, select ``Modules``. Click ``+``, then ``Import Module``, then select
+  the ``cordapp-example`` folder and click ``Open``. Choose to ``Import module from external model``, select
+  ``Gradle``, click ``Next`` then ``Finish`` (leaving the defaults) and ``OK``
 
-  .. image:: resources/unlinked-gradle-project.png
-     :width: 400
-
-* Click the 'import gradle project' link. Press OK on the dialogue that pops up
-
-* Gradle will now download all the project dependencies and perform some indexing. This usually takes a minute or so.
-
-  * If the 'import gradle project' pop-up does not appear, click the small green speech bubble at the bottom-right of
-    the IDE, or simply close and re-open IntelliJ again to make it reappear.
-
-**If you already have IntelliJ open**
-
-* Open the ``File`` menu
-
-* Navigate to ``Open ...``
-
-* Navigate to the directory where you cloned the ``cordapp-example``
-
-* Click OK
+* Gradle will now download all the project dependencies and perform some indexing. This usually takes a minute or so
 
 Project structure
 -----------------
