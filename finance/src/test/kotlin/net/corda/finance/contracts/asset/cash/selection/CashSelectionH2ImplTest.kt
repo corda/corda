@@ -1,5 +1,6 @@
 package net.corda.finance.contracts.asset.cash.selection
 
+import junit.framework.Assert
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -38,18 +39,12 @@ class CashSelectionH2ImplTest {
     }
 
     @Test
-    fun `selecting pennies amount larger than max int, which is split across multiple cash states, plus an issuerConstraint of multiple onlyFromParties`() {
+    fun `multiple issuers in issuerConstraint condition`() {
         val node = mockNet.createNode()
-        // The amount has to split across at least two states, probably to trigger the H2 accumulator variable during the
-        // spend operation below.
-        // Issuing Integer.MAX_VALUE will not cause an exception since PersistentCashState.pennies is a long
-        nCopies(2, Integer.MAX_VALUE).map { issueAmount ->
-            node.startFlow(CashIssueFlow(issueAmount.POUNDS, OpaqueBytes.of(1), mockNet.defaultNotaryIdentity))
-        }.transpose().getOrThrow()
-        // The spend must be more than the size of a single cash state to force the accumulator onto the second state.
-        // Also, here we test issuerConstraint with multiple onlyFromParties.
-        val request = CashPaymentFlow.PaymentRequest((Integer.MAX_VALUE + 1L).POUNDS, node.info.legalIdentities[0], true, setOf(node.info.legalIdentities[0], mockNet.defaultNotaryIdentity))
-        node.startFlow(CashPaymentFlow(request)).getOrThrow()
+        node.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(1), mockNet.defaultNotaryIdentity)).getOrThrow()
+        val request = CashPaymentFlow.PaymentRequest(1.POUNDS, node.info.legalIdentities[0], true, setOf(node.info.legalIdentities[0], mockNet.defaultNotaryIdentity))
+        val paymentResult = node.startFlow(CashPaymentFlow(request)).getOrThrow()
+        assertNotNull(paymentResult.recipient)
     }
 
     @Test
