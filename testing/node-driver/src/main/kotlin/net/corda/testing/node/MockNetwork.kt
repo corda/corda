@@ -31,7 +31,7 @@ import java.nio.file.Path
  * @property entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
  * but can be overridden to cause nodes to have stable or colliding identity/service keys.
  * @property configOverrides Add/override behaviour of the [NodeConfiguration] mock object.
- * @property extraCordappPackages Extra CorDapp packages to include for this node.
+ * @property additionalCordapps [TestCorDapp]s that will be added to this node in addition to the ones shared by all nodes, which get specified at [MockNetwork] level.
  */
 @Suppress("unused")
 data class MockNodeParameters constructor(
@@ -217,6 +217,7 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
  * @property notarySpecs The notaries to use in the mock network. By default you get one mock notary and that is usually sufficient.
  * @property networkParameters The network parameters to be used by all the nodes. [NetworkParameters.notaries] must be
  * empty as notaries are defined by [notarySpecs].
+ * @property cordappsForAllNodes [TestCorDapp]s that will be added to each node started by the [MockNetwork].
  */
 @Suppress("MemberVisibilityCanBePrivate", "CanBeParameter")
 open class MockNetwork(
@@ -298,13 +299,12 @@ open class MockNetwork(
      * @param entropyRoot The initial entropy value to use when generating keys. Defaults to an (insecure) random value,
      * but can be overridden to cause nodes to have stable or colliding identity/service keys.
      * @param configOverrides Add/override behaviour of the [NodeConfiguration] mock object.
-     * @param additionalCordapps Extra CorDapp packages to add for this node.
+     * @param additionalCordapps additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [MockNetwork].
      */
     fun createNode(legalName: CordaX500Name? = null,
                    forcedID: Int? = null,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                    configOverrides: (NodeConfiguration) -> Any? = {},
-                    // TODO sollecitom document
                    additionalCordapps: Set<TestCorDapp>): StartedMockNode {
         val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides, additionalCordapps)
         return StartedMockNode.create(internalMockNetwork.createNode(InternalMockNodeParameters(parameters)))
@@ -341,13 +341,12 @@ open class MockNetwork(
      * @param entropyRoot The initial entropy value to use when generating keys. Defaults to an (insecure) random value,
      * but can be overridden to cause nodes to have stable or colliding identity/service keys.
      * @param configOverrides Add/override behaviour of the [NodeConfiguration] mock object.
-     * @param extraCordappPackages Extra CorDapp packages to add for this node.
+     * @param additionalCordapps additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [MockNetwork].
      */
     fun createUnstartedNode(legalName: CordaX500Name? = null,
                             forcedID: Int? = null,
                             entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                             configOverrides: (NodeConfiguration) -> Any? = {},
-                            // TODO sollecitom document
                             additionalCordapps: Set<TestCorDapp> = emptySet()): UnstartedMockNode {
         val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides, additionalCordapps)
         return UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(InternalMockNodeParameters(parameters)))
