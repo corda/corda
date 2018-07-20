@@ -97,8 +97,10 @@ class NodeVaultServiceTest {
         vaultFiller = VaultFiller(services, dummyNotary)
         // This is safe because MockServices only ever have a single identity
         identity = services.myInfo.singleIdentityAndCert()
-        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock())
-        bocServices = MockServices(cordappPackages, bankOfCorda, rigorousMock())
+        issuerServices = MockServices(services.cordappLoader, dummyCashIssuer)
+//        issuerServices = MockServices(services.cordappLoader, dummyCashIssuer, rigorousMock())
+        bocServices = MockServices(services.cordappLoader, bankOfCorda)
+//        bocServices = MockServices(services.cordappLoader, bankOfCorda, rigorousMock())
         services.identityService.verifyAndRegisterIdentity(DUMMY_CASH_ISSUER_IDENTITY)
         services.identityService.verifyAndRegisterIdentity(BOC_IDENTITY)
     }
