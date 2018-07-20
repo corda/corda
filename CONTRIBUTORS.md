@@ -97,6 +97,7 @@ see changes to this list.
 * Johann Palychata (BNP Paribas)
 * johnnyychiu
 * Jonathan Sartin (R3)
+* Jonathan Sphar (R3)
 * Jose Coll (R3)
 * Jose Luu (Natixis)
 * Josh Lindl (BCS)
