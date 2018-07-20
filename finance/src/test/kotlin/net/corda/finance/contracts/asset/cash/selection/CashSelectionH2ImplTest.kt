@@ -1,5 +1,6 @@
 package net.corda.finance.contracts.asset.cash.selection
 
+import junit.framework.Assert
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -68,5 +69,14 @@ class CashSelectionH2ImplTest {
         // Make a payment
         val paymentResult = node.startFlow(CashPaymentFlow(999.POUNDS, node.info.legalIdentities[0], false)).getOrThrow()
         assertNotNull(paymentResult.recipient)
+    }
+
+    @Test
+    fun `multiple issuers in issuerConstraint condition`() {
+        val node = mockNet.createNode()
+        node.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(1), mockNet.defaultNotaryIdentity)).getOrThrow()
+        val request = CashPaymentFlow.PaymentRequest(1.POUNDS, node.info.legalIdentities[0], true, setOf(node.info.legalIdentities[0], mockNet.defaultNotaryIdentity))
+        val paymentResult = node.startFlow(CashPaymentFlow(request)).getOrThrow()
+        Assert.assertNotNull(paymentResult.recipient)
     }
 }
