@@ -39,11 +39,11 @@ dependencies {
     compile project(':node-api')
     compile project(':node')
 
-    compile group: "com.typesafe", name: "config", version: typesafe_config_version
-    compile group: "com.fasterxml.jackson.dataformat", name: "jackson-dataformat-yaml", version: "2.9.0"
-    compile group: "com.fasterxml.jackson.core", name: "jackson-databind", version: "2.9.0"
-    compile "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.+"
-    compile group: 'info.picocli', name: 'picocli', version: '3.0.1'
+    compile "com.typesafe:config:$typesafe_config_version"
+    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
+    compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    compile "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
+    compile 'info.picocli:picocli:3.0.1'
 
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
     compile "no.tornado:tornadofx:$tornadofx_version"
