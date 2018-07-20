@@ -71,3 +71,35 @@ Note that:
   `PostgreSQL documentation <https://www.postgresql.org/docs/9.3/static/ddl-schemas.html#DDL-SCHEMAS-PATH>`_, or
   the schema search path must be set explicitly for the user.
 
+SQLServer
+----------
+Nodes also have untested support for Microsoft SQL Server 2017, using Microsoft JDBC Driver 6.2 for SQL Server.
+
+.. warning:: This is an experimental community contribution, and is currently untested. We welcome pull requests to add
+   tests and additional support for this feature.
+
+Configuration
+~~~~~~~~~~~~~
+Here is an example node configuration for SQLServer:
+
+.. sourcecode:: groovy
+
+    dataSourceProperties = {
+        dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
+        dataSource.url = "jdbc:sqlserver://[HOST]:[PORT];databaseName=[DATABASE_NAME]"
+        dataSource.user = [USER]
+        dataSource.password = [PASSWORD]
+    }
+    database = {
+        transactionIsolationLevel = READ_COMMITTED
+        schema = [SCHEMA]
+    }
+    jarDirs = ["[FULL_PATH]/sqljdbc_6.2/enu/"]
+
+Note that:
+
+* The ``database.schema`` property is optional and is ignored as of release 3.1.
+* Ensure the directory referenced by jarDirs contains only one JDBC driver JAR file; by the default,
+  sqljdbc_6.2/enu/contains two JDBC JAR file for different Java versions.
+=======
+

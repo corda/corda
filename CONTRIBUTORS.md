@@ -171,6 +171,7 @@ see changes to this list.
 * Sam Chadwick (Thomson Reuters)
 * Sasmit Sahu
 * Scott James
+* Sean Zhang (Wells Fargo)
 * Shams Asari (R3)
 * Siddhartha Sengupta (Tradewind Markets)
 * Simon Taylor (Barclays)
