@@ -304,12 +304,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             return Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, counter)
         }
 
-        /**
-         * InternalMockNetwork will ensure nodes are connected to each other. The nodes themselves
-         * won't be able to tell if that happened already or not.
-         */
-        override fun checkNetworkMapIsInitialized() = Unit
-
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
 
         // NodeInfo requires a non-empty addresses list and so we give it a dummy value for mock nodes.
