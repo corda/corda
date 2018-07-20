@@ -22,9 +22,10 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.configureDatabase
-import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.schema.HibernateObserver
@@ -78,7 +79,7 @@ open class MockServices private constructor(
             val cordapps = cordappsForPackages(packages)
             return testCordappsDirectory().let { directory ->
                 cordapps.packageInDirectory(directory)
-                CordappLoader.fromDirectories(listOf(directory))
+                JarScanningCordappLoader.fromDirectories(listOf(directory))
             }
         }
 

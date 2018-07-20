@@ -24,9 +24,10 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
+import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
-import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.*
@@ -140,7 +141,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     }
 
     val sharedCordappLoader: CordappLoader by lazy {
-        CordappLoader.fromDirectories(listOf(sharedCorDappsDirectory))
+        JarScanningCordappLoader.fromDirectories(listOf(sharedCorDappsDirectory))
     }
 
     /** A read only view of the current set of nodes. */
@@ -235,7 +236,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         }
     }
 
-    open class MockNode(args: MockNodeArgs, cordappLoader: CordappLoader = CordappLoader.fromDirectories(args.config.cordappDirectories)) : AbstractNode(
+    open class MockNode(args: MockNodeArgs, cordappLoader: CordappLoader = JarScanningCordappLoader.fromDirectories(args.config.cordappDirectories)) : AbstractNode(
             args.config,
             TestClock(Clock.systemUTC()),
             args.version,
@@ -406,7 +407,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             logger.info("Node's specific CorDapps directory $cordappsDirectory already exists, skipping CorDapps packaging for node ${config.myLegalName}.")
         }
 
-        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version), CordappLoader.fromDirectories(cordappDirectories))
+        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version), JarScanningCordappLoader.fromDirectories(cordappDirectories))
         _nodes += node
         if (start) {
             node.start()

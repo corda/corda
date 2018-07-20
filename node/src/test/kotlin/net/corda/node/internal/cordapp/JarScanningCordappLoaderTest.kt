@@ -31,7 +31,7 @@ class DummyRPCFlow : FlowLogic<Unit>() {
     override fun call() = Unit
 }
 
-class CordappLoaderTest {
+class JarScanningCordappLoaderTest {
     private companion object {
         const val testScanPackage = "net.corda.node.internal.cordapp"
         const val isolatedContractId = "net.corda.finance.contracts.isolated.AnotherDummyContract"
@@ -41,19 +41,19 @@ class CordappLoaderTest {
     @Test
     fun `test that classes that aren't in cordapps aren't loaded`() {
         // Basedir will not be a corda node directory so the dummy flow shouldn't be recognised as a part of a cordapp
-        val loader = CordappLoader.fromDirectories(listOf(Paths.get(".")))
-        assertThat(loader.cordapps).containsOnly(CordappLoader.coreCordapp)
+        val loader = JarScanningCordappLoader.fromDirectories(listOf(Paths.get(".")))
+        assertThat(loader.cordapps).containsOnly(JarScanningCordappLoader.coreCordapp)
     }
 
     @Test
     fun `isolated JAR contains a CorDapp with a contract and plugin`() {
-        val isolatedJAR = CordappLoaderTest::class.java.getResource("isolated.jar")!!
-        val loader = CordappLoader.fromJarUrls(listOf(isolatedJAR))
+        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("isolated.jar")!!
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR))
 
         val actual = loader.cordapps.toTypedArray()
         assertThat(actual).hasSize(2)
 
-        val actualCordapp = actual.single { it != CordappLoader.coreCordapp }
+        val actualCordapp = actual.single { it != JarScanningCordappLoader.coreCordapp }
         assertThat(actualCordapp.contractClassNames).isEqualTo(listOf(isolatedContractId))
         assertThat(actualCordapp.initiatedFlows.single().name).isEqualTo("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Acceptor")
         assertThat(actualCordapp.rpcFlows).isEmpty()
@@ -96,8 +96,8 @@ class CordappLoaderTest {
     // being used internally. Later iterations will use a classloader per cordapp and this test can be retired.
     @Test
     fun `cordapp classloader can load cordapp classes`() {
-        val isolatedJAR = CordappLoaderTest::class.java.getResource("isolated.jar")!!
-        val loader = CordappLoader.fromJarUrls(listOf(isolatedJAR))
+        val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("isolated.jar")!!
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR))
 
         loader.appClassLoader.loadClass(isolatedContractId)
         loader.appClassLoader.loadClass(isolatedFlowName)

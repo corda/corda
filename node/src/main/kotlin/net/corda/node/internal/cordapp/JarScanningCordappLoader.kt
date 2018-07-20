@@ -14,6 +14,7 @@ import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.contextLogger
+import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.serialization.internal.DefaultWhitelist
@@ -31,14 +32,14 @@ import kotlin.streams.toList
  *
  * @property cordappJarPaths The classpath of cordapp JARs
  */
-class CordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>) {
+class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>) : CordappLoader {
 
-    val cordapps: List<Cordapp> by lazy { loadCordapps() + coreCordapp }
-    val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
+    override val cordapps: List<Cordapp> by lazy { loadCordapps() + coreCordapp }
+    override val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
 
     // Create a map of the CorDapps that provide a Flow. If a flow is not in this map it is a Core flow.
     // It also checks that there is only one CorDapp containing that flow class
-    val flowCordappMap: Map<Class<out FlowLogic<*>>, Cordapp> by lazy {
+    override val flowCordappMap: Map<Class<out FlowLogic<*>>, Cordapp> by lazy {
         cordapps.flatMap { corDapp -> corDapp.allFlows.map { flow -> flow to corDapp } }
                 .groupBy { it.first }
                 .mapValues {
@@ -55,7 +56,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         }
     }
 
-    val cordappSchemas: Set<MappedSchema> get() = cordapps.flatMap { it.customSchemas }.toSet()
+    override val cordappSchemas: Set<MappedSchema> get() = cordapps.flatMap { it.customSchemas }.toSet()
 
     companion object {
         private val logger = contextLogger()
@@ -68,7 +69,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         fun fromDirectories(corDappDirectories: Iterable<Path>): CordappLoader {
 
             logger.info("Looking for CorDapps in ${corDappDirectories.distinct().joinToString(", ", "[", "]")}")
-            return CordappLoader(corDappDirectories.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() })
+            return JarScanningCordappLoader(corDappDirectories.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() })
         }
 
         /**
@@ -76,7 +77,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          *
          * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection.
          */
-        fun fromJarUrls(scanJars: List<URL>) = CordappLoader(scanJars.map { it.restricted() })
+        fun fromJarUrls(scanJars: List<URL>) = JarScanningCordappLoader(scanJars.map { it.restricted() })
 
         private fun URL.restricted(rootPackageName: String? = null) =  RestrictedURL(this, rootPackageName)
 
