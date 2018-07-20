@@ -1,6 +1,5 @@
 package net.corda.node.internal
 
-import com.jcabi.manifests.Manifests
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
@@ -8,14 +7,9 @@ import io.netty.channel.unix.Errors
 import joptsimple.OptionParser
 import joptsimple.util.PathConverter
 import net.corda.core.crypto.Crypto
-import net.corda.core.internal.Emoji
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
-import net.corda.core.internal.exists
-import net.corda.core.internal.location
-import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
@@ -48,6 +42,8 @@ import java.net.InetAddress
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+import java.util.jar.Attributes
+import java.util.jar.Manifest
 import kotlin.system.exitProcess
 
 /** This class is responsible for starting a Node from command line arguments. */
@@ -96,8 +92,8 @@ open class NodeStartup(val args: Array<String>) {
 
         if (cmdlineOptions.isVersion) {
             println("${versionInfo.vendor} ${versionInfo.releaseVersion}")
-            println("Revision ${versionInfo.revision}")
             println("Platform Version ${versionInfo.platformVersion}")
+            println("Revision ${versionInfo.revision}")
             return true
         }
 
@@ -399,15 +395,24 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     protected open fun getVersionInfo(): VersionInfo {
-        // Manifest properties are only available if running from the corda jar
-        fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
+        val manifestAttrs = Thread.currentThread()
+                .contextClassLoader
+                .getResources("META-INF/MANIFEST.MF")
+                .asSequence()
+                .map { it.openStream().use { Manifest(it).mainAttributes } }
+                .firstOrNull { Attributes.Name("Corda-Platform-Version") in it }
 
-        return VersionInfo(
-                manifestValue("Corda-Platform-Version")?.toInt() ?: 1,
-                manifestValue("Corda-Release-Version") ?: "Unknown",
-                manifestValue("Corda-Revision") ?: "Unknown",
-                manifestValue("Corda-Vendor") ?: "Unknown"
-        )
+        return if (manifestAttrs == null) {
+            logger.error("Manifest for Corda node not found")
+            VersionInfo(1, "Unknown", "Unknown", "Unknown")
+        } else {
+            VersionInfo(
+                    manifestAttrs.getValue("Corda-Platform-Version").toInt(),
+                    manifestAttrs.getValue("Corda-Release-Version"),
+                    manifestAttrs.getValue("Corda-Revision"),
+                    manifestAttrs.getValue("Corda-Vendor")
+            )
+        }
     }
 
     private fun enforceSingleNodeIsRunning(baseDirectory: Path) {
