@@ -107,7 +107,7 @@ interface DriverDSL {
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
             maximumHeapSize: String = defaultParameters.maximumHeapSize,
             // TODO sollecitom document
-            additionalCorDapps: Set<TestCorDapp> = defaultParameters.additionalCorDapps,
+            additionalCordapps: Set<TestCorDapp> = defaultParameters.additionalCordapps,
             deleteExistingCordappsDirectory: Boolean = defaultParameters.deleteExistingCordappsDirectory
     ): CordaFuture<NodeHandle>
 

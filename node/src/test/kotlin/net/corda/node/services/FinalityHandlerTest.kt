@@ -39,7 +39,7 @@ class FinalityHandlerTest {
         mockNet = InternalMockNetwork()
 
         val assertCordapp = TestCorDapp.Factory.create("net.corda.finance.contracts.asset", "1.0").plusPackage("net.corda.finance.contracts.asset")
-        val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, additionalCorDapps = setOf(assertCordapp)))
+        val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, additionalCordapps = setOf(assertCordapp)))
 
         var bob = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
 

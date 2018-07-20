@@ -144,7 +144,7 @@ data class NodeParameters(
         val maximumHeapSize: String = "512m",
         val logLevel: String? = null,
         // TODO sollecitom document
-        val additionalCorDapps: Set<TestCorDapp> = emptySet(),
+        val additionalCordapps: Set<TestCorDapp> = emptySet(),
         val deleteExistingCordappsDirectory: Boolean = false
 ) {
     constructor(
@@ -163,7 +163,7 @@ data class NodeParameters(
             startInSameProcess,
             maximumHeapSize,
             logLevel,
-            additionalCorDapps = emptySet(),
+            additionalCordapps = emptySet(),
             deleteExistingCordappsDirectory = false
     )
 
@@ -182,7 +182,7 @@ data class NodeParameters(
             startInSameProcess,
             maximumHeapSize,
             null,
-            additionalCorDapps = emptySet(),
+            additionalCordapps = emptySet(),
             deleteExistingCordappsDirectory = false)
 
     constructor(
@@ -192,7 +192,7 @@ data class NodeParameters(
             customOverrides: Map<String, Any?>,
             startInSameProcess: Boolean?,
             maximumHeapSize: String,
-            additionalCorDapps: Set<TestCorDapp> = emptySet(),
+            additionalCordapps: Set<TestCorDapp> = emptySet(),
             deleteExistingCordappsDirectory: Boolean = false
     ) : this(
             providedName,
@@ -202,7 +202,7 @@ data class NodeParameters(
             startInSameProcess,
             maximumHeapSize,
             null,
-            additionalCorDapps,
+            additionalCordapps,
             deleteExistingCordappsDirectory)
 
     fun copy(
@@ -237,7 +237,7 @@ data class NodeParameters(
             startInSameProcess,
             maximumHeapSize,
             logLevel,
-            additionalCorDapps = additionalCorDapps,
+            additionalCordapps = additionalCordapps,
             deleteExistingCordappsDirectory = deleteExistingCordappsDirectory)
 
     fun withProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
@@ -247,7 +247,7 @@ data class NodeParameters(
     fun withStartInSameProcess(startInSameProcess: Boolean?): NodeParameters = copy(startInSameProcess = startInSameProcess)
     fun withMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
     fun withLogLevel(logLevel: String?): NodeParameters = copy(logLevel = logLevel)
-    fun withAdditionalCorDapps(additionalCorDapps: Set<TestCorDapp>): NodeParameters = copy(additionalCorDapps = additionalCorDapps)
+    fun withAdditionalCordapps(additionalCordapps: Set<TestCorDapp>): NodeParameters = copy(additionalCordapps = additionalCordapps)
     fun withDeleteExistingCordappsDirectory(deleteExistingCordappsDirectory: Boolean): NodeParameters = copy(deleteExistingCordappsDirectory = deleteExistingCordappsDirectory)
 }
 

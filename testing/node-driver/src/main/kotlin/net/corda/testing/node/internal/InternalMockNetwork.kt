@@ -81,7 +81,7 @@ data class InternalMockNodeParameters(
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
         val configOverrides: (NodeConfiguration) -> Any? = {},
         val version: VersionInfo = MOCK_VERSION_INFO,
-        val additionalCorDapps: Set<TestCorDapp>? = null) {
+        val additionalCordapps: Set<TestCorDapp>? = null) {
     constructor(mockNodeParameters: MockNodeParameters) : this(
             mockNodeParameters.forcedID,
             mockNodeParameters.legalName,
@@ -398,7 +398,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
 
         doReturn(cordappDirectories).whenever(config).cordappDirectories
 
-        val cordapps: Set<TestCorDapp> = parameters.additionalCorDapps ?: emptySet()
+        val cordapps: Set<TestCorDapp> = parameters.additionalCordapps ?: emptySet()
 
         if (!cordappsDirectory.exists()) {
             cordapps.packageInDirectory(cordappsDirectory)

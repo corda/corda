@@ -76,7 +76,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
             cordapps: Set<TestCorDapp>?,
             cordappsVersionAtStartup: Set<TestCorDapp>,
             cordappsVersionAtRestart: Set<TestCorDapp>,
-            reuseAdditionalCorDappsAtRestart: Boolean,
+            reuseAdditionalCordappsAtRestart: Boolean,
             assertNodeLogs: String
     ) {
 
@@ -86,8 +86,8 @@ class FlowCheckpointVersionNodeStartupCheckTest {
                 cordappsForAllNodes = cordapps)
         ) {
             val bobLogFolder = {
-                val alice = startNode(rpcUsers = listOf(user), providedName = ALICE_NAME, additionalCorDapps = cordappsVersionAtStartup).getOrThrow()
-                val bob = startNode(rpcUsers = listOf(user), providedName = BOB_NAME, additionalCorDapps = cordappsVersionAtStartup).getOrThrow()
+                val alice = startNode(rpcUsers = listOf(user), providedName = ALICE_NAME, additionalCordapps = cordappsVersionAtStartup).getOrThrow()
+                val bob = startNode(rpcUsers = listOf(user), providedName = BOB_NAME, additionalCordapps = cordappsVersionAtStartup).getOrThrow()
                 alice.stop()
                 CordaRPCClient(bob.rpcAddress).start(user.username, user.password).use {
                     val flowTracker = it.proxy.startTrackedFlow(::SendMessageFlow, message, defaultNotaryIdentity, alice.nodeInfo.singleIdentity()).progress
@@ -101,11 +101,11 @@ class FlowCheckpointVersionNodeStartupCheckTest {
             }()
 
             startNode(rpcUsers = listOf(user), providedName = ALICE_NAME, customOverrides = mapOf("devMode" to false),
-                    additionalCorDapps = cordappsVersionAtRestart, deleteExistingCordappsDirectory = !reuseAdditionalCorDappsAtRestart).getOrThrow()
+                    additionalCordapps = cordappsVersionAtRestart, deleteExistingCordappsDirectory = !reuseAdditionalCordappsAtRestart).getOrThrow()
 
             assertFailsWith(ListenProcessDeathException::class) {
                 startNode(providedName = BOB_NAME, rpcUsers = listOf(user), customOverrides = mapOf("devMode" to false),
-                        additionalCorDapps = cordappsVersionAtRestart, deleteExistingCordappsDirectory = !reuseAdditionalCorDappsAtRestart).getOrThrow()
+                        additionalCordapps = cordappsVersionAtRestart, deleteExistingCordappsDirectory = !reuseAdditionalCordappsAtRestart).getOrThrow()
             }
 
             val logFile = bobLogFolder.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }

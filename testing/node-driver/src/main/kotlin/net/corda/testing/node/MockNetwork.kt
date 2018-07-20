@@ -55,7 +55,7 @@ data class MockNodeParameters constructor(
     fun withEntropyRoot(entropyRoot: BigInteger): MockNodeParameters = copy(entropyRoot = entropyRoot)
     fun withConfigOverrides(configOverrides: (NodeConfiguration) -> Any?): MockNodeParameters = copy(configOverrides = configOverrides)
     fun withExtraCordappPackages(extraCordappPackages: List<String>): MockNodeParameters = copy(forcedID = forcedID, legalName = legalName, entropyRoot = entropyRoot, configOverrides = configOverrides, extraCordappPackages = extraCordappPackages)
-    fun withAdditionalCorDapps(additionalCorDapps: Set<TestCorDapp>): MockNodeParameters = copy(additionalCordapps = additionalCorDapps)
+    fun withAdditionalCordapps(additionalCordapps: Set<TestCorDapp>): MockNodeParameters = copy(additionalCordapps = additionalCordapps)
     fun copy(forcedID: Int?, legalName: CordaX500Name?, entropyRoot: BigInteger, configOverrides: (NodeConfiguration) -> Any?): MockNodeParameters {
         return MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides, additionalCordapps = emptySet())
     }

@@ -186,7 +186,7 @@ class DriverDSLImpl(
         }
     }
 
-    override fun startNode(defaultParameters: NodeParameters, providedName: CordaX500Name?, rpcUsers: List<User>, verifierType: VerifierType, customOverrides: Map<String, Any?>, startInSameProcess: Boolean?, maximumHeapSize: String) = startNode(defaultParameters, providedName, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, defaultParameters.additionalCorDapps, defaultParameters.deleteExistingCordappsDirectory)
+    override fun startNode(defaultParameters: NodeParameters, providedName: CordaX500Name?, rpcUsers: List<User>, verifierType: VerifierType, customOverrides: Map<String, Any?>, startInSameProcess: Boolean?, maximumHeapSize: String) = startNode(defaultParameters, providedName, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, defaultParameters.additionalCordapps, defaultParameters.deleteExistingCordappsDirectory)
 
     override fun startNode(
             defaultParameters: NodeParameters,
@@ -196,7 +196,7 @@ class DriverDSLImpl(
             customOverrides: Map<String, Any?>,
             startInSameProcess: Boolean?,
             maximumHeapSize: String,
-            additionalCorDapps: Set<TestCorDapp>,
+            additionalCordapps: Set<TestCorDapp>,
             deleteExistingCordappsDirectory: Boolean
     ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
@@ -213,7 +213,7 @@ class DriverDSLImpl(
         return registrationFuture.flatMap {
             networkMapAvailability.flatMap {
                 // But starting the node proper does require the network map
-                startRegisteredNode(name, it, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, p2pAddress, additionalCorDapps, deleteExistingCordappsDirectory)
+                startRegisteredNode(name, it, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, p2pAddress, additionalCordapps, deleteExistingCordappsDirectory)
             }
         }
     }
@@ -226,7 +226,7 @@ class DriverDSLImpl(
                                     startInSameProcess: Boolean? = null,
                                     maximumHeapSize: String = "512m",
                                     p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort(),
-                                    additionalCorDapps: Set<TestCorDapp> = emptySet(),
+                                    additionalCordapps: Set<TestCorDapp> = emptySet(),
                                     deleteExistingCordappsDirectory: Boolean = false): CordaFuture<NodeHandle> {
         val rpcAddress = portAllocation.nextHostAndPort()
         val rpcAdminAddress = portAllocation.nextHostAndPort()
@@ -255,7 +255,7 @@ class DriverDSLImpl(
                 allowMissingConfig = true,
                 configOverrides = if (overrides.hasPath("devMode")) overrides else overrides + mapOf("devMode" to true)
         )).checkAndOverrideForInMemoryDB()
-        return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap, additionalCorDapps, deleteExistingCordappsDirectory)
+        return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap, additionalCordapps, deleteExistingCordappsDirectory)
     }
 
     private fun startNodeRegistration(providedName: CordaX500Name, rootCert: X509Certificate, compatibilityZoneURL: URL): CordaFuture<NodeConfig> {
@@ -646,7 +646,7 @@ class DriverDSLImpl(
                                   startInProcess: Boolean?,
                                   maximumHeapSize: String,
                                   localNetworkMap: LocalNetworkMap?,
-                                  additionalCorDapps: Set<TestCorDapp>,
+                                  additionalCordapps: Set<TestCorDapp>,
                                   deleteExistingCordappsDirectory: Boolean = false): CordaFuture<NodeHandle> {
         val visibilityHandle = networkVisibilityController.register(specifiedConfig.corda.myLegalName)
         val baseDirectory = specifiedConfig.corda.baseDirectory.createDirectories()
@@ -672,7 +672,7 @@ class DriverDSLImpl(
             individualCorDappsDirectory.deleteRecursively()
         }
         if (!individualCorDappsDirectory.exists()) {
-            additionalCorDapps.packageInDirectory(individualCorDappsDirectory)
+            additionalCordapps.packageInDirectory(individualCorDappsDirectory)
         } else {
             log.info("Node's specific CorDapps directory $individualCorDappsDirectory already exists, skipping CorDapps packaging for node ${specifiedConfig.corda.myLegalName}.")
         }
