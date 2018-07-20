@@ -9,6 +9,7 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.deserialize
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import java.io.File
 import java.security.cert.X509Certificate
@@ -36,7 +37,7 @@ interface Volume {
 
     fun convertNodeIntoToNetworkParams(notaryFiles: List<Pair<File, File>>): NetworkParameters {
         val notaryInfos = notaryFiles.map { (configFile, nodeInfoFile) ->
-            val validating = ConfigFactory.parseFile(configFile).getConfig("notary").getBoolean("validating")
+            val validating = ConfigFactory.parseFile(configFile).getConfig("notary").getBooleanCaseInsensitive("validating")
             nodeInfoFile.readBytes().deserialize<SignedNodeInfo>().verified().let { NotaryInfo(it.legalIdentities.first(), validating) }
         }
 

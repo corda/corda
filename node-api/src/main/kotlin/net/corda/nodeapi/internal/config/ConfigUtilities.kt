@@ -276,13 +276,17 @@ private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
     }
 }
 
-// The typesafe .getBoolean function is case sensitive, this is a case insensitve version
-private fun Config.getBooleanCaseInsensitive(path: String): Boolean {
-    val stringVal = getString(path).toLowerCase()
-    if (stringVal == "true" || stringVal == "false") {
-        return stringVal.toBoolean()
+// The typesafe .getBoolean function is case sensitive, this is a case insensitive version
+fun Config.getBooleanCaseInsensitive(path: String): Boolean {
+    try {
+        return getBoolean(path)
+    } catch(e:Exception) {
+        val stringVal = getString(path).toLowerCase()
+        if (stringVal == "true" || stringVal == "false") {
+            return stringVal.toBoolean()
+        }
+        throw e
     }
-    throw ConfigException.BadValue(stringVal, "Boolean values must be true or false")
 }
 
 private val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.config")
