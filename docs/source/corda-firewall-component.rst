@@ -17,7 +17,7 @@ This document is intended to provide an overview of the architecture and options
 Terminology
 -----------
 The component referred to here as the *bridge* is the library of code responsible for managing outgoing links to peer
-nodes and implements the AMQP 1.0 protocol over TLS 1.0 between peers to provide reliable flow message delivery. This
+nodes and implements the AMQP 1.0 protocol over TLS 1.2 between peers to provide reliable flow message delivery. This
 component can be run as a simple integrated feature of the node. However, for enhanced security and features in Corda
 Enterprise, the in-node version should be turned off and a standalone and HA version can be run from the
 ``corda-firewall.jar``, possibly integrating with a SOCKS proxy.
