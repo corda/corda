@@ -48,7 +48,7 @@ couple of resources.
 
    .. code:: bash
 
-       custom : { issuableCurrencies : [ USD ] }
+       issuableCurrencies : [ USD ]
 
    .. note:: Make sure that the config file is in the correct format, e.g., by ensuring that there's a comma at the end of the line prior to the added config.
 
