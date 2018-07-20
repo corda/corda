@@ -35,6 +35,8 @@ import javax.annotation.concurrent.ThreadSafe
 data class SerializationSchemas(val schema: Schema, val transforms: TransformsSchema)
 @KeepForDJVM
 data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typeDescriptor: Any)
+@KeepForDJVM
+data class CustomSerializersCacheKey(val clazz: Class<*>, val declaredType: Type)
 
 /**
  * Factory of serializers designed to be shared across threads and invocations.
@@ -66,6 +68,7 @@ open class SerializerFactory(
         private val serializersByType: MutableMap<Type, AMQPSerializer<Any>>,
         val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>>,
         private val customSerializers: MutableList<SerializerFor>,
+        private val customSerializersCache: MutableMap<CustomSerializersCacheKey, AMQPSerializer<Any>?>,
         val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>,
         private val onlyCustomSerializers: Boolean = false
 ) {
@@ -83,6 +86,7 @@ open class SerializerFactory(
             ConcurrentHashMap(),
             ConcurrentHashMap(),
             CopyOnWriteArrayList(),
+            ConcurrentHashMap(),
             ConcurrentHashMap(),
             onlyCustomSerializers
     )
@@ -387,6 +391,13 @@ open class SerializerFactory(
     }
 
     internal fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
+        return customSerializersCache.computeIfAbsent(CustomSerializersCacheKey(clazz, declaredType), ::doFindCustomSerializer)
+    }
+
+    private fun doFindCustomSerializer(key: CustomSerializersCacheKey): AMQPSerializer<Any>? {
+
+        val (clazz, declaredType) = key
+
         // e.g. Imagine if we provided a Map serializer this way, then it won't work if the declared type is
         // AbstractMap, only Map. Otherwise it needs to inject additional schema for a RestrictedType source of the
         // super type.  Could be done, but do we need it?
@@ -399,7 +410,7 @@ open class SerializerFactory(
                         || !customSerializer.isSerializerFor(declaredSuperClass)
                         || !customSerializer.revealSubclassesInSchema
                 ) {
-                    logger.info ("action=\"Using custom serializer\", class=${clazz.typeName}, " +
+                    logger.debug("action=\"Using custom serializer\", class=${clazz.typeName}, " +
                             "declaredType=${declaredType.typeName}")
 
                     @Suppress("UNCHECKED_CAST")

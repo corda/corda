@@ -28,7 +28,11 @@ import net.corda.nodeapi.internal.bridging.AMQPBridgeManager
 import net.corda.nodeapi.internal.bridging.BridgeManager
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.MAX_MESSAGE_SIZE
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -54,11 +58,9 @@ class AMQPBridgeTest {
 
     private val BOB = TestIdentity(BOB_NAME)
 
-    private val artemisPort = freePort()
-    private val artemisPort2 = freePort()
-    private val amqpPort = freePort()
-    private val artemisAddress = NetworkHostAndPort("localhost", artemisPort)
-    private val amqpAddress = NetworkHostAndPort("localhost", amqpPort)
+    private val portAllocation = PortAllocation.Incremental(10000)
+    private val artemisAddress = portAllocation.nextHostAndPort()
+    private val amqpAddress = portAllocation.nextHostAndPort()
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 
@@ -261,8 +263,10 @@ class AMQPBridgeTest {
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
         }
         artemisConfig.configureWithDevSSLCertificate()
-        val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", artemisPort), MAX_MESSAGE_SIZE)
-        val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress, MAX_MESSAGE_SIZE, confirmationWindowSize = 10 * 1024)
+
+        val artemisServer = ArtemisMessagingServer(artemisConfig, artemisAddress.copy(host = "0.0.0.0"), MAX_MESSAGE_SIZE)
+        val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress, MAX_MESSAGE_SIZE)
+
         artemisServer.start()
         artemisClient.start()
         val bridgeManager = AMQPBridgeManager(artemisConfig, artemisAddress, MAX_MESSAGE_SIZE)
@@ -314,7 +318,7 @@ class AMQPBridgeTest {
             override val maxMessageSize: Int = maxMessageSize
         }
         return AMQPServer("0.0.0.0",
-                amqpPort,
+                amqpAddress.port,
                 amqpConfig
         )
     }

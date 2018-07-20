@@ -10,8 +10,8 @@
 
 package net.corda.core.contracts
 
-import net.corda.finance.*
 import net.corda.core.contracts.Amount.Companion.sumOrZero
+import net.corda.finance.*
 import org.junit.Test
 import java.math.BigDecimal
 import java.util.*

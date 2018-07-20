@@ -94,7 +94,7 @@ class LargeTransactionsTest : IntegrationTest() {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.testing.contracts"),
-                networkParameters = testNetworkParameters(maxTransactionSize = 13.MB.toInt())
+                networkParameters = testNetworkParameters(maxMessageSize = 15.MB.toInt(), maxTransactionSize = 13.MB.toInt())
         )) {
             val rpcUser = User("admin", "admin", setOf("ALL"))
             val (alice, _) = listOf(ALICE_NAME, BOB_NAME).map { startNode(providedName = it, rpcUsers = listOf(rpcUser)) }.transpose().getOrThrow()

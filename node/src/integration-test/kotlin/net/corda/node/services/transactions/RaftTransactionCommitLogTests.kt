@@ -30,12 +30,15 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.core.freeLocalHostAndPort
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.hamcrest.Matchers.instanceOf
-import org.junit.*
+import org.junit.After
 import org.junit.Assert.assertThat
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.CompletableFuture
@@ -49,8 +52,10 @@ class RaftTransactionCommitLogTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
-    private lateinit var cluster: List<Member>
     private val databases: MutableList<CordaPersistence> = mutableListOf()
+    private val portAllocation = PortAllocation.Incremental(10000)
+
+    private lateinit var cluster: List<Member>
 
     @Before
     fun setup() {
@@ -149,9 +154,9 @@ class RaftTransactionCommitLogTests {
     }
 
     private fun setUpCluster(nodeCount: Int = 3): List<Member> {
-        val clusterAddress = freeLocalHostAndPort()
+        val clusterAddress = portAllocation.nextHostAndPort()
         val cluster = mutableListOf(createReplica(clusterAddress))
-        for (i in 1..nodeCount) cluster.add(createReplica(freeLocalHostAndPort(), clusterAddress))
+        for (i in 1..nodeCount) cluster.add(createReplica(portAllocation.nextHostAndPort(), clusterAddress))
         return cluster.map { it.getOrThrow() }
     }
 
