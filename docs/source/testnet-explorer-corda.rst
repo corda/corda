@@ -44,7 +44,7 @@ couple of resources.
 
        sudo cp /home/<USER>/corda-finance-<VERSION>-corda.jar /opt/corda/cordapps/
 
-4. Add the following line to your ``node.conf``:
+4. Add the following line to the bottom of your ``node.conf``:
 
    .. code:: bash
 
@@ -61,17 +61,21 @@ couple of resources.
 
    Your node is now running the Finance Cordapp.
 
-   .. note:: You can double-check that the CorDapp is loaded in the log file ``/opt/corda/logs/node-<VM-NAME>.log``. This file will list installed apps at startup.
+   .. note:: You can double-check that the CorDapp is loaded in the log file ``/opt/corda/logs/node-<VM-NAME>.log``. This file will list installed apps at startup. Search for ``Loaded CorDapps`` in the logs.
 
-6. Now download the Node Explorer to your local machine:
+6. Now download the Node Explorer to your **LOCAL** machine:
+
+   .. note:: Node Explorer is a JavaFX GUI which connects to the node over the RPC interface and allows you to send transactions.
+
+   Download the Node Explorer from here:
 
    .. code:: bash
 
-       wget http://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-tools-explorer/<VERSION>-corda/corda-tools-explorer-<VERSION>-corda.jar
+       http://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-tools-explorer/<VERSION>-corda/corda-tools-explorer-<VERSION>-corda.jar
 
    .. warning:: This Node Explorer is incompatible with the Corda Enterprise distribution and vice versa as they currently use different serialisation schemes (Kryo vs AMQP).
 
-7. Run the Node Explorer tool on your local machine.
+7. Run the Node Explorer tool on your **LOCAL** machine.
 
    .. code:: bash
 
