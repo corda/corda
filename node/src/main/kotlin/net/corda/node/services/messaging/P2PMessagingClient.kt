@@ -145,7 +145,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private val handlers = ConcurrentHashMap<String, MessageHandler>()
 
     private val deduplicator = P2PMessageDeduplicator(database)
-    internal var messagingExecutor: MessagingExecutor? = null
+    var messagingExecutor: MessagingExecutor? = null
 
     fun start() {
         state.locked {
@@ -378,7 +378,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         override fun toString() = "$topic#$data"
     }
 
-    internal fun deliver(artemisMessage: ClientMessage) {
+    fun deliver(artemisMessage: ClientMessage) {
         artemisToCordaMessage(artemisMessage)?.let { cordaMessage ->
             if (!deduplicator.isDuplicate(cordaMessage)) {
                 deduplicator.signalMessageProcessStart(cordaMessage)
