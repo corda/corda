@@ -186,6 +186,8 @@ class DriverDSLImpl(
         }
     }
 
+    override fun startNode(defaultParameters: NodeParameters, providedName: CordaX500Name?, rpcUsers: List<User>, verifierType: VerifierType, customOverrides: Map<String, Any?>, startInSameProcess: Boolean?, maximumHeapSize: String) = startNode(defaultParameters, providedName, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, defaultParameters.additionalCorDapps, defaultParameters.deleteExistingCordappsDirectory)
+
     override fun startNode(
             defaultParameters: NodeParameters,
             providedName: CordaX500Name?,
