@@ -88,7 +88,7 @@ data class InternalMockNodeParameters(
             mockNodeParameters.entropyRoot,
             mockNodeParameters.configOverrides,
             MOCK_VERSION_INFO,
-            mockNodeParameters.additionalCorDapps
+            mockNodeParameters.additionalCordapps
     )
 }
 
