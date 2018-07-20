@@ -76,15 +76,15 @@ open class MockServices private constructor(
         fun cordappLoaderForPackages(packages: Iterable<String>): CordappLoader {
 
             val cordapps = cordappsForPackages(packages)
-            return testCorDappsDirectory().let { directory ->
+            return testCordappsDirectory().let { directory ->
                 cordapps.packageInDirectory(directory)
                 CordappLoader.fromDirectories(listOf(directory))
             }
         }
 
-        private fun testCorDappsDirectory(): Path {
+        private fun testCordappsDirectory(): Path {
 
-            val cordappsDirectory = Paths.get("build") / "tmp" / "generated-test-cordapps"
+            val cordappsDirectory = Paths.get("build") / "tmp" / getTimestampAsDirectoryName() / "generated-test-cordapps"
             if (cordappsDirectory.exists()) {
                 cordappsDirectory.deleteRecursively()
             }
@@ -124,7 +124,27 @@ open class MockServices private constructor(
                                             initialIdentity: TestIdentity,
                                             networkParameters: NetworkParameters = testNetworkParameters(),
                                             vararg moreKeys: KeyPair): Pair<CordaPersistence, MockServices> {
+
             val cordappLoader = cordappLoaderForPackages(cordappPackages)
+            return makeTestDatabaseAndMockServices(cordappLoader, identityService, initialIdentity, networkParameters, *moreKeys)
+        }
+
+        /**
+         * Makes database and mock services appropriate for unit tests.
+         *
+         * @param cordappLoader [CordappLoader] containing CorDapps.
+         * @param identityService An instance of [IdentityService], see [makeTestIdentityService].
+         * @param initialIdentity The first (typically sole) identity the services will represent.
+         * @param moreKeys A list of additional [KeyPair] instances to be used by [MockServices].
+         * @return A pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun makeTestDatabaseAndMockServices(cordappLoader: CordappLoader,
+                                            identityService: IdentityService,
+                                            initialIdentity: TestIdentity,
+                                            networkParameters: NetworkParameters = testNetworkParameters(),
+                                            vararg moreKeys: KeyPair): Pair<CordaPersistence, MockServices> {
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
@@ -240,6 +260,19 @@ open class MockServices private constructor(
      */
     constructor(firstIdentity: TestIdentity, vararg moreIdentities: TestIdentity) : this(
             listOf(getCallerPackage(MockServices::class)!!),
+            firstIdentity,
+            makeTestIdentityService(*listOf(firstIdentity, *moreIdentities).map { it.identity }.toTypedArray()),
+            firstIdentity.keyPair
+    )
+
+    /**
+     * A helper constructor that requires at least one test identity to be registered, and which takes the package of
+     * the caller as the package in which to find app code. This is the most convenient constructor and the one that
+     * is normally worth using. The first identity is the identity of this service hub, the rest are identities that
+     * it is aware of.
+     */
+    constructor(cordappLoader: CordappLoader, firstIdentity: TestIdentity, vararg moreIdentities: TestIdentity) : this(
+            cordappLoader,
             firstIdentity,
             makeTestIdentityService(*listOf(firstIdentity, *moreIdentities).map { it.identity }.toTypedArray()),
             firstIdentity.keyPair

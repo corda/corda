@@ -114,9 +114,9 @@ private fun Iterable<JarEntryInfo>.zip(outputStream: ZipOutputStream, willResour
 
 private fun zip(outputStream: ZipOutputStream, allInfo: Iterable<JarEntryInfo>) {
 
-    val time = FileTime.from(Instant.now())
+    val time = FileTime.from(Instant.EPOCH)
     val classLoader = Thread.currentThread().contextClassLoader
-    allInfo.distinctBy { it.url }.forEach { info ->
+    allInfo.distinctBy { it.url }.sortedBy { it.url.toExternalForm() }.forEach { info ->
 
         try {
             val entry = ZipEntry(info.entryName).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
