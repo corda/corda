@@ -165,7 +165,7 @@ class MessagingExecutor(
         producer.send(SimpleString(mqAddress), artemisMessage, { job.sentFuture.set(Unit) })
     }
 
-    internal fun cordaToArtemisMessage(message: Message): ClientMessage? {
+    fun cordaToArtemisMessage(message: Message): ClientMessage? {
         return session.createMessage(true).apply {
             putStringProperty(P2PMessagingHeaders.cordaVendorProperty, cordaVendor)
             putStringProperty(P2PMessagingHeaders.releaseVersionProperty, releaseVersion)
