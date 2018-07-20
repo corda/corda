@@ -175,6 +175,12 @@ open class MockServices private constructor(
                 vararg moreKeys: KeyPair) :
             this(cordappLoaderForPackages(cordappPackages), identityService, testNetworkParameters(), initialIdentity, moreKeys)
 
+    constructor(cordappLoader: CordappLoader,
+                initialIdentity: TestIdentity,
+                identityService: IdentityService = makeTestIdentityService(),
+                vararg moreKeys: KeyPair) :
+            this(cordappLoader, identityService, testNetworkParameters(), initialIdentity, moreKeys)
+
     constructor(cordappPackages: Iterable<String>,
                 initialIdentity: TestIdentity,
                 identityService: IdentityService,
@@ -197,6 +203,9 @@ open class MockServices private constructor(
     @JvmOverloads
     constructor(cordappPackages: Iterable<String>, initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService()) :
             this(cordappPackages, TestIdentity(initialIdentityName), identityService)
+
+    constructor(cordappLoader: CordappLoader, initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService()) :
+            this(cordappLoader, TestIdentity(initialIdentityName), identityService)
 
     /**
      * Create a mock [ServiceHub] that can't load CorDapp code, and which uses a default service identity.
@@ -255,9 +264,9 @@ open class MockServices private constructor(
             return NodeInfo(listOf(NetworkHostAndPort("mock.node.services", 10000)), listOf(initialIdentity.identity), 1, serial = 1L)
         }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
-    private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments, networkParameters.whitelistedContractImplementations).also { provider ->
-        cordappLoader.cordapps.flatMap { it.contractClassNames }.forEach { provider.addMockCordapp(it, attachments) }
-    }
+
+    private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments, networkParameters.whitelistedContractImplementations)
+
     override val cordappProvider: CordappProvider get() = mockCordappProvider
 
     protected val servicesForResolution: ServicesForResolution get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParameters, validatedTransactions)

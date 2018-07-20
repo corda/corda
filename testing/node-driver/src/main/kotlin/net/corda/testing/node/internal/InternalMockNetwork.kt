@@ -99,7 +99,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                                val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
                                val testDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
                                networkParameters: NetworkParameters = testNetworkParameters(),
-                               val defaultFactory: (MockNodeArgs) -> MockNode = InternalMockNetwork::MockNode,
+                               val defaultFactory: (MockNodeArgs, CordappLoader?) -> MockNode = { args, cordappLoader -> cordappLoader?.let { MockNode(args, it) } ?: MockNode(args) },
                                val cordappsForAllNodes: Set<TestCorDapp> = emptySet()) {
     init {
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
@@ -137,6 +137,10 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             deleteRecursively()
             cordappsForAllNodes.packageInDirectory(this)
         }
+    }
+
+    val sharedCordappLoader: CordappLoader by lazy {
+        CordappLoader.fromDirectories(listOf(sharedCorDappsDirectory))
     }
 
     /** A read only view of the current set of nodes. */
@@ -231,11 +235,11 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         }
     }
 
-    open class MockNode(args: MockNodeArgs) : AbstractNode(
+    open class MockNode(args: MockNodeArgs, cordappLoader: CordappLoader = CordappLoader.fromDirectories(args.config.cordappDirectories)) : AbstractNode(
             args.config,
             TestClock(Clock.systemUTC()),
             args.version,
-            CordappLoader.fromDirectories(args.config.cordappDirectories),
+            cordappLoader,
             args.network.busyLatch
     ) {
         companion object {
@@ -365,7 +369,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         return createUnstartedNode(parameters, defaultFactory)
     }
 
-    fun <N : MockNode> createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): N {
+    fun <N : MockNode> createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs, CordappLoader?) -> N): N {
         return createNodeImpl(parameters, nodeFactory, false)
     }
 
@@ -374,11 +378,11 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     }
 
     /** Like the other [createNode] but takes a [nodeFactory] and propagates its [MockNode] subtype. */
-    fun <N : MockNode> createNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs) -> N): StartedNode<N> {
+    fun <N : MockNode> createNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs, CordappLoader?) -> N): StartedNode<N> {
         return uncheckedCast(createNodeImpl(parameters, nodeFactory, true).started)!!
     }
 
-    private fun <N : MockNode> createNodeImpl(parameters: InternalMockNodeParameters, nodeFactory: (MockNodeArgs) -> N, start: Boolean): N {
+    private fun <N : MockNode> createNodeImpl(parameters: InternalMockNodeParameters, nodeFactory: (MockNodeArgs, CordappLoader?) -> N, start: Boolean): N {
         val id = parameters.forcedID ?: nextNodeId++
         val config = mockNodeConfiguration().also {
             doReturn(baseDirectory(id).createDirectories()).whenever(it).baseDirectory
@@ -402,7 +406,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             logger.info("Node's specific CorDapps directory $cordappsDirectory already exists, skipping CorDapps packaging for node ${config.myLegalName}.")
         }
 
-        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version))
+        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version), CordappLoader.fromDirectories(cordappDirectories))
         _nodes += node
         if (start) {
             node.start()
@@ -410,7 +414,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         return node
     }
 
-    fun <N : MockNode> restartNode(node: StartedNode<N>, nodeFactory: (MockNodeArgs) -> N): StartedNode<N> {
+    fun <N : MockNode> restartNode(node: StartedNode<N>, nodeFactory: (MockNodeArgs, CordappLoader?) -> N): StartedNode<N> {
         node.internals.disableDBCloseOnStop()
         node.dispose()
         return createNode(

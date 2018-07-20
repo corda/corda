@@ -110,7 +110,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         // allow interruption half way through.
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages), threadPerNode = true)
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
-        MockServices(cordappPackages, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
+        MockServices(mockNet.sharedCordappLoader, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
             val notaryNode = mockNet.defaultNotaryNode
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             val bobNode = mockNet.createPartyNode(BOB_NAME)
@@ -162,7 +162,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     fun `trade cash for commercial paper fails using soft locking`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages), threadPerNode = true)
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
-        MockServices(cordappPackages, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
+        MockServices(mockNet.sharedCordappLoader, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
             val notaryNode = mockNet.defaultNotaryNode
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             val bobNode = mockNet.createPartyNode(BOB_NAME)
@@ -317,11 +317,20 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     // of gets and puts.
     private fun makeNodeWithTracking(name: CordaX500Name): StartedNode<InternalMockNetwork.MockNode> {
         // Create a node in the mock network ...
-        return mockNet.createNode(InternalMockNodeParameters(legalName = name), nodeFactory = { args ->
-            object : InternalMockNetwork.MockNode(args) {
-                // That constructs a recording tx storage
-                override fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage {
-                    return RecordingTransactionStorage(database, super.makeTransactionStorage(database, transactionCacheSizeBytes))
+        return mockNet.createNode(InternalMockNodeParameters(legalName = name), nodeFactory = { args, cordappLoader ->
+            if (cordappLoader != null) {
+                object : InternalMockNetwork.MockNode(args, cordappLoader) {
+                    // That constructs a recording tx storage
+                    override fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage {
+                        return RecordingTransactionStorage(database, super.makeTransactionStorage(database, transactionCacheSizeBytes))
+                    }
+                }
+            } else {
+                object : InternalMockNetwork.MockNode(args) {
+                    // That constructs a recording tx storage
+                    override fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage {
+                        return RecordingTransactionStorage(database, super.makeTransactionStorage(database, transactionCacheSizeBytes))
+                    }
                 }
             }
         })

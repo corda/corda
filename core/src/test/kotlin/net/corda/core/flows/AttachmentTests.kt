@@ -127,7 +127,7 @@ class AttachmentTests : WithMockNet {
     // Makes a node that doesn't do sanity checking at load time.
     private fun makeBadNode(name: CordaX500Name) = mockNet.createNode(
             InternalMockNodeParameters(legalName = randomise(name)),
-            nodeFactory = { args ->
+            nodeFactory = { args, _ ->
                 object : InternalMockNetwork.MockNode(args) {
                     override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
                 }

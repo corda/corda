@@ -52,7 +52,6 @@ fun Iterable<TestCorDapp>.packageInDirectory(directory: Path) {
 fun allClassesForPackage(targetPackage: String): Set<Class<*>> {
 
     val scanResult = FastClasspathScanner(targetPackage).strictWhitelist().scan()
-    // TODO sollecitom fix this (the resources are not found)
     return scanResult.namesOfAllClasses.filter { className -> className.startsWith(targetPackage) }.map(scanResult::classNameToClassRef).toSet()
 }
 
