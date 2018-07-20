@@ -14,13 +14,15 @@ import net.corda.finance.flows.CashPaymentFlow;
 import net.corda.testing.driver.DriverParameters;
 import net.corda.testing.driver.NodeHandle;
 import net.corda.testing.driver.NodeParameters;
+import net.corda.testing.internal.IntegrationTest;
+import net.corda.testing.internal.IntegrationTestKt;
+import net.corda.testing.internal.IntegrationTestSchemas;
 import net.corda.testing.node.User;
+import org.junit.ClassRule;
 import org.junit.Test;
 import rx.Observable;
 
-import java.util.Currency;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -31,16 +33,22 @@ import static net.corda.testing.core.ExpectKt.expect;
 import static net.corda.testing.core.ExpectKt.expectEvents;
 import static net.corda.testing.core.TestConstants.ALICE_NAME;
 import static net.corda.testing.core.TestConstants.BOB_NAME;
+import static net.corda.testing.core.TestConstants.DUMMY_NOTARY_NAME;
 import static net.corda.testing.driver.Driver.driver;
 import static org.junit.Assert.assertEquals;
 
-public class JavaIntegrationTestingTutorial {
+public class JavaIntegrationTestingTutorial extends IntegrationTest {
+
+    @ClassRule
+    public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(ALICE_NAME), IntegrationTestKt.toDatabaseSchemaName(BOB_NAME),
+            IntegrationTestKt.toDatabaseSchemaName(DUMMY_NOTARY_NAME));
+
     @Test
     public void aliceBobCashExchangeExample() {
         // START 1
         driver(new DriverParameters()
                 .withStartNodesInProcess(true)
-                .withExtraCordappPackagesToScan(singletonList("net.corda.finance.contracts.asset")), dsl -> {
+                .withExtraCordappPackagesToScan(Arrays.asList("net.corda.finance.contracts.asset", "net.corda.finance.schemas")), dsl -> {
 
             User aliceUser = new User("aliceUser", "testPassword1", new HashSet<>(asList(
                     startFlow(CashIssueAndPaymentFlow.class),

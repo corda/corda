@@ -19,19 +19,30 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
+import org.junit.ClassRule
 import org.junit.Test
 import rx.Observable
 import java.util.*
 import kotlin.test.assertEquals
 
-class KotlinIntegrationTestingTutorial {
+class KotlinIntegrationTestingTutorial : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
+                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+    }
+
     @Test
     fun `alice bob cash exchange example`() {
         // START 1
         driver(DriverParameters(
                 startNodesInProcess = true,
-                extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset")
+                extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas")
         )) {
             val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(
                     startFlow<CashIssueAndPaymentFlow>(),

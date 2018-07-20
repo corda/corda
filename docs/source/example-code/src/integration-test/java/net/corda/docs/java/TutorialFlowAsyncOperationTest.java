@@ -7,7 +7,11 @@ import net.corda.core.utilities.KotlinUtilsKt;
 import net.corda.docs.java.tutorial.flowstatemachines.ExampleSummingFlow;
 import net.corda.node.services.Permissions;
 import net.corda.testing.driver.*;
+import net.corda.testing.internal.IntegrationTest;
+import net.corda.testing.internal.IntegrationTestKt;
+import net.corda.testing.internal.IntegrationTestSchemas;
 import net.corda.testing.node.User;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -15,9 +19,14 @@ import java.util.HashSet;
 import java.util.concurrent.Future;
 
 import static net.corda.testing.core.TestConstants.ALICE_NAME;
+import static net.corda.testing.core.TestConstants.DUMMY_NOTARY_NAME;
 import static org.junit.Assert.assertEquals;
 
-public final class TutorialFlowAsyncOperationTest {
+public final class TutorialFlowAsyncOperationTest extends IntegrationTest {
+
+    @ClassRule
+    public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(ALICE_NAME), IntegrationTestKt.toDatabaseSchemaName(DUMMY_NOTARY_NAME));
+
     // DOCSTART summingWorks
     @Test
     public final void summingWorks() {

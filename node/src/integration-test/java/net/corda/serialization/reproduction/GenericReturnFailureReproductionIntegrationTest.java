@@ -10,7 +10,11 @@ import net.corda.testing.driver.Driver;
 import net.corda.testing.driver.DriverParameters;
 import net.corda.testing.driver.NodeHandle;
 import net.corda.testing.driver.NodeParameters;
+import net.corda.testing.internal.IntegrationTest;
+import net.corda.testing.internal.IntegrationTestKt;
+import net.corda.testing.internal.IntegrationTestSchemas;
 import net.corda.testing.node.User;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -19,7 +23,14 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class GenericReturnFailureReproductionIntegrationTest {
+import static net.corda.testing.core.TestConstants.*;
+
+public class GenericReturnFailureReproductionIntegrationTest extends IntegrationTest {
+
+    @ClassRule
+    public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(ALICE_NAME), IntegrationTestKt.toDatabaseSchemaName(BOB_NAME),
+            IntegrationTestKt.toDatabaseSchemaName(DUMMY_BANK_A_NAME), IntegrationTestKt.toDatabaseSchemaName(DUMMY_NOTARY_NAME));
+
 
     @Test()
     public void flowShouldReturnGenericList() {
