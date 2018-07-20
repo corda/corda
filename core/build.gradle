@@ -68,8 +68,13 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
+    // Hamkrest, for fluent, composable matchers
+    testCompile "com.natpryce:hamkrest:$hamkrest_version"
+
     // Quasar, for suspendable fibres.
-    compileOnly "$quasar_group:quasar-core:$quasar_version:jdk8"
+    compileOnly("$quasar_group:quasar-core:$quasar_version:jdk8") {
+        transitive = false
+    }
 
     // Thread safety annotations
     compile "com.google.code.findbugs:jsr305:$jsr305_version"

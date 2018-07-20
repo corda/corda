@@ -39,6 +39,7 @@ buildscript {
     ext.fileupload_version = '1.3.3'
     ext.junit_version = '4.12'
     ext.mockito_version = '2.18.3'
+    ext.hamkrest_version = '1.4.2.2'
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
@@ -98,6 +99,7 @@ buildscript {
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
         classpath "net.corda.plugins:cordapp:$gradle_plugins_version"
         classpath "net.corda.plugins:api-scanner:$gradle_plugins_version"
+        classpath "net.corda.plugins:jar-filter:$gradle_plugins_version"
         classpath "net.sf.proguard:proguard-gradle:$proguard_version"
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
         classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
@@ -215,6 +217,9 @@ allprojects {
                 force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
                 force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
                 force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+
+                // Force dependencies to use the same version of Guava as Corda.
+                force "com.google.guava:guava:$guava_version"
 
                 // Demand that everything uses our given version of Netty.
                 eachDependency { details ->

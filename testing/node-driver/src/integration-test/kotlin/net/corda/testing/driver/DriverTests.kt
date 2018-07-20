@@ -17,7 +17,6 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.http.HttpApi
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.addressMustBeBound
@@ -86,15 +85,6 @@ class DriverTests {
                 assertThat(bob.rpc.networkMapSnapshot().flatMap { it.legalIdentities }).contains(defaultNotaryIdentity)
             }
         }
-    }
-
-    @Test
-    fun `random free port allocation`() {
-        val nodeHandle = driver(DriverParameters(portAllocation = RandomFree, notarySpecs = emptyList())) {
-            val nodeInfo = startNode(providedName = DUMMY_BANK_A_NAME)
-            nodeMustBeUp(nodeInfo)
-        }
-        nodeMustBeDown(nodeHandle)
     }
 
     @Test

@@ -13,12 +13,12 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
-import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.testing.node.User
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.getFreeLocalPorts
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.testThreadFactory
+import net.corda.testing.node.User
 import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Before
@@ -45,6 +45,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     private lateinit var defaultNetworkParameters: NetworkParametersCopier
     private val nodes = mutableListOf<StartedNode<Node>>()
     private val nodeInfos = mutableListOf<NodeInfo>()
+    private val portAllocation = PortAllocation.Incremental(10000)
 
     init {
         System.setProperty("consoleLogLevel", Level.DEBUG.name().toLowerCase())
@@ -84,8 +85,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap()): StartedNode<Node> {
         val baseDirectory = baseDirectory(legalName).createDirectories()
-        val localPort = getFreeLocalPorts("localhost", 3)
-        val p2pAddress = configOverrides["p2pAddress"] ?: localPort[0].toString()
+        val p2pAddress = configOverrides["p2pAddress"] ?: portAllocation.nextHostAndPort().toString()
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
@@ -93,8 +93,8 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                         "myLegalName" to legalName.toString(),
                         "p2pAddress" to p2pAddress,
                         "devMode" to true,
-                        "rpcSettings.address" to localPort[1].toString(),
-                        "rpcSettings.adminAddress" to localPort[2].toString(),
+                        "rpcSettings.address" to portAllocation.nextHostAndPort().toString(),
+                        "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString(),
                         "rpcUsers" to rpcUsers.map { it.toConfig().root().unwrapped() }
                 ) + configOverrides
         )

@@ -6,6 +6,10 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* ``freeLocalHostAndPort``, ``freePort``, and ``getFreeLocalPorts`` from ``TestUtils`` have been deprecated as they
+  don't provide any guarantee the returned port will be available which can result in flaky tests. Use ``PortAllocation.Incremental``
+  instead.
+
 * Docs for IdentityService. assertOwnership updated to correctly state that an UnknownAnonymousPartyException is thrown
   rather than IllegalStateException.
 

@@ -9,7 +9,6 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned
@@ -39,9 +38,9 @@ class NetworkMapClientTest {
 
     @Before
     fun setUp() {
-        server = NetworkMapServer(cacheTimeout, PortAllocation.Incremental(10000).nextHostAndPort())
-        val hostAndPort = server.start()
-        networkMapClient = NetworkMapClient(URL("http://${hostAndPort.host}:${hostAndPort.port}"), DEV_ROOT_CA.certificate)
+        server = NetworkMapServer(cacheTimeout)
+        val address = server.start()
+        networkMapClient = NetworkMapClient(URL("http://$address"), DEV_ROOT_CA.certificate)
     }
 
     @After
