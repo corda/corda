@@ -62,7 +62,7 @@ fun makeTestIdentityService(vararg identities: PartyAndCertificate) = InMemoryId
  * must have at least an identity of its own. The other components have defaults that work in most situations.
  */
 open class MockServices private constructor(
-       cordappLoader: CordappLoader,
+        cordappLoader: CordappLoader,
         override val validatedTransactions: TransactionStorage,
         override val identityService: IdentityService,
         final override val networkParameters: NetworkParameters,
