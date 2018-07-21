@@ -68,7 +68,7 @@ class TimedFlowTests {
         @JvmStatic
         fun setup() {
             mockNet = InternalMockNetwork(
-                    cordappsForAllNodes = cordappsForPackages(setOf("net.corda.testing.contracts", "net.corda.node.services")),
+                    cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.node.services"),
                     defaultParameters = MockNetworkParameters().withServicePeerAllocationStrategy(InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin()),
                     threadPerNode = true
             )

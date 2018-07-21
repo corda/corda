@@ -25,7 +25,7 @@ class BFTSMaRtTests {
 
     @Before
     fun before() {
-        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(setOf("net.corda.testing.contracts")))
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"))
     }
 
     @After

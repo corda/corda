@@ -9,10 +9,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.deleteRecursively
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
@@ -39,10 +35,11 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.MockCordappProvider
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.MockKeyManagementService
+import net.corda.testing.node.internal.MockTransactionStorage
+import net.corda.testing.node.internal.TestCordappDirectories
+import net.corda.testing.node.internal.getCallerPackage
 import net.corda.testing.services.MockAttachmentStorage
-import java.nio.file.Path
-import java.nio.file.Paths
 import java.security.KeyPair
 import java.sql.Connection
 import java.time.Clock
@@ -63,7 +60,7 @@ fun makeTestIdentityService(vararg identities: PartyAndCertificate) = InMemoryId
  * must have at least an identity of its own. The other components have defaults that work in most situations.
  */
 open class MockServices private constructor(
-        val cordappLoader: CordappLoader,
+        cordappLoader: CordappLoader,
         override val validatedTransactions: TransactionStorage,
         override val identityService: IdentityService,
         final override val networkParameters: NetworkParameters,
@@ -75,21 +72,8 @@ open class MockServices private constructor(
 
         private fun cordappLoaderForPackages(packages: Iterable<String>): CordappLoader {
 
-            val cordapps = cordappsForPackages(packages)
-            return testCordappsDirectory().let { directory ->
-                cordapps.packageInDirectory(directory)
-                JarScanningCordappLoader.fromDirectories(listOf(directory))
-            }
-        }
-
-        private fun testCordappsDirectory(): Path {
-
-            val cordappsDirectory = Paths.get("build") / "tmp" / getTimestampAsDirectoryName() / "generated-test-cordapps"
-            if (cordappsDirectory.exists()) {
-                cordappsDirectory.deleteRecursively()
-            }
-            cordappsDirectory.createDirectories()
-            return cordappsDirectory
+            val cordappPaths = TestCordappDirectories.forPackages(packages)
+            return JarScanningCordappLoader.fromDirectories(cordappPaths)
         }
 
         /**
@@ -126,25 +110,6 @@ open class MockServices private constructor(
                                             vararg moreKeys: KeyPair): Pair<CordaPersistence, MockServices> {
 
             val cordappLoader = cordappLoaderForPackages(cordappPackages)
-            return makeTestDatabaseAndMockServices(cordappLoader, identityService, initialIdentity, networkParameters, *moreKeys)
-        }
-
-        /**
-         * Makes database and mock services appropriate for unit tests.
-         *
-         * @param cordappLoader [CordappLoader] containing CorDapps.
-         * @param identityService An instance of [IdentityService], see [makeTestIdentityService].
-         * @param initialIdentity The first (typically sole) identity the services will represent.
-         * @param moreKeys A list of additional [KeyPair] instances to be used by [MockServices].
-         * @return A pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
-         */
-        @JvmStatic
-        @JvmOverloads
-        fun makeTestDatabaseAndMockServices(cordappLoader: CordappLoader,
-                                            identityService: IdentityService,
-                                            initialIdentity: TestIdentity,
-                                            networkParameters: NetworkParameters = testNetworkParameters(),
-                                            vararg moreKeys: KeyPair): Pair<CordaPersistence, MockServices> {
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
@@ -195,12 +160,6 @@ open class MockServices private constructor(
                 vararg moreKeys: KeyPair) :
             this(cordappLoaderForPackages(cordappPackages), identityService, testNetworkParameters(), initialIdentity, moreKeys)
 
-    constructor(cordappLoader: CordappLoader,
-                initialIdentity: TestIdentity,
-                identityService: IdentityService = makeTestIdentityService(),
-                vararg moreKeys: KeyPair) :
-            this(cordappLoader, identityService, testNetworkParameters(), initialIdentity, moreKeys)
-
     constructor(cordappPackages: Iterable<String>,
                 initialIdentity: TestIdentity,
                 identityService: IdentityService,
@@ -215,11 +174,6 @@ open class MockServices private constructor(
     @JvmOverloads
     constructor(cordappPackages: Iterable<String>, initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService(), key: KeyPair, vararg moreKeys: KeyPair) :
             this(cordappPackages, TestIdentity(initialIdentityName, key), identityService, *moreKeys)
-
-    @JvmOverloads
-    constructor(cordappLoader: CordappLoader, initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService(), key: KeyPair, vararg moreKeys: KeyPair) :
-            this(cordappLoader, TestIdentity(initialIdentityName, key), identityService, *moreKeys)
-
     /**
      * Create a mock [ServiceHub] that can't load CorDapp code, which uses the provided identity service
      * (you can get one from [makeTestIdentityService]) and which represents the given identity.
@@ -227,9 +181,6 @@ open class MockServices private constructor(
     @JvmOverloads
     constructor(cordappPackages: Iterable<String>, initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService()) :
             this(cordappPackages, TestIdentity(initialIdentityName), identityService)
-
-    constructor(cordappLoader: CordappLoader, initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService()) :
-            this(cordappLoader, TestIdentity(initialIdentityName), identityService)
 
     /**
      * Create a mock [ServiceHub] that can't load CorDapp code, and which uses a default service identity.
@@ -260,19 +211,6 @@ open class MockServices private constructor(
      */
     constructor(firstIdentity: TestIdentity, vararg moreIdentities: TestIdentity) : this(
             listOf(getCallerPackage(MockServices::class)!!),
-            firstIdentity,
-            makeTestIdentityService(*listOf(firstIdentity, *moreIdentities).map { it.identity }.toTypedArray()),
-            firstIdentity.keyPair
-    )
-
-    /**
-     * A helper constructor that requires at least one test identity to be registered, and which takes the package of
-     * the caller as the package in which to find app code. This is the most convenient constructor and the one that
-     * is normally worth using. The first identity is the identity of this service hub, the rest are identities that
-     * it is aware of.
-     */
-    constructor(cordappLoader: CordappLoader, firstIdentity: TestIdentity, vararg moreIdentities: TestIdentity) : this(
-            cordappLoader,
             firstIdentity,
             makeTestIdentityService(*listOf(firstIdentity, *moreIdentities).map { it.identity }.toTypedArray()),
             firstIdentity.keyPair

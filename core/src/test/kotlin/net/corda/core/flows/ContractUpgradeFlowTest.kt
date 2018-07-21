@@ -62,7 +62,7 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
 
         // The request is expected to be rejected because party B hasn't authorised the upgrade yet.
         assert.that(
-                aliceNode.initiateDummyContractUpgrade(atx),
+            aliceNode.initiateDummyContractUpgrade(atx),
                 willThrow<UnexpectedFlowEndException>())
 
         // Party B authorise the contract state upgrade, and immediately deauthorise the same.
@@ -71,7 +71,7 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
 
         // The request is expected to be rejected because party B has subsequently deauthorised a previously authorised upgrade.
         assert.that(
-                aliceNode.initiateDummyContractUpgrade(atx),
+            aliceNode.initiateDummyContractUpgrade(atx),
                 willThrow<UnexpectedFlowEndException>())
 
         // Party B authorise the contract state upgrade
@@ -79,32 +79,32 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
 
         // Party A initiates contract upgrade flow, expected to succeed this time.
         assert.that(
-                aliceNode.initiateDummyContractUpgrade(atx),
-                willReturn(
-                        aliceNode.hasDummyContractUpgradeTransaction()
-                                and bobNode.hasDummyContractUpgradeTransaction()))
+            aliceNode.initiateDummyContractUpgrade(atx),
+            willReturn(
+                aliceNode.hasDummyContractUpgradeTransaction()
+                and bobNode.hasDummyContractUpgradeTransaction()))
     }
 
     private fun StartedNode<*>.issueCash(amount: Amount<Currency> = Amount(1000, USD)) =
-            services.startFlow(CashIssueFlow(amount, OpaqueBytes.of(1), notary))
-                    .andRunNetwork()
-                    .resultFuture.getOrThrow()
+        services.startFlow(CashIssueFlow(amount, OpaqueBytes.of(1), notary))
+            .andRunNetwork()
+            .resultFuture.getOrThrow()
 
     private fun StartedNode<*>.getBaseStateFromVault() = getStateFromVault(ContractState::class)
 
     private fun StartedNode<*>.getCashStateFromVault() = getStateFromVault(CashV2.State::class)
 
     private fun hasIssuedAmount(expected: Amount<Issued<Currency>>) =
-            hasContractState(has(CashV2.State::amount, equalTo(expected)))
+        hasContractState(has(CashV2.State::amount, equalTo(expected)))
 
     private fun belongsTo(vararg recipients: AbstractParty) =
-            hasContractState(has(CashV2.State::owners, equalTo(recipients.toList())))
+        hasContractState(has(CashV2.State::owners, equalTo(recipients.toList())))
 
     private fun <T : ContractState> hasContractState(expectation: Matcher<T>) =
-            has<StateAndRef<T>, T>(
-                    "contract state",
-                    { it.state.data },
-                    expectation)
+        has<StateAndRef<T>, T>(
+            "contract state",
+            { it.state.data },
+            expectation)
 
     @Test
     fun `upgrade Cash to v2`() {
@@ -123,14 +123,14 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
         val upgradedState = aliceNode.getCashStateFromVault()
         assert.that(upgradedState,
                 hasIssuedAmount(Amount(1000000, USD) `issued by` (alice.ref(1)))
-                        and belongsTo(anonymisedRecipient))
+                and belongsTo(anonymisedRecipient))
 
         // Make sure the upgraded state can be spent
         val movedState = upgradedState.state.data.copy(amount = upgradedState.state.data.amount.times(2))
         val spendUpgradedTx = aliceNode.signInitialTransaction {
             addInputState(upgradedState)
             addOutputState(
-                    upgradedState.state.copy(data = movedState)
+                upgradedState.state.copy(data = movedState)
             )
             addCommand(CashV2.Move(), alice.owningKey)
         }
@@ -174,14 +174,14 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
             hasContractUpgradeTransaction<DummyContract.State, DummyContractV2.State>()
 
     private inline fun <reified FROM : Any, reified TO: Any> StartedNode<*>.hasContractUpgradeTransaction() =
-            has<StateAndRef<ContractState>, ContractUpgradeLedgerTransaction>(
-                    "a contract upgrade transaction",
-                    { getContractUpgradeTransaction(it) },
-                    isUpgrade<FROM, TO>())
+        has<StateAndRef<ContractState>, ContractUpgradeLedgerTransaction>(
+            "a contract upgrade transaction",
+            { getContractUpgradeTransaction(it) },
+            isUpgrade<FROM, TO>())
 
     private fun StartedNode<*>.getContractUpgradeTransaction(state: StateAndRef<ContractState>) =
-            services.validatedTransactions.getTransaction(state.ref.txhash)!!
-                    .resolveContractUpgradeTransaction(services)
+        services.validatedTransactions.getTransaction(state.ref.txhash)!!
+                .resolveContractUpgradeTransaction(services)
 
     private inline fun <reified FROM : Any, reified TO : Any> isUpgrade() =
             isUpgradeFrom<FROM>() and isUpgradeTo<TO>()

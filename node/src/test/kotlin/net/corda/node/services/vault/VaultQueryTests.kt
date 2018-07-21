@@ -1534,11 +1534,11 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         val gbpCashIssuer = gbpCashIssuerServices.myInfo.singleIdentityAndCert()
         // USD issuer
         val usdCashIssuerName = CordaX500Name(organisation = "US Dollars Cash Issuer", locality = "New York", country = "US")
-        val usdCashIssuerServices = MockServices(gbpCashIssuerServices.cordappLoader, usdCashIssuerName, rigorousMock(), generateKeyPair())
+        val usdCashIssuerServices = MockServices(cordappPackages, usdCashIssuerName, rigorousMock(), generateKeyPair())
         val usdCashIssuer = usdCashIssuerServices.myInfo.singleIdentityAndCert()
         // CHF issuer
         val chfCashIssuerName = CordaX500Name(organisation = "Swiss Francs Cash Issuer", locality = "Zurich", country = "CH")
-        val chfCashIssuerServices = MockServices(gbpCashIssuerServices.cordappLoader, chfCashIssuerName, rigorousMock(), generateKeyPair())
+        val chfCashIssuerServices = MockServices(cordappPackages, chfCashIssuerName, rigorousMock(), generateKeyPair())
         val chfCashIssuer = chfCashIssuerServices.myInfo.singleIdentityAndCert()
         listOf(gbpCashIssuer, usdCashIssuer, chfCashIssuer).forEach { identity ->
             services.identityService.verifyAndRegisterIdentity(identity)

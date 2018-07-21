@@ -245,15 +245,22 @@ class CommercialPaperTestsGeneric {
         // of the dummy cash issuer.
 
         val allIdentities = arrayOf(megaCorp.identity, alice.identity, dummyCashIssuer.identity, dummyNotary.identity)
-        val notaryServices = MockServices(ledgerServices.cordappLoader, dummyNotary)
-        val issuerServices = MockServices(ledgerServices.cordappLoader, dummyCashIssuer, dummyNotary)
-
-        val (aliceDatabase, aliceServices) = makeTestDatabaseAndMockServices(ledgerServices.cordappLoader, makeTestIdentityService(*allIdentities), alice)
+        val notaryServices = MockServices(dummyNotary)
+        val issuerServices = MockServices(dummyCashIssuer, dummyNotary)
+        val (aliceDatabase, aliceServices) = makeTestDatabaseAndMockServices(
+                listOf("net.corda.finance.contracts"),
+                makeTestIdentityService(*allIdentities),
+                alice
+        )
         val aliceCash: Vault<Cash.State> = aliceDatabase.transaction {
             VaultFiller(aliceServices, dummyNotary).fillWithSomeTestCash(9000.DOLLARS, issuerServices, 1, dummyCashIssuer.ref(1))
         }
 
-        val (megaCorpDatabase, megaCorpServices) = makeTestDatabaseAndMockServices(ledgerServices.cordappLoader, makeTestIdentityService(*allIdentities), megaCorp)
+        val (megaCorpDatabase, megaCorpServices) = makeTestDatabaseAndMockServices(
+                listOf("net.corda.finance.contracts"),
+                makeTestIdentityService(*allIdentities),
+                megaCorp
+        )
         val bigCorpCash: Vault<Cash.State> = megaCorpDatabase.transaction {
              VaultFiller(megaCorpServices, dummyNotary).fillWithSomeTestCash(13000.DOLLARS, issuerServices, 1, dummyCashIssuer.ref(1))
         }

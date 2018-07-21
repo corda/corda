@@ -89,7 +89,7 @@ class ObligationTests {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
     }
-    private val mockService = MockServices(miniCorpServices.cordappLoader, MEGA_CORP.name, identityService)
+    private val mockService = MockServices(listOf("net.corda.finance.contracts.asset"), MEGA_CORP.name, identityService)
     private val ledgerServices get() = MockServices(listOf("net.corda.finance.contracts.asset", "net.corda.testing.contracts"), MEGA_CORP.name, identityService)
     private fun cashObligationTestRoots(
             group: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>

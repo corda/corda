@@ -102,7 +102,7 @@ class ScheduledFlowTests {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(setOf("net.corda.testing.contracts")), threadPerNode = true)
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"), threadPerNode = true)
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
         notary = mockNet.defaultNotaryIdentity

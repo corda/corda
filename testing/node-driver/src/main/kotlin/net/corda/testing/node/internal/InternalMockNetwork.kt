@@ -130,18 +130,12 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     }
     private val sharedUserCount = AtomicInteger(0)
 
-    private val sharedCorDappsDirectory: Path by lazy {
-
-        val corDappsDirectory = testDirectory / "sharedCordapps"
-        logger.info("Writing test CorDapps for all nodes in $corDappsDirectory.")
-        corDappsDirectory.apply {
-            deleteRecursively()
-            cordappsForAllNodes.packageInDirectory(this)
-        }
+    private val sharedCorDappsDirectories: Iterable<Path> by lazy {
+        TestCordappDirectories.cached(cordappsForAllNodes)
     }
 
     val sharedCordappLoader: CordappLoader by lazy {
-        JarScanningCordappLoader.fromDirectories(listOf(sharedCorDappsDirectory))
+        JarScanningCordappLoader.fromDirectories(sharedCorDappsDirectories)
     }
 
     /** A read only view of the current set of nodes. */
@@ -393,19 +387,9 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             parameters.configOverrides(it)
         }
 
-        // TODO caching here doesn't help too much - investigate caching on disk at test or better at test suite level
-        val cordappsDirectory = config.baseDirectory / "cordapps"
-        val cordappDirectories = listOf(sharedCorDappsDirectory, cordappsDirectory)
-
-        doReturn(cordappDirectories).whenever(config).cordappDirectories
-
         val cordapps: Set<TestCorDapp> = parameters.additionalCordapps ?: emptySet()
-
-        if (!cordappsDirectory.exists()) {
-            cordapps.packageInDirectory(cordappsDirectory)
-        } else {
-            logger.info("Node's specific CorDapps directory $cordappsDirectory already exists, skipping CorDapps packaging for node ${config.myLegalName}.")
-        }
+        val cordappDirectories = sharedCorDappsDirectories + TestCordappDirectories.cached(cordapps)
+        doReturn(cordappDirectories).whenever(config).cordappDirectories
 
         val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version), JarScanningCordappLoader.fromDirectories(cordappDirectories))
         _nodes += node

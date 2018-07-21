@@ -38,7 +38,7 @@ class IdempotentFlowTests {
 
     @Before
     fun start() {
-        mockNet = InternalMockNetwork(threadPerNode = true, cordappsForAllNodes = cordappsForPackages(setOf(this.javaClass.packageName)))
+        mockNet = InternalMockNetwork(threadPerNode = true, cordappsForAllNodes = cordappsForPackages(this.javaClass.packageName))
         nodeA = mockNet.createNode(InternalMockNodeParameters(
                 legalName = CordaX500Name("Alice", "AliceCorp", "GB"),
                 configOverrides = {

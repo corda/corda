@@ -53,7 +53,7 @@ class CollectSignaturesFlowTests : WithContracts {
         aliceNode.verifyAndRegister(bConfidentialIdentity)
 
         assert.that(
-                aliceNode.startTestFlow(alice, bConfidentialIdentity.party, charlie),
+            aliceNode.startTestFlow(alice, bConfidentialIdentity.party, charlie),
                 willReturn(requiredSignatures(3))
         )
     }
@@ -95,10 +95,10 @@ class CollectSignaturesFlowTests : WithContracts {
     //region Operators
     private fun StartedNode<*>.startTestFlow(vararg party: Party) =
             startFlowAndRunNetwork(
-                    TestFlow.Initiator(DummyContract.MultiOwnerState(
-                            MAGIC_NUMBER,
-                            listOf(*party)),
-                            mockNet.defaultNotaryIdentity))
+                TestFlow.Initiator(DummyContract.MultiOwnerState(
+                    MAGIC_NUMBER,
+                    listOf(*party)),
+                    mockNet.defaultNotaryIdentity))
 
     //region Test Flow
     // With this flow, the initiator starts the "CollectTransactionFlow". It is then the responders responsibility to
