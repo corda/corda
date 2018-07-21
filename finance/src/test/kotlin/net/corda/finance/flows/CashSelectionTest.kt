@@ -20,7 +20,7 @@ import org.junit.After
 import org.junit.Test
 
 class CashSelectionTest {
-    private val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(setOf("net.corda.finance")), threadPerNode = true)
+    private val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.finance"), threadPerNode = true)
 
     @After
     fun cleanUp() {

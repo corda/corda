@@ -326,7 +326,6 @@ data class JmxPolicy(val startJmxHttpServer: Boolean = false,
  * @return The value returned in the [dsl] closure.
  */
 fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: DriverDSL.() -> A): A {
-
     return genericDriver(
             driverDsl = DriverDSLImpl(
                     portAllocation = defaultParameters.portAllocation,

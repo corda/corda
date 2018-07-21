@@ -9,6 +9,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.CheckpointIncompatibleException
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions
+import net.corda.node.services.Permissions.Companion.invokeRpc
+import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testMessage.Message
 import net.corda.testMessage.MessageState
 import net.corda.testing.core.ALICE_NAME
@@ -33,7 +35,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
                 net.corda.testMessage.MessageContract::class.java,
                 net.test.cordapp.v1.SendMessageFlow::class.java,
                 net.test.cordapp.v1.Record::class.java)
-        val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlow>(), Permissions.invokeRpc("vaultQuery"), Permissions.invokeRpc("vaultTrack")))
+        val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery"), invokeRpc("vaultTrack")))
     }
 
     @Test

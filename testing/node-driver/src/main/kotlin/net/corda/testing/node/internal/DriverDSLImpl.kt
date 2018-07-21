@@ -630,15 +630,8 @@ class DriverDSLImpl(
         }
     }
 
-    private val sharedCorDappsDirectory: Path by lazy {
-
-        val corDappsDirectory = driverDirectory / "sharedCordapps"
-        log.info("Writing test CorDapps for all nodes in $corDappsDirectory.")
-        if (corDappsDirectory.exists()) {
-            corDappsDirectory.toFile().deleteRecursively()
-        }
-        cordappsForAllNodes.packageInDirectory(corDappsDirectory)
-        corDappsDirectory
+    private val sharedCordappsDirectories: Iterable<Path> by lazy {
+        TestCordappDirectories.cached(cordappsForAllNodes)
     }
 
     private fun startNodeInternal(specifiedConfig: NodeConfig,
@@ -662,20 +655,9 @@ class DriverDSLImpl(
 
         val existingCorDappDirectoriesOption = if (specifiedConfig.typesafe.hasPath(NodeConfiguration.cordappDirectoriesKey)) specifiedConfig.typesafe.getStringList(NodeConfiguration.cordappDirectoriesKey) else emptyList()
 
-        // TODO caching here doesn't help too much - investigate caching on disk at test or better at test suite level
-        val individualCorDappsDirectory = specifiedConfig.corda.baseDirectory / "cordapps"
-        val cordappDirectories = existingCorDappDirectoriesOption + sharedCorDappsDirectory.toString() + individualCorDappsDirectory.toString()
+        val cordappDirectories = existingCorDappDirectoriesOption + sharedCordappsDirectories.map { it.toString() } + TestCordappDirectories.cached(additionalCordapps, deleteExistingCordappsDirectory).map { it.toString() }
 
         val config = NodeConfig(specifiedConfig.typesafe.withValue(NodeConfiguration.cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories)))
-
-        if (deleteExistingCordappsDirectory) {
-            individualCorDappsDirectory.deleteRecursively()
-        }
-        if (!individualCorDappsDirectory.exists()) {
-            additionalCordapps.packageInDirectory(individualCorDappsDirectory)
-        } else {
-            log.info("Node's specific CorDapps directory $individualCorDappsDirectory already exists, skipping CorDapps packaging for node ${specifiedConfig.corda.myLegalName}.")
-        }
 
         if (startInProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, config)

@@ -4,7 +4,6 @@ import net.corda.testing.node.internal.MutableTestCorDapp
 import java.net.URL
 import java.nio.file.Path
 
-// TODO add support for CorDapps' config files
 interface TestCorDapp {
 
     val name: String

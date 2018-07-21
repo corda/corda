@@ -134,10 +134,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         TestCordappDirectories.cached(cordappsForAllNodes)
     }
 
-    val sharedCordappLoader: CordappLoader by lazy {
-        JarScanningCordappLoader.fromDirectories(sharedCorDappsDirectories)
-    }
-
     /** A read only view of the current set of nodes. */
     val nodes: List<MockNode> get() = _nodes
 
