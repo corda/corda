@@ -32,21 +32,11 @@ import kotlin.streams.toList
  *
  * @property cordappJarPaths The classpath of cordapp JARs
  */
-class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>) : CordappLoader {
+class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>) : CordappLoaderTemplate() {
 
     override val cordapps: List<Cordapp> by lazy { loadCordapps() + coreCordapp }
-    override val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
 
-    // Create a map of the CorDapps that provide a Flow. If a flow is not in this map it is a Core flow.
-    // It also checks that there is only one CorDapp containing that flow class
-    override val flowCordappMap: Map<Class<out FlowLogic<*>>, Cordapp> by lazy {
-        cordapps.flatMap { corDapp -> corDapp.allFlows.map { flow -> flow to corDapp } }
-                .groupBy { it.first }
-                .mapValues {
-                    if(it.value.size > 1) { throw MultipleCordappsForFlowException("There are multiple CorDapp JARs on the classpath for flow ${it.value.first().first.name}: [ ${it.value.joinToString { it.second.name }} ].")  }
-                    it.value.single().second
-                }
-    }
+    override val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
 
     init {
         if (cordappJarPaths.isEmpty()) {
@@ -55,8 +45,6 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
             logger.info("Loading CorDapps from ${cordappJarPaths.joinToString()}")
         }
     }
-
-    override val cordappSchemas: Set<MappedSchema> get() = cordapps.flatMap { it.customSchemas }.toSet()
 
     companion object {
         private val logger = contextLogger()
@@ -278,3 +266,26 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
  * Thrown when scanning CorDapps.
  */
 class MultipleCordappsForFlowException(message: String) : Exception(message)
+
+abstract class CordappLoaderTemplate : CordappLoader {
+
+    override val flowCordappMap: Map<Class<out FlowLogic<*>>, Cordapp> by lazy {
+        cordapps.flatMap { corDapp -> corDapp.allFlows.map { flow -> flow to corDapp } }
+                .groupBy { it.first }
+                .mapValues {
+                    if(it.value.size > 1) { throw MultipleCordappsForFlowException("There are multiple CorDapp JARs on the classpath for flow ${it.value.first().first.name}: [ ${it.value.joinToString { it.second.name }} ].")  }
+                    it.value.single().second
+                }
+    }
+
+    override val cordappSchemas: Set<MappedSchema> by lazy {
+
+        cordapps.flatMap { it.customSchemas }.toSet()
+    }
+
+    override val appClassLoader: ClassLoader by lazy {
+
+        URLClassLoader(cordapps.stream().map { it.jarPath }.toTypedArray(), javaClass.classLoader)
+    }
+}
+

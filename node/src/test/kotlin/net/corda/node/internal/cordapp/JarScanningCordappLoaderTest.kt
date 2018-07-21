@@ -3,7 +3,6 @@ package net.corda.node.internal.cordapp
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
 import net.corda.node.cordapp.CordappLoader
-import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.getTimestampAsDirectoryName
 import net.corda.testing.node.internal.packageInDirectory
@@ -92,7 +91,7 @@ class JarScanningCordappLoaderTest {
 
     @Test
     fun `sub-packages are ignored`() {
-        val loader = MockServices.cordappLoaderForPackages(listOf("net.corda", testScanPackage))
+        val loader = cordappLoaderForPackages(listOf("net.corda", testScanPackage))
         val cordapps = loader.cordapps.filter { LoaderTestFlow::class.java in it.initiatedFlows }
         assertThat(cordapps).hasSize(1)
     }
