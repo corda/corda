@@ -522,7 +522,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     fun `dependency with error on buyer side`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages))
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
-        MockServices(cordappPackages, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
+        MockServices(mockNet.sharedCordappLoader, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
             runWithError(ledgerIdentityService, true, false, "at least one cash input")
         }
     }
@@ -531,7 +531,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     fun `dependency with error on seller side`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages))
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
-        MockServices(cordappPackages, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
+        MockServices(mockNet.sharedCordappLoader, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
             runWithError(ledgerIdentityService, false, true, "Issuances have a time-window")
         }
     }
