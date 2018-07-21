@@ -28,7 +28,7 @@ internal object TestCordappDirectories {
         cordappsDirectory.toFile().deleteOnExit()
         return cordappsCache.getOrPut(cordapp.resources.map { it.toExternalForm() }.sorted()) {
 
-            val cordappDirectory = cordappsDirectory / "${cordapp.name}_${cordapp.version}".replace(whitespace, whitespaceReplacement)
+            val cordappDirectory = (cordappsDirectory / "${cordapp.name}_${cordapp.version}".replace(whitespace, whitespaceReplacement)).toAbsolutePath()
             cordappDirectory.createDirectories()
             cordappDirectory.toFile().deleteOnExit()
             cordapp.packageAsJarInDirectory(cordappDirectory)

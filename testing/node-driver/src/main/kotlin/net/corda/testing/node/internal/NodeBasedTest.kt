@@ -6,7 +6,6 @@ import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
-import net.corda.core.internal.exists
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
@@ -107,8 +106,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
         val existingCorDappDirectoriesOption = if (config.hasPath(NodeConfiguration.cordappDirectoriesKey)) config.getStringList(NodeConfiguration.cordappDirectoriesKey) else emptyList()
 
-        val individualCorDappsDirectory = config.parseAsNodeConfiguration().baseDirectory / "cordapps"
-        val cordappDirectories = existingCorDappDirectoriesOption + individualCorDappsDirectory.toString()
+        val cordappDirectories = existingCorDappDirectoriesOption + TestCordappDirectories.cached(cordapps).map { it.toString() }
 
         val specificConfig = config.withValue(NodeConfiguration.cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories))
 
@@ -117,12 +115,6 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
             if (errors.isNotEmpty()) {
                 throw IllegalStateException("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
             }
-        }
-
-        if (!individualCorDappsDirectory.exists()) {
-            cordapps.packageInDirectory(individualCorDappsDirectory)
-        } else {
-            logger.info("Node's specific CorDapps directory $individualCorDappsDirectory already exists, skipping CorDapps packaging for node ${parsedConfig.myLegalName}.")
         }
 
         defaultNetworkParameters.install(baseDirectory)
