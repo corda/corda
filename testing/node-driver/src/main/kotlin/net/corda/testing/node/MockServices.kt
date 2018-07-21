@@ -73,8 +73,7 @@ open class MockServices private constructor(
 
     companion object {
 
-        @JvmStatic
-        fun cordappLoaderForPackages(packages: Iterable<String>): CordappLoader {
+        private fun cordappLoaderForPackages(packages: Iterable<String>): CordappLoader {
 
             val cordapps = cordappsForPackages(packages)
             return testCordappsDirectory().let { directory ->

@@ -3,6 +3,7 @@ package net.corda.traderdemo
 import net.corda.core.contracts.CommandData
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -47,7 +48,7 @@ class TransactionGraphSearchTests {
      */
     fun buildTransactions(command: CommandData): GraphTransactionStorage {
         val megaCorpServices = MockServices(listOf("net.corda.testing.contracts"), megaCorp, rigorousMock())
-        val notaryServices = MockServices(listOf("net.corda.testing.contracts"), dummyNotary, rigorousMock())
+        val notaryServices = MockServices(megaCorpServices.cordappLoader, dummyNotary, rigorousMock<IdentityService>())
         val originBuilder = TransactionBuilder(dummyNotary.party)
                 .addOutputState(DummyState(random31BitValue()), DummyContract.PROGRAM_ID)
                 .addCommand(command, megaCorp.publicKey)

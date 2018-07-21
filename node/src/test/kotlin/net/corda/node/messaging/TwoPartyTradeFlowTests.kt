@@ -220,7 +220,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     fun `shutdown and restore`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages))
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
-        MockServices(cordappPackages, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
+        MockServices(mockNet.sharedCordappLoader, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
             val notaryNode = mockNet.defaultNotaryNode
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             var bobNode = mockNet.createPartyNode(BOB_NAME)

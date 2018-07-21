@@ -67,7 +67,7 @@ class TransactionSerializationTests {
     val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val megaCorpServices = MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, rigorousMock(), MEGA_CORP_KEY)
-    val notaryServices = MockServices(listOf("net.corda.core.serialization"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY)
+    val notaryServices = MockServices(megaCorpServices.cordappLoader, DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY)
     lateinit var tx: TransactionBuilder
 
     @Before

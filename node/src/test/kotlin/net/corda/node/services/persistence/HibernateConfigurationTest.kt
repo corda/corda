@@ -98,8 +98,8 @@ class HibernateConfigurationTest {
     fun setUp() {
         val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset")
         bankServices = MockServices(cordappPackages, BOC.name, rigorousMock(), BOC_KEY)
-        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock())
-        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock())
+        issuerServices = MockServices(bankServices.cordappLoader, dummyCashIssuer, rigorousMock<IdentityService>())
+        notaryServices = MockServices(bankServices.cordappLoader, dummyNotary, rigorousMock<IdentityService>())
         notary = notaryServices.myInfo.singleIdentity()
         val dataSourceProps = makeTestDataSourceProperties()
         val identityService = rigorousMock<IdentityService>().also { mock ->

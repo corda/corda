@@ -2,9 +2,14 @@ package net.corda.node.internal.cordapp
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
+import net.corda.node.cordapp.CordappLoader
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.getTimestampAsDirectoryName
+import net.corda.testing.node.internal.packageInDirectory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import java.nio.file.Path
 import java.nio.file.Paths
 
 @InitiatingFlow
@@ -66,7 +71,7 @@ class JarScanningCordappLoaderTest {
 
     @Test
     fun `flows are loaded by loader`() {
-        val loader = MockServices.cordappLoaderForPackages(listOf(testScanPackage))
+        val loader = cordappLoaderForPackages(listOf(testScanPackage))
 
         val actual = loader.cordapps.toTypedArray()
         // One core cordapp, one cordapp from this source tree. In gradle it will also pick up the node jar.
@@ -80,7 +85,7 @@ class JarScanningCordappLoaderTest {
 
     @Test
     fun `duplicate packages are ignored`() {
-        val loader = MockServices.cordappLoaderForPackages(listOf(testScanPackage, testScanPackage))
+        val loader = cordappLoaderForPackages(listOf(testScanPackage, testScanPackage))
         val cordapps = loader.cordapps.filter { LoaderTestFlow::class.java in it.initiatedFlows }
         assertThat(cordapps).hasSize(1)
     }
@@ -101,5 +106,19 @@ class JarScanningCordappLoaderTest {
 
         loader.appClassLoader.loadClass(isolatedContractId)
         loader.appClassLoader.loadClass(isolatedFlowName)
+    }
+
+    private fun cordappLoaderForPackages(packages: Iterable<String>): CordappLoader {
+
+        val cordapps = cordappsForPackages(packages)
+        return testDirectory().let { directory ->
+            cordapps.packageInDirectory(directory)
+            JarScanningCordappLoader.fromDirectories(listOf(directory))
+        }
+    }
+
+    private fun testDirectory(): Path {
+
+        return Paths.get("build", getTimestampAsDirectoryName())
     }
 }
