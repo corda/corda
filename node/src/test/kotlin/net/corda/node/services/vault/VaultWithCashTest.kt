@@ -11,6 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.packageName
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
@@ -81,8 +82,8 @@ class VaultWithCashTest {
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
-        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock(), MEGA_CORP_KEY)
-        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock())
+        issuerServices = MockServices(services.cordappLoader, dummyCashIssuer, rigorousMock(), MEGA_CORP_KEY)
+        notaryServices = MockServices(services.cordappLoader, dummyNotary, rigorousMock<IdentityService>())
         notary = notaryServices.myInfo.legalIdentitiesAndCerts.single().party
     }
 
