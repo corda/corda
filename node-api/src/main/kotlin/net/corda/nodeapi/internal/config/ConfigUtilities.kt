@@ -121,7 +121,7 @@ private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set
             Int::class -> getInt(path)
             Long::class -> getLong(path)
             Double::class -> getDouble(path)
-            Boolean::class -> getBoolean(path)
+            Boolean::class -> getBooleanCaseInsensitive(path)
             LocalDate::class -> LocalDate.parse(getString(path))
             Duration::class -> getDuration(path)
             Instant::class -> Instant.parse(getString(path))
@@ -273,6 +273,19 @@ private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
         } else {
             map { it?.toConfigMap() }
         }
+    }
+}
+
+// The typesafe .getBoolean function is case sensitive, this is a case insensitive version
+fun Config.getBooleanCaseInsensitive(path: String): Boolean {
+    try {
+        return getBoolean(path)
+    } catch(e:Exception) {
+        val stringVal = getString(path).toLowerCase()
+        if (stringVal == "true" || stringVal == "false") {
+            return stringVal.toBoolean()
+        }
+        throw e
     }
 }
 

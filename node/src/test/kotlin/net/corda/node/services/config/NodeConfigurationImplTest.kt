@@ -4,6 +4,7 @@ import com.typesafe.config.*
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
+import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.tools.shell.SSHDConfiguration
@@ -67,16 +68,16 @@ class NodeConfigurationImplTest {
         val os = System.getProperty("os.name")
 
         setSystemOs("Windows 98")
-        assertTrue(getConfig("test-config-empty.conf").getBoolean("devMode"))
+        assertTrue(getConfig("test-config-empty.conf").getBooleanCaseInsensitive("devMode"))
 
         setSystemOs("Mac Sierra")
-        assertTrue(getConfig("test-config-empty.conf").getBoolean("devMode"))
+        assertTrue(getConfig("test-config-empty.conf").getBooleanCaseInsensitive("devMode"))
 
         setSystemOs("Windows server 2008")
-        assertFalse(getConfig("test-config-empty.conf").getBoolean("devMode"))
+        assertFalse(getConfig("test-config-empty.conf").getBooleanCaseInsensitive("devMode"))
 
         setSystemOs("Linux")
-        assertFalse(getConfig("test-config-empty.conf").getBoolean("devMode"))
+        assertFalse(getConfig("test-config-empty.conf").getBooleanCaseInsensitive("devMode"))
 
         setSystemOs(os)
     }
@@ -87,22 +88,22 @@ class NodeConfigurationImplTest {
 
     @Test
     fun `Dev mode is read from the config over the autodetect logic`() {
-        assertTrue(getConfig("test-config-DevMode.conf").getBoolean("devMode"))
-        assertFalse(getConfig("test-config-noDevMode.conf").getBoolean("devMode"))
+        assertTrue(getConfig("test-config-DevMode.conf").getBooleanCaseInsensitive("devMode"))
+        assertFalse(getConfig("test-config-noDevMode.conf").getBooleanCaseInsensitive("devMode"))
     }
 
     @Test
     fun `Dev mode is true if overriden`() {
-        assertTrue(getConfig("test-config-DevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to true))).getBoolean("devMode"))
-        assertTrue(getConfig("test-config-noDevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to true))).getBoolean("devMode"))
-        assertTrue(getConfig("test-config-empty.conf", ConfigFactory.parseMap(mapOf("devMode" to true))).getBoolean("devMode"))
+        assertTrue(getConfig("test-config-DevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to true))).getBooleanCaseInsensitive("devMode"))
+        assertTrue(getConfig("test-config-noDevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to true))).getBooleanCaseInsensitive("devMode"))
+        assertTrue(getConfig("test-config-empty.conf", ConfigFactory.parseMap(mapOf("devMode" to true))).getBooleanCaseInsensitive("devMode"))
     }
 
     @Test
     fun `Dev mode is false if overriden`() {
-        assertFalse(getConfig("test-config-DevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to false))).getBoolean("devMode"))
-        assertFalse(getConfig("test-config-noDevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to false))).getBoolean("devMode"))
-        assertFalse(getConfig("test-config-empty.conf", ConfigFactory.parseMap(mapOf("devMode" to false))).getBoolean("devMode"))
+        assertFalse(getConfig("test-config-DevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to false))).getBooleanCaseInsensitive("devMode"))
+        assertFalse(getConfig("test-config-noDevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to false))).getBooleanCaseInsensitive("devMode"))
+        assertFalse(getConfig("test-config-empty.conf", ConfigFactory.parseMap(mapOf("devMode" to false))).getBooleanCaseInsensitive("devMode"))
     }
 
     private fun getConfig(cfgName: String, overrides: Config = ConfigFactory.empty()): Config {
