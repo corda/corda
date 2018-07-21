@@ -16,7 +16,7 @@ interface TestCorDapp {
 
     val resources: Set<URL>
 
-    fun packageAsJarInDirectory(parentDirectory: Path)
+    fun packageAsJarInDirectory(parentDirectory: Path): Path
 
     fun packageAsJarWithPath(jarFilePath: Path)
 

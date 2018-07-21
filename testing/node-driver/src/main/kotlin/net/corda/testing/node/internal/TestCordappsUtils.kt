@@ -82,7 +82,7 @@ fun getCallerPackage(directCallerClass: KClass<*>): String? {
     return getCallerClass(directCallerClass)?.`package`?.name
 }
 
-private fun testCorDapp(packageName: String): TestCorDapp {
+internal fun testCorDapp(packageName: String): TestCorDapp {
 
     val uuid = UUID.randomUUID()
     val name = "$packageName-$uuid"
@@ -90,7 +90,7 @@ private fun testCorDapp(packageName: String): TestCorDapp {
     return TestCorDapp.Factory.create(name, version).plusPackage(packageName)
 }
 
-private fun simplifyScanPackages(scanPackages: Iterable<String>): List<String> {
+fun simplifyScanPackages(scanPackages: Iterable<String>): List<String> {
 
     return scanPackages.sorted().fold(emptyList()) { listSoFar, packageName ->
         when {

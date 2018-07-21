@@ -67,7 +67,7 @@ internal class MutableTestCorDapp private constructor(override val name: String,
 
     override fun packageAsJarWithPath(jarFilePath: Path) = jarEntries.packageToCorDapp(jarFilePath, name, version, vendor, title, willResourceBeAddedToCorDapp)
 
-    override fun packageAsJarInDirectory(parentDirectory: Path) = packageAsJarWithPath(parentDirectory / defaultJarName())
+    override fun packageAsJarInDirectory(parentDirectory: Path): Path = (parentDirectory / defaultJarName()).also { packageAsJarWithPath(it) }
 
     private fun defaultJarName(): String = "${name.replace(whitespace, whitespaceReplacement)}$jarExtension"
 }
