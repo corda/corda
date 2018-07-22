@@ -135,7 +135,7 @@ abstract class PortAllocation {
  * @property maximumHeapSize The maximum JVM heap size to use for the node.
  * @property logLevel Logging level threshold.
  * @property additionalCordapps additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
- * @property deleteExistingCordappsDirectory whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
+ * @property regenerateCordappsOnStart whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
  */
 @Suppress("unused")
 data class NodeParameters(
@@ -147,7 +147,7 @@ data class NodeParameters(
         val maximumHeapSize: String = "512m",
         val logLevel: String? = null,
         val additionalCordapps: Set<TestCorDapp> = emptySet(),
-        val deleteExistingCordappsDirectory: Boolean = false
+        val regenerateCordappsOnStart: Boolean = false
 ) {
     /**
      * Helper builder for configuring a [Node] from Java.
@@ -180,7 +180,7 @@ data class NodeParameters(
             maximumHeapSize,
             logLevel,
             additionalCordapps = emptySet(),
-            deleteExistingCordappsDirectory = false
+            regenerateCordappsOnStart = false
     )
 
     /**
@@ -212,7 +212,7 @@ data class NodeParameters(
             maximumHeapSize,
             null,
             additionalCordapps = emptySet(),
-            deleteExistingCordappsDirectory = false)
+            regenerateCordappsOnStart = false)
 
     /**
      * Helper builder for configuring a [Node] from Java.
@@ -227,7 +227,7 @@ data class NodeParameters(
      *     in. If null the Driver-level value will be used.
      * @param maximumHeapSize The maximum JVM heap size to use for the node.
      * @param additionalCordapps additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
-     * @param deleteExistingCordappsDirectory whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
+     * @param regenerateCordappsOnStart whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
      */
     constructor(
             providedName: CordaX500Name?,
@@ -237,7 +237,7 @@ data class NodeParameters(
             startInSameProcess: Boolean?,
             maximumHeapSize: String,
             additionalCordapps: Set<TestCorDapp> = emptySet(),
-            deleteExistingCordappsDirectory: Boolean = false
+            regenerateCordappsOnStart: Boolean = false
     ) : this(
             providedName,
             rpcUsers,
@@ -247,7 +247,7 @@ data class NodeParameters(
             maximumHeapSize,
             null,
             additionalCordapps,
-            deleteExistingCordappsDirectory)
+            regenerateCordappsOnStart)
 
     fun copy(
             providedName: CordaX500Name?,
@@ -282,7 +282,7 @@ data class NodeParameters(
             maximumHeapSize,
             logLevel,
             additionalCordapps = additionalCordapps,
-            deleteExistingCordappsDirectory = deleteExistingCordappsDirectory)
+            regenerateCordappsOnStart = regenerateCordappsOnStart)
 
     fun withProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
     fun withRpcUsers(rpcUsers: List<User>): NodeParameters = copy(rpcUsers = rpcUsers)
@@ -292,7 +292,7 @@ data class NodeParameters(
     fun withMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
     fun withLogLevel(logLevel: String?): NodeParameters = copy(logLevel = logLevel)
     fun withAdditionalCordapps(additionalCordapps: Set<TestCorDapp>): NodeParameters = copy(additionalCordapps = additionalCordapps)
-    fun withDeleteExistingCordappsDirectory(deleteExistingCordappsDirectory: Boolean): NodeParameters = copy(deleteExistingCordappsDirectory = deleteExistingCordappsDirectory)
+    fun withDeleteExistingCordappsDirectory(regenerateCordappsOnStart: Boolean): NodeParameters = copy(regenerateCordappsOnStart = regenerateCordappsOnStart)
 }
 
 /**

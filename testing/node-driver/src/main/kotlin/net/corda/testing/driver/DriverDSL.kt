@@ -96,7 +96,7 @@ interface DriverDSL {
      *     as being in bytes. Append the letter 'k' or 'K' to the value to indicate Kilobytes, 'm' or 'M' to indicate
      *     megabytes, and 'g' or 'G' to indicate gigabytes. The default value is "512m" = 512 megabytes.
      * @param additionalCordapps additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
-     * @param deleteExistingCordappsDirectory whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
+     * @param regenerateCordappsOnStart whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
      * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available and
      * it sees all previously started nodes, including the notaries.
      */
@@ -109,7 +109,7 @@ interface DriverDSL {
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
             maximumHeapSize: String = defaultParameters.maximumHeapSize,
             additionalCordapps: Set<TestCorDapp> = defaultParameters.additionalCordapps,
-            deleteExistingCordappsDirectory: Boolean = defaultParameters.deleteExistingCordappsDirectory
+            regenerateCordappsOnStart: Boolean = defaultParameters.regenerateCordappsOnStart
     ): CordaFuture<NodeHandle>
 
     /**

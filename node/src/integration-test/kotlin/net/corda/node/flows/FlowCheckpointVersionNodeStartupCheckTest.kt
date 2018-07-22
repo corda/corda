@@ -8,7 +8,6 @@ import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.CheckpointIncompatibleException
 import net.corda.node.internal.NodeStartup
-import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testMessage.Message
@@ -103,11 +102,11 @@ class FlowCheckpointVersionNodeStartupCheckTest {
             }()
 
             startNode(rpcUsers = listOf(user), providedName = ALICE_NAME, customOverrides = mapOf("devMode" to false),
-                    additionalCordapps = cordappsVersionAtRestart, deleteExistingCordappsDirectory = !reuseAdditionalCordappsAtRestart).getOrThrow()
+                    additionalCordapps = cordappsVersionAtRestart, regenerateCordappsOnStart = !reuseAdditionalCordappsAtRestart).getOrThrow()
 
             assertFailsWith(ListenProcessDeathException::class) {
                 startNode(providedName = BOB_NAME, rpcUsers = listOf(user), customOverrides = mapOf("devMode" to false),
-                        additionalCordapps = cordappsVersionAtRestart, deleteExistingCordappsDirectory = !reuseAdditionalCordappsAtRestart).getOrThrow()
+                        additionalCordapps = cordappsVersionAtRestart, regenerateCordappsOnStart = !reuseAdditionalCordappsAtRestart).getOrThrow()
             }
 
             val logFile = bobLogFolder.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }
@@ -120,7 +119,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
     fun `restart nodes with incompatible version of suspended flow due to different jar name`() {
 
         assertNodeRestartFailure(
-                null,
+                emptySet(),
                 setOf(TestCorDapp.Factory.create("testJar", "1.0", classes = classes)),
                 setOf(TestCorDapp.Factory.create("testJar2", "1.0", classes = classes)),
                 false,
@@ -131,7 +130,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
     fun `restart nodes with incompatible version of suspended flow`() {
 
         assertNodeRestartFailure(
-                null,
+                emptySet(),
                 setOf(TestCorDapp.Factory.create("testJar", "1.0", classes = classes)),
                 setOf(TestCorDapp.Factory.create("testJar", "1.0", classes = classes + net.test.cordapp.v1.SendMessageFlow::class.java)),
                 false,
@@ -143,7 +142,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
     fun `restart nodes with incompatible version of suspended flow due to different timestamps only`() {
 
         assertNodeRestartFailure(
-                null,
+                emptySet(),
                 setOf(TestCorDapp.Factory.create("testJar", "1.0", classes = classes)),
                 setOf(TestCorDapp.Factory.create("testJar", "1.0", classes = classes)),
                 false,
