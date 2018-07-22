@@ -1,5 +1,6 @@
 package net.corda.testing.driver
 
+import net.corda.core.DoNotImplement
 import net.corda.testing.node.internal.MutableTestCorDapp
 import java.net.URL
 import java.nio.file.Path
@@ -7,6 +8,7 @@ import java.nio.file.Path
 /**
  * Represents information about a CorDapp. Used to generate CorDapp JARs in tests.
  */
+@DoNotImplement
 interface TestCorDapp {
 
     val name: String
@@ -39,6 +41,7 @@ interface TestCorDapp {
         }
     }
 
+    @DoNotImplement
     interface Mutable : TestCorDapp {
 
         fun withName(name: String): TestCorDapp.Mutable

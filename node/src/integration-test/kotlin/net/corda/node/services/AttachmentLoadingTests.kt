@@ -14,9 +14,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.copyTo
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.internal.toLedgerTransaction
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
@@ -116,17 +113,6 @@ class AttachmentLoadingTests {
                 }
             }
             Unit
-        }
-    }
-
-    @Test
-    fun `tests that if the attachment is loaded on both sides already that a flow can run`() {
-        val cordapps = cordappsForPackages("net.corda.finance.contracts.isolated")
-        withoutTestSerialization {
-            driver(DriverParameters(cordappsForAllNodes = cordapps)) {
-                val (bankA, bankB) = createTwoNodes()
-                bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
-            }
         }
     }
 }
