@@ -14,6 +14,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappConfigException
+import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 
 /**
  * Provides configuration from a typesafe config source
@@ -81,7 +82,7 @@ class TypesafeCordappConfig(private val cordappConfig: Config) : CordappConfig {
 
     override fun getBoolean(path: String): Boolean {
         try {
-            return cordappConfig.getBoolean(path)
+            return cordappConfig.getBooleanCaseInsensitive(path)
         } catch (e: ConfigException) {
             throw CordappConfigException("Cordapp configuration is incorrect due to exception", e)
         }

@@ -12,4 +12,7 @@ Networks
    corda-testnet-intro
    azure-template-guide
    testnet-explorer
+   gcp-vm
+   deploy-locally
+   testnet-explorer-corda
    cipher-suites

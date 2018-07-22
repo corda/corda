@@ -26,7 +26,7 @@ dependencies {
 task copyJdk(type: Copy) {
     outputs.dir jdk_home
 
-    from(configurations.jdk.asPath) {
+    from(configurations.jdk) {
         rename 'deterministic-rt-(.*).jar', 'rt.jar'
     }
     into "$jdk_home/jre/lib"
