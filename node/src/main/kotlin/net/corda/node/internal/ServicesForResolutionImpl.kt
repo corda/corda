@@ -12,9 +12,15 @@ data class ServicesForResolutionImpl(
         override val identityService: IdentityService,
         override val attachments: AttachmentStorage,
         override val cordappProvider: CordappProvider,
-        override val networkParameters: NetworkParameters,
         private val validatedTransactions: TransactionStorage
 ) : ServicesForResolution {
+    private lateinit var _networkParameters: NetworkParameters
+    override val networkParameters: NetworkParameters get() = _networkParameters
+
+    fun start(networkParameters: NetworkParameters) {
+        _networkParameters = networkParameters
+    }
+
     @Throws(TransactionResolutionException::class)
     override fun loadState(stateRef: StateRef): TransactionState<*> {
         val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)

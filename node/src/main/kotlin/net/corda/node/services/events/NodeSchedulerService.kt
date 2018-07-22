@@ -60,13 +60,13 @@ class NodeSchedulerService(private val clock: CordaClock,
                            private val database: CordaPersistence,
                            private val flowStarter: FlowStarter,
                            private val servicesForResolution: ServicesForResolution,
-                           private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
                            private val flowLogicRefFactory: FlowLogicRefFactory,
                            private val nodeProperties: NodePropertiesStore,
                            private val drainingModePollPeriod: Duration,
                            private val log: Logger = staticLog,
+                           private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
                            private val schedulerRepo: ScheduledFlowRepository = PersistentScheduledFlowRepository(database))
-    : SchedulerService, SingletonSerializeAsToken() {
+    : SchedulerService, AutoCloseable, SingletonSerializeAsToken() {
 
     companion object {
         private val staticLog get() = contextLogger()
@@ -224,8 +224,7 @@ class NodeSchedulerService(private val clock: CordaClock,
         }
     }
 
-    @VisibleForTesting
-    internal fun join() {
+    override fun close() {
         mutex.locked {
             running = false
             rescheduleWakeUp()

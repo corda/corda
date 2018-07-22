@@ -50,11 +50,7 @@ import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.internal.cordappsForPackages
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.pumpReceive
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import net.corda.testing.node.ledger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -99,7 +95,9 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     @After
     fun after() {
-        mockNet.stopNodes()
+        if (::mockNet.isInitialized) {
+            mockNet.stopNodes()
+        }
         LogHelper.reset("platform.trade", "core.contract.TransactionGroup", "recordingmap")
     }
 
@@ -148,11 +146,11 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             bobNode.dispose()
 
             aliceNode.database.transaction {
-                assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
+                assertThat(aliceNode.internals.checkpointStorage.checkpoints()).isEmpty()
             }
             aliceNode.internals.manuallyCloseDB()
             bobNode.database.transaction {
-                assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
+                assertThat(bobNode.internals.checkpointStorage.checkpoints()).isEmpty()
             }
             bobNode.internals.manuallyCloseDB()
         }
@@ -206,11 +204,11 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             bobNode.dispose()
 
             aliceNode.database.transaction {
-                assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
+                assertThat(aliceNode.internals.checkpointStorage.checkpoints()).isEmpty()
             }
             aliceNode.internals.manuallyCloseDB()
             bobNode.database.transaction {
-                assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
+                assertThat(bobNode.internals.checkpointStorage.checkpoints()).isEmpty()
             }
             bobNode.internals.manuallyCloseDB()
         }
@@ -262,7 +260,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
             // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
             bobNode.database.transaction {
-                assertThat(bobNode.checkpointStorage.checkpoints()).hasSize(1)
+                assertThat(bobNode.internals.checkpointStorage.checkpoints()).hasSize(1)
             }
 
             val storage = bobNode.services.validatedTransactions
@@ -295,10 +293,10 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
             assertThat(bobNode.smm.findStateMachines(Buyer::class.java)).isEmpty()
             bobNode.database.transaction {
-                assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
+                assertThat(bobNode.internals.checkpointStorage.checkpoints()).isEmpty()
             }
             aliceNode.database.transaction {
-                assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
+                assertThat(aliceNode.internals.checkpointStorage.checkpoints()).isEmpty()
             }
 
             bobNode.database.transaction {
@@ -321,15 +319,15 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             if (cordappLoader != null) {
                 object : InternalMockNetwork.MockNode(args, cordappLoader) {
                     // That constructs a recording tx storage
-                    override fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage {
-                        return RecordingTransactionStorage(database, super.makeTransactionStorage(database, transactionCacheSizeBytes))
+                    override fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {
+                        return RecordingTransactionStorage(database, super.makeTransactionStorage(transactionCacheSizeBytes))
                     }
                 }
             } else {
                 object : InternalMockNetwork.MockNode(args) {
                     // That constructs a recording tx storage
-                    override fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage {
-                        return RecordingTransactionStorage(database, super.makeTransactionStorage(database, transactionCacheSizeBytes))
+                    override fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {
+                        return RecordingTransactionStorage(database, super.makeTransactionStorage(transactionCacheSizeBytes))
                     }
                 }
             }

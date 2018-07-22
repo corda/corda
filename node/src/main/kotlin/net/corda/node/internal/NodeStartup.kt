@@ -8,14 +8,9 @@ import io.netty.channel.unix.Errors
 import joptsimple.OptionParser
 import joptsimple.util.PathConverter
 import net.corda.core.crypto.Crypto
-import net.corda.core.internal.Emoji
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
-import net.corda.core.internal.exists
-import net.corda.core.internal.location
-import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
@@ -321,6 +316,12 @@ open class NodeStartup(val args: Array<String>) {
                 }
             }
             return
+        }
+
+        if (conf.devMode) {
+            Emoji.renderIfSupported {
+                Node.printWarning("This node is running in developer mode! ${Emoji.developer} This is not safe for production deployment.")
+            }
         }
 
         val startedNode = node.start()

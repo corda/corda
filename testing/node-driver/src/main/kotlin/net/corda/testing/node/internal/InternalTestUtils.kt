@@ -111,8 +111,6 @@ fun InMemoryMessagingNetwork.MessageTransfer.getMessage(): Message = message
 
 internal interface InternalMockMessagingService : MessagingService {
     fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer?
-
-    fun stop()
 }
 
 fun CordaRPCClient.start(user: User) = start(user.username, user.password)
