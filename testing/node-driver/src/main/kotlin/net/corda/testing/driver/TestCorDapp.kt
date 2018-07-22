@@ -4,6 +4,9 @@ import net.corda.testing.node.internal.MutableTestCorDapp
 import java.net.URL
 import java.nio.file.Path
 
+/**
+ * Represents information about a CorDapp. Used to generate CorDapp JARs in tests.
+ */
 interface TestCorDapp {
 
     val name: String
@@ -19,9 +22,15 @@ interface TestCorDapp {
 
     fun packageAsJarWithPath(jarFilePath: Path)
 
+    /**
+     * Responsible of creating [TestCorDapp]s.
+     */
     class Factory {
         companion object {
 
+            /**
+             * Returns a builder-style [TestCorDapp] to easily generate different [TestCorDapp]s that have something in common.
+             */
             @JvmStatic
             fun create(name: String, version: String, vendor: String = "R3", title: String = name, classes: Set<Class<*>> = emptySet(), willResourceBeAddedBeToCorDapp: (fullyQualifiedName: String, url: URL) -> Boolean = MutableTestCorDapp.Companion::filterTestCorDappClass): TestCorDapp.Mutable {
 

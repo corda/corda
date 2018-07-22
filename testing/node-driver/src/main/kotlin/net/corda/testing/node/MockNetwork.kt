@@ -299,7 +299,7 @@ open class MockNetwork(
      * @param entropyRoot The initial entropy value to use when generating keys. Defaults to an (insecure) random value,
      * but can be overridden to cause nodes to have stable or colliding identity/service keys.
      * @param configOverrides Add/override behaviour of the [NodeConfiguration] mock object.
-     * @param additionalCordapps additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [MockNetwork].
+     * @param additionalCordapps Additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [MockNetwork].
      */
     fun createNode(legalName: CordaX500Name? = null,
                    forcedID: Int? = null,
@@ -341,7 +341,7 @@ open class MockNetwork(
      * @param entropyRoot The initial entropy value to use when generating keys. Defaults to an (insecure) random value,
      * but can be overridden to cause nodes to have stable or colliding identity/service keys.
      * @param configOverrides Add/override behaviour of the [NodeConfiguration] mock object.
-     * @param additionalCordapps additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [MockNetwork].
+     * @param additionalCordapps Additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [MockNetwork].
      */
     fun createUnstartedNode(legalName: CordaX500Name? = null,
                             forcedID: Int? = null,

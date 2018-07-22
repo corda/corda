@@ -15,7 +15,7 @@ internal class MutableTestCorDapp private constructor(override val name: String,
         private const val jarExtension = ".jar"
         private const val whitespace = " "
         private const val whitespaceReplacement = "_"
-        private val productionPathSegments = setOf<(String) -> String>({ "out${File.separator}production${File.separator}classes" }, { fullyQualifiedName -> "main/${fullyQualifiedName.packageToPath()}" })
+        private val productionPathSegments = setOf<(String) -> String>({ "out${File.separator}production${File.separator}classes" }, { fullyQualifiedName -> "main${File.separator}${fullyQualifiedName.packageToPath()}" })
         private val excludedCordaPackages = setOf("net.corda.core", "net.corda.node")
 
         fun filterTestCorDappClass(fullyQualifiedName: String, url: URL): Boolean {

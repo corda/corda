@@ -34,7 +34,7 @@ class SendMessageFlow(private val message: Message, private val notary: Party, p
     override fun call(): SignedTransaction {
         progressTracker.currentStep = GENERATING_TRANSACTION
 
-        val messageState = MessageState(message = message, by = /*reciepent ?:*/ ourIdentity)
+        val messageState = MessageState(message = message, by = ourIdentity)
         val txCommand = Command(MessageContract.Commands.Send(), messageState.participants.map { it.owningKey })
         val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, MESSAGE_CONTRACT_PROGRAM_ID), txCommand)
 

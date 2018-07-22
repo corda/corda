@@ -134,8 +134,8 @@ abstract class PortAllocation {
  *     in. If null the Driver-level value will be used.
  * @property maximumHeapSize The maximum JVM heap size to use for the node.
  * @property logLevel Logging level threshold.
- * @property additionalCordapps additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
- * @property regenerateCordappsOnStart whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
+ * @property additionalCordapps Additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
+ * @property regenerateCordappsOnStart Whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
  */
 @Suppress("unused")
 data class NodeParameters(
@@ -226,8 +226,8 @@ data class NodeParameters(
      * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
      *     in. If null the Driver-level value will be used.
      * @param maximumHeapSize The maximum JVM heap size to use for the node.
-     * @param additionalCordapps additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
-     * @param regenerateCordappsOnStart whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
+     * @param additionalCordapps Additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
+     * @param regenerateCordappsOnStart Whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
      */
     constructor(
             providedName: CordaX500Name?,
