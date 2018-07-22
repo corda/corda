@@ -8,7 +8,6 @@ import net.corda.core.DoNotImplement
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -20,7 +19,6 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
@@ -28,20 +26,16 @@ import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
-import net.corda.node.services.api.NodePropertiesStore
-import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.*
 import net.corda.node.services.keys.E2ETestKeyManagementService
+import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.BFTSMaRt
-import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.TestCorDapp
@@ -52,6 +46,7 @@ import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
+import rx.Scheduler
 import rx.internal.schedulers.CachedThreadScheduler
 import java.math.BigInteger
 import java.nio.file.Path
@@ -226,11 +221,21 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         }
     }
 
+    private fun getServerThread(id: Int): ServiceAffinityExecutor {
+        return if (threadPerNode) {
+            ServiceAffinityExecutor("Mock node $id thread", 1)
+        } else {
+            sharedUserCount.incrementAndGet()
+            sharedServerThread
+        }
+    }
+
     open class MockNode(args: MockNodeArgs, cordappLoader: CordappLoader = JarScanningCordappLoader.fromDirectories(args.config.cordappDirectories)) : AbstractNode(
             args.config,
             TestClock(Clock.systemUTC()),
             args.version,
             cordappLoader,
+            args.network.getServerThread(args.id),
             args.network.busyLatch
     ) {
         companion object {
@@ -242,13 +247,16 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         private val entropyRoot = args.entropyRoot
         var counter = entropyRoot
         override val log get() = staticLog
-        override val serverThread: AffinityExecutor.ServiceAffinityExecutor =
-                if (mockNet.threadPerNode) {
-                    ServiceAffinityExecutor("Mock node $id thread", 1)
-                } else {
-                    mockNet.sharedUserCount.incrementAndGet()
-                    mockNet.sharedServerThread
+        override val transactionVerifierWorkerCount: Int get() = 1
+
+        private var _rxIoScheduler: Scheduler? = null
+        override val rxIoScheduler: Scheduler
+            get() {
+                return _rxIoScheduler ?: CachedThreadScheduler(testThreadFactory()).also {
+                    runOnStop += it::shutdown
+                    _rxIoScheduler = it
                 }
+            }
 
         override val started: StartedNode<MockNode>? get() = uncheckedCast(super.started)
 
@@ -259,7 +267,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             return started
         }
 
-        override fun getRxIoScheduler() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
         private fun advertiseNodeToNetwork(newNode: StartedNode<MockNode>) {
             mockNet.nodes
                     .mapNotNull { it.started }
@@ -269,32 +276,36 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                     }
         }
 
-        // We only need to override the messaging service here, as currently everything that hits disk does so
-        // through the java.nio API which we are already mocking via Jimfs.
-        override fun makeMessagingService(database: CordaPersistence, info: NodeInfo, nodeProperties: NodePropertiesStore, networkParameters: NetworkParameters): MessagingService {
+        override fun makeMessagingService(): MessagingService {
             require(id >= 0) { "Node ID must be zero or positive, was passed: $id" }
+            // TODO AbstractNode is forced to call this method in start(), and not in the c'tor, because the mockNet
+            // c'tor parameter isn't available. We need to be able to return a InternalMockMessagingService
+            // here that can be populated properly in startMessagingService.
             return mockNet.messagingNetwork.createNodeWithID(
                     !mockNet.threadPerNode,
                     id,
                     serverThread,
-                    myNotaryIdentity,
-                    configuration.myLegalName).also { runOnStop += it::stop }
+                    configuration.myLegalName
+            ).closeOnStop()
+        }
+
+        override fun startMessagingService(rpcOps: RPCOps,
+                                           nodeInfo: NodeInfo,
+                                           myNotaryIdentity: PartyAndCertificate?,
+                                           networkParameters: NetworkParameters) {
+            mockNet.messagingNetwork.onNotaryIdentity(network as InternalMockMessagingService, myNotaryIdentity)
         }
 
         fun setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
             network = messagingServiceSpy
         }
 
-        override fun makeKeyManagementService(identityService: IdentityService, keyPairs: Set<KeyPair>, database: CordaPersistence): KeyManagementService {
-            return E2ETestKeyManagementService(identityService, keyPairs)
+        override fun makeKeyManagementService(identityService: IdentityService): KeyManagementServiceInternal {
+            return E2ETestKeyManagementService(identityService)
         }
 
         override fun startShell() {
             //No mock shell
-        }
-
-        override fun startMessagingService(rpcOps: RPCOps) {
-            // Nothing to do
         }
 
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine
@@ -303,8 +314,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             // The StartedMockNode specifically uses EdDSA keys as they are fixed and stored in json files for some tests (e.g IRSSimulation).
             return Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, counter)
         }
-
-        override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
 
         // NodeInfo requires a non-empty addresses list and so we give it a dummy value for mock nodes.
         // The non-empty addresses check is important to have and so we tolerate the ugliness here.
@@ -316,10 +325,11 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         override val serializationWhitelists: List<SerializationWhitelist>
             get() = _serializationWhitelists
         private var dbCloser: (() -> Any?)? = null
-        override fun initialiseDatabasePersistence(schemaService: SchemaService,
-                                                   wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
-                                                   wellKnownPartyFromAnonymous: (AbstractParty) -> Party?): CordaPersistence {
-            return super.initialiseDatabasePersistence(schemaService, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous).also { dbCloser = it::close }
+
+        override fun startDatabase() {
+            super.startDatabase()
+            dbCloser = database::close
+            runOnStop += dbCloser!!
         }
 
         fun disableDBCloseOnStop() {

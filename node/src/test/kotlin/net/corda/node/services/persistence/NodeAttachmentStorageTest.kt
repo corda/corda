@@ -43,7 +43,11 @@ class NodeAttachmentStorageTest {
         val dataSourceProperties = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProperties, DatabaseConfig(), { null }, { null })
         fs = Jimfs.newFileSystem(Configuration.unix())
-        storage = NodeAttachmentService(MetricRegistry(), database = database).also { it.start() }
+        storage = NodeAttachmentService(MetricRegistry(), database).also {
+            database.transaction {
+                it.start()
+            }
+        }
     }
 
     @After

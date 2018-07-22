@@ -20,7 +20,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.NetworkMapCacheBaseInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
@@ -34,18 +33,17 @@ import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
-import kotlin.collections.HashSet
 
 class NetworkMapCacheImpl(
-        networkMapCacheBase: NetworkMapCacheBaseInternal,
+        private val networkMapCacheBase: NetworkMapCacheBaseInternal,
         private val identityService: IdentityService,
         private val database: CordaPersistence
 ) : NetworkMapCacheBaseInternal by networkMapCacheBase, NetworkMapCacheInternal, SingletonSerializeAsToken() {
     companion object {
-        private val logger = loggerFor<NetworkMapCacheImpl>()
+        private val logger = contextLogger()
     }
 
-    init {
+    fun start() {
         networkMapCacheBase.allNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
         networkMapCacheBase.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
@@ -76,10 +74,7 @@ class NetworkMapCacheImpl(
  * Extremely simple in-memory cache of the network map.
  */
 @ThreadSafe
-open class PersistentNetworkMapCache(
-        private val database: CordaPersistence,
-        notaries: List<NotaryInfo>
-) : SingletonSerializeAsToken(), NetworkMapCacheBaseInternal {
+open class PersistentNetworkMapCache(private val database: CordaPersistence) : SingletonSerializeAsToken(), NetworkMapCacheBaseInternal {
     companion object {
         private val logger = contextLogger()
     }
@@ -93,9 +88,9 @@ open class PersistentNetworkMapCache(
     // with the NetworkMapService redesign their meaning is not too well defined.
     private val _nodeReady = openFuture<Void?>()
     override val nodeReady: CordaFuture<Void?> = _nodeReady
+    private lateinit var notaries: List<NotaryInfo>
 
-    override val notaryIdentities: List<Party> = notaries.map { it.identity }
-    private val validatingNotaries = notaries.mapNotNullTo(HashSet()) { if (it.validating) it.identity else null }
+    override val notaryIdentities: List<Party> get() = notaries.map { it.identity }
 
     override val allNodeHashes: List<SecureHash>
         get() {
@@ -110,6 +105,10 @@ open class PersistentNetworkMapCache(
             }
         }
 
+    fun start(notaries: List<NotaryInfo>) {
+        this.notaries = notaries
+    }
+
     override fun getNodeByHash(nodeHash: SecureHash): NodeInfo? {
         return database.transaction {
             val builder = session.criteriaBuilder
@@ -122,7 +121,7 @@ open class PersistentNetworkMapCache(
         }
     }
 
-    override fun isValidatingNotary(party: Party): Boolean = party in validatingNotaries
+    override fun isValidatingNotary(party: Party): Boolean = notaries.any { it.validating && it.identity == party }
 
     override fun getPartyInfo(party: Party): PartyInfo? {
         val nodes = getNodesByLegalIdentityKey(party.owningKey)
