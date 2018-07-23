@@ -12,7 +12,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
-class FlowMonitor constructor(private val retrieveFlows: () -> Set<FlowStateMachineImpl<*>>,
+internal class FlowMonitor constructor(private val retrieveFlows: () -> Set<FlowStateMachineImpl<*>>,
                                        private val monitoringPeriod: Duration,
                                        private val suspensionLoggingThreshold: Duration,
                                        private var scheduler: ScheduledExecutorService? = null) : LifecycleSupport {
