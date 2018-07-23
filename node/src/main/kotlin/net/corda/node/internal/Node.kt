@@ -54,6 +54,7 @@ import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.serialization.internal.*
+import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -331,8 +332,12 @@ open class Node(configuration: NodeConfiguration,
 
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
             val effectiveH2Settings = configuration.effectiveH2Settings
-
+            System.setProperty("h2.allowedClasses","org.h2.mvstore.db.MVTableEngine,org.locationtech.jts.geom.Geometry,org.h2.server.TcpServer") //forbid execution of arbitrary code via SQL except those classes required by H2 itself
             if (effectiveH2Settings?.address != null) {
+                if (effectiveH2Settings.address.host.equals("localhost", ignoreCase = true).not() &&
+                        configuration.dataSourceProperties.getProperty("dataSource.password").isBlank()) {
+                    throw CouldNotCreateDataSourceException("Exposing H2 server address other than localhost requires 'dataSource.password' to be set.")
+                }
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
                 val server = org.h2.tools.Server.createTcpServer(
                         "-tcpPort", effectiveH2Settings.address.port.toString(),
