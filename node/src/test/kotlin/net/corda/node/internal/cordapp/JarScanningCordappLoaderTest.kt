@@ -101,7 +101,7 @@ class JarScanningCordappLoaderTest {
 
     @Test
     fun `sub-packages are ignored`() {
-        val loader = cordappLoaderForPackages(listOf("net.corda", testScanPackage))
+        val loader = cordappLoaderForPackages(listOf("net.corda.core", testScanPackage))
         val cordapps = loader.cordapps.filter { LoaderTestFlow::class.java in it.initiatedFlows }
         assertThat(cordapps).hasSize(1)
     }
