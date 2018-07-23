@@ -9,9 +9,9 @@ of contributing to Corda.
    :maxdepth: 1
 
    contributing
-   contributing-flow-state-machines
    building-corda
-   codestyle
    testing
+   codestyle
    building-the-docs
    api-scanner
+   contributing-flow-state-machines

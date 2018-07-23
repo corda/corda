@@ -53,6 +53,7 @@ We look forward to seeing what you can do with Corda!
    azure-vm.rst
    aws-vm.rst
    loadtesting.rst
+   building-container-images.rst
 
 .. Documentation is not included in the pdf unless it is included in a toctree somewhere
 
@@ -88,6 +89,5 @@ We look forward to seeing what you can do with Corda!
    contributing-index.rst
    corda-repo-layout.rst
    deterministic-modules.rst
-   building-container-images.rst
    release-notes
    changelog
