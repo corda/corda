@@ -3,8 +3,8 @@ package net.corda.core.identity
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.LegalNameValidator
 import net.corda.core.internal.toAttributesMap
-import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.internal.toX500Name
+import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.x500.style.BCStyle
 import java.util.*
