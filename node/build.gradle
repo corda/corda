@@ -144,6 +144,7 @@ dependencies {
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
     testCompile project(':finance')
+    testCompile project(':finance:isolated')
 
     // sample test schemas
     testCompile project(path: ':finance', configuration: 'testArtifacts')

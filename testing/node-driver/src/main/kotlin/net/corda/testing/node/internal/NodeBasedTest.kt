@@ -10,6 +10,7 @@
 
 package net.corda.testing.node.internal
 
+import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
@@ -17,11 +18,11 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.internal.EnterpriseNode
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -41,10 +42,12 @@ import java.nio.file.Path
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
-// TODO Some of the logic here duplicates what's in the driver
+// TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't support this, and it's a property of the Corda JAR)
 abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyList()) : IntegrationTest() {
     companion object {
         private val WHITESPACE = "\\s++".toRegex()
+
+        private val logger = loggerFor<NodeBasedTest>()
     }
 
     @Rule
@@ -112,15 +115,24 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 ) + configOverrides
         )
 
-        val parsedConfig = config.parseAsNodeConfiguration().also { nodeConfiguration ->
+        val cordapps =  cordappsForPackages(getCallerPackage(NodeBasedTest::class)?.let { cordappPackages + it } ?: cordappPackages)
+
+        val existingCorDappDirectoriesOption = if (config.hasPath(NodeConfiguration.cordappDirectoriesKey)) config.getStringList(NodeConfiguration.cordappDirectoriesKey) else emptyList()
+
+        val cordappDirectories = existingCorDappDirectoriesOption + TestCordappDirectories.cached(cordapps).map { it.toString() }
+
+        val specificConfig = config.withValue(NodeConfiguration.cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories))
+
+        val parsedConfig = specificConfig.parseAsNodeConfiguration().also { nodeConfiguration ->
             val errors = nodeConfiguration.validate()
             if (errors.isNotEmpty()) {
                 throw IllegalStateException("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
             }
         }
+
         defaultNetworkParameters.install(baseDirectory)
 
-        return InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion), cordappPackages)
+        return InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion))
     }
 
     @JvmOverloads
@@ -153,8 +165,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     }
 }
 
-class InProcessNode(
-        configuration: NodeConfiguration, versionInfo: VersionInfo, cordappPackages: List<String>) : EnterpriseNode(
-        configuration, versionInfo, false, CordappLoader.createDefaultWithTestPackages(configuration, cordappPackages)) {
+class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo) : EnterpriseNode(configuration, versionInfo, false) {
+
     override fun getRxIoScheduler() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
 }

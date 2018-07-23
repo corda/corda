@@ -30,6 +30,7 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.cordappsForPackages
 import org.junit.AfterClass
 import org.junit.Test
 
@@ -37,7 +38,7 @@ class CollectSignaturesFlowTests : WithContracts {
     companion object {
         private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
         private val miniCorpServices = MockServices(listOf("net.corda.testing.contracts"), miniCorp, rigorousMock())
-        private val classMockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.core.flows"))
+        private val classMockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.core.flows"))
 
         private const val MAGIC_NUMBER = 1337
 

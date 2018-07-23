@@ -24,13 +24,14 @@ import net.corda.finance.issuedBy
 import net.corda.node.internal.StartedNode
 import net.corda.testing.core.*
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.cordappsForPackages
 import org.junit.AfterClass
 import org.junit.Test
 
 class FinalityFlowTests : WithFinality {
     companion object {
         private val CHARLIE = TestIdentity(CHARLIE_NAME, 90).party
-        private val classMockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
+        private val classMockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts.asset"))
 
         @JvmStatic
         @AfterClass

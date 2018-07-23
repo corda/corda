@@ -16,10 +16,9 @@ import java.util.*
 import java.util.jar.Attributes
 import java.util.jar.Manifest
 
-internal fun createTestManifest(name: String, title: String, jarUUID: UUID): Manifest {
+fun createTestManifest(name: String, title: String, version: String, vendor: String): Manifest {
+
     val manifest = Manifest()
-    val version = "test-$jarUUID"
-    val vendor = "R3"
 
     // Mandatory manifest attribute. If not present, all other entries are silently skipped.
     manifest.mainAttributes[Attributes.Name.MANIFEST_VERSION] = "1.0"
@@ -37,11 +36,18 @@ internal fun createTestManifest(name: String, title: String, jarUUID: UUID): Man
     return manifest
 }
 
-internal operator fun Manifest.set(key: String, value: String) {
+internal fun createTestManifest(name: String, title: String, jarUUID: UUID): Manifest {
+
+    return createTestManifest(name, title, "test-$jarUUID", "R3")
+}
+
+operator fun Manifest.set(key: String, value: String) {
+
     mainAttributes.putValue(key, value)
 }
 
 internal fun Manifest?.toCordappInfo(defaultShortName: String): Cordapp.Info {
+
     var unknown = CordappImpl.Info.UNKNOWN
     (this?.mainAttributes?.getValue("Name") ?: defaultShortName).let { shortName ->
         unknown = unknown.copy(shortName = shortName)

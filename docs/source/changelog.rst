@@ -6,6 +6,7 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* Introduced ``TestCorDapp`` and utilities to support asymmetric setups for nodes through ``DriverDSL``, ``MockNetwork`` and ``MockServices``.
 
 * ``freeLocalHostAndPort``, ``freePort``, and ``getFreeLocalPorts`` from ``TestUtils`` have been deprecated as they
   don't provide any guarantee the returned port will be available which can result in flaky tests. Use ``PortAllocation.Incremental``

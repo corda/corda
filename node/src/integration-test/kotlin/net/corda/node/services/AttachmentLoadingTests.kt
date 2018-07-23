@@ -13,20 +13,12 @@ package net.corda.node.services
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.PartyAndReference
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.copyTo
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.internal.toLedgerTransaction
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
@@ -36,8 +28,8 @@ import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverDSL
@@ -45,6 +37,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.*
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Assert.assertEquals
 import org.junit.ClassRule
@@ -58,7 +51,7 @@ class AttachmentLoadingTests : IntegrationTest() {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val attachments = MockAttachmentStorage()
-    private val provider = CordappProviderImpl(CordappLoader.createDevMode(listOf(isolatedJAR)), MockCordappConfigProvider(), attachments, testNetworkParameters().whitelistedContractImplementations)
+    private val provider = CordappProviderImpl(JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR)), MockCordappConfigProvider(), attachments, testNetworkParameters().whitelistedContractImplementations)
     private val cordapp get() = provider.cordapps.first()
     private val attachmentId get() = provider.getCordappAttachmentId(cordapp)!!
     private val appContext get() = provider.getAppContext(cordapp)
@@ -85,13 +78,6 @@ class AttachmentLoadingTests : IntegrationTest() {
                     startNode(providedName = bankAName),
                     startNode(providedName = bankBName)
             ).transpose().getOrThrow()
-        }
-
-        private fun DriverDSL.installIsolatedCordappTo(nodeName: CordaX500Name) {
-            // Copy the app jar to the first node. The second won't have it.
-            val path = (baseDirectory(nodeName) / "cordapps").createDirectories() / "isolated.jar"
-            logger.info("Installing isolated jar to $path")
-            isolatedJAR.openStream().use { it.copyTo(path) }
         }
     }
 
@@ -125,26 +111,14 @@ class AttachmentLoadingTests : IntegrationTest() {
     @Test
     fun `test that attachments retrieved over the network are not used for code`() {
         withoutTestSerialization {
-            driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-                installIsolatedCordappTo(bankAName)
-                val (bankA, bankB) = createTwoNodes()
+            driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = emptySet())) {
+                val bankA = startNode(providedName = bankAName, additionalCordapps = cordappsForPackages("net.corda.finance.contracts.isolated")).getOrThrow()
+                val bankB = startNode(providedName = bankBName, additionalCordapps = cordappsForPackages("net.corda.finance.contracts.isolated")).getOrThrow()
                 assertFailsWith<CordaRuntimeException>("Party C=CH,L=Zurich,O=BankB rejected session request: Don't know net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator") {
                     bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
                 }
             }
             Unit
-        }
-    }
-
-    @Test
-    fun `tests that if the attachment is loaded on both sides already that a flow can run`() {
-        withoutTestSerialization {
-            driver {
-                installIsolatedCordappTo(bankAName)
-                installIsolatedCordappTo(bankBName)
-                val (bankA, bankB) = createTwoNodes()
-                bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
-            }
         }
     }
 }

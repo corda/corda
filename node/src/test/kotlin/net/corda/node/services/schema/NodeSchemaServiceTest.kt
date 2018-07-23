@@ -25,6 +25,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
@@ -41,7 +42,7 @@ class NodeSchemaServiceTest {
      */
     @Test
     fun `registering custom schemas for testing with MockNode`() {
-        val mockNet = InternalMockNetwork(cordappPackages = listOf(DummyLinearStateSchemaV1::class.packageName))
+        val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(DummyLinearStateSchemaV1::class.packageName))
         val mockNode = mockNet.createNode()
         val schemaService = mockNode.services.schemaService
         assertTrue(schemaService.schemaOptions.containsKey(DummyLinearStateSchemaV1))
@@ -74,8 +75,6 @@ class NodeSchemaServiceTest {
 
     /**
      * Note: this test verifies auto-scanning to register identified [MappedSchema] schemas.
-     *       By default, Driver uses the caller package for auto-scanning:
-     *       System.setProperty("net.corda.node.cordapp.scan.packages", callerPackage)
      */
     @Test
     fun `auto scanning of custom schemas for testing with Driver`() {
