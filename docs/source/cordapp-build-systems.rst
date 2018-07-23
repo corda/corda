@@ -158,9 +158,9 @@ Installing the CorDapp JAR
 .. note:: Before installing a CorDapp, you must create one or more nodes to install it on. For instructions, please see
    :doc:`generating-a-node`.
 
-At runtime, nodes will load any CorDapps present in their ``cordapps`` folder. Therefore in order to install a CorDapp on
-a node, the CorDapp JAR must be added to the ``<node_dir>/cordapps/`` folder, where ``node_dir`` is the folder in which
-the node's JAR and configuration files are stored.
+At start-up, nodes will load any CorDapps present in their ``cordapps`` folder. Therefore, in order to install a CorDapp on
+a node, the CorDapp JAR must be added to the ``<node_dir>/cordapps/`` folder (where ``node_dir`` is the folder in which
+the node's JAR and configuration files are stored) and the node restarted.
 
 CorDapp configuration files
 ---------------------------

@@ -30,10 +30,7 @@ import net.corda.testing.driver.PortAllocation.Incremental
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.DriverDSLImpl
-import net.corda.testing.node.internal.genericDriver
-import net.corda.testing.node.internal.getTimestampAsDirectoryName
-import net.corda.testing.node.internal.newContext
+import net.corda.testing.node.internal.*
 import rx.Observable
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -146,6 +143,9 @@ abstract class PortAllocation {
  * @property startInSameProcess Determines if the node should be started inside the same process the Driver is running
  *     in. If null the Driver-level value will be used.
  * @property maximumHeapSize The maximum JVM heap size to use for the node.
+ * @property logLevel Logging level threshold.
+ * @property additionalCordapps Additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
+ * @property regenerateCordappsOnStart Whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
  */
 @Suppress("unused")
 data class NodeParameters(
@@ -155,8 +155,57 @@ data class NodeParameters(
         val customOverrides: Map<String, Any?> = emptyMap(),
         val startInSameProcess: Boolean? = null,
         val maximumHeapSize: String = "512m",
-        val logLevel: String? = null
+        val logLevel: String? = null,
+        val additionalCordapps: Set<TestCorDapp> = emptySet(),
+        val regenerateCordappsOnStart: Boolean = false
 ) {
+    /**
+     * Helper builder for configuring a [Node] from Java.
+     *
+     * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
+     *     random. Note that this must be unique as the driver uses it as a primary key!
+     * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to a single user with
+     *     all permissions.
+     * @param verifierType The type of transaction verifier to use. See: [VerifierType]
+     * @param customOverrides A map of custom node configuration overrides.
+     * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
+     *     in. If null the Driver-level value will be used.
+     * @param maximumHeapSize The maximum JVM heap size to use for the node.
+     * @param logLevel Logging level threshold.
+     */
+    constructor(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            logLevel: String? = null
+    ) : this(
+            providedName,
+            rpcUsers,
+            verifierType,
+            customOverrides,
+            startInSameProcess,
+            maximumHeapSize,
+            logLevel,
+            additionalCordapps = emptySet(),
+            regenerateCordappsOnStart = false
+    )
+
+    /**
+     * Helper builder for configuring a [Node] from Java.
+     *
+     * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
+     *     random. Note that this must be unique as the driver uses it as a primary key!
+     * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to a single user with
+     *     all permissions.
+     * @param verifierType The type of transaction verifier to use. See: [VerifierType]
+     * @param customOverrides A map of custom node configuration overrides.
+     * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
+     *     in. If null the Driver-level value will be used.
+     * @param maximumHeapSize The maximum JVM heap size to use for the node.
+     */
     constructor(
             providedName: CordaX500Name?,
             rpcUsers: List<User>,
@@ -171,7 +220,44 @@ data class NodeParameters(
             customOverrides,
             startInSameProcess,
             maximumHeapSize,
-            null)
+            null,
+            additionalCordapps = emptySet(),
+            regenerateCordappsOnStart = false)
+
+    /**
+     * Helper builder for configuring a [Node] from Java.
+     *
+     * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
+     *     random. Note that this must be unique as the driver uses it as a primary key!
+     * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to a single user with
+     *     all permissions.
+     * @param verifierType The type of transaction verifier to use. See: [VerifierType]
+     * @param customOverrides A map of custom node configuration overrides.
+     * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
+     *     in. If null the Driver-level value will be used.
+     * @param maximumHeapSize The maximum JVM heap size to use for the node.
+     * @param additionalCordapps Additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
+     * @param regenerateCordappsOnStart Whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
+     */
+    constructor(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            additionalCordapps: Set<TestCorDapp> = emptySet(),
+            regenerateCordappsOnStart: Boolean = false
+    ) : this(
+            providedName,
+            rpcUsers,
+            verifierType,
+            customOverrides,
+            startInSameProcess,
+            maximumHeapSize,
+            null,
+            additionalCordapps,
+            regenerateCordappsOnStart)
 
     fun copy(
             providedName: CordaX500Name?,
@@ -189,6 +275,25 @@ data class NodeParameters(
             maximumHeapSize,
             null)
 
+    fun copy(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String,
+            logLevel: String?
+    ) = this.copy(
+            providedName,
+            rpcUsers,
+            verifierType,
+            customOverrides,
+            startInSameProcess,
+            maximumHeapSize,
+            logLevel,
+            additionalCordapps = additionalCordapps,
+            regenerateCordappsOnStart = regenerateCordappsOnStart)
+
     fun withProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
     fun withRpcUsers(rpcUsers: List<User>): NodeParameters = copy(rpcUsers = rpcUsers)
     fun withVerifierType(verifierType: VerifierType): NodeParameters = copy(verifierType = verifierType)
@@ -196,6 +301,8 @@ data class NodeParameters(
     fun withStartInSameProcess(startInSameProcess: Boolean?): NodeParameters = copy(startInSameProcess = startInSameProcess)
     fun withMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
     fun withLogLevel(logLevel: String?): NodeParameters = copy(logLevel = logLevel)
+    fun withAdditionalCordapps(additionalCordapps: Set<TestCorDapp>): NodeParameters = copy(additionalCordapps = additionalCordapps)
+    fun withDeleteExistingCordappsDirectory(regenerateCordappsOnStart: Boolean): NodeParameters = copy(regenerateCordappsOnStart = regenerateCordappsOnStart)
 }
 
 /**
@@ -240,12 +347,12 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     startNodesInProcess = defaultParameters.startNodesInProcess,
                     waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
                     notarySpecs = defaultParameters.notarySpecs,
-                    extraCordappPackagesToScan = defaultParameters.extraCordappPackagesToScan,
                     jmxPolicy = defaultParameters.jmxPolicy,
                     compatibilityZone = null,
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
-                    inMemoryDB = defaultParameters.inMemoryDB
+                    inMemoryDB = defaultParameters.inMemoryDB,
+                    cordappsForAllNodes = defaultParameters.cordappsForAllNodes()
             ),
             coerce = { it },
             dsl = dsl,
@@ -282,6 +389,7 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
  * @property inMemoryDB Whether to use in-memory H2 for new nodes rather then on-disk (the node starts quicker, however
  *     the data is not persisted between node restarts). Has no effect if node is configured
  *     in any way to use database other than H2.
+ * @property cordappsForAllNodes [TestCorDapp]s that will be added to each node started by the [DriverDSL].
  */
 @Suppress("unused")
 data class DriverParameters(
@@ -299,8 +407,44 @@ data class DriverParameters(
         val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         val initialiseSerialization: Boolean = true,
-        val inMemoryDB: Boolean = true
+        val inMemoryDB: Boolean = true,
+        val cordappsForAllNodes: Set<TestCorDapp>? = null
     ) {
+    constructor(
+            isDebug: Boolean = false,
+            driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
+            portAllocation: PortAllocation = PortAllocation.Incremental(10000),
+            debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+            systemProperties: Map<String, String> = emptyMap(),
+            useTestClock: Boolean = false,
+            startNodesInProcess: Boolean = false,
+            waitForAllNodesToFinish: Boolean = false,
+            notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
+            extraCordappPackagesToScan: List<String> = emptyList(),
+            jmxPolicy: JmxPolicy = JmxPolicy(),
+            networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
+            notaryCustomOverrides: Map<String, Any?> = emptyMap(),
+            initialiseSerialization: Boolean = true,
+            inMemoryDB: Boolean = true
+    ) : this(
+            isDebug,
+            driverDirectory,
+            portAllocation,
+            debugPortAllocation,
+            systemProperties,
+            useTestClock,
+            startNodesInProcess,
+            waitForAllNodesToFinish,
+            notarySpecs,
+            extraCordappPackagesToScan,
+            jmxPolicy,
+            networkParameters,
+            notaryCustomOverrides,
+            initialiseSerialization,
+            inMemoryDB,
+            cordappsForAllNodes = null
+    )
+
     constructor(
             isDebug: Boolean,
             driverDirectory: Path,
@@ -329,7 +473,41 @@ data class DriverParameters(
             networkParameters,
             emptyMap(),
             true,
-            true
+            true,
+            cordappsForAllNodes = null
+    )
+
+    constructor(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters,
+            cordappsForAllNodes: Set<TestCorDapp>? = null
+    ) : this(
+            isDebug,
+            driverDirectory,
+            portAllocation,
+            debugPortAllocation,
+            systemProperties,
+            useTestClock,
+            startNodesInProcess,
+            waitForAllNodesToFinish,
+            notarySpecs,
+            extraCordappPackagesToScan,
+            jmxPolicy,
+            networkParameters,
+            emptyMap(),
+            true,
+            true,
+            cordappsForAllNodes
     )
 
     constructor(
@@ -362,7 +540,43 @@ data class DriverParameters(
             networkParameters,
             emptyMap(),
             initialiseSerialization,
-            inMemoryDB
+            inMemoryDB,
+            cordappsForAllNodes = null
+    )
+
+    constructor(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters,
+            initialiseSerialization: Boolean,
+            inMemoryDB: Boolean,
+            cordappsForAllNodes: Set<TestCorDapp>? = null
+    ) : this(
+            isDebug,
+            driverDirectory,
+            portAllocation,
+            debugPortAllocation,
+            systemProperties,
+            useTestClock,
+            startNodesInProcess,
+            waitForAllNodesToFinish,
+            notarySpecs,
+            extraCordappPackagesToScan,
+            jmxPolicy,
+            networkParameters,
+            emptyMap(),
+            initialiseSerialization,
+            inMemoryDB,
+            cordappsForAllNodes
     )
 
     fun withIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)
@@ -380,6 +594,7 @@ data class DriverParameters(
     fun withNetworkParameters(networkParameters: NetworkParameters): DriverParameters = copy(networkParameters = networkParameters)
     fun withNotaryCustomOverrides(notaryCustomOverrides: Map<String, Any?>): DriverParameters = copy(notaryCustomOverrides = notaryCustomOverrides)
     fun withInMemoryDB(inMemoryDB: Boolean): DriverParameters = copy(inMemoryDB = inMemoryDB)
+    fun withCordappsForAllNodes(cordappsForAllNodes: Set<TestCorDapp>?): DriverParameters = copy(cordappsForAllNodes = cordappsForAllNodes)
 
     fun copy(
             isDebug: Boolean,
@@ -440,5 +655,70 @@ data class DriverParameters(
             networkParameters = networkParameters,
             notaryCustomOverrides = emptyMap(),
             initialiseSerialization = initialiseSerialization
+    )
+
+    fun copy(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters,
+            cordappsForAllNodes: Set<TestCorDapp>?
+    ) = this.copy(
+            isDebug = isDebug,
+            driverDirectory = driverDirectory,
+            portAllocation = portAllocation,
+            debugPortAllocation = debugPortAllocation,
+            systemProperties = systemProperties,
+            useTestClock = useTestClock,
+            startNodesInProcess = startNodesInProcess,
+            waitForAllNodesToFinish = waitForAllNodesToFinish,
+            notarySpecs = notarySpecs,
+            extraCordappPackagesToScan = extraCordappPackagesToScan,
+            jmxPolicy = jmxPolicy,
+            networkParameters = networkParameters,
+            notaryCustomOverrides = emptyMap(),
+            initialiseSerialization = true,
+            cordappsForAllNodes = cordappsForAllNodes
+    )
+
+    fun copy(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters,
+            initialiseSerialization: Boolean,
+            cordappsForAllNodes: Set<TestCorDapp>?
+    ) = this.copy(
+            isDebug = isDebug,
+            driverDirectory = driverDirectory,
+            portAllocation = portAllocation,
+            debugPortAllocation = debugPortAllocation,
+            systemProperties = systemProperties,
+            useTestClock = useTestClock,
+            startNodesInProcess = startNodesInProcess,
+            waitForAllNodesToFinish = waitForAllNodesToFinish,
+            notarySpecs = notarySpecs,
+            extraCordappPackagesToScan = extraCordappPackagesToScan,
+            jmxPolicy = jmxPolicy,
+            networkParameters = networkParameters,
+            notaryCustomOverrides = emptyMap(),
+            initialiseSerialization = initialiseSerialization,
+            cordappsForAllNodes = cordappsForAllNodes
     )
 }

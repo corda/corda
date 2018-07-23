@@ -23,6 +23,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
+import net.corda.node.cordapp.CordappLoader
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 

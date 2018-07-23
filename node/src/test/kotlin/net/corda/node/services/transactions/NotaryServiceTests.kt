@@ -25,6 +25,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetworkNotarySpec
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
@@ -43,7 +44,7 @@ class NotaryServiceTests {
     @Before
     fun setup() {
         mockNet = InternalMockNetwork(
-                cordappPackages = listOf("net.corda.testing.contracts"),
+                cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"),
                 notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME, validating = false))
         )
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))

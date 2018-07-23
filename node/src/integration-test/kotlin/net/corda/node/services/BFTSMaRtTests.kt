@@ -14,6 +14,7 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.startFlow
@@ -34,7 +35,7 @@ class BFTSMaRtTests : IntegrationTest() {
 
     @Before
     fun before() {
-        mockNet = InternalMockNetwork(listOf("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"))
     }
 
     @After

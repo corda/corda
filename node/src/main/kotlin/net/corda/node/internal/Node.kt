@@ -35,8 +35,9 @@ import net.corda.node.SimpleClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
-import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.core.internal.errors.AddressBindingException
+import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
@@ -124,15 +125,11 @@ open class Node(configuration: NodeConfiguration,
         }
 
         private val sameVmNodeCounter = AtomicInteger()
-        const val scanPackagesSystemProperty = "net.corda.node.cordapp.scan.packages"
-        const val scanPackagesSeparator = ","
 
         @JvmStatic
         protected fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
 
-            return System.getProperty(scanPackagesSystemProperty)?.let { scanPackages ->
-                CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator), versionInfo)
-            } ?: CordappLoader.createDefault(configuration.baseDirectory, versionInfo)
+            return JarScanningCordappLoader.fromDirectories(configuration.cordappDirectories, versionInfo)
         }
         // TODO: make this configurable.
         const val MAX_RPC_MESSAGE_SIZE = 10485760

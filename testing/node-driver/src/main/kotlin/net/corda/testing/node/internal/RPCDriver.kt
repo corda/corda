@@ -37,8 +37,10 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.TestCorDapp
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -119,13 +121,13 @@ fun <A> rpcDriver(
         useTestClock: Boolean = false,
         startNodesInProcess: Boolean = false,
         waitForNodesToFinish: Boolean = false,
-        extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
         jmxPolicy: JmxPolicy = JmxPolicy(),
         networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
         notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         inMemoryDB: Boolean = true,
+        cordappsForAllNodes: Set<TestCorDapp> = cordappsInCurrentAndAdditionalPackages(),
         dsl: RPCDriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -139,13 +141,13 @@ fun <A> rpcDriver(
                             isDebug = isDebug,
                             startNodesInProcess = startNodesInProcess,
                             waitForAllNodesToFinish = waitForNodesToFinish,
-                            extraCordappPackagesToScan = extraCordappPackagesToScan,
                             notarySpecs = notarySpecs,
                             jmxPolicy = jmxPolicy,
                             compatibilityZone = null,
                             networkParameters = networkParameters,
                             notaryCustomOverrides = notaryCustomOverrides,
-                            inMemoryDB = inMemoryDB
+                            inMemoryDB = inMemoryDB,
+                            cordappsForAllNodes = cordappsForAllNodes
                     ), externalTrace
             ),
             coerce = { it },

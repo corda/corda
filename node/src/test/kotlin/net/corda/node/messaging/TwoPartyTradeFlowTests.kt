@@ -60,6 +60,7 @@ import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.pumpReceive
@@ -89,7 +90,7 @@ import kotlin.test.assertTrue
 @RunWith(Parameterized::class)
 class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     companion object {
-        private val cordappPackages = listOf("net.corda.finance.contracts", "net.corda.finance.schemas")
+        private val cordappPackages = setOf("net.corda.finance.contracts")
         @JvmStatic
         @Parameterized.Parameters(name = "Anonymous = {0}")
         fun data(): Collection<Boolean> = listOf(true, false)
@@ -117,7 +118,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         // We run this in parallel threads to help catch any race conditions that may exist. The other tests
         // we run in the unit test thread exclusively to speed things up, ensure deterministic results and
         // allow interruption half way through.
-        mockNet = InternalMockNetwork(cordappPackages = cordappPackages, threadPerNode = true)
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages), threadPerNode = true)
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
         MockServices(cordappPackages, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
             val notaryNode = mockNet.defaultNotaryNode
@@ -169,7 +170,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     @Test(expected = InsufficientBalanceException::class)
     fun `trade cash for commercial paper fails using soft locking`() {
-        mockNet = InternalMockNetwork(cordappPackages = cordappPackages, threadPerNode = true)
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages), threadPerNode = true)
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
         MockServices(cordappPackages, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
             val notaryNode = mockNet.defaultNotaryNode
@@ -227,7 +228,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     @Test
     fun `shutdown and restore`() {
-        mockNet = InternalMockNetwork(cordappPackages = cordappPackages)
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages))
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
         MockServices(cordappPackages, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
             val notaryNode = mockNet.defaultNotaryNode
@@ -326,11 +327,20 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     // of gets and puts.
     private fun makeNodeWithTracking(name: CordaX500Name): StartedNode<InternalMockNetwork.MockNode> {
         // Create a node in the mock network ...
-        return mockNet.createNode(InternalMockNodeParameters(legalName = name), nodeFactory = { args ->
-            object : InternalMockNetwork.MockNode(args) {
-                // That constructs a recording tx storage
-                override fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage {
-                    return RecordingTransactionStorage(database, super.makeTransactionStorage(database, transactionCacheSizeBytes))
+        return mockNet.createNode(InternalMockNodeParameters(legalName = name), nodeFactory = { args, cordappLoader ->
+            if (cordappLoader != null) {
+                object : InternalMockNetwork.MockNode(args, cordappLoader) {
+                    // That constructs a recording tx storage
+                    override fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage {
+                        return RecordingTransactionStorage(database, super.makeTransactionStorage(database, transactionCacheSizeBytes))
+                    }
+                }
+            } else {
+                object : InternalMockNetwork.MockNode(args) {
+                    // That constructs a recording tx storage
+                    override fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage {
+                        return RecordingTransactionStorage(database, super.makeTransactionStorage(database, transactionCacheSizeBytes))
+                    }
                 }
             }
         })
@@ -338,7 +348,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     @Test
     fun `check dependencies of sale asset are resolved`() {
-        mockNet = InternalMockNetwork(cordappPackages = cordappPackages)
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages))
         val notaryNode = mockNet.defaultNotaryNode
         val aliceNode = makeNodeWithTracking(ALICE_NAME)
         val bobNode = makeNodeWithTracking(BOB_NAME)
@@ -442,7 +452,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     @Test
     fun `track works`() {
-        mockNet = InternalMockNetwork(cordappPackages = cordappPackages)
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages))
         val notaryNode = mockNet.defaultNotaryNode
         val aliceNode = makeNodeWithTracking(ALICE_NAME)
         val bobNode = makeNodeWithTracking(BOB_NAME)
@@ -520,7 +530,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     @Test
     fun `dependency with error on buyer side`() {
-        mockNet = InternalMockNetwork(cordappPackages = cordappPackages)
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages))
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
         MockServices(cordappPackages, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
             runWithError(ledgerIdentityService, true, false, "at least one cash input")
@@ -529,7 +539,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     @Test
     fun `dependency with error on seller side`() {
-        mockNet = InternalMockNetwork(cordappPackages = cordappPackages)
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages))
         val ledgerIdentityService = rigorousMock<IdentityServiceInternal>()
         MockServices(cordappPackages, MEGA_CORP.name, ledgerIdentityService).ledger(DUMMY_NOTARY) {
             runWithError(ledgerIdentityService, false, true, "Issuances have a time-window")

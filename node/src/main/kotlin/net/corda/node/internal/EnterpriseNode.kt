@@ -22,7 +22,6 @@ import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
-import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.RelayConfiguration
 import net.corda.node.services.statemachine.MultiThreadedStateMachineExecutor
@@ -38,9 +37,8 @@ import java.util.concurrent.TimeUnit
 
 open class EnterpriseNode(configuration: NodeConfiguration,
                           versionInfo: VersionInfo,
-                          initialiseSerialization: Boolean = true,
-                          cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo)
-) : Node(configuration, versionInfo, initialiseSerialization, cordappLoader) {
+                          initialiseSerialization: Boolean = true
+) : Node(configuration, versionInfo, initialiseSerialization) {
     companion object {
         private val logger by lazy { loggerFor<EnterpriseNode>() }
 
