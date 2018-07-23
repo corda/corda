@@ -55,38 +55,40 @@ We look forward to seeing what you can do with Corda!
    loadtesting.rst
 
 .. Documentation is not included in the pdf unless it is included in a toctree somewhere
-.. only:: pdfmode
 
-   .. toctree::
-      :caption: Other documentation
+.. conditional-toctree::
+   :caption: Contents
+   :maxdepth: 2
+   :if_tag: pdfmode
 
-      deterministic-modules.rst
-      release-notes.rst
-      changelog.rst
+   deterministic-modules.rst
+   release-notes.rst
+   changelog.rst
 
-.. only:: htmlmode
 
-   .. toctree::
-      :caption: Design docs
-      :maxdepth: 2
+.. conditional-toctree::
+   :caption: Design docs
+   :maxdepth: 2
+   :if_tag: htmlmode
 
-      design/design-review-process.md
-      design/certificate-hierarchies/design.md
-      design/failure-detection-master-election/design.md
-      design/float/design.md
-      design/hadr/design.md
-      design/kafka-notary/design.md
-      design/monitoring-management/design.md
-      design/sgx-integration/design.md
-      design/sgx-infrastructure/design.md
+   design/design-review-process.md
+   design/certificate-hierarchies/design.md
+   design/failure-detection-master-election/design.md
+   design/float/design.md
+   design/hadr/design.md
+   design/kafka-notary/design.md
+   design/monitoring-management/design.md
+   design/sgx-integration/design.md
+   design/sgx-infrastructure/design.md
 
-   .. toctree::
-      :caption: Participate
-      :maxdepth: 2
-
-      building-corda.rst
-      release-process-index.rst
-      corda-repo-layout.rst
-      deterministic-modules.rst
-      building-the-docs.rst
-      building-container-images.rst
+.. conditional-toctree::
+   :caption: Participate
+   :maxdepth: 2
+   :if_tag: htmlmode
+   
+   building-corda.rst
+   release-process-index.rst
+   corda-repo-layout.rst
+   deterministic-modules.rst
+   building-the-docs.rst
+   building-container-images.rst

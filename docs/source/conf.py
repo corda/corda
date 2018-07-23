@@ -13,6 +13,9 @@
 # serve to show the default.
 
 import sphinx_rtd_theme
+import sys, os
+
+sys.path.append(os.path.abspath('../ext/'))
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -25,7 +28,7 @@ import sphinx_rtd_theme
 # needs_sphinx = '1.0'
 
 # m2r is a Markdown to RST converter, as our design docs use Markdown.
-extensions = ['rst2pdf.pdfbuilder', 'm2r']
+extensions = ['rst2pdf.pdfbuilder', 'm2r', 'conditional_toctree']
 
 # PDF configuration
 pdf_documents = [('index', u'corda-developer-site', u'Corda Developer Documentation', u'R3')]
@@ -274,3 +277,4 @@ latex_elements = {
 
     'extraclassoptions' : 'openany',
 }
+
