@@ -20,6 +20,7 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.logElapsedTime
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
@@ -301,6 +302,14 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         // possible (yet) to due restriction from MockNode
         network = makeMessagingService().tokenize()
 
+        val startupExecutor = Executors.newSingleThreadExecutor()
+
+        val beforeDb = System.currentTimeMillis()
+        val databaseReadyFuture = startupExecutor.submit {
+            startDatabase()
+            database.transaction { session }
+        }
+
         val trustRoot = initKeyStore()
         val nodeCa = configuration.loadNodeKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_CA)
         initialiseJVMAgents()
@@ -326,20 +335,27 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         servicesForResolution.start(netParams)
         persistentNetworkMapCache.start(netParams.notaries)
 
-        startDatabase()
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
 
+        val beforeDbDone = System.currentTimeMillis()
+        println("interval.database ${beforeDbDone-beforeDb} ms")
+        databaseReadyFuture.getOrThrow()
+        val dbDone = System.currentTimeMillis()
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
             networkMapCache.start()
             updateNodeInfo(identity, identityKeyPair, publish = true)
         }
 
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
-        networkMapUpdater.start(trustRoot, signedNetParams.raw.hash, signedNodeInfo.raw.hash)
-        startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
+        val beforeMsg = System.currentTimeMillis()
+        println("interval.dead ${beforeMsg-dbDone} ms")
 
-        // Do all of this in a database transaction so anything that might need a connection has one.
+        val messagingServiceReadyFuture = startupExecutor.submit {
+            startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
+        }
+        networkMapUpdater.start(trustRoot, signedNetParams.raw.hash, signedNodeInfo.raw.hash)
+
         return database.transaction {
             services.start(nodeInfo, netParams)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
@@ -358,6 +374,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             tokenizableServices = null
 
             verifyCheckpointsCompatible(frozenTokenizableServices)
+
+            val beforeMsgDone = System.currentTimeMillis()
+            println("interval.message ${beforeMsgDone-beforeMsg} ms")
+            messagingServiceReadyFuture.getOrThrow()
 
             smm.start(frozenTokenizableServices)
             // Shut down the SMM so no Fibers are scheduled.
