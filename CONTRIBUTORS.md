@@ -192,7 +192,7 @@ see changes to this list.
 * Tommy Lillehagen (R3)
 * tomtau
 * Tudor Malene (R3)
-* Tushar Singh Bora
+* Tushar Singh Bora (Accenture)
 * varunkm
 * Venelin Stoykov (INDUSTRIA)
 * verymahler
