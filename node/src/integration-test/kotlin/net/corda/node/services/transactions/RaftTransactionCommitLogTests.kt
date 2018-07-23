@@ -10,6 +10,7 @@
 
 package net.corda.node.services.transactions
 
+import com.typesafe.config.ConfigFactory
 import io.atomix.catalyst.transport.Address
 import io.atomix.copycat.client.ConnectionStrategies
 import io.atomix.copycat.client.CopycatClient
@@ -32,7 +33,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.internal.makeInternalTestDataSourceProperties
 import org.hamcrest.Matchers.instanceOf
 import org.junit.After
 import org.junit.Assert.assertThat
@@ -163,7 +164,7 @@ class RaftTransactionCommitLogTests {
     private fun createReplica(myAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): CompletableFuture<Member> {
         val storage = Storage.builder().withStorageLevel(StorageLevel.MEMORY).build()
         val address = Address(myAddress.host, myAddress.port)
-        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(includeNotarySchemas = true))
+        val database = configureDatabase(makeInternalTestDataSourceProperties( configSupplier = { ConfigFactory.empty() }), DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(includeNotarySchemas = true))
         databases.add(database)
         val stateMachineFactory = { RaftTransactionCommitLog(database, Clock.systemUTC(), RaftUniquenessProvider.Companion::createMap) }
 

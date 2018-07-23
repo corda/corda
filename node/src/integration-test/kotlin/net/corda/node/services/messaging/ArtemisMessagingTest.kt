@@ -13,6 +13,7 @@ package net.corda.node.services.messaging
 import com.codahale.metrics.MetricRegistry
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
@@ -28,8 +29,8 @@ import net.corda.testing.core.*
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
+import net.corda.testing.node.internal.makeInternalTestDataSourceProperties
 import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.assertj.core.api.Assertions.assertThat
@@ -87,7 +88,7 @@ class ArtemisMessagingTest {
             doReturn(FlowTimeoutConfiguration(5.seconds, 3, backoffBase = 1.0)).whenever(it).flowTimeout
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), { null }, { null })
+        database = configureDatabase(makeInternalTestDataSourceProperties(configSupplier = { ConfigFactory.empty() }), DatabaseConfig(runMigration = true), { null }, { null })
         networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, emptyList()).start(), rigorousMock(), database)
     }
 
