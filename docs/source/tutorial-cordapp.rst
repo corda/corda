@@ -317,7 +317,7 @@ Assuming all went well, you can view the newly-created IOU by accessing the vaul
 *Via web/example:*
 
 * PartyA: Navigate to http://localhost:10009/web/example and hit the "refresh" button
-* PartyA: Navigate to http://localhost:10012/web/example and hit the "refresh" button
+* PartyB: Navigate to http://localhost:10012/web/example and hit the "refresh" button
 
 The vault and web front-end of PartyC (at ``localhost:10015``) will not display any IOUs. This is because PartyC was
 not involved in this transaction.
