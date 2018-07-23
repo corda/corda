@@ -30,10 +30,7 @@ import org.junit.Test
 
 class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
     companion object {
-        private val classMockNet = InternalMockNetwork(cordappPackages = listOf(
-            "net.corda.testing.contracts",
-            "net.corda.finance.contracts.asset",
-            "net.corda.core.flows"))
+        private val classMockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
 
         @JvmStatic
         @AfterClass
@@ -99,7 +96,7 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
         ).get()
     }
 
-    private fun RPCDriverDSL.createTestUser() = rpcTestUser.copy(permissions = setOf(
+    private fun createTestUser() = rpcTestUser.copy(permissions = setOf(
             startFlow<WithFinality.FinalityInvoker>(),
             startFlow<ContractUpgradeFlow.Initiate<*, *>>(),
             startFlow<ContractUpgradeFlow.Authorise>(),

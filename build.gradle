@@ -169,7 +169,7 @@ allprojects {
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
             freeCompilerArgs = ['-Xjvm-default=compatibility']
-            allWarningsAsErrors = true
+            allWarningsAsErrors = project.hasProperty('compilation.allWarningsAsErrors') ? project.property('compilation.allWarningsAsErrors') : false
         }
     }
 
@@ -185,7 +185,7 @@ allprojects {
     }
 
     tasks.withType(Test) {
-        failFast = true
+        failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast') : false
 
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperty 'java.io.tmpdir', buildDir.absolutePath

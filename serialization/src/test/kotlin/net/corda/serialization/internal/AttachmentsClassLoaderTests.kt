@@ -13,7 +13,7 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.nodeapi.DummyContractBackdoor
 import net.corda.testing.common.internal.testNetworkParameters
@@ -57,7 +57,7 @@ class AttachmentsClassLoaderTests {
     val testSerialization = SerializationEnvironmentRule()
     private val attachments = MockAttachmentStorage()
     private val networkParameters = testNetworkParameters()
-    private val cordappProvider = CordappProviderImpl(CordappLoader.createDevMode(listOf(ISOLATED_CONTRACTS_JAR_PATH)), MockCordappConfigProvider(), attachments, networkParameters.whitelistedContractImplementations)
+    private val cordappProvider = CordappProviderImpl(JarScanningCordappLoader.fromJarUrls(listOf(ISOLATED_CONTRACTS_JAR_PATH)), MockCordappConfigProvider(), attachments, networkParameters.whitelistedContractImplementations)
     private val cordapp get() = cordappProvider.cordapps.first()
     private val attachmentId get() = cordappProvider.getCordappAttachmentId(cordapp)!!
     private val appContext get() = cordappProvider.getAppContext(cordapp)

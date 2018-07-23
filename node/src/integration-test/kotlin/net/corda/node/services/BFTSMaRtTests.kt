@@ -12,6 +12,7 @@ import net.corda.node.services.transactions.minClusterSize
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.startFlow
@@ -24,7 +25,7 @@ class BFTSMaRtTests {
 
     @Before
     fun before() {
-        mockNet = InternalMockNetwork(listOf("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"))
     }
 
     @After

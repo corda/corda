@@ -1,11 +1,7 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.LinearState
-import net.corda.core.contracts.SchedulableState
-import net.corda.core.contracts.ScheduledActivity
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.contracts.*
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
@@ -20,6 +16,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
@@ -51,7 +48,7 @@ class ScheduledFlowsDrainingModeTest {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"), threadPerNode = true)
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"), threadPerNode = true)
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
         notary = mockNet.defaultNotaryIdentity

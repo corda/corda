@@ -6,6 +6,7 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.cordappsForPackages
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -18,7 +19,7 @@ class NodeUnloadHandlerTests {
         val shutdownLatch = CountDownLatch(1)
     }
 
-    private val mockNet = InternalMockNetwork(cordappPackages = listOf(javaClass.packageName), notarySpecs = emptyList())
+    private val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(javaClass.packageName), notarySpecs = emptyList())
 
     @After
     fun cleanUp() {

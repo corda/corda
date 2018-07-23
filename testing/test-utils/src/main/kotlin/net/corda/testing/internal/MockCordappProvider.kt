@@ -7,7 +7,8 @@ import net.corda.core.internal.TEST_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.cordapp.CordappLoader
+import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.testing.services.MockAttachmentStorage
 import java.nio.file.Paths
@@ -42,8 +43,7 @@ class MockCordappProvider(
         }
     }
 
-    override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? = cordappRegistry.find { it.first.contractClassNames.contains(contractClassName) }?.second
-            ?: super.getContractAttachmentID(contractClassName)
+    override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? = cordappRegistry.find { it.first.contractClassNames.contains(contractClassName) }?.second ?: super.getContractAttachmentID(contractClassName)
 
     private fun findOrImportAttachment(contractClassNames: List<ContractClassName>, data: ByteArray, attachments: MockAttachmentStorage): AttachmentId {
         val existingAttachment = attachments.files.filter {

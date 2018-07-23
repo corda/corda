@@ -59,10 +59,11 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
+import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.CheckpointVerifier.verifyCheckpointsCompatible
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappConfigFileProvider
-import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy

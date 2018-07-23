@@ -68,7 +68,7 @@ class FlowFrameworkTests {
         @JvmStatic
         fun beforeClass() {
             mockNet = InternalMockNetwork(
-                    cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                    cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
                     servicePeerAllocationStrategy = RoundRobin()
             )
 
@@ -481,7 +481,7 @@ class FlowFrameworkTripartyTests {
         @JvmStatic
         fun beforeClass() {
             mockNet = InternalMockNetwork(
-                    cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                    cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
                     servicePeerAllocationStrategy = RoundRobin()
             )
 
@@ -645,7 +645,7 @@ class FlowFrameworkPersistenceTests {
     @Before
     fun start() {
         mockNet = InternalMockNetwork(
-                cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
                 servicePeerAllocationStrategy = RoundRobin()
         )
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
