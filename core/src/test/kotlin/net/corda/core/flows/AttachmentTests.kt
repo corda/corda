@@ -148,18 +148,18 @@ class AttachmentTests : WithMockNet {
     //endregion
 
     //region Operations
-    private fun StartedNode<*>.importAttachment(attachment: ByteArray) =
+    private fun StartedNode.importAttachment(attachment: ByteArray) =
         attachments.importAttachment(attachment.inputStream(), "test", null)
             .andRunNetwork()
 
-    private fun StartedNode<*>.updateAttachment(attachment:  NodeAttachmentService.DBAttachment) = database.transaction {
+    private fun StartedNode.updateAttachment(attachment:  NodeAttachmentService.DBAttachment) = database.transaction {
         session.update(attachment)
     }.andRunNetwork()
 
-    private fun StartedNode<*>.startAttachmentFlow(hash: SecureHash, otherSide: Party) = startFlowAndRunNetwork(
+    private fun StartedNode.startAttachmentFlow(hash: SecureHash, otherSide: Party) = startFlowAndRunNetwork(
             InitiatingFetchAttachmentsFlow(otherSide, setOf(hash)))
 
-    private fun StartedNode<*>.getAttachmentWithId(id: SecureHash) =
+    private fun StartedNode.getAttachmentWithId(id: SecureHash) =
         attachments.openAttachment(id)!!
     //endregion
 

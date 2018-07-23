@@ -41,7 +41,6 @@ import net.corda.testing.core.expectEvents
 import net.corda.testing.core.sequence
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.testActor
 import org.apache.commons.io.IOUtils
@@ -72,7 +71,7 @@ class CordaRPCOpsImplTest {
     }
 
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var aliceNode: StartedNode<MockNode>
+    private lateinit var aliceNode: StartedNode
     private lateinit var alice: Party
     private lateinit var notary: Party
     private lateinit var rpc: CordaRPCOps

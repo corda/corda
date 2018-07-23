@@ -10,7 +10,6 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.DataSourceFactory
-import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.PasswordEncryption
@@ -35,7 +34,7 @@ import kotlin.test.assertFailsWith
 @RunWith(Parameterized::class)
 class AuthDBTests : NodeBasedTest() {
 
-    private lateinit var node: StartedNode<Node>
+    private lateinit var node: StartedNode
     private lateinit var client: CordaRPCClient
     private lateinit var db: UsersDB
 

@@ -21,6 +21,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
@@ -44,11 +45,11 @@ private fun
         Attachment.extractContent() = ByteArrayOutputStream().apply { extractFile("content", this) }.toString(UTF_8.name())
 
 @Suppress("deprecation")
-private fun StartedNode<*>.saveAttachment(content: String) = database.transaction {
+private fun StartedNode.saveAttachment(content: String) = database.transaction {
     attachments.importAttachment(createAttachmentData(content).inputStream())
 }
 
-private fun StartedNode<*>.hackAttachment(attachmentId: SecureHash, content: String) = database.transaction {
+private fun StartedNode.hackAttachment(attachmentId: SecureHash, content: String) = database.transaction {
     updateAttachment(attachmentId, createAttachmentData(content))
 }
 
@@ -66,8 +67,8 @@ private fun updateAttachment(attachmentId: SecureHash, data: ByteArray) {
 
 class AttachmentSerializationTest {
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var server: StartedNode<InternalMockNetwork.MockNode>
-    private lateinit var client: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var server: TestStartedNode
+    private lateinit var client: TestStartedNode
     private lateinit var serverIdentity: Party
 
     @Before

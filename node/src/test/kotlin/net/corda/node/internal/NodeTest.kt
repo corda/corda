@@ -44,7 +44,7 @@ class NodeTest {
         }
     }
 
-    private fun AbstractNode.generateNodeInfo(): NodeInfo {
+    private fun Node.generateNodeInfo(): NodeInfo {
         assertNull(nodeInfoFile())
         generateAndSaveNodeInfo()
         val path = nodeInfoFile()!!
