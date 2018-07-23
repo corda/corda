@@ -57,10 +57,12 @@ Optionally run the node's webserver as well by opening a terminal window in the 
 
 .. warning:: The node webserver is for testing purposes only and will be removed soon.
 
-Starting a node with remote debugging enabled
----------------------------------------------
-To enable remote debugging of the node, run the following from the terminal window:
+.. _enabling-remote-debugging:
+
+Enabling remote debugging
+-------------------------
+To enable remote debugging of the node, run the node with the following JVM arguments:
 
 ``java -Dcapsule.jvm.args="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005" -jar corda.jar``
 
-This command line will start the debugger on port 5005 and pause the process awaiting debugger attachment.
+This will allow you to attach a debugger to your node on port 5005.
