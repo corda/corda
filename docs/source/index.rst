@@ -65,7 +65,6 @@ We look forward to seeing what you can do with Corda!
    release-notes.rst
    changelog.rst
 
-
 .. conditional-toctree::
    :caption: Design docs
    :maxdepth: 2
@@ -86,9 +85,9 @@ We look forward to seeing what you can do with Corda!
    :maxdepth: 2
    :if_tag: htmlmode
    
-   building-corda.rst
-   release-process-index.rst
+   contributing-index.rst
    corda-repo-layout.rst
    deterministic-modules.rst
-   building-the-docs.rst
    building-container-images.rst
+   release-notes
+   changelog
