@@ -11,6 +11,7 @@
 package net.corda.nodeapi.internal.config
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory.empty
 import com.typesafe.config.ConfigRenderOptions.defaults
 import com.typesafe.config.ConfigValueFactory
@@ -18,6 +19,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import org.assertj.core.api.Assertions.*
+import org.hibernate.exception.DataException
 import org.junit.Test
 import java.net.URL
 import java.nio.file.Path
@@ -51,8 +53,16 @@ class ConfigParsingTest {
     @Test
     fun Boolean() {
         testPropertyType<BooleanData, BooleanListData, Boolean>(true, false)
+        assertThat(config(Pair("value", "false")).parseAs<BooleanData>().value).isEqualTo(false)
+        assertThat(config(Pair("value", "False")).parseAs<BooleanData>().value).isEqualTo(false)
+        assertThat(config(Pair("value", "FALSE")).parseAs<BooleanData>().value).isEqualTo(false)
+        assertThat(config(Pair("value", "true")).parseAs<BooleanData>().value).isEqualTo(true)
+        assertThat(config(Pair("value", "True")).parseAs<BooleanData>().value).isEqualTo(true)
+        assertThat(config(Pair("value", "TRUE")).parseAs<BooleanData>().value).isEqualTo(true)
+        assertThatThrownBy { config(Pair("value", "stilton")).parseAs<BooleanData>().value }
+                .isInstanceOf(ConfigException.WrongType::class.java)
+                .hasMessageContaining("hardcoded value: value has type STRING rather than BOOLEAN")
     }
-
     @Test
     fun Enum() {
         testPropertyType<EnumData, EnumListData, TestEnum>(TestEnum.Value2, TestEnum.Value1, valuesToString = true)

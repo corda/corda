@@ -477,7 +477,11 @@ class NodeVaultService(
                 if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and $MAX_PAGE_SIZE]")
             }
 
-            query.firstResult = if (paging.pageNumber > 0) (paging.pageNumber - 1) * paging.pageSize else 0 //some DB don't allow a negative value in SELECT TOP query
+            // For both SQLServer and PostgresSQL, firstResult must be >= 0. So we set a floor at 0.
+            // TODO: This is a catch-all solution. But why is the default pageNumber set to be -1 in the first place?
+            // Even if we set the default pageNumber to be 1 instead, that may not cover the non-default cases.
+            // So the floor may be necessary anyway.
+            query.firstResult = maxOf(0, (paging.pageNumber - 1) * paging.pageSize)
             query.maxResults = paging.pageSize + 1  // detection too many results
 
             // execution
