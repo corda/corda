@@ -127,6 +127,7 @@ see changes to this list.
 * Massimo Morini
 * Mat Rizzo (R3)
 * Matt Britton (BCS)
+* Matthew Layton (TradeIX)
 * Matthew Nesbit (R3)
 * Matthijs van den Bos (ING)
 * Michal Kit (R3)
