@@ -60,6 +60,7 @@ data class NetworkParameters(
         require(epoch > 0) { "epoch must be at least 1" }
         require(maxMessageSize > 0) { "maxMessageSize must be at least 1" }
         require(maxTransactionSize > 0) { "maxTransactionSize must be at least 1" }
+        require(maxTransactionSize <= maxMessageSize) { "maxTransactionSize cannot be bigger than maxMessageSize" }
         require(!eventHorizon.isNegative) { "eventHorizon must be positive value" }
     }
 

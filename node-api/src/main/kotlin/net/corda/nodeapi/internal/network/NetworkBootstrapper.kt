@@ -21,6 +21,7 @@ import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.*
+import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.CordaSerializationMagic
@@ -289,7 +290,7 @@ class NetworkBootstrapper
             // The config contains the notary type
             val nodeConfig = configs[nodeInfoFile.parent]!!
             if (nodeConfig.hasPath("notary")) {
-                val validating = nodeConfig.getBoolean("notary.validating")
+                val validating = nodeConfig.getBooleanCaseInsensitive("notary.validating")
                 // And the node-info file contains the notary's identity
                 val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
                 NotaryInfo(nodeInfo.notaryIdentity(), validating)
@@ -350,7 +351,7 @@ class NetworkBootstrapper
                     notaries = notaryInfos,
                     modifiedTime = Instant.now(),
                     maxMessageSize = 10485760,
-                    maxTransactionSize = Int.MAX_VALUE,
+                    maxTransactionSize = 10485760,
                     whitelistedContractImplementations = whitelist,
                     epoch = 1,
                     eventHorizon = 30.days

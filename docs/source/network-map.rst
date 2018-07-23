@@ -124,10 +124,8 @@ The current set of network parameters:
 :eventHorizon: Time after which nodes are considered to be unresponsive and removed from network map. Nodes republish their
         ``NodeInfo`` on a regular interval. Network map treats that as a heartbeat from the node.
 
-More parameters will be added in future releases to regulate things like allowed port numbers, how long a node can be
-offline before it is evicted from the zone, whether or not IPv6 connectivity is required for zone members, required
-cryptographic algorithms and roll-out schedules (e.g. for moving to post quantum cryptography), parameters related to
-SGX and so on.
+More parameters will be added in future releases to regulate things like allowed port numbers, whether or not IPv6 
+connectivity is required for zone members, required cryptographic algorithms and roll-out schedules (e.g. for moving to post quantum cryptography), parameters related to SGX and so on.
 
 Network parameters update process
 ---------------------------------

@@ -1,8 +1,8 @@
 package net.corda.core.utilities
 
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import kotlin.test.assertEquals
-import org.assertj.core.api.Assertions.assertThatThrownBy
 
 class NetworkHostAndPortTest {
     /**

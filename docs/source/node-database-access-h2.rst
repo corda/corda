@@ -18,6 +18,7 @@ overridden by specifying the full network address (interface and port), using th
 syntax in the node configuration:
 
 .. sourcecode:: groovy
+
   h2Settings {
       address: "localhost:12345"
   }
@@ -25,3 +26,6 @@ syntax in the node configuration:
 The configuration above will restrict the H2 service to run on localhost. If remote access is required, the address
 can be changed to 0.0.0.0. However it is recommended to change the default username and password
 before doing so.
+
+The previous ``h2Port`` syntax is now deprecated. ``h2Port`` will continue to work but the database
+will only be accessible on localhost.
