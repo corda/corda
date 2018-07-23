@@ -12,6 +12,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.serialization.internal.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
@@ -251,18 +252,23 @@ open class SerializerFactory(
      * that expects to find getters and a constructor with a parameter for each property.
      */
     open fun register(customSerializer: CustomSerializer<out Any>) {
-        logger.info ("action=\"Registering custom serializer\", class=\"${customSerializer.type}\"")
-        if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
-            customSerializers += customSerializer
-            serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
-            for (additional in customSerializer.additionalSerializers) {
-                register(additional)
-            }
+        if (serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) return
+
+        val className = (customSerializer.type as? Class<*>)?.name
+        if (className != null && (className.startsWith("java.") || className.startsWith("javax.") || className.startsWith("net.corda."))) {
+            logger.debug { "action=\"Registering custom serializer\", class=\"${customSerializer.type}\"" }
+        } else {
+            logger.info("action=\"Registering custom serializer\", class=\"${customSerializer.type}\"")
+        }
+        customSerializers += customSerializer
+        serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
+        for (additional in customSerializer.additionalSerializers) {
+            register(additional)
         }
     }
 
     fun registerExternal(customSerializer: CorDappCustomSerializer) {
-        logger.info ("action=\"Registering external serializer\", class=\"${customSerializer.type}\"")
+        logger.info("action=\"Registering external serializer\", class=\"${customSerializer.type}\"")
         if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
             customSerializers += customSerializer
             serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
