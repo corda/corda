@@ -25,6 +25,7 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DummyClusterSpec
 import net.corda.testing.node.internal.InternalDriverDSL
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
@@ -69,7 +70,7 @@ class InstrumentationTest : IntegrationTest() {
         val portAllocation = PortAllocation.Incremental(10000)
 
         internalDriver(
-                extraCordappPackagesToScan = listOf("net.corda.finance.contracts", "net.corda.finance.schemas"),
+                cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.finance.schemas"),
                 portAllocation = portAllocation,
                 notarySpecs = listOf(
                         NotarySpec(
