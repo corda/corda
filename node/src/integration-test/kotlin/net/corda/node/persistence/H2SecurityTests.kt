@@ -39,7 +39,7 @@ class H2SecurityTests {
     }
 
     @Test
-    fun `remote access to h2 server can't run java code`() {
+    fun `remote access to h2 server cant run java code`() {
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
             val nodeHandle = startNode(customOverrides = mapOf("h2Settings.address" to "localhost:10030")).getOrThrow()
             assertFailsWith(org.h2.jdbc.JdbcSQLException::class) {
@@ -60,6 +60,17 @@ class H2SecurityTests {
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
             assertFailsWith(CouldNotCreateDataSourceException::class) {
                 startNode(customOverrides = mapOf("h2Settings.address" to "${InetAddress.getLocalHost().hostName}:10030")).getOrThrow()
+            }
+        }
+    }
+
+    @Test
+    fun `h2 server not bind to localhost require non-blank database admin password`() {
+
+        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
+            assertFailsWith(CouldNotCreateDataSourceException::class) {
+                startNode(customOverrides = mapOf("h2Settings.address" to "${InetAddress.getLocalHost().hostName}:10030",
+                        "dataSourceProperties.dataSource.password" to " ")).getOrThrow()
             }
         }
     }

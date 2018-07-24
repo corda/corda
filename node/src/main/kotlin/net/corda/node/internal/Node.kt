@@ -336,7 +336,7 @@ open class Node(configuration: NodeConfiguration,
             if (effectiveH2Settings?.address != null) {
                 if (effectiveH2Settings.address.host.equals("localhost", ignoreCase = true).not() &&
                         configuration.dataSourceProperties.getProperty("dataSource.password").isBlank()) {
-                    throw CouldNotCreateDataSourceException("Exposing H2 server address other than localhost requires 'dataSource.password' to be set.")
+                    throw CouldNotCreateDataSourceException("Database password required when H2 server listen to non localhost address.")
                 }
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
                 val server = org.h2.tools.Server.createTcpServer(
