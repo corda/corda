@@ -102,9 +102,10 @@ absolute path to the node's base directory.
     :dataSource.user:     Database user.
     :dataSource.password: Database password.
 
-:h2port: A number that's used to pick the H2 JDBC server port. If not set a randomly chosen port will be used. For production
-    use you will typically be using a different, non-H2 database backend (e.g. Oracle, SQL Server, Postgres) so this option
-    is intended primarily for developer mode.
+
+:h2Port: Deprecated. Use ``h2Settings`` instead.
+
+:h2Settings:  Sets the H2 JDBC server port. See :doc:`node-database-access-h2`.
 
 :messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
 
