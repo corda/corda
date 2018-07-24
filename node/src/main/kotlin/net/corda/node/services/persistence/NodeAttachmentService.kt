@@ -57,12 +57,10 @@ import javax.persistence.*
 @ThreadSafe
 class NodeAttachmentService(
         metrics: MetricRegistry,
+        private val database: CordaPersistence,
         attachmentContentCacheSize: Long = NodeConfiguration.defaultAttachmentContentCacheSize,
-        attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound,
-        private val database: CordaPersistence
-) : AttachmentStorage, SingletonSerializeAsToken(
-) {
-
+        attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
+) : AttachmentStorage, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
 
@@ -119,14 +117,12 @@ class NodeAttachmentService(
     private val attachmentCount = metrics.counter("Attachments")
 
     fun start() {
-        database.transaction {
-            val session = currentDBSession()
-            val criteriaBuilder = session.criteriaBuilder
-            val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-            criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
-            val count = session.createQuery(criteriaQuery).singleResult
-            attachmentCount.inc(count)
-        }
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
+        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
+        val count = session.createQuery(criteriaQuery).singleResult
+        attachmentCount.inc(count)
     }
 
     @CordaSerializable

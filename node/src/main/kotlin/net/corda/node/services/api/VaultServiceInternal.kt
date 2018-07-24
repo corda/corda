@@ -17,6 +17,8 @@ import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
 
 interface VaultServiceInternal : VaultService {
+    fun start()
+
     /**
      * Splits the provided [txns] into batches of [WireTransaction] and [NotaryChangeWireTransaction].
      * This is required because the batches get aggregated into single updates, and we want to be able to

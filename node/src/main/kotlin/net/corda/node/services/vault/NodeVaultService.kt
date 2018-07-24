@@ -12,47 +12,21 @@ package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.FungibleAsset
-import net.corda.core.contracts.OwnableState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
-import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.VaultQueryException
-import net.corda.core.node.services.queryBy
-import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
-import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
-import net.corda.core.node.services.vault.MAX_PAGE_SIZE
-import net.corda.core.node.services.vault.PageSpecification
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
-import net.corda.core.node.services.vault.SortAttribute
-import net.corda.core.node.services.vault.builder
+import net.corda.core.node.services.*
+import net.corda.core.node.services.vault.*
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.transactions.ContractUpgradeWireTransaction
-import net.corda.core.transactions.CoreTransaction
-import net.corda.core.transactions.FullTransaction
-import net.corda.core.transactions.NotaryChangeWireTransaction
-import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.toHexString
-import net.corda.core.utilities.toNonEmptySet
-import net.corda.core.utilities.trace
+import net.corda.core.transactions.*
+import net.corda.core.utilities.*
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
@@ -87,7 +61,6 @@ class NodeVaultService(
         private val clock: Clock,
         private val keyManagementService: KeyManagementService,
         private val servicesForResolution: ServicesForResolution,
-        hibernateConfig: HibernateConfiguration,
         private val database: CordaPersistence
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
@@ -104,6 +77,32 @@ class NodeVaultService(
     }
 
     private val concurrentBox = ConcurrentBox(InnerState())
+    private lateinit var criteriaBuilder: CriteriaBuilder
+
+    /**
+     * Maintain a list of contract state interfaces to concrete types stored in the vault
+     * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
+     */
+    private val contractStateTypeMappings = mutableMapOf<String, MutableSet<String>>()
+
+    override fun start() {
+        criteriaBuilder = database.hibernateConfig.sessionFactoryForRegisteredSchemas.criteriaBuilder
+        bootstrapContractStateTypes()
+        rawUpdates.subscribe { update ->
+            update.produced.forEach {
+                val concreteType = it.state.data.javaClass
+                log.trace { "State update of type: $concreteType" }
+                val seen = contractStateTypeMappings.any { it.value.contains(concreteType.name) }
+                if (!seen) {
+                    val contractInterfaces = deriveContractInterfaces(concreteType)
+                    contractInterfaces.map {
+                        val contractInterface = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
+                        contractInterface.add(concreteType.name)
+                    }
+                }
+            }
+        }
+    }
 
     private fun recordUpdate(update: Vault.Update<ContractState>): Vault.Update<ContractState> {
         if (!update.isEmpty()) {
@@ -413,31 +412,6 @@ class NodeVaultService(
         return keysToCheck.any { it in myKeys }
     }
 
-    private val sessionFactory = hibernateConfig.sessionFactoryForRegisteredSchemas
-    private val criteriaBuilder = sessionFactory.criteriaBuilder
-    /**
-     * Maintain a list of contract state interfaces to concrete types stored in the vault
-     * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
-     */
-    private val contractStateTypeMappings = bootstrapContractStateTypes()
-
-    init {
-        rawUpdates.subscribe { update ->
-            update.produced.forEach {
-                val concreteType = it.state.data.javaClass
-                log.trace { "State update of type: $concreteType" }
-                val seen = contractStateTypeMappings.any { it.value.contains(concreteType.name) }
-                if (!seen) {
-                    val contractInterfaces = deriveContractInterfaces(concreteType)
-                    contractInterfaces.map {
-                        val contractInterface = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
-                        contractInterface.add(concreteType.name)
-                    }
-                }
-            }
-        }
-    }
-
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): Vault.Page<T> {
         return _queryBy(criteria, paging, sorting, contractStateType, false)
@@ -549,7 +523,7 @@ class NodeVaultService(
     /**
      * Derive list from existing vault states and then incrementally update using vault observables
      */
-    private fun bootstrapContractStateTypes(): MutableMap<String, MutableSet<String>> {
+    private fun bootstrapContractStateTypes() {
         val criteria = criteriaBuilder.createQuery(String::class.java)
         val vaultStates = criteria.from(VaultSchemaV1.VaultStates::class.java)
         criteria.select(vaultStates.get("contractStateClassName")).distinct(true)
@@ -559,7 +533,6 @@ class NodeVaultService(
         val results = query.resultList
         val distinctTypes = results.map { it }
 
-        val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
         val unknownTypes = mutableSetOf<String>()
         distinctTypes.forEach { type ->
             val concreteType: Class<ContractState>? = try {
@@ -571,7 +544,7 @@ class NodeVaultService(
             concreteType?.let {
                 val contractInterfaces = deriveContractInterfaces(it)
                 contractInterfaces.map {
-                    val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name) { mutableSetOf() }
+                    val contractInterface = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
                     contractInterface.add(it.name)
                 }
             }
@@ -579,7 +552,6 @@ class NodeVaultService(
         if (unknownTypes.isNotEmpty()) {
             log.warn("There are unknown contract state types in the vault, which will prevent these states from being used. The relevant CorDapps must be loaded for these states to be used. The types not on the classpath are ${unknownTypes.joinToString(", ", "[", "]")}.")
         }
-        return contractInterfaceToConcreteTypes
     }
 
     private fun <T : ContractState> deriveContractInterfaces(clazz: Class<T>): Set<Class<T>> {
