@@ -70,7 +70,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.IncompatibleAttachmentsContractsTableName
+import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.nodeapi.internal.storeLegalIdentity
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -152,7 +152,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             configuration.database,
             identityService::wellKnownPartyFromX500Name,
             identityService::wellKnownPartyFromAnonymous,
-            schemaService
+            schemaService,
+            configuration.dataSourceProperties
     )
     init {
         // TODO Break cyclic dependency
@@ -1010,7 +1011,7 @@ fun configureDatabase(hikariProperties: Properties,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                       schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
-    val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService)
+    val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, hikariProperties)
     persistence.hikariStart(hikariProperties)
     return persistence
 }
@@ -1018,7 +1019,8 @@ fun configureDatabase(hikariProperties: Properties,
 fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                            wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
-                           schemaService: SchemaService): CordaPersistence {
+                           schemaService: SchemaService,
+                           hikariProperties: Properties): CordaPersistence {
     // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
     // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
