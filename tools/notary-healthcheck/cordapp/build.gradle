@@ -1,0 +1,54 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+    }
+}
+
+dependencies {
+    cordaCompile project(":node") // Not node-api so we get metrics.
+    cordaCompile project(":tools:notary-healthcheck:contract")
+    testCompile project(":node-driver")
+}
+
+configurations {
+    testArtifacts.extendsFrom testRuntime
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+
+jar {
+    dependsOn test // Apparently not default.
+    version = "$corda_release_version"
+}
+
+cordapp {
+    info {
+        vendor "R3"
+        version "$corda_release_version"
+    }
+}
+
+publish {
+    name "corda-notary-healthcheck-cordapp"
+}

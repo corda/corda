@@ -49,11 +49,15 @@
       <module name="common_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
       <module name="confidential-identities_test" target="1.8" />
+      <module name="contract_main" target="1.8" />
+      <module name="contract_test" target="1.8" />
       <module name="contracts-states_integrationTest" target="1.8" />
       <module name="contracts-states_main" target="1.8" />
       <module name="contracts-states_test" target="1.8" />
       <module name="corda-core_integrationTest" target="1.8" />
       <module name="corda-core_smokeTest" target="1.8" />
+      <module name="corda-enterprise-client_main" target="1.8" />
+      <module name="corda-enterprise-client_test" target="1.8" />
       <module name="corda-enterprise-testing_main" target="1.8" />
       <module name="corda-enterprise-testing_test" target="1.8" />
       <module name="corda-enterprise-tools_main" target="1.8" />
@@ -197,6 +201,13 @@
       <module name="node_test" target="1.8" />
       <module name="notary-demo_main" target="1.8" />
       <module name="notary-demo_test" target="1.8" />
+      <module name="notary-healthcheck-client_main" target="1.8" />
+      <module name="notary-healthcheck-client_test" target="1.8" />
+      <module name="notary-healthcheck-cordapp_integrationTest" target="1.8" />
+      <module name="notary-healthcheck-cordapp_main" target="1.8" />
+      <module name="notary-healthcheck-cordapp_test" target="1.8" />
+      <module name="notary-healthcheck_main" target="1.8" />
+      <module name="notary-healthcheck_test" target="1.8" />
       <module name="notarytest_main" target="1.8" />
       <module name="notarytest_test" target="1.8" />
       <module name="perftestcordapp_integrationTest" target="1.8" />

@@ -1,0 +1,60 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+repositories {
+    mavenCentral()
+    jcenter()
+    maven { url 'https://jitpack.io' }
+    mavenLocal()
+}
+
+configurations {
+    runtimeArtifacts
+}
+
+apply plugin: 'kotlin'
+apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'application'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+mainClassName = 'net.corda.notaryhealthcheck.client.MainKt'
+
+dependencies {
+    compile project(":client:rpc")
+    runtime project(":core")
+    testCompile "junit:junit:$junit_version"
+    compile group: 'info.picocli', name: 'picocli', version: '3.0.1'
+    compile project(":tools:notary-healthcheck:cordapp")
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': mainClassName
+    }
+}
+
+task buildClientJar(type: FatCapsule) {
+    applicationClass mainClassName
+    archiveName "notaryhealthcheck-client-${corda_release_version}.jar"
+    applicationSource = jar
+}
+
+artifacts {
+    runtimeArtifacts buildClientJar
+    publish buildClientJar {
+        classifier ""
+    }
+}
+
+publish {
+    disableDefaultJar = true
+    name "corda-notary-healthcheck-client"
+}

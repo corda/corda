@@ -402,7 +402,10 @@ bintrayConfig {
             'corda-ptflows',
             'jmeter-corda',
             'tools-database-manager',
-            'corda-installer'
+            'corda-installer',
+            'corda-notary-healthcheck-contract',
+            'corda-notary-healthcheck-cordapp',
+            'corda-notary-healthcheck-client'
     ]
     license {
         name = 'Apache-2.0'
