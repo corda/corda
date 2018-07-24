@@ -43,10 +43,14 @@ class CashSelectionH2Impl : AbstractCashSelection() {
                     """ +
                 (if (notary != null)
                     " AND vs.notary_name = ?" else "") +
-                (if (onlyFromIssuerParties.isNotEmpty())
-                    " AND ccs.issuer_key_hash IN (?)" else "") +
-                (if (withIssuerRefs.isNotEmpty())
-                    " AND ccs.issuer_ref IN (?)" else "")
+                (if (onlyFromIssuerParties.isNotEmpty()) {
+                    val repeats = generateSequence { "?" }.take(onlyFromIssuerParties.size).joinToString(",")
+                    " AND ccs.issuer_key_hash IN ($repeats)"
+                } else "") +
+                (if (withIssuerRefs.isNotEmpty()) {
+                    val repeats = generateSequence { "?" }.take(withIssuerRefs.size).joinToString(",")
+                    " AND ccs.issuer_ref IN ($repeats)"
+                } else "")
 
         // Use prepared statement for protection against SQL Injection (http://www.h2database.com/html/advanced.html#sql_injection)
         connection.prepareStatement(selectJoin).use { psSelectJoin ->
@@ -56,10 +60,12 @@ class CashSelectionH2Impl : AbstractCashSelection() {
             psSelectJoin.setString(++pIndex, lockId.toString())
             if (notary != null)
                 psSelectJoin.setString(++pIndex, notary.name.toString())
-            if (onlyFromIssuerParties.isNotEmpty())
-                psSelectJoin.setObject(++pIndex, onlyFromIssuerParties.map { it.owningKey.toStringShort() as Any }.toTypedArray())
-            if (withIssuerRefs.isNotEmpty())
-                psSelectJoin.setObject(++pIndex, withIssuerRefs.map { it.bytes as Any }.toTypedArray())
+            onlyFromIssuerParties.forEach {
+                psSelectJoin.setString(++pIndex, it.owningKey.toStringShort())
+            }
+            withIssuerRefs.forEach {
+                psSelectJoin.setBytes(++pIndex, it.bytes)
+            }
             log.debug { psSelectJoin.toString() }
 
             psSelectJoin.executeQuery().use { rs ->
