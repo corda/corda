@@ -12,7 +12,8 @@ import net.corda.core.internal.createCordappContext
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
+import net.corda.node.cordapp.CordappLoader
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 
@@ -21,26 +22,25 @@ import java.util.concurrent.ConcurrentHashMap
  */
 open class CordappProviderImpl(private val cordappLoader: CordappLoader,
                                private val cordappConfigProvider: CordappConfigProvider,
-                               attachmentStorage: AttachmentStorage,
-                               private val whitelistedContractImplementations: Map<String, List<AttachmentId>>) : SingletonSerializeAsToken(), CordappProviderInternal {
+                               private val attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
     companion object {
-        private val log = loggerFor<CordappProviderImpl>()
+        private val log = contextLogger()
     }
 
     private val contextCache = ConcurrentHashMap<Cordapp, CordappContext>()
+    private val cordappAttachments = HashBiMap.create<SecureHash, URL>()
 
     /**
      * Current known CorDapps loaded on this node
      */
     override val cordapps get() = cordappLoader.cordapps
-    private val cordappAttachments = HashBiMap.create(loadContractsIntoAttachmentStore(attachmentStorage))
 
-    init {
-        verifyInstalledCordapps(attachmentStorage)
+    fun start(whitelistedContractImplementations: Map<String, List<AttachmentId>>) {
+        cordappAttachments.putAll(loadContractsIntoAttachmentStore())
+        verifyInstalledCordapps(whitelistedContractImplementations)
     }
 
-    private fun verifyInstalledCordapps(attachmentStorage: AttachmentStorage) {
-
+    private fun verifyInstalledCordapps(whitelistedContractImplementations: Map<String, List<AttachmentId>>) {
         // This will invoke the lazy flowCordappMap property, thus triggering the MultipleCordappsForFlow check.
         cordappLoader.flowCordappMap
 
@@ -85,7 +85,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
      */
     fun getCordappAttachmentId(cordapp: Cordapp): SecureHash? = cordappAttachments.inverse()[cordapp.jarPath]
 
-    private fun loadContractsIntoAttachmentStore(attachmentStorage: AttachmentStorage): Map<SecureHash, URL> =
+    private fun loadContractsIntoAttachmentStore(): Map<SecureHash, URL> =
             cordapps.filter { !it.contractClassNames.isEmpty() }.map {
                 it.jarPath.openStream().use { stream ->
                     try {
@@ -103,14 +103,14 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
      * @return A cordapp context for the given CorDapp
      */
     fun getAppContext(cordapp: Cordapp): CordappContext {
-        return contextCache.computeIfAbsent(cordapp, {
+        return contextCache.computeIfAbsent(cordapp) {
             createCordappContext(
                     cordapp,
                     getCordappAttachmentId(cordapp),
                     cordappLoader.appClassLoader,
                     TypesafeCordappConfig(cordappConfigProvider.getConfigByName(cordapp.name))
             )
-        })
+        }
     }
 
     /**

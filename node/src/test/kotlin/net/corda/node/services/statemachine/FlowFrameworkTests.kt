@@ -68,7 +68,7 @@ class FlowFrameworkTests {
         @JvmStatic
         fun beforeClass() {
             mockNet = InternalMockNetwork(
-                    cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                    cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
                     servicePeerAllocationStrategy = RoundRobin()
             )
 
@@ -195,7 +195,7 @@ class FlowFrameworkTests {
                 .withMessage("Nothing useful")
                 .withStackTraceContaining(ReceiveFlow::class.java.name)  // Make sure the stack trace is that of the receiving flow
         bobNode.database.transaction {
-            assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
+            assertThat(bobNode.internals.checkpointStorage.checkpoints()).isEmpty()
         }
 
         assertThat(receivingFiber.state).isEqualTo(Strand.State.WAITING)
@@ -481,7 +481,7 @@ class FlowFrameworkTripartyTests {
         @JvmStatic
         fun beforeClass() {
             mockNet = InternalMockNetwork(
-                    cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                    cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
                     servicePeerAllocationStrategy = RoundRobin()
             )
 
@@ -645,7 +645,7 @@ class FlowFrameworkPersistenceTests {
     @Before
     fun start() {
         mockNet = InternalMockNetwork(
-                cordappPackages = listOf("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
                 servicePeerAllocationStrategy = RoundRobin()
         )
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
@@ -712,14 +712,14 @@ class FlowFrameworkPersistenceTests {
         // Kick off first send and receive
         bobNode.services.startFlow(PingPongFlow(charlie, payload))
         bobNode.database.transaction {
-            assertEquals(1, bobNode.checkpointStorage.checkpoints().size)
+            assertEquals(1, bobNode.internals.checkpointStorage.checkpoints().size)
         }
         // Make sure the add() has finished initial processing.
         bobNode.internals.disableDBCloseOnStop()
         // Restart node and thus reload the checkpoint and resend the message with same UUID
         bobNode.dispose()
         bobNode.database.transaction {
-            assertEquals(1, bobNode.checkpointStorage.checkpoints().size) // confirm checkpoint
+            assertEquals(1, bobNode.internals.checkpointStorage.checkpoints().size) // confirm checkpoint
             bobNode.services.networkMapCache.clearNetworkMapCache()
         }
         val node2b = mockNet.createNode(InternalMockNodeParameters(bobNode.internals.id))
@@ -735,10 +735,10 @@ class FlowFrameworkPersistenceTests {
         // can't give a precise value as every addMessageHandler re-runs the undelivered messages
         assertTrue(sentCount > receivedCount, "Node restart should have retransmitted messages")
         node2b.database.transaction {
-            assertEquals(0, node2b.checkpointStorage.checkpoints().size, "Checkpoints left after restored flow should have ended")
+            assertEquals(0, node2b.internals.checkpointStorage.checkpoints().size, "Checkpoints left after restored flow should have ended")
         }
         charlieNode.database.transaction {
-            assertEquals(0, charlieNode.checkpointStorage.checkpoints().size, "Checkpoints left after restored flow should have ended")
+            assertEquals(0, charlieNode.internals.checkpointStorage.checkpoints().size, "Checkpoints left after restored flow should have ended")
         }
         assertEquals(payload2, firstAgain.receivedPayload, "Received payload does not match the first value on Node 3")
         assertEquals(payload2 + 1, firstAgain.receivedPayload2, "Received payload does not match the expected second value on Node 3")

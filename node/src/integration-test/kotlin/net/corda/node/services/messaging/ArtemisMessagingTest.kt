@@ -15,7 +15,9 @@ import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.MAX_MESSAGE_SIZE
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
@@ -78,7 +80,8 @@ class ArtemisMessagingTest {
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
-        networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, emptyList()).start(), rigorousMock(), database)
+        val persistentNetworkMapCache = PersistentNetworkMapCache(database).apply { start(emptyList()) }
+        networkMapCache = NetworkMapCacheImpl(persistentNetworkMapCache, rigorousMock(), database).apply { start() }
     }
 
     @After
@@ -181,8 +184,8 @@ class ArtemisMessagingTest {
         assertThat(received.platformVersion).isEqualTo(3)
     }
 
-    private fun startNodeMessagingClient() {
-        messagingClient!!.start()
+    private fun startNodeMessagingClient(maxMessageSize: Int = MAX_MESSAGE_SIZE) {
+        messagingClient!!.start(identity.public, null, maxMessageSize)
     }
 
     private fun createAndStartClientAndServer(platformVersion: Int = 1, serverMaxMessageSize: Int = MAX_MESSAGE_SIZE, clientMaxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<P2PMessagingClient, BlockingQueue<ReceivedMessage>> {
@@ -190,13 +193,13 @@ class ArtemisMessagingTest {
 
         createMessagingServer(maxMessageSize = serverMaxMessageSize).start()
 
-        val messagingClient = createMessagingClient(platformVersion = platformVersion, maxMessageSize = clientMaxMessageSize)
+        val messagingClient = createMessagingClient(platformVersion = platformVersion)
         messagingClient.addMessageHandler(TOPIC) { message, _, handle ->
             database.transaction { handle.insideDatabaseTransaction() }
             handle.afterDatabaseTransaction() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
             receivedMessages.add(message)
         }
-        startNodeMessagingClient()
+        startNodeMessagingClient(maxMessageSize = clientMaxMessageSize)
 
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
         thread(isDaemon = true) { messagingClient.run() }
@@ -204,18 +207,15 @@ class ArtemisMessagingTest {
         return Pair(messagingClient, receivedMessages)
     }
 
-    private fun createMessagingClient(server: NetworkHostAndPort = NetworkHostAndPort("localhost", serverPort), platformVersion: Int = 1, maxMessageSize: Int = MAX_MESSAGE_SIZE): P2PMessagingClient {
+    private fun createMessagingClient(server: NetworkHostAndPort = NetworkHostAndPort("localhost", serverPort), platformVersion: Int = 1): P2PMessagingClient {
         return database.transaction {
             P2PMessagingClient(
                     config,
                     MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
                     server,
-                    identity.public,
-                    null,
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
                     database,
                     networkMapCache,
-                    maxMessageSize = maxMessageSize,
                     isDrainingModeOn = { false },
                     drainingModeWasChangedEvents = PublishSubject.create<Pair<Boolean, Boolean>>()).apply {
                 config.configureWithDevSSLCertificate()

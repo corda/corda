@@ -43,12 +43,14 @@ The set-up instructions are available for the following platforms:
 
 * :ref:`mac-label` (or `in video form <https://vimeo.com/217462230>`__)
 
+* :ref:`deb-ubuntu-label`
+
 .. _windows-label:
 
 Windows
 -------
 
-.. warning:: If you are using a Mac machine, please follow the :ref:`mac-label` instructions instead.
+.. warning:: If you are using a Mac or a Debian/Ubuntu machine, please follow the :ref:`mac-label` or :ref:`deb-ubuntu-label` instructions instead.
 
 Java
 ^^^^
@@ -78,7 +80,7 @@ IntelliJ
 Mac
 ---
 
-.. warning:: If you are using a Windows machine, please follow the :ref:`windows-label` instructions instead.
+.. warning:: If you are using a Windows or a Debian/Ubuntu machine, please follow the :ref:`windows-label` or :ref:`deb-ubuntu-label` instructions instead.
 
 Java
 ^^^^
@@ -94,6 +96,36 @@ IntelliJ
 1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?platform=mac&code=IIC
 2. Download and run the executable to install IntelliJ Community Edition (use the default settings)
 3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version|
+
+.. _deb-ubuntu-label:
+
+Debian/Ubuntu
+-------------
+
+.. warning:: If you are using a Mac or a Windows machine, please follow the :ref:`mac-label` or :ref:`windows-label` instructions instead.
+
+These instructions were tested on Ubuntu Desktop 18.04 LTS.
+
+Java
+^^^^
+1. Open a new terminal and add the Oracle PPA to your repositories by typing ``sudo add-apt-repository ppa:webupd8team/java``. Press ENTER when prompted.
+2. Update your packages list with the command ``sudo apt update``
+3. Install the Oracle JDK 8 by typing ``sudo apt install oracle-java8-installer``. Press Y when prompted and agree to the licence terms.
+4. Verify that the JDK was installed correctly by running ``java -version``
+
+Git
+^^^^
+1. From the terminal, Git can be installed using apt with the command ``sudo apt install git``
+2. Verify that git was installed correctly by typing ``git --version``
+
+IntelliJ
+^^^^^^^^
+Jetbrains offers a pre-built snap package that allows for easy, one-step installation of IntelliJ onto Ubuntu.
+
+1. To download the snap, navigate to https://snapcraft.io/intellij-idea-community
+2. Click ``Install``, then ``View in Desktop Store``. Choose ``Ubuntu Software`` in the Launch Application window.
+3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version|
+
 
 Next steps
 ----------

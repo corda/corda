@@ -85,7 +85,9 @@ absolute path to the node's base directory.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
     the only configuration that has been tested, although in the future full support for other storage layers will be validated.
 
-:h2port: A number that's used to pick the H2 JDBC server port. If not set a randomly chosen port will be used.
+:h2Port: Deprecated. Use ``h2Settings`` instead.
+
+:h2Settings:  Sets the H2 JDBC server port. See :doc:`node-database-access-h2`.
 
 :messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
 

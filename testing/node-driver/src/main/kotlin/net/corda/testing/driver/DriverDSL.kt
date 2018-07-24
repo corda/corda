@@ -81,6 +81,38 @@ interface DriverDSL {
     ): CordaFuture<NodeHandle>
 
     /**
+     * Start a node.
+     *
+     * @param defaultParameters The default parameters for the node. Allows the node to be configured in builder style
+     *   when called from Java code.
+     * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
+     *     random. Note that this must be unique as the driver uses it as a primary key!
+     * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
+     * @param verifierType The type of transaction verifier to use. See: [VerifierType].
+     * @param customOverrides A map of custom node configuration overrides.
+     * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
+     *     in. If null the Driver-level value will be used.
+     * @param maximumHeapSize The maximum JVM heap size to use for the node as a [String]. By default a number is interpreted
+     *     as being in bytes. Append the letter 'k' or 'K' to the value to indicate Kilobytes, 'm' or 'M' to indicate
+     *     megabytes, and 'g' or 'G' to indicate gigabytes. The default value is "512m" = 512 megabytes.
+     * @param additionalCordapps Additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
+     * @param regenerateCordappsOnStart Whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
+     * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available and
+     * it sees all previously started nodes, including the notaries.
+     */
+    fun startNode(
+            defaultParameters: NodeParameters = NodeParameters(),
+            providedName: CordaX500Name? = defaultParameters.providedName,
+            rpcUsers: List<User> = defaultParameters.rpcUsers,
+            verifierType: VerifierType = defaultParameters.verifierType,
+            customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
+            startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
+            maximumHeapSize: String = defaultParameters.maximumHeapSize,
+            additionalCordapps: Set<TestCorDapp> = defaultParameters.additionalCordapps,
+            regenerateCordappsOnStart: Boolean = defaultParameters.regenerateCordappsOnStart
+    ): CordaFuture<NodeHandle>
+
+    /**
      * Helper function for starting a [Node] with custom parameters from Java.
      *
      * @param parameters The default parameters for the driver.

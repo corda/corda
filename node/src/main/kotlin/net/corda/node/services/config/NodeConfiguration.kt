@@ -5,6 +5,7 @@ import com.typesafe.config.ConfigException
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.TimedFlow
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
@@ -27,6 +28,7 @@ val Int.MB: Long get() = this * 1024L * 1024L
 
 private val DEFAULT_FLOW_MONITOR_PERIOD_MILLIS: Duration = Duration.ofMinutes(1)
 private val DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS: Duration = Duration.ofMinutes(1)
+private const val CORDAPPS_DIR_NAME_DEFAULT = "cordapps"
 
 interface NodeConfiguration : NodeSSLConfiguration {
     val myLegalName: CordaX500Name
@@ -67,6 +69,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val effectiveH2Settings: NodeH2Settings?
     val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
     val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
+    val cordappDirectories: List<Path> get() = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 
     fun validate(): List<String>
 
@@ -81,6 +84,8 @@ interface NodeConfiguration : NodeSSLConfiguration {
 
         val defaultAttachmentContentCacheSize: Long = 10.MB
         const val defaultAttachmentCacheBound = 1024L
+
+        const val cordappDirectoriesKey = "cordappDirectories"
     }
 }
 
@@ -202,7 +207,8 @@ data class NodeConfigurationImpl(
         // do not use or remove (used by Capsule)
         private val jarDirs: List<String> = emptyList(),
         override val flowMonitorPeriodMillis: Duration = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS,
-        override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
+        override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS,
+        override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()

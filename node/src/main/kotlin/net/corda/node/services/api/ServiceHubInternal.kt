@@ -24,7 +24,6 @@ import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.contextDatabase
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBaseInternal
 interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
@@ -41,9 +40,6 @@ interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
 
     /** Removes a node from the local cache. */
     fun removeNode(node: NodeInfo)
-
-    /** Indicates if loading network map data from database was successful. */
-    val loadDBSuccess: Boolean
 }
 
 interface ServiceHubInternal : ServiceHub {

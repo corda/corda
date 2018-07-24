@@ -97,6 +97,7 @@ see changes to this list.
 * Johann Palychata (BNP Paribas)
 * johnnyychiu
 * Jonathan Sartin (R3)
+* Jonathan Sphar (R3)
 * Jose Coll (R3)
 * Jose Luu (Natixis)
 * Josh Lindl (BCS)
@@ -126,6 +127,7 @@ see changes to this list.
 * Massimo Morini
 * Mat Rizzo (R3)
 * Matt Britton (BCS)
+* Matthew Layton (TradeIX)
 * Matthew Nesbit (R3)
 * Matthijs van den Bos (ING)
 * Michal Kit (R3)
@@ -170,6 +172,7 @@ see changes to this list.
 * Sam Chadwick (Thomson Reuters)
 * Sasmit Sahu
 * Scott James
+* Sean Zhang (Wells Fargo)
 * Shams Asari (R3)
 * Siddhartha Sengupta (Tradewind Markets)
 * Simon Taylor (Barclays)
@@ -189,7 +192,7 @@ see changes to this list.
 * Tommy Lillehagen (R3)
 * tomtau
 * Tudor Malene (R3)
-* Tushar Singh Bora
+* Tushar Singh Bora (Accenture)
 * varunkm
 * Venelin Stoykov (INDUSTRIA)
 * verymahler

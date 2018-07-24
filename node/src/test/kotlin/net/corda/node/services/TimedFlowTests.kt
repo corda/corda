@@ -35,6 +35,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetworkParameters
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
@@ -67,8 +68,8 @@ class TimedFlowTests {
         @JvmStatic
         fun setup() {
             mockNet = InternalMockNetwork(
-                    listOf("net.corda.testing.contracts", "net.corda.node.services"),
-                    MockNetworkParameters().withServicePeerAllocationStrategy(InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin()),
+                    cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.node.services"),
+                    defaultParameters = MockNetworkParameters().withServicePeerAllocationStrategy(InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin()),
                     threadPerNode = true
             )
             val started = startClusterAndNode(mockNet)

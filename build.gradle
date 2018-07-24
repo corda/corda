@@ -39,6 +39,7 @@ buildscript {
     ext.fileupload_version = '1.3.3'
     ext.junit_version = '4.12'
     ext.mockito_version = '2.18.3'
+    ext.hamkrest_version = '1.4.2.2'
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
@@ -98,6 +99,7 @@ buildscript {
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
         classpath "net.corda.plugins:cordapp:$gradle_plugins_version"
         classpath "net.corda.plugins:api-scanner:$gradle_plugins_version"
+        classpath "net.corda.plugins:jar-filter:$gradle_plugins_version"
         classpath "net.sf.proguard:proguard-gradle:$proguard_version"
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
         classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
@@ -167,7 +169,7 @@ allprojects {
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
             freeCompilerArgs = ['-Xjvm-default=compatibility']
-            allWarningsAsErrors = true
+            allWarningsAsErrors = project.hasProperty('compilation.allWarningsAsErrors') ? project.property('compilation.allWarningsAsErrors').toBoolean() : true
         }
     }
 
@@ -183,7 +185,7 @@ allprojects {
     }
 
     tasks.withType(Test) {
-        failFast = true
+        failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : true
 
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperty 'java.io.tmpdir', buildDir.absolutePath

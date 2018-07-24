@@ -34,14 +34,9 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
         )
     }
 
-    private data class NetworkParamsAndHash(val networkParameters: NetworkParameters, val hash: SecureHash)
     private val networkParamsFile = baseDirectory / NETWORK_PARAMS_FILE_NAME
-    private val parametersUpdateFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
-    private val netParamsAndHash by lazy { retrieveNetworkParameters() }
-    val networkParameters get() = netParamsAndHash.networkParameters
-    val hash get() = netParamsAndHash.hash
 
-    private fun retrieveNetworkParameters(): NetworkParamsAndHash {
+    fun read(): NetworkParametersAndSigned {
         val advertisedParametersHash = try {
             networkMapClient?.getNetworkMap()?.payload?.networkParameterHash
         } catch (e: Exception) {
@@ -54,7 +49,7 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
         } else {
             null
         }
-        val parameters = if (advertisedParametersHash != null) {
+        val signedParameters = if (advertisedParametersHash != null) {
             // TODO On one hand we have node starting without parameters and just accepting them by default,
             //  on the other we have parameters update process - it needs to be unified. Say you start the node, you don't have matching parameters,
             //  you get them from network map, but you have to run the approval step.
@@ -68,11 +63,12 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
         } else { // No compatibility zone configured. Node should proceed with parameters from file.
             signedParametersFromFile ?: throw Error.ParamsNotConfigured()
         }
-        logger.info("Loaded network parameters: $parameters")
-        return NetworkParamsAndHash(parameters.verifiedNetworkMapCert(trustRoot), parameters.raw.hash)
+
+        return NetworkParametersAndSigned(signedParameters, trustRoot)
     }
 
     private fun readParametersUpdate(advertisedParametersHash: SecureHash, previousParametersHash: SecureHash): SignedNetworkParameters {
+        val parametersUpdateFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
         if (!parametersUpdateFile.exists()) {
             throw Error.OldParams(previousParametersHash, advertisedParametersHash)
         }
@@ -88,9 +84,17 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
     // Used only when node joins for the first time.
     private fun downloadParameters(parametersHash: SecureHash): SignedNetworkParameters {
         logger.info("No network-parameters file found. Expecting network parameters to be available from the network map.")
-        val networkMapClient = networkMapClient ?: throw Error.NetworkMapNotConfigured()
+        networkMapClient ?: throw Error.NetworkMapNotConfigured()
         val signedParams = networkMapClient.getNetworkParameters(parametersHash)
         signedParams.serialize().open().copyTo(baseDirectory / NETWORK_PARAMS_FILE_NAME)
         return signedParams
+    }
+
+    // By passing in just the SignedNetworkParameters object, this class guarantees that the networkParameters property
+    // could have only been derived from it.
+    class NetworkParametersAndSigned(val signed: SignedNetworkParameters, trustRoot: X509Certificate) {
+        val networkParameters: NetworkParameters = signed.verifiedNetworkMapCert(trustRoot)
+        operator fun component1() = networkParameters
+        operator fun component2() = signed
     }
 }
