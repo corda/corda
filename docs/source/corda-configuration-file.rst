@@ -76,7 +76,6 @@ absolute path to the node's base directory.
 
 :database: Database configuration:
 
-        :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
         :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
             ``java.sql.Connection``, but without the ``TRANSACTION_`` prefix. Defaults to REPEATABLE_READ.
         :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
