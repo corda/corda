@@ -1,6 +1,94 @@
 Release notes
 =============
 
+.. _release_notes_v3_2:
+
+Release 3.2
+-----------
+
+As we see more Corda deployments in production this minor release of the open source platform brings
+several fixes that make it easier for a node to join Corda networks broader than those used when
+operating as part of an internal testing deployment. This will ensure Corda nodes will be free to interact
+with upcoming network offerings from R3 and others who may make broad-access Corda networks available.
+
+* **The Corda Network Builder**
+
+To make it easier to create more dynamic, flexible, networks for testing and deployment,
+with the 3.2 release of Corda we are shipping a graphical network bootsrapping tool (see :doc:`network-builder`)
+to facilitate the simple creation of more dynamic ad hoc dev-mode environments.
+
+Using a graphical interface you can dynamically create and alter Corda test networks, adding
+nodes and CorDapps with the click of a button! Additionally, you can leverage its integration
+with Azure cloud services for remote hosting of Nodes and Docker instances for local testing.
+
+* **Split Compatibility Zone**
+
+Prior to this release compatibility zone membership was denoted with a single configuration setting
+
+.. sourcecode:: shell
+
+    compatibilityZoneURL : "http://<host>(:<port>)"
+
+That would indicate both the location of the Doorman service the node should use for registration
+of its identity as well as the Network Map service where it would publish its signed Node Info and
+retrieve the Network Map.
+
+Compatibility Zones can now, however, be configured with the two disparate services, Doorman and
+Network Map, running on different URLs. If the compatibility zone your node is connecting to
+is configured in this manner, the new configuration looks as follows.
+
+.. sourcecode:: shell
+
+    networkServices {
+        doormanURL: "http://<host>(:<port>)"
+        networkMapURL: "http://<host>(:<port>)"
+    }
+
+.. note:: The ``compatibilityZoneURL`` setting should be considered deprecated in favour of the new
+    ``networkServices`` settings group.
+
+* **The Blob Inspector**
+
+The blob inspector brings the ability to unpack serialized Corda blobs at the
+command line, giving a human readable interpretation of the encoded date.
+
+.. note:: This tool has been shipped as a separate Jar previously. We are now including it
+    as part of an official release.
+
+Documentation on its use can be found here :doc:`blob-inspector`
+
+* **The Event Horizon**
+
+One part of joining a node to a Corda network is agreeing to the rules that govern that network as set out
+by the network operator. A node's membership of a network is communicated to other nodes through the network
+map, the service to which the node will have published its Node Info, and through which it receives the
+set of NodeInfos currently present on the network. Membership of that list is a finite thing determined by
+the network operator.
+
+Periodically a node will republish its NodeInfo to the Nework Map service. The Network Map uses this as a
+heartbeat to determine the status of nodes registered with it. Those that don't "beep" within the
+determined interval are removed from the list of registered nodes. The ``Event Horizon`` network parameter
+sets the upper limit within which a node must respond or be considered inactive.
+
+.. important:: This does not mean a node is unregistered from the Doorman, only that its NodeInfo is
+    removed from the Network Map. Should the node come back online it will be re-added to the published
+    set of NodeInfos
+
+Issues Fixed
+~~~~~~~~~~~~
+
+* Update Jolokia to a more secure version [`CORDA-1744 <https://r3-cev.atlassian.net/browse/CORDA-1744>`_]
+* Add the Blob Inspector [`CORDA-1709 <https://r3-cev.atlassian.net/browse/CORDA-1709>`_]
+* Add support for the ``Event Horizon`` Network Parameter [`CORDA-866 <https://r3-cev.atlassian.net/browse/CORDA-866>`_]
+* Add the Network Bootstrapper [`CORDA-1717 <https://r3-cev.atlassian.net/browse/CORDA-1717>`_]
+* Fixes for the finance CordApp[`CORDA-1711 <https://r3-cev.atlassian.net/browse/CORDA-1711>`_]
+* Allow Doorman and NetworkMap to be configured independently [`CORDA-1510 <https://r3-cev.atlassian.net/browse/CORDA-1510>`_]
+* Serialization fix for generics when evolving a class [`CORDA-1530  <https://r3-cev.atlassian.net/browse/CORDA-1530>`_]
+* Correct typo in an internal database table name [`CORDA-1499 <https://r3-cev.atlassian.net/browse/CORDA-1499>`_] and [`CORDA-1804 <https://r3-cev.atlassian.net/browse/CORDA-1804>`_]
+* Hibernate session not flushed before handing over raw JDBC session to user code [`CORDA-1548 <https://r3-cev.atlassian.net/browse/CORDA-1548>`_]
+* Fix Postgres db bloat issue [`CORDA-1812  <https://r3-cev.atlassian.net/browse/CORDA-1812>`_]
+* Roll back flow transaction on exception [`CORDA-1790 <https://r3-cev.atlassian.net/browse/CORDA-1790>`_]
+
 .. _release_notes_v3_1:
 
 Release 3.1

@@ -67,11 +67,42 @@ UNRELEASED
   No action is needed for default node tables as ``PersistentStateRef`` is used as Primary Key only and the backing columns are automatically not nullable
   or custom Cordapp entities using ``PersistentStateRef`` as Primary Key.
 
-* H2 database upgrade - the table with a typo has been change, for each database instance and schema run the following SQL statement:
+v3.1 to v3.2
+------------
 
-    ALTER TABLE [schema].NODE_ATTCHMENTS_CONTRACTS RENAME TO NODE_ATTACHMENTS_CONTRACTS;
+Gradle Plugin Version
+^^^^^^^^^^^^^^^^^^^^^
 
-  Schema is optional, run SQL when the node is not running.
+You will need to update the ``corda_release_version`` identifier in your project gradle file.
+
+.. sourcecode:: shell
+
+  ext.corda_release_version = '3.2-corda'
+
+Database schema changes
+^^^^^^^^^^^^^^^^^^^^^^^
+
+* Database upgrade - a typo has been corrected in the ``NODE_ATTACHMENTS_CONTRACTS`` table name.
+When upgrading from versions 3.0 or 3.1, run the following command:
+
+.. sourcecode:: sql
+
+   ALTER TABLE [schema].NODE_ATTCHMENTS_CONTRACTS RENAME TO NODE_ATTACHMENTS_CONTRACTS;
+
+Schema name is optional, run SQL when the node is not running.
+
+* Postgres database upgrade - Change the type of the ``checkpoint_value`` column to ``bytea``.
+This will address the issue that the `vacuum` function is unable to clean up deleted checkpoints as they are still referenced from the ``pg_shdepend`` table.
+
+  .. sourcecode:: sql
+
+    ALTER TABLE node_checkpoints ALTER COLUMN checkpoint_value set data type bytea using null;
+
+  .. note::
+    This change will also need to be run when migrating from version 3.0.
+
+.. important::
+   The Corda node will fail on startup if the database was not updated with the above commands.
 
 v3.0 to v3.1
 ------------
