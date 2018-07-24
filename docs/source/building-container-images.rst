@@ -1,5 +1,5 @@
 =========================
-Building Container Images
+Building container images
 =========================
 
 To build a container image of Corda you can use the Jib gradle tasks. See the `documentation of the Jib gradle plugin <https://github.com/GoogleContainerTools/jib/tree/master/jib-gradle-plugin>`_ for details.

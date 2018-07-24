@@ -22,56 +22,32 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.isCRLDistributionPointBlacklisted
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sign
-import net.corda.core.flows.ContractUpgradeFlow
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowLogicRefFactory
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.NotaryChangeFlow
-import net.corda.core.flows.NotaryFlow
-import net.corda.core.flows.StartableByService
+import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.Emoji
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.notary.NotaryService
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.FlowHandle
-import net.corda.core.messaging.FlowHandleImpl
-import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.FlowProgressHandleImpl
-import net.corda.core.messaging.RPCOps
-import net.corda.core.node.AppServiceHub
-import net.corda.core.node.NetworkParameters
-import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceHub
-import net.corda.core.node.ServicesForResolution
-import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.CordaService
-import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.TransactionVerifierService
+import net.corda.core.internal.uncheckedCast
+import net.corda.core.messaging.*
+import net.corda.core.node.*
+import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.days
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.minutes
+import net.corda.core.utilities.*
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.CheckpointVerifier.verifyCheckpointsCompatible
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.CordappConfigFileProvider
-import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
@@ -81,64 +57,21 @@ import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
-import net.corda.node.services.api.CheckpointStorage
-import net.corda.node.services.api.DummyAuditService
-import net.corda.node.services.api.FlowStarter
-import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.node.services.api.MonitoringService
-import net.corda.node.services.api.NetworkMapCacheBaseInternal
-import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.node.services.api.NodePropertiesStore
-import net.corda.node.services.api.SchedulerService
-import net.corda.node.services.api.SchemaService
-import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.api.StartedNodeServices
-import net.corda.node.services.api.VaultServiceInternal
-import net.corda.node.services.api.WritableTransactionStorage
-import net.corda.node.services.config.BFTSMaRtConfiguration
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.api.*
+import net.corda.node.services.config.*
 import net.corda.node.services.config.shell.toShellConfig
-import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.network.NetworkMapCacheImpl
-import net.corda.node.services.network.NetworkMapClient
-import net.corda.node.services.network.NetworkMapUpdater
-import net.corda.node.services.network.NodeInfoWatcher
-import net.corda.node.services.network.PersistentNetworkMapCache
-import net.corda.node.services.persistence.AbstractPartyDescriptor
-import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
-import net.corda.node.services.persistence.DBCheckpointStorage
-import net.corda.node.services.persistence.DBTransactionMappingStorage
-import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.node.services.persistence.NodePropertiesPersistentStore
-import net.corda.node.services.persistence.RunOnceService
+import net.corda.node.services.network.*
+import net.corda.node.services.persistence.*
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.statemachine.ExternalEvent
-import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
-import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
-import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.statemachine.FlowMonitor
-import net.corda.node.services.statemachine.StateMachineManagerInternal
-import net.corda.node.services.statemachine.appName
-import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
-import net.corda.node.services.transactions.BFTNonValidatingNotaryService
-import net.corda.node.services.transactions.BFTSMaRt
-import net.corda.node.services.transactions.MySQLNonValidatingNotaryService
-import net.corda.node.services.transactions.MySQLValidatingNotaryService
-import net.corda.node.services.transactions.RaftNonValidatingNotaryService
-import net.corda.node.services.transactions.RaftUniquenessProvider
-import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.node.services.statemachine.*
+import net.corda.node.services.transactions.*
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
@@ -153,9 +86,6 @@ import net.corda.nodeapi.internal.persistence.*
 import net.corda.nodeapi.internal.storeLegalIdentity
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.bouncycastle.asn1.x509.CRLDistPoint
-import org.bouncycastle.asn1.x509.Extension
-import org.bouncycastle.x509.extension.X509ExtensionUtil
 import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.slf4j.Logger
 import rx.Observable
@@ -292,7 +222,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 // TODO The fact that we need to specify an empty list of notaries just to generate our node info looks
                 // like a design smell.
                 val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
-                persistentNetworkMapCache.start()
                 val (_, nodeInfo) = updateNodeInfo(persistentNetworkMapCache, null, identity, identityKeyPair)
                 nodeInfo
             }
@@ -303,8 +232,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         Node.printBasicNodeInfo("Clearing network map cache entries")
         log.info("Starting clearing of network map cache entries...")
         configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
-            val networkMapCache = PersistentNetworkMapCache(it, emptyList())
-            networkMapCache.clearNetworkMapCache()
+            PersistentNetworkMapCache(it, emptyList()).clearNetworkMapCache()
         }
     }
 
@@ -357,7 +285,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
         val (startedImpl, schedulerService) = database.transaction {
-            val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries).start(), identityService, database)
+            val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries), identityService, database)
             val (keyPairs, nodeInfo) = updateNodeInfo(networkMapCache, networkMapClient, identity, identityKeyPair)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             val metrics = MetricRegistry()
@@ -908,13 +836,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    protected open fun checkNetworkMapIsInitialized() {
-        if (!services.networkMapCache.loadDBSuccess) {
-            // TODO: There should be a consistent approach to configuration error exceptions.
-            throw NetworkMapCacheEmptyException()
-        }
-    }
-
     protected open fun makeKeyManagementService(identityService: IdentityService, keyPairs: Set<KeyPair>, database: CordaPersistence): KeyManagementService {
         return PersistentKeyManagementService(identityService, keyPairs, database)
     }
@@ -1148,11 +1069,6 @@ internal class FlowStarterImpl(private val smm: StateMachineManager, private val
 }
 
 class ConfigurationException(message: String) : CordaException(message)
-
-/**
- * Thrown when a node is about to start and its network map cache doesn't contain any node.
- */
-internal class NetworkMapCacheEmptyException : Exception()
 
 /**
  * Creates the connection pool to the database.
