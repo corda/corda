@@ -43,9 +43,6 @@ class HibernateConfiguration(
                 // to avoid OOM when large blobs might get logged.
                 applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
                 applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
-                // When connecting to SqlServer,we need to tell hibernate to use
-                // nationalised (i.e. Unicode) strings by default
-                val forceUnicodeForSqlServer = jdbcUrl.contains(":sqlserver:", ignoreCase = true)
 
                 // Create a custom type that will map a blob to byteA in postgres and as a normal blob for all other dbms.
                 // This is required for the Checkpoints as a workaround for the issue that postgres has on azure.
@@ -55,7 +52,6 @@ class HibernateConfiguration(
                     applyBasicType(MapBlobToNormalBlob, MapBlobToNormalBlob.name)
                 }
 
-                enableGlobalNationalizedCharacterDataSupport(forceUnicodeForSqlServer)
                 return build()
             }
         }
