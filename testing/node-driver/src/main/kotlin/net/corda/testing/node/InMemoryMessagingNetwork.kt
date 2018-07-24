@@ -18,17 +18,11 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.trace
-import net.corda.node.services.messaging.DeduplicationHandler
-import net.corda.node.services.messaging.Message
-import net.corda.node.services.messaging.MessageHandler
-import net.corda.node.services.messaging.MessageHandlerRegistration
-import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.messaging.ReceivedMessage
+import net.corda.node.services.messaging.*
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.node.internal.InMemoryMessage
 import net.corda.testing.node.internal.InternalMockMessagingService
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -42,7 +36,6 @@ import java.util.concurrent.LinkedBlockingQueue
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.concurrent.schedule
 import kotlin.concurrent.thread
-import kotlin.jvm.Volatile
 
 /**
  * An in-memory network allows you to manufacture [InternalMockMessagingService]s for a set of participants. Each
@@ -132,24 +125,29 @@ class InMemoryMessagingNetwork private constructor(
             manuallyPumped: Boolean,
             id: Int,
             executor: AffinityExecutor,
-            notaryService: PartyAndCertificate?,
-            description: CordaX500Name = CordaX500Name(organisation = "In memory node $id", locality = "London", country = "UK"))
-            : InternalMockMessagingService {
+            description: CordaX500Name = CordaX500Name(organisation = "In memory node $id", locality = "London", country = "UK")
+    ): InternalMockMessagingService {
         val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.name] = peerHandle // Assume that the same name - the same entity in MockNetwork.
-        notaryService?.let { if (it.owningKey !is CompositeKey) peersMapping[it.name] = peerHandle }
-        val serviceHandles = notaryService?.let { listOf(DistributedServiceHandle(it.party)) }
-                ?: emptyList() //TODO only notary can be distributed?
-        synchronized(this) {
+        return synchronized(this) {
             val node = InMemoryMessaging(manuallyPumped, peerHandle, executor)
             val oldNode = handleEndpointMap.put(peerHandle, node)
             if (oldNode != null) {
                 node.inheritPendingRedelivery(oldNode)
             }
+            node
+        }
+    }
+
+    internal fun onNotaryIdentity(node: InternalMockMessagingService, notaryService: PartyAndCertificate?) {
+        val peerHandle = (node as InMemoryMessaging).peerHandle
+        notaryService?.let { if (it.owningKey !is CompositeKey) peersMapping[it.name] = peerHandle }
+        val serviceHandles = notaryService?.let { listOf(DistributedServiceHandle(it.party)) }
+                ?: emptyList() //TODO only notary can be distributed?
+        synchronized(this) {
             serviceHandles.forEach {
                 serviceToPeersMapping.getOrPut(it) { LinkedHashSet() }.add(peerHandle)
             }
-            return node
         }
     }
 
@@ -196,8 +194,7 @@ class InMemoryMessagingNetwork private constructor(
             handleEndpointMap.values.toList()
         }
 
-        for (node in nodes)
-            node.stop()
+        nodes.forEach { it.close() }
 
         handleEndpointMap.clear()
         messageReceiveQueues.clear()
@@ -358,7 +355,7 @@ class InMemoryMessagingNetwork private constructor(
 
     @ThreadSafe
     private inner class InMemoryMessaging(private val manuallyPumped: Boolean,
-                                          private val peerHandle: PeerHandle,
+                                          val peerHandle: PeerHandle,
                                           private val executor: AffinityExecutor) : SingletonSerializeAsToken(), InternalMockMessagingService {
         private inner class Handler(val topicSession: String, val callback: MessageHandler) : MessageHandlerRegistration
 
@@ -434,7 +431,7 @@ class InMemoryMessagingNetwork private constructor(
             }
         }
 
-        override fun stop() {
+        override fun close() {
             if (backgroundThread != null) {
                 backgroundThread.interrupt()
                 backgroundThread.join()
