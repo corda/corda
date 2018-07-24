@@ -17,9 +17,6 @@ import javax.persistence.Entity
 import javax.persistence.Id
 import org.hibernate.annotations.Type
 
-// The max column size for the checkpoint is 32MB.
-const val MAX_CHECKPOINT_SIZE = 32 * 1024 * 1024
-
 /**
  * Simple checkpoint key value storage in DB.
  */
@@ -34,7 +31,7 @@ class DBCheckpointStorage : CheckpointStorage {
             var checkpointId: String = "",
 
             @Type(type = "corda-blob")
-            @Column(name = "checkpoint_value", length = MAX_CHECKPOINT_SIZE, nullable = false)
+            @Column(name = "checkpoint_value", nullable = false)
             var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
     )
 
