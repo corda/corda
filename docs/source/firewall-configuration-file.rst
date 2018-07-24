@@ -237,18 +237,18 @@ In this example the tunnel connection uses local certs which can be generated wi
 
 ..  code-block:: bash
 
-    keytool.exe -genkeypair -keyalg EC -keysize 256 -alias floatroot -validity 1000 -dname "CN=Float Root,O=Local Only,L=London,C=GB" -ext bc:ca:true,pathlen:1 -keystore floatca.jks -storepass capass -keypass cakeypass
-    keytool.exe -genkeypair -keyalg EC -keysize 256 -alias bridgecert -validity 1000 -dname "CN=Bridge Local,O=Local Only,L=London,C=GB" -ext bc:ca:false -keystore bridge.jks -storepass bridgepass -keypass bridgepass
-    keytool.exe -genkeypair -keyalg EC -keysize 256 -alias floatcert -validity 1000 -dname "CN=Float Local,O=Local Only,L=London,C=GB" -ext bc:ca:false -keystore float.jks -storepass floatpass -keypass floatpass
+    keytool.exe -genkeypair -keyalg EC -keysize 256 -alias floatroot -validity 1000 -dname "CN=Float Root,O=Tunnel,L=London,C=GB" -ext bc:ca:true,pathlen:1 -keystore floatca.jks -storepass capass -keypass cakeypass
+    keytool.exe -genkeypair -keyalg EC -keysize 256 -alias bridgecert -validity 1000 -dname "CN=Bridge Local,O=Tunnel,L=London,C=GB" -ext bc:ca:false -keystore bridge.jks -storepass bridgepass -keypass bridgepass
+    keytool.exe -genkeypair -keyalg EC -keysize 256 -alias floatcert -validity 1000 -dname "CN=Float Local,O=Tunnel,L=London,C=GB" -ext bc:ca:false -keystore float.jks -storepass floatpass -keypass floatpass
 
     keytool.exe -exportcert -rfc -alias floatroot -keystore floatca.jks -storepass capass -keypass cakeypass > root.pem
     keytool.exe -importcert -noprompt -file root.pem -alias root -keystore trust.jks -storepass trustpass
 
-    keytool.exe -certreq -alias bridgecert -keystore bridge.jks -storepass bridgepass -keypass bridgepass |keytool.exe -gencert -ext ku:c=dig,keyEncipherment -ext: eku:true=serverAuth,clientAuth -rfc -keystore floatca.jks -alias floatroot -storepass capass -keypass cakeypass > bridge.pem
+    keytool.exe -certreq -alias bridgecert -keystore bridge.jks -storepass bridgepass -keypass bridgepass | keytool.exe -gencert -ext ku:c=dig,keyEncipherment -ext: eku:true=serverAuth,clientAuth -rfc -keystore floatca.jks -alias floatroot -storepass capass -keypass cakeypass > bridge.pem
     cat root.pem bridge.pem >> bridgechain.pem
     keytool.exe -importcert -noprompt -file bridgechain.pem -alias bridgecert -keystore bridge.jks -storepass bridgepass -keypass bridgepass
 
-    keytool.exe -certreq -alias floatcert -keystore float.jks -storepass floatpass -keypass floatpass |keytool.exe -gencert -ext ku:c=dig,keyEncipherment -ext: eku::true=serverAuth,clientAuth -rfc -keystore floatca.jks -alias floatroot -storepass capass -keypass cakeypass > float.pem
+    keytool.exe -certreq -alias floatcert -keystore float.jks -storepass floatpass -keypass floatpass | keytool.exe -gencert -ext ku:c=dig,keyEncipherment -ext: eku::true=serverAuth,clientAuth -rfc -keystore floatca.jks -alias floatroot -storepass capass -keypass cakeypass > float.pem
     cat root.pem float.pem >> floatchain.pem
     keytool.exe -importcert -noprompt -file floatchain.pem -alias floatcert -keystore float.jks -storepass floatpass -keypass floatpass
 
