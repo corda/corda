@@ -1120,7 +1120,8 @@ fun configureDatabase(hikariProperties: Properties,
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties)
         val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
-        return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
+        val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
+        return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters)
     } catch (ex: Exception) {
         when {
             ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)

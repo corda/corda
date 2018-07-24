@@ -33,7 +33,7 @@ class DBCheckpointStorage : CheckpointStorage {
             @Column(name = "checkpoint_id", length = 64, nullable = false)
             var checkpointId: String = "",
 
-            @Type(type = "corda-wrapper-binary")
+            @Type(type = "corda-blob")
             @Column(name = "checkpoint_value", length = MAX_CHECKPOINT_SIZE, nullable = false)
             var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
     )

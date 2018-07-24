@@ -6,17 +6,17 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
 import org.hibernate.SessionFactory
+import org.hibernate.boot.Metadata
+import org.hibernate.boot.MetadataBuilder
 import org.hibernate.boot.MetadataSources
-import org.hibernate.boot.model.naming.Identifier
-import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
 import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
 import org.hibernate.type.AbstractSingleColumnStandardBasicType
+import org.hibernate.type.MaterializedBlobType
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
 import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
 import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
@@ -29,10 +29,36 @@ class HibernateConfiguration(
         schemas: Set<MappedSchema>,
         private val databaseConfig: DatabaseConfig,
         private val attributeConverters: Collection<AttributeConverter<*, *>>,
+        private val jdbcUrl: String,
         val cordappClassLoader: ClassLoader? = null
 ) {
     companion object {
         private val logger = contextLogger()
+
+        // register custom converters
+        fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, jdbcUrl:String, attributeConverters: Collection<AttributeConverter<*, *>>): Metadata {
+            metadataBuilder.run {
+                attributeConverters.forEach { applyAttributeConverter(it) }
+                // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
+                // to avoid OOM when large blobs might get logged.
+                applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
+                applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
+                // When connecting to SqlServer or Oracle, do we need to tell hibernate to use
+                // nationalised (i.e. Unicode) strings by default
+                val forceUnicodeForSqlServer = jdbcUrl.contains(":sqlserver:", ignoreCase = true)
+
+                // Create a custom type that will map a blob to byteA in postgres and as a normal blob for all other dbms.
+                // This is required for the Checkpoints as a workaround for the issue that postgres has on azure.
+                if (jdbcUrl.contains(":postgresql:", ignoreCase = true)) {
+                    applyBasicType(MapBlobToPostgresByteA, MapBlobToPostgresByteA.name)
+                } else {
+                    applyBasicType(MapBlobToNormalBlob, MapBlobToNormalBlob.name)
+                }
+
+                enableGlobalNationalizedCharacterDataSupport(forceUnicodeForSqlServer)
+                return build()
+            }
+        }
     }
 
     private val sessionFactories = Caffeine.newBuilder().maximumSize(databaseConfig.mappedSchemaCacheSize).build<Set<MappedSchema>, SessionFactory>()
@@ -62,7 +88,7 @@ class HibernateConfiguration(
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
 
-        val sessionFactory = buildSessionFactory(config, metadataSources, databaseConfig.serverNameTablePrefix, cordappClassLoader)
+        val sessionFactory = buildSessionFactory(config, metadataSources, cordappClassLoader)
         logger.info("Created session factory for schemas: $schemas")
 
         // export Hibernate JMX statistics
@@ -83,13 +109,12 @@ class HibernateConfiguration(
 
         try {
             mbeanServer.registerMBean(statisticsMBean, statsName)
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             logger.warn(e.message)
         }
     }
 
-    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, tablePrefix: String, cordappClassLoader: ClassLoader?): SessionFactory {
+    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, cordappClassLoader: ClassLoader?): SessionFactory {
         config.standardServiceRegistryBuilder.applySettings(config.properties)
 
         if (cordappClassLoader != null) {
@@ -98,22 +123,8 @@ class HibernateConfiguration(
                     ClassLoaderServiceImpl(cordappClassLoader))
         }
 
-        val metadata = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build()).run {
-            applyPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
-                override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
-                    val default = super.toPhysicalTableName(name, context)
-                    return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
-                }
-            })
-            // register custom converters
-            attributeConverters.forEach { applyAttributeConverter(it) }
-            // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
-            // to avoid OOM when large blobs might get logged.
-            applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
-            applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
-            build()
-        }
-
+        val metadataBuilder = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build())
+        val metadata = buildHibernateMetadata(metadataBuilder, jdbcUrl, attributeConverters)
         return metadata.sessionFactoryBuilder.run {
             allowOutOfTransactionUpdateOperations(true)
             applySecondLevelCacheSupport(false)
@@ -148,7 +159,7 @@ class HibernateConfiguration(
     }
 
     // A tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.  Also logs in hex.
-    private object CordaMaterializedBlobType : AbstractSingleColumnStandardBasicType<ByteArray>(BlobTypeDescriptor.DEFAULT, CordaPrimitiveByteArrayTypeDescriptor) {
+    object CordaMaterializedBlobType : AbstractSingleColumnStandardBasicType<ByteArray>(BlobTypeDescriptor.DEFAULT, CordaPrimitiveByteArrayTypeDescriptor) {
         override fun getName(): String {
             return "materialized_blob"
         }
@@ -172,13 +183,30 @@ class HibernateConfiguration(
     }
 
     // A tweaked version of `org.hibernate.type.WrapperBinaryType` that deals with ByteArray (java primitive byte[] type).
-    private object CordaWrapperBinaryType : AbstractSingleColumnStandardBasicType<ByteArray>(VarbinaryTypeDescriptor.INSTANCE, PrimitiveByteArrayTypeDescriptor.INSTANCE) {
+    object CordaWrapperBinaryType : AbstractSingleColumnStandardBasicType<ByteArray>(VarbinaryTypeDescriptor.INSTANCE, PrimitiveByteArrayTypeDescriptor.INSTANCE) {
         override fun getRegistrationKeys(): Array<String> {
             return arrayOf(name, "ByteArray", ByteArray::class.java.name)
         }
 
         override fun getName(): String {
             return "corda-wrapper-binary"
+        }
+    }
+
+    // Maps to a byte array on postgres.
+    object MapBlobToPostgresByteA : AbstractSingleColumnStandardBasicType<ByteArray>(VarbinaryTypeDescriptor.INSTANCE, PrimitiveByteArrayTypeDescriptor.INSTANCE) {
+        override fun getRegistrationKeys(): Array<String> {
+            return arrayOf(name, "ByteArray", ByteArray::class.java.name)
+        }
+
+        override fun getName(): String {
+            return "corda-blob"
+        }
+    }
+
+    object MapBlobToNormalBlob : MaterializedBlobType() {
+        override fun getName(): String {
+            return "corda-blob"
         }
     }
 }
