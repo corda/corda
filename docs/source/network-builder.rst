@@ -1,14 +1,6 @@
 Corda Network Builder
 =====================
 
-
-
-TODO:
-    * Move to creating the node images from the templates
-    * What output is displayed when using Azure?
-
-
-
 .. contents::
 
 The Corda Network Builder is a tool for building Corda networks for testing purposes. It leverages Docker and
@@ -16,7 +8,9 @@ containers to abstract the complexity of managing a distributed network away fro
 
 At the moment, there are integrations for ``docker`` and ``azure container service``.
 
-The Corda Network Builder can be downloaded from https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-network-builder/.
+The Corda Network Builder can be downloaded from
+https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-network-builder/X.Y-corda/corda-network-builder-X.Y-corda-executable.jar,
+where ``X`` is the major Corda version and ``Y`` is the minor Corda version.
 
 .. _pre-requisites:
 
@@ -29,10 +23,10 @@ Prerequisites
 Building a network
 ------------------
 
-Creating the node images
-~~~~~~~~~~~~~~~~~~~~~~~~
+Creating the base nodes
+~~~~~~~~~~~~~~~~~~~~~~~
 
-The network builder uses node docker images as the base for all other operations. A node is anything that satisfies
+The network builder uses a set of nodes as the base for all other operations. A node is anything that satisfies
 the following layout:
 
 .. sourcecode:: shell
@@ -43,11 +37,12 @@ the following layout:
    -- cordapps/
 
 
-An easy way to build a valid set of nodes is to use the ``deployNodes`` utility. In this document, we will be using
-the output of running ``deployNodes`` for the ``bank-of-corda-demo`` sample in the main Corda repository:
+An easy way to build a valid set of nodes is by running ``deployNodes``. In this document, we will be using
+the output of running ``deployNodes`` for the `Example CorDapp <https://github.com/corda/cordapp-example>`_:
 
-1. ``./gradlew clean samples:bank-of-corda-demo:deployNodes``
-2. ``cd samples/bank-of-corda-demo/build/nodes``
+1. ``git clone https://github.com/corda/cordapp-example``
+2. ``cd cordapp-example``
+3. ``./gradlew clean deployNodes``
 
 Starting the nodes
 ~~~~~~~~~~~~~~~~~~
@@ -55,10 +50,10 @@ Starting the nodes
 Quickstart Local Docker
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-1. ``java -jar <network-builder-jar> -d .``
-2. ``docker ps``
+1. ``cd kotlin-source/build/nodes``
+2. ``java -jar <path/to/network-builder-jar> -d .``
 
-The following output should be displayed:
+If you run ``docker ps`` to see the running containers, the following output should be displayed:
 
 .. sourcecode:: shell
 
@@ -70,14 +65,16 @@ The following output should be displayed:
 Quickstart Remote Azure
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-1. ``java -jar <network-builder-jar> -b AZURE -d .``
+1. ``cd kotlin-source/build/nodes``
+2. ``java -jar <path/to/network-builder-jar> -b AZURE -d .``
 
 .. note:: The Azure configuration is handled by the az-cli utility. See the :ref:`pre-requisites`.
 
 Interacting with the nodes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To interact with the nodes, it is possible to SSH into the nodes via the port 12222 mapping. For example, to SSH into the ``bankofcorda0`` node:
+You can interact with the nodes by SSHing into them on the port that is mapped to 12222. For example, to SSH into the
+``bankofcorda0`` node, you would run:
 
 .. sourcecode:: shell
 
@@ -98,12 +95,15 @@ To interact with the nodes, it is possible to SSH into the nodes via the port 12
 
     >>>
 
-Now that the node images have been built, it is possible to add additional nodes reusing the same images. To add a node
-reusing the ``BankOfCorda`` base image:
+Adding additional nodes
+~~~~~~~~~~~~~~~~~~~~~~~
 
-``java -jar <bootstrapper-jar> --add "BankOfCorda=O=WayTooBigToFailBank,L=London,C=GB"``
+It is possible to add additional nodes to the network by reusing the nodes you built earlier. For example, to add a
+node reusing the existing ``BankOfCorda`` node, you would run:
 
-And to confirm the node has been started correctly in the previously connected SSH session:
+``java -jar <network-builder-jar> --add "BankOfCorda=O=WayTooBigToFailBank,L=London,C=GB"``
+
+To confirm the node has been started correctly, run the following in the previously connected SSH session:
 
 .. sourcecode:: shell
 
@@ -118,5 +118,5 @@ And to confirm the node has been started correctly in the previously connected S
 Graphical User Mode
 ~~~~~~~~~~~~~~~~~~~
 
-The Corda network builder also provides a GUI for when automated interactions are not required. To launch this, run
-``java -jar <network-builder-jar> -g``.
+The Corda Network Builder also provides a GUI for when automated interactions are not required. To launch this, run
+``java -jar <path/to/network-builder-jar> -g``.
