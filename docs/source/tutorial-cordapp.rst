@@ -41,8 +41,7 @@ Let's open the example CorDapp in IntelliJ IDEA:
 
 * Open IntelliJ
 
-* A splash screen will appear. Click ``open``, navigate to the folder where you cloned the ``cordapp-example``, and
-  click ``OK``
+* A splash screen will appear. Click ``open``, select the cloned ``cordapp-example`` folder, and click ``OK``
 
 * Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
   clicking ``New...``, clicking ``JDK``, and navigating to ``C:\Program Files\Java\jdk1.8.0_XXX`` (where ``XXX`` is the
