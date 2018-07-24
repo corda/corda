@@ -4,9 +4,9 @@ file="${BASH_SOURCE[0]}"
 linked_file="$(test -L "$file" && readlink "$file" || echo "$file")"
 base_dir="$(cd "$(dirname "$linked_file")/../" && pwd)"
 version="$(cat $base_dir/../build.gradle | sed -n 's/^[ ]*ext\.corda_release_version[ =]*"\([^"]*\)".*$/\1/p')"
-jar_file="$base_dir/build/libs/corda-djvm-$version-all.jar"
+jar_file="$base_dir/cli/build/libs/corda-djvm-$version-all.jar"
 
-CLASSPATH=${CLASSPATH:-}
+CLASSPATH="${CLASSPATH:-}"
 
 DEBUG=`echo "${DEBUG:-0}" | sed 's/^[Nn][Oo]*$/0/g'`
 DEBUG_PORT=5005

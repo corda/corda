@@ -11,7 +11,7 @@ import net.corda.djvm.tools.Utilities.find
 import net.corda.djvm.tools.Utilities.onEmpty
 import net.corda.djvm.tools.Utilities.userClassPath
 import net.corda.djvm.utilities.Discovery
-import org.objectweb.asm.ClassReader
+import djvm.org.objectweb.asm.ClassReader
 import picocli.CommandLine.Option
 import java.nio.file.Files
 import java.nio.file.Path
