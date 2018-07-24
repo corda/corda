@@ -82,12 +82,12 @@ class H2SecurityTests {
         }
     }
 
-    @Test
-    fun `h2 server to loopback IP runs with the default database password`() {
-        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
-            startNode(customOverrides = mapOf(h2AddressKey to "127.0.0.1:${getFreePort()}")).getOrThrow()
-        }
-    }
+//    @Test
+//    fun `h2 server to loopback IP runs with the default database password`() {
+//        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
+//            startNode(customOverrides = mapOf(h2AddressKey to "127.0.0.1:${getFreePort()}")).getOrThrow()
+//        }
+//    }
 
     @Test
     fun `remote code execution via h2 server is disabled`() {
