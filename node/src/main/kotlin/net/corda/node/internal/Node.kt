@@ -182,6 +182,7 @@ open class Node(configuration: NodeConfiguration,
                 nodeExecutor = serverThread,
                 database = database,
                 networkMap = networkMapCache,
+                metricRegistry = metricRegistry,
                 isDrainingModeOn = nodeProperties.flowsDrainingMode::isEnabled,
                 drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values
         )
@@ -214,10 +215,9 @@ open class Node(configuration: NodeConfiguration,
             startLocalRpcBroker(securityManager)
         }
 
-        val advertisedAddress = info.addresses.single()
         val externalBridge = configuration.enterpriseConfiguration.externalBridge
         val bridgeControlListener = if (externalBridge == null || !externalBridge) {
-            BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
+            BridgeControlListener(configuration, client.serverAddress, networkParameters.maxMessageSize)
         } else {
             null
         }
@@ -243,7 +243,7 @@ open class Node(configuration: NodeConfiguration,
             start()
         }
         // Start P2P bridge service
-        bridgeControlListener.apply {
+        bridgeControlListener?.apply {
             closeOnStop()
             start()
         }
@@ -256,8 +256,9 @@ open class Node(configuration: NodeConfiguration,
         client.start(
                 myIdentity = nodeInfo.legalIdentities[0].owningKey,
                 serviceIdentity = if (nodeInfo.legalIdentities.size == 1) null else nodeInfo.legalIdentities[1].owningKey,
-                advertisedAddress = nodeInfo.addresses[0],
-                maxMessageSize = networkParameters.maxMessageSize
+                advertisedAddress = nodeInfo.addresses.single(),
+                maxMessageSize = networkParameters.maxMessageSize,
+                legalName = nodeInfo.legalIdentities[0].name.toString()
         )
     }
 

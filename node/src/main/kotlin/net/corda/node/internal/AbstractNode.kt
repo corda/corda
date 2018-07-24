@@ -79,10 +79,7 @@ import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.IncompatibleAttachmentsContractsTableName
+import net.corda.nodeapi.internal.persistence.*
 import net.corda.nodeapi.internal.storeLegalIdentity
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -107,8 +104,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.collections.set
@@ -180,7 +175,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL) }
-    private val metricRegistry = MetricRegistry()
+    val metricRegistry = MetricRegistry()
     val attachments = NodeAttachmentService(metricRegistry, database, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound).tokenize()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(), attachments).tokenize()
     @Suppress("LeakingThis")
@@ -795,7 +790,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        database.hikariStart(props)
+        database.hikariStart(props, configuration.database, schemaService)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -1061,7 +1056,7 @@ fun configureDatabase(hikariProperties: Properties,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                       schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
     val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService)
-    persistence.hikariStart(hikariProperties)
+    persistence.hikariStart(hikariProperties, databaseConfig, schemaService)
     return persistence
 }
 
@@ -1074,18 +1069,22 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
     // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
     JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
+    val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
+    return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
+}
 
-        val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
+fun CordaPersistence.hikariStart(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemaService: SchemaService) {
+    try {
+        val dataSource = DataSourceFactory.createDataSource(hikariProperties)
         val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
-        SchemaMigration(
+        val schemaMigration = SchemaMigration(
                 schemaService.schemaOptions.keys,
                 dataSource,
                 !isH2Database(jdbcUrl),
-                databaseConfig).nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })return CordaPersistence( databaseConfig, schemaService.schemaOptions.keys, jdbcUrl,attributeConverters)}
-
-fun CordaPersistence.hikariStart(hikariProperties: Properties) {
-    try {
-        start(DataSourceFactory.createDataSource(hikariProperties))
+                databaseConfig
+        )
+        schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+        start(dataSource, jdbcUrl)
     } catch (ex: Exception) {
         when {
             ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)

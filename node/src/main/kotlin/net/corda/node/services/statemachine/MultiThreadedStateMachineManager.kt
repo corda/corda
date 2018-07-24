@@ -118,7 +118,7 @@ class MultiThreadedStateMachineManager(
     private val flowMessaging: FlowMessaging = FlowMessagingImpl(serviceHub)
     private val fiberDeserializationChecker = if (serviceHub.configuration.shouldCheckCheckpoints()) FiberDeserializationChecker() else null
     private val transitionExecutor = makeTransitionExecutor()
-    private val ourSenderUUID = serviceHub.networkService.ourSenderUUID
+    private val ourSenderUUID get() = serviceHub.networkService.ourSenderUUID
 
     private var checkpointSerializationContext: SerializationContext? = null
     private var tokenizableServices: List<Any>? = null

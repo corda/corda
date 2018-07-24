@@ -93,7 +93,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
                          private val database: CordaPersistence,
                          private val networkMap: NetworkMapCacheInternal,
                          private val metricRegistry: MetricRegistry,
-                         val legalName: String,
                          private val isDrainingModeOn: () -> Boolean,
                          private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>
 ) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver {
@@ -154,7 +153,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
      * in the network map data.
      * @param maxMessageSize A bound applied to the message size.
      */
-    fun start(myIdentity: PublicKey, serviceIdentity: PublicKey?, maxMessageSize: Int, advertisedAddress: NetworkHostAndPort = serverAddress) {
+    fun start(myIdentity: PublicKey, serviceIdentity: PublicKey?, maxMessageSize: Int, advertisedAddress: NetworkHostAndPort = serverAddress, legalName: String) {
         this.myIdentity = myIdentity
         this.serviceIdentity = serviceIdentity
         this.advertisedAddress = advertisedAddress

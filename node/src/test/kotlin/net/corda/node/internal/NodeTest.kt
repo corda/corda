@@ -70,10 +70,7 @@ class NodeTest {
         val configuration = createConfig(ALICE_NAME)
         val info = VersionInfo(789, "3.0", "SNAPSHOT", "R3")
         configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
-            val versionInfo = rigorousMock<VersionInfo>().also {
-                doReturn(platformVersion).whenever(it).platformVersion
-            }
-            val node = Node(configuration, versionInfo, initialiseSerialization = false)
+            val node = Node(configuration, info, initialiseSerialization = false)
             assertEquals(node.generateNodeInfo(), node.generateNodeInfo())  // Node info doesn't change (including the serial)
         }
     }
@@ -179,7 +176,11 @@ class NodeTest {
                 flowTimeout = FlowTimeoutConfiguration(timeout = Duration.ZERO, backoffBase = 1.0, maxRestartCount = 1),
                 rpcSettings = NodeRpcSettings(address = fakeAddress, adminAddress = null, ssl = null),
                 messagingServerAddress = null,
-                notary = null
+                notary = null,
+                enterpriseConfiguration = EnterpriseConfiguration(
+                        mutualExclusionConfiguration = MutualExclusionConfiguration(updateInterval = 0, waitInterval = 0)
+                ),
+                relay = null
         )
     }
 }

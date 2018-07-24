@@ -360,7 +360,7 @@ class ArtemisMessagingTest {
     }
 
     private fun startNodeMessagingClient(maxMessageSize: Int = MAX_MESSAGE_SIZE) {
-        messagingClient!!.start(identity.public, null, maxMessageSize)
+        messagingClient!!.start(identity.public, null, maxMessageSize, legalName = ALICE_NAME.toString())
     }
 
     private fun createAndStartClientAndServer(platformVersion: Int = 1, serverMaxMessageSize: Int = MAX_MESSAGE_SIZE,
@@ -395,6 +395,7 @@ class ArtemisMessagingTest {
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
                     database,
                     networkMapCache,
+                    MetricRegistry(),
                     isDrainingModeOn = { false },
                     drainingModeWasChangedEvents = PublishSubject.create()).apply {
                 config.configureWithDevSSLCertificate()
