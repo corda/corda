@@ -6,80 +6,94 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import org.junit.Test
 import java.net.InetAddress
+import java.net.ServerSocket
 import java.sql.DriverManager
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class H2SecurityTests {
+    companion object {
+        private fun getFreePort() = ServerSocket(0).localPort
+        private const val h2AddressKey = "h2Settings.address"
+        private const val dbPasswordKey = "dataSourceProperties.dataSource.password"
+    }
 
     @Test
-    fun `node starts h2 server when h2Settings are set`() {
+    fun `h2 server starts when h2Settings are set`() {
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
-            val nodeHandle = startNode(customOverrides = mapOf("h2Settings.address" to "localhost:10030")).getOrThrow()
-            DriverManager.getConnection("jdbc:h2:tcp://localhost:10030/node", "sa", "").use {
-                val result = it.createStatement().executeQuery("SELECT 1")
-                assertTrue(result.next())
+            val port = getFreePort()
+            startNode(customOverrides = mapOf(h2AddressKey to "localhost:$port")).getOrThrow()
+            DriverManager.getConnection("jdbc:h2:tcp://localhost:$port/node", "sa", "").use {
+                assertTrue(it.createStatement().executeQuery("SELECT 1").next())
             }
-            nodeHandle.stop()
         }
     }
 
     @Test
-    fun `node doesn't start h2 server by the default`() {
+    fun `remote access to h2 server can't run java code`() {
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
-            val nodeHandle = startNode().getOrThrow()
+            val port = getFreePort()
+            startNode(customOverrides = mapOf(h2AddressKey to "localhost:$port")).getOrThrow()
             assertFailsWith(org.h2.jdbc.JdbcSQLException::class) {
-                DriverManager.getConnection("jdbc:h2:tcp://localhost:10030/node", "sa", "").use {
-                    it.createStatement().executeQuery("SELECT 1")
-                }
-            }
-            nodeHandle.stop()
-        }
-    }
-
-    @Test
-    fun `remote access to h2 server cant run java code`() {
-        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
-            val nodeHandle = startNode(customOverrides = mapOf("h2Settings.address" to "localhost:10030")).getOrThrow()
-            assertFailsWith(org.h2.jdbc.JdbcSQLException::class) {
-                DriverManager.getConnection("jdbc:h2:tcp://localhost:10030/node", "sa", "").use {
+                DriverManager.getConnection("jdbc:h2:tcp://localhost:$port/node", "sa", "").use {
                     it.createStatement().execute("CREATE ALIAS SET_PROPERTY FOR \"java.lang.System.setProperty\"")
                     it.createStatement().execute("CALL SET_PROPERTY('abc', '1')")
-                    it.commit()
                 }
             }
             assertNull(System.getProperty("abc"))
-            nodeHandle.stop()
         }
     }
 
     @Test
-    fun `h2 server not bind to localhost require non-default database admin password`() {
-
+    fun `h2 server on the host name requires non-default database password`() {
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
             assertFailsWith(CouldNotCreateDataSourceException::class) {
-                startNode(customOverrides = mapOf("h2Settings.address" to "${InetAddress.getLocalHost().hostName}:10030")).getOrThrow()
+                startNode(customOverrides = mapOf(h2AddressKey to "${InetAddress.getLocalHost().hostName}:${getFreePort()}")).getOrThrow()
             }
         }
     }
 
     @Test
-    fun `h2 server not bind to localhost require non-blank database admin password`() {
-
+    fun `h2 server on the external host IP requires non-default database password`() {
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
             assertFailsWith(CouldNotCreateDataSourceException::class) {
-                startNode(customOverrides = mapOf("h2Settings.address" to "${InetAddress.getLocalHost().hostName}:10030",
-                        "dataSourceProperties.dataSource.password" to " ")).getOrThrow()
+                startNode(customOverrides = mapOf(h2AddressKey to "${InetAddress.getLocalHost().hostAddress}:${getFreePort()}")).getOrThrow()
             }
         }
     }
 
     @Test
-    fun `h2 serevr bind to localhost allows default database admin password`() {
-
+    fun `h2 server on host name requires non-blank database admin password`() {
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
-            startNode(customOverrides = mapOf("h2Settings.address" to "localhost:10030")).getOrThrow()
+            assertFailsWith(CouldNotCreateDataSourceException::class) {
+                startNode(customOverrides = mapOf(h2AddressKey to "${InetAddress.getLocalHost().hostName}:${getFreePort()}",
+                        dbPasswordKey to " ")).getOrThrow()
+            }
+        }
+    }
+
+    @Test
+    fun `h2 server on external host IP requires non-blank database admin password`() {
+        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
+            assertFailsWith(CouldNotCreateDataSourceException::class) {
+                startNode(customOverrides = mapOf(h2AddressKey to "${InetAddress.getLocalHost().hostAddress}:${getFreePort()}",
+                        dbPasswordKey to " ")).getOrThrow()
+            }
+        }
+    }
+
+    @Test
+    fun `h2 server on localhost runs with the default database password`() {
+        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
+            startNode(customOverrides = mapOf(h2AddressKey to "localhost:${getFreePort()}")).getOrThrow()
+        }
+    }
+
+    @Test
+    fun `h2 server to loopback IP runs with the default database password`() {
+        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
+            startNode(customOverrides = mapOf(h2AddressKey to "127.0.0.1:${getFreePort()}")).getOrThrow()
         }
     }
 }

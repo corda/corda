@@ -62,6 +62,7 @@ import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.net.BindException
+import java.net.InetAddress
 import java.nio.file.Path
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
@@ -332,11 +333,12 @@ open class Node(configuration: NodeConfiguration,
 
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
             val effectiveH2Settings = configuration.effectiveH2Settings
-            System.setProperty("h2.allowedClasses","org.h2.mvstore.db.MVTableEngine,org.locationtech.jts.geom.Geometry,org.h2.server.TcpServer") //forbid execution of arbitrary code via SQL except those classes required by H2 itself
+            //forbid execution of arbitrary code via SQL except those classes required by H2 itself
+            System.setProperty("h2.allowedClasses", "org.h2.mvstore.db.MVTableEngine,org.locationtech.jts.geom.Geometry,org.h2.server.TcpServer")
             if (effectiveH2Settings?.address != null) {
-                if (effectiveH2Settings.address.host.equals("localhost", ignoreCase = true).not() &&
-                        configuration.dataSourceProperties.getProperty("dataSource.password").isBlank()) {
-                    throw CouldNotCreateDataSourceException("Database password required when H2 server listen to non localhost address.")
+                if (!InetAddress.getByName(effectiveH2Settings.address.host).isLoopbackAddress
+                        && configuration.dataSourceProperties.getProperty("dataSource.password").isBlank()) {
+                    throw CouldNotCreateDataSourceException("Database password is required for H2 server exposed on an external address.")
                 }
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
                 val server = org.h2.tools.Server.createTcpServer(
