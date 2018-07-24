@@ -23,12 +23,17 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util.*
 
-class NetworkMapClient(compatibilityZoneURL: URL, val trustedRoot: X509Certificate) {
+class NetworkMapClient(compatibilityZoneURL: URL) {
     companion object {
         private val logger = contextLogger()
     }
 
     private val networkMapUrl = URL("$compatibilityZoneURL/network-map")
+    private lateinit var trustRoot: X509Certificate
+
+    fun start(trustRoot: X509Certificate) {
+        this.trustRoot = trustRoot
+    }
 
     fun publish(signedNodeInfo: SignedNodeInfo) {
         val publishURL = URL("$networkMapUrl/publish")
@@ -49,7 +54,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, val trustedRoot: X509Certifica
         logger.trace { "Fetching network map update from $url." }
         val connection = url.openHttpConnection()
         val signedNetworkMap = connection.responseAs<SignedNetworkMap>()
-        val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustedRoot)
+        val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustRoot)
         val timeout = connection.cacheControl.maxAgeSeconds().seconds
         logger.trace { "Fetched network map update from $url successfully: $networkMap" }
         return NetworkMapResponse(networkMap, timeout)

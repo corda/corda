@@ -6,7 +6,6 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
-import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.persistence.NodeAttachmentService
@@ -18,14 +17,15 @@ interface StartedNode<out N : AbstractNode> {
     val internals: N
     val services: StartedNodeServices
     val info: NodeInfo
-    val checkpointStorage: CheckpointStorage
     val smm: StateMachineManager
     val attachments: NodeAttachmentService
     val network: MessagingService
     val database: CordaPersistence
     val rpcOps: CordaRPCOps
     val notaryService: NotaryService?
+
     fun dispose() = internals.stop()
+
     /**
      * Use this method to register your initiated flows in your tests. This is automatically done by the node when it
      * starts up for all [FlowLogic] classes it finds which are annotated with [InitiatedBy].

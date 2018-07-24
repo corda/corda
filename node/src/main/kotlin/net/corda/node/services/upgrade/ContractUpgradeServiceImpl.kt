@@ -43,6 +43,10 @@ class ContractUpgradeServiceImpl : ContractUpgradeService, SingletonSerializeAsT
 
     private val authorisedUpgrade = createContractUpgradesMap()
 
+    fun start() {
+        authorisedUpgrade.preload()
+    }
+
     override fun getAuthorisedContractUpgrade(ref: StateRef) = authorisedUpgrade[ref.toString()]
 
     override fun storeAuthorisedContractUpgrade(ref: StateRef, upgradedContractClass: Class<out UpgradedContract<*, *>>) {
