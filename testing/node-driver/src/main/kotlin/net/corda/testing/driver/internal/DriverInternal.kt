@@ -9,6 +9,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.OutOfProcess
@@ -75,3 +76,5 @@ data class InProcessImpl(
 }
 
 val InProcess.internalServices: StartedNodeServices get() = services as StartedNodeServices
+
+internal val DEFAULT_NET_PARAMS = testNetworkParameters()

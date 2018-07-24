@@ -20,6 +20,7 @@ mainClassName = 'net.corda.tools.shell.StandaloneShellKt'
 
 dependencies {
     compile project(':tools:shell')
+    compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
     compile group: 'org.slf4j', name: 'slf4j-simple', version: slf4j_version
 
     testCompile(project(':test-utils')) {

@@ -35,6 +35,7 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
+import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -45,6 +46,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.*
 import net.corda.testing.driver.VerifierType
+import net.corda.testing.driver.internal.DEFAULT_NET_PARAMS
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
@@ -247,6 +249,7 @@ class DriverDSLImpl(
                 "rpcSettings.address" to rpcAddress.toString(),
                 "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
                 "useTestClock" to useTestClock,
+                "additionalNodeInfoPollingFrequencyMsec" to 1000,
                 "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
                 "verifierType" to verifierType.name
         ) + czUrlConfig + customOverrides
@@ -271,10 +274,10 @@ class DriverDSLImpl(
                                 "address" to portAllocation.nextHostAndPort().toString(),
                                 "adminAddress" to portAllocation.nextHostAndPort().toString()
                         ),
-                        "devMode" to false)
+                        "devMode" to false
+                )
         )).checkAndOverrideForInMemoryDB()
 
-        val versionInfo = VersionInfo(1, "1", "1", "1")
         config.corda.certificatesDirectory.createDirectories()
         // Create network root truststore.
         val rootTruststorePath = config.corda.certificatesDirectory / "network-root-truststore.jks"
@@ -288,7 +291,7 @@ class DriverDSLImpl(
             executorService.fork {
                 NodeRegistrationHelper(
                         config.corda,
-                        HTTPNetworkRegistrationService(compatibilityZoneURL, versionInfo),
+                        HTTPNetworkRegistrationService(compatibilityZoneURL, VersionInfo(1, "1", "1", "1")),
                         NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)
                 ).buildKeystore()
                 config
@@ -354,7 +357,7 @@ class DriverDSLImpl(
             notaryInfos += NotaryInfo(identity, type.validating)
         }
 
-        val localNetworkMap = LocalNetworkMap(notaryInfos)
+        val localNetworkMap = LocalNetworkMap(this, notaryInfos)
 
         return cordforms.map {
             val startedNode = startCordformNode(it, localNetworkMap)
@@ -437,7 +440,7 @@ class DriverDSLImpl(
         val notaryInfosFuture = if (compatibilityZone == null) {
             // If no CZ is specified then the driver does the generation of the network parameters and the copying of the
             // node info files.
-            startNotaryIdentityGeneration().map { notaryInfos -> Pair(notaryInfos, LocalNetworkMap(notaryInfos)) }
+            startNotaryIdentityGeneration().map { notaryInfos -> Pair(notaryInfos, LocalNetworkMap(this, notaryInfos)) }
         } else {
             // Otherwise it's the CZ's job to distribute thse via the HTTP network map, as that is what the nodes will be expecting.
             val notaryInfosFuture = if (compatibilityZone.rootCert == null) {
@@ -710,16 +713,19 @@ class DriverDSLImpl(
                 }
                 establishRpc(config, processDeathFuture).flatMap { rpc ->
                     // Check for all nodes to have all other nodes in background in case RPC is failing over:
+                    val beforeVisbilityHandle = System.currentTimeMillis()
                     val networkMapFuture = executorService.fork { visibilityHandle.listen(rpc) }.flatMap { it }
                     firstOf(processDeathFuture, networkMapFuture) {
+                        log.info("Time to become visible (${config.corda.myLegalName}): ${System.currentTimeMillis()-beforeVisbilityHandle}")
                         if (it == processDeathFuture) {
                             throw ListenProcessDeathException(config.corda.p2pAddress, process)
                         }
                         // Will interrupt polling for process death as this is no longer relevant since the process been
                         // successfully started and reflected itself in the NetworkMap.
                         processDeathFuture.cancel(true)
-                        log.info("Node handle is ready. NodeInfo: ${rpc.nodeInfo()}, WebAddress: $webAddress")
-                        OutOfProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, debugPort, process, onNodeExit)
+                        val nodeInfo = rpc.nodeInfo()
+                        log.info("Node handle is ready. NodeInfo: $nodeInfo, WebAddress: $webAddress")
+                        OutOfProcessImpl(nodeInfo, rpc, config.corda, webAddress, useHTTPS, debugPort, process, onNodeExit)
                     }
                 }
             }
@@ -735,12 +741,23 @@ class DriverDSLImpl(
     /**
      * The local version of the network map, which is a bunch of classes that copy the relevant files to the node directories.
      */
-    inner class LocalNetworkMap(notaryInfos: List<NotaryInfo>) {
-        val networkParametersCopier = NetworkParametersCopier(networkParameters.copy(notaries = notaryInfos))
+    private class LocalNetworkMap(dsl: DriverDSLImpl, notaryInfos: List<NotaryInfo>) {
+        companion object {
+            val DEV_NETWORK_MAP_CA = createDevNetworkMapCa()
+            val DEFAULT_NET_PARAMS_COPIER = NetworkParametersCopier(DEFAULT_NET_PARAMS, signingCertAndKeyPair = DEV_NETWORK_MAP_CA)
+        }
+
+        val networkParametersCopier = if (dsl.networkParameters === DEFAULT_NET_PARAMS && notaryInfos.isEmpty()) {
+            // If the default network parameters are being used *and* no notaries have been provided then avoid serialising
+            // and signing the same network parameters each time.
+            DEFAULT_NET_PARAMS_COPIER
+        } else {
+            NetworkParametersCopier(dsl.networkParameters.copy(notaries = notaryInfos), signingCertAndKeyPair = DEV_NETWORK_MAP_CA)
+        }
         // TODO: this object will copy NodeInfo files from started nodes to other nodes additional-node-infos/
         // This uses the FileSystem and adds a delay (~5 seconds) given by the time we wait before polling the file system.
         // Investigate whether we can avoid that.
-        val nodeInfosCopier = NodeInfoFilesCopier().also { shutdownManager.registerShutdown(it::close) }
+        val nodeInfosCopier = NodeInfoFilesCopier().also { dsl.shutdownManager.registerShutdown(it::close) }
     }
 
     /**
@@ -834,7 +851,7 @@ class DriverDSLImpl(
 
             // See experimental/quasar-hook/README.md for how to generate.
             val excludePattern = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;" +
-                    "com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;" +
+                    "com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.nhaarman**;com.opengamma**;" +
                     "com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;" +
                     "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;" +
                     "org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;" +
