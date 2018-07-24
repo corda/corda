@@ -1,8 +1,7 @@
-package net.corda.core.flows
+package net.corda.core.internal
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
-import net.corda.core.internal.FlowAsyncOperation
 import net.corda.core.internal.concurrent.asCordaFuture
 import net.corda.core.node.ServiceHub
 import net.corda.core.utilities.contextLogger

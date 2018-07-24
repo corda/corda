@@ -17,6 +17,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Test
@@ -119,7 +120,7 @@ class WithReferencedStatesFlowTests {
     companion object {
         @JvmStatic
         private val mockNet = InternalMockNetwork(
-                cordappPackages = listOf("net.corda.core.flows", "net.corda.testing.contracts"),
+                cordappsForAllNodes = cordappsForPackages("net.corda.core.flows", "net.corda.testing.contracts"),
                 threadPerNode = true,
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
         )
