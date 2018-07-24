@@ -97,7 +97,11 @@ class ActionExecutorImpl(
     @Suspendable
     private fun executePersistCheckpoint(action: Action.PersistCheckpoint) {
         val checkpointBytes = serializeCheckpoint(action.checkpoint)
-        checkpointStorage.addCheckpoint(action.id, checkpointBytes)
+        if (action.initialCheckpoint) {
+            checkpointStorage.addCheckpoint(action.id, checkpointBytes)
+        } else {
+            checkpointStorage.updateCheckpoint(action.id, checkpointBytes)
+        }
         checkpointingMeter.mark()
         checkpointSizesThisSecond.update(checkpointBytes.size.toLong())
         var lastUpdateTime = lastBandwidthUpdate.get()

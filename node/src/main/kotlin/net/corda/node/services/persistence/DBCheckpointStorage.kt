@@ -36,12 +36,21 @@ class DBCheckpointStorage : CheckpointStorage {
     )
 
     override fun addCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>) {
-        currentDBSession().saveOrUpdate(DBCheckpoint().apply {
+        currentDBSession().save(DBCheckpoint().apply {
             checkpointId = id.uuid.toString()
             this.checkpoint = checkpoint.bytes
             log.debug { "Checkpoint $checkpointId, size=${this.checkpoint.size}" }
         })
     }
+
+    override fun updateCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>) {
+        currentDBSession().update(DBCheckpoint().apply {
+            checkpointId = id.uuid.toString()
+            this.checkpoint = checkpoint.bytes
+            log.debug { "Checkpoint $checkpointId, size=${this.checkpoint.size}" }
+        })
+    }
+
 
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
         val session = currentDBSession()
