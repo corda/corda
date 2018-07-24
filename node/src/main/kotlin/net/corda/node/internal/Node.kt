@@ -352,11 +352,11 @@ open class Node(configuration: NodeConfiguration,
                 val url = try {
                     server.start().url
                 } catch (e: JdbcSQLException) {
-                    if (e.cause is BindException) {
-                        throw AddressBindingException(effectiveH2Settings.address)
-                    } else {
+                   // if (e.cause is BindException) {
+                   //     throw AddressBindingException(effectiveH2Settings.address)
+                   // } else {
                         throw e
-                    }
+                   // }
                 }
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }

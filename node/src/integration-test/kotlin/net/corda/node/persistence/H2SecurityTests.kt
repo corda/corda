@@ -9,10 +9,12 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import org.junit.Test
 import java.net.InetAddress
+//import java.net.InetSocketAddress
 //import java.net.ServerSocket
 import java.sql.DriverManager
 import kotlin.test.assertFailsWith
@@ -21,13 +23,15 @@ import kotlin.test.assertTrue
 
 class H2SecurityTests {
     companion object {
-        private fun getFreePort() = 20001 //ServerSocket(0).localPort
+        private  val port = PortAllocation.Incremental(20002)
+        private fun getFreePort() = port.nextPort() //ServerSocket(0).localPort
         private const val h2AddressKey = "h2Settings.address"
         private const val dbPasswordKey = "dataSourceProperties.dataSource.password"
     }
 
     @Test
     fun `h2 server starts when h2Settings are set`() {
+        //println(InetSocketAddress.ho)
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
             val port = getFreePort()
             startNode(customOverrides = mapOf(h2AddressKey to "localhost:$port")).getOrThrow()
