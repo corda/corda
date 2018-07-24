@@ -7,6 +7,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import rx.Observable
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 @RunWith(Parameterized::class)
@@ -24,7 +25,7 @@ class RPCLargeObservableTests : AbstractRPCTest() {
     internal class TestOpsImpl : TestOps {
         override val protocolVersion = 1
 
-        override fun makeObservable(): Observable<Int> = Observable.range(1, Int.MAX_VALUE)
+        override fun makeObservable(): Observable<Int> = Observable.interval(0, TimeUnit.MICROSECONDS).map { it.toInt() + 1 }
     }
 
     @Test
