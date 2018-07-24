@@ -100,7 +100,7 @@ IntelliJ
 .. _deb-ubuntu-label:
 
 Debian/Ubuntu
-------
+-------------
 
 .. warning:: If you are using a Mac or a Windows machine, please follow the :ref:`mac-label` or :ref:`windows-label` instructions instead.
 
