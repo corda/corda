@@ -44,8 +44,8 @@ Let's open the example CorDapp in IntelliJ IDEA:
 * A splash screen will appear. Click ``open``, select the cloned ``cordapp-example`` folder, and click ``OK``
 
 * Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
-  clicking ``New...``, clicking ``JDK``, and navigating to ``C:\Program Files\Java\jdk1.8.0_XXX`` (where ``XXX`` is the
-  latest minor version number). Click ``OK``
+  clicking ``New...``, clicking ``JDK``, and navigating to ``C:\Program Files\Java\jdk1.8.0_XXX`` on Windows or ``Library/Java/JavaVirtualMachines/jdk1.8.XXX`` on MacOSX (where ``XXX`` is the
+  latest minor version number). Click ``Apply`` followed by ``OK``
 
 * Again under ``File`` then ``Project Structure``, select ``Modules``. Click ``+``, then ``Import Module``, then select
   the ``cordapp-example`` folder and click ``Open``. Choose to ``Import module from external model``, select
