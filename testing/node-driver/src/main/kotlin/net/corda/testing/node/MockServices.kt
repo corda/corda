@@ -192,6 +192,12 @@ open class MockServices private constructor(
     constructor(firstIdentity: TestIdentity, vararg moreIdentities: TestIdentity) : this(
             listOf(getCallerPackage()),
             firstIdentity,
+            *moreIdentities
+    )
+
+    constructor(cordappPackages: List<String>, firstIdentity: TestIdentity, vararg moreIdentities: TestIdentity) : this(
+            cordappPackages,
+            firstIdentity,
             makeTestIdentityService(*listOf(firstIdentity, *moreIdentities).map { it.identity }.toTypedArray()),
             firstIdentity.keyPair
     )
