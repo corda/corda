@@ -28,7 +28,7 @@ dependencies {
 cordapp {
     info {
         vendor "R3"
-        version "$corda_release_version"
+        version corda_release_version
     }
 }
 

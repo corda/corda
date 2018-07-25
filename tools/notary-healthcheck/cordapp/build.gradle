@@ -36,16 +36,10 @@ configurations {
     integrationTestRuntime.extendsFrom testRuntime
 }
 
-
-jar {
-    dependsOn test // Apparently not default.
-    version = "$corda_release_version"
-}
-
 cordapp {
     info {
         vendor "R3"
-        version "$corda_release_version"
+        version corda_release_version
     }
 }
 
