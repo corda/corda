@@ -78,7 +78,7 @@ class UnstartedFlowTransition(
     private fun TransitionBuilder.createInitialCheckpoint() {
         actions.addAll(arrayOf(
                 Action.CreateTransaction,
-                Action.PersistCheckpoint(context.id, currentState.checkpoint),
+                Action.PersistCheckpoint(context.id, currentState.checkpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted),
                 Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
                 Action.CommitTransaction,
                 Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers)
