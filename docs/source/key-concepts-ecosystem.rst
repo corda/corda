@@ -6,7 +6,7 @@ The network
    * *A Corda network is made up of nodes running Corda and CorDapps*
    * *Communication between nodes is point-to-point, instead of relying on global broadcasts*
    * *Each node has a certificate mapping their network identity to a real-world legal identity*
-   * *The network is permissioned, with access controlled by the network operator*
+   * *The network is permissioned, with access requiring a certificate from the network operator*
 
 Network structure
 -----------------
