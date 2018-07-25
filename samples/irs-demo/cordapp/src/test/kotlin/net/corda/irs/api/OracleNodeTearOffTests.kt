@@ -15,24 +15,21 @@ import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.irs.flows.RatesFixFlow
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.core.TestIdentity
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.StartedMockNode
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.After
-import org.junit.Before
+import org.junit.AfterClass
+import org.junit.BeforeClass
 import org.junit.Test
 import java.math.BigDecimal
 import kotlin.test.assertEquals
 
 class OracleNodeTearOffTests {
-    private val TEST_DATA = NodeInterestRates.parseFile("""
+    private companion object {
+        private val TEST_DATA = NodeInterestRates.parseFile("""
         LIBOR 2016-03-16 1M = 0.678
         LIBOR 2016-03-16 2M = 0.685
         LIBOR 2016-03-16 1Y = 0.890
@@ -41,31 +38,34 @@ class OracleNodeTearOffTests {
         EURIBOR 2016-03-15 2M = 0.111
         """.trimIndent())
 
-    private val dummyCashIssuer = TestIdentity(CordaX500Name("Cash issuer", "London", "GB"))
+        private val dummyCashIssuer = TestIdentity(CordaX500Name("Cash issuer", "London", "GB"))
 
-    val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
-    val alice = TestIdentity(ALICE_NAME, 70)
-    private lateinit var mockNet: MockNetwork
-    private lateinit var aliceNode: StartedMockNode
-    private lateinit var oracleNode: StartedMockNode
-    private val oracle get() = oracleNode.services.myInfo.singleIdentity()
+        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        val alice = TestIdentity(ALICE_NAME, 70)
+        private lateinit var mockNet: MockNetwork
+        private lateinit var aliceNode: StartedMockNode
+        private lateinit var oracleNode: StartedMockNode
+        private val oracle get() = oracleNode.services.myInfo.singleIdentity()
 
-    @Before
-    // DOCSTART 1
-    fun setUp() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts", "net.corda.irs"))
-        aliceNode = mockNet.createPartyNode(ALICE_NAME)
-        oracleNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME)).apply {
-            transaction {
-                services.cordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
+        @BeforeClass
+        @JvmStatic
+        // DOCSTART 1
+        fun setUp() {
+            mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts", "net.corda.irs"))
+            aliceNode = mockNet.createPartyNode(ALICE_NAME)
+            oracleNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME)).apply {
+                transaction {
+                    services.cordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
+                }
             }
         }
-    }
-    // DOCEND 1
+        // DOCEND 1
 
-    @After
-    fun tearDown() {
-        mockNet.stopNodes()
+        @AfterClass
+        @JvmStatic
+        fun tearDown() {
+            mockNet.stopNodes()
+        }
     }
 
     // DOCSTART 2

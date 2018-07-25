@@ -140,7 +140,7 @@ class ScheduledFlowTests {
 
     @Test
     fun `run a whole batch of scheduled flows`() {
-        val N = 99
+        val N = 20  // Used to be 99 for no reason.
         val futures = mutableListOf<CordaFuture<*>>()
         for (i in 0 until N) {
             futures.add(aliceNode.services.startFlow(InsertInitialStateFlow(bob, notary)).resultFuture)

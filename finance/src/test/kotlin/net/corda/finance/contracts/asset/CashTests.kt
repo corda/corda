@@ -7,7 +7,6 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -19,6 +18,7 @@ import net.corda.finance.utils.sumCashOrNull
 import net.corda.finance.utils.sumCashOrZero
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.testing.cleanDatabase
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
 import net.corda.testing.dsl.EnforceVerifyOrFail
@@ -31,10 +31,7 @@ import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServ
 import net.corda.testing.node.ledger
 import net.corda.testing.node.makeTestIdentityService
 import net.corda.testing.node.transaction
-import org.junit.After
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import java.util.*
 import kotlin.test.*
 
@@ -47,54 +44,70 @@ class CashTests {
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
+
+        private lateinit var ourServices: MockServices
+        private lateinit var miniCorpServices: MockServices
+        private lateinit var megaCorpServices: MockServices
+        lateinit var database: CordaPersistence
+        private lateinit var vaultStatesUnconsumed: List<StateAndRef<Cash.State>>
+
+        private lateinit var ourIdentity: AbstractParty
+        private lateinit var miniCorpAnonymised: AnonymousParty
+        private lateinit var cashStates: List<StateAndRef<Cash.State>>
+
+        private fun makeCash(amount: Amount<Currency>, issuer: AbstractParty, depositRef: Byte = 1) =
+                StateAndRef(
+                        TransactionState(Cash.State(amount `issued by` issuer.ref(depositRef), ourIdentity), Cash.PROGRAM_ID, dummyNotary.party),
+                        StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
+                )
+
+        @ClassRule
+        @JvmField
+        val testSerialization = SerializationEnvironmentRule()
+        private val defaultIssuer = megaCorp.ref(1)
+        private val inState = Cash.State(
+                amount = 1000.DOLLARS `issued by` defaultIssuer,
+                owner = AnonymousParty(alice.publicKey)
+        )
+        // Input state held by the issuer
+        private val issuerInState = inState.copy(owner = defaultIssuer.party)
+        private val outState = issuerInState.copy(owner = AnonymousParty(bob.publicKey))
+
+        private fun Cash.State.editDepositRef(ref: Byte) = copy(
+                amount = Amount(amount.quantity, token = amount.token.copy(amount.token.issuer.copy(reference = OpaqueBytes.of(ref))))
+        )
+
+        @BeforeClass
+        @JvmStatic
+        fun setUp() {
+            LogHelper.setLevel(NodeVaultService::class)
+            megaCorpServices = MockServices(megaCorp)
+            miniCorpServices = MockServices(miniCorp)
+            val myself = TestIdentity(CordaX500Name("Me", "London", "GB"))
+            val databaseAndServices = makeTestDatabaseAndMockServices(
+                    listOf("net.corda.finance.contracts.asset"),
+                    makeTestIdentityService(megaCorp.identity, miniCorp.identity, dummyCashIssuer.identity, dummyNotary.identity, myself.identity),
+                    myself
+            )
+            database = databaseAndServices.first
+            ourServices = databaseAndServices.second
+
+            // Set up and register identities
+            ourIdentity = ourServices.myInfo.singleIdentity()
+            miniCorpAnonymised = miniCorpServices.myInfo.singleIdentityAndCert().party.anonymise()
+
+        }
+
+        @AfterClass
+        @JvmStatic
+        fun tearDown() {
+            database.close()
+        }
     }
 
-    @Rule
-    @JvmField
-    val testSerialization = SerializationEnvironmentRule()
-    private val defaultIssuer = megaCorp.ref(1)
-    private val inState = Cash.State(
-            amount = 1000.DOLLARS `issued by` defaultIssuer,
-            owner = AnonymousParty(alice.publicKey)
-    )
-    // Input state held by the issuer
-    private val issuerInState = inState.copy(owner = defaultIssuer.party)
-    private val outState = issuerInState.copy(owner = AnonymousParty(bob.publicKey))
-
-    private fun Cash.State.editDepositRef(ref: Byte) = copy(
-            amount = Amount(amount.quantity, token = amount.token.copy(amount.token.issuer.copy(reference = OpaqueBytes.of(ref))))
-    )
-
-    private lateinit var ourServices: MockServices
-    private lateinit var miniCorpServices: MockServices
-    private lateinit var megaCorpServices: MockServices
-    val vault: VaultService get() = miniCorpServices.vaultService
-    lateinit var database: CordaPersistence
-    private lateinit var vaultStatesUnconsumed: List<StateAndRef<Cash.State>>
-
-    private lateinit var ourIdentity: AbstractParty
-    private lateinit var miniCorpAnonymised: AnonymousParty
-    private lateinit var cashStates: List<StateAndRef<Cash.State>>
-
-    // TODO: Optimise this so that we don't throw away and rebuild state that can be shared across tests.
     @Before
-    fun setUp() {
-        LogHelper.setLevel(NodeVaultService::class)
-        megaCorpServices = MockServices(megaCorp)
-        miniCorpServices = MockServices(miniCorp)
-        val myself = TestIdentity(CordaX500Name("Me", "London", "GB"))
-        val databaseAndServices = makeTestDatabaseAndMockServices(
-                listOf("net.corda.finance.contracts.asset"),
-                makeTestIdentityService(megaCorp.identity, miniCorp.identity, dummyCashIssuer.identity, dummyNotary.identity, myself.identity),
-                myself
-        )
-        database = databaseAndServices.first
-        ourServices = databaseAndServices.second
-
-        // Set up and register identities
-        ourIdentity = ourServices.myInfo.singleIdentity()
-        miniCorpAnonymised = miniCorpServices.myInfo.singleIdentityAndCert().party.anonymise()
-
+    fun before() {
+        cleanDatabase(database)
         // Create some cash. Any attempt to spend >$500 will require multiple issuers to be involved.
         database.transaction {
             val vaultFiller = VaultFiller(ourServices, dummyNotary)
@@ -107,16 +120,11 @@ class CashTests {
             vaultStatesUnconsumed = ourServices.vaultService.queryBy<Cash.State>().states
         }
         cashStates = listOf(
-            makeCash(100.DOLLARS, megaCorp.party),
-            makeCash(400.DOLLARS, megaCorp.party),
-            makeCash(80.DOLLARS, miniCorp.party),
-            makeCash(80.SWISS_FRANCS, miniCorp.party, 2)
+                makeCash(100.DOLLARS, megaCorp.party),
+                makeCash(400.DOLLARS, megaCorp.party),
+                makeCash(80.DOLLARS, miniCorp.party),
+                makeCash(80.SWISS_FRANCS, miniCorp.party, 2)
         )
-    }
-
-    @After
-    fun tearDown() {
-        database.close()
     }
 
     private fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) {
@@ -498,12 +506,6 @@ class CashTests {
     //
     // Spend tx generation
 
-    private fun makeCash(amount: Amount<Currency>, issuer: AbstractParty, depositRef: Byte = 1) =
-            StateAndRef(
-                    TransactionState(Cash.State(amount `issued by` issuer.ref(depositRef), ourIdentity), Cash.PROGRAM_ID, dummyNotary.party),
-                    StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
-            )
-
     /**
      * Generate an exit transaction, removing some amount of cash from the ledger.
      */
@@ -624,10 +626,10 @@ class CashTests {
 
     @Test
     fun generateSimpleSpendWithChange() {
-        val wtx =
-                database.transaction {
-                    makeSpend(ourServices, 10.DOLLARS, miniCorpAnonymised)
-                }
+        val wtx = database.transaction {
+            makeSpend(ourServices, 10.DOLLARS, miniCorpAnonymised)
+        }
+
         database.transaction {
             val vaultState = vaultStatesUnconsumed.elementAt(0)
             val changeAmount = 90.DOLLARS `issued by` defaultIssuer
@@ -687,15 +689,10 @@ class CashTests {
     @Test
     fun generateSpendInsufficientBalance() {
         database.transaction {
-
             val e: InsufficientBalanceException = assertFailsWith("balance") {
                 makeSpend(ourServices, 1000.DOLLARS, miniCorpAnonymised)
             }
             assertEquals((1000 - 580).DOLLARS, e.amountMissing)
-
-            assertFailsWith(InsufficientBalanceException::class) {
-                makeSpend(ourServices, 81.SWISS_FRANCS, miniCorpAnonymised)
-            }
         }
     }
 
