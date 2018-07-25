@@ -52,7 +52,7 @@ class FailNodeOnNotMigratedAttachmentContractsTableNameTests {
                 it.createStatement().execute("ALTER TABLE $tableNameFromMapping RENAME TO $tableNameInDB")
                 it.commit()
             }
-            assertFailsWith(net.corda.nodeapi.internal.persistence.IncompatibleAttachmentsContractsTableName::class) {
+            assertFailsWith(net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException::class) {
                 val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
                 nodeHandle.stop()
             }
