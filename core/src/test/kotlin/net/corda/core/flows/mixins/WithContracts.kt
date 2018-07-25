@@ -10,8 +10,8 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
-import net.corda.node.internal.StartedNode
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.node.internal.TestStartedNode
 import kotlin.reflect.KClass
 
 /**
@@ -29,33 +29,33 @@ interface WithContracts : WithMockNet {
     //region
 
     //region Operations
-    fun StartedNode.signDummyContract(owner: PartyAndReference, magicNumber: Int = 0, vararg others: PartyAndReference) =
+    fun TestStartedNode.signDummyContract(owner: PartyAndReference, magicNumber: Int = 0, vararg others: PartyAndReference) =
             services.signDummyContract(owner, magicNumber, *others).andRunNetwork()
 
     fun ServiceHub.signDummyContract(owner: PartyAndReference, magicNumber: Int = 0, vararg others: PartyAndReference) =
             signInitialTransaction(createDummyContract(owner, magicNumber, *others))
 
-    fun StartedNode.collectSignatures(ptx: SignedTransaction) =
+    fun TestStartedNode.collectSignatures(ptx: SignedTransaction) =
             startFlowAndRunNetwork(CollectSignaturesFlow(ptx, emptySet()))
 
-    fun StartedNode.addSignatureTo(ptx: SignedTransaction) =
+    fun TestStartedNode.addSignatureTo(ptx: SignedTransaction) =
             services.addSignature(ptx).andRunNetwork()
 
     fun <T : UpgradedContract<*, *>>
-            StartedNode.initiateContractUpgrade(tx: SignedTransaction, toClass: KClass<T>) =
+            TestStartedNode.initiateContractUpgrade(tx: SignedTransaction, toClass: KClass<T>) =
             initiateContractUpgrade(tx.tx.outRef(0), toClass)
 
     fun <S : ContractState, T : UpgradedContract<S, *>>
-            StartedNode.initiateContractUpgrade(stateAndRef: StateAndRef<S>, toClass: KClass<T>) =
+            TestStartedNode.initiateContractUpgrade(stateAndRef: StateAndRef<S>, toClass: KClass<T>) =
             startFlowAndRunNetwork(ContractUpgradeFlow.Initiate(stateAndRef, toClass.java))
 
-    fun <T : UpgradedContract<*, *>> StartedNode.authoriseContractUpgrade(
+    fun <T : UpgradedContract<*, *>> TestStartedNode.authoriseContractUpgrade(
         tx: SignedTransaction, toClass: KClass<T>) =
         startFlow(
             ContractUpgradeFlow.Authorise(tx.tx.outRef<ContractState>(0), toClass.java)
         )
 
-    fun StartedNode.deauthoriseContractUpgrade(tx: SignedTransaction) = startFlow(
+    fun TestStartedNode.deauthoriseContractUpgrade(tx: SignedTransaction) = startFlow(
         ContractUpgradeFlow.Deauthorise(tx.tx.outRef<ContractState>(0).ref)
     )
 

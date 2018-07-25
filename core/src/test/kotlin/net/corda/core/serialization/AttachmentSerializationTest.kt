@@ -13,7 +13,6 @@ import net.corda.core.internal.FetchDataFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.core.ALICE_NAME
@@ -45,11 +44,11 @@ private fun
         Attachment.extractContent() = ByteArrayOutputStream().apply { extractFile("content", this) }.toString(UTF_8.name())
 
 @Suppress("deprecation")
-private fun StartedNode.saveAttachment(content: String) = database.transaction {
+private fun TestStartedNode.saveAttachment(content: String) = database.transaction {
     attachments.importAttachment(createAttachmentData(content).inputStream())
 }
 
-private fun StartedNode.hackAttachment(attachmentId: SecureHash, content: String) = database.transaction {
+private fun TestStartedNode.hackAttachment(attachmentId: SecureHash, content: String) = database.transaction {
     updateAttachment(attachmentId, createAttachmentData(content))
 }
 

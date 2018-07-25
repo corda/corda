@@ -21,7 +21,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.minClusterSize
@@ -33,10 +32,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.TestClock
-import net.corda.testing.node.internal.cordappsForPackages
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import org.hamcrest.Matchers.instanceOf
 import org.junit.AfterClass
 import org.junit.Assert.assertThat
@@ -56,7 +52,7 @@ class BFTNotaryServiceTests {
     companion object {
         private lateinit var mockNet: InternalMockNetwork
         private lateinit var notary: Party
-        private lateinit var node: StartedNode
+        private lateinit var node: TestStartedNode
 
         @BeforeClass
         @JvmStatic
@@ -74,7 +70,7 @@ class BFTNotaryServiceTests {
             mockNet.stopNodes()
         }
 
-        fun startBftClusterAndNode(clusterSize: Int, mockNet: InternalMockNetwork, exposeRaces: Boolean = false): Pair<Party, StartedNode> {
+        fun startBftClusterAndNode(clusterSize: Int, mockNet: InternalMockNetwork, exposeRaces: Boolean = false): Pair<Party, TestStartedNode> {
             (Paths.get("config") / "currentView").deleteIfExists() // XXX: Make config object warn if this exists?
             val replicaIds = (0 until clusterSize)
 
@@ -214,7 +210,7 @@ class BFTNotaryServiceTests {
         signatures.forEach { it.verify(txId) }
     }
 
-    private fun StartedNode.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
+    private fun TestStartedNode.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
         return services.signInitialTransaction(
                 TransactionBuilder(notary).apply {
                     addCommand(dummyCommand(services.myInfo.singleIdentity().owningKey))

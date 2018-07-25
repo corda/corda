@@ -110,7 +110,7 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
 // AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
-abstract class AbstractNode<S : StartedNode>(val configuration: NodeConfiguration,
+abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                              val platformClock: CordaClock,
                                              protected val versionInfo: VersionInfo,
                                              protected val cordappLoader: CordappLoader,
@@ -183,7 +183,7 @@ abstract class AbstractNode<S : StartedNode>(val configuration: NodeConfiguratio
     val services = ServiceHubInternalImpl().tokenize()
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
-    protected val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
+    val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
     private val schedulerService = NodeSchedulerService(
             platformClock,
             database,
@@ -221,7 +221,7 @@ abstract class AbstractNode<S : StartedNode>(val configuration: NodeConfiguratio
     /** Set to non-null once [start] has been successfully called. */
     open val started get() = _started
     @Volatile
-    private var _started: StartedNode? = null
+    private var _started: S? = null
 
     private fun <T : Any> T.tokenize(): T {
         tokenizableServices?.add(this) ?: throw IllegalStateException("The tokenisable services list has already been finialised")
@@ -625,7 +625,7 @@ abstract class AbstractNode<S : StartedNode>(val configuration: NodeConfiguratio
                 }
     }
 
-    protected fun <T : FlowLogic<*>> registerInitiatedFlow(smm: StateMachineManager, initiatedFlowClass: Class<T>): Observable<T> {
+    fun <T : FlowLogic<*>> registerInitiatedFlow(smm: StateMachineManager, initiatedFlowClass: Class<T>): Observable<T> {
         return registerInitiatedFlowInternal(smm, initiatedFlowClass, track = true)
     }
 

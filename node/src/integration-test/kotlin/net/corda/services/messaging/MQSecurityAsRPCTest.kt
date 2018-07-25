@@ -8,7 +8,7 @@ import org.junit.Test
  */
 class MQSecurityAsRPCTest : RPCMQSecurityTest() {
     override fun createAttacker(): SimpleMQClient {
-        return clientTo(alice.internals.configuration.rpcOptions.address)
+        return clientTo(alice.node.configuration.rpcOptions.address)
     }
 
     @Test

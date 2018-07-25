@@ -20,7 +20,7 @@ import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.internal.StartedNodeWithInternals
+import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.common.internal.checkNotOnClasspath
 import net.corda.testing.core.*
@@ -50,7 +50,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
         val rpcUser = User("user1", "test", permissions = setOf(all()))
     }
 
-    private lateinit var node: StartedNodeWithInternals
+    private lateinit var node: NodeWithInfo
     private lateinit var identity: Party
     private lateinit var client: CordaRPCClient
     private var connection: CordaRPCConnection? = null
@@ -62,7 +62,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
     @Before
     fun setUp() {
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
-        client = CordaRPCClient(node.internals.configuration.rpcOptions.address, CordaRPCClientConfiguration.DEFAULT.copy(
+        client = CordaRPCClient(node.node.configuration.rpcOptions.address, CordaRPCClientConfiguration.DEFAULT.copy(
             maxReconnectAttempts = 5
         ))
         identity = node.info.identityFromX500Name(ALICE_NAME)
@@ -127,7 +127,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
                 task.cancel(true)
                 latch.countDown()
             }.doOnCompleted {
-                        successful = (node.internals.started == null)
+                        successful = (node.node.started == null)
                         task.cancel(true)
                         latch.countDown()
                     }.subscribe()
@@ -235,7 +235,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
         node.services.startFlow(CashIssueFlow(100.POUNDS, OpaqueBytes.of(1), identity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()
         val outOfProcessRpc = ProcessUtilities.startJavaProcess<StandaloneCashRpcClient>(
                 classPath = classPathWithoutFinance,
-                arguments = listOf(node.internals.configuration.rpcOptions.address.toString(), financeLocation)
+                arguments = listOf(node.node.configuration.rpcOptions.address.toString(), financeLocation)
         )
         assertThat(outOfProcessRpc.waitFor()).isZero()  // i.e. no exceptions were thrown
     }

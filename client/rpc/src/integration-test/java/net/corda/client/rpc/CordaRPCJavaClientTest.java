@@ -8,8 +8,7 @@ import net.corda.finance.flows.AbstractCashFlow;
 import net.corda.finance.flows.CashIssueFlow;
 import net.corda.finance.flows.CashPaymentFlow;
 import net.corda.finance.schemas.CashSchemaV1;
-import net.corda.node.internal.StartedNode;
-import net.corda.node.internal.StartedNodeWithInternals;
+import net.corda.node.internal.NodeWithInfo;
 import net.corda.testing.internal.InternalTestUtilsKt;
 import net.corda.testing.node.User;
 import net.corda.testing.node.internal.NodeBasedTest;
@@ -44,7 +43,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     private Set<String> permSet = new HashSet<>(perms);
     private User rpcUser = new User("user1", "test", permSet);
 
-    private StartedNodeWithInternals node;
+    private NodeWithInfo node;
     private CordaRPCClient client;
     private RPCConnection<CordaRPCOps> connection = null;
     private CordaRPCOps rpcProxy;
@@ -57,7 +56,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     @Before
     public void setUp() throws Exception {
         node = startNode(ALICE_NAME, 1, singletonList(rpcUser));
-        client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcOptions().getAddress()));
+        client = new CordaRPCClient(requireNonNull(node.getNode().getConfiguration().getRpcOptions().getAddress()));
     }
 
     @After
