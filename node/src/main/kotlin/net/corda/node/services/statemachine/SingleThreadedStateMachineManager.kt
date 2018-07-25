@@ -62,7 +62,7 @@ class SingleThreadedStateMachineManager(
         private val secureRandom: SecureRandom,
         private val unfinishedFibers: ReusableLatch = ReusableLatch(),
         private val classloader: ClassLoader = SingleThreadedStateMachineManager::class.java.classLoader
-) : StateMachineManager, StateMachineManagerInternal {
+) : StateMachineManager {
     companion object {
         private val logger = contextLogger()
     }
