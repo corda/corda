@@ -6,7 +6,7 @@ disadvantage is the inability to view the contents in a human-friendly manner. T
 by allowing the contents of a binary blob file (or URL end-point) to be output in either YAML or JSON. It uses
 ``JacksonSupport`` to do this (see :doc:`json`).
 
-The latest version of the tool can be downloaded from `here <https://www.corda.net/downloads/>`_.
+The latest version of the tool can be downloaded from `here <https://www.corda.net/develop/resources.html>`_.
 
 To run simply pass in the file or URL as the first parameter::
 
