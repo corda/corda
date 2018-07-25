@@ -21,8 +21,8 @@ import kotlin.test.assertTrue
 
 class H2SecurityTests {
     companion object {
-        private  val port = PortAllocation.Incremental(20100)
-        private fun getFreePort() = port.nextPort() //ServerSocket(0).localPort
+        private val port = PortAllocation.Incremental(20_000)
+        private fun getFreePort() = port.nextPort()
         private const val h2AddressKey = "h2Settings.address"
         private const val dbPasswordKey = "dataSourceProperties.dataSource.password"
     }
@@ -78,7 +78,7 @@ class H2SecurityTests {
 
     @Test
     fun `h2 server on localhost runs with the default database password`() {
-        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
+        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = false, notarySpecs = emptyList())) {
             startNode(customOverrides = mapOf(h2AddressKey to "localhost:${getFreePort()}")).getOrThrow()
         }
     }
@@ -92,12 +92,11 @@ class H2SecurityTests {
 
     @Test
     fun `remote code execution via h2 server is disabled`() {
-        assertNull(System.getProperty("abc"), "Expecting abc property to be not set") //sanity check
-        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
+        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = false, notarySpecs = emptyList())) {
             val port = getFreePort()
-            startNode(customOverrides = mapOf(h2AddressKey to "localhost:$port")).getOrThrow()
-            assertFailsWith(org.h2.jdbc.JdbcSQLException::class) {
-                DriverManager.getConnection("jdbc:h2:tcp://localhost:$port/node", "sa", "").use {
+            startNode(customOverrides = mapOf(h2AddressKey to "localhost:$port", dbPasswordKey to "x")).getOrThrow()
+            DriverManager.getConnection("jdbc:h2:tcp://localhost:$port/node", "sa", "x").use {
+                assertFailsWith(org.h2.jdbc.JdbcSQLException::class) {
                     it.createStatement().execute("CREATE ALIAS SET_PROPERTY FOR \"java.lang.System.setProperty\"")
                     it.createStatement().execute("CALL SET_PROPERTY('abc', '1')")
                 }
@@ -108,16 +107,16 @@ class H2SecurityTests {
 
     @Test
     fun `malicious flow tries to enable remote code execution via h2 server`() {
-        assertNull(System.getProperty("abc"), "Expecting abc property to be not set") //sanity check
         val user = User("mark", "dadada", setOf(Permissions.startFlow<MaliciousFlow>()))
-        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
+        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = false, notarySpecs = emptyList())) {
             val port = getFreePort()
-            val nodeHandle = startNode(rpcUsers = listOf(user), customOverrides = mapOf(h2AddressKey to "localhost:$port")).getOrThrow()
+            val nodeHandle = startNode(rpcUsers = listOf(user), customOverrides = mapOf(h2AddressKey to "localhost:$port",
+                    dbPasswordKey to "x")).getOrThrow()
             CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlow(::MaliciousFlow).returnValue.getOrThrow()
             }
-            assertFailsWith(org.h2.jdbc.JdbcSQLException::class) {
-                DriverManager.getConnection("jdbc:h2:tcp://localhost:$port/node", "sa", "").use {
+            DriverManager.getConnection("jdbc:h2:tcp://localhost:$port/node", "sa", "x").use {
+                assertFailsWith(org.h2.jdbc.JdbcSQLException::class) {
                     it.createStatement().execute("CREATE ALIAS SET_PROPERTY FOR \"java.lang.System.setProperty\"")
                     it.createStatement().execute("CALL SET_PROPERTY('abc', '1')")
                 }
