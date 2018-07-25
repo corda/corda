@@ -1054,11 +1054,9 @@ fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
-                      schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
-    val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService)
-    persistence.hikariStart(hikariProperties, databaseConfig, schemaService)
-    return persistence
-}
+                      schemaService: SchemaService = NodeSchemaService()): CordaPersistence =
+    createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService)
+            .apply { hikariStart(hikariProperties, databaseConfig, schemaService) }
 
 fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
@@ -1089,6 +1087,7 @@ fun CordaPersistence.hikariStart(hikariProperties: Properties, databaseConfig: D
         when {
             ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)
             ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html")
+            ex is DatabaseIncompatibleException -> throw ex
             else -> throw CouldNotCreateDataSourceException("Could not create the DataSource: ${ex.message}", ex)
         }
     }

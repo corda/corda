@@ -39,6 +39,7 @@ import net.corda.node.utilities.registration.UnableToRegisterNodeWithDoormanExce
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.DatabaseMigrationException
 import net.corda.nodeapi.internal.persistence.oracleJdbcDriverSerialFilter
@@ -189,6 +190,10 @@ open class NodeStartup(val args: Array<String>) {
             logger.error(e.message)
             return false
         } catch (e: NetworkParametersReader.Error) {
+            logger.error(e.message)
+            return false
+        } catch (e: DatabaseIncompatibleException) {
+            e.message?.let { Node.printWarning(it) }
             logger.error(e.message)
             return false
         } catch (e: Exception) {

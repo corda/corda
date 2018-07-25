@@ -22,10 +22,64 @@ Upgrading to |release| from Open Source 3.x requires updating build file propert
 
 .. sourcecode:: shell
 
+<<<<<<< HEAD
     ext.corda_release_distribution = 'com.r3.corda'
     ext.corda_release_version = '3.1'
     ext.corda_gradle_plugins_version = '4.0.25'
 ..
+=======
+    ext.kotlin_version = '1.1.4'
+    ext.quasar_version = '0.7.9'
+
+Please consult the relevant release notes of the release in question. If not specified, you may assume the
+versions you are currently using are still in force.
+
+We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes.
+
+UNRELEASED
+----------
+
+<<< Fill this in >>>
+
+* Database upgrade - Change the type of the ``checkpoint_value``.
+This will address the issue that the `vacuum` function is unable to clean up deleted checkpoints as they are still referenced from the ``pg_shdepend`` table.
+
+For Postgres:
+
+  .. sourcecode:: sql
+
+    ALTER TABLE node_checkpoints ALTER COLUMN checkpoint_value set data type bytea;
+
+For H2:
+
+  .. sourcecode:: sql
+
+    ALTER TABLE node_checkpoints ALTER COLUMN checkpoint_value set data type VARBINARY(33554432);
+
+
+* API change: ``net.corda.core.schemas.PersistentStateRef`` fields (``index`` and ``txId``) incorrectly marked as nullable are now non-nullable,
+  :doc:`changelog` contains the explanation.
+
+  H2 database upgrade action:
+
+  For Cordapps persisting custom entities with ``PersistentStateRef`` used as non Primary Key column, the backing table needs to be updated,
+  In SQL replace ``your_transaction_id``/``your_output_index`` column names with your custom names, if entity didn't used JPA ``@AttributeOverrides``
+  then default names are ``transaction_id`` and ``output_index``.
+
+  .. sourcecode:: sql
+
+       SELECT count(*) FROM [YOUR_PersistentState_TABLE_NAME] WHERE your_transaction_id IS NULL OR your_output_index IS NULL;
+
+  In case your table already contains rows with NULL columns, and the logic doesn't distinguish between NULL and an empty string,
+  all NULL column occurrences can be changed to an empty string:
+
+  .. sourcecode:: sql
+
+       UPDATE [YOUR_PersistentState_TABLE_NAME] SET your_transaction_id="" WHERE your_transaction_id IS NULL;
+       UPDATE [YOUR_PersistentState_TABLE_NAME] SET your_output_index="" WHERE your_output_index IS NULL;
+
+  If all rows have NON NULL ``transaction_ids`` and ``output_idx`` or you have assigned empty string values, then it's safe to update the table:
+>>>>>>> 121dbec87700856679baab3995352448e8214b4e
 
 and specifying an additional repository entry to point to the location of the Corda Enterprise distribution. As an example:
 
