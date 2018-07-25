@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
 
 class H2SecurityTests {
     companion object {
-        private val port = PortAllocation.Incremental(30_000)
+        private val port = PortAllocation.Incremental(21_000)
         private fun getFreePort() = port.nextPort()
         private const val h2AddressKey = "h2Settings.address"
         private const val dbPasswordKey = "dataSourceProperties.dataSource.password"
@@ -83,12 +83,12 @@ class H2SecurityTests {
         }
     }
 
-//    @Test
-//    fun `h2 server to loopback IP runs with the default database password`() {
-//        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
-//            startNode(customOverrides = mapOf(h2AddressKey to "127.0.0.1:${getFreePort()}")).getOrThrow()
-//        }
-//    }
+    @Test
+    fun `h2 server to loopback IP runs with the default database password`() {
+        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
+            startNode(customOverrides = mapOf(h2AddressKey to "127.0.0.1:${getFreePort()}")).getOrThrow()
+        }
+    }
 
     @Test
     fun `remote code execution via h2 server is disabled`() {
