@@ -19,10 +19,10 @@ import net.corda.core.node.services.trackBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.StartedNode
 import net.corda.testing.core.*
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
@@ -33,9 +33,9 @@ import kotlin.test.assertEquals
 class CashIssueAndPaymentFlowTests {
     private lateinit var mockNet: InternalMockNetwork
     private val ref = OpaqueBytes.of(0x01)
-    private lateinit var bankOfCordaNode: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var bankOfCordaNode: TestStartedNode
     private lateinit var bankOfCorda: Party
-    private lateinit var aliceNode: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var aliceNode: TestStartedNode
     private lateinit var notary: Party
 
     @Before

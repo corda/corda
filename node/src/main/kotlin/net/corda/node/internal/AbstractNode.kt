@@ -126,7 +126,7 @@ abstract class AbstractNode<S : StartedNode>(val configuration: NodeConfiguratio
                                              protected val versionInfo: VersionInfo,
                                              protected val cordappLoader: CordappLoader,
                                              protected val serverThread: AffinityExecutor.ServiceAffinityExecutor,
-                                             private val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
+                                             protected val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
 

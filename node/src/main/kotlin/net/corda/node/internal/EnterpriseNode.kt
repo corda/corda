@@ -172,7 +172,7 @@ D""".trimStart()
         }
     }
 
-    override fun start(): StartedNode<Node> {
+    override fun start(): StartedNode {
         val started = super.start()
         registerOptionalMetricsReporter(configuration, started.services.monitoringService.metrics)
         return started

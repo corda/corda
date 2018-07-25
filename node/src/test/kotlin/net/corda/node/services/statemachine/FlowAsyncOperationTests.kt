@@ -21,8 +21,8 @@ import net.corda.core.internal.executeAsync
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.node.internal.StartedNode
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
@@ -34,7 +34,7 @@ import kotlin.test.assertFailsWith
 
 class FlowAsyncOperationTests {
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var aliceNode: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var aliceNode: TestStartedNode
     @Before
     fun setup() {
         mockNet = InternalMockNetwork(
