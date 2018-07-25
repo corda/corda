@@ -55,6 +55,7 @@ dependencies {
     // Here we pull in dependencies that would normally be pulled in transitively from :core and :node-api, but we need more fine grained control
     // For AMQP serialisation.
     compile "org.apache.qpid:proton-j:${protonj_version}"
+    compile "com.google.guava:guava:$guava_version"
     // RxJava: observable streams of events.
     compile "io.reactivex:rxjava:$rxjava_version"
     compile("org.apache.activemq:artemis-core-client:${artemis_version}")

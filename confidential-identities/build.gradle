@@ -23,11 +23,6 @@ description 'Corda Experimental Confidential Identities'
 dependencies {
     compile project(':core')
 
-    // Quasar, for suspendable fibres.
-    compileOnly("$quasar_group:quasar-core:$quasar_version:jdk8") {
-        transitive = false
-    }
-
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 

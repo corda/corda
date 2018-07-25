@@ -58,7 +58,7 @@ sourceSets {
 jib.container {
   mainClass = "net.corda.node.Corda"
   args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
-  jvmFlags = ['-Xmx1g', '-javaagent:/app/libs/quasar-core-0.7.10.jar']
+  jvmFlags = ['-Xmx1g', "-javaagent:/app/libs/quasar-core-${quasar_version}.jar"]
 }
 
 // Use manual resource copying of log4j2.xml rather than source sets.
@@ -83,8 +83,6 @@ dependencies {
 
     compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
 
-    compile group: 'co.paralleluniverse', name: 'quasar-core', version: '0.7.10:jdk8@jar'
-
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
     compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
@@ -96,7 +94,7 @@ dependencies {
 
     // Kryo: object graph serialization.
     compile "com.esotericsoftware:kryo:4.0.0"
-    compile "de.javakaffee:kryo-serializers:0.41"
+    compile "de.javakaffee:kryo-serializers:0.42"
 
     compile "com.google.guava:guava:$guava_version"
 
