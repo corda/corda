@@ -68,22 +68,11 @@ import javax.management.ObjectName
 import kotlin.system.exitProcess
 import rx.Observable
 
-/**
- * A version of [StartedNode] which exposes its [Node] internals.
- *
- * Although this is the type of [StartedNode] created by [Node], it is not explicitly provided
- * and should not ordinarily be used (the code that _does_ use it obtains it via a cast).
- */
-interface StartedNodeWithInternals : StartedNode {
-    val internals: Node
-    val services: StartedNodeServices
-
-    /**
-     * Use this method to register your initiated flows in your tests. This is automatically done by the node when it
-     * starts up for all [FlowLogic] classes it finds which are annotated with [InitiatedBy].
-     * @return An [Observable] of the initiated flows started by counterparties.
-     */
-    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T>
+class NodeWithInfo(val node: Node, val info: NodeInfo) {
+    val services: StartedNodeServices = object : StartedNodeServices, ServiceHubInternal by node.services, FlowStarter by node.flowStarter {}
+    fun dispose() = node.stop()
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> =
+            node.registerInitiatedFlow(node.smm, initiatedFlowClass)
 }
 
 /**
@@ -96,7 +85,7 @@ open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 private val initialiseSerialization: Boolean = true,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration)
-) : AbstractNode<StartedNode>(
+) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
         versionInfo,
@@ -105,23 +94,8 @@ open class Node(configuration: NodeConfiguration,
         AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1)
 ) {
 
-    /** The actual [StartedNode] implementation created by this [AbstractNode]. */
-    private class StartedNodeWithInternalsImpl(
-            override val internals: Node,
-            override val services: StartedNodeServices,
-            override val info: NodeInfo) : StartedNodeWithInternals {
-
-        override fun dispose() = internals.stop()
-
-        override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> =
-                internals.registerInitiatedFlow(internals.smm, initiatedFlowClass)
-    }
-
-    override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): StartedNode =
-            StartedNodeWithInternalsImpl(
-                    this,
-                    object : StartedNodeServices, ServiceHubInternal by services, FlowStarter by flowStarter {},
-                    nodeInfo)
+    override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): NodeInfo =
+            nodeInfo
 
     companion object {
         private val staticLog = contextLogger()
@@ -394,9 +368,9 @@ open class Node(configuration: NodeConfiguration,
         return super.generateAndSaveNodeInfo()
     }
 
-    override fun start(): StartedNode {
+    override fun start(): NodeInfo {
         initialiseSerialization()
-        val started: StartedNode = super.start()
+        val nodeInfo: NodeInfo = super.start()
         nodeReadyFuture.thenMatch({
             serverThread.execute {
                 // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
@@ -420,7 +394,7 @@ open class Node(configuration: NodeConfiguration,
         shutdownHook = addShutdownHook {
             stop()
         }
-        return started
+        return nodeInfo
     }
 
     override val rxIoScheduler: Scheduler get() = Schedulers.io()

@@ -6,7 +6,6 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.BFTNotaryServiceTests.Companion.startBftClusterAndNode
 import net.corda.node.services.transactions.minClusterSize
 import net.corda.testing.contracts.DummyContract

@@ -10,7 +10,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.statemachine.StaffedFlowHospital
 import net.corda.node.services.statemachine.StaffedFlowHospital.MedicalRecord.KeptInForObservation
 import net.corda.testing.core.ALICE_NAME

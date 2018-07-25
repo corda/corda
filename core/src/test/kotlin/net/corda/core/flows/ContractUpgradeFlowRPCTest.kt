@@ -15,7 +15,6 @@ import net.corda.core.flows.mixins.WithFinality
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction
 import net.corda.core.transactions.SignedTransaction
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2

@@ -324,18 +324,18 @@ open class NodeStartup(val args: Array<String>) {
             }
         }
 
-        val startedNode = node.start()
+        val nodeInfo = node.start()
         Node.printBasicNodeInfo("Loaded CorDapps", node.services.cordappProvider.cordapps.joinToString { it.name })
         node.nodeReadyFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            val name = startedNode.info.legalIdentitiesAndCerts.first().name.organisation
+            val name = nodeInfo.legalIdentitiesAndCerts.first().name.organisation
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.
             if (conf.shouldStartLocalShell()) {
                 node.startupComplete.then {
                     try {
-                        InteractiveShell.runLocalShell({ startedNode.dispose() })
+                        InteractiveShell.runLocalShell({ node.stop() })
                     } catch (e: Throwable) {
                         logger.error("Shell failed to start", e)
                     }

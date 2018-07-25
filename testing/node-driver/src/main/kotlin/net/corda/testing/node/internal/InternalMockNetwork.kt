@@ -29,7 +29,6 @@ import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.InitiatedFlowFactory
-import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
@@ -103,8 +102,9 @@ data class InternalMockNodeParameters(
 /**
  * A [StartedNode] which exposes its internal [InternalMockNetwork.MockNode] for testing.
  */
-interface TestStartedNode : StartedNode {
+interface TestStartedNode {
     val internals: InternalMockNetwork.MockNode
+    val info: NodeInfo
     val services: StartedNodeServices
     val smm: StateMachineManager
     val attachments: NodeAttachmentService
@@ -112,6 +112,8 @@ interface TestStartedNode : StartedNode {
     val network: MessagingService
     val database: CordaPersistence
     val notaryService: NotaryService?
+
+    fun dispose() = internals.stop()
 
     /**
      * Use this method to register your initiated flows in your tests. This is automatically done by the node when it

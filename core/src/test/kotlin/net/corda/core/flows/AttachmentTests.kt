@@ -13,7 +13,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.hash
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
