@@ -36,6 +36,8 @@ import org.junit.Before
 import org.junit.Test
 import java.lang.Thread.sleep
 import java.time.Instant
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class TestCheckScheduleManagementFlow {
     private lateinit var mockNet: MockNetwork
@@ -70,10 +72,10 @@ class TestCheckScheduleManagementFlow {
         Thread.sleep(4.seconds.toMillis())
         nodeA.transaction {
             val successfulChecks = nodeA.services.vaultService.queryBy<SuccessfulCheckState>()
-            assert(successfulChecks.states.size > 4) { "Expected at least 3 successful checks per notary by now, got ${successfulChecks.states.size}" }
+            assertTrue { successfulChecks.states.size > 4 }
 
             val pendingChecks = nodeA.services.vaultService.queryBy<ScheduledCheckState>(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED))
-            assert(pendingChecks.states.size == 2) { "Expected exactly 2 pending (scheduled) checks, got ${pendingChecks.states.size}" }
+            assertEquals(2, pendingChecks.states.size, "Expected exactly 2 pending (scheduled) checks, got ${pendingChecks.states.size}")
         }
 
         nodeA.startFlow(StopCheckScheduleFlow(target)).get()
@@ -81,7 +83,7 @@ class TestCheckScheduleManagementFlow {
         val pendingChecksAfterCleanUp = nodeA.transaction {
             nodeA.services.vaultService.queryBy<ScheduledCheckState>(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED))
         }
-        assert(pendingChecksAfterCleanUp.states.size == 1) { "Expected 1 pending check to be removed, got ${pendingChecksAfterCleanUp.states.size}" }
+        assertEquals(1, pendingChecksAfterCleanUp.states.size, "Expected 1 pending check to be removed, got ${pendingChecksAfterCleanUp.states.size}")
     }
 
 
@@ -93,10 +95,10 @@ class TestCheckScheduleManagementFlow {
         Thread.sleep(4.seconds.toMillis())
         nodeA.transaction {
             val successfulChecks = nodeA.services.vaultService.queryBy<SuccessfulCheckState>()
-            assert(successfulChecks.states.size > 3) { "Expected at least 2 successful checks per notary by now, got ${successfulChecks.states.size}" }
+            assertTrue(successfulChecks.states.size > 3, "Expected at least 2 successful checks per notary by now, got ${successfulChecks.states.size}")
 
             val pendingChecks = nodeA.services.vaultService.queryBy<ScheduledCheckState>(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED))
-            assert(pendingChecks.states.size == 2) { "Expected exactly 2 pending (scheduled) checks, got ${pendingChecks.states.size}" }
+            assertEquals(2, pendingChecks.states.size, "Expected exactly 2 pending (scheduled) checks, got ${pendingChecks.states.size}")
         }
 
         nodeA.startFlow(StopCheckScheduleFlow(target)).get()
@@ -104,7 +106,7 @@ class TestCheckScheduleManagementFlow {
         val pendingChecksAfterCleanUp = nodeA.transaction {
             nodeA.services.vaultService.queryBy<ScheduledCheckState>(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED))
         }
-        assert(pendingChecksAfterCleanUp.states.isEmpty()) { "Expected all pending checks to be removed, got ${pendingChecksAfterCleanUp.states.size}" }
+        assertTrue(pendingChecksAfterCleanUp.states.isEmpty(), "Expected all pending checks to be removed, got ${pendingChecksAfterCleanUp.states.size}")
     }
 
     @Test
@@ -113,13 +115,13 @@ class TestCheckScheduleManagementFlow {
         sleep(1.seconds.toMillis())
         nodeA.transaction {
             val pendingChecks = nodeA.services.vaultService.queryBy<ScheduledCheckState>(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED))
-            assert(pendingChecks.states.size == 2) { "Expected exactly 2 pending (scheduled) checks, got ${pendingChecks.states.size}" }
+            assertEquals(2, pendingChecks.states.size, "Expected exactly 2 pending (scheduled) checks, got ${pendingChecks.states.size}")
         }
         nodeA.startFlow(StopAllChecksFlow()).getOrThrow()
         val pendingChecksAfterCleanUp = nodeA.transaction {
             nodeA.services.vaultService.queryBy<ScheduledCheckState>(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED))
         }
-        assert(pendingChecksAfterCleanUp.states.isEmpty()) { "Expected all pending checks to be removed, got ${pendingChecksAfterCleanUp.states.size}" }
+        assertTrue(pendingChecksAfterCleanUp.states.isEmpty(), "Expected all pending checks to be removed, got ${pendingChecksAfterCleanUp.states.size}")
     }
 
     @Test
@@ -167,9 +169,9 @@ class TestCheckScheduleManagementFlow {
         }
 
         val targets = getTargets(networkMap)
-        assert(targets.size == 4) { "Expected 4 targets. got ${targets.size}" }
-        assert(notaries.all { it in targets.map { it.party } })
-        assert(notary2Parties.all { it in targets.map { it.party } })
+        assertEquals(4, targets.size, "Expected 4 targets. got ${targets.size}")
+        assertTrue(notaries.all { it in targets.map { it.party } })
+        assertTrue(notary2Parties.all { it in targets.map { it.party } })
     }
 
 }

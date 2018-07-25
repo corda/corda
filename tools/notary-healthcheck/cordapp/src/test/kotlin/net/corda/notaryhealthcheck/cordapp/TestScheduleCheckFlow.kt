@@ -24,6 +24,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 
 class TestScheduleCheckFlow {
@@ -57,12 +58,12 @@ class TestScheduleCheckFlow {
             val successfulChecks = nodeA.services.vaultService.queryBy<SuccessfulCheckState>()
 
             val pendingChecks = nodeA.services.vaultService.queryBy<ScheduledCheckState>(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED))
-            assert(successfulChecks.states.size > 1) { "Expected at least 2 successful checks by now, got ${successfulChecks.states.size}" }
+            assertTrue(successfulChecks.states.size > 1, "Expected at least 2 successful checks by now, got ${successfulChecks.states.size}")
             // sort all successful states, get the second to last one and take it's finish time - that will be the last recorded success. The last one will be
             // handled the next time the scheduled state is run as it was started in the last run and finished after scheduling
             // the current pending state.
             val lastSuccessTime = successfulChecks.states.map { it.state.data.finishTime }.sorted().dropLast(1).last()
-            assert(pendingChecks.states.size == 1) { "Expected exactly 1 pending (scheduled check), got ${pendingChecks.states.size}" }
+            assertEquals(1, pendingChecks.states.size, "Expected exactly 1 pending (scheduled check), got ${pendingChecks.states.size}")
             assertEquals(lastSuccessTime, pendingChecks.states.first().state.data.lastSuccessTime)
         }
 
@@ -71,7 +72,7 @@ class TestScheduleCheckFlow {
         val pendingChecksAfterCleanUp = nodeA.transaction {
             nodeA.services.vaultService.queryBy<ScheduledCheckState>(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED))
         }
-        assert(pendingChecksAfterCleanUp.states.isEmpty()) { "Expected all pending checks to be removed, got ${pendingChecksAfterCleanUp.states.size}" }
+        assertTrue(pendingChecksAfterCleanUp.states.isEmpty(), "Expected all pending checks to be removed, got ${pendingChecksAfterCleanUp.states.size}")
     }
 
 
@@ -84,23 +85,23 @@ class TestScheduleCheckFlow {
         Thread.sleep(5.seconds.toMillis())
         nodeA.transaction {
             val successfulChecks = nodeA.services.vaultService.queryBy<SuccessfulCheckState>()
-            assert(successfulChecks.states.isEmpty()) { "Not expecting any successful checks, got ${successfulChecks.states.size}" }
+            assertTrue(successfulChecks.states.isEmpty(), "Not expecting any successful checks, got ${successfulChecks.states.size}")
 
             val startedChecks = nodeA.services.vaultService.queryBy<RunningCheckState>()
-            assert(startedChecks.states.size > 1) { "Expected at least 2 started/running checks by now, got ${startedChecks.states.size}" }
+            assertTrue(startedChecks.states.size > 1, "Expected at least 2 started/running checks by now, got ${startedChecks.states.size}")
 
             val abandonnedStates = nodeA.services.vaultService.queryBy<AbandonnedCheckState>()
-            assert(abandonnedStates.states.size > 1) { "Expected at least 1 abandonned check by now, got ${abandonnedStates.states.size}" }
+            assertTrue(abandonnedStates.states.size > 1, "Expected at least 1 abandonned check by now, got ${abandonnedStates.states.size}")
 
             val scheduledStates = nodeA.services.vaultService.queryBy<ScheduledCheckState>()
-            assert(scheduledStates.states.size == 1) { "Expected exactly 1 pending (scheduled check), got ${scheduledStates.states.size}" }
+            assertEquals(1, scheduledStates.states.size, "Expected exactly 1 pending (scheduled check), got ${scheduledStates.states.size}")
         }
         nodeA.startFlow(StopAllChecksFlow()).get()
 
         val pendingChecksAfterCleanUp = nodeA.transaction {
             nodeA.services.vaultService.queryBy<ScheduledCheckState>(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED))
         }
-        assert(pendingChecksAfterCleanUp.states.isEmpty()) { "Expected all pending checks to be removed, got ${pendingChecksAfterCleanUp.states.size}" }
+        assertTrue(pendingChecksAfterCleanUp.states.isEmpty(), "Expected all pending checks to be removed, got ${pendingChecksAfterCleanUp.states.size}")
     }
 
     @Test
@@ -114,23 +115,23 @@ class TestScheduleCheckFlow {
         nodeA.transaction {
 
             val successfulChecks = nodeA.services.vaultService.queryBy<SuccessfulCheckState>()
-            assert(successfulChecks.states.isEmpty()) { "Not expecting any successful checks, got ${successfulChecks.states.size}" }
+            assertTrue(successfulChecks.states.isEmpty(), "Not expecting any successful checks, got ${successfulChecks.states.size}")
 
             val failedStates = nodeA.services.vaultService.queryBy<FailedCheckState>()
-            assert(failedStates.states.size > 1) { "Expected at least 2 failed checks by now, got ${failedStates.states.size}" }
+            assertTrue(failedStates.states.size > 1, "Expected at least 2 failed checks by now, got ${failedStates.states.size}")
 
             val abandonnedStates = nodeA.services.vaultService.queryBy<AbandonnedCheckState>()
-            assert(abandonnedStates.states.isEmpty()) { "Not expecting any abandonned checks, got ${abandonnedStates.states.size}" }
+            assertTrue(abandonnedStates.states.isEmpty(), "Not expecting any abandonned checks, got ${abandonnedStates.states.size}")
 
             val scheduledStates = nodeA.services.vaultService.queryBy<ScheduledCheckState>()
-            assert(scheduledStates.states.size == 1) { "Expected exactly 1 pending (scheduled check), got ${scheduledStates.states.size}" }
-            assert(scheduledStates.states.first().state.data.lastSuccessTime == lastSuccessTime)
+            assertEquals(1, scheduledStates.states.size, "Expected exactly 1 pending (scheduled check), got ${scheduledStates.states.size}")
+            assertEquals(lastSuccessTime, scheduledStates.states.first().state.data.lastSuccessTime)
         }
         nodeA.startFlow(StopAllChecksFlow())
         Thread.sleep(1.seconds.toMillis())
         val pendingChecksAfterCleanUp = nodeA.transaction {
             nodeA.services.vaultService.queryBy<ScheduledCheckState>(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED))
         }
-        assert(pendingChecksAfterCleanUp.states.isEmpty()) { "Expected all pending checks to be removed, got ${pendingChecksAfterCleanUp.states.size}" }
+        assertTrue(pendingChecksAfterCleanUp.states.isEmpty(), "Expected all pending checks to be removed, got ${pendingChecksAfterCleanUp.states.size}")
     }
 }

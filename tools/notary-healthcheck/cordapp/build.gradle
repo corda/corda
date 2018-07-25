@@ -26,12 +26,11 @@ sourceSets {
 
 dependencies {
     cordaCompile project(":node") // Not node-api so we get metrics.
-    cordaCompile project(":tools:notary-healthcheck:contract")
+    cordapp project(":tools:notary-healthcheck:contract")
     testCompile project(":node-driver")
 }
 
 configurations {
-    testArtifacts.extendsFrom testRuntime
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
 }

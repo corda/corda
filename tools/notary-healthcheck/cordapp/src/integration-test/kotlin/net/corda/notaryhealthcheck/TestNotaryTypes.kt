@@ -28,6 +28,8 @@ import net.corda.testing.node.internal.DummyClusterSpec
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @RunWith(Parameterized::class)
 class TestNotaryTypes(val validating: Boolean, @Suppress("UNUSED_PARAMETER") description: String) {
@@ -54,14 +56,14 @@ class TestNotaryTypes(val validating: Boolean, @Suppress("UNUSED_PARAMETER") des
             nodeA.rpc.startFlow(::StartAllChecksFlow, 2, 5).returnValue.getOrThrow()
             Thread.sleep(5.seconds.toMillis())
             val pendingStates = nodeA.rpc.vaultQueryBy(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED), contractStateType = ScheduledCheckState::class.java, paging = PageSpecification(1, 100), sorting = Sort(columns = emptyList())).states
-            assert(pendingStates.size == 4)
+            assertEquals(4, pendingStates.size)
             val successStates = nodeA.rpc.vaultQueryBy(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED), contractStateType = SuccessfulCheckState::class.java, paging = PageSpecification(1, 100), sorting = Sort(columns = emptyList())).states
-            assert(successStates.size > 7) { "Expecting at least 8 successful checks by now, got ${successStates.size}" }
+            assertTrue(successStates.size > 7, "Expecting at least 8 successful checks by now, got ${successStates.size}")
             val failStates = nodeA.rpc.vaultQueryBy(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED), contractStateType = FailedCheckState::class.java, paging = PageSpecification(1, 100), sorting = Sort(columns = emptyList())).states
-            assert(failStates.isEmpty()) { "Did not expect any checks to fail, got ${failStates.size}" }
+            assertTrue(failStates.isEmpty(), "Did not expect any checks to fail, got ${failStates.size}")
             nodeA.rpc.startFlow(::StopAllChecksFlow).returnValue.getOrThrow()
             val pendingStatesAfterClean = nodeA.rpc.vaultQueryBy(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED), contractStateType = ScheduledCheckState::class.java, paging = PageSpecification(1, 100), sorting = Sort(columns = emptyList())).states
-            assert(pendingStatesAfterClean.isEmpty()) { "Expected all pending states to be cleared, got ${pendingStatesAfterClean.size}" }
+            assertTrue(pendingStatesAfterClean.isEmpty(), "Expected all pending states to be cleared, got ${pendingStatesAfterClean.size}")
         }
     }
 
@@ -80,14 +82,14 @@ class TestNotaryTypes(val validating: Boolean, @Suppress("UNUSED_PARAMETER") des
             nodeA.rpc.startFlow(::StartAllChecksFlow, 2, 5).returnValue.getOrThrow()
             Thread.sleep(5.seconds.toMillis())
             val pendingStates = nodeA.rpc.vaultQueryBy(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED), contractStateType = ScheduledCheckState::class.java, paging = PageSpecification(1, 100), sorting = Sort(columns = emptyList())).states
-            assert(pendingStates.size == 1)
+            assertEquals(1, pendingStates.size)
             val successStates = nodeA.rpc.vaultQueryBy(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED), contractStateType = SuccessfulCheckState::class.java, paging = PageSpecification(1, 100), sorting = Sort(columns = emptyList())).states
-            assert(successStates.size > 1) { "Expecting at least 2 successful checks by now, got ${successStates.size}" }
+            assertTrue(successStates.size > 1, "Expecting at least 2 successful checks by now, got ${successStates.size}")
             val failStates = nodeA.rpc.vaultQueryBy(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED), contractStateType = FailedCheckState::class.java, paging = PageSpecification(1, 100), sorting = Sort(columns = emptyList())).states
-            assert(failStates.isEmpty()) { "Did not expect any checks to fail, got ${failStates.size}" }
+            assertTrue(failStates.isEmpty(), "Did not expect any checks to fail, got ${failStates.size}")
             nodeA.rpc.startFlow(::StopAllChecksFlow).returnValue.getOrThrow()
             val pendingStatesAfterClean = nodeA.rpc.vaultQueryBy(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED), contractStateType = ScheduledCheckState::class.java, paging = PageSpecification(1, 100), sorting = Sort(columns = emptyList())).states
-            assert(pendingStatesAfterClean.isEmpty()) { "Expected all pending states to be cleared, got ${pendingStatesAfterClean.size}" }
+            assertTrue(pendingStatesAfterClean.isEmpty(), "Expected all pending states to be cleared, got ${pendingStatesAfterClean.size}")
         }
 
     }

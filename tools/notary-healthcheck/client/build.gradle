@@ -11,7 +11,6 @@
 repositories {
     mavenCentral()
     jcenter()
-    maven { url 'https://jitpack.io' }
     mavenLocal()
 }
 
@@ -29,9 +28,8 @@ mainClassName = 'net.corda.notaryhealthcheck.client.MainKt'
 
 dependencies {
     compile project(":client:rpc")
-    runtime project(":core")
     testCompile "junit:junit:$junit_version"
-    compile group: 'info.picocli', name: 'picocli', version: '3.0.1'
+    compile "info.picocli:picocli:$picocli_version"
     compile project(":tools:notary-healthcheck:cordapp")
 }
 
@@ -43,7 +41,7 @@ jar {
 
 task buildClientJar(type: FatCapsule) {
     applicationClass mainClassName
-    archiveName "notaryhealthcheck-client-${corda_release_version}.jar"
+    baseName "notaryhealthcheck-client"
     applicationSource = jar
 }
 
@@ -58,3 +56,5 @@ publish {
     disableDefaultJar = true
     name "corda-notary-healthcheck-client"
 }
+
+assemble.dependsOn buildClientJar
