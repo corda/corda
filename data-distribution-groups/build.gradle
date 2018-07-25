@@ -1,0 +1,41 @@
+// Experimental Confidential Identities support for 1.0
+// This contains the prototype SwapIdentitiesFlow and SwapIdentitiesHandler, which can be used
+// for exchanging confidential identities as part of a flow, until a permanent solution is prepared.
+// Expect this module to be removed and merged into core in a later release.
+apply plugin: 'kotlin'
+apply plugin: CanonicalizerPlugin
+//apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.quasar-utils'
+//apply plugin: 'com.jfrog.artifactory'
+
+description 'Corda Data Distribution Groups'
+
+dependencies {
+    compile project(':core')
+
+    // Quasar, for suspendable fibres.
+    compileOnly("$quasar_group:quasar-core:$quasar_version:jdk8") {
+        transitive = false
+    }
+
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile "junit:junit:$junit_version"
+
+    // Guava: Google test library (collections test suite)
+    testCompile "com.google.guava:guava-testlib:$guava_version"
+
+    // Bring in the MockNode infrastructure for writing protocol unit tests.
+    testCompile project(":node")
+    testCompile project(":node-driver")
+
+    // AssertJ: for fluent assertions for testing
+    testCompile "org.assertj:assertj-core:$assertj_version"
+}
+
+jar {
+    baseName 'corda-data-distribution-groups'
+}
+
+publish {
+    name jar.baseName
+}
