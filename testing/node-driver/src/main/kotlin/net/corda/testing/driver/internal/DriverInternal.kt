@@ -57,7 +57,7 @@ data class InProcessImpl(
         private val onStopCallback: () -> Unit,
         private val node: StartedNodeWithInternals
 ) : InProcess, NodeHandleInternal {
-    val database: CordaPersistence = node.database
+    val database: CordaPersistence = node.internals.database
     override val services: StartedNodeServices get() = node.services
     override val rpcUsers: List<User> = configuration.rpcUsers.map { User(it.username, it.password, it.permissions) }
     override fun stop() {

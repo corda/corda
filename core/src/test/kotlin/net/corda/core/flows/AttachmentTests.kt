@@ -20,6 +20,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.TestStartedNode
 import org.junit.AfterClass
 import org.junit.Test
 import java.io.ByteArrayOutputStream
@@ -148,18 +149,18 @@ class AttachmentTests : WithMockNet {
     //endregion
 
     //region Operations
-    private fun StartedNode.importAttachment(attachment: ByteArray) =
+    private fun TestStartedNode.importAttachment(attachment: ByteArray) =
         attachments.importAttachment(attachment.inputStream(), "test", null)
             .andRunNetwork()
 
-    private fun StartedNode.updateAttachment(attachment:  NodeAttachmentService.DBAttachment) = database.transaction {
+    private fun TestStartedNode.updateAttachment(attachment:  NodeAttachmentService.DBAttachment) = database.transaction {
         session.update(attachment)
     }.andRunNetwork()
 
-    private fun StartedNode.startAttachmentFlow(hash: SecureHash, otherSide: Party) = startFlowAndRunNetwork(
+    private fun TestStartedNode.startAttachmentFlow(hash: SecureHash, otherSide: Party) = startFlowAndRunNetwork(
             InitiatingFetchAttachmentsFlow(otherSide, setOf(hash)))
 
-    private fun StartedNode.getAttachmentWithId(id: SecureHash) =
+    private fun TestStartedNode.getAttachmentWithId(id: SecureHash) =
         attachments.openAttachment(id)!!
     //endregion
 

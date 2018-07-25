@@ -9,6 +9,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -104,6 +105,20 @@ data class InternalMockNodeParameters(
  */
 interface TestStartedNode : StartedNode {
     val internals: InternalMockNetwork.MockNode
+    val services: StartedNodeServices
+    val smm: StateMachineManager
+    val attachments: NodeAttachmentService
+    val rpcOps: CordaRPCOps
+    val network: MessagingService
+    val database: CordaPersistence
+    val notaryService: NotaryService?
+
+    /**
+     * Use this method to register your initiated flows in your tests. This is automatically done by the node when it
+     * starts up for all [FlowLogic] classes it finds which are annotated with [InitiatedBy].
+     * @return An [Observable] of the initiated flows started by counterparties.
+     */
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T>
 
     fun <F : FlowLogic<*>> internalRegisterFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
                                                        flowFactory: InitiatedFlowFactory<F>,

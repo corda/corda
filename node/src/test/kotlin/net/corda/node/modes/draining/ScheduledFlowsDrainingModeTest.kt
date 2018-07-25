@@ -16,10 +16,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.internal.cordappsForPackages
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -34,8 +31,8 @@ import kotlin.test.fail
 class ScheduledFlowsDrainingModeTest {
 
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var aliceNode: StartedNode
-    private lateinit var bobNode: StartedNode
+    private lateinit var aliceNode: TestStartedNode
+    private lateinit var bobNode: TestStartedNode
     private lateinit var notary: Party
     private lateinit var alice: Party
     private lateinit var bob: Party

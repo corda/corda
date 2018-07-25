@@ -19,6 +19,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.TestCorDapp
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -75,7 +76,7 @@ class FinalityHandlerTest {
         assertThat(bob.getTransaction(finalisedTx.id)).isNull()
     }
 
-    private fun StartedNode.assertFlowSentForObservation(runId: StateMachineRunId) {
+    private fun TestStartedNode.assertFlowSentForObservation(runId: StateMachineRunId) {
         val keptInForObservation = smm.flowHospital
                 .track()
                 .let { it.updates.startWith(it.snapshot) }
@@ -86,7 +87,7 @@ class FinalityHandlerTest {
         assertThat(keptInForObservation.by).contains(StaffedFlowHospital.FinalityDoctor)
     }
 
-    private fun StartedNode.getTransaction(id: SecureHash): SignedTransaction? {
+    private fun TestStartedNode.getTransaction(id: SecureHash): SignedTransaction? {
         return database.transaction {
             services.validatedTransactions.getTransaction(id)
         }

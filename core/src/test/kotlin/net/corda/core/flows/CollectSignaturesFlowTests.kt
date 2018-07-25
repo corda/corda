@@ -20,6 +20,7 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.cordappsForPackages
 import org.junit.AfterClass
 import org.junit.Test
@@ -93,7 +94,7 @@ class CollectSignaturesFlowTests : WithContracts {
     }
 
     //region Operators
-    private fun StartedNode.startTestFlow(vararg party: Party) =
+    private fun TestStartedNode.startTestFlow(vararg party: Party) =
             startFlowAndRunNetwork(
                 TestFlow.Initiator(DummyContract.MultiOwnerState(
                     MAGIC_NUMBER,

@@ -14,10 +14,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.testing.node.internal.cordappsForPackages
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -27,8 +24,8 @@ import kotlin.test.assertEquals
 
 class IdempotentFlowTests {
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var nodeA: StartedNode
-    private lateinit var nodeB: StartedNode
+    private lateinit var nodeA: TestStartedNode
+    private lateinit var nodeB: TestStartedNode
 
     companion object {
         val executionCounter = AtomicInteger(0)

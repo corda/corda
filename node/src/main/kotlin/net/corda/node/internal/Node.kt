@@ -4,6 +4,7 @@ import com.codahale.metrics.JmxReporter
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
@@ -13,8 +14,6 @@ import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.internal.notary.NotaryService
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
@@ -67,7 +66,8 @@ import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.system.exitProcess
-import net.corda.node.services.persistence.NodeAttachmentService
+import rx.Observable
+
 /**
  * A version of [StartedNode] which exposes its [Node] internals.
  *
@@ -76,6 +76,14 @@ import net.corda.node.services.persistence.NodeAttachmentService
  */
 interface StartedNodeWithInternals : StartedNode {
     val internals: Node
+    val services: StartedNodeServices
+
+    /**
+     * Use this method to register your initiated flows in your tests. This is automatically done by the node when it
+     * starts up for all [FlowLogic] classes it finds which are annotated with [InitiatedBy].
+     * @return An [Observable] of the initiated flows started by counterparties.
+     */
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T>
 }
 
 /**
@@ -100,33 +108,20 @@ open class Node(configuration: NodeConfiguration,
     /** The actual [StartedNode] implementation created by this [AbstractNode]. */
     private class StartedNodeWithInternalsImpl(
             override val internals: Node,
-            override val attachments: NodeAttachmentService,
-            override val network: MessagingService,
             override val services: StartedNodeServices,
-            override val info: NodeInfo,
-            override val smm: StateMachineManager,
-            override val database: CordaPersistence,
-            override val rpcOps: CordaRPCOps,
-            override val notaryService: NotaryService?) : StartedNodeWithInternals {
+            override val info: NodeInfo) : StartedNodeWithInternals {
 
         override fun dispose() = internals.stop()
 
-        override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) =
-                internals.registerInitiatedFlow(smm, initiatedFlowClass)
+        override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> =
+                internals.registerInitiatedFlow(internals.smm, initiatedFlowClass)
     }
 
     override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): StartedNode =
             StartedNodeWithInternalsImpl(
                     this,
-                    attachments,
-                    network,
-                    object : StartedNodeServices, ServiceHubInternal by services, FlowStarter by flowStarter { },
-                    nodeInfo,
-                    smm,
-                    database,
-                    rpcOps,
-                    notaryService
-            )
+                    object : StartedNodeServices, ServiceHubInternal by services, FlowStarter by flowStarter {},
+                    nodeInfo)
 
     companion object {
         private val staticLog = contextLogger()
@@ -407,7 +402,7 @@ open class Node(configuration: NodeConfiguration,
                 // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
                 //
                 // https://jolokia.org/agent/jvm.html
-                JmxReporter.forRegistry(started.services.monitoringService.metrics).inDomain("net.corda").createsObjectNamesWith { _, domain, name ->
+                JmxReporter.forRegistry(services.monitoringService.metrics).inDomain("net.corda").createsObjectNamesWith { _, domain, name ->
                     // Make the JMX hierarchy a bit better organised.
                     val category = name.substringBefore('.')
                     val subName = name.substringAfter('.', "")

@@ -53,7 +53,7 @@ class RetryFlowMockTest {
         KeepSendingFlow.count.set(0)
     }
 
-    private fun <T> StartedNode.startFlow(logic: FlowLogic<T>): CordaFuture<T> {
+    private fun <T> TestStartedNode.startFlow(logic: FlowLogic<T>): CordaFuture<T> {
         return this.services.startFlow(logic, this.services.newContext()).flatMap { it.resultFuture }
     }
 

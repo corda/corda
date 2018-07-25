@@ -14,6 +14,7 @@ import net.corda.finance.issuedBy
 import net.corda.node.internal.StartedNode
 import net.corda.testing.core.*
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.cordappsForPackages
 import org.junit.AfterClass
 import org.junit.Test
@@ -58,7 +59,7 @@ class FinalityFlowTests : WithFinality {
                 willThrow<IllegalArgumentException>())
     }
 
-    private fun StartedNode.signCashTransactionWith(other: Party): SignedTransaction {
+    private fun TestStartedNode.signCashTransactionWith(other: Party): SignedTransaction {
         val amount = 1000.POUNDS.issuedBy(alice.ref(0))
         val builder = TransactionBuilder(notary)
         Cash().generateIssue(builder, amount, other, notary)
