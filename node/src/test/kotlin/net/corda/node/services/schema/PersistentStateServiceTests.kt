@@ -25,15 +25,15 @@ import org.junit.Test
 import rx.subjects.PublishSubject
 import kotlin.test.assertEquals
 
-class HibernateObserverTests {
+class PersistentStateServiceTests {
     @Before
     fun setUp() {
-        LogHelper.setLevel(HibernateObserver::class)
+        LogHelper.setLevel(PersistentStateService::class)
     }
 
     @After
     fun cleanUp() {
-        LogHelper.reset(HibernateObserver::class)
+        LogHelper.reset(PersistentStateService::class)
     }
 
     class TestState : QueryableState {
@@ -66,7 +66,6 @@ class HibernateObserverTests {
             }
         }
         val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock(), schemaService)
-        HibernateObserver.install(rawUpdatesPublisher, database.hibernateConfig, schemaService)
         database.transaction {
             val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
             rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), DummyContract.PROGRAM_ID, MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))

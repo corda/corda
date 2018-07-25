@@ -30,7 +30,7 @@ import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.ContractStateAndRef
-import net.corda.node.services.schema.HibernateObserver
+import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.services.api.IdentityServiceInternal
@@ -82,7 +82,7 @@ class HibernateConfigurationTest {
 
     // Hibernate configuration objects
     lateinit var hibernateConfig: HibernateConfiguration
-    lateinit var hibernatePersister: HibernateObserver
+    lateinit var hibernatePersister: PersistentStateService
     lateinit var sessionFactory: SessionFactory
     lateinit var entityManager: EntityManager
     lateinit var criteriaBuilder: CriteriaBuilder
@@ -119,7 +119,7 @@ class HibernateConfigurationTest {
             services = object : MockServices(cordappPackages, BOB_NAME, rigorousMock<IdentityServiceInternal>().also {
                 doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == BOB_NAME })
             }, generateKeyPair(), dummyNotary.keyPair) {
-                override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, hibernateConfig)
+                override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, hibernateConfig, schemaService)
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         (validatedTransactions as WritableTransactionStorage).addTransaction(stx)
@@ -131,7 +131,7 @@ class HibernateConfigurationTest {
                 override fun jdbcSession() = database.createSession()
             }
             vaultFiller = VaultFiller(services, dummyNotary, notary, ::Random)
-            hibernatePersister = HibernateObserver.install(services.vaultService.rawUpdates, hibernateConfig, schemaService)
+            hibernatePersister = PersistentStateService(schemaService)
         }
 
         identity = services.myInfo.singleIdentity()
