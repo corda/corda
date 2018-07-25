@@ -75,7 +75,7 @@ class FinalityHandlerTest {
         assertThat(bob.getTransaction(finalisedTx.id)).isNull()
     }
 
-    private fun StartedNode<*>.assertFlowSentForObservation(runId: StateMachineRunId) {
+    private fun StartedNode.assertFlowSentForObservation(runId: StateMachineRunId) {
         val keptInForObservation = smm.flowHospital
                 .track()
                 .let { it.updates.startWith(it.snapshot) }
@@ -86,7 +86,7 @@ class FinalityHandlerTest {
         assertThat(keptInForObservation.by).contains(StaffedFlowHospital.FinalityDoctor)
     }
 
-    private fun StartedNode<*>.getTransaction(id: SecureHash): SignedTransaction? {
+    private fun StartedNode.getTransaction(id: SecureHash): SignedTransaction? {
         return database.transaction {
             services.validatedTransactions.getTransaction(id)
         }

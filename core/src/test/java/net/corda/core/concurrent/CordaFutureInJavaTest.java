@@ -14,18 +14,12 @@ import net.corda.core.internal.concurrent.OpenFuture;
 import org.junit.Test;
 
 import java.io.EOFException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 import static net.corda.core.internal.concurrent.CordaFutureImplKt.doneFuture;
 import static net.corda.core.internal.concurrent.CordaFutureImplKt.openFuture;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class CordaFutureInJavaTest {
     @Test

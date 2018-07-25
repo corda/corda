@@ -343,15 +343,16 @@ open class NodeStartup(val args: Array<String>) {
         }
 
         val startedNode = node.start()
-        logLoadedCorDapps(startedNode.services.cordappProvider.cordapps)
-        startedNode.internals.nodeReadyFuture.thenMatch({
+        logLoadedCorDapps(node.services.cordappProvider.cordapps)
+        Node.printBasicNodeInfo("Loaded CorDapps", startedNode.services.cordappProvider.cordapps.joinToString { it.name })
+        node.nodeReadyFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             val name = startedNode.info.legalIdentitiesAndCerts.first().name.organisation
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.
             if (conf.shouldStartLocalShell()) {
-                startedNode.internals.startupComplete.then {
+                node.startupComplete.then {
                     try {
                         InteractiveShell.runLocalShell({ startedNode.dispose() })
                     } catch (e: Throwable) {
@@ -366,7 +367,7 @@ open class NodeStartup(val args: Array<String>) {
                 { th ->
                     logger.error("Unexpected exception during registration", th)
                 })
-        startedNode.internals.run()
+        node.run()
     }
 
     protected open fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {

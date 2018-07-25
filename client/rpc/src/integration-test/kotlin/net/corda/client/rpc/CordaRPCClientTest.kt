@@ -30,8 +30,7 @@ import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
+import net.corda.node.internal.StartedNodeWithInternals
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.common.internal.checkNotOnClasspath
 import net.corda.testing.core.*
@@ -68,7 +67,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
     }
 
-    private lateinit var node: StartedNode<Node>
+    private lateinit var node: StartedNodeWithInternals
     private lateinit var identity: Party
     private lateinit var client: CordaRPCClient
     private var connection: CordaRPCConnection? = null

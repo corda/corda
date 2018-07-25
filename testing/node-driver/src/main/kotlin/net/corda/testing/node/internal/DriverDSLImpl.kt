@@ -32,7 +32,7 @@ import net.corda.core.utilities.*
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.VersionInfo
 import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
+import net.corda.node.internal.StartedNodeWithInternals
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
@@ -821,7 +821,7 @@ class DriverDSLImpl(
         private fun startInProcessNode(
                 executorService: ScheduledExecutorService,
                 config: NodeConfig
-        ): CordaFuture<Pair<StartedNode<Node>, Thread>> {
+        ): CordaFuture<Pair<StartedNodeWithInternals, Thread>> {
             return executorService.fork {
                 log.info("Starting in-process Node ${config.corda.myLegalName.organisation}")
                 if (!(ManagementFactory.getRuntimeMXBean().inputArguments.any { it.contains("quasar") })) {
@@ -830,9 +830,10 @@ class DriverDSLImpl(
                 // Write node.conf
                 writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe.toNodeOnly())
                 // TODO pass the version in?
-                val node = InProcessNode(config.corda, MOCK_VERSION_INFO).start()
+                val internals = InProcessNode(config.corda, MOCK_VERSION_INFO)
+                val node = internals.start() as StartedNodeWithInternals
                 val nodeThread = thread(name = config.corda.myLegalName.organisation) {
-                    node.internals.run()
+                    internals.run()
                 }
                 node to nodeThread
             }.flatMap { nodeAndThread ->

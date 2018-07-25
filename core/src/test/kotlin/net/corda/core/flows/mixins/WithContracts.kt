@@ -29,33 +29,33 @@ interface WithContracts : WithMockNet {
     //region
 
     //region Operations
-    fun StartedNode<*>.signDummyContract(owner: PartyAndReference, magicNumber: Int = 0, vararg others: PartyAndReference) =
+    fun StartedNode.signDummyContract(owner: PartyAndReference, magicNumber: Int = 0, vararg others: PartyAndReference) =
             services.signDummyContract(owner, magicNumber, *others).andRunNetwork()
 
     fun ServiceHub.signDummyContract(owner: PartyAndReference, magicNumber: Int = 0, vararg others: PartyAndReference) =
             signInitialTransaction(createDummyContract(owner, magicNumber, *others))
 
-    fun StartedNode<*>.collectSignatures(ptx: SignedTransaction) =
+    fun StartedNode.collectSignatures(ptx: SignedTransaction) =
             startFlowAndRunNetwork(CollectSignaturesFlow(ptx, emptySet()))
 
-    fun StartedNode<*>.addSignatureTo(ptx: SignedTransaction) =
+    fun StartedNode.addSignatureTo(ptx: SignedTransaction) =
             services.addSignature(ptx).andRunNetwork()
 
     fun <T : UpgradedContract<*, *>>
-            StartedNode<*>.initiateContractUpgrade(tx: SignedTransaction, toClass: KClass<T>) =
+            StartedNode.initiateContractUpgrade(tx: SignedTransaction, toClass: KClass<T>) =
             initiateContractUpgrade(tx.tx.outRef(0), toClass)
 
     fun <S : ContractState, T : UpgradedContract<S, *>>
-            StartedNode<*>.initiateContractUpgrade(stateAndRef: StateAndRef<S>, toClass: KClass<T>) =
+            StartedNode.initiateContractUpgrade(stateAndRef: StateAndRef<S>, toClass: KClass<T>) =
             startFlowAndRunNetwork(ContractUpgradeFlow.Initiate(stateAndRef, toClass.java))
 
-    fun <T : UpgradedContract<*, *>> StartedNode<*>.authoriseContractUpgrade(
+    fun <T : UpgradedContract<*, *>> StartedNode.authoriseContractUpgrade(
         tx: SignedTransaction, toClass: KClass<T>) =
         startFlow(
             ContractUpgradeFlow.Authorise(tx.tx.outRef<ContractState>(0), toClass.java)
         )
 
-    fun StartedNode<*>.deauthoriseContractUpgrade(tx: SignedTransaction) = startFlow(
+    fun StartedNode.deauthoriseContractUpgrade(tx: SignedTransaction) = startFlow(
         ContractUpgradeFlow.Deauthorise(tx.tx.outRef<ContractState>(0).ref)
     )
 

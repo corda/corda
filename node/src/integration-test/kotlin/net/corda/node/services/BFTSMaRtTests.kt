@@ -16,7 +16,6 @@ import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
@@ -59,7 +58,7 @@ class BFTSMaRtTests : IntegrationTest() {
         f.getOrThrow()
     }
 
-    private fun StartedNode<MockNode>.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
+    private fun StartedNode.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
         return services.signInitialTransaction(
                 TransactionBuilder(notary).apply {
                     addCommand(dummyCommand(services.myInfo.singleIdentity().owningKey))

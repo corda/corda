@@ -41,32 +41,32 @@ interface WithMockNet {
     /**
      * Sign an initial transaction
      */
-    fun StartedNode<*>.signInitialTransaction(build: TransactionBuilder.() -> TransactionBuilder) =
+    fun StartedNode.signInitialTransaction(build: TransactionBuilder.() -> TransactionBuilder) =
             services.signInitialTransaction(TransactionBuilder(mockNet.defaultNotaryIdentity).build())
 
     /**
      * Retrieve the sole instance of a state of a particular class from the node's vault
      */
-    fun <S: ContractState> StartedNode<*>.getStateFromVault(stateClass: KClass<S>) =
+    fun <S: ContractState> StartedNode.getStateFromVault(stateClass: KClass<S>) =
         services.vaultService.queryBy(stateClass.java).states.single()
 
     /**
      * Start a flow
      */
-    fun <T> StartedNode<*>.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = services.startFlow(logic)
+    fun <T> StartedNode.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = services.startFlow(logic)
 
     /**
      * Start a flow and run the network immediately afterwards
      */
-    fun <T> StartedNode<*>.startFlowAndRunNetwork(logic: FlowLogic<T>): FlowStateMachine<T> =
+    fun <T> StartedNode.startFlowAndRunNetwork(logic: FlowLogic<T>): FlowStateMachine<T> =
             startFlow(logic).andRunNetwork()
 
-    fun StartedNode<*>.createConfidentialIdentity(party: Party) =
+    fun StartedNode.createConfidentialIdentity(party: Party) =
         services.keyManagementService.freshKeyAndCert(
                 services.myInfo.legalIdentitiesAndCerts.single { it.name == party.name },
                 false)
 
-    fun StartedNode<*>.verifyAndRegister(identity: PartyAndCertificate) =
+    fun StartedNode.verifyAndRegister(identity: PartyAndCertificate) =
         services.identityService.verifyAndRegisterIdentity(identity)
 
     //endregion

@@ -68,7 +68,7 @@ class FinalityFlowTests : WithFinality {
                 willThrow<IllegalArgumentException>())
     }
 
-    private fun StartedNode<*>.signCashTransactionWith(other: Party): SignedTransaction {
+    private fun StartedNode.signCashTransactionWith(other: Party): SignedTransaction {
         val amount = 1000.POUNDS.issuedBy(alice.ref(0))
         val builder = TransactionBuilder(notary)
         Cash().generateIssue(builder, amount, other, notary)

@@ -24,7 +24,6 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.*
-import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import org.junit.AfterClass
 import org.junit.Test
 
@@ -85,7 +84,7 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
     }
 
     //region RPC DSL
-    private fun RPCDriverDSL.startProxy(node: StartedNode<MockNode>, user: User): CordaRPCOps {
+    private fun RPCDriverDSL.startProxy(node: StartedNode, user: User): CordaRPCOps {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,
@@ -113,16 +112,16 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
     //endregion
 
     //region Matchers
-    private fun StartedNode<*>.hasDummyContractUpgradeTransaction() =
+    private fun StartedNode.hasDummyContractUpgradeTransaction() =
             hasContractUpgradeTransaction<DummyContract.State, DummyContractV2.State>()
 
-    private inline fun <reified FROM : Any, reified TO: Any> StartedNode<*>.hasContractUpgradeTransaction() =
+    private inline fun <reified FROM : Any, reified TO: Any> StartedNode.hasContractUpgradeTransaction() =
         has<StateAndRef<ContractState>, ContractUpgradeLedgerTransaction>(
             "a contract upgrade transaction",
             { getContractUpgradeTransaction(it) },
             isUpgrade<FROM, TO>())
 
-    private fun StartedNode<*>.getContractUpgradeTransaction(state: StateAndRef<ContractState>) =
+    private fun StartedNode.getContractUpgradeTransaction(state: StateAndRef<ContractState>) =
         services.validatedTransactions.getTransaction(state.ref.txhash)!!
                 .resolveContractUpgradeTransaction(services)
 

@@ -16,10 +16,10 @@ import net.corda.testing.core.singleIdentity
 interface WithFinality : WithMockNet {
 
     //region Operations
-    fun StartedNode<*>.finalise(stx: SignedTransaction, vararg additionalParties: Party) =
+    fun StartedNode.finalise(stx: SignedTransaction, vararg additionalParties: Party) =
         startFlowAndRunNetwork(FinalityFlow(stx, additionalParties.toSet()))
 
-    fun StartedNode<*>.getValidatedTransaction(stx: SignedTransaction) =
+    fun StartedNode.getValidatedTransaction(stx: SignedTransaction) =
         services.validatedTransactions.getTransaction(stx.id)!!
 
     fun CordaRPCOps.finalise(stx: SignedTransaction, vararg parties: Party) =
@@ -28,7 +28,7 @@ interface WithFinality : WithMockNet {
     //endregion
 
     //region Matchers
-    fun visibleTo(other: StartedNode<*>) = object : Matcher<SignedTransaction> {
+    fun visibleTo(other: StartedNode) = object : Matcher<SignedTransaction> {
         override val description = "has a transaction visible to ${other.info.singleIdentity()}"
         override fun invoke(actual: SignedTransaction) =
                 equalTo(actual)(other.getValidatedTransaction(actual))

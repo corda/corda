@@ -37,7 +37,7 @@ import kotlin.test.assertFailsWith
 class NotaryServiceTests {
     private lateinit var mockNet: InternalMockNetwork
     private lateinit var notaryServices: ServiceHub
-    private lateinit var aliceNode: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var aliceNode: StartedNode
     private lateinit var notary: Party
     private lateinit var alice: Party
 
@@ -65,7 +65,7 @@ class NotaryServiceTests {
 
     internal companion object {
         /** This is used by both [NotaryServiceTests] and [ValidatingNotaryServiceTests]. */
-        fun notariseWithTooManyInputs(node: StartedNode<InternalMockNetwork.MockNode>, party: Party, notary: Party, network: InternalMockNetwork) {
+        fun notariseWithTooManyInputs(node: StartedNode, party: Party, notary: Party, network: InternalMockNetwork) {
             val stx = generateTransaction(node, party, notary)
 
             val future = node.services.startFlow(DummyClientFlow(stx, notary)).resultFuture
@@ -73,7 +73,7 @@ class NotaryServiceTests {
             assertFailsWith<NotaryException> { future.getOrThrow() }
         }
 
-        private fun generateTransaction(node: StartedNode<InternalMockNetwork.MockNode>, party: Party, notary: Party): SignedTransaction {
+        private fun generateTransaction(node: StartedNode, party: Party, notary: Party): SignedTransaction {
             val txHash = SecureHash.randomSHA256()
             val inputs = (1..10_005).map { StateRef(txHash, it) }
             val tx = NotaryChangeTransactionBuilder(inputs, notary, party).build()

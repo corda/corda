@@ -103,7 +103,7 @@ class CollectSignaturesFlowTests : WithContracts {
     }
 
     //region Operators
-    private fun StartedNode<*>.startTestFlow(vararg party: Party) =
+    private fun StartedNode.startTestFlow(vararg party: Party) =
             startFlowAndRunNetwork(
                 TestFlow.Initiator(DummyContract.MultiOwnerState(
                     MAGIC_NUMBER,

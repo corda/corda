@@ -46,10 +46,7 @@ import net.corda.testing.internal.GlobalDatabaseRule
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetworkParameters
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.cordappsForPackages
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Test
@@ -65,9 +62,9 @@ class TimedFlowTestRule(val clusterSize: Int) : ExternalResource() {
 
     lateinit var mockNet: InternalMockNetwork
     lateinit var notary: Party
-    lateinit var node: StartedNode<InternalMockNetwork.MockNode>
+    lateinit var node: TestStartedNode
 
-    private fun startClusterAndNode(mockNet: InternalMockNetwork): Pair<Party, StartedNode<InternalMockNetwork.MockNode>> {
+    private fun startClusterAndNode(mockNet: InternalMockNetwork): Pair<Party, TestStartedNode> {
         val replicaIds = (0 until clusterSize)
         val notaryIdentity = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
                 replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
@@ -187,7 +184,7 @@ class TimedFlowTests {
         }
     }
 
-    private fun StartedNode<InternalMockNetwork.MockNode>.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
+    private fun StartedNode.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
         return services.signInitialTransaction(
                 TransactionBuilder(notary).apply {
                     addCommand(dummyCommand(services.myInfo.singleIdentity().owningKey))

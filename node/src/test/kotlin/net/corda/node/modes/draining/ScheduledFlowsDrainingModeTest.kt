@@ -44,8 +44,8 @@ import kotlin.test.fail
 class ScheduledFlowsDrainingModeTest {
 
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var aliceNode: StartedNode<InternalMockNetwork.MockNode>
-    private lateinit var bobNode: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var aliceNode: StartedNode
+    private lateinit var bobNode: StartedNode
     private lateinit var notary: Party
     private lateinit var alice: Party
     private lateinit var bob: Party

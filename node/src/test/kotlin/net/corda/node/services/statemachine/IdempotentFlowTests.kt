@@ -27,8 +27,8 @@ import kotlin.test.assertEquals
 
 class IdempotentFlowTests {
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var nodeA: StartedNode<InternalMockNetwork.MockNode>
-    private lateinit var nodeB: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var nodeA: StartedNode
+    private lateinit var nodeB: StartedNode
 
     companion object {
         val executionCounter = AtomicInteger(0)

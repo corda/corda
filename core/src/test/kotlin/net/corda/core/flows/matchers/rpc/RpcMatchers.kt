@@ -2,8 +2,8 @@ package net.corda.core.flows.matchers.rpc
 
 import com.natpryce.hamkrest.Matcher
 import com.natpryce.hamkrest.has
-import net.corda.core.flows.matchers.willThrow
 import net.corda.core.flows.matchers.willReturn
+import net.corda.core.flows.matchers.willThrow
 import net.corda.core.messaging.FlowHandle
 
 /**
