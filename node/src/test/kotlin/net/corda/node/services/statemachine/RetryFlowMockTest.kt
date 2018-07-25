@@ -18,10 +18,10 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.MessagingServiceSpy
 import net.corda.testing.node.internal.newContext
 import net.corda.testing.node.internal.setMessagingServiceSpy
+import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hibernate.exception.ConstraintViolationException
@@ -38,8 +38,8 @@ import kotlin.test.assertNull
 
 class RetryFlowMockTest {
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var nodeA: StartedNode<MockNode>
-    private lateinit var nodeB: StartedNode<MockNode>
+    private lateinit var nodeA: TestStartedNode
+    private lateinit var nodeB: TestStartedNode
 
     @Before
     fun start() {
@@ -53,7 +53,7 @@ class RetryFlowMockTest {
         KeepSendingFlow.count.set(0)
     }
 
-    private fun <T> StartedNode<MockNode>.startFlow(logic: FlowLogic<T>): CordaFuture<T> {
+    private fun <T> StartedNode.startFlow(logic: FlowLogic<T>): CordaFuture<T> {
         return this.services.startFlow(logic, this.services.newContext()).flatMap { it.resultFuture }
     }
 

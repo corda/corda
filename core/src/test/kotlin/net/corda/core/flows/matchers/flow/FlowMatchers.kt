@@ -3,8 +3,8 @@ package net.corda.core.flows.matchers.flow
 import com.natpryce.hamkrest.Matcher
 import com.natpryce.hamkrest.equalTo
 import com.natpryce.hamkrest.has
-import net.corda.core.flows.matchers.willThrow
 import net.corda.core.flows.matchers.willReturn
+import net.corda.core.flows.matchers.willThrow
 import net.corda.core.internal.FlowStateMachine
 
 /**

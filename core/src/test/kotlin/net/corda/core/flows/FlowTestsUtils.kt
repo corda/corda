@@ -4,8 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
-import net.corda.node.internal.StartedNode
-import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.TestStartedNode
 import kotlin.reflect.KClass
 
 /**
@@ -38,14 +37,14 @@ class NoAnswer(private val closure: () -> Unit = {}) : FlowLogic<Unit>() {
 /**
  * Allows to register a flow of type [R] against an initiating flow of type [I].
  */
-inline fun <I : FlowLogic<*>, reified R : FlowLogic<*>> StartedNode<*>.registerInitiatedFlow(initiatingFlowType: KClass<I>, crossinline construct: (session: FlowSession) -> R) {
+inline fun <I : FlowLogic<*>, reified R : FlowLogic<*>> TestStartedNode.registerInitiatedFlow(initiatingFlowType: KClass<I>, crossinline construct: (session: FlowSession) -> R) {
     internalRegisterFlowFactory(initiatingFlowType.java, InitiatedFlowFactory.Core { session -> construct(session) }, R::class.javaObjectType, true)
 }
 
 /**
  * Allows to register a flow of type [Answer] against an initiating flow of type [I], returning a valure of type [R].
  */
-inline fun <I : FlowLogic<*>, reified R : Any> StartedNode<InternalMockNetwork.MockNode>.registerAnswer(initiatingFlowType: KClass<I>, value: R) {
+inline fun <I : FlowLogic<*>, reified R : Any> TestStartedNode.registerAnswer(initiatingFlowType: KClass<I>, value: R) {
     internalRegisterFlowFactory(initiatingFlowType.java, InitiatedFlowFactory.Core { session -> Answer(session, value) }, Answer::class.javaObjectType, true)
 }
 

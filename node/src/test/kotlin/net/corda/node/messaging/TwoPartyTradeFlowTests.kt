@@ -313,7 +313,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     // Creates a mock node with an overridden storage service that uses a RecordingMap, that lets us test the order
     // of gets and puts.
-    private fun makeNodeWithTracking(name: CordaX500Name): StartedNode<InternalMockNetwork.MockNode> {
+    private fun makeNodeWithTracking(name: CordaX500Name): StartedNode {
         // Create a node in the mock network ...
         return mockNet.createNode(InternalMockNodeParameters(legalName = name), nodeFactory = { args, cordappLoader ->
             if (cordappLoader != null) {
@@ -543,8 +543,8 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     private fun runBuyerAndSeller(notary: Party,
                                   buyer: Party,
-                                  sellerNode: StartedNode<InternalMockNetwork.MockNode>,
-                                  buyerNode: StartedNode<InternalMockNetwork.MockNode>,
+                                  sellerNode: StartedNode,
+                                  buyerNode: StartedNode,
                                   assetToSell: StateAndRef<OwnableState>): RunResult {
         val buyerFlows: Observable<out FlowLogic<*>> = buyerNode.registerInitiatedFlow(BuyerAcceptor::class.java)
         val firstBuyerFiber = buyerFlows.toFuture().map { it.stateMachine }
@@ -638,10 +638,10 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     private fun insertFakeTransactions(
             wtxToSign: List<WireTransaction>,
-            node: StartedNode<*>,
+            node: StartedNode,
             identity: Party,
-            notaryNode: StartedNode<*>,
-            vararg extraSigningNodes: StartedNode<*>): Map<SecureHash, SignedTransaction> {
+            notaryNode: StartedNode,
+            vararg extraSigningNodes: StartedNode): Map<SecureHash, SignedTransaction> {
         val notaryParty = mockNet.defaultNotaryIdentity
         val signed = wtxToSign.map {
             val id = it.id

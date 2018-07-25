@@ -14,8 +14,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
+import net.corda.node.internal.StartedNodeWithInternals
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
@@ -26,6 +25,7 @@ import net.corda.testing.node.User
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.configureTestSSL
 import net.corda.testing.node.internal.NodeBasedTest
+import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
@@ -44,7 +44,7 @@ import kotlin.test.assertEquals
  */
 abstract class MQSecurityTest : NodeBasedTest() {
     val rpcUser = User("user1", "pass", permissions = emptySet())
-    lateinit var alice: StartedNode<Node>
+    lateinit var alice: StartedNodeWithInternals
     lateinit var attacker: SimpleMQClient
     private val clients = ArrayList<SimpleMQClient>()
 

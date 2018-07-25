@@ -10,7 +10,6 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -128,9 +127,9 @@ class UnstartedMockNode private constructor(private val node: InternalMockNetwor
 }
 
 /** A class that represents a started mock node for testing. */
-class StartedMockNode private constructor(private val node: StartedNode<InternalMockNetwork.MockNode>) {
+class StartedMockNode private constructor(private val node: TestStartedNode) {
     companion object {
-        internal fun create(node: StartedNode<InternalMockNetwork.MockNode>): StartedMockNode {
+        internal fun create(node: TestStartedNode): StartedMockNode {
             return StartedMockNode(node)
         }
     }

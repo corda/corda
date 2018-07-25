@@ -11,7 +11,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
+
+import net.corda.node.internal.StartedNodeWithInternals
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -46,7 +47,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     val tempFolder = TemporaryFolder()
 
     private lateinit var defaultNetworkParameters: NetworkParametersCopier
-    private val nodes = mutableListOf<StartedNode<Node>>()
+    private val nodes = mutableListOf<StartedNodeWithInternals>()
     private val nodeInfos = mutableListOf<NodeInfo>()
     private val portAllocation = PortAllocation.Incremental(10000)
 
@@ -86,7 +87,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     fun startNode(legalName: CordaX500Name,
                   platformVersion: Int = 1,
                   rpcUsers: List<User> = emptyList(),
-                  configOverrides: Map<String, Any> = emptyMap()): StartedNode<Node> {
+                  configOverrides: Map<String, Any> = emptyMap()): StartedNodeWithInternals {
         val baseDirectory = baseDirectory(legalName).createDirectories()
         val p2pAddress = configOverrides["p2pAddress"] ?: portAllocation.nextHostAndPort().toString()
         val config = ConfigHelper.loadConfig(
@@ -118,11 +119,12 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
         }
 
         defaultNetworkParameters.install(baseDirectory)
-        val node = InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion)).start()
+        val internals = InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion))
+        val node = internals.start() as StartedNodeWithInternals
         nodes += node
         ensureAllNetworkMapCachesHaveAllNodeInfos()
         thread(name = legalName.organisation) {
-            node.internals.run()
+            internals.run()
         }
 
         return node
