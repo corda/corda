@@ -100,9 +100,9 @@ class CordaPersistence(
         transaction {
             check(!connection.metaData.isReadOnly) { "Database should not be readonly." }
 
-            }
+        }
     }
-        object DataSourceConfigTag {
+    object DataSourceConfigTag {
         const val DATA_SOURCE_URL = "dataSource.url"
     }
 

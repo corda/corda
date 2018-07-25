@@ -28,7 +28,7 @@ import java.util.stream.Stream
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
-import javax.persistence.Lob
+import org.hibernate.annotations.Type
 
 /**
  * Simple checkpoint key value storage in DB.
@@ -43,7 +43,7 @@ class DBCheckpointStorage : CheckpointStorage {
             @Column(name = "checkpoint_id", length = 64, nullable = false)
             var checkpointId: String = "",
 
-            @Lob
+            @Type(type = "corda-blob")
             @Column(name = "checkpoint_value", nullable = false)
             var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
     )

@@ -76,10 +76,10 @@ absolute path to the node's base directory.
 
 :database:  This section is used to configure JDBC and Hibernate related properties:
 
-    :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
+        :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
             ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
 
-    :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
+        :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
 
     :runMigration: Boolean on whether to run the database migration scripts at startup. Defaults to false.
                    In production please keep it false. For more information please check :doc:`database-management`

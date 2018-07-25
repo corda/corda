@@ -26,6 +26,7 @@ import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.service.UnknownUnwrapTypeException
 import org.hibernate.type.AbstractSingleColumnStandardBasicType
+import org.hibernate.type.MaterializedBlobType
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
 import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
 import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
@@ -52,6 +53,15 @@ class HibernateConfiguration(
                 // to avoid OOM when large blobs might get logged.
                 applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
                 applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
+
+                // Create a custom type that will map a blob to byteA in postgres and as a normal blob for all other dbms.
+                // This is required for the Checkpoints as a workaround for the issue that postgres has on azure.
+                if (jdbcUrl.contains(":postgresql:", ignoreCase = true)) {
+                    applyBasicType(MapBlobToPostgresByteA, MapBlobToPostgresByteA.name)
+                } else {
+                    applyBasicType(MapBlobToNormalBlob, MapBlobToNormalBlob.name)
+                }
+
                 // When connecting to SqlServer or Oracle, do we need to tell hibernate to use
                 // nationalised (i.e. Unicode) strings by default
                 val forceUnicodeForSqlServer = listOf(":oracle:", ":sqlserver:").any { jdbcUrl.contains(it, ignoreCase = true) }
@@ -200,6 +210,23 @@ class HibernateConfiguration(
 
         override fun getName(): String {
             return "corda-wrapper-binary"
+        }
+    }
+
+    // Maps to a byte array on postgres.
+    object MapBlobToPostgresByteA : AbstractSingleColumnStandardBasicType<ByteArray>(VarbinaryTypeDescriptor.INSTANCE, PrimitiveByteArrayTypeDescriptor.INSTANCE) {
+        override fun getRegistrationKeys(): Array<String> {
+            return arrayOf(name, "ByteArray", ByteArray::class.java.name)
+        }
+
+        override fun getName(): String {
+            return "corda-blob"
+        }
+    }
+
+    object MapBlobToNormalBlob : MaterializedBlobType() {
+        override fun getName(): String {
+            return "corda-blob"
         }
     }
 }
