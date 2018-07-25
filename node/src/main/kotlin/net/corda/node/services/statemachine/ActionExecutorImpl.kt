@@ -26,7 +26,7 @@ class ActionExecutorImpl(
         private val services: ServiceHubInternal,
         private val checkpointStorage: CheckpointStorage,
         private val flowMessaging: FlowMessaging,
-        private val stateMachineManager: StateMachineManagerInternal,
+        private val stateMachineManager: StateMachineManager,
         private val checkpointSerializationContext: SerializationContext,
         metrics: MetricRegistry
 ) : ActionExecutor {

@@ -107,9 +107,6 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
  * sweeping up the Node into the Kryo checkpoint serialization via any flows holding a reference to ServiceHub.
  */
 // TODO Log warning if this node is a notary but not one of the ones specified in the network parameters, both for core and custom
-
-// In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
-// AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
 abstract class AbstractNode<S : StartedNode>(val configuration: NodeConfiguration,
                                              val platformClock: CordaClock,
                                              protected val versionInfo: VersionInfo,
@@ -224,7 +221,7 @@ abstract class AbstractNode<S : StartedNode>(val configuration: NodeConfiguratio
     private var _started: StartedNode? = null
 
     private fun <T : Any> T.tokenize(): T {
-        tokenizableServices?.add(this) ?: throw IllegalStateException("The tokenisable services list has already been finialised")
+        tokenizableServices?.add(this) ?: throw IllegalStateException("The tokenisable services list has already been finalised")
         return this
     }
 
@@ -351,11 +348,9 @@ abstract class AbstractNode<S : StartedNode>(val configuration: NodeConfiguratio
             smm.start(frozenTokenizableServices)
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
-            (smm as? StateMachineManagerInternal)?.let {
-                val flowMonitor = FlowMonitor(smm::snapshot, configuration.flowMonitorPeriodMillis, configuration.flowMonitorSuspensionLoggingThresholdMillis)
-                runOnStop += flowMonitor::stop
-                flowMonitor.start()
-            }
+            val flowMonitor = FlowMonitor(smm::snapshot, configuration.flowMonitorPeriodMillis, configuration.flowMonitorSuspensionLoggingThresholdMillis)
+            runOnStop += flowMonitor::stop
+            flowMonitor.start()
 
             schedulerService.start()
 
