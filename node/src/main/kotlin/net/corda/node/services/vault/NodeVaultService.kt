@@ -205,6 +205,7 @@ class NodeVaultService(
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
                 val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
                 persistentStateService.persist(vaultUpdate.produced)
+                updatesPublisher.onNext(vaultUpdate)
             }
         }
     }

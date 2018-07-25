@@ -14,10 +14,7 @@ import net.corda.core.identity.*
 import net.corda.core.internal.NotaryChangeTransactionBuilder
 import net.corda.core.internal.packageName
 import net.corda.core.node.StatesToRecord
-import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.*
@@ -100,8 +97,8 @@ class NodeVaultServiceTest {
         vaultFiller = VaultFiller(services, dummyNotary)
         // This is safe because MockServices only ever have a single identity
         identity = services.myInfo.singleIdentityAndCert()
-        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock())
-        bocServices = MockServices(cordappPackages, bankOfCorda, rigorousMock())
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock<IdentityService>())
+        bocServices = MockServices(cordappPackages, bankOfCorda, rigorousMock<IdentityService>())
         services.identityService.verifyAndRegisterIdentity(DUMMY_CASH_ISSUER_IDENTITY)
         services.identityService.verifyAndRegisterIdentity(BOC_IDENTITY)
     }
