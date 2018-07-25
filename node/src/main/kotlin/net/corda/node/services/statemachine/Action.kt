@@ -39,7 +39,7 @@ sealed class Action {
     /**
      * Persist the specified [checkpoint].
      */
-    data class PersistCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint, val initialCheckpoint: Boolean) : Action()
+    data class PersistCheckpoint(val id: StateMachineRunId, val checkpoint: Checkpoint, val isCheckpointUpdate: Boolean) : Action()
 
     /**
      * Remove the checkpoint corresponding to [id].

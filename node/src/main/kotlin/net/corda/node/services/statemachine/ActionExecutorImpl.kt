@@ -97,10 +97,10 @@ class ActionExecutorImpl(
     @Suspendable
     private fun executePersistCheckpoint(action: Action.PersistCheckpoint) {
         val checkpointBytes = serializeCheckpoint(action.checkpoint)
-        if (action.initialCheckpoint) {
-            checkpointStorage.addCheckpoint(action.id, checkpointBytes)
-        } else {
+        if (action.isCheckpointUpdate) {
             checkpointStorage.updateCheckpoint(action.id, checkpointBytes)
+        } else {
+            checkpointStorage.addCheckpoint(action.id, checkpointBytes)
         }
         checkpointingMeter.mark()
         checkpointSizesThisSecond.update(checkpointBytes.size.toLong())
