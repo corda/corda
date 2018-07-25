@@ -9,6 +9,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.Vault.StateStatus
 import net.corda.core.node.services.vault.*
@@ -180,7 +181,14 @@ interface VaultService {
      */
     @DeleteForDJVM
     fun whenConsumed(ref: StateRef): CordaFuture<Vault.Update<ContractState>> {
-        return updates.filter { it.consumed.any { it.ref == ref } }.toFuture()
+        val query = QueryCriteria.VaultQueryCriteria(stateRefs = listOf(ref), status = Vault.StateStatus.CONSUMED)
+        val result = trackBy<ContractState>(query)
+        val snapshot = result.snapshot.states
+        return if (snapshot.isNotEmpty()) {
+            doneFuture(Vault.Update(consumed = setOf(snapshot.single()), produced = emptySet()))
+        } else {
+            result.updates.toFuture()
+        }
     }
 
     /**

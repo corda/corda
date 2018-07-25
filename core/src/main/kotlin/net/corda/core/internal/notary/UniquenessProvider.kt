@@ -19,6 +19,7 @@ interface UniquenessProvider {
             txId: SecureHash,
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow? = null
+            timeWindow: TimeWindow? = null,
+            references: List<StateRef> = emptyList()
     )
 }

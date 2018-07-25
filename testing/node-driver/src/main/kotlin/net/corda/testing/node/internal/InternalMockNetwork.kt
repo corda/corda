@@ -134,7 +134,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                                servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
                                val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
                                val testDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-                               networkParameters: NetworkParameters = testNetworkParameters(),
+                               val networkParameters: NetworkParameters = testNetworkParameters(),
                                val defaultFactory: (MockNodeArgs, CordappLoader?) -> MockNode = { args, cordappLoader -> cordappLoader?.let { MockNode(args, it) } ?: MockNode(args) },
                                val cordappsForAllNodes: Set<TestCorDapp> = emptySet()) {
     init {
@@ -238,6 +238,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             // The network parameters must be serialised before starting any of the nodes
             networkParametersCopier = NetworkParametersCopier(networkParameters.copy(notaries = notaryInfos))
             @Suppress("LeakingThis")
+            // Notary nodes need a platform version >= network min platform version.
             notaryNodes = createNotaries()
         } catch (t: Throwable) {
             stopNodes()
@@ -254,10 +255,13 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
 
     @VisibleForTesting
     internal open fun createNotaries(): List<TestStartedNode> {
+        val version = VersionInfo(networkParameters.minimumPlatformVersion, "Mock release", "Mock revision", "Mock Vendor")
         return notarySpecs.map { (name, validating) ->
-            createNode(InternalMockNodeParameters(legalName = name, configOverrides = {
-                doReturn(NotaryConfig(validating)).whenever(it).notary
-            }))
+            createNode(InternalMockNodeParameters(
+                    legalName = name,
+                    configOverrides = { doReturn(NotaryConfig(validating)).whenever(it).notary },
+                    version = version
+            ))
         }
     }
 
