@@ -14,7 +14,6 @@ import net.corda.core.crypto.*
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
@@ -35,24 +34,22 @@ import javax.annotation.concurrent.ThreadSafe
  * etc.
  */
 @ThreadSafe
-class E2ETestKeyManagementService(val identityService: IdentityService,
-                                  initialKeys: Set<KeyPair>) : SingletonSerializeAsToken(), KeyManagementService {
+class E2ETestKeyManagementService(val identityService: IdentityService) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
     private class InnerState {
         val keys = HashMap<PublicKey, PrivateKey>()
     }
 
     private val mutex = ThreadBox(InnerState())
+    // Accessing this map clones it.
+    override val keys: Set<PublicKey> get() = mutex.locked { keys.keys }
 
-    init {
+    override fun start(initialKeyPairs: Set<KeyPair>) {
         mutex.locked {
-            for (key in initialKeys) {
+            for (key in initialKeyPairs) {
                 keys[key.public] = key.private
             }
         }
     }
-
-    // Accessing this map clones it.
-    override val keys: Set<PublicKey> get() = mutex.locked { keys.keys }
 
     override fun freshKey(): PublicKey {
         val keyPair = generateKeyPair()

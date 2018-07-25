@@ -79,4 +79,13 @@ class CashSelectionH2ImplTest {
         val paymentResult = node.startFlow(CashPaymentFlow(999.POUNDS, node.info.legalIdentities[0], false)).getOrThrow()
         assertNotNull(paymentResult.recipient)
     }
+
+    @Test
+    fun `multiple issuers in issuerConstraint condition`() {
+        val node = mockNet.createNode()
+        node.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(1), mockNet.defaultNotaryIdentity)).getOrThrow()
+        val request = CashPaymentFlow.PaymentRequest(1.POUNDS, node.info.legalIdentities[0], true, setOf(node.info.legalIdentities[0], mockNet.defaultNotaryIdentity))
+        val paymentResult = node.startFlow(CashPaymentFlow(request)).getOrThrow()
+        assertNotNull(paymentResult.recipient)
+    }
 }

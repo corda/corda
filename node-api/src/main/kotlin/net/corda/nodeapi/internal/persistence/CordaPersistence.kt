@@ -61,10 +61,8 @@ var contextDatabase: CordaPersistence
 val contextDatabaseOrNull: CordaPersistence? get() = _contextDatabase.get()
 
 class CordaPersistence(
-        val dataSource: DataSource,
         databaseConfig: DatabaseConfig,
         schemas: Set<MappedSchema>,
-        val jdbcUrl: String,
         attributeConverters: Collection<AttributeConverter<*, *>> = emptySet()
 ) : Closeable {
     companion object {
@@ -73,16 +71,23 @@ class CordaPersistence(
 
     private val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
     val hibernateConfig: HibernateConfiguration by lazy {
-
         transaction {
             HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl)
         }
     }
+
     val entityManagerFactory get() = hibernateConfig.sessionFactoryForRegisteredSchemas
 
     data class Boundary(val txId: UUID, val success: Boolean)
 
-    init {
+    private var _dataSource: DataSource? = null
+    val dataSource: DataSource get() = checkNotNull(_dataSource) { "CordaPersistence not started" }
+
+    private lateinit var jdbcUrl: String
+
+    fun start(dataSource: DataSource, jdbcUrl: String) {
+        _dataSource = dataSource
+        this.jdbcUrl = jdbcUrl
         // Found a unit test that was forgetting to close the database transactions.  When you close() on the top level
         // database transaction it will reset the threadLocalTx back to null, so if it isn't then there is still a
         // database transaction open.  The [transaction] helper above handles this in a finally clause for you
@@ -94,10 +99,10 @@ class CordaPersistence(
         // Check not in read-only mode.
         transaction {
             check(!connection.metaData.isReadOnly) { "Database should not be readonly." }
-        }
-    }
 
-    object DataSourceConfigTag {
+            }
+    }
+        object DataSourceConfigTag {
         const val DATA_SOURCE_URL = "dataSource.url"
     }
 
@@ -189,7 +194,7 @@ class CordaPersistence(
 
     override fun close() {
         // DataSource doesn't implement AutoCloseable so we just have to hope that the implementation does so that we can close it
-        (dataSource as? AutoCloseable)?.close()
+        (_dataSource as? AutoCloseable)?.close()
     }
 }
 

@@ -132,8 +132,6 @@ fun InMemoryMessagingNetwork.MessageTransfer.getMessage(): Message = message
 
 internal interface InternalMockMessagingService : MessagingService {
     fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer?
-
-    fun stop()
 }
 
 /**

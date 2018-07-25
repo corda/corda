@@ -50,7 +50,7 @@ class NetworkMapClientTest {
     fun setUp() {
         server = NetworkMapServer(cacheTimeout)
         val address = server.start()
-        networkMapClient = NetworkMapClient(URL("http://$address"), DEV_ROOT_CA.certificate)
+        networkMapClient = NetworkMapClient(URL("http://$address")).apply { start(DEV_ROOT_CA.certificate) }
     }
 
     @After

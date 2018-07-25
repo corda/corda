@@ -13,19 +13,18 @@ package net.corda.node.internal
 import com.codahale.metrics.JmxReporter
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
@@ -33,30 +32,23 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.CordaClock
 import net.corda.node.SimpleClock
 import net.corda.node.VersionInfo
+import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
-import net.corda.core.internal.errors.AddressBindingException
-import net.corda.node.cordapp.CordappLoader
+import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
 import net.corda.node.serialization.kryo.KryoServerSerializationScheme
 import net.corda.node.services.Permissions
-import net.corda.node.services.api.NodePropertiesStore
-import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.config.shouldStartLocalShell
-import net.corda.node.services.messaging.ArtemisMessagingServer
-import net.corda.node.services.messaging.InternalRPCMessagingClient
-import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.messaging.P2PMessagingClient
-import net.corda.node.services.messaging.RPCServerConfiguration
+import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
-import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.DemoClock
@@ -66,12 +58,7 @@ import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.serialization.internal.AMQP_P2P_CONTEXT
-import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
-import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT
-import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
-import net.corda.serialization.internal.SerializationFactoryImpl
+import net.corda.serialization.internal.*
 import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -79,7 +66,6 @@ import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.net.BindException
 import java.nio.file.Path
-import java.security.PublicKey
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
@@ -95,7 +81,14 @@ open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 private val initialiseSerialization: Boolean = true,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo)
-) : AbstractNode(configuration, createClock(configuration), versionInfo, cordappLoader) {
+) : AbstractNode(
+        configuration,
+        createClock(configuration),
+        versionInfo,
+        cordappLoader,
+        // Under normal (non-test execution) it will always be "1"
+        AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1)
+) {
     companion object {
         private val staticLog = contextLogger()
         var renderBasicInfoToConsole = true
@@ -136,9 +129,12 @@ open class Node(configuration: NodeConfiguration,
     }
 
     override val log: Logger get() = staticLog
-    override fun makeTransactionVerifierService(): TransactionVerifierService = InMemoryTransactionVerifierService(numberOfWorkers = 4)
+    override val transactionVerifierWorkerCount: Int get() = 4
 
-    private val sameVmNodeNumber = sameVmNodeCounter.incrementAndGet() // Under normal (non-test execution) it will always be "1"
+    private var internalRpcMessagingClient: InternalRPCMessagingClient? = null
+    private var rpcBroker: ArtemisBroker? = null
+
+    private var shutdownHook: ShutdownHook? = null
 
     // DISCUSSION
     //
@@ -177,47 +173,56 @@ open class Node(configuration: NodeConfiguration,
     //
     // The primary work done by the server thread is execution of flow logics, and related
     // serialisation/deserialisation work.
-    override lateinit var serverThread: AffinityExecutor.ServiceAffinityExecutor
 
-    private var messageBroker: ArtemisMessagingServer? = null
-    private var bridgeControlListener: BridgeControlListener? = null
-    private var rpcBroker: ArtemisBroker? = null
+    override fun makeMessagingService(): MessagingService {
+        return P2PMessagingClient(
+                config = configuration,
+                versionInfo = versionInfo,
+                serverAddress = configuration.messagingServerAddress ?: NetworkHostAndPort("localhost", configuration.p2pAddress.port),
+                nodeExecutor = serverThread,
+                database = database,
+                networkMap = networkMapCache,
+                metricRegistry = metricRegistry,
+                isDrainingModeOn = nodeProperties.flowsDrainingMode::isEnabled,
+                drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values
+        )
+    }
 
-    private var shutdownHook: ShutdownHook? = null
+    override fun startMessagingService(rpcOps: RPCOps, nodeInfo: NodeInfo, myNotaryIdentity: PartyAndCertificate?, networkParameters: NetworkParameters) {
+        require(nodeInfo.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
 
-    override fun makeMessagingService(database: CordaPersistence,
-                                      info: NodeInfo,
-                                      nodeProperties: NodePropertiesStore,
-                                      networkParameters: NetworkParameters): MessagingService {
+        val client = network as P2PMessagingClient
+
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
         val securityManagerConfig = configuration.security?.authService
                 ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
-        securityManager = with(RPCSecurityManagerImpl(securityManagerConfig)) {
+        val securityManager = with(RPCSecurityManagerImpl(securityManagerConfig)) {
             if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this, User(INTERNAL_SHELL_USER, INTERNAL_SHELL_USER, setOf(Permissions.all()))) else this
         }
 
-        if (!configuration.messagingServerExternal) {
+        val messageBroker = if (!configuration.messagingServerExternal) {
             val brokerBindAddress = configuration.messagingServerAddress ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
-            messageBroker = ArtemisMessagingServer(configuration, brokerBindAddress, networkParameters.maxMessageSize)
+            ArtemisMessagingServer(configuration, brokerBindAddress, networkParameters.maxMessageSize)
+        } else {
+            null
         }
 
-        val serverAddress = configuration.messagingServerAddress
-                ?: NetworkHostAndPort("localhost", configuration.p2pAddress.port)
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) {
             BrokerAddresses(configuration.rpcOptions.address, configuration.rpcOptions.adminAddress)
         } else {
-            startLocalRpcBroker()
+            startLocalRpcBroker(securityManager)
         }
 
-        val advertisedAddress = info.addresses.single()
         val externalBridge = configuration.enterpriseConfiguration.externalBridge
-        if (externalBridge == null || !externalBridge) {
-            bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
+        val bridgeControlListener = if (externalBridge == null || !externalBridge) {
+            BridgeControlListener(configuration, client.serverAddress, networkParameters.maxMessageSize)
+        } else {
+            null
         }
 
-        printBasicNodeInfo("Advertised P2P messaging addresses", info.addresses.joinToString())
+        printBasicNodeInfo("Advertised P2P messaging addresses", nodeInfo.addresses.joinToString())
 
         val rpcServerConfiguration = RPCServerConfiguration.DEFAULT.copy(
                 rpcThreadPoolSize = configuration.enterpriseConfiguration.tuning.rpcThreadPoolSize
@@ -227,26 +232,37 @@ open class Node(configuration: NodeConfiguration,
             printBasicNodeInfo("RPC connection address", it.primary.toString())
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
         }
-        require(info.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
-        val serviceIdentity: PublicKey? = if (info.legalIdentities.size == 1) null else info.legalIdentities[1].owningKey
-        return P2PMessagingClient(
-                configuration,
-                versionInfo,
-                serverAddress,
-                info.legalIdentities[0].owningKey,
-                serviceIdentity,
-                serverThread,
-                database,
-                services.networkMapCache,
-                services.monitoringService.metrics,
-                info.legalIdentities[0].name.toString(),
-                advertisedAddress,
-                networkParameters.maxMessageSize,
-                nodeProperties.flowsDrainingMode::isEnabled,
-                nodeProperties.flowsDrainingMode.values)
+
+        // Start up the embedded MQ server
+        messageBroker?.apply {
+            closeOnStop()
+            start()
+        }
+        rpcBroker?.apply {
+            closeOnStop()
+            start()
+        }
+        // Start P2P bridge service
+        bridgeControlListener?.apply {
+            closeOnStop()
+            start()
+        }
+        // Start up the MQ clients.
+        internalRpcMessagingClient?.run {
+            closeOnStop()
+            init(rpcOps, securityManager)
+        }
+        client.closeOnStop()
+        client.start(
+                myIdentity = nodeInfo.legalIdentities[0].owningKey,
+                serviceIdentity = if (nodeInfo.legalIdentities.size == 1) null else nodeInfo.legalIdentities[1].owningKey,
+                advertisedAddress = nodeInfo.addresses.single(),
+                maxMessageSize = networkParameters.maxMessageSize,
+                legalName = nodeInfo.legalIdentities[0].name.toString()
+        )
     }
 
-    private fun startLocalRpcBroker(): BrokerAddresses? {
+    private fun startLocalRpcBroker(securityManager: RPCSecurityManager): BrokerAddresses? {
         return with(configuration) {
             rpcOptions.address.let {
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
@@ -257,6 +273,7 @@ open class Node(configuration: NodeConfiguration,
                         ArtemisRpcBroker.withoutSsl(configuration, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     }
                 }
+                rpcBroker!!.closeOnStop()
                 rpcBroker!!.addresses
             }
         }
@@ -308,32 +325,6 @@ open class Node(configuration: NodeConfiguration,
         }
     }
 
-    override fun startMessagingService(rpcOps: RPCOps) {
-        // Start up the embedded MQ server
-        messageBroker?.apply {
-            runOnStop += this::close
-            start()
-        }
-        rpcBroker?.apply {
-            runOnStop += this::close
-            start()
-        }
-        // Start P2P bridge service
-        bridgeControlListener?.apply {
-            runOnStop += this::stop
-            start()
-        }
-        // Start up the MQ clients.
-        internalRpcMessagingClient?.run {
-            runOnStop += this::close
-            init(rpcOps, securityManager)
-        }
-        (network as P2PMessagingClient).apply {
-            runOnStop += this::stop
-            start()
-        }
-    }
-
     /**
      * If the node is persisting to an embedded H2 database, then expose this via TCP with a DB URL of the form:
      * jdbc:h2:tcp://<host>:<port>/node
@@ -344,9 +335,7 @@ open class Node(configuration: NodeConfiguration,
      * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
      * on H2 URLs and configuration see: http://www.h2database.com/html/features.html#database_url
      */
-    override fun initialiseDatabasePersistence(schemaService: SchemaService,
-                                               wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
-                                               wellKnownPartyFromAnonymous: (AbstractParty) -> Party?): CordaPersistence {
+    override fun startDatabase() {
         val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
         val h2Prefix = "jdbc:h2:file:"
 
@@ -374,11 +363,12 @@ open class Node(configuration: NodeConfiguration,
                 }
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
-        }
-        else if (databaseUrl != null) {
+        } else if (databaseUrl != null) {
             printBasicNodeInfo("Database connection url is", databaseUrl)
         }
-        return super.initialiseDatabasePersistence(schemaService, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous)
+
+        super.startDatabase()
+        database.closeOnStop()
     }
 
     private val _startupComplete = openFuture<Unit>()
@@ -390,7 +380,6 @@ open class Node(configuration: NodeConfiguration,
     }
 
     override fun start(): StartedNode<Node> {
-        serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread-$sameVmNodeNumber", 1)
         initialiseSerialization()
         val started: StartedNode<Node> = uncheckedCast(super.start())
         nodeReadyFuture.thenMatch({
@@ -419,7 +408,7 @@ open class Node(configuration: NodeConfiguration,
         return started
     }
 
-    override fun getRxIoScheduler(): Scheduler = Schedulers.io()
+    override val rxIoScheduler: Scheduler get() = Schedulers.io()
 
     private fun initialiseSerialization() {
         if (!initialiseSerialization) return
@@ -436,8 +425,6 @@ open class Node(configuration: NodeConfiguration,
                 checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader),
                 rpcClientContext = if (configuration.shouldInitCrashShell()) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classloader) else null) //even Shell embeded in the node connects via RPC to the node
     }
-
-    private var internalRpcMessagingClient: InternalRPCMessagingClient? = null
 
     /** Starts a blocking event loop for message dispatch. */
     fun run() {

@@ -37,15 +37,9 @@ import javax.persistence.Lob
 /**
  * An identity service that stores parties and their identities to a key value tables in the database. The entries are
  * cached for efficient lookup.
- *
- * @param trustRoot certificate from the zone operator for identity on the network.
- * @param caCertificates list of additional certificates.
  */
 @ThreadSafe
-class PersistentIdentityService(override val trustRoot: X509Certificate,
-                                private val database: CordaPersistence,
-                                caCertificates: List<X509Certificate> = emptyList()) : SingletonSerializeAsToken(), IdentityServiceInternal {
-
+class PersistentIdentityService : SingletonSerializeAsToken(), IdentityServiceInternal {
     companion object {
         private val log = contextLogger()
 
@@ -103,30 +97,37 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
             var publicKeyHash: String? = ""
     )
 
-    override val caCertStore: CertStore
-    override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
+    private lateinit var _caCertStore: CertStore
+    override val caCertStore: CertStore get() = _caCertStore
+
+    private lateinit var _trustRoot: X509Certificate
+    override val trustRoot: X509Certificate get() = _trustRoot
+
+    private lateinit var _trustAnchor: TrustAnchor
+    override val trustAnchor: TrustAnchor get() = _trustAnchor
+
+    // CordaPersistence is not a c'tor parameter to work around the cyclic dependency
+    lateinit var database: CordaPersistence
 
     private val keyToParties = createPKMap()
     private val principalToParties = createX500Map()
 
-    init {
-        val caCertificatesWithRoot: Set<X509Certificate> = caCertificates.toSet() + trustRoot
-        caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificatesWithRoot))
+    fun start(trustRoot: X509Certificate, caCertificates: List<X509Certificate> = emptyList()) {
+        _trustRoot = trustRoot
+        _trustAnchor = TrustAnchor(trustRoot, null)
+        _caCertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(caCertificates.toSet() + trustRoot))
     }
 
-    /** Requires a database transaction. */
-    fun loadIdentities(identities: Iterable<PartyAndCertificate> = emptySet(), confidentialIdentities: Iterable<PartyAndCertificate> = emptySet()) {
-        database.transaction {
-            identities.forEach {
-                val key = mapToKey(it)
-                keyToParties.addWithDuplicatesAllowed(key, it, false)
-                principalToParties.addWithDuplicatesAllowed(it.name, key, false)
-            }
-            confidentialIdentities.forEach {
-                principalToParties.addWithDuplicatesAllowed(it.name, mapToKey(it), false)
-            }
-            log.debug("Identities loaded")
+    fun loadIdentities(identities: Collection<PartyAndCertificate> = emptySet(), confidentialIdentities: Collection<PartyAndCertificate> = emptySet()) {
+        identities.forEach {
+            val key = mapToKey(it)
+            keyToParties.addWithDuplicatesAllowed(key, it, false)
+            principalToParties.addWithDuplicatesAllowed(it.name, key, false)
         }
+        confidentialIdentities.forEach {
+            principalToParties.addWithDuplicatesAllowed(it.name, mapToKey(it), false)
+        }
+        log.debug("Identities loaded")
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
@@ -177,5 +178,4 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
 
     @Throws(UnknownAnonymousPartyException::class)
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) = database.transaction { super.assertOwnership(party, anonymousParty) }
-
 }

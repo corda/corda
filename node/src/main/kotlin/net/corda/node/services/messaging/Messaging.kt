@@ -36,7 +36,7 @@ import javax.annotation.concurrent.ThreadSafe
  * is *reliable* and as such messages may be stored to disk once queued.
  */
 @ThreadSafe
-interface MessagingService {
+interface MessagingService : AutoCloseable {
     /**
      * A unique identifier for this sender that changes whenever a node restarts.  This is used in conjunction with a sequence
      * number for message de-duplication at the recipient.

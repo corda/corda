@@ -27,7 +27,6 @@ import net.corda.node.services.config.RelayConfiguration
 import net.corda.node.services.statemachine.MultiThreadedStateMachineExecutor
 import net.corda.node.services.statemachine.MultiThreadedStateMachineManager
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.nodeapi.internal.persistence.CordaPersistence
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import java.io.IOException
@@ -184,7 +183,7 @@ D""".trimStart()
         return MultiThreadedStateMachineExecutor(configuration.enterpriseConfiguration.tuning.flowThreadPoolSize)
     }
 
-    override fun makeStateMachineManager(database: CordaPersistence): StateMachineManager {
+    override fun makeStateMachineManager(): StateMachineManager {
         if (configuration.enterpriseConfiguration.useMultiThreadedSMM) {
             val executor = makeStateMachineExecutorService()
             runOnStop += { executor.shutdown() }
@@ -199,7 +198,7 @@ D""".trimStart()
             )
         } else {
             log.info("Single-threaded state machine manager with 1 thread.")
-            return super.makeStateMachineManager(database)
+            return super.makeStateMachineManager()
         }
     }
 }

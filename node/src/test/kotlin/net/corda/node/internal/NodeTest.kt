@@ -21,7 +21,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
-import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -36,12 +36,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Path
+import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class NodeTest {
-    private abstract class AbstractNodeConfiguration : NodeConfiguration
-
     @Rule
     @JvmField
     val temporaryFolder = TemporaryFolder()
@@ -160,20 +159,28 @@ class NodeTest {
     }
 
     private fun createConfig(nodeName: CordaX500Name): NodeConfiguration {
-        val dataSourceProperties = makeTestDataSourceProperties()
-        val databaseConfig = DatabaseConfig()
-        val nodeAddress = NetworkHostAndPort("0.1.2.3", 456)
-        return rigorousMock<AbstractNodeConfiguration>().also {
-            doReturn(null).whenever(it).relay
-            doReturn(nodeAddress).whenever(it).p2pAddress
-            doReturn(nodeName).whenever(it).myLegalName
-            doReturn(null).whenever(it).notary // Don't add notary identity.
-            doReturn(dataSourceProperties).whenever(it).dataSourceProperties
-            doReturn(databaseConfig).whenever(it).database
-            doReturn(temporaryFolder.root.toPath()).whenever(it).baseDirectory
-            doReturn(true).whenever(it).devMode // Needed for identity cert.
-            doReturn("tsp").whenever(it).trustStorePassword
-            doReturn("ksp").whenever(it).keyStorePassword
-        }
+        val fakeAddress = NetworkHostAndPort("0.1.2.3", 456)
+        return NodeConfigurationImpl(
+                baseDirectory = temporaryFolder.root.toPath(),
+                myLegalName = nodeName,
+                devMode = true, // Needed for identity cert.
+                emailAddress = "",
+                p2pAddress = fakeAddress,
+                keyStorePassword = "ksp",
+                trustStorePassword = "tsp",
+                crlCheckSoftFail = true,
+                dataSourceProperties = makeTestDataSourceProperties(),
+                database = DatabaseConfig(),
+                rpcUsers = emptyList(),
+                verifierType = VerifierType.InMemory,
+                flowTimeout = FlowTimeoutConfiguration(timeout = Duration.ZERO, backoffBase = 1.0, maxRestartCount = 1),
+                rpcSettings = NodeRpcSettings(address = fakeAddress, adminAddress = null, ssl = null),
+                messagingServerAddress = null,
+                notary = null,
+                enterpriseConfiguration = EnterpriseConfiguration(
+                        mutualExclusionConfiguration = MutualExclusionConfiguration(updateInterval = 0, waitInterval = 0)
+                ),
+                relay = null
+        )
     }
 }

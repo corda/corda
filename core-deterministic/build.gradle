@@ -71,13 +71,13 @@ task patchCore(type: Zip, dependsOn: coreJarTask) {
 import proguard.gradle.ProGuardTask
 task predeterminise(type: ProGuardTask) {
     injars patchCore
-    outjars "$buildDir/proguard/pre-deterministic-${project.version}.jar"
+    outjars file("$buildDir/proguard/pre-deterministic-${project.version}.jar")
 
-    libraryjars "$javaHome/lib/rt.jar"
-    libraryjars "$javaHome/lib/jce.jar"
+    libraryjars file("$javaHome/lib/rt.jar")
+    libraryjars file("$javaHome/lib/jce.jar")
     configurations.compileOnly.forEach {
-        if (originalJar.path != it.path) {
-            libraryjars it.path, filter: '!META-INF/versions/**'
+        if (originalJar != it) {
+            libraryjars it, filter: '!META-INF/versions/**'
         }
     }
 
@@ -120,12 +120,12 @@ task jarFilter(type: JarFilterTask) {
 
 task determinise(type: ProGuardTask) {
     injars jarFilter
-    outjars "$buildDir/proguard/$jarBaseName-${project.version}.jar"
+    outjars file("$buildDir/proguard/$jarBaseName-${project.version}.jar")
 
-    libraryjars "$javaHome/lib/rt.jar"
-    libraryjars "$javaHome/lib/jce.jar"
+    libraryjars file("$javaHome/lib/rt.jar")
+    libraryjars file("$javaHome/lib/jce.jar")
     configurations.runtimeLibraries.forEach {
-        libraryjars it.path, filter: '!META-INF/versions/**'
+        libraryjars it, filter: '!META-INF/versions/**'
     }
 
     // Analyse the JAR for dead code, and remove (some of) it.
@@ -165,7 +165,7 @@ task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
     libraryjars deterministic_rt_jar
 
     configurations.runtimeLibraries.forEach {
-        libraryjars it.path, filter: '!META-INF/versions/**'
+        libraryjars it, filter: '!META-INF/versions/**'
     }
 
     keepattributes '*'

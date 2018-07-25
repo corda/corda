@@ -150,10 +150,10 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
             database,
             flowStarter,
             servicesForResolution,
-            flowLogicRefFactory = flowLogicRefFactory,
-            nodeProperties = nodeProperties,
-            drainingModePollPeriod = Duration.ofSeconds(5),
-            log = log,
+            flowLogicRefFactory,
+            nodeProperties,
+            Duration.ofSeconds(5),
+            log,
             schedulerRepo = MockScheduledFlowRepository()
     ).apply { start() }
 
@@ -161,7 +161,7 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
     @JvmField
     val tearDown = object : TestWatcher() {
         override fun succeeded(description: Description) {
-            scheduler.join()
+            scheduler.close()
             verifyNoMoreInteractions(flowStarter)
         }
     }
@@ -337,7 +337,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
             testClock.advanceBy(1.days)
             assertStarted(flowLogic)
 
-            newScheduler.join()
+            newScheduler.close()
         }
     }
 
@@ -370,7 +370,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
             testClock.advanceBy(1.days)
             assertStarted(flowLogic)
 
-            scheduler.join()
+            scheduler.close()
         }
     }
 }
