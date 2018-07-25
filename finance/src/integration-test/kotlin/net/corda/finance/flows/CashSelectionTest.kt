@@ -106,7 +106,7 @@ class CashSelectionTest {
 
     @Test
     fun `select cash states issued by single transaction and give change`() {
-        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        driver(DriverParameters(startNodesInProcess = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
             val node = startNode().getOrThrow() as InProcessImpl
             val nodeIdentity = node.services.myInfo.singleIdentity()
 
