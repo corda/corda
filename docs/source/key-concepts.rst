@@ -13,7 +13,6 @@ This section should be read in order:
 
    key-concepts-ecosystem
    key-concepts-ledger
-   key-concepts-identity
    key-concepts-states
    key-concepts-contracts
    key-concepts-transactions
