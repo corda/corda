@@ -1,16 +1,12 @@
 package net.corda.finance.flows
 
 import net.corda.core.contracts.TransactionState
-import net.corda.core.contracts.withoutIssuer
 import net.corda.core.identity.Party
-import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
-import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.issuedBy
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
