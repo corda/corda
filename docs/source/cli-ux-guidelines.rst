@@ -12,6 +12,7 @@ Option names
 * Options should be specified on the command line using a double dash, e.g. ``--parameter``.
 * Options that consist of multiple words should be separated via hyphens e.g. ``--my-multiple-word-parameter-name``.
 * A ``--help`` option should be provided which details all possible options with a brief description and any short name equivalents.
+* A ``--version`` option that should output the version number of the software.
 * A ``--logging-level`` option should be provided which specifies the logging level to be used in any logging files. Acceptable values should be ``DEBUG``, ``TRACE``, ``INFO``, ``WARN`` and ``ERROR``.
 * A ``--verbose`` option should be provided which specifies that logging output should be displayed in the console.
 
@@ -68,5 +69,5 @@ Application behavior
 * Setting a unique error code (starting from 1) for each thing that can conceivably break makes your tool shell-scripting friendly.
 * Make sure all exit codes are documented with recommended remedies where applicable.
 * Your ``--help`` text or other docs should ideally include examples. Writing examples is also a good way to find out if your program requires a dozen flags to do anything.
-* Don’t print logging output to the console unless the user requested it via a ``-–verbose`` flag (conventionally shortened to ``-v``) or a ``-–log-to-console`` flag. Logs should be either suppressed or saved to a text file during normal usage, except for errors, which are always OK to print.
+* Don’t print logging output to the console unless the user requested it via a ``-–verbose`` flag (conventionally shortened to ``-v``). Logs should be either suppressed or saved to a text file during normal usage, except for errors, which are always OK to print.
 * Don't print stack traces to the console. Stack traces can be added to logging files, but the user should see as meaningful error description as possible.
