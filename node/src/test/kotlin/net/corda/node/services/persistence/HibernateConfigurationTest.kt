@@ -25,6 +25,7 @@ import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DummyFungibleContract
 import net.corda.finance.schemas.CashSchemaV1
+import net.corda.finance.schemas.SampleCashSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
@@ -41,6 +42,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.DummyDealStateSchemaV1
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -97,7 +99,7 @@ class HibernateConfigurationTest {
 
     @Before
     fun setUp() {
-        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset")
+        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", "net.corda.finance.schemas")
         bankServices = MockServices(cordappPackages, BOC.name, rigorousMock(), BOC_KEY)
         issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock<IdentityService>())
         notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock<IdentityService>())
@@ -110,7 +112,7 @@ class HibernateConfigurationTest {
                 doReturn(it.party).whenever(mock).wellKnownPartyFromX500Name(it.name)
             }
         }
-        val schemaService = NodeSchemaService()
+        val schemaService = NodeSchemaService(extraSchemas = setOf(CashSchemaV1, SampleCashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, DummyLinearStateSchemaV1, DummyLinearStateSchemaV2, DummyDealStateSchemaV1))
         database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService)
         database.transaction {
             hibernateConfig = database.hibernateConfig
