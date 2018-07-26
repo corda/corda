@@ -1,7 +1,7 @@
 package net.corda.bootstrapper
 
 import com.jcabi.manifests.Manifests
-import net.corda.core.internal.rootMessage
+import net.corda.core.internal.*
 import net.corda.nodeapi.internal.network.NetworkBootstrapper
 import picocli.CommandLine
 import picocli.CommandLine.*
@@ -29,7 +29,7 @@ fun main(args: Array<String>) {
         versionProvider = CordaVersionProvider::class,
         mixinStandardHelpOptions = true,
         showDefaultValues = true,
-        description = [ "Bootstrap a local test Corda network using a set of node conf files and CorDapp JARs" ]
+        description = ["Bootstrap a local test Corda network using a set of node conf files and CorDapp JARs"]
 )
 class Main : Runnable {
     @Option(
@@ -47,7 +47,74 @@ class Main : Runnable {
     @Option(names = ["--verbose"], description = ["Enable verbose output."])
     var verbose: Boolean = false
 
+    @Option(names = ["--install", "-i"], description = ["Install bootstrapper alias and autocompletion in bash"])
+    var install: Boolean = false
+
+    // Return the lines in the file if it exists, else return an empty mutable list
+    private fun getFileLines(filePath: Path): MutableList<String> {
+        return if (filePath.exists()) {
+            filePath.toFile().readLines().toMutableList()
+        } else {
+            emptyList<String>().toMutableList()
+        }
+    }
+
+    private fun MutableList<String>.addOrReplaceIfStartsWith(startsWith: String, replaceWith: String) {
+        val index = this.indexOfFirst { it.startsWith(startsWith) }
+        if (index >= 0) {
+            this[index] = replaceWith
+        } else {
+            this.add(replaceWith)
+        }
+    }
+
+    private fun MutableList<String>.addIfNotExists(line: String) {
+        if (!this.contains(line)) {
+            this.add(line)
+        }
+    }
+
+    // If on windows, Path.toString() returns a path with \ instead of /, but for bash windows users we want to convert those back to /'s
+    private fun Path.toStringWithDeWindowsfication(): String = this.toAbsolutePath().toString().replace("\\", "/")
+
+    private fun install(alias: String) {
+        // Get jar location and generate alias command
+        val jarLocation = this.javaClass.location.toPath()
+        val command = "alias $alias='java -jar ${jarLocation.toStringWithDeWindowsfication()}'"
+
+        val userHome = Paths.get(System.getProperty("user.home"))
+
+        System.out.println("Generating $alias auto completion file")
+        val completionDir = userHome / ".completion"
+        if (!completionDir.exists()) {
+            completionDir.createDirectory()
+        }
+        val autoCompletePath = (completionDir / "$alias").toStringWithDeWindowsfication()
+        picocli.AutoComplete.main("-f", "-n", alias, this.javaClass.name, "-o", autoCompletePath)
+
+        // get bash settings file
+        val bashSettingsFile = userHome / ".bashrc"
+        val bashSettingsFileLines = getFileLines(bashSettingsFile).toMutableList()
+
+        System.out.println("Updating bash settings files")
+        // Replace any existing bootstrapper alias. There can be only one.
+        bashSettingsFileLines.addOrReplaceIfStartsWith("alias $alias", command)
+
+        val completionFileCommand = "for bcfile in ~/.completion/* ; do . \$bcfile; done"
+        bashSettingsFileLines.addIfNotExists(completionFileCommand)
+
+        bashSettingsFile.writeLines(bashSettingsFileLines)
+
+        System.out.println("Installation complete, $alias is available in bash with autocompletion. ")
+        System.out.println("Type `$alias <options>` from the commandline.")
+        System.out.println("Restart bash for this to take effect, or run `. ~/.bashrc` to re-initialise bash now")
+    }
+
     override fun run() {
+        if (install) {
+            install("bootstrapper")
+            return
+        }
         if (verbose) {
             System.setProperty("logLevel", "trace")
         }
