@@ -16,10 +16,7 @@ import net.corda.core.transactions.*
 import net.corda.core.utilities.*
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
-import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.persistence.*
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -137,22 +134,25 @@ class NodeVaultService(
 
     /** Groups adjacent transactions into batches to generate separate net updates per transaction type. */
     override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>) {
-        if (statesToRecord == StatesToRecord.NONE || !txns.any()) return
-        val batch = mutableListOf<CoreTransaction>()
+        // apply locking closer to database transaction boundary
+        mutex.locked {
+            if (statesToRecord == StatesToRecord.NONE || !txns.any()) return
+            val batch = mutableListOf<CoreTransaction>()
 
-        fun flushBatch() {
-            val updates = makeUpdates(batch, statesToRecord)
-            processAndNotify(updates)
-            batch.clear()
-        }
-
-        for (tx in txns) {
-            if (batch.isNotEmpty() && tx.javaClass != batch.last().javaClass) {
-                flushBatch()
+            fun flushBatch() {
+                val updates = makeUpdates(batch, statesToRecord)
+                processAndNotify(updates)
+                batch.clear()
             }
-            batch.add(tx)
+
+            for (tx in txns) {
+                if (batch.isNotEmpty() && tx.javaClass != batch.last().javaClass) {
+                    flushBatch()
+                }
+                batch.add(tx)
+            }
+            flushBatch()
         }
-        flushBatch()
     }
 
     private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord): List<Vault.Update<ContractState>> {
@@ -234,8 +234,9 @@ class NodeVaultService(
         if (updates.isEmpty()) return
         val netUpdate = updates.reduce { update1, update2 -> update1 + update2 }
         if (!netUpdate.isEmpty()) {
-            recordUpdate(netUpdate)
+            // ensure mutex captures persistent update and update notification
             mutex.locked {
+                recordUpdate(netUpdate)
                 // flowId was required by SoftLockManager to perform auto-registration of soft locks for new states
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
                 val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
@@ -491,8 +492,9 @@ class NodeVaultService(
 
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
+        // Mutex can be applied more granularly as the vault query is independent from concurrent state changes to observables.
         return mutex.locked {
-            val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
             val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed()
                     .filter { it.containsType(contractStateType, snapshotResults.stateTypes) }
                     .map { filterContractStates(it, contractStateType) })
