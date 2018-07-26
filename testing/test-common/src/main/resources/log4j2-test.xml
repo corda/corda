@@ -70,6 +70,10 @@
             <AppenderRef ref="Console-Appender"/>
             <AppenderRef ref="RollingFile-Appender" />
         </Logger>
+        <Logger name="net.corda.serialization.internal.amqp.SerializerFactory" level="warn" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+            <AppenderRef ref="RollingFile-Appender" />
+        </Logger>
         <Logger name="BasicInfo" additivity="false">
             <AppenderRef ref="Console-Appender-Println"/>
             <AppenderRef ref="RollingFile-Appender" />
