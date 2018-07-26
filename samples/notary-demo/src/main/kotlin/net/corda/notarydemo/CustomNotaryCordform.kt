@@ -23,6 +23,7 @@ class CustomNotaryCordform : CordformDefinition() {
             }
             rpcUsers(notaryDemoUser)
             devMode(true)
+            extraConfig = mapOf("h2Settings" to mapOf("address" to "localhost:0"))
         }
         node {
             name(BOB_NAME)
@@ -32,6 +33,7 @@ class CustomNotaryCordform : CordformDefinition() {
                 adminAddress("localhost:10106")
             }
             devMode(true)
+            extraConfig = mapOf("h2Settings" to mapOf("address" to "localhost:0"))
         }
         node {
             name(DUMMY_NOTARY_NAME)
@@ -42,6 +44,7 @@ class CustomNotaryCordform : CordformDefinition() {
             }
             notary(NotaryConfig(validating = true, custom = true))
             devMode(true)
+            extraConfig = mapOf("h2Settings" to mapOf("address" to "localhost:0"))
         }
     }
 
