@@ -17,6 +17,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.millis
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.messaging.RPCServer
 import net.corda.node.services.messaging.RPCServerConfiguration
@@ -485,7 +486,7 @@ data class RPCDriverDSL(
                 configuration
         )
         driverDSL.shutdownManager.registerShutdown {
-            rpcServer.close()
+            rpcServer.close(1.millis)
             locator.close()
         }
         rpcServer.start(brokerHandle.serverControl)

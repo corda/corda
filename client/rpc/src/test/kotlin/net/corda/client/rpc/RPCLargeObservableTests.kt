@@ -34,8 +34,9 @@ class RPCLargeObservableTests : AbstractRPCTest() {
             val proxy = testProxy()
             // This tests that the observations are transmitted correctly, also check that server side doesn't try to serialize the whole lot
             // till client consumed some of the output produced.
-            val observations = proxy.makeObservable().take(4).toBlocking().toIterable().toList()
-            assertEquals(listOf(1, 2, 3, 4), observations)
+            val observations = proxy.makeObservable()
+            val observationsList = observations.take(4).toBlocking().toIterable().toList()
+            assertEquals(listOf(1, 2, 3, 4), observationsList)
         }
     }
 }

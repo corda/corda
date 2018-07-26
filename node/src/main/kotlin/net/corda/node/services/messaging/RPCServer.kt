@@ -18,11 +18,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
 import net.corda.core.serialization.deserialize
-import net.corda.core.utilities.Try
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.days
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.seconds
+import net.corda.core.utilities.*
 import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.serialization.amqp.RpcServerObservableSerializer
@@ -247,9 +243,10 @@ class RPCServer(
         }
     }
 
-    fun close() {
+    fun close(queueDrainTimeout: Duration = 1.hours) {
+        // Putting Stop message onto the queue will eventually make senderThread to stop.
         sendJobQueue.put(RpcSendJob.Stop)
-        senderThread?.join()
+        senderThread?.join(queueDrainTimeout.toMillis())
         reaperScheduledFuture?.cancel(false)
         rpcExecutor?.shutdownNow()
         reaperExecutor?.shutdownNow()
