@@ -86,7 +86,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             adminAddress "localhost:10013"
         }
         webPort 10004
-        extraConfig = ['h2Settings.address' : 'localhost:100014']
+        extraConfig = ['h2Settings.address' : 'localhost:10014']
         cordapps = []
     }
     node {
