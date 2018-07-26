@@ -4,41 +4,44 @@ The network
 .. topic:: Summary
 
    * *A Corda network is made up of nodes running Corda and CorDapps*
-   * *The network is permissioned, with access controlled by a doorman*
    * *Communication between nodes is point-to-point, instead of relying on global broadcasts*
+   * *Each node has a certificate mapping their network identity to a real-world legal identity*
+   * *The network is permissioned, with access requiring a certificate from the network operator*
 
 Network structure
 -----------------
-A Corda network is an authenticated peer-to-peer network of nodes, where each node is a JVM run-time environment
-hosting Corda services and executing applications known as *CorDapps*.
-
-All communication between nodes is direct, with TLS-encrypted messages sent over AMQP/1.0. This means that data is
-shared only on a need-to-know basis; in Corda, there are **no global broadcasts**.
-
-Each network has a **network map service** that publishes the IP addresses through which every node on the network can
-be reached, along with the identity certificates of those nodes and the services they provide.
-
-The doorman
------------
-Corda networks are semi-private. Each network has a doorman service that enforces rules regarding the information
-that nodes must provide and the know-your-customer processes that they must complete before being admitted to the
-network.
-
-To join the network, a node must contact the doorman and provide the required information. If the doorman is
-satisfied, the node will receive a root-authority-signed TLS certificate from the network's permissioning service.
-This certificate certifies the node's identity when communicating with other participants on the network.
-
-We can visualize a network as follows:
+A Corda network is a peer-to-peer network of **nodes**. Each node runs the Corda software as well as Corda applications
+known as **CorDapps**.
 
 .. image:: resources/network.png
    :scale: 25%
    :align: center
 
-Network services
-----------------
-Nodes can provide several types of services:
+All communication between nodes is point-to-point and encrypted using transport-layer security. This means that data is
+shared only on a need-to-know basis. There are **no global broadcasts**.
 
-* One or more pluggable **notary services**. Notaries guarantee the uniqueness, and possibility the validity, of ledger
-  updates. Each notary service may be run on a single node, or across a cluster of nodes.
-* Zero or more **oracle services**. An oracle is a well-known service that signs transactions if they state a fact and
-  that fact is considered to be true.
+Identity
+--------
+Each node has a single well-known identity. The node's identity is used to represent the node in transactions, such as
+when purchasing an asset.
+
+.. note:: These identities are distinct from the RPC user logins that are able to connect to the node via RPC.
+
+Each network has a **network map service** that maps each well-known node identity to an IP address. These IP
+addresses are used for messaging between nodes.
+
+Nodes can also generate confidential identities for individual transactions. The certificate chain linking a
+confidential identity to a well-known node identity or real-world legal identity is only distributed on a need-to-know
+basis. This ensures that even if an attacker gets access to an unencrypted transaction, they cannot identify the
+transaction's participants without additional information if confidential identities are being used.
+
+Admission to the network
+------------------------
+Corda networks are semi-private. To join a network, a node must obtain a certificate from the network operator. This
+certificate maps a well-known node identity to:
+
+* A real-world legal identity
+* A public key
+
+The network operator enforces rules regarding the information that nodes must provide and the know-your-customer
+processes they must undergo before being granted this certificate.
