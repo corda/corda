@@ -114,7 +114,7 @@ open class MockServices private constructor(
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
-                    override val vaultService: VaultService = makeVaultService(database.hibernateConfig, schemaService, database)
+                    override val vaultService: VaultService = makeVaultService(schemaService, database)
 
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                         ServiceHubInternal.recordTransactions(statesToRecord, txs,
@@ -256,8 +256,8 @@ open class MockServices private constructor(
             }
         }
 
-    internal fun makeVaultService(hibernateConfig: HibernateConfiguration, schemaService: SchemaService, database: CordaPersistence): VaultServiceInternal {
-        return NodeVaultService(clock, keyManagementService, servicesForResolution, database).apply { start() }
+    internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence): VaultServiceInternal {
+        return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService).apply { start() }
     }
 
     // This needs to be internal as MutableClassToInstanceMap is a guava type and shouldn't be part of our public API

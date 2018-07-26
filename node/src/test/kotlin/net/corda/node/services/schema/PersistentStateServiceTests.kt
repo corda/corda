@@ -17,6 +17,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
 import org.junit.Before
@@ -66,7 +67,7 @@ class PersistentStateServiceTests {
                 return parent
             }
         }
-        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock(), schemaService)
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock(), rigorousMock(), schemaService)
         database.transaction {
             val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
             rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), DummyContract.PROGRAM_ID, MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))

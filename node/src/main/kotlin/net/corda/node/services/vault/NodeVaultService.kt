@@ -18,10 +18,7 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
-import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.persistence.*
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -54,7 +51,6 @@ class NodeVaultService(
         private val keyManagementService: KeyManagementService,
         private val servicesForResolution: ServicesForResolution,
         private val database: CordaPersistence,
-        private val hibernateConfig: HibernateConfiguration,
         private val schemaService: SchemaService
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
