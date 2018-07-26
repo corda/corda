@@ -1,9 +1,8 @@
 package net.corda.core
 
-import kotlin.annotation.AnnotationRetention.*
-import kotlin.annotation.AnnotationTarget.*
-import kotlin.annotation.Retention
-import kotlin.annotation.Target
+import kotlin.annotation.AnnotationRetention.BINARY
+import kotlin.annotation.AnnotationTarget.CLASS
+import kotlin.annotation.AnnotationTarget.FILE
 
 /**
  * This annotates a class or file that we want to include into the deterministic version of Corda Core.

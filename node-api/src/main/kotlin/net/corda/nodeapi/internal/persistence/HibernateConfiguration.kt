@@ -66,6 +66,7 @@ class HibernateConfiguration(
                 // nationalised (i.e. Unicode) strings by default
                 val forceUnicodeForSqlServer = listOf(":oracle:", ":sqlserver:").any { jdbcUrl.contains(it, ignoreCase = true) }
                 enableGlobalNationalizedCharacterDataSupport(forceUnicodeForSqlServer)
+
                 return build()
             }
         }
@@ -233,3 +234,4 @@ class HibernateConfiguration(
 
 /** Allow Oracle database drivers ojdbc7.jar and ojdbc8.jar to deserialize classes from oracle.sql.converter package. */
 fun oracleJdbcDriverSerialFilter(clazz: Class<*>): Boolean = clazz.name.startsWith("oracle.sql.converter.")
+

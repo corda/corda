@@ -47,7 +47,6 @@ import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
 import org.hamcrest.Matchers.instanceOf
@@ -75,7 +74,7 @@ class BFTNotaryServiceTests {
 
         private lateinit var mockNet: InternalMockNetwork
         private lateinit var notary: Party
-        private lateinit var node: StartedNode<MockNode>
+        private lateinit var node: StartedNode
 
         @BeforeClass
         @JvmStatic
@@ -95,7 +94,7 @@ class BFTNotaryServiceTests {
             IntegrationTest.globalTearDown() //Enterprise only - remote db cleanup
         }
 
-        fun startBftClusterAndNode(clusterSize: Int, mockNet: InternalMockNetwork, exposeRaces: Boolean = false): Pair<Party, StartedNode<MockNode>> {
+        fun startBftClusterAndNode(clusterSize: Int, mockNet: InternalMockNetwork, exposeRaces: Boolean = false): Pair<Party, StartedNode> {
             (Paths.get("config") / "currentView").deleteIfExists() // XXX: Make config object warn if this exists?
             val replicaIds = (0 until clusterSize)
 
@@ -237,7 +236,7 @@ class BFTNotaryServiceTests {
         signatures.forEach { it.verify(txId) }
     }
 
-    private fun StartedNode<MockNode>.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
+    private fun StartedNode.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
         return services.signInitialTransaction(
                 TransactionBuilder(notary).apply {
                     addCommand(dummyCommand(services.myInfo.singleIdentity().owningKey))

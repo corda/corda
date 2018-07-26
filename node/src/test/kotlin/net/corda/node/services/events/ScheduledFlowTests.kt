@@ -35,7 +35,6 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
@@ -53,8 +52,8 @@ class ScheduledFlowTests {
     }
 
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var aliceNode: StartedNode<MockNode>
-    private lateinit var bobNode: StartedNode<MockNode>
+    private lateinit var aliceNode: StartedNode
+    private lateinit var bobNode: StartedNode
     private lateinit var notary: Party
     private lateinit var alice: Party
     private lateinit var bob: Party

@@ -121,24 +121,12 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
 // AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
-abstract class AbstractNode(val configuration: NodeConfiguration,
-                            val platformClock: CordaClock,
-                            protected val versionInfo: VersionInfo,
-                            protected val cordappLoader: CordappLoader,
-                            protected val serverThread: AffinityExecutor.ServiceAffinityExecutor,
-                            protected val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
-
-    private class StartedNodeImpl<out N : AbstractNode>(
-            override val internals: N,
-            override val info: NodeInfo,
-            override val rpcOps: CordaRPCOps,
-            override val notaryService: NotaryService?) : StartedNode<N> {
-        override val smm: StateMachineManager get() = internals.smm
-        override val attachments: NodeAttachmentService get() = internals.attachments
-        override val network: MessagingService get() = internals.network
-        override val database: CordaPersistence get() = internals.database
-        override val services: StartedNodeServices = object : StartedNodeServices, ServiceHubInternal by internals.services, FlowStarter by internals.flowStarter {}
-    }
+abstract class AbstractNode<S : StartedNode>(val configuration: NodeConfiguration,
+                                             val platformClock: CordaClock,
+                                             protected val versionInfo: VersionInfo,
+                                             protected val cordappLoader: CordappLoader,
+                                             protected val serverThread: AffinityExecutor.ServiceAffinityExecutor,
+                                             protected val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
 
@@ -205,7 +193,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     val services = ServiceHubInternalImpl().tokenize()
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
-    private val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
+    protected val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
     private val schedulerService = NodeSchedulerService(
             platformClock,
             database,
@@ -243,7 +231,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     /** Set to non-null once [start] has been successfully called. */
     open val started get() = _started
     @Volatile
-    private var _started: StartedNode<AbstractNode>? = null
+    private var _started: StartedNode? = null
 
     private fun <T : Any> T.tokenize(): T {
         tokenizableServices?.add(this) ?: throw IllegalStateException("The tokenisable services list has already been finialised")
@@ -305,7 +293,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    open fun start(): StartedNode<AbstractNode> {
+    open fun start(): S {
         check(started == null) { "Node has already been started" }
 
         if (configuration.devMode) {
@@ -401,9 +389,12 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
             schedulerService.start()
 
-            StartedNodeImpl(this@AbstractNode, nodeInfo, rpcOps, notaryService).also { _started = it }
+            createStartedNode(nodeInfo, rpcOps, notaryService).also { _started = it }
         }
     }
+
+    /** Subclasses must override this to create a [StartedNode] of the desired type, using the provided machinery. */
+    abstract fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): S
 
     private fun verifyCheckpointsCompatible(tokenizableServices: List<Any>) {
         try {
@@ -664,7 +655,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 }
     }
 
-    internal fun <T : FlowLogic<*>> registerInitiatedFlow(smm: StateMachineManager, initiatedFlowClass: Class<T>): Observable<T> {
+    protected fun <T : FlowLogic<*>> registerInitiatedFlow(smm: StateMachineManager, initiatedFlowClass: Class<T>): Observable<T> {
         return registerInitiatedFlowInternal(smm, initiatedFlowClass, track = true)
     }
 
@@ -700,11 +691,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return observable
     }
 
-    internal fun <F : FlowLogic<*>> internalRegisterFlowFactory(smm: StateMachineManager,
-                                                                initiatingFlowClass: Class<out FlowLogic<*>>,
-                                                                flowFactory: InitiatedFlowFactory<F>,
-                                                                initiatedFlowClass: Class<F>,
-                                                                track: Boolean): Observable<F> {
+    protected fun <F : FlowLogic<*>> internalRegisterFlowFactory(smm: StateMachineManager,
+                                                                 initiatingFlowClass: Class<out FlowLogic<*>>,
+                                                                 flowFactory: InitiatedFlowFactory<F>,
+                                                                 initiatedFlowClass: Class<F>,
+                                                                 track: Boolean): Observable<F> {
         val observable = if (track) {
             smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
         } else {
@@ -1003,7 +994,7 @@ internal fun logVendorString(database: CordaPersistence, log: Logger) {
 }
 
 // TODO Move this into its own file
-internal class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
+class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
     override fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<FlowStateMachine<T>> {
         smm.deliverExternalEvent(event)
         return event.future
@@ -1054,11 +1045,9 @@ fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
-                      schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
-    val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService)
-    persistence.hikariStart(hikariProperties, databaseConfig, schemaService)
-    return persistence
-}
+                      schemaService: SchemaService = NodeSchemaService()): CordaPersistence =
+    createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService)
+            .apply { hikariStart(hikariProperties, databaseConfig, schemaService) }
 
 fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
@@ -1089,6 +1078,7 @@ fun CordaPersistence.hikariStart(hikariProperties: Properties, databaseConfig: D
         when {
             ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)
             ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html")
+            ex is DatabaseIncompatibleException -> throw ex
             else -> throw CouldNotCreateDataSourceException("Could not create the DataSource: ${ex.message}", ex)
         }
     }

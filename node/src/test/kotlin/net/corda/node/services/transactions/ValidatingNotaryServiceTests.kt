@@ -37,7 +37,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.issueInvalidState
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.statemachine.InitialSessionMessage
@@ -53,6 +52,7 @@ import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.MessagingServiceSpy
 import net.corda.testing.node.internal.setMessagingServiceSpy
 import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -66,8 +66,8 @@ import kotlin.test.assertTrue
 
 class ValidatingNotaryServiceTests {
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var notaryNode: StartedNode<InternalMockNetwork.MockNode>
-    private lateinit var aliceNode: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var notaryNode: TestStartedNode
+    private lateinit var aliceNode: TestStartedNode
     private lateinit var notary: Party
     private lateinit var alice: Party
 

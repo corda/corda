@@ -95,14 +95,14 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
                 and bobNode.hasDummyContractUpgradeTransaction()))
     }
 
-    private fun StartedNode<*>.issueCash(amount: Amount<Currency> = Amount(1000, USD)) =
+    private fun StartedNode.issueCash(amount: Amount<Currency> = Amount(1000, USD)) =
         services.startFlow(CashIssueFlow(amount, OpaqueBytes.of(1), notary))
             .andRunNetwork()
             .resultFuture.getOrThrow()
 
-    private fun StartedNode<*>.getBaseStateFromVault() = getStateFromVault(ContractState::class)
+    private fun StartedNode.getBaseStateFromVault() = getStateFromVault(ContractState::class)
 
-    private fun StartedNode<*>.getCashStateFromVault() = getStateFromVault(CashV2.State::class)
+    private fun StartedNode.getCashStateFromVault() = getStateFromVault(CashV2.State::class)
 
     private fun hasIssuedAmount(expected: Amount<Issued<Currency>>) =
         hasContractState(has(CashV2.State::amount, equalTo(expected)))
@@ -172,24 +172,24 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
     }
 
     //region Operations
-    private fun StartedNode<*>.initiateDummyContractUpgrade(tx: SignedTransaction) =
+    private fun StartedNode.initiateDummyContractUpgrade(tx: SignedTransaction) =
             initiateContractUpgrade(tx, DummyContractV2::class)
 
-    private fun StartedNode<*>.authoriseDummyContractUpgrade(tx: SignedTransaction) =
+    private fun StartedNode.authoriseDummyContractUpgrade(tx: SignedTransaction) =
             authoriseContractUpgrade(tx, DummyContractV2::class)
     //endregion
 
     //region Matchers
-    private fun StartedNode<*>.hasDummyContractUpgradeTransaction() =
+    private fun StartedNode.hasDummyContractUpgradeTransaction() =
             hasContractUpgradeTransaction<DummyContract.State, DummyContractV2.State>()
 
-    private inline fun <reified FROM : Any, reified TO: Any> StartedNode<*>.hasContractUpgradeTransaction() =
+    private inline fun <reified FROM : Any, reified TO: Any> StartedNode.hasContractUpgradeTransaction() =
         has<StateAndRef<ContractState>, ContractUpgradeLedgerTransaction>(
             "a contract upgrade transaction",
             { getContractUpgradeTransaction(it) },
             isUpgrade<FROM, TO>())
 
-    private fun StartedNode<*>.getContractUpgradeTransaction(state: StateAndRef<ContractState>) =
+    private fun StartedNode.getContractUpgradeTransaction(state: StateAndRef<ContractState>) =
         services.validatedTransactions.getTransaction(state.ref.txhash)!!
                 .resolveContractUpgradeTransaction(services)
 

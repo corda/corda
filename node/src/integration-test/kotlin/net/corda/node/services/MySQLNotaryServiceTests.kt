@@ -32,7 +32,6 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.MySQLConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.MySQLNotaryService
@@ -68,10 +67,10 @@ class MySQLNotaryServiceTests : IntegrationTest() {
     }
 
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var node: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var node: TestStartedNode
     private val nodeParty: Party get() = node.info.singleIdentity()
     private lateinit var notaryParty: Party
-    private lateinit var notaryNode: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var notaryNode: TestStartedNode
 
     @Before
     fun before() {
@@ -247,7 +246,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
         }
     }
 
-    private fun issueState(node: StartedNode<InternalMockNetwork.MockNode>, notary: Party): StateAndRef<*> {
+    private fun issueState(node: TestStartedNode, notary: Party): StateAndRef<*> {
         return node.database.transaction {
             val builder = DummyContract.generateInitial(Random().nextInt(), notary, node.info.singleIdentity().ref(0))
             val stx = node.services.signInitialTransaction(builder)

@@ -10,7 +10,7 @@
 
 package net.corda.core
 
-import kotlin.annotation.AnnotationRetention.*
+import kotlin.annotation.AnnotationRetention.BINARY
 import kotlin.annotation.AnnotationTarget.*
 
 /**

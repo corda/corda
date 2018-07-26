@@ -32,6 +32,7 @@ const val NODE_DATABASE_PREFIX = "node_"
 // This class forms part of the node config and so any changes to it must be handled with care
 data class DatabaseConfig(
         val runMigration: Boolean = false,
+        val initialiseSchema: Boolean = true,
         val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ,
         val schema: String? = null,
         val exportHibernateJMXStatistics: Boolean = false,
@@ -99,7 +100,8 @@ class CordaPersistence(
         // Check not in read-only mode.
         transaction {
             check(!connection.metaData.isReadOnly) { "Database should not be readonly." }
-
+            checkCorrectAttachmentsContractsTableName(connection)
+            checkCorrectCheckpointTypeOnPostgres(connection)
         }
     }
     object DataSourceConfigTag {
@@ -304,3 +306,33 @@ private fun Throwable.hasSQLExceptionCause(): Boolean =
         }
 
 class CouldNotCreateDataSourceException(override val message: String?, override val cause: Throwable? = null) : Exception()
+
+class DatabaseIncompatibleException(override val message: String?, override val cause: Throwable? = null) : Exception()
+
+private fun checkCorrectAttachmentsContractsTableName(connection: Connection) {
+    val correctName = "NODE_ATTACHMENTS_CONTRACTS"
+    val incorrectV30Name = "NODE_ATTACHMENTS_CONTRACT_CLASS_NAME"
+    val incorrectV31Name = "NODE_ATTCHMENTS_CONTRACTS"
+
+    fun warning(incorrectName: String, version: String) = "The database contains the older table name $incorrectName instead of $correctName, see upgrade notes to migrate from Corda database version $version https://docs.corda.net/head/upgrade-notes.html."
+
+    if (!connection.metaData.getTables(null, null, correctName, null).next()) {
+        if (connection.metaData.getTables(null, null, incorrectV30Name, null).next()) { throw DatabaseIncompatibleException(warning(incorrectV30Name, "3.0")) }
+        if (connection.metaData.getTables(null, null, incorrectV31Name, null).next()) { throw DatabaseIncompatibleException(warning(incorrectV31Name, "3.1")) }
+    }
+}
+
+private fun checkCorrectCheckpointTypeOnPostgres(connection: Connection) {
+    val metaData = connection.metaData
+    if (metaData.getDatabaseProductName() != "PostgreSQL") {
+        return
+    }
+
+    val result = metaData.getColumns(null, null, "node_checkpoints", "checkpoint_value")
+    if (result.next()) {
+        val type = result.getString("TYPE_NAME")
+        if (type != "bytea") {
+            throw DatabaseIncompatibleException("The type of the 'checkpoint_value' table must be 'bytea', but 'oid' was found. See upgrade notes to migrate from Corda database version 3.1 https://docs.corda.net/head/upgrade-notes.html.")
+        }
+    }
+}

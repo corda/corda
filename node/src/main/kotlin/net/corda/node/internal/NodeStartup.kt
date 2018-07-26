@@ -39,6 +39,7 @@ import net.corda.node.utilities.registration.UnableToRegisterNodeWithDoormanExce
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.DatabaseMigrationException
 import net.corda.nodeapi.internal.persistence.oracleJdbcDriverSerialFilter
@@ -191,6 +192,10 @@ open class NodeStartup(val args: Array<String>) {
         } catch (e: NetworkParametersReader.Error) {
             logger.error(e.message)
             return false
+        } catch (e: DatabaseIncompatibleException) {
+            e.message?.let { Node.printWarning(it) }
+            logger.error(e.message)
+            return false
         } catch (e: Exception) {
             if (e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
                 logger.error("One of the ports required by the Corda node is already in use.")
@@ -338,15 +343,16 @@ open class NodeStartup(val args: Array<String>) {
         }
 
         val startedNode = node.start()
-        logLoadedCorDapps(startedNode.services.cordappProvider.cordapps)
-        startedNode.internals.nodeReadyFuture.thenMatch({
+        logLoadedCorDapps(node.services.cordappProvider.cordapps)
+        Node.printBasicNodeInfo("Loaded CorDapps", startedNode.services.cordappProvider.cordapps.joinToString { it.name })
+        node.nodeReadyFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             val name = startedNode.info.legalIdentitiesAndCerts.first().name.organisation
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.
             if (conf.shouldStartLocalShell()) {
-                startedNode.internals.startupComplete.then {
+                node.startupComplete.then {
                     try {
                         InteractiveShell.runLocalShell({ startedNode.dispose() })
                     } catch (e: Throwable) {
@@ -361,7 +367,7 @@ open class NodeStartup(val args: Array<String>) {
                 { th ->
                     logger.error("Unexpected exception during registration", th)
                 })
-        startedNode.internals.run()
+        node.run()
     }
 
     protected open fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {

@@ -16,8 +16,7 @@ import net.corda.core.internal.packageName
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.schemas.CashSchemaV1
-import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
+import net.corda.node.internal.StartedNodeWithInternals
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.testing.core.ALICE_NAME
@@ -79,7 +78,7 @@ class FlowsExecutionModeTests : NodeBasedTest(listOf("net.corda.finance.contract
     }
 
     private val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
-    private lateinit var node: StartedNode<Node>
+    private lateinit var node: StartedNodeWithInternals
     private lateinit var client: CordaRPCClient
 
     @Before
