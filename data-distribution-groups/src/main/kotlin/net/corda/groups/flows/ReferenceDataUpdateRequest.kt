@@ -13,7 +13,10 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 
-// TODO: Add KDocs.
+/**
+ * Given a Linear StateAndRef, this flow looks up which parties maintain the state object and then requests an
+ * update from them.
+ */
 class ReferenceDataUpdateRequest {
 
     @CordaSerializable
@@ -72,6 +75,8 @@ class ReferenceDataUpdateRequest {
             val query = QueryCriteria.LinearStateQueryCriteria(uuid = listOf(linearId.id))
             val result = serviceHub.vaultService.queryBy<LinearState>(query).states.singleOrNull()
 
+            // TODO: Check to see if they already have the latest version.
+
             if (result == null) {
                 // We don't have the transaction!
                 otherSession.send(Response.FAILURE)
@@ -80,7 +85,7 @@ class ReferenceDataUpdateRequest {
                 // We _must_ have the transaction which created the latest version of the state.
                 val stx = serviceHub.validatedTransactions.getTransaction(result.ref.txhash) as SignedTransaction
                 // Send on the transaction and dependencies.
-                logger.info("Sending dependencies for transaction ${stx.id}...")
+                logger.info("Sending transaction and dependencies for ${stx.id}...")
                 subFlow(SendTransactionFlow(otherSession, stx))
             }
         }
