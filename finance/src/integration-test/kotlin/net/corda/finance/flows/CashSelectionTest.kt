@@ -12,6 +12,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.InProcessImpl
+import net.corda.testing.driver.internal.OutOfProcessImpl
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
@@ -47,8 +48,8 @@ class CashSelectionTest {
 
     @Test
     fun `dont return extra coins if the selected amount has been reached`() {
-        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
-            val node = startNode().getOrThrow() as InProcessImpl
+        driver(DriverParameters(startNodesInProcess = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+            val node = startNode().getOrThrow()
             val nodeIdentity = node.services.myInfo.singleIdentity()
 
             val issuer = nodeIdentity.ref(1)

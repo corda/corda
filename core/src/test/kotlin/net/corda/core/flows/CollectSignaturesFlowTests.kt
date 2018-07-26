@@ -8,6 +8,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.excludeHostNode
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
+import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
@@ -137,7 +138,7 @@ class CollectSignaturesFlowTests {
     @Test
     fun `fails when not signed by initiator`() {
         val onePartyDummyContract = DummyContract.generateInitial(1337, notary, alice.ref(1))
-        val miniCorpServices = MockServices(listOf("net.corda.testing.contracts"), miniCorp, rigorousMock())
+        val miniCorpServices = MockServices(listOf("net.corda.testing.contracts"), miniCorp, rigorousMock<IdentityService>())
         val ptx = miniCorpServices.signInitialTransaction(onePartyDummyContract)
         val flow = aliceNode.services.startFlow(CollectSignaturesFlow(ptx, emptySet()))
         mockNet.runNetwork()
