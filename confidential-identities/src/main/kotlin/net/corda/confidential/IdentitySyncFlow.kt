@@ -3,6 +3,7 @@ package net.corda.confidential
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.identity.AbstractParty
@@ -54,15 +55,15 @@ object IdentitySyncFlow {
         }
 
         private fun extractOurConfidentialIdentities(): Map<AbstractParty, PartyAndCertificate?> {
-            // loadStates throw TransactionResolutionException if some inputs are not in storage
-//            val states: List<ContractState> = (serviceHub.loadStates(tx.inputs.toSet()).map { it.state.data } + tx.outputs.map { it.data })
-            val storedInputs = mutableSetOf<StateRef>()
-            // TODO: Is there a more efficient way to find out whether a transaction is in the local storage?
-            tx.inputs.forEach {
-                if (serviceHub.validatedTransactions.getTransaction(it.txhash) != null)
-                    storedInputs.add(it)
+            val inputStates: List<ContractState> = (tx.inputs.toSet()).mapNotNull {
+                try {
+                    serviceHub.loadState(it).data
+                }
+                catch (e: TransactionResolutionException) {
+                    null
+                }
             }
-            val states: List<ContractState> = (serviceHub.loadStates(storedInputs).map { it.state.data } + tx.outputs.map { it.data })
+            val states: List<ContractState> = inputStates + tx.outputs.map { it.data }
             val identities: Set<AbstractParty> = states.flatMap(ContractState::participants).toSet()
             // Filter participants down to the set of those not in the network map (are not well known)
             val confidentialIdentities = identities
