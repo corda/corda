@@ -234,22 +234,20 @@ class NodeVaultService(
         if (updates.isEmpty()) return
         val netUpdate = updates.reduce { update1, update2 -> update1 + update2 }
         if (!netUpdate.isEmpty()) {
-            // ensure mutex captures persistent update and update notification
-            mutex.locked {
-                recordUpdate(netUpdate)
-                // flowId was required by SoftLockManager to perform auto-registration of soft locks for new states
-                val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
-                val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
-                if (uuid != null) {
-                    val fungible = netUpdate.produced.filter { it.state.data is FungibleAsset<*> }
-                    if (fungible.isNotEmpty()) {
-                        val stateRefs = fungible.map { it.ref }.toNonEmptySet()
-                        log.trace { "Reserving soft locks for flow id $uuid and states $stateRefs" }
-                        softLockReserve(uuid, stateRefs)
-                    }
+            recordUpdate(netUpdate)
+            // flowId was required by SoftLockManager to perform auto-registration of soft locks for new states
+            val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
+            val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
+            if (uuid != null) {
+                val fungible = netUpdate.produced.filter { it.state.data is FungibleAsset<*> }
+                if (fungible.isNotEmpty()) {
+                    val stateRefs = fungible.map { it.ref }.toNonEmptySet()
+                    log.trace { "Reserving soft locks for flow id $uuid and states $stateRefs" }
+                    softLockReserve(uuid, stateRefs)
                 }
-                updatesPublisher.onNext(vaultUpdate)
             }
+            // note we already have a the lock from the parent calling method.
+            mutex.locked { updatesPublisher.onNext(vaultUpdate) }
         }
     }
 
