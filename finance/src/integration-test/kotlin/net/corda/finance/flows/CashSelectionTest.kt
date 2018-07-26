@@ -48,8 +48,8 @@ class CashSelectionTest {
 
     @Test
     fun `dont return extra coins if the selected amount has been reached`() {
-        driver(DriverParameters(startNodesInProcess = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
-            val node = startNode().getOrThrow()
+        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+            val node = startNode().getOrThrow() as InProcessImpl
             val nodeIdentity = node.services.myInfo.singleIdentity()
 
             val issuer = nodeIdentity.ref(1)
