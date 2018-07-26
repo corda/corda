@@ -2,8 +2,6 @@ package net.corda.testing.node
 
 import com.google.common.collect.MutableClassToInstanceMap
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
@@ -17,7 +15,6 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.VersionInfo
 import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.cordapp.CordappLoader
@@ -25,7 +22,6 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
@@ -196,6 +192,12 @@ open class MockServices private constructor(
     constructor(firstIdentity: TestIdentity, vararg moreIdentities: TestIdentity) : this(
             listOf(getCallerPackage()),
             firstIdentity,
+            *moreIdentities
+    )
+
+    constructor(cordappPackages: List<String>, firstIdentity: TestIdentity, vararg moreIdentities: TestIdentity) : this(
+            cordappPackages,
+            firstIdentity,
             makeTestIdentityService(*listOf(firstIdentity, *moreIdentities).map { it.identity }.toTypedArray()),
             firstIdentity.keyPair
     )
@@ -229,9 +231,7 @@ open class MockServices private constructor(
     protected val servicesForResolution: ServicesForResolution get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParameters, validatedTransactions)
 
     internal fun makeVaultService(hibernateConfig: HibernateConfiguration, schemaService: SchemaService): VaultServiceInternal {
-        val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, hibernateConfig)
-        HibernateObserver.install(vaultService.rawUpdates, hibernateConfig, schemaService)
-        return vaultService
+        return NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, hibernateConfig, schemaService)
     }
 
     // This needs to be internal as MutableClassToInstanceMap is a guava type and shouldn't be part of our public API

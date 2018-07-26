@@ -12,6 +12,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.InProcessImpl
+import net.corda.testing.driver.internal.OutOfProcessImpl
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 

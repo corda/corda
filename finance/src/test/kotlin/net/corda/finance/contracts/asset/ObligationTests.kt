@@ -9,6 +9,7 @@ import net.corda.core.crypto.sha256
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
@@ -79,7 +80,7 @@ class ObligationTests {
             beneficiary = CHARLIE
     )
     private val outState = inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY))
-    private val miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), miniCorp, rigorousMock())
+    private val miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), miniCorp, rigorousMock<IdentityService>())
     private val notaryServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock(), dummyNotary.keyPair)
     private val identityService = rigorousMock<IdentityServiceInternal>().also {
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
