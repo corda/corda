@@ -559,7 +559,7 @@ private typealias RpcReplyMap = ConcurrentHashMap<InvocationId, SettableFuture<A
 private typealias CallSiteMap = ConcurrentHashMap<InvocationId, Throwable?>
 
 /**
- * Holds a context available during Kryo deserialisation of messages that are expected to contain Observables.
+ * Holds a context available during de-serialisation of messages that are expected to contain Observables.
  *
  * @param observableMap holds the Observables that are ultimately exposed to the user.
  * @param hardReferenceStore holds references to Observables we want to keep alive while they are subscribed to.
