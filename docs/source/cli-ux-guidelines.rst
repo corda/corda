@@ -15,6 +15,7 @@ Option names
 * A ``--version`` option that should output the version number of the software.
 * A ``--logging-level`` option should be provided which specifies the logging level to be used in any logging files. Acceptable values should be ``DEBUG``, ``TRACE``, ``INFO``, ``WARN`` and ``ERROR``.
 * A ``--verbose`` option should be provided which specifies that logging output should be displayed in the console.
+* A ``--install-completion`` option should be provided that creates and installs a bash completion file.
 
 Short names
 ~~~~~~~~~~~
