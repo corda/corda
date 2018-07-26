@@ -33,7 +33,7 @@ import java.util.*
 
 class ContractUpgradeFlowTest : WithContracts, WithFinality {
     companion object {
-        private val classMockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
+        private val classMockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows", "net.corda.finance.schemas"))
 
         @JvmStatic
         @AfterClass

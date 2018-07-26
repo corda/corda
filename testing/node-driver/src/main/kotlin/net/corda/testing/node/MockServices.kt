@@ -24,7 +24,6 @@ import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
@@ -212,6 +211,12 @@ open class MockServices private constructor(
     constructor(firstIdentity: TestIdentity, vararg moreIdentities: TestIdentity) : this(
             listOf(getCallerPackage(MockServices::class)!!),
             firstIdentity,
+            *moreIdentities
+    )
+
+    constructor(cordappPackages: List<String>, firstIdentity: TestIdentity, vararg moreIdentities: TestIdentity) : this(
+            cordappPackages,
+            firstIdentity,
             makeTestIdentityService(*listOf(firstIdentity, *moreIdentities).map { it.identity }.toTypedArray()),
             firstIdentity.keyPair
     )
@@ -252,9 +257,7 @@ open class MockServices private constructor(
         }
 
     internal fun makeVaultService(hibernateConfig: HibernateConfiguration, schemaService: SchemaService, database: CordaPersistence): VaultServiceInternal {
-        val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database).apply { start() }
-        HibernateObserver.install(vaultService.rawUpdates, hibernateConfig, schemaService)
-        return vaultService
+        return NodeVaultService(clock, keyManagementService, servicesForResolution, database).apply { start() }
     }
 
     // This needs to be internal as MutableClassToInstanceMap is a guava type and shouldn't be part of our public API

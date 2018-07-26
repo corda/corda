@@ -109,7 +109,7 @@ class CommercialPaperTestsGeneric {
     val testSerialization = SerializationEnvironmentRule()
 
     private val megaCorpRef = megaCorp.ref(123)
-    private val ledgerServices = MockServices(megaCorp, miniCorp)
+    private val ledgerServices = MockServices(listOf("net.corda.finance.schemas"), megaCorp, miniCorp)
 
     @Test
     fun `trade lifecycle test`() {
@@ -245,10 +245,10 @@ class CommercialPaperTestsGeneric {
         // of the dummy cash issuer.
 
         val allIdentities = arrayOf(megaCorp.identity, alice.identity, dummyCashIssuer.identity, dummyNotary.identity)
-        val notaryServices = MockServices(dummyNotary)
-        val issuerServices = MockServices(dummyCashIssuer, dummyNotary)
+        val notaryServices = MockServices(listOf("net.corda.finance.contracts", "net.corda.finance.contracts.asset", "net.corda.finance.schemas"), dummyNotary)
+        val issuerServices = MockServices(listOf("net.corda.finance.contracts", "net.corda.finance.contracts.asset", "net.corda.finance.schemas"), dummyCashIssuer, dummyNotary)
         val (aliceDatabase, aliceServices) = makeTestDatabaseAndMockServices(
-                listOf("net.corda.finance.contracts"),
+                listOf("net.corda.finance.contracts", "net.corda.finance.contracts.asset", "net.corda.finance.schemas"),
                 makeTestIdentityService(*allIdentities),
                 alice
         )
@@ -257,7 +257,7 @@ class CommercialPaperTestsGeneric {
         }
 
         val (megaCorpDatabase, megaCorpServices) = makeTestDatabaseAndMockServices(
-                listOf("net.corda.finance.contracts"),
+                listOf("net.corda.finance.contracts", "net.corda.finance.contracts.asset", "net.corda.finance.schemas"),
                 makeTestIdentityService(*allIdentities),
                 megaCorp
         )
