@@ -185,6 +185,7 @@ interface VaultService {
         val result = trackBy<ContractState>(query)
         val snapshot = result.snapshot.states
         return if (snapshot.isNotEmpty()) {
+            require(snapshot.size == 1) { "Tracking consumption of single StateRef $ref but snapshot query returned many: $snapshot" }
             doneFuture(Vault.Update(consumed = setOf(snapshot.single()), produced = emptySet()))
         } else {
             result.updates.toFuture()
