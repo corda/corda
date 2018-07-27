@@ -29,13 +29,13 @@ fun main(args: Array<String>) {
         versionProvider = CordaVersionProvider::class,
         mixinStandardHelpOptions = true,
         showDefaultValues = true,
-        description = ["Bootstrap a local test Corda network using a set of node conf files and CorDapp JARs"]
+        description = ["Bootstrap a local test Corda network using a set of node configuration files and CorDapp JARs"]
 )
 class Main : Runnable {
     @Option(
             names = ["--dir"],
             description = [
-                "Root directory containing the node conf files and CorDapp JARs that will form the test network.",
+                "Root directory containing the node configuration files and CorDapp JARs that will form the test network.",
                 "It may also contain existing node directories."
             ]
     )
@@ -47,7 +47,7 @@ class Main : Runnable {
     @Option(names = ["--verbose"], description = ["Enable verbose output."])
     var verbose: Boolean = false
 
-    @Option(names = ["--install", "-i"], description = ["Install bootstrapper alias and autocompletion in bash"])
+    @Option(names = ["--install-shell-extensions", "-i"], description = ["Install bootstrapper alias and autocompletion in bash"])
     var install: Boolean = false
 
     // Return the lines in the file if it exists, else return an empty mutable list
@@ -74,29 +74,26 @@ class Main : Runnable {
         }
     }
 
-    // If on windows, Path.toString() returns a path with \ instead of /, but for bash windows users we want to convert those back to /'s
+    // If on Windows, Path.toString() returns a path with \ instead of /, but for bash Windows users we want to convert those back to /'s
     private fun Path.toStringWithDeWindowsfication(): String = this.toAbsolutePath().toString().replace("\\", "/")
 
     private fun install(alias: String) {
         // Get jar location and generate alias command
         val jarLocation = this.javaClass.location.toPath()
-        val command = "alias $alias='java -jar ${jarLocation.toStringWithDeWindowsfication()}'"
+        val command = "alias $alias='java -jar \"${jarLocation.toStringWithDeWindowsfication()}\"'"
 
         val userHome = Paths.get(System.getProperty("user.home"))
 
-        System.out.println("Generating $alias auto completion file")
-        val completionDir = userHome / ".completion"
-        if (!completionDir.exists()) {
-            completionDir.createDirectory()
-        }
-        val autoCompletePath = (completionDir / "$alias").toStringWithDeWindowsfication()
+        println("Generating $alias auto completion file")
+        val completionDir = (userHome / ".completion").createDirectories()
+        val autoCompletePath = (completionDir / "$alias").createDirectories().toStringWithDeWindowsfication()
         picocli.AutoComplete.main("-f", "-n", alias, this.javaClass.name, "-o", autoCompletePath)
 
-        // get bash settings file
+        // Get bash settings file
         val bashSettingsFile = userHome / ".bashrc"
         val bashSettingsFileLines = getFileLines(bashSettingsFile).toMutableList()
 
-        System.out.println("Updating bash settings files")
+        println("Updating bash settings files")
         // Replace any existing bootstrapper alias. There can be only one.
         bashSettingsFileLines.addOrReplaceIfStartsWith("alias $alias", command)
 
@@ -105,9 +102,9 @@ class Main : Runnable {
 
         bashSettingsFile.writeLines(bashSettingsFileLines)
 
-        System.out.println("Installation complete, $alias is available in bash with autocompletion. ")
-        System.out.println("Type `$alias <options>` from the commandline.")
-        System.out.println("Restart bash for this to take effect, or run `. ~/.bashrc` to re-initialise bash now")
+        println("Installation complete, $alias is available in bash with autocompletion. ")
+        println("Type `$alias <options>` from the commandline.")
+        println("Restart bash for this to take effect, or run `. ~/.bashrc` to re-initialise bash now")
     }
 
     override fun run() {
