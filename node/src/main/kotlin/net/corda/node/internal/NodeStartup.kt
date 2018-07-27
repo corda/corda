@@ -27,9 +27,9 @@ import net.corda.node.utilities.registration.UnableToRegisterNodeWithDoormanExce
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
+import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -319,6 +319,8 @@ open class NodeStartup(val args: Array<String>) {
             Emoji.renderIfSupported {
                 Node.printWarning("This node is running in developer mode! ${Emoji.developer} This is not safe for production deployment.")
             }
+        } else {
+            logger.info("The Corda node is running in production mode. If this is a developer environment you can set 'devMode=true' in the node.conf file.")
         }
 
         val nodeInfo = node.start()
@@ -332,7 +334,7 @@ open class NodeStartup(val args: Array<String>) {
             if (conf.shouldStartLocalShell()) {
                 node.startupComplete.then {
                     try {
-                        InteractiveShell.runLocalShell({ node.stop() })
+                        InteractiveShell.runLocalShell(node::stop)
                     } catch (e: Throwable) {
                         logger.error("Shell failed to start", e)
                     }
