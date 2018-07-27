@@ -4,6 +4,7 @@ Tools
 .. toctree::
    :maxdepth: 1
 
+   network-builder
    blob-inspector
    network-simulator
    demobench
