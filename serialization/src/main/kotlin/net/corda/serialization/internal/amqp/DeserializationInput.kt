@@ -39,25 +39,32 @@ data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
  * instances and threads.
  */
 @KeepForDJVM
-class DeserializationInput @JvmOverloads constructor(private val serializerFactory: SerializerFactory,
-                                                     private val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist) {
+class DeserializationInput @JvmOverloads constructor(
+        private val serializerFactory: SerializerFactory,
+        private val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist
+) {
     private val objectHistory: MutableList<Any> = mutableListOf()
     private val logger = loggerFor<DeserializationInput>()
 
     companion object {
         @VisibleForTesting
-        @Throws(NotSerializableException::class)
-        fun <T> withDataBytes(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist, task: (ByteBuffer) -> T): T {
+        @Throws(AMQPNoTypeNotSerializableException::class)
+        fun <T> withDataBytes(
+                byteSequence: ByteSequence,
+                encodingWhitelist: EncodingWhitelist,
+                task: (ByteBuffer) -> T
+        ) : T {
             // Check that the lead bytes match expected header
             val amqpSequence = amqpMagic.consume(byteSequence)
-                    ?: throw NotSerializableException("Serialization header does not match.")
+                    ?: throw AMQPNoTypeNotSerializableException("Serialization header does not match.")
             var stream: InputStream = ByteBufferInputStream(amqpSequence)
             try {
                 while (true) {
                     when (SectionId.reader.readFrom(stream)) {
                         SectionId.ENCODING -> {
                             val encoding = CordaSerializationEncoding.reader.readFrom(stream)
-                            encodingWhitelist.acceptEncoding(encoding) || throw NotSerializableException(encodingNotPermittedFormat.format(encoding))
+                            encodingWhitelist.acceptEncoding(encoding) ||
+                                    throw AMQPNoTypeNotSerializableException(encodingNotPermittedFormat.format(encoding))
                             stream = encoding.wrap(stream)
                         }
                         SectionId.DATA_AND_STOP, SectionId.ALT_DATA_AND_STOP -> return task(stream.asByteBuffer())
@@ -68,29 +75,40 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
             }
         }
 
-        @Throws(NotSerializableException::class)
+        @Throws(AMQPNoTypeNotSerializableException::class)
         fun getEnvelope(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist): Envelope {
             return withDataBytes(byteSequence, encodingWhitelist) { dataBytes ->
                 val data = Data.Factory.create()
                 val expectedSize = dataBytes.remaining()
-                if (data.decode(dataBytes) != expectedSize.toLong()) throw NotSerializableException("Unexpected size of data")
+                if (data.decode(dataBytes) != expectedSize.toLong()) {
+                    throw AMQPNoTypeNotSerializableException(
+                            "Unexpected size of data",
+                            "Blob is corrupted!.")
+                }
                 Envelope.get(data)
             }
         }
     }
 
 
-    @Throws(NotSerializableException::class)
+    @Throws(AMQPNoTypeNotSerializableException::class)
     fun getEnvelope(byteSequence: ByteSequence) = getEnvelope(byteSequence, encodingWhitelist)
 
-    @Throws(NotSerializableException::class)
+    @Throws(
+            AMQPNotSerializableException::class,
+            AMQPNoTypeNotSerializableException::class)
     inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>, context: SerializationContext): T =
             deserialize(bytes, T::class.java, context)
 
-    @Throws(NotSerializableException::class)
+    @Throws(
+            AMQPNotSerializableException::class,
+            AMQPNoTypeNotSerializableException::class)
     private fun <R> des(generator: () -> R): R {
         try {
             return generator()
+        } catch (amqp : AMQPNotSerializableException) {
+            amqp.log("Deserialize", logger)
+            throw NotSerializableException(amqp.mitigation)
         } catch (nse: NotSerializableException) {
             throw nse
         } catch (t: Throwable) {
@@ -143,12 +161,15 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
                 // It must be a reference to an instance that has already been read, cheaply and quickly returning it by reference.
                 val objectIndex = (obj.described as UnsignedInteger).toInt()
                 if (objectIndex !in 0..objectHistory.size)
-                    throw NotSerializableException("Retrieval of existing reference failed. Requested index $objectIndex " +
+                    throw AMQPNotSerializableException(
+                            type,
+                            "Retrieval of existing reference failed. Requested index $objectIndex " +
                             "is outside of the bounds for the list of size: ${objectHistory.size}")
 
                 val objectRetrieved = objectHistory[objectIndex]
                 if (!objectRetrieved::class.java.isSubClassOf(type.asClass()!!)) {
-                    throw NotSerializableException(
+                    throw AMQPNotSerializableException(
+                            type,
                             "Existing reference type mismatch. Expected: '$type', found: '${objectRetrieved::class.java}' " +
                                     "@ $objectIndex")
                 }
@@ -160,8 +181,11 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
                         val serializer = serializerFactory.get(obj.descriptor, schemas)
                         if (SerializerFactory.AnyType != type && serializer.type != type && with(serializer.type) {
                                     !isSubClassOf(type) && !materiallyEquivalentTo(type)
-                                }) {
-                            throw NotSerializableException("Described type with descriptor ${obj.descriptor} was " +
+                                }
+                        ) {
+                            throw AMQPNotSerializableException(
+                                    type,
+                                    "Described type with descriptor ${obj.descriptor} was " +
                                     "expected to be of type $type but was ${serializer.type}")
                         }
                         serializer.readObject(obj.described, schemas, this, context)

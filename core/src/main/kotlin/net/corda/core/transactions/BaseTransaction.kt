@@ -25,6 +25,8 @@ import java.util.function.Predicate
 @KeepForDJVM
 @DoNotImplement
 abstract class BaseTransaction : NamedByHash {
+    /** A list of reusable reference data states which can be referred to by other contracts in this transaction. */
+    abstract val references: List<*>
     /** The inputs of this transaction. Note that in BaseTransaction subclasses the type of this list may change! */
     abstract val inputs: List<*>
     /** Ordered list of states defined by this transaction, along with the associated notaries. */
@@ -39,16 +41,26 @@ abstract class BaseTransaction : NamedByHash {
     protected open fun checkBaseInvariants() {
         checkNotarySetIfInputsPresent()
         checkNoDuplicateInputs()
+        checkForInputsAndReferencesOverlap()
     }
 
     private fun checkNotarySetIfInputsPresent() {
-        if (inputs.isNotEmpty()) {
+        if (inputs.isNotEmpty() || references.isNotEmpty()) {
             check(notary != null) { "The notary must be specified explicitly for any transaction that has inputs" }
         }
     }
 
     private fun checkNoDuplicateInputs() {
         check(inputs.size == inputs.toSet().size) { "Duplicate input states detected" }
+        check(references.size == references.toSet().size) { "Duplicate reference states detected" }
+    }
+
+    private fun checkForInputsAndReferencesOverlap() {
+        val intersection = inputs intersect references
+        require(intersection.isEmpty()) {
+            "A StateRef cannot be both an input and a reference input in the same transaction. Offending " +
+                    "StateRefs: $intersection"
+        }
     }
 
     /**

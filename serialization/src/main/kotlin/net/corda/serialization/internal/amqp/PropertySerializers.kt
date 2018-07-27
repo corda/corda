@@ -201,7 +201,7 @@ abstract class PropertySerializers(
                     is PropertyAccessorGetterSetter -> PropertySerializersSetter(serializationOrder)
                     null -> PropertySerializersNoProperties()
                     else -> {
-                        throw NotSerializableException("Unknown Property Accessor type, cannot create set")
+                        throw AMQPNoTypeNotSerializableException("Unknown Property Accessor type, cannot create set")
                     }
                 }
     }

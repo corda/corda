@@ -16,7 +16,6 @@ import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.assertj.core.api.Condition
 import org.junit.Test
 import java.io.NotSerializableException
 import java.net.URI

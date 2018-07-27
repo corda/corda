@@ -21,5 +21,6 @@ enum class ComponentGroupEnum {
     ATTACHMENTS_GROUP, // ordinal = 3.
     NOTARY_GROUP, // ordinal = 4.
     TIMEWINDOW_GROUP, // ordinal = 5.
-    SIGNERS_GROUP // ordinal = 6.
+    SIGNERS_GROUP, // ordinal = 6.
+    REFERENCES_GROUP // ordinal = 7.
 }

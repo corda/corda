@@ -172,7 +172,7 @@ class TopLevelTransition(
                 )
             } else {
                 actions.addAll(arrayOf(
-                        Action.PersistCheckpoint(context.id, newCheckpoint),
+                        Action.PersistCheckpoint(context.id, newCheckpoint, isCheckpointUpdate = currentState.isAnyCheckpointPersisted),
                         Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
                         Action.CommitTransaction,
                         Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),

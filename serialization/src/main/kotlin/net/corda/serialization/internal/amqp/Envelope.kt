@@ -41,7 +41,8 @@ data class Envelope(val obj: Any?, val schema: Schema, val transformsSchema: Tra
         fun get(data: Data): Envelope {
             val describedType = data.`object` as DescribedType
             if (describedType.descriptor != DESCRIPTOR) {
-                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}, should be $DESCRIPTOR.")
+                throw AMQPNoTypeNotSerializableException(
+                        "Unexpected descriptor ${describedType.descriptor}, should be $DESCRIPTOR.")
             }
             val list = describedType.described as List<*>
 
@@ -50,7 +51,8 @@ data class Envelope(val obj: Any?, val schema: Schema, val transformsSchema: Tra
             val transformSchema: Any? = when (list.size) {
                 ENVELOPE_WITHOUT_TRANSFORMS -> null
                 ENVELOPE_WITH_TRANSFORMS -> list[TRANSFORMS_SCHEMA_IDX]
-                else -> throw NotSerializableException("Malformed list, bad length of ${list.size} (should be 2 or 3)")
+                else -> throw AMQPNoTypeNotSerializableException(
+                        "Malformed list, bad length of ${list.size} (should be 2 or 3)")
             }
 
             return newInstance(listOf(list[BLOB_IDX], Schema.get(list[SCHEMA_IDX]!!),
@@ -67,7 +69,8 @@ data class Envelope(val obj: Any?, val schema: Schema, val transformsSchema: Tra
             val transformSchema = when (list.size) {
                 ENVELOPE_WITHOUT_TRANSFORMS -> TransformsSchema.newInstance(null)
                 ENVELOPE_WITH_TRANSFORMS -> list[TRANSFORMS_SCHEMA_IDX] as TransformsSchema
-                else -> throw NotSerializableException("Malformed list, bad length of ${list.size} (should be 2 or 3)")
+                else -> throw AMQPNoTypeNotSerializableException(
+                        "Malformed list, bad length of ${list.size} (should be 2 or 3)")
             }
 
             return Envelope(list[BLOB_IDX], list[SCHEMA_IDX] as Schema, transformSchema)

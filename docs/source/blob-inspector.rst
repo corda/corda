@@ -2,9 +2,9 @@ Blob Inspector
 ==============
 
 There are many benefits to having a custom binary serialisation format (see :doc:`serialization` for details) but one
-disadvantage is the inability to view the contents in a human-friendly manner. The blob inspector tool alleviates this issue
-by allowing the contents of a binary blob file (or URL end-point) to be output in either YAML or JSON. It uses
-``JacksonSupport`` to do this (see :doc:`json`).
+disadvantage is the inability to view the contents in a human-friendly manner. The Corda Blob Inspector tool alleviates
+this issue by allowing the contents of a binary blob file (or URL end-point) to be output in either YAML or JSON. It
+uses ``JacksonSupport`` to do this (see :doc:`json`).
 
 The tool is distributed as part of |release| in the form of runnable JAR "|jar_name|".
 
@@ -58,8 +58,9 @@ Example
 
 Here's what a node-info file from the node's data directory may look like:
 
-**-\\-format=YAML**
-::
+* YAML:
+
+.. sourcecode:: none
 
     net.corda.nodeapi.internal.SignedNodeInfo
     ---
@@ -76,8 +77,9 @@ Here's what a node-info file from the node's data directory may look like:
     - !!binary |-
       VFRy4frbgRDbCpK1Vo88PyUoj01vbRnMR3ROR2abTFk7yJ14901aeScX/CiEP+CDGiMRsdw01cXt\nhKSobAY7Dw==
 
-**-\\-format=JSON**
-::
+* JSON:
+
+.. sourcecode:: none
 
     net.corda.nodeapi.internal.SignedNodeInfo
     {

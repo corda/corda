@@ -65,8 +65,11 @@ data class ContractUpgradeWireTransaction(
         get() = throw UnsupportedOperationException("ContractUpgradeWireTransaction does not contain output states, " +
                 "outputs can only be obtained from a resolved ContractUpgradeLedgerTransaction")
 
+    /** ContractUpgradeWireTransactions should not contain reference input states. */
+    override val references: List<StateRef> get() = emptyList()
+
     override val id: SecureHash by lazy {
-        val componentHashes =serializedComponents.mapIndexed { index, component ->
+        val componentHashes = serializedComponents.mapIndexed { index, component ->
             componentHash(nonces[index], component)
         }
         combinedHash(componentHashes)
@@ -155,6 +158,7 @@ data class ContractUpgradeFilteredTransaction(
         combinedHash(hashList)
     }
     override val outputs: List<TransactionState<ContractState>> get() = emptyList()
+    override val references: List<StateRef> get() = emptyList()
 
     /** Contains the serialized component and the associated nonce for computing the transaction id. */
     @CordaSerializable
@@ -183,6 +187,8 @@ data class ContractUpgradeLedgerTransaction(
         override val sigs: List<TransactionSignature>,
         private val networkParameters: NetworkParameters
 ) : FullTransaction(), TransactionWithSignatures {
+    /** ContractUpgradeLEdgerTransactions do not contain reference input states. */
+    override val references: List<StateAndRef<ContractState>> = emptyList()
     /** The legacy contract class name is determined by the first input state. */
     private val legacyContractClassName = inputs.first().state.contract
     private val upgradedContract: UpgradedContract<ContractState, *> = loadUpgradedContract()

@@ -24,8 +24,7 @@ You can find out more about network maps and network parameters from :doc:`netwo
 Bootstrapping a test network
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The bootstrapper can be downloaded from https://downloads.corda.net/network-bootstrapper-VERSION.jar, where ``VERSION``
-is the Corda version.
+The Corda Network Bootstrapper can be downloaded from `here <https://corda.net/resources>`_.
 
 Create a directory containing a node config file, ending in "_node.conf", for each node you want to create. Then run the
 following command:

@@ -65,11 +65,25 @@ sealed class NotaryError {
 /** Contains information about the consuming transaction for a particular state. */
 // TODO: include notary timestamp?
 @CordaSerializable
-data class StateConsumptionDetails(
+data class StateConsumptionDetails @JvmOverloads constructor(
         /**
          * Hash of the consuming transaction id.
          *
          * Note that this is NOT the transaction id itself – revealing it could lead to privacy leaks.
          */
-        val hashOfTransactionId: SecureHash
-)
+        val hashOfTransactionId: SecureHash,
+
+        /**
+         * The type of consumed state: Either a reference input state or a regular input state.
+         */
+        val type: ConsumedStateType = ConsumedStateType.INPUT_STATE
+) {
+
+    @CordaSerializable
+    enum class ConsumedStateType { INPUT_STATE, REFERENCE_INPUT_STATE }
+
+    fun copy(hashOfTransactionId: SecureHash): StateConsumptionDetails {
+        return StateConsumptionDetails(hashOfTransactionId, type)
+    }
+}
+

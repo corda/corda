@@ -128,7 +128,8 @@ open class SerializerFactory(
         // can be useful to enable but will be *extremely* chatty if you do
         logger.trace { "Get Serializer for $actualClass ${declaredType.typeName}" }
 
-        val declaredClass = declaredType.asClass() ?: throw NotSerializableException(
+        val declaredClass = declaredType.asClass() ?: throw AMQPNotSerializableException(
+                declaredType,
                 "Declared types of $declaredType are not supported.")
 
         val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
@@ -215,9 +216,12 @@ open class SerializerFactory(
                     val endType = DeserializedParameterizedType(actualClass, actualClass.typeParameters)
                     val resolvedType = resolver.resolveType(endType)
                     resolvedType
-                } else throw NotSerializableException("No inheritance path between actual $actualClass and declared $declaredType.")
+                } else throw AMQPNotSerializableException(declaredType,
+                        "No inheritance path between actual $actualClass and declared $declaredType.")
             } else actualClass
-        } else throw NotSerializableException("Found object of type $actualClass in a property expecting $declaredType")
+        } else throw AMQPNotSerializableException(
+                declaredType,
+                "Found object of type $actualClass in a property expecting $declaredType")
     }
 
     // Stop when reach declared type or return null if we don't find it.
@@ -327,7 +331,7 @@ open class SerializerFactory(
 
             // prevent carpenter exceptions escaping into the world, convert things into a nice
             // NotSerializableException for when this escapes over the wire
-            throw NotSerializableException(e.name)
+            NotSerializableException(e.name)
         }
         processSchema(schemaAndDescriptor, true)
     }
@@ -352,7 +356,9 @@ open class SerializerFactory(
     private fun processCompositeType(typeNotation: CompositeType): AMQPSerializer<Any> {
         // TODO: class loader logic, and compare the schema.
         val type = typeForName(typeNotation.name, classloader)
-        return get(type.asClass() ?: throw NotSerializableException("Unable to build composite type for $type"), type)
+        return get(
+                type.asClass() ?: throw AMQPNotSerializableException(type, "Unable to build composite type for $type"),
+                type)
     }
 
     private fun makeClassSerializer(
@@ -364,13 +370,15 @@ open class SerializerFactory(
         if (clazz.isSynthetic) {
             // Explicitly ban synthetic classes, we have no way of recreating them when deserializing. This also
             // captures Lambda expressions and other anonymous functions
-            throw NotSerializableException(type.typeName)
+            throw AMQPNotSerializableException(
+                    type,
+                    "Serializer does not support synthetic classes")
         } else if (isPrimitive(clazz)) {
             AMQPPrimitiveSerializer(clazz)
         } else {
             findCustomSerializer(clazz, declaredType) ?: run {
                 if (onlyCustomSerializers) {
-                    throw NotSerializableException("Only allowing custom serializers")
+                    throw AMQPNotSerializableException(type, "Only allowing custom serializers")
                 }
                 if (type.isArray()) {
                     // Don't need to check the whitelist since each element will come back through the whitelisting process.
@@ -395,7 +403,6 @@ open class SerializerFactory(
     }
 
     private fun doFindCustomSerializer(key: CustomSerializersCacheKey): AMQPSerializer<Any>? {
-
         val (clazz, declaredType) = key
 
         // e.g. Imagine if we provided a Map serializer this way, then it won't work if the declared type is
@@ -481,7 +488,7 @@ open class SerializerFactory(
             is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
             is WildcardType -> "?"
             is TypeVariable<*> -> "?"
-            else -> throw NotSerializableException("Unable to render type $type to a string.")
+            else -> throw AMQPNotSerializableException(type, "Unable to render type $type to a string.")
         }
 
         private fun typeForName(name: String, classloader: ClassLoader): Type {
@@ -492,7 +499,7 @@ open class SerializerFactory(
                 } else if (elementType is Class<*>) {
                     java.lang.reflect.Array.newInstance(elementType, 0).javaClass
                 } else {
-                    throw NotSerializableException("Not able to deserialize array type: $name")
+                    throw AMQPNoTypeNotSerializableException("Not able to deserialize array type: $name")
                 }
             } else if (name.endsWith("[p]")) {
                 // There is no need to handle the ByteArray case as that type is coercible automatically
@@ -506,7 +513,7 @@ open class SerializerFactory(
                     "double[p]" -> DoubleArray::class.java
                     "short[p]" -> ShortArray::class.java
                     "long[p]" -> LongArray::class.java
-                    else -> throw NotSerializableException("Not able to deserialize array type: $name")
+                    else -> throw AMQPNoTypeNotSerializableException("Not able to deserialize array type: $name")
                 }
             } else {
                 DeserializedParameterizedType.make(name, classloader)

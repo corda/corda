@@ -189,6 +189,12 @@ Unreleased
 
 * Upgraded Artemis to v2.6.2.
 
+* Introduced the concept of "reference input states". A reference input state is a ``ContractState`` which can be referred
+  to in a transaction by the contracts of input and output states but whose contract is not executed as part of the
+  transaction verification process and is not consumed when the transaction is committed to the ledger but is checked
+  for "current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a
+  normal state when it occurs in an input or output position.
+
 .. _changelog_v3.1:
 
 Version 3.1
