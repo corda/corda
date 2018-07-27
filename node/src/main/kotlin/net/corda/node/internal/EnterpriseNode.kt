@@ -20,6 +20,7 @@ import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.services.config.NodeConfiguration
@@ -172,10 +173,10 @@ D""".trimStart()
         }
     }
 
-    override fun start(): StartedNode {
-        val started = super.start()
-        registerOptionalMetricsReporter(configuration, started.services.monitoringService.metrics)
-        return started
+    override fun start(): NodeInfo {
+        val info = super.start()
+        registerOptionalMetricsReporter(configuration, services.monitoringService.metrics)
+        return info
     }
 
     private fun makeStateMachineExecutorService(): ExecutorService {
