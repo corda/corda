@@ -68,6 +68,8 @@ import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.system.exitProcess
+import rx.Observable
+import java.nio.file.Paths
 
 class NodeWithInfo(val node: Node, val info: NodeInfo) {
     val services: StartedNodeServices = object : StartedNodeServices, ServiceHubInternal by node.services, FlowStarter by node.flowStarter {}
@@ -341,10 +343,12 @@ open class Node(configuration: NodeConfiguration,
                     throw CouldNotCreateDataSourceException("Database password is required for H2 server listening on ${InetAddress.getByName(effectiveH2Settings.address.host)}.")
                 }
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
+                val baseDir = Paths.get(databaseName).parent.toString()
                 val server = org.h2.tools.Server.createTcpServer(
                         "-tcpPort", effectiveH2Settings.address.port.toString(),
                         "-tcpAllowOthers",
                         "-tcpDaemon",
+                        "-baseDir", baseDir,
                         "-key", "node", databaseName)
                 // override interface that createTcpServer listens on (which is always 0.0.0.0)
                 System.setProperty("h2.bindAddress", effectiveH2Settings.address.host)
