@@ -114,6 +114,6 @@ abstract class ArgsParser {
  */
 class LoggingLevelConverter : ITypeConverter<Level> {
     override fun convert(value: String?): Level {
-        return value?.let { Level.getLevel(it) } ?: throw IllegalArgumentException("Unknown option for --logging-level: $value")
+        return value?.let { Level.getLevel(it) } ?: throw TypeConversionException("Unknown option for --logging-level: $value")
     }
 }
