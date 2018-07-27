@@ -107,13 +107,7 @@ commands.
 
 We want to create an IOU of 99 with PartyB. We start the ``IOUFlow`` by typing:
 
-.. container:: codeset
-
-    .. code-block:: java
-
-        start IOUFlow arg0: 99, arg1: "O=PartyB,L=New York,C=US"
-
-    .. code-block:: kotlin
+.. code-block:: kotlin
 
         start IOUFlow iouValue: 99, otherParty: "O=PartyB,L=New York,C=US"
 
