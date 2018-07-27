@@ -39,7 +39,7 @@ class FlowVersioningTest : NodeBasedTest() {
     fun `getFlowContext returns the platform version for core flows`() {
         val alice = startNode(ALICE_NAME, platformVersion = 2)
         val bob = startNode(BOB_NAME, platformVersion = 3)
-        bob.internals.installCoreFlow(PretendInitiatingCoreFlow::class, ::PretendInitiatedCoreFlow)
+        bob.node.installCoreFlow(PretendInitiatingCoreFlow::class, ::PretendInitiatedCoreFlow)
         val (alicePlatformVersionAccordingToBob, bobPlatformVersionAccordingToAlice) = alice.services.startFlow(
                 PretendInitiatingCoreFlow(bob.info.singleIdentity())).resultFuture.getOrThrow()
         assertThat(alicePlatformVersionAccordingToBob).isEqualTo(2)

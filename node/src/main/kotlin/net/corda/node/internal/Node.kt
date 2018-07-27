@@ -14,6 +14,7 @@ import com.codahale.metrics.JmxReporter
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
@@ -23,8 +24,6 @@ import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.internal.notary.NotaryService
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
@@ -77,15 +76,13 @@ import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.system.exitProcess
-import net.corda.node.services.persistence.NodeAttachmentService
-/**
- * A version of [StartedNode] which exposes its [Node] internals.
- *
- * Although this is the type of [StartedNode] created by [Node], it is not explicitly provided
- * and should not ordinarily be used (the code that _does_ use it obtains it via a cast).
- */
-interface StartedNodeWithInternals : StartedNode {
-    val internals: Node
+import rx.Observable
+
+class NodeWithInfo(val node: Node, val info: NodeInfo) {
+    val services: StartedNodeServices = object : StartedNodeServices, ServiceHubInternal by node.services, FlowStarter by node.flowStarter {}
+    fun dispose() = node.stop()
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> =
+            node.registerInitiatedFlow(node.smm, initiatedFlowClass)
 }
 
 /**
@@ -98,7 +95,7 @@ open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 private val initialiseSerialization: Boolean = true,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo)
-) : AbstractNode<StartedNode>(
+) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
         versionInfo,
@@ -107,36 +104,8 @@ open class Node(configuration: NodeConfiguration,
         AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1)
 ) {
 
-    /** The actual [StartedNode] implementation created by this [AbstractNode]. */
-    private class StartedNodeWithInternalsImpl(
-            override val internals: Node,
-            override val attachments: NodeAttachmentService,
-            override val network: MessagingService,
-            override val services: StartedNodeServices,
-            override val info: NodeInfo,
-            override val smm: StateMachineManager,
-            override val database: CordaPersistence,
-            override val rpcOps: CordaRPCOps,
-            override val notaryService: NotaryService?) : StartedNodeWithInternals {
-
-        override fun dispose() = internals.stop()
-
-        override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) =
-                internals.registerInitiatedFlow(smm, initiatedFlowClass)
-    }
-
-    override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): StartedNode =
-            StartedNodeWithInternalsImpl(
-                    this,
-                    attachments,
-                    network,
-                    object : StartedNodeServices, ServiceHubInternal by services, FlowStarter by flowStarter { },
-                    nodeInfo,
-                    smm,
-                    database,
-                    rpcOps,
-                    notaryService
-            )
+    override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): NodeInfo =
+            nodeInfo
 
     companion object {
         private val staticLog = contextLogger()
@@ -428,15 +397,15 @@ open class Node(configuration: NodeConfiguration,
         return super.generateAndSaveNodeInfo()
     }
 
-    override fun start(): StartedNode {
+    override fun start(): NodeInfo {
         initialiseSerialization()
-        val started: StartedNode = super.start()
+        val nodeInfo: NodeInfo = super.start()
         nodeReadyFuture.thenMatch({
             serverThread.execute {
                 // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
                 //
                 // https://jolokia.org/agent/jvm.html
-                JmxReporter.forRegistry(started.services.monitoringService.metrics).inDomain("net.corda").createsObjectNamesWith { _, domain, name ->
+                JmxReporter.forRegistry(services.monitoringService.metrics).inDomain("net.corda").createsObjectNamesWith { _, domain, name ->
                     // Make the JMX hierarchy a bit better organised.
                     val category = name.substringBefore('.')
                     val subName = name.substringAfter('.', "")
@@ -454,7 +423,7 @@ open class Node(configuration: NodeConfiguration,
         shutdownHook = addShutdownHook {
             stop()
         }
-        return started
+        return nodeInfo
     }
 
     override val rxIoScheduler: Scheduler get() = Schedulers.io()

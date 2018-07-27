@@ -37,7 +37,6 @@ import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.persistence.checkpoints
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
@@ -455,7 +454,7 @@ class FlowFrameworkTests {
 
     private val normalEnd = ExistingSessionMessage(SessionId(0), EndSessionMessage) // NormalSessionEnd(0)
 
-    private fun StartedNode.sendSessionMessage(message: SessionMessage, destination: Party) {
+    private fun TestStartedNode.sendSessionMessage(message: SessionMessage, destination: Party) {
         services.networkService.apply {
             val address = getAddressOfParty(PartyInfo.SingleNode(destination, emptyList()))
             send(createMessage(FlowMessagingImpl.sessionTopic, message.serialize().bytes), address)
@@ -784,7 +783,7 @@ class FlowFrameworkPersistenceTests {
 
 private fun sessionConfirm(flowVersion: Int = 1) = ExistingSessionMessage(SessionId(0), ConfirmSessionMessage(SessionId(0), FlowInfo(flowVersion, "")))
 
-private inline fun <reified P : FlowLogic<*>> StartedNode.getSingleFlow(): Pair<P, CordaFuture<*>> {
+private inline fun <reified P : FlowLogic<*>> TestStartedNode.getSingleFlow(): Pair<P, CordaFuture<*>> {
     return smm.findStateMachines(P::class.java).single()
 }
 
@@ -819,7 +818,7 @@ private fun Observable<MessageTransfer>.toSessionTransfers(): Observable<Session
 private fun errorMessage(errorResponse: FlowException? = null) = ExistingSessionMessage(SessionId(0), ErrorSessionMessage(errorResponse, 0))
 
 private infix fun TestStartedNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(internals.id, message)
-private infix fun Pair<Int, SessionMessage>.to(node: StartedNode): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
+private infix fun Pair<Int, SessionMessage>.to(node: TestStartedNode): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
 
 private data class SessionTransfer(val from: Int, val message: SessionMessage, val to: MessageRecipients) {
     val isPayloadTransfer: Boolean get() =

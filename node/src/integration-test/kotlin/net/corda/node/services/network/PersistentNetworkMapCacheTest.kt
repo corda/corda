@@ -15,9 +15,10 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.internal.StartedNode
+
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.node.internal.NodeWithInfo
 import net.corda.testing.core.*
 import net.corda.testing.node.internal.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
@@ -125,7 +126,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
 
     // HELPERS
     // Helper function to restart nodes with the same host and port.
-    private fun startNodesWithPort(nodesToStart: List<Party>, customRetryIntervalMs: Long? = null): List<StartedNode> {
+    private fun startNodesWithPort(nodesToStart: List<Party>, customRetryIntervalMs: Long? = null): List<NodeWithInfo> {
         return nodesToStart.map { party ->
             val configOverrides = (addressesMap[party.name]?.let { mapOf("p2pAddress" to it.toString()) } ?: emptyMap()) +
                     (customRetryIntervalMs?.let { mapOf("activeMQServer.bridge.retryIntervalMs" to it.toString()) } ?: emptyMap())
