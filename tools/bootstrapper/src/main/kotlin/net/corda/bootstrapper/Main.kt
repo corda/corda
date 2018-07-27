@@ -1,7 +1,6 @@
 package net.corda.bootstrapper
 
 import com.jcabi.manifests.Manifests
-import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import net.corda.nodeapi.internal.network.NetworkBootstrapper
 import picocli.CommandLine
@@ -77,11 +76,10 @@ class Main : Runnable {
 
     private val userHome: Path by lazy { Paths.get(System.getProperty("user.home")) }
     private val jarLocation: Path by lazy { this.javaClass.location.toPath() }
-    private val jarHash: SecureHash by lazy { jarLocation.toFile().inputStream().hash() }
 
     // If on Windows, Path.toString() returns a path with \ instead of /, but for bash Windows users we want to convert those back to /'s
     private fun Path.toStringWithDeWindowsfication(): String = this.toAbsolutePath().toString().replace("\\", "/")
-    private fun jarSignature(alias: String, jarHash: SecureHash) = "# $alias: $jarHash"
+    private fun jarVersion(alias: String) = "# $alias - Version: ${CordaVersionProvider.releaseVersion}, Revision: ${CordaVersionProvider.revision}"
     private fun getAutoCompleteFileLocation(alias: String) = userHome / ".completion" / alias
 
     private fun generateAutoCompleteFile(alias: String) {
@@ -91,7 +89,7 @@ class Main : Runnable {
         picocli.AutoComplete.main("-f", "-n", alias, this.javaClass.name, "-o", autoCompleteFile.toStringWithDeWindowsfication())
 
         // Append hash of file to autocomplete file
-        autoCompleteFile.toFile().appendText(jarSignature(alias, jarHash))
+        autoCompleteFile.toFile().appendText(jarVersion(alias))
     }
 
     private fun installShellExtensions(alias: String) {
@@ -127,7 +125,7 @@ class Main : Runnable {
         var lastLine = ""
         autoCompleteFile.toFile().forEachLine { lastLine = it }
 
-        if (lastLine != jarSignature(alias, jarHash)) {
+        if (lastLine != jarVersion(alias)) {
             println("Old auto completion file detected... regenerating")
             generateAutoCompleteFile(alias)
             println("Restart bash for this to take effect, or run `. ~/.bashrc` to re-initialise bash now")
@@ -153,10 +151,15 @@ class Main : Runnable {
 }
 
 private class CordaVersionProvider : IVersionProvider {
+    companion object {
+        val releaseVersion: String by lazy { Manifests.read("Corda-Release-Version") }
+        val revision: String by lazy { Manifests.read("Corda-Revision") }
+    }
+
     override fun getVersion(): Array<String> {
         return arrayOf(
-                "Version: ${Manifests.read("Corda-Release-Version")}",
-                "Revision: ${Manifests.read("Corda-Revision")}"
+                "Version: $releaseVersion",
+                "Revision: $revision"
         )
     }
 }
