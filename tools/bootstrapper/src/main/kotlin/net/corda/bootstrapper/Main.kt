@@ -97,7 +97,7 @@ class Main : Runnable {
         autoCompleteFile.toFile().appendText(jarSignature(alias, jarHash))
     }
 
-    private fun install(alias: String) {
+    private fun installShellExtensions(alias: String) {
         // Get jar location and generate alias command
         val command = "alias $alias='java -jar \"${jarLocation.toStringWithDeWindowsfication()}\"'"
 
@@ -137,13 +137,17 @@ class Main : Runnable {
         }
     }
 
-    override fun run() {
+    private fun installOrUpdateShellExtensions(alias: String) {
         if (install) {
-            install("bootstrapper")
+            installShellExtensions(alias)
             return
         } else {
-            checkForAutoCompleteUpdate("bootstrapper")
+            checkForAutoCompleteUpdate(alias)
         }
+    }
+
+    override fun run() {
+        installOrUpdateShellExtensions("bootstrapper")
         if (verbose) {
             System.setProperty("logLevel", "trace")
         }
