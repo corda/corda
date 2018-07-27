@@ -220,7 +220,7 @@ data class RestrictedType(override val name: String,
 
         fun get(describedType: DescribedType): RestrictedType {
             if (describedType.descriptor != DESCRIPTOR) {
-                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+                throw AMQPNoTypeNotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
             }
             val list = describedType.described as List<*>
             return newInstance(listOf(list[0], list[1], list[2], list[3], Descriptor.get(list[4]!!), (list[5] as List<*>).map { Choice.get(it!!) }))
@@ -297,7 +297,7 @@ data class ReferencedObject(private val refCounter: Int) : DescribedType {
         fun get(obj: Any): ReferencedObject {
             val describedType = obj as DescribedType
             if (describedType.descriptor != DESCRIPTOR) {
-                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+                throw AMQPNoTypeNotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
             }
             return newInstance(describedType.described)
         }
