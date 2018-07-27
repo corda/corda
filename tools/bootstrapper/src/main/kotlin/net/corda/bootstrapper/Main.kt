@@ -1,6 +1,7 @@
 package net.corda.bootstrapper
 
 import com.jcabi.manifests.Manifests
+import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import net.corda.nodeapi.internal.network.NetworkBootstrapper
 import picocli.CommandLine
@@ -50,6 +51,9 @@ class Main : Runnable {
     @Option(names = ["--install-shell-extensions", "-i"], description = ["Install bootstrapper alias and autocompletion in bash"])
     var install: Boolean = false
 
+    @Option(names = ["--new-option"], description = ["This is a new option"])
+    var newOption: Boolean = false
+
     // Return the lines in the file if it exists, else return an empty mutable list
     private fun getFileLines(filePath: Path): MutableList<String> {
         return if (filePath.exists()) {
@@ -74,20 +78,30 @@ class Main : Runnable {
         }
     }
 
+    private val userHome: Path by lazy { Paths.get(System.getProperty("user.home")) }
+    private val jarLocation: Path by lazy { this.javaClass.location.toPath() }
+    private val jarHash: SecureHash by lazy { jarLocation.toFile().inputStream().hash() }
+
     // If on Windows, Path.toString() returns a path with \ instead of /, but for bash Windows users we want to convert those back to /'s
     private fun Path.toStringWithDeWindowsfication(): String = this.toAbsolutePath().toString().replace("\\", "/")
+    private fun jarSignature(alias: String, jarHash: SecureHash) = "# $alias: $jarHash"
+    private fun getAutoCompleteFileLocation(alias: String) = userHome / ".completion" / alias
+
+    private fun generateAutoCompleteFile(alias: String) {
+        println("Generating $alias auto completion file")
+        val autoCompleteFile = getAutoCompleteFileLocation(alias)
+        autoCompleteFile.root.createDirectories()
+        picocli.AutoComplete.main("-f", "-n", alias, this.javaClass.name, "-o", autoCompleteFile.toStringWithDeWindowsfication())
+
+        // Append hash of file to autocomplete file
+        autoCompleteFile.toFile().appendText(jarSignature(alias, jarHash))
+    }
 
     private fun install(alias: String) {
         // Get jar location and generate alias command
-        val jarLocation = this.javaClass.location.toPath()
         val command = "alias $alias='java -jar \"${jarLocation.toStringWithDeWindowsfication()}\"'"
 
-        val userHome = Paths.get(System.getProperty("user.home"))
-
-        println("Generating $alias auto completion file")
-        val completionDir = (userHome / ".completion").createDirectories()
-        val autoCompletePath = (completionDir / "$alias").createDirectories().toStringWithDeWindowsfication()
-        picocli.AutoComplete.main("-f", "-n", alias, this.javaClass.name, "-o", autoCompletePath)
+        generateAutoCompleteFile(alias)
 
         // Get bash settings file
         val bashSettingsFile = userHome / ".bashrc"
@@ -107,10 +121,28 @@ class Main : Runnable {
         println("Restart bash for this to take effect, or run `. ~/.bashrc` to re-initialise bash now")
     }
 
+    private fun checkForAutoCompleteUpdate(alias: String) {
+        val autoCompleteFile = getAutoCompleteFileLocation(alias)
+
+        // If no autocomplete file, it hasn't been installed, so don't do anything
+        if (!autoCompleteFile.exists()) return
+
+        var lastLine = ""
+        autoCompleteFile.toFile().forEachLine { lastLine = it.toString() }
+
+        if (lastLine != jarSignature(alias, jarHash)) {
+            println("Old auto completion file detected... regenerating")
+            generateAutoCompleteFile(alias)
+            println("Restart bash for this to take effect, or run `. ~/.bashrc` to re-initialise bash now")
+        }
+    }
+
     override fun run() {
         if (install) {
             install("bootstrapper")
             return
+        } else {
+            checkForAutoCompleteUpdate("bootstrapper")
         }
         if (verbose) {
             System.setProperty("logLevel", "trace")
