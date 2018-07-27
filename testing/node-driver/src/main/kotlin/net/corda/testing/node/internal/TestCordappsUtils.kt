@@ -7,7 +7,6 @@ import net.corda.core.internal.outputStream
 import net.corda.node.internal.cordapp.createTestManifest
 import net.corda.testing.driver.TestCorDapp
 import org.apache.commons.io.IOUtils
-import java.io.File
 import java.io.OutputStream
 import java.net.URI
 import java.net.URL
@@ -136,7 +135,7 @@ fun simplifyScanPackages(scanPackages: Iterable<String>): List<String> {
 /**
  * Transforms a class or package name into a path segment.
  */
-internal fun String.packageToPath() = replace(".", File.separator)
+internal fun String.packageToJarPath() = replace(".", "/")
 
 private fun Iterable<JarEntryInfo>.zip(outputStream: ZipOutputStream, willResourceBeAddedBeToCorDapp: (String, URL) -> Boolean): Boolean {
 
@@ -177,7 +176,7 @@ internal sealed class JarEntryInfo(val fullyQualifiedName: String, val url: URL)
      */
     class ClassJarEntryInfo(val clazz: Class<*>) : JarEntryInfo(clazz.name, clazz.classFileURL()) {
 
-        override val entryName = "${fullyQualifiedName.packageToPath()}$fileExtensionSeparator$classFileExtension"
+        override val entryName = "${fullyQualifiedName.packageToJarPath()}$fileExtensionSeparator$classFileExtension"
     }
 
     /**
@@ -188,7 +187,7 @@ internal sealed class JarEntryInfo(val fullyQualifiedName: String, val url: URL)
         override val entryName: String
             get() {
                 val extensionIndex = fullyQualifiedName.lastIndexOf(fileExtensionSeparator)
-                return "${fullyQualifiedName.substring(0 until extensionIndex).packageToPath()}${fullyQualifiedName.substring(extensionIndex)}"
+                return "${fullyQualifiedName.substring(0 until extensionIndex).packageToJarPath()}${fullyQualifiedName.substring(extensionIndex)}"
             }
     }
 
@@ -206,7 +205,7 @@ internal sealed class JarEntryInfo(val fullyQualifiedName: String, val url: URL)
         private fun Class<*>.classFileURL(): URL {
 
             require(protectionDomain?.codeSource?.location != null) { "Invalid class $name for test CorDapp. Classes without protection domain cannot be referenced. This typically happens for Java / Kotlin types." }
-            return URI.create("${protectionDomain.codeSource.location}/${name.packageToPath()}$fileExtensionSeparator$classFileExtension".escaped()).toURL()
+            return URI.create("${protectionDomain.codeSource.location}/${name.packageToJarPath()}$fileExtensionSeparator$classFileExtension".escaped()).toURL()
         }
 
         private fun String.escaped(): String = this.replace(whitespace, whitespaceReplacement)
