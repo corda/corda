@@ -159,7 +159,7 @@ Adding additional nodes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 It is possible to add additional nodes to the network by reusing the nodes you built earlier. For example, to add a
-node by reusing the existing ``BankOfCorda`` node, you would:
+node by reusing the existing ``PartyA`` node, you would:
 
 1. Select ``partya`` in the dropdown
 2. Click ``Add Instance``
