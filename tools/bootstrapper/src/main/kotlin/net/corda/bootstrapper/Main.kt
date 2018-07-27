@@ -117,9 +117,9 @@ class Main : Runnable {
         println("Updating zsh settings files")
         zshSettingsFileLines.addIfNotExists("autoload -U +X compinit && compinit")
         zshSettingsFileLines.addIfNotExists("autoload -U +X bashcompinit && bashcompinit")
-
         zshSettingsFileLines.addOrReplaceIfStartsWith("alias $alias", command)
         zshSettingsFileLines.addIfNotExists(completionFileCommand)
+        zshSettingsFile.writeLines(zshSettingsFileLines)
 
         println("Installation complete, $alias is available in bash with autocompletion. ")
         println("Type `$alias <options>` from the commandline.")
