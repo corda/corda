@@ -47,7 +47,7 @@ class Main : Runnable {
     @Option(names = ["--verbose"], description = ["Enable verbose output."])
     var verbose: Boolean = false
 
-    @Option(names = ["--install-shell-extensions"], description = ["Install bootstrapper alias and autocompletion in bash"])
+    @Option(names = ["--install-shell-extensions"], description = ["Install bootstrapper alias and autocompletion for bash and zsh"])
     var install: Boolean = false
 
     // Return the lines in the file if it exists, else return an empty mutable list
@@ -123,7 +123,7 @@ class Main : Runnable {
 
         println("Installation complete, $alias is available in bash with autocompletion. ")
         println("Type `$alias <options>` from the commandline.")
-        println("Restart bash for this to take effect, or run `. ~/.bashrc` to re-initialise bash now")
+        println("Restart bash for this to take effect, or run `. ~/.bashrc` in bash or `. ~/.zshrc` in zsh to re-initialise your shell now")
     }
 
     private fun checkForAutoCompleteUpdate(alias: String) {
