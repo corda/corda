@@ -68,10 +68,7 @@ open class NodeStartup(val args: Array<String>) {
 
         val registrationMode = checkRegistrationMode()
         val cmdlineOptions: CmdLineOptions = if (registrationMode && !args.contains("--initial-registration")) {
-            "Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.".let {
-                println(it)
-                logger.info(it)
-            }
+            println("Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.")
             // Pretend that the node was started with `--initial-registration` to help prevent user error.
             NodeArgsParser().parseOrExit(*args.plus("--initial-registration"))
         } else {
