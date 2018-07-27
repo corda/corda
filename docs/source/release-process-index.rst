@@ -6,6 +6,3 @@ Release process
 
    release-notes
    changelog
-   contributing
-   codestyle
-   testing

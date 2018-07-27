@@ -1,14 +1,9 @@
-Contributing
-============
-
-Corda is an open-source project and contributions are welcome. Our contributing philosophy is described in
-`CONTRIBUTING.md <https://github.com/corda/corda/blob/master/CONTRIBUTING.md>`_. This guide explains the mechanics
-of contributing to Corda.
-
-.. contents::
+How to contribute
+=================
 
 Identifying an area to contribute
 ---------------------------------
+
 There are several ways to identify an area where you can contribute to Corda:
 
 * Browse issues labelled as ``good first issue`` in the
@@ -26,7 +21,8 @@ Making the required changes
 
 1. Create a fork of the master branch of the `Corda repo <https://github.com/corda/corda>`_
 2. Clone the fork to your local machine
-3. Make the changes, in accordance with the :doc:`code style guide </codestyle>`
+3. Build Corda by following the instructions :doc:`here </building-corda>`
+4. Make the changes, in accordance with the :doc:`code style guide </codestyle>`
 
 Things to check
 ^^^^^^^^^^^^^^^
