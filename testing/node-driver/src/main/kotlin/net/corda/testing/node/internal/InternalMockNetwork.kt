@@ -19,6 +19,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -38,7 +39,6 @@ import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.InitiatedFlowFactory
-import net.corda.node.internal.StartedNode
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
@@ -112,8 +112,25 @@ data class InternalMockNodeParameters(
 /**
  * A [StartedNode] which exposes its internal [InternalMockNetwork.MockNode] for testing.
  */
-interface TestStartedNode : StartedNode {
+interface TestStartedNode {
     val internals: InternalMockNetwork.MockNode
+    val info: NodeInfo
+    val services: StartedNodeServices
+    val smm: StateMachineManager
+    val attachments: NodeAttachmentService
+    val rpcOps: CordaRPCOps
+    val network: MessagingService
+    val database: CordaPersistence
+    val notaryService: NotaryService?
+
+    fun dispose() = internals.stop()
+
+    /**
+     * Use this method to register your initiated flows in your tests. This is automatically done by the node when it
+     * starts up for all [FlowLogic] classes it finds which are annotated with [InitiatedBy].
+     * @return An [Observable] of the initiated flows started by counterparties.
+     */
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T>
 
     fun <F : FlowLogic<*>> internalRegisterFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
                                                        flowFactory: InitiatedFlowFactory<F>,

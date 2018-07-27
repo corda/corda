@@ -11,7 +11,6 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -53,7 +52,7 @@ class RetryFlowMockTest {
         KeepSendingFlow.count.set(0)
     }
 
-    private fun <T> StartedNode.startFlow(logic: FlowLogic<T>): CordaFuture<T> {
+    private fun <T> TestStartedNode.startFlow(logic: FlowLogic<T>): CordaFuture<T> {
         return this.services.startFlow(logic, this.services.newContext()).flatMap { it.resultFuture }
     }
 

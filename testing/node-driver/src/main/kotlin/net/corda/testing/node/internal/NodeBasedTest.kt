@@ -21,7 +21,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.internal.EnterpriseNode
-import net.corda.node.internal.StartedNodeWithInternals
+import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -57,7 +57,8 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     val tempFolder = TemporaryFolder()
 
     private lateinit var defaultNetworkParameters: NetworkParametersCopier
-    private val startedNodes = mutableListOf<StartedNodeWithInternals>()
+
+    private val nodes = mutableListOf<NodeWithInfo>()
     private val nodeInfos = mutableListOf<NodeInfo>()
     private val portAllocation = PortAllocation.Incremental(10000)
 
@@ -76,17 +77,17 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
      */
     @After
     fun stopAllNodes() {
-        val shutdownExecutor = Executors.newScheduledThreadPool(startedNodes.size)
+        val shutdownExecutor = Executors.newScheduledThreadPool(nodes.size)
         try {
-            startedNodes.map { shutdownExecutor.fork(it::dispose) }.transpose().getOrThrow()
+            nodes.map { shutdownExecutor.fork(it::dispose) }.transpose().getOrThrow()
             // Wait until ports are released
-            val portNotBoundChecks = startedNodes.flatMap {
+            val portNotBoundChecks = nodes.flatMap {
                 listOf(
-                        addressMustNotBeBoundFuture(shutdownExecutor, it.internals.configuration.p2pAddress),
-                        addressMustNotBeBoundFuture(shutdownExecutor, it.internals.configuration.rpcOptions.address)
+                        addressMustNotBeBoundFuture(shutdownExecutor, it.node.configuration.p2pAddress),
+                        addressMustNotBeBoundFuture(shutdownExecutor, it.node.configuration.rpcOptions.address)
                 )
             }
-            startedNodes.clear()
+            nodes.clear()
             portNotBoundChecks.transpose().getOrThrow()
         } finally {
             shutdownExecutor.shutdown()
@@ -137,16 +138,18 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     fun startNode(legalName: CordaX500Name,
                   platformVersion: Int = 1,
                   rpcUsers: List<User> = emptyList(),
-                  configOverrides: Map<String, Any> = emptyMap()): StartedNodeWithInternals {
+                  configOverrides: Map<String, Any> = emptyMap()): NodeWithInfo {
         val node = initNode(legalName,platformVersion, rpcUsers,configOverrides)
-        val startedNode = node.start() as StartedNodeWithInternals
-        startedNodes += startedNode
+        val nodeInfo = node.start()
+        val nodeWithInfo = NodeWithInfo(node, nodeInfo)
+        nodes += nodeWithInfo
+
         ensureAllNetworkMapCachesHaveAllNodeInfos()
         thread(name = legalName.organisation) {
             node.run()
         }
 
-        return startedNode
+        return nodeWithInfo
     }
 
     protected fun baseDirectory(legalName: CordaX500Name): Path {
@@ -154,7 +157,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     }
 
     private fun ensureAllNetworkMapCachesHaveAllNodeInfos() {
-        val runningNodes = startedNodes.filter { it.internals.started != null }
+        val runningNodes = nodes.filter { it.node.started != null }
         val runningNodesInfo = runningNodes.map { it.info }
         for (node in runningNodes)
             for (nodeInfo in runningNodesInfo) {

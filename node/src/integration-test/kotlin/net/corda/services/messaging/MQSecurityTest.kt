@@ -24,7 +24,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.node.internal.StartedNodeWithInternals
+import net.corda.node.internal.NodeWithInfo
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
@@ -37,7 +37,6 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.configureTestSSL
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.internal.NodeBasedTest
-import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
@@ -61,7 +60,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     val rpcUser = User("user1", "pass", permissions = emptySet())
-    lateinit var alice: StartedNodeWithInternals
+    lateinit var alice: NodeWithInfo
     lateinit var attacker: SimpleMQClient
     private val clients = ArrayList<SimpleMQClient>()
 
@@ -126,9 +125,9 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     fun loginToRPCAndGetClientQueue(): String {
-        loginToRPC(alice.internals.configuration.rpcOptions.address, rpcUser)
+        loginToRPC(alice.node.configuration.rpcOptions.address, rpcUser)
         val clientQueueQuery = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.${rpcUser.username}.*")
-        val client = clientTo(alice.internals.configuration.rpcOptions.address)
+        val client = clientTo(alice.node.configuration.rpcOptions.address)
         client.start(rpcUser.username, rpcUser.password, false)
         return client.session.addressQuery(clientQueueQuery).queueNames.single().toString()
     }

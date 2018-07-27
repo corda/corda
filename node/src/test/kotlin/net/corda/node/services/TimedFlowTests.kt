@@ -32,7 +32,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
@@ -47,6 +46,7 @@ import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.internal.*
+
 import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Test
@@ -125,6 +125,7 @@ class TimedFlowTests {
         /** A shared counter across all notary service nodes. */
         var requestsReceived: AtomicInteger = AtomicInteger(0)
 
+
         private val notary by lazy { globalRule.notary }
         private val node by lazy { globalRule.node }
 
@@ -184,7 +185,7 @@ class TimedFlowTests {
         }
     }
 
-    private fun StartedNode.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
+    private fun TestStartedNode.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
         return services.signInitialTransaction(
                 TransactionBuilder(notary).apply {
                     addCommand(dummyCommand(services.myInfo.singleIdentity().owningKey))

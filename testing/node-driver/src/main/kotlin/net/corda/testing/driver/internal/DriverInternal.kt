@@ -14,7 +14,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.internal.StartedNodeWithInternals
+import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -65,9 +65,9 @@ data class InProcessImpl(
         override val useHTTPS: Boolean,
         private val nodeThread: Thread,
         private val onStopCallback: () -> Unit,
-        private val node: StartedNodeWithInternals
+        private val node: NodeWithInfo
 ) : InProcess, NodeHandleInternal {
-    val database: CordaPersistence get() = node.database
+    val database: CordaPersistence = node.node.database
     override val services: StartedNodeServices get() = node.services
     override val rpcUsers: List<User> = configuration.rpcUsers.map { User(it.username, it.password, it.permissions) }
     override fun stop() {
