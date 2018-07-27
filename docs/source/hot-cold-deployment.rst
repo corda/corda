@@ -184,7 +184,9 @@ base directory of both primary and back-up VMs. To facilitate operations, a pers
           appropriate values:
 
         .. container:: codeset
-            .. sourcecode:: groovy
+
+            .. sourcecode:: bash
+
                 sudo bash -c 'echo "//<storage-account-name>.file.core.windows.net/<share-name> /mymountpoint cifs vers=2.1,username=<storage-account-name>,password=<storage-account-key>,dir_mode=0700,file_mode=0700,serverino" >> /etc/fstab'
 
 In the above command, **mymountpoint** represents the location on the VM's file system where the mount point will be created.
@@ -209,7 +211,9 @@ The newly created EFS needs to be mounted and linked to the ``artemis`` director
 primary and back-up VMs. To facilitate operations, a persistent mount point can be created using **/etc/fstab**:
 
 .. container:: codeset
-    .. sourcecode:: groovy
+
+    .. sourcecode:: bash
+
         sudo bash -c 'echo "mount-target-DNS:/ efs-mount-point nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev,noresvport 0 0" >> /etc/fstab'
 
 .. note:: EFS cannot be mounted on a Windows machine. Please see EFS limits `here <https://docs.aws.amazon.com/efs/latest/ug/limits.html>`_.
