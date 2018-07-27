@@ -48,11 +48,8 @@ class Main : Runnable {
     @Option(names = ["--verbose"], description = ["Enable verbose output."])
     var verbose: Boolean = false
 
-    @Option(names = ["--install-shell-extensions", "-i"], description = ["Install bootstrapper alias and autocompletion in bash"])
+    @Option(names = ["--install-shell-extensions"], description = ["Install bootstrapper alias and autocompletion in bash"])
     var install: Boolean = false
-
-    @Option(names = ["--new-option"], description = ["This is a new option"])
-    var newOption: Boolean = false
 
     // Return the lines in the file if it exists, else return an empty mutable list
     private fun getFileLines(filePath: Path): MutableList<String> {
@@ -90,7 +87,7 @@ class Main : Runnable {
     private fun generateAutoCompleteFile(alias: String) {
         println("Generating $alias auto completion file")
         val autoCompleteFile = getAutoCompleteFileLocation(alias)
-        autoCompleteFile.root.createDirectories()
+        autoCompleteFile.parent.createDirectories()
         picocli.AutoComplete.main("-f", "-n", alias, this.javaClass.name, "-o", autoCompleteFile.toStringWithDeWindowsfication())
 
         // Append hash of file to autocomplete file
@@ -128,7 +125,7 @@ class Main : Runnable {
         if (!autoCompleteFile.exists()) return
 
         var lastLine = ""
-        autoCompleteFile.toFile().forEachLine { lastLine = it.toString() }
+        autoCompleteFile.toFile().forEachLine { lastLine = it }
 
         if (lastLine != jarSignature(alias, jarHash)) {
             println("Old auto completion file detected... regenerating")
