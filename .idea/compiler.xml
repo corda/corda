@@ -124,6 +124,8 @@
       <module name="experimental-kryo-hook_main" target="1.8" />
       <module name="experimental-kryo-hook_test" target="1.8" />
       <module name="experimental_main" target="1.8" />
+      <module name="experimental_rpc-worker_main" target="1.8" />
+      <module name="experimental_rpc-worker_test" target="1.8" />
       <module name="experimental_test" target="1.8" />
       <module name="explorer-capsule_main" target="1.6" />
       <module name="explorer-capsule_test" target="1.6" />
@@ -229,6 +231,9 @@
       <module name="rpc-proxy_rpcProxy" target="1.8" />
       <module name="rpc-proxy_smokeTest" target="1.8" />
       <module name="rpc-proxy_test" target="1.8" />
+      <module name="rpc-worker_integrationTest" target="1.8" />
+      <module name="rpc-worker_main" target="1.8" />
+      <module name="rpc-worker_test" target="1.8" />
       <module name="rpc_integrationTest" target="1.8" />
       <module name="rpc_main" target="1.8" />
       <module name="rpc_smokeTest" target="1.8" />
