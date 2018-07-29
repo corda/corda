@@ -42,7 +42,6 @@ class CustomVaultQueryTest {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance", "net.corda.docs", "com.template"))
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
-        nodeA.registerInitiatedFlow(TopupIssuerFlow.TopupIssuer::class.java)
         notary = mockNet.defaultNotaryIdentity
     }
 
