@@ -11,7 +11,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
-internal object TestCordappDirectories {
+ object TestCordappDirectories {
 
     private val logger = loggerFor<TestCordappDirectories>()
 
@@ -20,7 +20,7 @@ internal object TestCordappDirectories {
 
     private val cordappsCache: ConcurrentMap<List<String>, Path> = ConcurrentHashMap<List<String>, Path>()
 
-    internal fun cached(cordapps: Iterable<TestCorDapp>, replaceExistingOnes: Boolean = false, cordappsDirectory: Path = defaultCordappsDirectory): Iterable<Path> {
+     fun cached(cordapps: Iterable<TestCorDapp>, replaceExistingOnes: Boolean = false, cordappsDirectory: Path = defaultCordappsDirectory): Iterable<Path> {
 
         cordappsDirectory.toFile().deleteOnExit()
         return cordapps.map { cached(it, replaceExistingOnes, cordappsDirectory) }

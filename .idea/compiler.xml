@@ -136,6 +136,9 @@
       <module name="finance_test" target="1.8" />
       <module name="flow-hook_main" target="1.8" />
       <module name="flow-hook_test" target="1.8" />
+      <module name="flow-worker_integrationTest" target="1.8" />
+      <module name="flow-worker_main" target="1.8" />
+      <module name="flow-worker_test" target="1.8" />
       <module name="flows_integrationTest" target="1.8" />
       <module name="flows_main" target="1.8" />
       <module name="flows_test" target="1.8" />
