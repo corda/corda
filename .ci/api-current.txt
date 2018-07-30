@@ -6219,6 +6219,10 @@ public static final class net.corda.testing.node.InMemoryMessagingNetwork$Servic
   public final java.util.SplittableRandom getRandom()
   public A pickNext(net.corda.testing.node.InMemoryMessagingNetwork$DistributedServiceHandle, java.util.List<? extends A>)
 ##
+@FunctionalInterface
+public interface ResponderFlowFactory<F extends net.corda.core.flows.FlowLogic<?>>
+  public F invoke(net.corda.core.flows.FlowSession)
+##
 @DoNotImplement
 public static final class net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy$RoundRobin extends net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy
   public <init>()
