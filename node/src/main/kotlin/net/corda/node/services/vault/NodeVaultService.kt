@@ -84,10 +84,10 @@ class NodeVaultService(
                 log.trace { "State update of type: $concreteType" }
                 val seen = contractStateTypeMappings.any { it.value.contains(concreteType.name) }
                 if (!seen) {
-                    val contractInterfaces = deriveContractInterfaces(concreteType)
-                    contractInterfaces.map {
-                        val contractInterface = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
-                        contractInterface.add(concreteType.name)
+                    val contractTypes = deriveContractTypes(concreteType)
+                    contractTypes.map {
+                        val contractStateType = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
+                        contractStateType.add(concreteType.name)
                     }
                 }
             }
@@ -530,10 +530,10 @@ class NodeVaultService(
                 null
             }
             concreteType?.let {
-                val contractInterfaces = deriveContractInterfaces(it)
-                contractInterfaces.map {
-                    val contractInterface = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
-                    contractInterface.add(it.name)
+                val contractTypes = deriveContractTypes(it)
+                contractTypes.map {
+                    val contractStateType = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
+                    contractStateType.add(it.name)
                 }
             }
         }
@@ -542,14 +542,20 @@ class NodeVaultService(
         }
     }
 
-    private fun <T : ContractState> deriveContractInterfaces(clazz: Class<T>): Set<Class<T>> {
-        val myInterfaces: MutableSet<Class<T>> = mutableSetOf()
-        clazz.interfaces.forEach {
-            if (it != ContractState::class.java) {
-                myInterfaces.add(uncheckedCast(it))
-                myInterfaces.addAll(deriveContractInterfaces(uncheckedCast(it)))
+    private fun <T : ContractState> deriveContractTypes(clazz: Class<T>): Set<Class<T>> {
+        val myTypes : MutableSet<Class<T>> = mutableSetOf()
+        clazz.superclass?.let {
+            if (!it.isInstance(Any::class)) {
+                myTypes.add(uncheckedCast(it))
+                myTypes.addAll(deriveContractTypes(uncheckedCast(it)))
             }
         }
-        return myInterfaces
+        clazz.interfaces.forEach {
+            if (it != ContractState::class.java) {
+                myTypes.add(uncheckedCast(it))
+                myTypes.addAll(deriveContractTypes(uncheckedCast(it)))
+            }
+        }
+        return myTypes
     }
 }
