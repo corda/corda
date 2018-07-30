@@ -117,7 +117,7 @@ class SwapIdentitiesFlowTests {
                     counterparty,
                     signature.withoutKey()
             )
-    //
+    //endregion
 
     //region Matchers
     private fun TestStartedNode.resolvesToWellKnownParty(party: Party) = object : Matcher<AnonymousParty> {
