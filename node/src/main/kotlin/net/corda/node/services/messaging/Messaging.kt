@@ -146,13 +146,6 @@ interface ReceivedMessage : Message {
     val isSessionInit: Boolean
 }
 
-/** A singleton that's useful for validating topic strings */
-object TopicStringValidator {
-    private val regex = "[a-zA-Z0-9.]+".toPattern()
-    /** @throws IllegalArgumentException if the given topic contains invalid characters */
-    fun check(tag: String) = require(regex.matcher(tag).matches())
-}
-
 /**
  * This handler is used to implement exactly-once delivery of an external event on top of an at-least-once delivery. This is done
  * using two hooks that are called from the event processor, one called from the database transaction committing the

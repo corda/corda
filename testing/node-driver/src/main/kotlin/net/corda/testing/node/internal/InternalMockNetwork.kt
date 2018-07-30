@@ -24,7 +24,10 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SerializationWhitelist
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.hours
+import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.AbstractNode
@@ -36,6 +39,7 @@ import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.*
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
+import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.statemachine.StateMachineManager
@@ -69,10 +73,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
-
-fun TestStartedNode.pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
-    return (network as InternalMockMessagingService).pumpReceive(block)
-}
 
 data class MockNodeArgs(
         val config: NodeConfiguration,
@@ -109,11 +109,22 @@ interface TestStartedNode {
     val smm: StateMachineManager
     val attachments: NodeAttachmentService
     val rpcOps: CordaRPCOps
-    val network: MessagingService
+    val network: MockNodeMessagingService
     val database: CordaPersistence
     val notaryService: NotaryService?
 
     fun dispose() = internals.stop()
+
+    fun pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
+        return network.pumpReceive(block)
+    }
+
+    /**
+     * Attach a [MessagingServiceSpy] to the [InternalMockNetwork.MockNode] allowing interception and modification of messages.
+     */
+    fun setMessagingServiceSpy(spy: MessagingServiceSpy) {
+        internals.setMessagingServiceSpy(spy)
+    }
 
     /**
      * Use this method to register your initiated flows in your tests. This is automatically done by the node when it
@@ -122,10 +133,10 @@ interface TestStartedNode {
      */
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T>
 
-    fun <F : FlowLogic<*>> internalRegisterFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
-                                                       flowFactory: InitiatedFlowFactory<F>,
-                                                       initiatedFlowClass: Class<F>,
-                                                       track: Boolean): Observable<F>
+    fun <F : FlowLogic<*>> registerFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
+                                               flowFactory: InitiatedFlowFactory<F>,
+                                               initiatedFlowClass: Class<F>,
+                                               track: Boolean): Observable<F>
 }
 
 open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParameters(),
@@ -143,10 +154,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         // Please see https://issues.apache.org/jira/browse/SSHD-736 - it's easier then to create our own fork of SSHD
         SecurityUtils.setAPrioriDisabledProvider("BC", true) // XXX: Why isn't this static?
         require(networkParameters.notaries.isEmpty()) { "Define notaries using notarySpecs" }
-    }
-
-    private companion object {
-        private val logger = loggerFor<InternalMockNetwork>()
     }
 
     var nextNodeId = 0
@@ -282,12 +289,15 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             args.network.getServerThread(args.id),
             args.network.busyLatch
     ) {
+        companion object {
+            private val staticLog = contextLogger()
+        }
 
-        /** The actual [StartedNode] implementation created by this node */
+        /** The actual [TestStartedNode] implementation created by this node */
         private class TestStartedNodeImpl(
                 override val internals: MockNode,
                 override val attachments: NodeAttachmentService,
-                override val network: MessagingService,
+                override val network: MockNodeMessagingService,
                 override val services: StartedNodeServices,
                 override val info: NodeInfo,
                 override val smm: StateMachineManager,
@@ -295,7 +305,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                 override val rpcOps: CordaRPCOps,
                 override val notaryService: NotaryService?) : TestStartedNode {
 
-            override fun <F : FlowLogic<*>> internalRegisterFlowFactory(
+            override fun <F : FlowLogic<*>> registerFlowFactory(
                     initiatingFlowClass: Class<out FlowLogic<*>>,
                     flowFactory: InitiatedFlowFactory<F>,
                     initiatedFlowClass: Class<F>,
@@ -308,25 +318,11 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                     internals.registerInitiatedFlow(smm, initiatedFlowClass)
         }
 
-        override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): TestStartedNode =
-                TestStartedNodeImpl(
-                        this,
-                        attachments,
-                        network,
-                        object : StartedNodeServices, ServiceHubInternal by services, FlowStarter by flowStarter { },
-                        nodeInfo,
-                        smm,
-                        database,
-                        rpcOps,
-                        notaryService
-                )
-
-        companion object {
-            private val staticLog = contextLogger()
-        }
-
         val mockNet = args.network
         val id = args.id
+        init {
+            require(id >= 0) { "Node ID must be zero or positive, was passed: $id" }
+        }
         private val entropyRoot = args.entropyRoot
         var counter = entropyRoot
         override val log get() = staticLog
@@ -343,9 +339,23 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
 
         override val started: TestStartedNode? get() = uncheckedCast(super.started)
 
+        override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): TestStartedNode {
+            return TestStartedNodeImpl(
+                    this,
+                    attachments,
+                    network as MockNodeMessagingService,
+                    object : StartedNodeServices, ServiceHubInternal by services, FlowStarter by flowStarter { },
+                    nodeInfo,
+                    smm,
+                    database,
+                    rpcOps,
+                    notaryService
+            )
+        }
+
         override fun start(): TestStartedNode {
             mockNet.networkParametersCopier.install(configuration.baseDirectory)
-            return super.start().also { advertiseNodeToNetwork(it) }
+            return super.start().also(::advertiseNodeToNetwork)
         }
 
         private fun advertiseNodeToNetwork(newNode: TestStartedNode) {
@@ -357,28 +367,20 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                     }
         }
 
-        override fun makeMessagingService(): MessagingService {
-            require(id >= 0) { "Node ID must be zero or positive, was passed: $id" }
-            // TODO AbstractNode is forced to call this method in start(), and not in the c'tor, because the mockNet
-            // c'tor parameter isn't available. We need to be able to return a InternalMockMessagingService
-            // here that can be populated properly in startMessagingService.
-            return mockNet.messagingNetwork.createNodeWithID(
-                    !mockNet.threadPerNode,
-                    id,
-                    serverThread,
-                    configuration.myLegalName
-            ).closeOnStop()
+        override fun makeMessagingService(): MockNodeMessagingService {
+            return MockNodeMessagingService(configuration, serverThread).closeOnStop()
         }
 
         override fun startMessagingService(rpcOps: RPCOps,
                                            nodeInfo: NodeInfo,
                                            myNotaryIdentity: PartyAndCertificate?,
                                            networkParameters: NetworkParameters) {
-            mockNet.messagingNetwork.onNotaryIdentity(network as InternalMockMessagingService, myNotaryIdentity)
+            (network as MockNodeMessagingService).start(mockNet.messagingNetwork, !mockNet.threadPerNode, id, myNotaryIdentity)
         }
 
-        fun setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
-            network = messagingServiceSpy
+        fun setMessagingServiceSpy(spy: MessagingServiceSpy) {
+            spy._messagingService = network
+            (network as MockNodeMessagingService).spy = spy
         }
 
         override fun makeKeyManagementService(identityService: IdentityService): KeyManagementServiceInternal {
@@ -551,13 +553,15 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     }
 }
 
-open class MessagingServiceSpy(val messagingService: MessagingService) : MessagingService by messagingService
+abstract class MessagingServiceSpy {
+    internal var _messagingService: MessagingService? = null
+        set(value) {
+            check(field == null) { "Spy has already been attached to a node" }
+            field = value
+        }
+    val messagingService: MessagingService get() = checkNotNull(_messagingService) { "Spy has not been attached to a node" }
 
-/**
- * Attach a [MessagingServiceSpy] to the [InternalMockNetwork.MockNode] allowing interception and modification of messages.
- */
-fun TestStartedNode.setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
-    internals.setMessagingServiceSpy(messagingServiceSpy)
+    abstract fun send(message: Message, target: MessageRecipients, sequenceKey: Any)
 }
 
 private fun mockNodeConfiguration(): NodeConfiguration {
