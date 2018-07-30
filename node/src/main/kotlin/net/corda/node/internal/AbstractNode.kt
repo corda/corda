@@ -899,7 +899,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val transactionVerifierService: TransactionVerifierService get() = this@AbstractNode.transactionVerifierService
         override val contractUpgradeService: ContractUpgradeService get() = this@AbstractNode.contractUpgradeService
         override val auditService: AuditService get() = this@AbstractNode.auditService
-        override val attachments: AttachmentStorage get() = this@AbstractNode.attachments
+        override val attachments: AttachmentStorageInternal get() = this@AbstractNode.attachments
         override val networkService: MessagingService get() = network
         override val clock: Clock get() = platformClock
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
