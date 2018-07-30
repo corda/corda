@@ -184,18 +184,36 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
 
     /**
      * Register an [InitiatedFlowFactory], to control relationship between initiating and receiving flow classes
-     * explicitly on a node-by-node basis.
+     * explicitly on a node-by-node basis. This is used when we want to manually specify that a particular initiating
+     * flow class will have a particular responder.
+     *
+     * An [InitiatedFlowFactory] is responsible for converting a [FlowSession] into the [FlowLogic] that will respond
+     * to the initiated flow. The registry records one responder type, and hence one factory, for each initiator flow
+     * type. If a factory is already registered for the type, it is overwritten in the registry when a new factory is
+     * registered.
+     *
+     * Note that this change affects _only_ the node on which this method is called, and not the entire network.
+     *
+     * @property initiatingFlowClass The [FlowLogic]-inheriting class to register a new responder for.
+     * @property flowFactory The flow factory that will create the responding flow.
+     * @property responderFlowClass The class of the responder flow.
+     * @return A [CordaFuture] that will complete the first time the responding flow is created.
      */
     fun <F : FlowLogic<*>> registerResponderFlow(initiatingFlowClass: Class<out FlowLogic<*>>,
                                                  flowFactory: InitiatedFlowFactory<F>,
-                                                 initiatedFlowClass: Class<F>): CordaFuture<F> =
-            node.registerFlowFactory(initiatingFlowClass, flowFactory, initiatedFlowClass, true)
+                                                 responderFlowClass: Class<F>): CordaFuture<F> =
+            node.registerFlowFactory(initiatingFlowClass, flowFactory, responderFlowClass, true)
                     .toFuture()
 }
 
-/*
+/**
  * Kotlin-only utility function using a reified type parameter and a lambda parameter to simplify the
  * [InitiatedFlowFactory.registerFlowFactory] function.
+ *
+ * @param F The [FlowLogic]-inherited type of the responder to register.
+ * @property initiatingFlowClass The [FlowLogic]-inheriting class to register a new responder for.
+ * @property flowFactory A lambda converting a [FlowSession] into an instance of the responder class [F].
+ * @return A [CordaFuture] that will complete the first time the responding flow is created.
  */
 inline fun <reified F : FlowLogic<*>> StartedMockNode.registerResponderFlow(
         initiatingFlowClass: Class<out FlowLogic<*>>,
