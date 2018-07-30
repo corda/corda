@@ -9,7 +9,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.testing.core.randomise
+import net.corda.testing.core.makeUnique
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
@@ -25,7 +25,7 @@ interface WithMockNet {
     /**
      * Create a node using a randomised version of the given name
      */
-    fun makeNode(name: CordaX500Name) = mockNet.createPartyNode(randomise(name))
+    fun makeNode(name: CordaX500Name) = mockNet.createPartyNode(makeUnique(name))
 
     /**
      * Run the mock network before proceeding

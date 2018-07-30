@@ -114,7 +114,7 @@ private val count = AtomicInteger(0)
 /**
  * Randomise a party name to avoid clashes with other tests
  */
-fun randomise(name: CordaX500Name) = name.copy(commonName =
+fun makeUnique(name: CordaX500Name) = name.copy(commonName =
     if (name.commonName == null) {
         count.incrementAndGet().toString()
     } else {
