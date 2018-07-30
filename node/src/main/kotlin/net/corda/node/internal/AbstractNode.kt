@@ -671,8 +671,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         } else {
             Observable.empty()
         }
-        if (flowFactories.containsKey(initiatingFlowClass)) {
-            throw IllegalStateException("$initiatingFlowClass is attempting to register multiple initiated flows")
+        check(initiatingFlowClass !in flowFactories.keys) {
+            "$initiatingFlowClass is attempting to register multiple initiated flows"
         }
         flowFactories[initiatingFlowClass] = flowFactory
         return observable

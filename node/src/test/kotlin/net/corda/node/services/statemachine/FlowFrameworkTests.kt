@@ -65,7 +65,7 @@ class FlowFrameworkTests {
     }
 
     @Before
-    fun before() {
+    fun setUpGlobalMockNet() {
         mockNet = InternalMockNetwork(
                 cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
                 servicePeerAllocationStrategy = RoundRobin()
@@ -87,7 +87,7 @@ class FlowFrameworkTests {
     }
 
     @After
-    fun after() {
+    fun cleanUp() {
         mockNet.stopNodes()
         receivedSessionMessages.clear()
     }
@@ -472,7 +472,7 @@ class FlowFrameworkTripartyTests {
     }
 
     @Before
-    fun before() {
+    fun setUpGlobalMockNet() {
         mockNet = InternalMockNetwork(
                 cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
                 servicePeerAllocationStrategy = RoundRobin()
@@ -493,7 +493,7 @@ class FlowFrameworkTripartyTests {
     }
 
     @After
-    fun after() {
+    fun cleanUp() {
         mockNet.stopNodes()
         receivedSessionMessages.clear()
     }
