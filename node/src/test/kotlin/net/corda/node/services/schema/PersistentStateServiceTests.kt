@@ -14,6 +14,7 @@ import net.corda.core.schemas.QueryableState
 import net.corda.node.services.api.SchemaService
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.contracts.DummyContract
@@ -26,7 +27,6 @@ import org.junit.Test
 import rx.subjects.PublishSubject
 import kotlin.test.assertEquals
 
-@Ignore("needs reworking")
 class PersistentStateServiceTests {
     @Before
     fun setUp() {
@@ -54,7 +54,6 @@ class PersistentStateServiceTests {
     @Test
     fun `test child objects are persisted`() {
         val testSchema = TestSchema
-        val rawUpdatesPublisher = PublishSubject.create<Vault.Update<ContractState>>()
         val schemaService = object : SchemaService {
             override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = mapOf(testSchema to SchemaService.SchemaOptions())
 
@@ -68,9 +67,11 @@ class PersistentStateServiceTests {
             }
         }
         val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock(), rigorousMock(), schemaService)
+        val persistentStateService = PersistentStateService(schemaService)
         database.transaction {
             val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
-            rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), DummyContract.PROGRAM_ID, MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))
+            persistentStateService.persist(setOf(StateAndRef(TransactionState(TestState(), DummyContract.PROGRAM_ID, MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0))))
+            currentDBSession().flush()
             val parentRowCountResult = connection.prepareStatement("select count(*) from Parents").executeQuery()
             parentRowCountResult.next()
             val parentRows = parentRowCountResult.getInt(1)
