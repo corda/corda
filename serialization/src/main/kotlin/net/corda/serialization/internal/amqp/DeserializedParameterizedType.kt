@@ -23,13 +23,19 @@ import java.util.*
  * of the JDK implementation which we use as the textual format in the AMQP schema.
  */
 @KeepForDJVM
-class DeserializedParameterizedType(private val rawType: Class<*>, private val params: Array<out Type>, private val ownerType: Type? = null) : ParameterizedType {
+class DeserializedParameterizedType(
+        private val rawType: Class<*>,
+        private val params: Array<out Type>,
+        private val ownerType: Type? = null
+) : ParameterizedType {
     init {
         if (params.isEmpty()) {
-            throw NotSerializableException("Must be at least one parameter type in a ParameterizedType")
+            throw AMQPNotSerializableException(rawType, "Must be at least one parameter type in a ParameterizedType")
         }
         if (params.size != rawType.typeParameters.size) {
-            throw NotSerializableException("Expected ${rawType.typeParameters.size} for ${rawType.name} but found ${params.size}")
+            throw AMQPNotSerializableException(
+                    rawType,
+                    "Expected ${rawType.typeParameters.size} for ${rawType.name} but found ${params.size}")
         }
     }
 
@@ -52,10 +58,11 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
             val paramTypes = ArrayList<Type>()
             val pos = parseTypeList("$name>", paramTypes, cl)
             if (pos <= name.length) {
-                throw NotSerializableException("Malformed string form of ParameterizedType. Unexpected '>' at character position $pos of $name.")
+                throw AMQPNoTypeNotSerializableException(
+                        "Malformed string form of ParameterizedType. Unexpected '>' at character position $pos of $name.")
             }
             if (paramTypes.size != 1) {
-                throw NotSerializableException("Expected only one type, but got $paramTypes")
+                throw AMQPNoTypeNotSerializableException("Expected only one type, but got $paramTypes")
             }
             return paramTypes[0]
         }
@@ -80,7 +87,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
                     if (!typeName.isEmpty()) {
                         types += makeType(typeName, cl)
                     } else if (needAType) {
-                        throw NotSerializableException("Expected a type, not ','")
+                        throw AMQPNoTypeNotSerializableException("Expected a type, not ','")
                     }
                     typeStart = pos
                     needAType = true
@@ -90,7 +97,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
                     if (!typeName.isEmpty()) {
                         types += makeType(typeName, cl)
                     } else if (needAType) {
-                        throw NotSerializableException("Expected a type, not '>'")
+                        throw AMQPNoTypeNotSerializableException("Expected a type, not '>'")
                     }
                     return pos
                 } else {
@@ -100,11 +107,11 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
                         if (params[pos].isWhitespace()) {
                             typeStart = ++pos
                         } else if (!needAType) {
-                            throw NotSerializableException("Not expecting a type")
+                            throw AMQPNoTypeNotSerializableException("Not expecting a type")
                         } else if (params[pos] == '?') {
                             pos++
                         } else if (!params[pos].isJavaIdentifierStart()) {
-                            throw NotSerializableException("Invalid character at start of type: ${params[pos]}")
+                            throw AMQPNoTypeNotSerializableException("Invalid character at start of type: ${params[pos]}")
                         } else {
                             pos++
                         }
@@ -115,12 +122,13 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
                         } else if (!skippingWhitespace && (params[pos] == '.' || params[pos].isJavaIdentifierPart())) {
                             pos++
                         } else {
-                            throw NotSerializableException("Invalid character ${params[pos]} in middle of type $params at idx $pos")
+                            throw AMQPNoTypeNotSerializableException(
+                                    "Invalid character ${params[pos]} in middle of type $params at idx $pos")
                         }
                     }
                 }
             }
-            throw NotSerializableException("Missing close generics '>'")
+            throw AMQPNoTypeNotSerializableException("Missing close generics '>'")
         }
 
         private fun makeType(typeName: String, cl: ClassLoader): Type {
@@ -134,9 +142,15 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
             return DeserializedParameterizedType(makeType(rawTypeName, cl) as Class<*>, args.toTypedArray(), null)
         }
 
-        private fun parseTypeParams(params: String, startPos: Int, paramTypes: MutableList<Type>, cl: ClassLoader, depth: Int): Int {
+        private fun parseTypeParams(
+                params: String,
+                startPos: Int,
+                paramTypes: MutableList<Type>,
+                cl: ClassLoader,
+                depth: Int
+        ): Int {
             if (depth == MAX_DEPTH) {
-                throw NotSerializableException("Maximum depth of nested generics reached: $depth")
+                throw AMQPNoTypeNotSerializableException("Maximum depth of nested generics reached: $depth")
             }
             return startPos + parseTypeList(params.substring(startPos), paramTypes, cl, depth)
         }

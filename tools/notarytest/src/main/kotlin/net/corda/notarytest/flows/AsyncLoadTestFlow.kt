@@ -82,7 +82,8 @@ open class AsyncLoadTestFlow<T : AsyncCFTNotaryService>(
             val inputs = inputGenerator.generateOrFail(random)
             val requestSignature = NotarisationRequest(inputs, txId).generateSignature(serviceHub)
 
-            futures += AsyncCFTNotaryService.CommitOperation(service, inputs, txId, callerParty, requestSignature, null).execute()
+            futures += AsyncCFTNotaryService.CommitOperation(service, inputs, txId, callerParty, requestSignature,
+                    null, emptyList()).execute()
         }
 
         futures.transpose().get()

@@ -16,7 +16,6 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.deserializeAndReturnEnvelope
-import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
 import net.corda.serialization.internal.amqp.testutils.testName

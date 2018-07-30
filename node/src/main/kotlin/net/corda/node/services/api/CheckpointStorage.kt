@@ -21,9 +21,15 @@ import java.util.stream.Stream
  */
 interface CheckpointStorage {
     /**
-     * Add a new checkpoint to the store.
+     * Add a checkpoint for a new id to the store. Will throw if there is already a checkpoint for this id
      */
     fun addCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>)
+
+    /**
+     * Update an existing checkpoint. Will throw if there is not checkpoint for this id.
+     */
+    fun updateCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>)
+
 
     /**
      * Remove existing checkpoint from the store.

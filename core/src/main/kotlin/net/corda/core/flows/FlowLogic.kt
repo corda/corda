@@ -13,6 +13,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaInternal
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -30,6 +31,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.toNonEmptySet
 import org.slf4j.Logger
 import java.time.Duration
+import java.util.*
 
 /**
  * A sub-class of [FlowLogic<T>] implements a flow using direct, straight line blocking code. Thus you
@@ -409,6 +411,18 @@ abstract class FlowLogic<out T> {
         val request = FlowIORequest.WaitForLedgerCommit(hash)
         return stateMachine.suspend(request, maySkipCheckpoint = maySkipCheckpoint)
     }
+
+    /**
+     * Suspends the current flow until all the provided [StateRef]s have been consumed.
+     *
+     * WARNING! Remember that the flow which uses this async operation will _NOT_ wake-up until all the supplied StateRefs
+     * have been consumed. If the node isn't aware of the supplied StateRefs or if the StateRefs are never consumed, then
+     * the calling flow will remain suspended FOREVER!!
+     *
+     * @param stateRefs the StateRefs which will be consumed in the future.
+     */
+    @Suspendable
+    fun waitForStateConsumption(stateRefs: Set<StateRef>) = executeAsync(WaitForStateConsumption(stateRefs, serviceHub))
 
     /**
      * Returns a shallow copy of the Quasar stack frames at the time of call to [flowStackSnapshot]. Use this to inspect

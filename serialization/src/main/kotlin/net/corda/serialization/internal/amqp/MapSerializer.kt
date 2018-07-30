@@ -50,7 +50,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
         ))
 
         private fun findConcreteType(clazz: Class<*>): MapCreationFunction {
-            return supportedTypes[clazz] ?: throw NotSerializableException("Unsupported map type $clazz.")
+            return supportedTypes[clazz] ?: throw AMQPNotSerializableException(clazz, "Unsupported map type $clazz.")
         }
 
         fun deriveParameterizedType(declaredType: Type, declaredClass: Class<*>, actualClass: Class<*>?): ParameterizedType {
@@ -64,7 +64,8 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
                 return deriveParametrizedType(declaredType, mapClass)
             }
 
-            throw NotSerializableException("Cannot derive map type for declaredType: '$declaredType', declaredClass: '$declaredClass', actualClass: '$actualClass'")
+            throw AMQPNotSerializableException(declaredType,
+                    "Cannot derive map type for declaredType=\"$declaredType\", declaredClass=\"$declaredClass\", actualClass=\"$actualClass\"")
         }
 
         private fun deriveParametrizedType(declaredType: Type, collectionClass: Class<out Map<*, *>>): ParameterizedType =
@@ -98,7 +99,8 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
             type: Type,
             output: SerializationOutput,
             context: SerializationContext,
-            debugIndent: Int) = ifThrowsAppend({ declaredType.typeName }) {
+            debugIndent: Int
+    ) = ifThrowsAppend({ declaredType.typeName }) {
         obj.javaClass.checkSupportedMapType()
         // Write described
         data.withDescribed(typeNotation.descriptor) {

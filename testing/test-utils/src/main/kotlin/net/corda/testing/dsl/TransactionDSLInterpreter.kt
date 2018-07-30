@@ -47,6 +47,12 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
     fun input(stateRef: StateRef)
 
     /**
+     * Add a reference input state to the transaction. Note that [verifies] will resolve this reference.
+     * @param stateRef The input [StateRef].
+     */
+    fun reference(stateRef: StateRef)
+
+    /**
      * Adds an output to the transaction.
      * @param label An optional label that may be later used to retrieve the output probably in other transactions.
      * @param notary The associated notary.
@@ -99,6 +105,24 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
  * */
 class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private val notary: Party) : TransactionDSLInterpreter by interpreter {
     /**
+     * Looks up the output label and adds the found state as an reference input state.
+     * @param stateLabel The label of the output state specified when calling [TransactionDSLInterpreter.output] and friends.
+     */
+    fun reference(stateLabel: String) = reference(retrieveOutputStateAndRef(ContractState::class.java, stateLabel).ref)
+
+    /**
+     * Creates an [LedgerDSLInterpreter._unverifiedTransaction] with a single reference input state and adds its
+     * reference as in input to the current transaction.
+     * @param state The state to be added.
+     */
+    fun reference(contractClassName: ContractClassName, state: ContractState) {
+        val transaction = ledgerInterpreter._unverifiedTransaction(null, TransactionBuilder(notary)) {
+            output(contractClassName, null, notary, null, AlwaysAcceptAttachmentConstraint, state)
+        }
+        reference(transaction.outRef<ContractState>(0).ref)
+    }
+
+    /**
      * Looks up the output label and adds the found state as an input.
      * @param stateLabel The label of the output state specified when calling [TransactionDSLInterpreter.output] and friends.
      */
@@ -110,7 +134,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private 
     }
 
     /**
-     * Creates an [LedgerDSLInterpreter._unverifiedTransaction] with a single output state and adds it's reference as an
+     * Creates an [LedgerDSLInterpreter._unverifiedTransaction] with a single output state and adds its reference as an
      * input to the current transaction.
      * @param state The state to be added.
      */

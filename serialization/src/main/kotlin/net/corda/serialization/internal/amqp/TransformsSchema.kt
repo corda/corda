@@ -41,7 +41,7 @@ abstract class Transform : DescribedType {
             val describedType = obj as DescribedType
 
             if (describedType.descriptor != DESCRIPTOR) {
-                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+                throw AMQPNoTypeNotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
             }
 
             return describedType.described
@@ -231,7 +231,8 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
                             // ignore them it feels like a good thing to alert the user to since this is
                             // more than likely a typo in their code so best make it an actual error
                             if (transforms.computeIfAbsent(transform.enum) { mutableListOf() }.any { t == it }) {
-                                throw NotSerializableException(
+                                throw AMQPNotSerializableException(
+                                        clazz,
                                         "Repeated unique transformation annotation of type ${t.name}")
                             }
 

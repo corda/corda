@@ -16,7 +16,6 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.NonEmptySet
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
-import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
@@ -45,7 +44,10 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
         ))
 
         private fun findConcreteType(clazz: Class<*>): (List<*>) -> Collection<*> {
-            return supportedTypes[clazz] ?: throw NotSerializableException("Unsupported collection type $clazz.")
+            return supportedTypes[clazz] ?: throw AMQPNotSerializableException(
+                    clazz,
+                    "Unsupported collection type $clazz.",
+                    "Supported Collections are ${supportedTypes.keys.joinToString(",")}")
         }
 
         fun deriveParameterizedType(declaredType: Type, declaredClass: Class<*>, actualClass: Class<*>?): ParameterizedType {
@@ -58,7 +60,10 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
                 return deriveParametrizedType(declaredType, collectionClass)
             }
 
-            throw NotSerializableException("Cannot derive collection type for declaredType: '$declaredType', declaredClass: '$declaredClass', actualClass: '$actualClass'")
+            throw AMQPNotSerializableException(
+                    declaredType,
+                    "Cannot derive collection type for declaredType: '$declaredType', " +
+                    "declaredClass: '$declaredClass', actualClass: '$actualClass'")
         }
 
         private fun deriveParametrizedType(declaredType: Type, collectionClass: Class<out Collection<*>>): ParameterizedType =

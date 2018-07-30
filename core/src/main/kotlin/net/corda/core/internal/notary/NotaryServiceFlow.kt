@@ -37,10 +37,10 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             txId = parts.id
             checkNotary(parts.notary)
             if (service is AsyncCFTNotaryService) {
-                val result = executeAsync(AsyncCFTNotaryService.CommitOperation(service, parts.inputs, txId, otherSideSession.counterparty, requestPayload.requestSignature, parts.timestamp))
+                val result = executeAsync(AsyncCFTNotaryService.CommitOperation(service, parts.inputs, txId, otherSideSession.counterparty, requestPayload.requestSignature, parts.timestamp, parts.references))
                 if (result is Result.Failure) throw NotaryInternalException(result.error)
             } else {
-                service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty, requestPayload.requestSignature, parts.timestamp)
+                service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty, requestPayload.requestSignature, parts.timestamp, parts.references)
             }
             signTransactionAndSendResponse(txId)
         } catch (e: NotaryInternalException) {
@@ -89,7 +89,17 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
      * The minimum amount of information needed to notarise a transaction. Note that this does not include
      * any sensitive transaction details.
      */
-    protected data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: TimeWindow?, val notary: Party?)
+    protected data class TransactionParts @JvmOverloads constructor(
+            val id: SecureHash,
+            val inputs: List<StateRef>,
+            val timestamp: TimeWindow?,
+            val notary: Party?,
+            val references: List<StateRef> = emptyList()
+    ) {
+        fun copy(id: SecureHash, inputs: List<StateRef>, timestamp: TimeWindow?, notary: Party?): TransactionParts {
+            return TransactionParts(id, inputs, timestamp, notary, references)
+        }
+    }
 }
 
 /** Exception internal to the notary service. Does not get exposed to CorDapps and flows calling [NotaryFlow.Client]. */

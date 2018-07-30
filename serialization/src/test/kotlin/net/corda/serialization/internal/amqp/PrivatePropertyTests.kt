@@ -133,7 +133,7 @@ class PrivatePropertyTests {
             SerializationOutput(factory).serialize(c1)
         }.isInstanceOf(NotSerializableException::class.java).hasMessageContaining(
                 "Defined setter for parameter a takes parameter of type class java.lang.String " +
-                        "yet underlying type is int ")
+                        "yet underlying type is int")
     }
 
     @Test

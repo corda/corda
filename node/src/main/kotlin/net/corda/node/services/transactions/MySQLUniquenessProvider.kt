@@ -98,6 +98,7 @@ class MySQLUniquenessProvider(
             val callerIdentity: Party,
             val requestSignature: NotarisationRequestSignature,
             val timeWindow: TimeWindow?,
+            val references: List<StateRef>,
             val id: UUID = UUID.randomUUID())
 
     private val metricPrefix = MySQLUniquenessProvider::class.simpleName
@@ -176,11 +177,12 @@ class MySQLUniquenessProvider(
             txId: SecureHash,
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow?
+            timeWindow: TimeWindow?,
+            references: List<StateRef>
     ): CordaFuture<Result> {
         inputStateCount.update(states.size)
         val timer = Stopwatch.createStarted()
-        val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow)
+        val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references)
         val future = openFuture<Result>()
         requestFutures[request.id] = future
         future.then {

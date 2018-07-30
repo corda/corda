@@ -37,9 +37,10 @@ abstract class AsyncCFTNotaryService : TrustedAuthorityNotaryService() {
             txId: SecureHash,
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow?
+            timeWindow: TimeWindow?,
+            references: List<StateRef>
     ): CordaFuture<Result> {
-        return asyncUniquenessProvider.commitAsync(states, txId, callerIdentity, requestSignature, timeWindow)
+        return asyncUniquenessProvider.commitAsync(states, txId, callerIdentity, requestSignature, timeWindow, references)
     }
 
     /**
@@ -53,9 +54,11 @@ abstract class AsyncCFTNotaryService : TrustedAuthorityNotaryService() {
             val txId: SecureHash,
             val caller: Party,
             val requestSignature: NotarisationRequestSignature,
-            val timeWindow: TimeWindow?) : FlowAsyncOperation<Result> {
+            val timeWindow: TimeWindow?,
+            val references: List<StateRef>
+    ): FlowAsyncOperation<Result> {
         override fun execute(): CordaFuture<Result> {
-            return service.commitAsync(inputs, txId, caller, requestSignature, timeWindow)
+            return service.commitAsync(inputs, txId, caller, requestSignature, timeWindow, references)
         }
     }
 }

@@ -17,7 +17,6 @@ import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
-import java.io.NotSerializableException
 import java.lang.reflect.Type
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.jvm.jvmErasure
@@ -66,7 +65,9 @@ class CorDappCustomSerializer(
 
     init {
         if (types.size != 2) {
-            throw NotSerializableException("Unable to determine serializer parent types")
+            throw AMQPNotSerializableException(
+                    CorDappCustomSerializer::class.java,
+                    "Unable to determine serializer parent types")
         }
     }
 

@@ -240,7 +240,8 @@ class MySQLNotaryServiceTests : IntegrationTest() {
                         txId,
                         callerParty,
                         requestSignature,
-                        null).execute()
+                        null,
+                        emptyList()).execute()
             }
             return futures.transpose().get()
         }
