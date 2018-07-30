@@ -41,7 +41,7 @@ The node requires a database password to be set when the database is exposed on 
       address: "0.0.0.0:12345"
   }
   dataSourceProperties {
-      dataSource.password : "secret"
+      dataSource.password : "strongpassword"
   }
 
 The previous ``h2Port`` syntax is now deprecated. ``h2Port`` will continue to work but the database
