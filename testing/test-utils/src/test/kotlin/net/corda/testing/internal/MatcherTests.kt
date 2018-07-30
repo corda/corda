@@ -31,24 +31,27 @@ class MatcherTests {
                 )
         )
 
+        println(matcher.description)
+        println((matcher(nestedMap) as MatchResult.Mismatch).description)
+
         assertEquals(
                 """
-                a map containing the entries:
-                    a: a map containing the entries:
+                is a map containing the entries:
+                    a: is a map containing the entries:
                         aardvark: is equal to "animal"
                         anthracite: is equal to "mineral"
-                    b: a map containing the entries:
+                    b: is a map containing the entries:
                         bison: is equal to "animal"
                         bauxite: is equal to "mineral"
-                """.trimIndent(),
+                """.trimIndent().replace("    ", "\t"),
                 matcher.description)
 
         assertEquals(
                 """
-                had entries which did not meet expectations:
-                    b: had entries which did not meet expectations:
+                had entries which did not meet criteria:
+                    b: had entries which did not meet criteria:
                         bauxite: was: "vegetable"
-                """.trimIndent(),
+                """.trimIndent().replace("    ", "\t"),
                 (matcher(nestedMap) as MatchResult.Mismatch).description
         )
     }
