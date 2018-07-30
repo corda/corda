@@ -24,7 +24,7 @@ CorDapp. You can find examples of building a CorDapp using these tools in the
 `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the 
 `Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
 
-You ensure you are using the correct version of Gradle, you should use the provided Gradle Wrapper by copying across 
+To ensure you are using the correct version of Gradle, you should use the provided Gradle Wrapper by copying across
 the following folder and files from the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ or the 
 `Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ to the root of your project:
 
@@ -113,7 +113,7 @@ Example
 ^^^^^^^
 Below is a sample of what a CorDapp's Gradle dependencies block might look like. When building your own CorDapp, you should 
 base yourself on the ``build.gradle`` file of the 
-`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the 
+`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ or the
 `Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
 
 .. container:: codeset

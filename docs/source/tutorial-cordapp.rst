@@ -197,7 +197,7 @@ Building the example CorDapp
       ├── logs
       ├── network-parameters
       ├── node.conf              // The node's configuration file
-      ├── nodeInfo-E4477B559304AADFC0638772C0956A38FA2E2A7A5EB0E65D0D83E5884831879A
+      ├── nodeInfo-<HASH>        // The hash will be different each time you generate a node
       └── persistence.mv.db      // The node's database
 
 .. note:: ``deployNodes`` is a utility task to create an entirely new set of nodes for testing your CorDapp. In production, 
