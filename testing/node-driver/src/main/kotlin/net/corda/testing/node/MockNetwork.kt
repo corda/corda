@@ -188,7 +188,7 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
      */
     fun <F : FlowLogic<*>> registerFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
                                                flowFactory: InitiatedFlowFactory<F>,
-                                               initiatedFlowClass: Class<F>): Future<F> =
+                                               initiatedFlowClass: Class<F>): CordaFuture<F> =
             node.registerFlowFactory(initiatingFlowClass, flowFactory, initiatedFlowClass, true)
                     .toFuture()
 }
