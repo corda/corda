@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.revocation.RevocationConfig
 import java.security.KeyStore
 
 interface AMQPConfiguration {
@@ -36,14 +37,6 @@ interface AMQPConfiguration {
     val trustStore: KeyStore
 
     /**
-     * Setting crlCheckSoftFail to true allows certificate paths where some leaf certificates do not contain cRLDistributionPoints
-     * and also allows validation to continue if the CRL distribution server is not contactable.
-     */
-    @JvmDefault
-    val crlCheckSoftFail: Boolean
-        get() = true
-
-    /**
      * Enables full debug tracing of all netty and AMQP level packets. This logs aat very high volume and is only for developers.
      */
     @JvmDefault
@@ -55,5 +48,11 @@ interface AMQPConfiguration {
      * but currently that is deferred to Artemis and the bridge code.
      */
     val maxMessageSize: Int
+
+    /**
+     * Certificate revocation related configuration.
+     */
+    val revocationConfig: RevocationConfig
+        get() = RevocationConfig()
 }
 

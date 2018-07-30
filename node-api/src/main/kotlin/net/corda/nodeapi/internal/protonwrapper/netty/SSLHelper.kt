@@ -7,12 +7,12 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHex
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.internal.crypto.toBc
+import net.corda.nodeapi.internal.revocation.RevocationConfig
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
 import java.net.Socket
 import java.security.KeyStore
-import java.security.SecureRandom
 import java.security.cert.*
 import java.util.*
 import javax.net.ssl.*
@@ -132,7 +132,7 @@ internal fun createServerSslHelper(keyManagerFactory: KeyManagerFactory,
     return SslHandler(sslEngine)
 }
 
-internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: KeyStore, crlCheckSoftFail: Boolean): ManagerFactoryParameters {
+internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: KeyStore, revocationConfig: RevocationConfig): ManagerFactoryParameters {
     val certPathBuilder = CertPathBuilder.getInstance("PKIX")
     val revocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
     revocationChecker.options = EnumSet.of(
@@ -140,12 +140,16 @@ internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: KeyStore, crlC
             PKIXRevocationChecker.Option.PREFER_CRLS,
             // Don't fall back to OCSP checking
             PKIXRevocationChecker.Option.NO_FALLBACK)
-    if (crlCheckSoftFail) {
+    if (revocationConfig.crlCheckSoftFail) {
         // Allow revocation check to succeed if the revocation status cannot be determined for one of
         // the following reasons: The CRL or OCSP response cannot be obtained because of a network error.
         revocationChecker.options = revocationChecker.options + PKIXRevocationChecker.Option.SOFT_FAIL
     }
     val pkixParams = PKIXBuilderParameters(trustStore, X509CertSelector())
     pkixParams.addCertPathChecker(revocationChecker)
+    pkixParams.isRevocationEnabled = true
+    revocationConfig.certStores.forEach {
+        pkixParams.addCertStore(it)
+    }
     return CertPathTrustManagerParameters(pkixParams)
 }

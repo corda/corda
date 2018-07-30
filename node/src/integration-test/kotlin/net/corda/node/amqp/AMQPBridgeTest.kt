@@ -15,6 +15,7 @@ import net.corda.nodeapi.internal.bridging.AMQPBridgeManager
 import net.corda.nodeapi.internal.bridging.BridgeManager
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
+import net.corda.nodeapi.internal.revocation.RevocationConfig
 import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
@@ -181,7 +182,7 @@ class AMQPBridgeTest {
         val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress, MAX_MESSAGE_SIZE)
         artemisServer.start()
         artemisClient.start()
-        val bridgeManager = AMQPBridgeManager(artemisConfig, artemisAddress, MAX_MESSAGE_SIZE)
+        val bridgeManager = AMQPBridgeManager(artemisConfig, artemisAddress, MAX_MESSAGE_SIZE, RevocationConfig())
         bridgeManager.start()
         val artemis = artemisClient.started!!
         if (sourceQueueName != null) {

@@ -53,9 +53,12 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_S
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.revocation.CordaCrlStore
+import net.corda.nodeapi.internal.revocation.RevocationConfig
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT
@@ -69,6 +72,7 @@ import rx.schedulers.Schedulers
 import java.net.BindException
 import java.nio.file.Path
 import java.security.PublicKey
+import java.security.cert.CertStore
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
@@ -201,7 +205,7 @@ open class Node(configuration: NodeConfiguration,
             startLocalRpcBroker()
         }
         val advertisedAddress = info.addresses[0]
-        bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
+        bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize, buildRevocationConfiguration(configuration))
 
         printBasicNodeInfo("Advertised P2P messaging addresses", info.addresses.joinToString())
         val rpcServerConfiguration = RPCServerConfiguration.DEFAULT
@@ -225,6 +229,19 @@ open class Node(configuration: NodeConfiguration,
                 networkParameters.maxMessageSize,
                 isDrainingModeOn = nodeProperties.flowsDrainingMode::isEnabled,
                 drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values)
+    }
+
+    private fun buildRevocationConfiguration(config: NodeSSLConfiguration): RevocationConfig {
+        val sslKeyStore = config.loadSslKeyStore()
+        val certStores = hashSetOf<CertStore>()
+        sslKeyStore.aliases().forEach {
+            sslKeyStore.getCertificateChain(it).forEach {
+                CordaCrlStore.getInstanceFromCertificate(it, config.baseDirectory / "crls")?.let{
+                    certStores.add(it)
+                }
+            }
+        }
+        return RevocationConfig(config.crlCheckSoftFail, certStores)
     }
 
     private fun startLocalRpcBroker(): BrokerAddresses? {

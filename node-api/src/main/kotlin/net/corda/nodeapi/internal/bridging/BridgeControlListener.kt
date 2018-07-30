@@ -12,6 +12,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.revocation.RevocationConfig
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -20,16 +21,18 @@ import java.util.*
 
 class BridgeControlListener(val config: NodeSSLConfiguration,
                             maxMessageSize: Int,
+                            revocationConfig: RevocationConfig,
                             val artemisMessageClientFactory: () -> ArtemisSessionProvider) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
-    private val bridgeManager: BridgeManager = AMQPBridgeManager(config, maxMessageSize, artemisMessageClientFactory)
+    private val bridgeManager: BridgeManager = AMQPBridgeManager(config, maxMessageSize, revocationConfig, artemisMessageClientFactory)
     private val validInboundQueues = mutableSetOf<String>()
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
 
     constructor(config: NodeSSLConfiguration,
                 p2pAddress: NetworkHostAndPort,
-                maxMessageSize: Int) : this(config, maxMessageSize, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+                maxMessageSize: Int,
+                revocationConfig: RevocationConfig) : this(config, maxMessageSize, revocationConfig, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private val log = contextLogger()

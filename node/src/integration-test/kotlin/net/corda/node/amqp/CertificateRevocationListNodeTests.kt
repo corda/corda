@@ -19,6 +19,8 @@ import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
+import net.corda.nodeapi.internal.revocation.CordaCrlStore
+import net.corda.nodeapi.internal.revocation.RevocationConfig
 import net.corda.testing.core.*
 import net.corda.testing.internal.DEV_INTERMEDIATE_CA
 import net.corda.testing.internal.DEV_ROOT_CA
@@ -45,6 +47,7 @@ import org.junit.rules.TemporaryFolder
 import java.io.Closeable
 import java.math.BigInteger
 import java.net.InetSocketAddress
+import java.net.URL
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PrivateKey
@@ -95,7 +98,7 @@ class CertificateRevocationListNodeTests {
     }
 
     @Test
-    fun `Simple AMPQ Client to Server connection works and soft fail is enabled`() {
+    fun `Simple AMQP Client to Server connection works and soft fail is enabled`() {
         val crlCheckSoftFail = true
         val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         amqpServer.use {
@@ -127,7 +130,7 @@ class CertificateRevocationListNodeTests {
     }
 
     @Test
-    fun `Simple AMPQ Client to Server connection works and soft fail is disabled`() {
+    fun `Simple AMQP Client to Server connection works and soft fail is disabled`() {
         val crlCheckSoftFail = false
         val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         amqpServer.use {
@@ -159,7 +162,7 @@ class CertificateRevocationListNodeTests {
     }
 
     @Test
-    fun `AMPQ Client to Server connection fails when client's certificate is revoked and soft fail is enabled`() {
+    fun `AMQP Client to Server connection fails when client's certificate is revoked and soft fail is enabled`() {
         val crlCheckSoftFail = true
         val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         amqpServer.use {
@@ -180,7 +183,7 @@ class CertificateRevocationListNodeTests {
     }
 
     @Test
-    fun `AMPQ Client to Server connection fails when client's certificate is revoked and soft fail is disabled`() {
+    fun `AMQP Client to Server connection fails when client's certificate is revoked and soft fail is disabled`() {
         val crlCheckSoftFail = false
         val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         amqpServer.use {
@@ -201,7 +204,7 @@ class CertificateRevocationListNodeTests {
     }
 
     @Test
-    fun `AMPQ Client to Server connection fails when servers's certificate is revoked`() {
+    fun `AMQP Client to Server connection fails when servers's certificate is revoked`() {
         val crlCheckSoftFail = true
         val (amqpServer, serverCert) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         revokedNodeCerts.add(serverCert.serialNumber)
@@ -222,7 +225,7 @@ class CertificateRevocationListNodeTests {
     }
 
     @Test
-    fun `AMPQ Client to Server connection fails when servers's certificate is revoked and soft fail is enabled`() {
+    fun `AMQP Client to Server connection fails when servers's certificate is revoked and soft fail is enabled`() {
         val crlCheckSoftFail = true
         val (amqpServer, serverCert) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         revokedNodeCerts.add(serverCert.serialNumber)
@@ -243,7 +246,7 @@ class CertificateRevocationListNodeTests {
     }
 
     @Test
-    fun `AMPQ Client to Server connection succeeds when CRL cannot be obtained and soft fail is enabled`() {
+    fun `AMQP Client to Server connection succeeds when CRL cannot be obtained and soft fail is enabled`() {
         val crlCheckSoftFail = true
         val (amqpServer, _) = createServer(
                 serverPort,
@@ -336,12 +339,15 @@ class CertificateRevocationListNodeTests {
         val nodeCert = clientConfig.recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
         val clientTruststore = clientConfig.loadTrustStore().internal
         val clientKeystore = clientConfig.loadSslKeyStore().internal
-
+        val crlDir = temporaryFolder.newFolder().toPath() / "client-crls"
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore: KeyStore = clientKeystore
             override val keyStorePrivateKeyPassword: CharArray = clientConfig.keyStorePassword.toCharArray()
             override val trustStore: KeyStore = clientTruststore
-            override val crlCheckSoftFail: Boolean = crlCheckSoftFail
+            override val revocationConfig: RevocationConfig = RevocationConfig(
+                    crlCheckSoftFail = crlCheckSoftFail,
+                    certStores = setOf(CordaCrlStore.getInstance(CordaCrlStore.CordaCertStoreParameters(url = URL(nodeCrlDistPoint), crlDirectory = crlDir)))
+            )
             override val maxMessageSize: Int = maxMessageSize
         }
         return Pair(AMQPClient(
@@ -366,11 +372,15 @@ class CertificateRevocationListNodeTests {
         val nodeCert = serverConfig.recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
         val serverTruststore = serverConfig.loadTrustStore().internal
         val serverKeystore = serverConfig.loadSslKeyStore().internal
+        val crlDir = temporaryFolder.newFolder().toPath() / "server-crls"
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore: KeyStore = serverKeystore
             override val keyStorePrivateKeyPassword: CharArray = serverConfig.keyStorePassword.toCharArray()
             override val trustStore: KeyStore = serverTruststore
-            override val crlCheckSoftFail: Boolean = crlCheckSoftFail
+            override val revocationConfig: RevocationConfig = RevocationConfig(
+                    crlCheckSoftFail = crlCheckSoftFail,
+                    certStores = setOf(CordaCrlStore.getInstance(CordaCrlStore.CordaCertStoreParameters(url = URL(nodeCrlDistPoint), crlDirectory = crlDir)))
+            )
             override val maxMessageSize: Int = maxMessageSize
         }
         return Pair(AMQPServer(
