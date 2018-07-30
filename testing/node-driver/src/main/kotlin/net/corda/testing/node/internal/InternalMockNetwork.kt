@@ -337,7 +337,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                 }
             }
 
-        override val started: TestStartedNode? get() = uncheckedCast(super.started)
+        override val started: TestStartedNode? = super.started
 
         override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): TestStartedNode {
             return TestStartedNodeImpl(
