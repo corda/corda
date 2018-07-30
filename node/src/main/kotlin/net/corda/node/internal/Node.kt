@@ -68,7 +68,6 @@ import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.system.exitProcess
-import rx.Observable
 import java.nio.file.Paths
 
 class NodeWithInfo(val node: Node, val info: NodeInfo) {
