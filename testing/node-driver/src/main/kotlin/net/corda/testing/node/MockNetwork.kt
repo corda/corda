@@ -187,7 +187,7 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
      * explicitly on a node-by-node basis. This is used when we want to manually specify that a particular initiating
      * flow class will have a particular responder.
      *
-     * An [InitiatedFlowFactory] is responsible for converting a [FlowSession] into the [FlowLogic] that will respond
+     * An [ResponderFlowFactory] is responsible for converting a [FlowSession] into the [FlowLogic] that will respond
      * to the initiated flow. The registry records one responder type, and hence one factory, for each initiator flow
      * type. If a factory is already registered for the type, it is overwritten in the registry when a new factory is
      * registered.
@@ -200,10 +200,29 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
      * @return A [CordaFuture] that will complete the first time the responding flow is created.
      */
     fun <F : FlowLogic<*>> registerResponderFlow(initiatingFlowClass: Class<out FlowLogic<*>>,
-                                                 flowFactory: InitiatedFlowFactory<F>,
+                                                 flowFactory: ResponderFlowFactory<F>,
                                                  responderFlowClass: Class<F>): CordaFuture<F> =
-            node.registerFlowFactory(initiatingFlowClass, flowFactory, responderFlowClass, true)
+            node.registerFlowFactory(
+                    initiatingFlowClass,
+                    InitiatedFlowFactory.CorDapp(flowVersion = 0, appName = "", factory = flowFactory::invoke),
+                    responderFlowClass, true)
                     .toFuture()
+}
+
+/**
+ * Responsible for converting a [FlowSession] into the [FlowLogic] that will respond to an initiated flow.
+ *
+ * @param F The [FlowLogic]-inherited type of the responder class this factory creates.
+ */
+@FunctionalInterface
+interface ResponderFlowFactory<F : FlowLogic<*>> {
+    /**
+     * Given the provided [FlowSession], create a responder [FlowLogic] of the desired type.
+     *
+     * @param flowSession The [FlowSession] to use to create the responder flow object.
+     * @return The constructed responder flow object.
+     */
+    fun invoke(flowSession: FlowSession): F
 }
 
 /**
@@ -220,7 +239,9 @@ inline fun <reified F : FlowLogic<*>> StartedMockNode.registerResponderFlow(
         noinline flowFactory: (FlowSession) -> F): Future<F> =
         registerResponderFlow(
                 initiatingFlowClass,
-                InitiatedFlowFactory.CorDapp(flowVersion = 0, appName = "", factory = flowFactory),
+                object : ResponderFlowFactory<F> {
+                    override fun invoke(flowSession: FlowSession) = flowFactory(flowSession)
+                },
                 F::class.java)
 
 /**
