@@ -4,12 +4,15 @@ import com.google.common.jimfs.Jimfs
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.toFuture
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -18,6 +21,7 @@ import net.corda.testing.node.internal.*
 import rx.Observable
 import java.math.BigInteger
 import java.nio.file.Path
+import java.util.concurrent.Future
 
 /**
  * Immutable builder for configuring a [StartedMockNode] or an [UnstartedMockNode] via [MockNetwork.createNode] and
@@ -177,7 +181,29 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
             statement()
         }
     }
+
+    /**
+     * Register an [InitiatedFlowFactory], to control relationship between initiating and receiving flow classes
+     * explicitly on a node-by-node basis.
+     */
+    fun <F : FlowLogic<*>> registerFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
+                                               flowFactory: InitiatedFlowFactory<F>,
+                                               initiatedFlowClass: Class<F>): Future<F> =
+            node.registerFlowFactory(initiatingFlowClass, flowFactory, initiatedFlowClass, true)
+                    .toFuture()
 }
+
+/*
+ * Kotlin-only utility function using a reified type parameter and a lambda parameter to simplify the
+ * [InitiatedFlowFactory.registerFlowFactory] function.
+ */
+inline fun <reified F : FlowLogic<*>> StartedMockNode.registerFlowFactory(
+        initiatingFlowClass: Class<out FlowLogic<*>>,
+        noinline flowFactory: (FlowSession) -> F): Future<F> =
+        registerFlowFactory(
+                initiatingFlowClass,
+                InitiatedFlowFactory.CorDapp(flowVersion = 0, appName = "", factory = flowFactory),
+                F::class.java)
 
 /**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
