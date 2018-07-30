@@ -186,9 +186,9 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
      * Register an [InitiatedFlowFactory], to control relationship between initiating and receiving flow classes
      * explicitly on a node-by-node basis.
      */
-    fun <F : FlowLogic<*>> registerFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
-                                               flowFactory: InitiatedFlowFactory<F>,
-                                               initiatedFlowClass: Class<F>): CordaFuture<F> =
+    fun <F : FlowLogic<*>> registerResponderFlow(initiatingFlowClass: Class<out FlowLogic<*>>,
+                                                 flowFactory: InitiatedFlowFactory<F>,
+                                                 initiatedFlowClass: Class<F>): CordaFuture<F> =
             node.registerFlowFactory(initiatingFlowClass, flowFactory, initiatedFlowClass, true)
                     .toFuture()
 }
@@ -197,10 +197,10 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
  * Kotlin-only utility function using a reified type parameter and a lambda parameter to simplify the
  * [InitiatedFlowFactory.registerFlowFactory] function.
  */
-inline fun <reified F : FlowLogic<*>> StartedMockNode.registerFlowFactory(
+inline fun <reified F : FlowLogic<*>> StartedMockNode.registerResponderFlow(
         initiatingFlowClass: Class<out FlowLogic<*>>,
         noinline flowFactory: (FlowSession) -> F): Future<F> =
-        registerFlowFactory(
+        registerResponderFlow(
                 initiatingFlowClass,
                 InitiatedFlowFactory.CorDapp(flowVersion = 0, appName = "", factory = flowFactory),
                 F::class.java)

@@ -4,10 +4,9 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.utilities.unwrap
-import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.registerFlowFactory
+import net.corda.testing.node.registerResponderFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
@@ -66,7 +65,7 @@ class TestResponseFlowInIsolation {
     fun `test`() {
         // This method returns the Responder flow object used by node B.
         // We tell node B to respond to BadInitiator with Responder.
-        val initiatedResponderFlowFuture = b.registerFlowFactory(
+        val initiatedResponderFlowFuture = b.registerResponderFlow(
                 initiatingFlowClass = BadInitiator::class.java,
                 flowFactory = ::Responder)
 

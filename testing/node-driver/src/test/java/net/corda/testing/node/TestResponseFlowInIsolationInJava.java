@@ -25,6 +25,13 @@ import static org.hamcrest.Matchers.instanceOf;
  */
 public class TestResponseFlowInIsolationInJava {
 
+    // An InitiatedFlowFactory that initiates a Responder, given a FlowSession.
+    private static final InitiatedFlowFactory.CorDapp<Responder> FLOW_FACTORY = new InitiatedFlowFactory.CorDapp<>(
+            0,
+            "",
+            Responder::new
+    );
+
     private final MockNetwork network = new MockNetwork(singletonList("com.template"));
     private final StartedMockNode a = network.createNode();
     private final StartedMockNode b = network.createNode();
@@ -40,10 +47,10 @@ public class TestResponseFlowInIsolationInJava {
     @Test
     public void test() throws Exception {
         // This method returns the Responder flow object used by node B.
-        Future<Responder> initiatedResponderFlowFuture = b.registerFlowFactory(
+        Future<Responder> initiatedResponderFlowFuture = b.registerResponderFlow(
                 // We tell node B to respond to BadInitiator with Responder.
                 // We want to observe the Responder flow object to check for errors.
-                BadInitiator.class, flowFactory, Responder.class);
+                BadInitiator.class, FLOW_FACTORY, Responder.class);
 
         // We run the BadInitiator flow on node A.
         BadInitiator flow = new BadInitiator(b.getInfo().getLegalIdentities().get(0));
@@ -97,12 +104,6 @@ public class TestResponseFlowInIsolationInJava {
             return null;
         }
     }
-
-    private static final InitiatedFlowFactory.CorDapp<Responder> flowFactory = new InitiatedFlowFactory.CorDapp<>(
-            0,
-            "",
-            Responder::new
-    );
 
     @InitiatingFlow
     public static final class BadInitiator extends FlowLogic<Void> {
