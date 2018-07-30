@@ -49,10 +49,7 @@ fun <K, V> hasEntry(key: K, valueMatcher: Matcher<V>) =
 fun <K, V> hasOnlyEntries(vararg entryMatchers: Pair<K, Matcher<V>>) = hasOnlyEntries(entryMatchers.toList())
 
 fun <K, V> hasOnlyEntries(entryMatchers: Collection<Pair<K, Matcher<V>>>) =
-        allOf(
-                hasEntrySetSize(entryMatchers.size),
-                hasEntries(entryMatchers)
-        )
+        hasEntrySetSize(entryMatchers.size) and hasEntries(entryMatchers)
 
 fun <K, V> hasEntries(vararg entryMatchers: Pair<K, Matcher<V>>) = hasEntries(entryMatchers.toList())
 
