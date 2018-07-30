@@ -165,7 +165,7 @@ Building the example CorDapp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Open a terminal window in the ``cordapp-example`` directory
 
-* Run the `deployNodes` Gradle task to build four nodes with our CorDapp already installed on them:
+* Run the ``deployNodes`` Gradle task to build four nodes with our CorDapp already installed on them:
 
   * Unix/Mac OSX: ``./gradlew deployNodes``
 
@@ -175,13 +175,13 @@ Building the example CorDapp
    both Kotlin (``/kotlin-source/src``) and Java (``/java-source/src``). Since both sets of source files are
    functionally identical, we will refer to the Kotlin version throughout the documentation.
 
-* After the build finishes, you will see the following in the ``kotlin-source/build/nodes`` folder:
+* After the build finishes, you will see the following output in the ``kotlin-source/build/nodes`` folder:
 
   * A folder for each generated node
   * A ``runnodes`` shell script for running all the nodes simultaneously on osX
   * A ``runnodes.bat`` batch file for running all the nodes simultaneously on Windows
 
-* Each node in the ``nodes`` folder has the following structure:
+* Each node in the ``nodes`` folder will have the following structure:
 
   .. sourcecode:: none
       
