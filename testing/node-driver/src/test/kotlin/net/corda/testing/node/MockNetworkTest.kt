@@ -1,7 +1,6 @@
-package net.corda.testing.node.internal
+package net.corda.testing.node
 
 import net.corda.testing.core.*
-import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.*
 import org.junit.After
 import org.junit.Assert.*
@@ -39,7 +38,7 @@ class MockNetworkTest {
     @Test
     fun `with an unstarted node`() {
         val unstarted = mockNetwork.createUnstartedNode(DUMMY_BANK_A_NAME, forcedID = NODE_ID)
-        val ex = assertFailsWith<NoSuchElementException> { unstarted.started }
+        val ex = assertFailsWith<IllegalStateException> { unstarted.started }
         assertThat(ex).hasMessage("Node ID=$NODE_ID is not running")
     }
 }

@@ -131,9 +131,10 @@ class UnstartedMockNode private constructor(private val node: InternalMockNetwor
 
     /**
      * A [StartedMockNode] object for this running node.
+     * @throws [IllegalStateException] if the node is not running yet.
      */
     val started: StartedMockNode
-        get() = StartedMockNode.create(node.started ?: throw NoSuchElementException("Node ID=$id is not running"))
+        get() = StartedMockNode.create(node.started ?: throw IllegalStateException("Node ID=$id is not running"))
 }
 
 /** A class that represents a started mock node for testing. */
