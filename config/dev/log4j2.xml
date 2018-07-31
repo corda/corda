@@ -24,7 +24,7 @@
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
             <PatternLayout>
-                <ScriptPatternSelector defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n}{INFO=white,WARN=red,FATAL=bright red}">
+                <ScriptPatternSelector defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n %throwable{0}}{INFO=white,WARN=red,FATAL=bright red}">
                     <Script name="MDCSelector" language="javascript"><![CDATA[
                     result = null;
                     if (!logEvent.getContextData().size() == 0) {
@@ -43,7 +43,7 @@
 
         <!-- Required for printBasicInfo -->
         <Console name="Console-Appender-Println" target="SYSTEM_OUT">
-            <PatternLayout pattern="%msg%n" />
+            <PatternLayout pattern="%msg%n %throwable{0}" />
         </Console>
 
         <!-- Will generate up to 100 log files for a given day. During every rollover it will delete

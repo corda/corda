@@ -45,6 +45,10 @@
       <module name="capsule-hsm_test" target="1.8" />
       <module name="client_main" target="1.8" />
       <module name="client_test" target="1.8" />
+      <module name="com.r3.corda_buildSrc_main" target="1.8" />
+      <module name="com.r3.corda_buildSrc_test" target="1.8" />
+      <module name="com.r3.corda_canonicalizer_main" target="1.8" />
+      <module name="com.r3.corda_canonicalizer_test" target="1.8" />
       <module name="common_main" target="1.8" />
       <module name="common_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
@@ -185,6 +189,10 @@
       <module name="loadtest_test" target="1.8" />
       <module name="mock_main" target="1.8" />
       <module name="mock_test" target="1.8" />
+      <module name="net.corda_buildSrc_main" target="1.8" />
+      <module name="net.corda_buildSrc_test" target="1.8" />
+      <module name="net.corda_canonicalizer_main" target="1.8" />
+      <module name="net.corda_canonicalizer_test" target="1.8" />
       <module name="network-bootstrapper_main" target="1.8" />
       <module name="network-bootstrapper_test" target="1.8" />
       <module name="network-verifier_main" target="1.8" />

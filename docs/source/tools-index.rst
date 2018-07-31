@@ -7,6 +7,7 @@ wish to try the :doc:`blob-inspector`.
 .. toctree::
    :maxdepth: 1
 
+   network-builder
    network-bootstrapper
    notary-healthcheck
    demobench

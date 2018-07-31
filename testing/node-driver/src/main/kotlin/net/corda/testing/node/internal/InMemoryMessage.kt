@@ -16,7 +16,7 @@ import net.corda.node.services.statemachine.DeduplicationId
 import java.time.Instant
 
 /**
- * An implementation of [Message] for in memory messaging by the test [InMemoryMessagingNetwork].
+ * An implementation of [Message] for in memory messaging by the test [MockNodeMessagingService].
  */
 data class InMemoryMessage(override val topic: String,
                            override val data: ByteSequence,

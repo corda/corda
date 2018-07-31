@@ -171,7 +171,7 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
      * @return the message that was processed, if any in this round.
      */
     fun pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
-        return (node.network as InternalMockMessagingService).pumpReceive(block)
+        return node.network.pumpReceive(block)
     }
 
     /** Returns the currently live flows of type [flowClass], and their corresponding result future. */

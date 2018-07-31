@@ -831,7 +831,7 @@ private inline fun <reified P : FlowLogic<*>> TestStartedNode.registerFlowFactor
         initiatingFlowClass: KClass<out FlowLogic<*>>,
         initiatedFlowVersion: Int = 1,
         noinline flowFactory: (FlowSession) -> P): CordaFuture<P> {
-    val observable = internalRegisterFlowFactory(
+    val observable = registerFlowFactory(
             initiatingFlowClass.java,
             InitiatedFlowFactory.CorDapp(initiatedFlowVersion, "", flowFactory),
             P::class.java,

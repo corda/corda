@@ -122,6 +122,7 @@ public class InteractiveShellJavaTest {
 
     private InMemoryIdentityService ids = new InMemoryIdentityService(Lists.newArrayList(megaCorp.getIdentity()), InternalTestConstantsKt.getDEV_ROOT_CA().getCertificate());
 
+    @SuppressWarnings("deprecation")
     private ObjectMapper om = JacksonSupport.createInMemoryMapper(ids, new YAMLFactory());
 
     private String output;
