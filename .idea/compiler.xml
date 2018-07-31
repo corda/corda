@@ -128,6 +128,10 @@
       <module name="loadtest_test" target="1.8" />
       <module name="mock_main" target="1.8" />
       <module name="mock_test" target="1.8" />
+      <module name="net.corda_buildSrc_main" target="1.8" />
+      <module name="net.corda_buildSrc_test" target="1.8" />
+      <module name="net.corda_canonicalizer_main" target="1.8" />
+      <module name="net.corda_canonicalizer_test" target="1.8" />
       <module name="network-bootstrapper_main" target="1.8" />
       <module name="network-bootstrapper_test" target="1.8" />
       <module name="network-verifier_main" target="1.8" />

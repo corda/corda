@@ -107,15 +107,12 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
  * sweeping up the Node into the Kryo checkpoint serialization via any flows holding a reference to ServiceHub.
  */
 // TODO Log warning if this node is a notary but not one of the ones specified in the network parameters, both for core and custom
-
-// In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
-// AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
 abstract class AbstractNode<S>(val configuration: NodeConfiguration,
-                                             val platformClock: CordaClock,
-                                             protected val versionInfo: VersionInfo,
-                                             protected val cordappLoader: CordappLoader,
-                                             protected val serverThread: AffinityExecutor.ServiceAffinityExecutor,
-                                             private val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
+                               val platformClock: CordaClock,
+                               protected val versionInfo: VersionInfo,
+                               protected val cordappLoader: CordappLoader,
+                               protected val serverThread: AffinityExecutor.ServiceAffinityExecutor,
+                               private val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
 
@@ -180,6 +177,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount).tokenize()
     val contractUpgradeService = ContractUpgradeServiceImpl().tokenize()
     val auditService = DummyAuditService().tokenize()
+    @Suppress("LeakingThis")
+    protected val network: MessagingService = makeMessagingService().tokenize()
     val services = ServiceHubInternalImpl().tokenize()
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
@@ -194,8 +193,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             configuration.drainingModePollPeriod,
             unfinishedSchedules = busyNodeLatch
     ).tokenize().closeOnStop()
-    // TODO Making this non-lateinit requires MockNode being able to create a blank InMemoryMessaging instance
-    protected lateinit var network: MessagingService
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
     private val flowFactories = ConcurrentHashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
@@ -285,10 +282,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             System.setProperty("co.paralleluniverse.fibers.verifyInstrumentation", "true")
         }
         log.info("Node starting up ...")
-
-        // TODO First thing we do is create the MessagingService. This should have been done by the c'tor but it's not
-        // possible (yet) to due restriction from MockNode
-        network = makeMessagingService().tokenize()
 
         val trustRoot = initKeyStore()
         val nodeCa = configuration.loadNodeKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_CA)

@@ -15,11 +15,6 @@ import net.corda.node.services.FinalityHandler
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.nodeapi.internal.persistence.contextTransaction
-import net.corda.testing.node.internal.cordappsForPackages
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.MessagingServiceSpy
-import net.corda.testing.node.internal.newContext
-import net.corda.testing.node.internal.setMessagingServiceSpy
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -79,7 +74,7 @@ class RetryFlowMockTest {
     fun `Retry does not set senderUUID`() {
         val messagesSent = Collections.synchronizedList(mutableListOf<Message>())
         val partyB = nodeB.info.legalIdentities.first()
-        nodeA.setMessagingServiceSpy(object : MessagingServiceSpy(nodeA.network) {
+        nodeA.setMessagingServiceSpy(object : MessagingServiceSpy() {
             override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
                 messagesSent.add(message)
                 messagingService.send(message, target)
@@ -95,7 +90,7 @@ class RetryFlowMockTest {
     fun `Restart does not set senderUUID`() {
         val messagesSent = Collections.synchronizedList(mutableListOf<Message>())
         val partyB = nodeB.info.legalIdentities.first()
-        nodeA.setMessagingServiceSpy(object : MessagingServiceSpy(nodeA.network) {
+        nodeA.setMessagingServiceSpy(object : MessagingServiceSpy() {
             override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
                 messagesSent.add(message)
                 messagingService.send(message, target)
@@ -109,7 +104,7 @@ class RetryFlowMockTest {
         assertNotNull(messagesSent.first().senderUUID)
         nodeA = mockNet.restartNode(nodeA)
         // This is a bit racy because restarting the node actually starts it, so we need to make sure there's enough iterations we get here with flow still going.
-        nodeA.setMessagingServiceSpy(object : MessagingServiceSpy(nodeA.network) {
+        nodeA.setMessagingServiceSpy(object : MessagingServiceSpy() {
             override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
                 messagesSent.add(message)
                 messagingService.send(message, target)
@@ -117,7 +112,7 @@ class RetryFlowMockTest {
         })
         // Now short circuit the iterations so the flow finishes soon.
         KeepSendingFlow.count.set(count - 2)
-        while (nodeA.smm.allStateMachines.size > 0) {
+        while (nodeA.smm.allStateMachines.isNotEmpty()) {
             Thread.sleep(10)
         }
         assertNull(messagesSent.last().senderUUID)

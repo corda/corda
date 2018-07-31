@@ -66,7 +66,7 @@ class NodePair(private val mockNet: InternalMockNetwork) {
         private set
 
     fun <T> communicate(clientLogic: AbstractClientLogic<T>, rebootClient: Boolean): FlowStateMachine<T> {
-        server.internalRegisterFlowFactory(AbstractClientLogic::class.java, InitiatedFlowFactory.Core { ServerLogic(it, serverRunning) }, ServerLogic::class.java, false)
+        server.registerFlowFactory(AbstractClientLogic::class.java, InitiatedFlowFactory.Core { ServerLogic(it, serverRunning) }, ServerLogic::class.java, false)
         client.services.startFlow(clientLogic)
         while (!serverRunning.get()) mockNet.runNetwork(1)
         if (rebootClient) {
