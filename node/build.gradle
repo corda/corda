@@ -182,6 +182,9 @@ dependencies {
     // Jsh: A SSH implementation for tunneling inbound traffic via a relay
     compile group: 'com.jcraft', name: 'jsch', version: '0.1.54'
 
+    //Picocli for command line interface
+    compile "info.picocli:picocli:$picocli_version"
+
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
