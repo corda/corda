@@ -29,10 +29,7 @@ General rules
   * We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes
 
 * To run database upgrades against H2, you'll need to connect to the node's database without starting the node. You can 
-  do this as follows:
-
-  * By connecting directly to the node's ``persistence.mv.db`` file. See :ref:`h2_relative_path`
-  * By creating an upgrade script. See :ref:`h2_upgrade_script`
+  do this by connecting directly to the node's ``persistence.mv.db`` file. See :ref:`h2_relative_path`
 
 UNRELEASED
 ----------

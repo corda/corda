@@ -87,10 +87,3 @@ Connecting directly to the node's ``persistence.mv.db`` file
 You can also use the H2 Console to connect directly to the node's ``persistence.mv.db`` file:
 
     ``jdbc:h2:~/path/to/file/persistence``
-
-.. _h2_upgrade_script:
-
-Upgrade scripts
----------------
-
-TODO
