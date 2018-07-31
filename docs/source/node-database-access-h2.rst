@@ -46,8 +46,8 @@ The JDBC URL defaults to a random value. The username defaults to ``sa`` and the
 These defaults can be modified in the :doc:`corda-configuration-file` using the ``dataSourceProperties`` configuration
 block.
 
-Access
-^^^^^^
+Connecting to the database
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 The JDBC URL is printed during node startup to the log and will typically look like this:
 
      ``jdbc:h2:tcp://localhost:31339/node``
