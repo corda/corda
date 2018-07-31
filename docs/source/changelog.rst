@@ -6,6 +6,8 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* Vault query fix: support query by parent classes of Contract State classes (see https://github.com/corda/corda/issues/3714)
+
 * Added ``registerResponderFlow`` method to ``StartedMockNode``, to support isolated testing of responder flow behaviour.
 
 * "app", "rpc", "p2p" and "unknown" are no longer allowed as uploader values when importing attachments. These are used
