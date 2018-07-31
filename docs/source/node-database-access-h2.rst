@@ -1,23 +1,16 @@
 Database access when running H2
 ===============================
 
-Via a socket on a running node
-------------------------------
-When running a node using the H2 database, the node can be configured to expose its internal database over socket which
-can be browsed using any tool that can use JDBC drivers. The JDBC URL is printed during node startup to the log and
-will typically look like this:
+.. contents::
 
-     ``jdbc:h2:tcp://localhost:31339/node``
+Connecting via a socket on a running node
+-----------------------------------------
 
-The username and password can be altered in the :doc:`corda-configuration-file` but default to username "sa" and a blank
-password.
-
-Any database browsing tool that supports JDBC can be used, but if you have IntelliJ Ultimate edition then there is
-a tool integrated with your IDE. Just open the database window and add an H2 data source with the above details.
-You will now be able to browse the tables and row data within them.
-
-By default, the node's H2 database is not exposed. This behaviour can be overridden by specifying the full network 
-address (interface and port), using the new ``h2Settings`` syntax in the node configuration.
+Configuring the port
+^^^^^^^^^^^^^^^^^^^^
+Nodes backed by an H2 database will not expose this database by default. To configure the node to expose its internal
+database over a socket which can be browsed using any tool that can use JDBC drivers, you must specify the full network
+address (interface and port) using the ``h2Settings`` syntax in the node configuration.
 
 The configuration below will restrict the H2 service to run on ``localhost``:
 
@@ -43,15 +36,57 @@ If remote access is required, the address can be changed to ``0.0.0.0``. However
       address: "0.0.0.0:12345"
   }
 
-The previous ``h2Port`` syntax is now deprecated. ``h2Port`` will continue to work but the database
-will only be accessible on localhost.
+.. note:: The previous ``h2Port`` syntax is now deprecated. ``h2Port`` will continue to work but the database will only
+   be accessible on localhost.
+
+Configuring the JDBC URL, username and password
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The JDBC URL defaults to a random value. The username defaults to ``sa`` and the password defaults to a blank password.
+
+These defaults can be modified in the :doc:`corda-configuration-file` using the ``dataSourceProperties`` configuration
+block.
+
+Access
+^^^^^^
+The JDBC URL is printed during node startup to the log and will typically look like this:
+
+     ``jdbc:h2:tcp://localhost:31339/node``
+
+Any database browsing tool that supports JDBC can be used. Below are two examples.
+
+IntelliJ Ultimate edition
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+IntelliJ Ultimate edition has an integrated tool. Just open the database window and add an H2 data source with the
+JDBC URL above. You will now be able to browse the tables and row data within them.
+
+H2 Console
+~~~~~~~~~~
+
+* Download the **last stable** `h2 platform-independent zip <http://www.h2database.com/html/download.html>`_, unzip the
+  zip, and navigate in a terminal window to the unzipped folder
+
+* Change directories to the bin folder: ``cd h2/bin``
+
+* Run the following command to open the h2 web console in a web browser tab:
+
+  * Unix: ``sh h2.sh``
+  * Windows: ``h2.bat``
+
+* Paste the node's JDBC URL into the JDBC URL field and click ``Connect``, using the default username (``sa``) and no
+  password (unless configured otherwise)
+
+You will be presented with a web interface that shows the contents of your node's storage and vault, and provides an
+interface for you to query them using SQL.
 
 .. _h2_relative_path:
 
 Connecting directly to the node's ``persistence.mv.db`` file
 ------------------------------------------------------------
 
-TODO
+You can also use the H2 Console to connect directly to the node's ``persistence.mv.db`` file:
+
+    ``jdbc:h2:~/path/to/file/persistence``
 
 .. _h2_upgrade_script:
 
