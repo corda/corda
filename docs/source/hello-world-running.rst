@@ -70,7 +70,7 @@ the three node folders. Each node folder has the following structure:
 
         .
         |____corda.jar                     // The runnable node
-        |____corda-webserver.jar           // The node's webserver(Notary doesn't need a web server)
+        |____corda-webserver.jar           // The node's webserver (The notary doesn't need a web server)
         |____node.conf                     // The node's configuration file
         |____cordapps
         |____java/kotlin-source-0.1.jar  // Our IOU CorDapp
