@@ -8,6 +8,9 @@ Unreleased
 ----------
 * Added ``registerResponderFlow`` method to ``StartedMockNode``, to support isolated testing of responder flow behaviour.
 
+* "app", "rpc", "p2p" and "unknown" are no longer allowed as uploader values when importing attachments. These are used
+  internally in security sensitive code.
+
 * Introduced ``TestCorDapp`` and utilities to support asymmetric setups for nodes through ``DriverDSL``, ``MockNetwork`` and ``MockServices``.
 
 * Change type of the `checkpoint_value` column. Please check the upgrade-notes on how to update your database.
