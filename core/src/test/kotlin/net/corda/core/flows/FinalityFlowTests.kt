@@ -21,7 +21,7 @@ import org.junit.Test
 class FinalityFlowTests : WithFinality {
     companion object {
         private val CHARLIE = TestIdentity(CHARLIE_NAME, 90).party
-        private val classMockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts.asset"))
+        private val classMockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts.asset","net.corda.finance.schemas"))
 
         @JvmStatic
         @AfterClass
