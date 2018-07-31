@@ -1651,9 +1651,6 @@ class VaultQueryTests {
         cordappPackages -= SampleCashSchemaV3::class.packageName
         setUp()
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
-            vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
-            vaultFiller.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, 1, DUMMY_CASH_ISSUER)
             // CashSchemaV3 NOT registered with NodeSchemaService
             val logicalExpression = builder { SampleCashSchemaV3.PersistentCashState::currency.equal(GBP.currencyCode) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)
