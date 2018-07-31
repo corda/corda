@@ -1,8 +1,11 @@
 Database access when running H2
 ===============================
+
+Via a socket on a running node
+------------------------------
 When running a node using the H2 database, the node can be configured to expose its internal database over socket which
-can be browsed using any tool that can use JDBC drivers.
-The JDBC URL is printed during node startup to the log and will typically look like this:
+can be browsed using any tool that can use JDBC drivers. The JDBC URL is printed during node startup to the log and
+will typically look like this:
 
      ``jdbc:h2:tcp://localhost:31339/node``
 
@@ -42,3 +45,17 @@ If remote access is required, the address can be changed to ``0.0.0.0``. However
 
 The previous ``h2Port`` syntax is now deprecated. ``h2Port`` will continue to work but the database
 will only be accessible on localhost.
+
+.. _h2_relative_path:
+
+Connecting directly to the node's ``persistence.mv.db`` file
+------------------------------------------------------------
+
+TODO
+
+.. _h2_upgrade_script:
+
+Upgrade scripts
+---------------
+
+TODO
