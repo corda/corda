@@ -62,8 +62,9 @@ import net.corda.testing.dsl.TestTransactionDSLInterpreter
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.node.*
+import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.*
+import net.corda.testing.node.ledger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -245,7 +246,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             aliceNode.internals.disableDBCloseOnStop()
             bobNode.internals.disableDBCloseOnStop()
 
-            val bobAddr = bobNode.network.myAddress as InMemoryMessagingNetwork.PeerHandle
+            val bobAddr = bobNode.network.myAddress
             mockNet.runNetwork() // Clear network map registration messages
 
             val notary = mockNet.defaultNotaryIdentity
