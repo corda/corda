@@ -53,19 +53,18 @@ class FlowFrameworkTests {
         init {
             LogHelper.setLevel("+net.corda.flow")
         }
-
-        private lateinit var mockNet: InternalMockNetwork
-        private lateinit var aliceNode: TestStartedNode
-        private lateinit var bobNode: TestStartedNode
-        private lateinit var alice: Party
-        private lateinit var bob: Party
-        private lateinit var notaryIdentity: Party
-        private val receivedSessionMessages = ArrayList<SessionTransfer>()
-
     }
 
+    private lateinit var mockNet: InternalMockNetwork
+    private lateinit var aliceNode: TestStartedNode
+    private lateinit var bobNode: TestStartedNode
+    private lateinit var alice: Party
+    private lateinit var bob: Party
+    private lateinit var notaryIdentity: Party
+    private val receivedSessionMessages = ArrayList<SessionTransfer>()
+
     @Before
-    fun setUpGlobalMockNet() {
+    fun setUpMockNet() {
         mockNet = InternalMockNetwork(
                 cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
                 servicePeerAllocationStrategy = RoundRobin()

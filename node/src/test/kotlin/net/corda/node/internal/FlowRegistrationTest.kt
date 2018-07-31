@@ -41,13 +41,12 @@ class FlowRegistrationTest {
     @Test
     fun `startup fails when two flows initiated by the same flow are registered`() {
         // register the same flow twice to invoke the error without causing errors in other tests
-        initiator.registerInitiatedFlow(Responder::class.java)
-        assertThatIllegalStateException().isThrownBy { initiator.registerInitiatedFlow(Responder::class.java) }
+        responder.registerInitiatedFlow(Responder::class.java)
+        assertThatIllegalStateException().isThrownBy { responder.registerInitiatedFlow(Responder::class.java) }
     }
 
     @Test
     fun `a single initiated flow can be registered without error`() {
-        initiator.registerInitiatedFlow(Responder::class.java)
         responder.registerInitiatedFlow(Responder::class.java)
         val result = initiator.startFlow(Initiator(responder.info.singleIdentity()))
         mockNetwork.runNetwork()
