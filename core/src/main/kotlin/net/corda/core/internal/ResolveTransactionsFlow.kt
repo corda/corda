@@ -72,7 +72,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
         }
 
     @Suspendable
-    @Throws(FetchDataFlow.HashNotFound::class)
+    @Throws(FetchDataFlow.HashNotFound::class, FetchDataFlow.IllegalTransactionRequest::class)
     override fun call() {
         val newTxns = ArrayList<SignedTransaction>(txHashes.size)
         // Start fetching data.

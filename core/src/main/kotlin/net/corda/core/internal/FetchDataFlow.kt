@@ -49,6 +49,8 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
 
     class HashNotFound(val requested: SecureHash) : FlowException()
 
+    class IllegalTransactionRequest(val requested: SecureHash) : FlowException("Illegally trying to access transaction: ${requested}")
+
     @CordaSerializable
     data class Result<out T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
 
@@ -172,9 +174,10 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
  * Given a set of tx hashes (IDs), either loads them from local disk or asks the remote peer to provide them.
  *
  * A malicious response in which the data provided by the remote peer does not hash to the requested hash results in
- * [FetchDataFlow.DownloadedVsRequestedDataMismatch] being thrown. If the remote peer doesn't have an entry, it
- * results in a [FetchDataFlow.HashNotFound] exception. Note that returned transactions are not inserted into
- * the database, because it's up to the caller to actually verify the transactions are valid.
+ * [FetchDataFlow.DownloadedVsRequestedDataMismatch] being thrown.
+ * If the remote peer doesn't have an entry, it results in a [FetchDataFlow.HashNotFound] exception.
+ * If we are not authorized to request this transaction, it results in a [FetchDataFlow.IllegalTransactionRequest] exception.
+ * Note that returned transactions are not inserted into the database, because it's up to the caller to actually verify the transactions are valid.
  */
 class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
         FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide, DataType.TRANSACTION) {

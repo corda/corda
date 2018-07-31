@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.readFully
 import net.corda.core.transactions.SignedTransaction
@@ -42,6 +43,15 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
     override fun call(): Void? {
         // The first payload will be the transaction data, subsequent payload will be the transaction/attachment data.
         var payload = payload
+
+        // Maintain a list of requests that the caller is allowed to make based on the transactions that she already requested
+        // Todo: should we remove a txId from the set once it has been requested? This would keep the list smaller?
+        val validRequests = when (payload) {
+            is NotarisationPayload -> getValidRequests(payload.signedTransaction)
+            is SignedTransaction -> getValidRequests(payload)
+            else -> throw Exception("what is ${payload} ?") //todo
+        }.toMutableSet()
+
         // This loop will receive [FetchDataFlow.Request] continuously until the `otherSideSession` has all the data they need
         // to resolve the transaction, a [FetchDataFlow.EndRequest] will be sent from the `otherSideSession` to indicate end of
         // data request.
@@ -56,14 +66,25 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                     FetchDataFlow.Request.End -> return null
                 }
             }
+
             payload = when (dataRequest.dataType) {
-                FetchDataFlow.DataType.TRANSACTION -> dataRequest.hashes.map {
-                    serviceHub.validatedTransactions.getTransaction(it) ?: throw FetchDataFlow.HashNotFound(it)
+                FetchDataFlow.DataType.TRANSACTION -> dataRequest.hashes.map { txId ->
+                    if (txId !in validRequests) {
+                        throw FetchDataFlow.IllegalTransactionRequest(txId)
+                    }
+                    val tx = serviceHub.validatedTransactions.getTransaction(txId)
+                            ?: throw FetchDataFlow.HashNotFound(txId)
+                    validRequests.addAll(getValidRequests(tx))
+                    tx
                 }
                 FetchDataFlow.DataType.ATTACHMENT -> dataRequest.hashes.map {
-                    serviceHub.attachments.openAttachment(it)?.open()?.readFully() ?: throw FetchDataFlow.HashNotFound(it)
+                    serviceHub.attachments.openAttachment(it)?.open()?.readFully()
+                            ?: throw FetchDataFlow.HashNotFound(it)
                 }
             }
         }
     }
+
+    @Suspendable
+    private fun getValidRequests(currentPayload: SignedTransaction): Set<SecureHash> = currentPayload.inputs.map { it.txhash }.toSet()
 }
