@@ -329,6 +329,25 @@ open class MockNetwork(
      */
     val notaryNodes get(): List<StartedMockNode> = internalMockNetwork.notaryNodes.map { StartedMockNode.create(it) }
 
+    /**
+     * Returns a [StartedMockNode] for node [id] running on the mock network,
+     * or throws [NoSuchElementException] if no such node has started yet.
+     * @param id Internal ID number of this node.
+     */
+    @Throws(NoSuchElementException::class)
+    fun findStartedNode(id: Int): StartedMockNode {
+        val started = internalMockNetwork.nodes.find { it.id == id }?.started ?: throw NoSuchElementException("No node with ID=$id")
+        return StartedMockNode.create(started)
+    }
+
+    /**
+     * Returns a [StartedMockNode] for unstarted [node] created for the mock network,
+     * or throws [NoSuchElementException] if no such node has started yet.
+     * @param node [UnstartedMockNode] element for this node.
+     */
+    @Throws(NoSuchElementException::class)
+    fun findStartedNode(node: UnstartedMockNode): StartedMockNode = findStartedNode(node.id)
+
     /** Create a started node with the given identity. **/
     fun createPartyNode(legalName: CordaX500Name? = null): StartedMockNode = StartedMockNode.create(internalMockNetwork.createPartyNode(legalName))
 
