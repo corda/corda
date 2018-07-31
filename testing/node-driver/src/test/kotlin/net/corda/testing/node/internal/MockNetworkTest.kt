@@ -26,19 +26,20 @@ class MockNetworkTest {
     }
 
     @Test
-    fun `finding a started node`() {
+    fun `with a started node`() {
         val unstarted = mockNetwork.createUnstartedNode(DUMMY_BANK_A_NAME, forcedID = NODE_ID)
         mockNetwork.startNodes()
 
-        val started = mockNetwork.findStartedNode(unstarted)
+        val started = unstarted.started
         assertEquals(NODE_ID, started.id)
         assertEquals(DUMMY_BANK_A_NAME, started.info.identityFromX500Name(DUMMY_BANK_A_NAME).name)
         assertFailsWith<IllegalArgumentException> { started.info.identityFromX500Name(DUMMY_BANK_B_NAME) }
     }
 
     @Test
-    fun `failing to find a node`() {
-        val ex = assertFailsWith<NoSuchElementException>{ mockNetwork.findStartedNode(NODE_ID) }
-        assertThat(ex).hasMessage("No node with ID=$NODE_ID")
+    fun `with an unstarted node`() {
+        val unstarted = mockNetwork.createUnstartedNode(DUMMY_BANK_A_NAME, forcedID = NODE_ID)
+        val ex = assertFailsWith<NoSuchElementException> { unstarted.started }
+        assertThat(ex).hasMessage("Node ID=$NODE_ID is not running")
     }
 }
