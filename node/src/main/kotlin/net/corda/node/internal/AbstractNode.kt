@@ -53,7 +53,6 @@ import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.*
 import net.corda.node.services.persistence.*
-import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
 import net.corda.node.services.transactions.*
@@ -334,7 +333,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             contractUpgradeService.start()
             vaultService.start()
             ScheduledActivityObserver.install(vaultService, schedulerService, flowLogicRefFactory)
-            HibernateObserver.install(vaultService.rawUpdates, database.hibernateConfig, schemaService)
 
             val frozenTokenizableServices = tokenizableServices!!
             tokenizableServices = null
@@ -864,7 +862,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun makeVaultService(keyManagementService: KeyManagementService,
                                         services: ServicesForResolution,
                                         database: CordaPersistence): VaultServiceInternal {
-        return NodeVaultService(platformClock, keyManagementService, services, database)
+        return NodeVaultService(platformClock, keyManagementService, services, database, schemaService)
     }
 
     /** Load configured JVM agents */
