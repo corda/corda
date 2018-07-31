@@ -16,12 +16,13 @@ import net.corda.behave.database.configuration.PostgresConfigurationTemplate
 import net.corda.behave.node.configuration.DatabaseConfiguration
 import net.corda.behave.service.ContainerService
 import net.corda.behave.service.ServiceSettings
+import net.corda.core.utilities.minutes
 
 class PostgreSQLService(
         name: String,
         port: Int,
         private val password: String,
-        settings: ServiceSettings = ServiceSettings()
+        settings: ServiceSettings = ServiceSettings(startupTimeout = 2.minutes)
 ) : ContainerService(name, port, "database system is ready to accept connections", settings) {
 
     override val baseImage = "postgres"

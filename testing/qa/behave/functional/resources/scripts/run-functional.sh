@@ -10,11 +10,23 @@
 
 R3CORDA_HOME=$PWD
 BEHAVE_DIR=${R3CORDA_HOME}/experimental/behave
-cd ${BEHAVE_DIR}
-../../gradlew behaveJar
 
+cd ${BEHAVE_DIR}
 BEHAVE_JAR=$(ls build/libs/corda-behave-*.jar | tail -n1)
+
+if [ ! -f "${BEHAVE_JAR}" ]; then
+    echo "Building behaveJar ..."
+    ../../gradlew behaveJar
+fi
+
 STAGING_ROOT="${STAGING_ROOT:-TMPDIR/staging}"
 
 # QA functional (specify -d for dry-run)
-java -DSTAGING_ROOT=${STAGING_ROOT} -DDISABLE_CLEANUP=true -jar ${BEHAVE_JAR} --glue net.corda.behave.scenarios -path ${R3CORDA_HOME}/testing/qa/behave/functional/resources/features/functional.feature
+CMD="java -DSTAGING_ROOT=${STAGING_ROOT} -DDISABLE_CLEANUP=true -jar ${BEHAVE_JAR} -path ${R3CORDA_HOME}/testing/qa/behave/functional/resources/features/functional.feature"
+if [ ! -z "$1" ]
+  then
+    java -DSTAGING_ROOT=${STAGING_ROOT} -DDISABLE_CLEANUP=true -jar ${BEHAVE_JAR} -path $1
+    exit
+fi
+echo "Executing: ${CMD}"
+eval `${CMD}`

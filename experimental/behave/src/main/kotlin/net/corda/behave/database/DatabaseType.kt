@@ -11,12 +11,12 @@
 package net.corda.behave.database
 
 import net.corda.behave.database.configuration.H2ConfigurationTemplate
+import net.corda.behave.database.configuration.OracleConfigurationTemplate
 import net.corda.behave.database.configuration.PostgresConfigurationTemplate
 import net.corda.behave.database.configuration.SqlServerConfigurationTemplate
 import net.corda.behave.node.configuration.Configuration
 import net.corda.behave.node.configuration.DatabaseConfiguration
-import net.corda.behave.service.database.H2Service
-import net.corda.behave.service.database.PostgreSQLService
+import net.corda.behave.service.database.*
 
 enum class DatabaseType(val settings: DatabaseSettings) {
 
@@ -37,11 +37,12 @@ enum class DatabaseType(val settings: DatabaseSettings) {
             .withUser(SqlServerService.username)
             .withConfigTemplate(SqlServerConfigurationTemplate())
             .withServiceInitiator {
-                PostgreSQLService("postgres-${it.name}", it.database.port, it.database.password)
+                SqlServerService("sql-server-${it.name}", it.database.port, it.database.password)
             }
     ),
 
     POSTGRES(DatabaseSettings()
+            .withDatabase(PostgreSQLService.database)
             .withDriver(PostgreSQLService.driver)
             .withSchema(PostgreSQLService.schema)
             .withUser(PostgreSQLService.username)
@@ -49,6 +50,26 @@ enum class DatabaseType(val settings: DatabaseSettings) {
             .withServiceInitiator {
                 PostgreSQLService("postgres-${it.name}", it.database.port, it.database.password)
             }
+    ),
+
+    ORACLE_12C(DatabaseSettings()
+        .withDriver(Oracle12cService.driver)
+        .withSchema(OracleService.schema)
+        .withUser(OracleService.username)
+        .withConfigTemplate(OracleConfigurationTemplate())
+        .withServiceInitiator {
+            Oracle12cService("oracle-12c-${it.name}", it.database.port, it.database.password)
+        }
+    ),
+
+    ORACLE_11G(DatabaseSettings()
+        .withDriver(Oracle11gService.driver)
+        .withSchema(OracleService.schema)
+        .withUser(OracleService.username)
+        .withConfigTemplate(OracleConfigurationTemplate())
+        .withServiceInitiator {
+            Oracle11gService("oracle-11g-${it.name}", it.database.port, it.database.password)
+        }
     );
 
     val driverJar = settings.driverJar
@@ -64,6 +85,10 @@ enum class DatabaseType(val settings: DatabaseSettings) {
             "sqlserver" -> SQL_SERVER
             "postgres" -> POSTGRES
             "postgresql" -> POSTGRES
+            "oracle11" -> ORACLE_11G
+            "oracle11g" -> ORACLE_11G
+            "oracle12" -> ORACLE_12C
+            "oracle12c" -> ORACLE_12C
             else -> null
         }
     }

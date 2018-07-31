@@ -19,6 +19,7 @@ group 'net.corda.behave'
 
 apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
 
 sourceSets {
     behave {
@@ -113,6 +114,7 @@ task smokeTest(type: Test) {
 }
 
 task behaveJar(type: Jar) {
+    group = "behave"
     baseName "corda-behave"
     from sourceSets.behave.output
     from {
@@ -131,8 +133,28 @@ task behaveJar(type: Jar) {
     }
 }
 
+task prepareBehave(type: Exec, dependsOn: behaveJar) {
+    group = "behave"
+    environment "STAGING_ROOT", "${workingDir}/build/libs"
+    commandLine './prepare.sh'
+}
+
+task runBehaveScenario(type: JavaExec) {
+    group = "behave"
+    systemProperty "STAGING_ROOT", "${workingDir}/build/libs"
+    main = "-jar";
+    args = [
+            behaveJar.archivePath,
+            "-path",
+            "${rootDir}/${System.getenv("BDD_SCENARIO_PATH") ?: "testing/qa/behave/compatibility/resources/features/version.feature"}",
+            "-plugin",
+            "html:build/runs/cucumberReport"
+    ]
+}
+
 task apiJar(type: Jar, dependsOn: classes) {
     baseName "corda-behave-api"
+    archiveName = "corda-behave-api-${version}.jar"
     from sourceSets.behave.output
     from {
         configurations.behaveCompile.collect {
@@ -146,10 +168,20 @@ task apiJar(type: Jar, dependsOn: classes) {
     include 'io/github/lukehutch/**'
     exclude '**/features/**'
     exclude '**/scripts/**'
+    exclude '**/resources/doorman/**'
+}
+
+jar {
+    classifier "ignore"
+}
+
+publish {
+    name 'corda-behave-api'
+    disableDefaultJar = true
 }
 
 artifacts {
     testArtifacts apiJar
 }
 
-jar.finalizedBy (apiJar, behaveJar)
+jar.finalizedBy(apiJar, behaveJar)

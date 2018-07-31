@@ -403,6 +403,7 @@ bintrayConfig {
             'jmeter-corda',
             'tools-database-manager',
             'corda-installer',
+            'corda-behave-api',
             'corda-notary-healthcheck-contract',
             'corda-notary-healthcheck-cordapp',
             'corda-notary-healthcheck-client'

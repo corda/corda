@@ -17,5 +17,6 @@ import org.junit.runner.RunWith
         glue = ["net.corda.behave.scenarios"],
         plugin = ["pretty"]
 )
+
 @Suppress("KDocMissingDocumentation")
 class CucumberTest

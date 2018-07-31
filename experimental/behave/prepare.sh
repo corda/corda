@@ -48,6 +48,9 @@ cp -v $(ls samples/simm-valuation-demo/flows/build/libs/flows-*.jar | tail -n1) 
 curl "https://search.maven.org/remotecontent?filepath=com/h2database/h2/1.4.196/h2-1.4.196.jar" > ${DRIVERS_DIR}/h2-1.4.196.jar
 curl -L "http://central.maven.org/maven2/org/postgresql/postgresql/42.1.4/postgresql-42.1.4.jar" > ${DRIVERS_DIR}/postgresql-42.1.4.jar
 curl -L "https://github.com/Microsoft/mssql-jdbc/releases/download/v6.2.2/mssql-jdbc-6.2.2.jre8.jar" > ${DRIVERS_DIR}/mssql-jdbc-6.2.2.jre8.jar
+curl -L "http://www.datanucleus.org/downloads/maven2/oracle/ojdbc6/11.2.0.3/ojdbc6-11.2.0.3.jar" > ${DRIVERS_DIR}/ojdbc6.jar
+# The following download requires an account authenticated against the Oracle Technology Network.
+#curl -L "http://download.oracle.com/otn/utilities_drivers/jdbc/122010/ojdbc8.jar" > ${DRIVERS_DIR}/ojdbc8.jar
 
 # Build Network Bootstrapper
 ./gradlew tools:bootstrapper:jar
@@ -60,7 +63,7 @@ cp -v $(ls tools/bootstrapper/build/libs/*.jar | tail -n1) ${CORDA_DIR}/network-
 
 # build and distribute DB Migration tool
 ./gradlew tools:dbmigration:shadowJar
-cp -v $(ls tools/dbmigration/build/libs/*migration-*.jar | tail -n1) ${CORDA_DIR}/dbmigration.jar
+cp -v $(ls tools/dbmigration/build/libs/database-manager-*.jar | tail -n1) ${CORDA_DIR}/database-manager.jar
 
 # Build rpcProxy (required by CTS Scenario Driver to call Corda 3.0 which continues to use Kryo for RPC)
 ./gradlew testing:qa:behave:tools:rpc-proxy:rpcProxyJar

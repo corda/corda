@@ -92,8 +92,7 @@ class Network private constructor(
         }
 
         fun addNode(nodeBuilder: Node.Builder): Builder {
-            nodeBuilder
-                    .withDirectory(directory)
+            nodeBuilder.withDirectory(directory)
                     .withTimeout(timeout)
             val node = nodeBuilder.build()
             nodes[node.config.name] = node
@@ -103,24 +102,17 @@ class Network private constructor(
         fun generate(): Network {
             val network = Network(nodes, directory, timeout)
 
-            network.copyDatabaseDrivers()
             if (!network.configureNodes()) {
                 throw CordaException("Unable to configure nodes in Corda network. Please check logs in $directory")
             }
 
             if (networkType == Distribution.Type.CORDA_ENTERPRISE && System.getProperty("USE_NETWORK_SERVICES") != null)
-                // TODO: rework how we use the Doorman/NMS (now these are a separate product / distribution)
+            // TODO: rework how we use the Doorman/NMS (now these are a separate product / distribution)
                 network.bootstrapDoorman()
             else
-                network.bootstrapLocalNetwork(networkType)
+                network.bootstrapLocalNetwork()
             return network
         }
-    }
-
-    fun copyDatabaseDrivers() {
-        val driverDirectory = (targetDirectory / "libs").createDirectories()
-        log.info("Copying database drivers from $stagingRoot/drivers to $driverDirectory")
-        Files.copy((stagingRoot / "drivers"), driverDirectory, StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING)
     }
 
     fun configureNodes(): Boolean {
@@ -160,6 +152,7 @@ class Network private constructor(
         }
         log.info("Running command: {}", command)
         command.output.subscribe {
+            log.info(it)
             if (it.contains("Exception")) {
                 log.warn("Found error in output; interrupting command execution ...\n{}", it)
                 command.interrupt()
@@ -184,13 +177,9 @@ class Network private constructor(
         return command
     }
 
-    private fun bootstrapLocalNetwork(networkType: Distribution.Type) {
-        // Use master version of Bootstrapper
-        val bootstrapper =
-                when (networkType) {
-                    Distribution.Type.CORDA_OS -> Distribution.MASTER.networkBootstrapper
-                    Distribution.Type.CORDA_ENTERPRISE -> Distribution.R3_MASTER.networkBootstrapper
-                }
+    private fun bootstrapLocalNetwork() {
+        // Use master version of Bootstrapper, it doesn't matter which bootstrapper we use because we provide corda.jar, the bootstrapper will use the provided jar found in the base dir.
+        val bootstrapper = Distribution.R3_MASTER.networkBootstrapper
         log.info("Bootstrapper URL: $bootstrapper\n")
 
         if (!bootstrapper.exists()) {
@@ -201,7 +190,7 @@ class Network private constructor(
         log.info("Bootstrapping network, please wait ...")
         val command = JarCommand(
                 bootstrapper,
-                arrayOf("$targetDirectory"),
+                arrayOf("--dir=$targetDirectory"),
                 targetDirectory,
                 timeout
         )
@@ -221,8 +210,7 @@ class Network private constructor(
                     timeout
             )
             runCommand(rpcProxyCommand)
-        }
-        else {
+        } else {
             log.warn("Missing RPC proxy startup script ($startProxyScript). Continuing ...")
         }
     }
@@ -236,9 +224,9 @@ class Network private constructor(
                 log.info("Deleting temporary files, but retaining logs and config ...")
                 for (node in nodes.values) {
                     val nodeDir = targetDirectory / node.config.name
-                    nodeDir.list { paths -> paths
-                            .filter { it.fileName.toString() !in setOf("logs", "node.conf") }
-                            .forEach(Path::deleteRecursively)
+                    nodeDir.list { paths ->
+                        paths.filter { it.fileName.toString() !in setOf("logs", "node.conf") }
+                                .forEach(Path::deleteRecursively)
                     }
                 }
                 listOf("libs", ".cache").forEach { (targetDirectory / it).deleteRecursively() }
@@ -340,8 +328,7 @@ class Network private constructor(
                     // TODO: consider generic implementation to support non *nix platforms
                     Command(listOf("kill", "-9", pid)).run()
                     (tmpDirectory / "rpcProxy-pid-$rpcProxyPortNo").deleteIfExists()
-                }
-                catch (e: Exception) {
+                } catch (e: Exception) {
                     log.warn("Unable to locate PID file: ${e.message}")
                 }
             }

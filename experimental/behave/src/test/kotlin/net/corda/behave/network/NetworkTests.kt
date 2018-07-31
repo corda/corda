@@ -114,4 +114,32 @@ class NetworkTests {
             it.keepAlive(30.seconds)
         }
     }
+
+    @Ignore
+    @Test
+    fun `Corda Enterprise network of single node using Oracle 11g can be spun up`() {
+        val network = Network
+                .new(Distribution.Type.CORDA_ENTERPRISE)
+                .addNode(name = "Notary", distribution = Distribution.R3_MASTER, notaryType = NotaryType.NON_VALIDATING, databaseType = DatabaseType.ORACLE_11G)
+                .generate()
+        network.use {
+            it.waitUntilRunning(30.seconds)
+            it.keepAlive(30.seconds)
+            it.signal()
+        }
+    }
+
+    @Ignore
+    @Test
+    fun `Corda Enterprise network of single node using Oracle 12c can be spun up`() {
+        val network = Network
+                .new(Distribution.Type.CORDA_ENTERPRISE)
+                .addNode(name = "Notary", distribution = Distribution.R3_MASTER, notaryType = NotaryType.NON_VALIDATING, databaseType = DatabaseType.ORACLE_12C)
+                .generate()
+        network.use {
+            it.waitUntilRunning(30.seconds)
+            it.keepAlive(30.seconds)
+            it.signal()
+        }
+    }
 }

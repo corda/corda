@@ -14,6 +14,7 @@ import net.corda.behave.database.DatabaseConnection
 import net.corda.behave.database.DatabaseType
 import net.corda.behave.file.LogSource
 import net.corda.behave.file.currentDirectory
+import net.corda.behave.file.stagingRoot
 import net.corda.behave.monitoring.PatternWatch
 import net.corda.behave.node.configuration.*
 import net.corda.behave.process.JarCommand
@@ -25,6 +26,7 @@ import net.corda.behave.ssh.MonitoringSSHClient
 import net.corda.behave.ssh.SSHClient
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
@@ -35,7 +37,9 @@ import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import org.apache.commons.io.FileUtils
 import java.net.InetAddress
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 
@@ -57,14 +61,15 @@ class Node(
     private val logDirectory = runtimeDirectory / "logs"
 
     private val command = JarCommand(
-            config.distribution.cordaJar,
-            arrayOf("--config", "node.conf"),
+            runtimeDirectory / "corda.jar",
+            arrayOf("--config", "node.conf", "--log-to-console", "--logging-level", "DEBUG"),
             runtimeDirectory,
             settings.timeout,
             enableRemoteDebugging = false
     )
 
     private val isAliveLatch = PatternWatch(command.output, "Node for \".*\" started up and registered")
+    private val isNetworkMapReadyLatch = PatternWatch(command.output, "Done adding node with info")
 
     private var isConfigured = false
 
@@ -77,19 +82,31 @@ class Node(
     private var haveDependenciesStopped = false
 
     fun configure() {
-        if (isConfigured) { return }
+        if (isConfigured) {
+            return
+        }
         isConfigured = true
         log.info("Configuring {} ...", this)
         serviceDependencies.addAll(config.database.type.dependencies(config))
         config.distribution.ensureAvailable()
-        if (networkType == Distribution.Type.CORDA_ENTERPRISE && System.getProperty("USE_NETWORK_SERVICES") != null) {
-            val nodeDirectory = (rootDirectory / config.name).createDirectories()
-            config.writeToFile(nodeDirectory / "node.conf")
-        }
-        else {
-            config.writeToFile(rootDirectory / "${config.name}_node.conf")
-        }
+        val nodeDirectory = runtimeDirectory.createDirectories()
+        config.writeToFile(nodeDirectory / "node.conf")
+        // Copy jar to node folder, the bootstrapper will use this instead of the master jar.
+        config.distribution.cordaJar.copyTo(nodeDirectory / "corda.jar", StandardCopyOption.REPLACE_EXISTING)
         installApps()
+        installDatabaseDriver(config.database.type)
+    }
+
+    private fun installDatabaseDriver(type: DatabaseType) {
+        if (type.driverJar != null) {
+            val driversDir = runtimeDirectory / "drivers"
+            log.info("Creating directory for drivers: $driversDir")
+            driversDir.toFile().mkdirs()
+
+            val driverPath = stagingRoot / "drivers" / type.driverJar
+            log.info("Copying database drivers from $driverPath to $driversDir")
+            Files.copy(driverPath, driversDir / type.driverJar, StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING)
+        }
     }
 
     private fun initialiseDatabase(database: DatabaseConfiguration) {
@@ -126,8 +143,9 @@ class Node(
         }
     }
 
-    fun waitUntilRunning(waitDuration: Duration? = null): Boolean {
-        val ok = isAliveLatch.await(waitDuration ?: settings.timeout)
+    fun waitUntilRunning(waitDuration: Duration = settings.timeout): Boolean {
+        val ok = isAliveLatch.await(waitDuration)
+                && isNetworkMapReadyLatch.await(waitDuration)
         if (!ok) {
             log.warn("{} did not start up as expected within the given time frame", this)
         } else {
@@ -201,8 +219,7 @@ class Node(
         log.info("Establishing HTTP connection to ${targetHost.host} on port ${targetHost.port} ...")
         try {
             return action(CordaRPCProxyClient(targetHost))
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             log.warn("Failed to invoke http endpoint: ", e)
             e.printStackTrace()
             error("Failed to run http action")
@@ -214,10 +231,14 @@ class Node(
     }
 
     fun startDependencies(): Boolean {
-        if (haveDependenciesStarted) { return true }
+        if (haveDependenciesStarted) {
+            return true
+        }
         haveDependenciesStarted = true
 
-        if (serviceDependencies.isEmpty()) { return true }
+        if (serviceDependencies.isEmpty()) {
+            return true
+        }
 
         log.info("Starting dependencies for {} ...", this)
         val latch = CountDownLatch(serviceDependencies.size)
@@ -240,10 +261,14 @@ class Node(
     }
 
     private fun stopDependencies() {
-        if (haveDependenciesStopped) { return }
+        if (haveDependenciesStopped) {
+            return
+        }
         haveDependenciesStopped = true
 
-        if (serviceDependencies.isEmpty()) { return }
+        if (serviceDependencies.isEmpty()) {
+            return
+        }
 
         log.info("Stopping dependencies for {} ...", this)
         val latch = CountDownLatch(serviceDependencies.size)

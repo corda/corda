@@ -148,9 +148,11 @@ open class Command(
     fun run() = use { _ -> }
 
     fun use(action: (Command) -> Unit): Int {
-        use {
+        try {
             start()
             action(this)
+        } finally {
+            close()
         }
         return exitCode
     }

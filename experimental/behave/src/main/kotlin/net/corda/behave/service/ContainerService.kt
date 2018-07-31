@@ -64,7 +64,6 @@ abstract class ContainerService(
             log.info("Container $id info: $info")
 
             client.startContainer(id)
-
             true
         } catch (e: Exception) {
             id = null

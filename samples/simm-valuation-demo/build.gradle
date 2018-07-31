@@ -29,7 +29,7 @@ sourceSets {
             srcDir file('src/integration-test/kotlin')
         }
     }
-    scenarioTest {
+    scenario {
         kotlin {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
@@ -45,8 +45,8 @@ configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
 
-    scenarioTestCompile.extendsFrom testCompile
-    scenarioTestRuntime.extendsFrom testRuntime
+    scenarioCompile.extendsFrom testCompile
+    scenarioRuntime.extendsFrom testRuntime
 }
 
 dependencies {
@@ -81,7 +81,7 @@ dependencies {
 
     // Test dependencies
     testCompile project(':node-driver')
-    scenarioTestCompile project(path: ":experimental:behave", configuration: 'testArtifacts')
+    scenarioCompile project(path: ":experimental:behave", configuration: 'testArtifacts')
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
 }
@@ -166,4 +166,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+task scenarioJar(type: Jar, dependsOn: classes) {
+    classifier "behave-test"
+    from sourceSets.scenario.output
 }

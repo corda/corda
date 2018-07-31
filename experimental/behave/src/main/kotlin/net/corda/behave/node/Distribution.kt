@@ -48,7 +48,7 @@ class Distribution private constructor(
         /**
          * Map of all distribution JAR artifacts from artifactory, if available.
          */
-        val artifactUrlMap: Map<String,URL>? = null,
+        val artifactUrlMap: Map<String, URL>? = null,
 
         /**
          *  The Docker image details, if available
@@ -84,7 +84,7 @@ class Distribution private constructor(
     /**
      * The path to the DB migration jar (Corda Enterprise only).
      */
-    val dbMigrationJar: Path = nodePrefix / version / "dbmigration.jar"
+    val dbMigrationJar: Path = nodePrefix / version / "database-manager.jar"
 
     /**
      * Ensure that the distribution is available on disk.
@@ -103,12 +103,11 @@ class Distribution private constructor(
                 artifactUrl.openStream().use {
                     if (artifactName.startsWith("corda-finance")) {
                         it.copyTo(cordappDirectory / "$artifactName.jar", StandardCopyOption.REPLACE_EXISTING)
-                    }
-                    else it.copyTo(path / "$artifactName.jar", StandardCopyOption.REPLACE_EXISTING)
+                    } else it.copyTo(path / "$artifactName.jar", StandardCopyOption.REPLACE_EXISTING)
                 }
             }
         } catch (e: Exception) {
-            if ("HTTP response code: 401" in e.message!!) {
+            if (e.message?.contains("HTTP response code: 401") == true) {
                 log.warn("CORDA_ARTIFACTORY_USERNAME ${System.getenv("CORDA_ARTIFACTORY_USERNAME")}")
                 log.warn("CORDA_ARTIFACTORY_PASSWORD ${System.getenv("CORDA_ARTIFACTORY_PASSWORD")}")
                 throw Exception("Incorrect Artifactory permission. Please set CORDA_ARTIFACTORY_USERNAME and CORDA_ARTIFACTORY_PASSWORD environment variables correctly.")
@@ -122,14 +121,17 @@ class Distribution private constructor(
      */
     override fun toString() = "Corda(version = $version, path = $cordaJar)"
 
-    enum class Type(val artifacts: Set<String>) {
-        CORDA_OS(setOf("corda", "corda-webserver", "corda-finance")),
+    enum class Type(val groupId: String, val repositoryId: String, val artifacts: Set<String>, val requireAuthentication: Boolean = false) {
+        CORDA_OS("net.corda", "corda-releases", setOf("corda", "corda-webserver", "corda-finance")),
+        CORDA_OS_SNAPSHOT("net.corda", "corda-dev", setOf("corda", "corda-webserver", "corda-finance")),
         // bridge-server not available in Enterprise Dev Previews
         // migration-tool not published in Enterprise Dev Previews
-        CORDA_ENTERPRISE(setOf("corda", "corda-webserver", "corda-finance", "corda-firewall", "migration-tool"))
+        CORDA_ENTERPRISE("com.r3.corda", "r3-corda-releases", setOf("corda", "corda-webserver", "corda-finance", "corda-tools-database-manager"), requireAuthentication = true),
+        CORDA_ENTERPRISE_SNAPSHOT("com.r3.corda", "r3-corda-dev", setOf("corda", "corda-webserver", "corda-finance", "tools-database-manager"), requireAuthentication = true)
     }
 
     companion object {
+        private const val ARTIFACTORY_URL = "https://ci-artifactory.corda.r3cev.com/artifactory"
 
         private val log = contextLogger()
 
@@ -146,32 +148,23 @@ class Distribution private constructor(
          * @param version The version of the Corda distribution.
          */
         fun fromArtifactory(type: Type, version: String): Distribution {
-            val artifactUrlMap = when (type) {
-                Type.CORDA_OS -> resolveArtifacts(Type.CORDA_OS.artifacts, version, "https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda")
-                Type.CORDA_ENTERPRISE -> {
-                    Authenticator.setDefault(object : Authenticator() {
-                        override fun getPasswordAuthentication(): PasswordAuthentication {
-                            return PasswordAuthentication(System.getenv("CORDA_ARTIFACTORY_USERNAME"), System.getenv("CORDA_ARTIFACTORY_PASSWORD").toCharArray())
-                        }
-                    })
-                    resolveArtifacts(Type.CORDA_ENTERPRISE.artifacts, version, "https://ci-artifactory.corda.r3cev.com/artifactory/r3-corda-releases/com/r3/corda")
-                }
-            }
+            val artifactUrlMap = resolveArtifacts(type, version)
             val distribution = Distribution(type, version, artifactUrlMap = artifactUrlMap)
             distributions.add(distribution)
             return distribution
         }
 
-        private fun resolveArtifacts(artifacts: Set<String>, version: String, artifactoryBaseUrl: String) : Map<String,URL> {
-            val urlMap = mutableMapOf<String,URL>()
-            artifacts.forEach { artifact ->
+        private fun resolveArtifacts(type: Type, version: String): Map<String, URL> {
+            if (type.requireAuthentication) Authenticator.setDefault(CordaArtifactoryAuthenticator)
+            val urlMap = mutableMapOf<String, URL>()
+            type.artifacts.forEach { artifact ->
+                val artifactoryBaseUrl = "$ARTIFACTORY_URL/${type.repositoryId}/${type.groupId.replace(".", "/")}"
                 val url = URL("$artifactoryBaseUrl/$artifact/$version/$artifact-$version.jar")
                 log.info("Artifactory resource URL: $url")
                 try {
                     url.openStream()
                     urlMap[artifact] = url
-                }
-                catch (ex: IOException) {
+                } catch (ex: IOException) {
                     log.warn("Unable to open artifactory resource URL: ${ex.message}")
                 }
             }
@@ -206,8 +199,11 @@ class Distribution private constructor(
          * Get registered representation of a Corda distribution based on its version string.
          * @param version The version of the Corda distribution
          */
-        private val entVersionScheme = "^\\d\\.\\d\\.\\d.*".toRegex() // ENTERPRISE version scheme x.y.z,
-        private val osVersionScheme = "^\\d\\.\\d.*".toRegex()        // OS version scheme x.y
+        private val entVersionScheme = "^ENT-\\d\\.\\d.*".toRegex()     // ENT version scheme x.y
+        private val osVersionScheme = "^OS-\\d\\.\\d.*".toRegex()       // OS version scheme x.y
+
+        private val entVersionSnapshotScheme = "^ENT-\\d\\.\\d-SNAPSHOT\$".toRegex()
+        private val osVersionSnapshotScheme = "^OS-\\d\\.\\d-SNAPSHOT\$".toRegex()
 
         fun fromVersionString(version: String): Distribution = when (version) {
             "master" -> MASTER
@@ -215,15 +211,19 @@ class Distribution private constructor(
             "corda-3.0" -> fromArtifactory(Type.CORDA_OS, version)
             "3.1-corda" -> fromArtifactory(Type.CORDA_OS, version)
             "R3.CORDA-3.0.0-DEV-PREVIEW-3" -> fromArtifactory(Type.CORDA_ENTERPRISE, version)
-            else -> {
-                if (version.matches(entVersionScheme))
-                    fromArtifactory(Type.CORDA_ENTERPRISE, version)
-                else if (version.matches(osVersionScheme))
-                    fromArtifactory(Type.CORDA_OS, version)
-                else
-                    distributions.firstOrNull { it.version == version }
-                            ?: throw CordaRuntimeException("Invalid Corda distribution for specified version: $version")
-            }
+            in entVersionSnapshotScheme -> fromArtifactory(Type.CORDA_ENTERPRISE_SNAPSHOT, version.substringAfter("ENT-"))
+            in osVersionSnapshotScheme -> fromArtifactory(Type.CORDA_OS_SNAPSHOT, version.substringAfter("OS-"))
+            in entVersionScheme -> fromArtifactory(Type.CORDA_ENTERPRISE, version.substringAfter("ENT-"))
+            in osVersionScheme -> fromArtifactory(Type.CORDA_OS, version.substringAfter("OS-"))
+            else -> distributions.firstOrNull { it.version == version } ?: throw CordaRuntimeException("Invalid Corda distribution for specified version: $version")
+        }
+    }
+
+    private object CordaArtifactoryAuthenticator : Authenticator() {
+        override fun getPasswordAuthentication(): PasswordAuthentication {
+            return PasswordAuthentication(System.getenv("CORDA_ARTIFACTORY_USERNAME"), System.getenv("CORDA_ARTIFACTORY_PASSWORD").toCharArray())
         }
     }
 }
+
+private operator fun Regex.contains(text: CharSequence): Boolean = this.containsMatchIn(text)

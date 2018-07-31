@@ -1,32 +1,37 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.behave.service.database
 
 import net.corda.behave.database.DatabaseConnection
 import net.corda.behave.database.DatabaseType
-import net.corda.behave.database.configuration.SqlServerConfigurationTemplate
+import net.corda.behave.database.configuration.OracleConfigurationTemplate
 import net.corda.behave.node.configuration.DatabaseConfiguration
 import net.corda.behave.service.ContainerService
 import net.corda.behave.service.ServiceSettings
-import net.corda.core.utilities.minutes
 
-class SqlServerService(
+abstract class OracleService(
         name: String,
         port: Int,
+        startupStatement: String,
         private val password: String,
-        settings: ServiceSettings = ServiceSettings(startupTimeout = 2.minutes)
-) : ContainerService(name, port, "SQL Server is now ready for client connections", settings) {
+        settings: ServiceSettings = ServiceSettings()
+) : ContainerService(name, port, startupStatement, settings) {
 
-    override val baseImage = "microsoft/mssql-server-linux"
+    override val internalPort = 1521
 
-    override val internalPort = 1433
-
-    init {
-        addEnvironmentVariable("ACCEPT_EULA", "Y")
-        addEnvironmentVariable("SA_PASSWORD", password)
-    }
+    protected abstract val type: DatabaseType
 
     override fun verify(): Boolean {
         val config = DatabaseConfiguration(
-                type = DatabaseType.SQL_SERVER,
+                type = type,
                 host = host,
                 port = port,
                 database = database,
@@ -34,7 +39,7 @@ class SqlServerService(
                 username = username,
                 password = password
         )
-        val connection = DatabaseConnection(config, SqlServerConfigurationTemplate())
+        val connection = DatabaseConnection(config, OracleConfigurationTemplate())
         try {
             connection.use {
                 return true
@@ -47,13 +52,10 @@ class SqlServerService(
     }
 
     companion object {
-
         val host = "localhost"
-        val database = "master"
-        val schema = "dbo"
-        val username = "sa"
-        val driver = "mssql-jdbc-6.2.2.jre8.jar"
-
+        val database = ""
+        val schema = ""
+        val username = "system"
+        val password = "oracle"
     }
-
 }
