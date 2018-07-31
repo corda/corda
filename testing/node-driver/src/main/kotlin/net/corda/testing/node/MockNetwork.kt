@@ -411,7 +411,7 @@ open class MockNetwork(
                             forcedID: Int? = null,
                             entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                             configOverrides: (NodeConfiguration) -> Any? = {},
-                            additionalCordapps: Set<TestCorDapp> = emptySet()): UnstartedMockNode {
+                            additionalCordapps: Set<TestCorDapp>): UnstartedMockNode {
         val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides, additionalCordapps)
         return UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(InternalMockNodeParameters(parameters)))
     }
