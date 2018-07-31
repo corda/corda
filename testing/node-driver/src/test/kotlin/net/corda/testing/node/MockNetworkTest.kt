@@ -27,7 +27,10 @@ class MockNetworkTest {
     @Test
     fun `with a started node`() {
         val unstarted = mockNetwork.createUnstartedNode(DUMMY_BANK_A_NAME, forcedID = NODE_ID)
+        assertFalse(unstarted.isStarted)
+
         mockNetwork.startNodes()
+        assertTrue(unstarted.isStarted)
 
         val started = unstarted.started
         assertEquals(NODE_ID, started.id)
