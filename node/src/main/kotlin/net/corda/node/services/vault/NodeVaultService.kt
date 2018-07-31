@@ -371,19 +371,20 @@ class NodeVaultService(
      * Maintain a list of contract state interfaces to concrete types stored in the vault
      * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
      */
-    private val contractStateTypeMappings = bootstrapContractStateTypes()
+    private val contractStateTypeMappings = mutableMapOf<String, MutableSet<String>>()
 
     init {
+        bootstrapContractStateTypes()
         rawUpdates.subscribe { update ->
             update.produced.forEach {
                 val concreteType = it.state.data.javaClass
                 log.trace { "State update of type: $concreteType" }
                 val seen = contractStateTypeMappings.any { it.value.contains(concreteType.name) }
                 if (!seen) {
-                    val contractInterfaces = deriveContractInterfaces(concreteType)
-                    contractInterfaces.map {
-                        val contractInterface = contractStateTypeMappings.getOrPut(it.name, { mutableSetOf() })
-                        contractInterface.add(concreteType.name)
+                    val contractTypes = deriveContractTypes(concreteType)
+                    contractTypes.map {
+                        val contractStateType = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
+                        contractStateType.add(concreteType.name)
                     }
                 }
             }
@@ -479,7 +480,7 @@ class NodeVaultService(
     /**
      * Derive list from existing vault states and then incrementally update using vault observables
      */
-    private fun bootstrapContractStateTypes(): MutableMap<String, MutableSet<String>> {
+    private fun bootstrapContractStateTypes() {
         val criteria = criteriaBuilder.createQuery(String::class.java)
         val vaultStates = criteria.from(VaultSchemaV1.VaultStates::class.java)
         criteria.select(vaultStates.get("contractStateClassName")).distinct(true)
@@ -492,23 +493,30 @@ class NodeVaultService(
         val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
         distinctTypes.forEach { type ->
             val concreteType: Class<ContractState> = uncheckedCast(Class.forName(type))
-            val contractInterfaces = deriveContractInterfaces(concreteType)
-            contractInterfaces.map {
-                val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableSetOf() })
-                contractInterface.add(concreteType.name)
+            concreteType?.let {
+                val contractTypes = deriveContractTypes(it)
+                contractTypes.map {
+                    val contractStateType = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
+                    contractStateType.add(it.name)
+                }
             }
         }
-        return contractInterfaceToConcreteTypes
     }
 
-    private fun <T : ContractState> deriveContractInterfaces(clazz: Class<T>): Set<Class<T>> {
-        val myInterfaces: MutableSet<Class<T>> = mutableSetOf()
-        clazz.interfaces.forEach {
-            if (it != ContractState::class.java) {
-                myInterfaces.add(uncheckedCast(it))
-                myInterfaces.addAll(deriveContractInterfaces(uncheckedCast(it)))
+    private fun <T : ContractState> deriveContractTypes(clazz: Class<T>): Set<Class<T>> {
+        val myTypes : MutableSet<Class<T>> = mutableSetOf()
+        clazz.superclass?.let {
+            if (!it.isInstance(Any::class)) {
+                myTypes.add(uncheckedCast(it))
+                myTypes.addAll(deriveContractTypes(uncheckedCast(it)))
             }
         }
-        return myInterfaces
+        clazz.interfaces.forEach {
+            if (it != ContractState::class.java) {
+                myTypes.add(uncheckedCast(it))
+                myTypes.addAll(deriveContractTypes(uncheckedCast(it)))
+            }
+        }
+        return myTypes
     }
 }
