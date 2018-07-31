@@ -24,12 +24,11 @@ import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.*
 import net.corda.core.utilities.*
+import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
+import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
-import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.persistence.*
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -61,7 +60,8 @@ class NodeVaultService(
         private val clock: Clock,
         private val keyManagementService: KeyManagementService,
         private val servicesForResolution: ServicesForResolution,
-        private val database: CordaPersistence
+        private val database: CordaPersistence,
+        private val schemaService: SchemaService
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
         private val log = contextLogger()
@@ -78,6 +78,7 @@ class NodeVaultService(
 
     private val concurrentBox = ConcurrentBox(InnerState())
     private lateinit var criteriaBuilder: CriteriaBuilder
+    private val persistentStateService = PersistentStateService(schemaService)
 
     /**
      * Maintain a list of contract state interfaces to concrete types stored in the vault
@@ -257,6 +258,7 @@ class NodeVaultService(
                         softLockReserve(uuid, stateRefs)
                     }
                 }
+                persistentStateService.persist(vaultUpdate.produced)
                 updatesPublisher.onNext(vaultUpdate)
             }
         }

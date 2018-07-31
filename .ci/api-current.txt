@@ -6517,6 +6517,10 @@ public final class net.corda.testing.node.NotarySpec extends java.lang.Object
   public int hashCode()
   public String toString()
 ##
+public interface net.corda.testing.node.ResponderFlowFactory
+  @NotNull
+  public abstract F invoke(net.corda.core.flows.FlowSession)
+##
 public final class net.corda.testing.node.StartedMockNode extends java.lang.Object
   @NotNull
   public final java.util.List<kotlin.Pair<F, net.corda.core.concurrent.CordaFuture<?>>> findStateMachines(Class<F>)

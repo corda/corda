@@ -33,6 +33,8 @@ import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DummyFungibleContract
+import net.corda.finance.schemas.CashSchemaV1
+import net.corda.finance.schemas.SampleCashSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.finance.schemas.CashSchemaV1
@@ -41,7 +43,7 @@ import net.corda.node.internal.configureDatabase
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.schema.ContractStateAndRef
-import net.corda.node.services.schema.HibernateObserver
+import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
@@ -92,7 +94,7 @@ class HibernateConfigurationTest {
 
     // Hibernate configuration objects
     lateinit var hibernateConfig: HibernateConfiguration
-    private lateinit var hibernatePersister: HibernateObserver
+    private lateinit var hibernatePersister: PersistentStateService
     private lateinit var sessionFactory: SessionFactory
     private lateinit var entityManager: EntityManager
     private lateinit var criteriaBuilder: CriteriaBuilder
@@ -107,10 +109,10 @@ class HibernateConfigurationTest {
 
     @Before
     fun setUp() {
-        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset")
+        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", "net.corda.finance.schemas")
         bankServices = MockServices(cordappPackages, BOC.name, rigorousMock(), BOC_KEY)
-        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock())
-        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock())
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock<IdentityService>())
+        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock<IdentityService>())
         notary = notaryServices.myInfo.singleIdentity()
         val dataSourceProps = makeTestDataSourceProperties()
         val identityService = rigorousMock<IdentityService>().also { mock ->
@@ -120,6 +122,7 @@ class HibernateConfigurationTest {
                 doReturn(it.party).whenever(mock).wellKnownPartyFromX500Name(it.name)
             }
         }
+        val schemaService = NodeSchemaService(extraSchemas = setOf(CashSchemaV1, SampleCashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, DummyLinearStateSchemaV1, DummyLinearStateSchemaV2, DummyDealStateSchemaV1))
         val schemaService = NodeSchemaService(extraSchemas = setOf(CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, DummyLinearStateSchemaV1, DummyLinearStateSchemaV2, DummyDealStateSchemaV1 ))
         database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
         database.transaction {
@@ -129,7 +132,7 @@ class HibernateConfigurationTest {
             services = object : MockServices(cordappPackages, BOB_NAME, rigorousMock<IdentityServiceInternal>().also {
                 doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == BOB_NAME })
             }, generateKeyPair(), dummyNotary.keyPair) {
-                override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, database).apply { start() }
+                override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, database, schemaService).apply { start() }
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         (validatedTransactions as WritableTransactionStorage).addTransaction(stx)
@@ -141,7 +144,7 @@ class HibernateConfigurationTest {
                 override fun jdbcSession() = database.createSession()
             }
             vaultFiller = VaultFiller(services, dummyNotary, notary, ::Random)
-            hibernatePersister = HibernateObserver.install(services.vaultService.rawUpdates, hibernateConfig, schemaService)
+            hibernatePersister = PersistentStateService(schemaService)
         }
 
         identity = services.myInfo.singleIdentity()

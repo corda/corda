@@ -89,12 +89,13 @@ class CashTests {
     // TODO: Optimise this so that we don't throw away and rebuild state that can be shared across tests.
     @Before
     fun setUp() {
+        val cordapps = listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas")
         LogHelper.setLevel(NodeVaultService::class)
-        megaCorpServices = MockServices(megaCorp)
-        miniCorpServices = MockServices(miniCorp)
+        megaCorpServices = MockServices(cordapps, megaCorp)
+        miniCorpServices = MockServices(cordapps, miniCorp)
         val myself = TestIdentity(CordaX500Name("Me", "London", "GB"))
         val databaseAndServices = makeTestDatabaseAndMockServices(
-                listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"),
+                cordapps,
                 makeTestIdentityService(megaCorp.identity, miniCorp.identity, dummyCashIssuer.identity, dummyNotary.identity, myself.identity),
                 myself
         )

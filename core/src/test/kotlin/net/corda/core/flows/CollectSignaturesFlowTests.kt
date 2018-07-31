@@ -22,6 +22,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.excludeHostNode
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
+import net.corda.core.node.services.IdentityService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.contracts.DummyContract
@@ -37,7 +38,7 @@ import org.junit.Test
 class CollectSignaturesFlowTests : WithContracts {
     companion object {
         private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
-        private val miniCorpServices = MockServices(listOf("net.corda.testing.contracts"), miniCorp, rigorousMock())
+        private val miniCorpServices = MockServices(listOf("net.corda.testing.contracts"), miniCorp, rigorousMock<IdentityService>())
         private val classMockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.core.flows"))
 
         private const val MAGIC_NUMBER = 1337
