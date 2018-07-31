@@ -44,7 +44,6 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.P2PMessagingClient
 import net.corda.node.services.network.*
 import net.corda.node.services.persistence.*
-import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.MultiThreadedStateMachineExecutor
 import net.corda.node.services.statemachine.MultiThreadedStateMachineManager
@@ -111,7 +110,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
     override val keyManagementService = PersistentKeyManagementService(identityService, database).tokenize()
     private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, validatedTransactions)
     @Suppress("LeakingThis")
-    override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database).tokenize()
+    override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService).tokenize()
     override val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database)
     override val monitoringService = MonitoringService(metricRegistry).tokenize()
     override val networkMapUpdater = NetworkMapUpdater(
@@ -264,7 +263,6 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
 
             contractUpgradeService.start()
             vaultService.start()
-            HibernateObserver.install(vaultService.rawUpdates, database.hibernateConfig, schemaService)
 
             val frozenTokenizableServices = tokenizableServices!!
             tokenizableServices = null
