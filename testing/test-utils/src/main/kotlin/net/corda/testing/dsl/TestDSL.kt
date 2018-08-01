@@ -298,7 +298,7 @@ data class TestLedgerDSLInterpreter private constructor(
             copy().dsl()
 
     override fun attachment(attachment: InputStream): SecureHash {
-        return services.attachments.importAttachment(attachment, UNKNOWN_UPLOADER, null)
+        return services.attachments.importAttachment(attachment, "TestDSL", null)
     }
 
     override fun verifies(): EnforceVerifyOrFail {

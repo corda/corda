@@ -52,7 +52,7 @@ by using the H2 web console:
   Each node outputs its connection string in the terminal window as it starts up. In a terminal window where a **notary** node is running,
   look for the following string:
 
-  ``Database connection url is              : jdbc:h2:tcp://10.18.0.150:56736/node``
+  ``Database connection url is              : jdbc:h2:tcp://localhost:56736/node``
 
   You can use the string on the right to connect to the h2 database: just paste it into the `JDBC URL` field and click *Connect*.
   You will be presented with a web application that enumerates all the available tables and provides an interface for you to query them using SQL

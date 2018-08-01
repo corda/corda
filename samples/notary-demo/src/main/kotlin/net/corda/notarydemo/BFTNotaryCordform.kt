@@ -45,6 +45,7 @@ class BFTNotaryCordform : CordformDefinition() {
             }
             rpcUsers(notaryDemoUser)
             devMode(true)
+            extraConfig = mapOf("h2Settings" to mapOf("address" to "localhost:0"))
         }
         node {
             name(BOB_NAME)
@@ -54,11 +55,13 @@ class BFTNotaryCordform : CordformDefinition() {
                 adminAddress("localhost:10106")
             }
             devMode(true)
+            extraConfig = mapOf("h2Settings" to mapOf("address" to "localhost:0"))
         }
         val clusterAddresses = (0 until clusterSize).map { NetworkHostAndPort("localhost", 11000 + it * 10) }
         fun notaryNode(replicaId: Int, configure: CordformNode.() -> Unit) = node {
             name(notaryNames[replicaId])
             notary(NotaryConfig(validating = false, serviceLegalName = clusterName, bftSMaRt = BFTSMaRtConfiguration(replicaId, clusterAddresses)))
+            extraConfig = mapOf("h2Settings" to mapOf("address" to "localhost:0"))
             configure()
         }
         notaryNode(0) {

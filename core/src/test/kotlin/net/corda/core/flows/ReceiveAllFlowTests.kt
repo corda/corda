@@ -12,7 +12,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.assertion.assert
-import net.corda.core.flows.matchers.flow.willReturn
+import net.corda.testing.internal.matchers.flow.willReturn
 import net.corda.core.flows.mixins.WithMockNet
 import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData

@@ -6,7 +6,12 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* Vault query fix: support query by parent classes of Contract State classes (see https://github.com/corda/corda/issues/3714)
+
 * Added ``registerResponderFlow`` method to ``StartedMockNode``, to support isolated testing of responder flow behaviour.
+
+* "app", "rpc", "p2p" and "unknown" are no longer allowed as uploader values when importing attachments. These are used
+  internally in security sensitive code.
 
 * Introduced ``TestCorDapp`` and utilities to support asymmetric setups for nodes through ``DriverDSL``, ``MockNetwork`` and ``MockServices``.
 
@@ -195,7 +200,8 @@ Unreleased
   to in a transaction by the contracts of input and output states but whose contract is not executed as part of the
   transaction verification process and is not consumed when the transaction is committed to the ledger but is checked
   for "current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a
-  normal state when it occurs in an input or output position.
+  normal state when it occurs in an input or output position. *This feature is only available on Corda networks running
+  with a minimum platform version of 4.*
 
 .. _changelog_v3.1:
 

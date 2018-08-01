@@ -105,7 +105,7 @@ absolute path to the node's base directory.
 
 :h2Port: Deprecated. Use ``h2Settings`` instead.
 
-:h2Settings:  Sets the H2 JDBC server port. See :doc:`node-database-access-h2`.
+:h2Settings:  Sets the H2 JDBC server host and port. See :doc:`node-database-access-h2`. For non-localhost address the database passowrd needs to be set in ``dataSourceProperties``.
 
 :messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
 

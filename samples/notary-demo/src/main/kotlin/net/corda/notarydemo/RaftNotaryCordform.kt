@@ -45,6 +45,7 @@ class RaftNotaryCordform : CordformDefinition() {
             }
             rpcUsers(notaryDemoUser)
             devMode(true)
+            extraConfig = mapOf("h2Settings" to mapOf("address" to "localhost:0"))
         }
         node {
             name(BOB_NAME)
@@ -54,11 +55,13 @@ class RaftNotaryCordform : CordformDefinition() {
                 adminAddress("localhost:10106")
             }
             devMode(true)
+            extraConfig = mapOf("h2Settings" to mapOf("address" to "localhost:0"))
         }
         fun notaryNode(index: Int, nodePort: Int, clusterPort: Int? = null, configure: CordformNode.() -> Unit) = node {
             name(notaryNames[index])
             val clusterAddresses = if (clusterPort != null) listOf(NetworkHostAndPort("localhost", clusterPort)) else emptyList()
             notary(NotaryConfig(validating = true, serviceLegalName = clusterName, raft = RaftConfig(NetworkHostAndPort("localhost", nodePort), clusterAddresses)))
+            extraConfig = mapOf("h2Settings" to mapOf("address" to "localhost:0"))
             configure()
             devMode(true)
         }

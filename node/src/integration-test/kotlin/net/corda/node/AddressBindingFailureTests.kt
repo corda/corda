@@ -42,7 +42,7 @@ class AddressBindingFailureTests: IntegrationTest() {
     @Test
     fun `H2 address`() {
         assumeTrue(!IntegrationTest.isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database
-        assertBindExceptionForOverrides { address -> mapOf("h2Settings" to mapOf("address" to address.toString())) }
+        assertBindExceptionForOverrides { address -> mapOf("h2Settings" to mapOf("address" to address.toString()), "dataSourceProperties.dataSource.password" to "password") }
     }
 
     private fun assertBindExceptionForOverrides(overrides: (NetworkHostAndPort) -> Map<String, Any?>) {

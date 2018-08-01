@@ -64,6 +64,7 @@ import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.serialization.internal.*
+import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -71,11 +72,13 @@ import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.net.BindException
+import java.net.InetAddress
 import java.nio.file.Path
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.system.exitProcess
+import java.nio.file.Paths
 
 class NodeWithInfo(val node: Node, val info: NodeInfo) {
     val services: StartedNodeServices = object : StartedNodeServices, ServiceHubInternal by node.services, FlowStarter by node.flowStarter {}
@@ -358,13 +361,20 @@ open class Node(configuration: NodeConfiguration,
 
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
             val effectiveH2Settings = configuration.effectiveH2Settings
-
+            //forbid execution of arbitrary code via SQL except those classes required by H2 itself
+            System.setProperty("h2.allowedClasses", "org.h2.mvstore.db.MVTableEngine,org.locationtech.jts.geom.Geometry,org.h2.server.TcpServer")
             if (effectiveH2Settings?.address != null) {
+                if (!InetAddress.getByName(effectiveH2Settings.address.host).isLoopbackAddress
+                        && configuration.dataSourceProperties.getProperty("dataSource.password").isBlank()) {
+                    throw CouldNotCreateDataSourceException("Database password is required for H2 server listening on ${InetAddress.getByName(effectiveH2Settings.address.host)}.")
+                }
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
+                val baseDir = Paths.get(databaseName).parent.toString()
                 val server = org.h2.tools.Server.createTcpServer(
                         "-tcpPort", effectiveH2Settings.address.port.toString(),
                         "-tcpAllowOthers",
                         "-tcpDaemon",
+                        "-baseDir", baseDir,
                         "-key", "node", databaseName)
                 // override interface that createTcpServer listens on (which is always 0.0.0.0)
                 System.setProperty("h2.bindAddress", effectiveH2Settings.address.host)

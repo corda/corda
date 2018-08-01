@@ -12,12 +12,14 @@ package net.corda.node.services.vault
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.*
 import net.corda.finance.*
@@ -37,6 +39,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.core.*
 import net.corda.testing.internal.TEST_TX_TIME
+import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
@@ -125,7 +128,8 @@ open class VaultQueryTestRule : ExternalResource(), VaultQueryParties {
             "net.corda.finance.contracts",
             CashSchemaV1::class.packageName,
             DummyLinearStateSchemaV1::class.packageName,
-            SampleCashSchemaV3::class.packageName)
+            SampleCashSchemaV3::class.packageName,
+            VaultQueryTestsBase.MyContractClass::class.packageName)
 
     override lateinit var services: MockServices
     override lateinit var vaultFiller: VaultFiller
@@ -262,6 +266,43 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             vaultService.queryBy<FungibleAsset<*>>(criteria)
         }
     }
+
+    @Test
+    fun `query by interface for a contract class extending a parent contract class`() {
+        database.transaction {
+
+            // build custom contract and store in vault
+            val me = services.myInfo.chooseIdentity()
+            val state = MyState("myState", listOf(me))
+            val stateAndContract = StateAndContract(state, MYCONTRACT_ID)
+            val utx = TransactionBuilder(notary = notaryServices.myInfo.singleIdentity()).withItems(stateAndContract).withItems(dummyCommand())
+            services.recordTransactions(services.signInitialTransaction(utx))
+
+            // query vault by Child class
+            val criteria = VaultQueryCriteria() // default is UNCONSUMED
+            val queryByMyState = vaultService.queryBy<MyState>(criteria)
+            assertThat(queryByMyState.states).hasSize(1)
+
+            // query vault by Parent class
+            val queryByBaseState = vaultService.queryBy<BaseState>(criteria)
+            assertThat(queryByBaseState.states).hasSize(1)
+
+            // query vault by extended Contract Interface
+            val queryByContract = vaultService.queryBy<MyContractInterface>(criteria)
+            assertThat(queryByContract.states).hasSize(1)
+        }
+    }
+
+    // Beware: do not use `MyContractClass::class.qualifiedName` as this returns a fully qualified name using "dot" notation for enclosed class
+    val MYCONTRACT_ID = "net.corda.node.services.vault.VaultQueryTestsBase\$MyContractClass"
+
+    open class MyContractClass : Contract {
+        override fun verify(tx: LedgerTransaction) {}
+    }
+
+    interface MyContractInterface : ContractState
+    open class BaseState(override val participants: List<AbstractParty> = emptyList()) : MyContractInterface
+    data class MyState(val name: String, override val participants: List<AbstractParty> = emptyList()) : BaseState(participants)
 
     @Test
     fun `unconsumed states simple`() {
