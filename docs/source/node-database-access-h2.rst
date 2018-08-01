@@ -32,12 +32,16 @@ If you want H2 to auto-select a port (mimicking the old ``h2Port`` behaviour), y
       address: "localhost:0"
   }
 
-If remote access is required, the address can be changed to ``0.0.0.0``. However it is recommended to change the default username and password before doing so.
+If remote access is required, the address can be changed to ``0.0.0.0``.
+The node requires a database password to be set when the database is exposed on the network interface to listen on.
 
 .. sourcecode:: groovy
 
   h2Settings {
       address: "0.0.0.0:12345"
+  }
+  dataSourceProperties {
+      dataSource.password : "strongpassword"
   }
 
 The previous ``h2Port`` syntax is now deprecated. ``h2Port`` will continue to work but the database

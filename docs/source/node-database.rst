@@ -3,7 +3,24 @@ Node database
 
 Default in-memory database
 --------------------------
-By default, nodes store their data in an H2 database. You can connect directly to a running node's database to see its
+By default, nodes store their data in an H2 database.
+The database (a file persistence.mv.db) is created at the first node startup with the administrator user 'sa' and a blank password.
+The user name and password can be changed in node configuration:
+
+.. sourcecode:: groovy
+
+    dataSourceProperties = {
+        dataSource.user = [USER]
+        dataSource.password = [PASSWORD]
+    }
+
+Note, changing user/password for the existing node in node.conf will not update them in the H2 database,
+you need to login to the database first to create new user or change the user password.
+The database password is required only when the H2 database is exposed on non-localhost address (which is disabled by default).
+The node requires the user with administrator permissions in order to creates tables upon the first startup
+or after deplying new CorDapps with own tables.
+
+You can connect directly to a running node's database to see its
 stored states, transactions and attachments as follows:
 
 * Enable the H2 database access in the node configuration using the following syntax:
@@ -35,7 +52,8 @@ interface for you to query them using SQL.
 
 The default behaviour is to expose the H2 database on localhost. This can be overridden in the
 node configuration using ``h2Settings.address`` and specifying the address of the network interface to listen on,
-or simply using ``0.0.0.0:0`` to listen on all interfaces.
+or simply using ``0.0.0.0:0`` to listen on all interfaces. The node requires a database password to be set when
+the database is exposed on the network interface to listen on.
 
 PostgreSQL
 ----------
