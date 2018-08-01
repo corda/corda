@@ -5,6 +5,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.readFully
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 
@@ -47,18 +48,19 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
         // Depending on who called this flow, the type of the payload is different
         // Maintain a list of requests that the caller is allowed to make based on the transactions that she already requested
         // Todo: should we remove a txId from the set once it has been requested? This would keep the list smaller?
-        val validRequests = when (payload) {
-            is NotarisationPayload -> getValidRequests(payload.signedTransaction)
-            is SignedTransaction -> getValidRequests(payload)
-            is List<*> -> payload.flatMap { stateAndRef ->
-                if(stateAndRef is StateAndRef<*>){
-                    getValidRequests(serviceHub.validatedTransactions.getTransaction(stateAndRef.ref.txhash)!!)
-                }else{
+        val validRequests: TransactionFilter = when (payload) {
+            is NotarisationPayload -> TransactionFilter().addAccepted(getValidRequests(payload.signedTransaction))
+            is SignedTransaction -> TransactionFilter().addAccepted(getValidRequests(payload))
+            is RetrieveAnyTransactionPayload -> TransactionFilter(acceptAll = true)
+            is List<*> -> TransactionFilter().addAccepted(payload.flatMap { stateAndRef ->
+                if (stateAndRef is StateAndRef<*>) {
+                    getValidRequests(serviceHub.validatedTransactions.getTransaction(stateAndRef.ref.txhash)!!) + stateAndRef.ref.txhash
+                } else {
                     throw Exception("Unknown payload type: ${stateAndRef!!::class.java} ?")
                 }
-            }
+            }.toSet())
             else -> throw Exception("Unknown payload type: ${payload::class.java} ?")
-        }.toMutableSet()
+        }
 
         // This loop will receive [FetchDataFlow.Request] continuously until the `otherSideSession` has all the data they need
         // to resolve the transaction, a [FetchDataFlow.EndRequest] will be sent from the `otherSideSession` to indicate end of
@@ -77,12 +79,12 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
 
             payload = when (dataRequest.dataType) {
                 FetchDataFlow.DataType.TRANSACTION -> dataRequest.hashes.map { txId ->
-                    if (txId !in validRequests) {
+                    if (!validRequests.accept(txId)) {
                         throw FetchDataFlow.IllegalTransactionRequest(txId)
                     }
                     val tx = serviceHub.validatedTransactions.getTransaction(txId)
                             ?: throw FetchDataFlow.HashNotFound(txId)
-                    validRequests.addAll(getValidRequests(tx))
+                    validRequests.addAccepted(getValidRequests(tx))
                     tx
                 }
                 FetchDataFlow.DataType.ATTACHMENT -> dataRequest.hashes.map {
@@ -95,4 +97,21 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
 
     @Suspendable
     private fun getValidRequests(currentPayload: SignedTransaction): Set<SecureHash> = currentPayload.inputs.map { it.txhash }.toSet()
+
+    class TransactionFilter(val validRequests: MutableSet<SecureHash> = mutableSetOf<SecureHash>(), val acceptAll: Boolean = false) {
+        @Suspendable
+        fun accept(txId: SecureHash) = acceptAll || validRequests.contains(txId)
+
+        @Suspendable
+        fun addAccepted(txs: Set<SecureHash>): TransactionFilter {
+            validRequests.addAll(txs)
+            return this
+        }
+    }
 }
+
+/**
+ * This is a wildcard payload to be used by the invoker of the [DataVendingFlow] to allow unlimited access to it's vault.
+ */
+@CordaSerializable
+object RetrieveAnyTransactionPayload : ArrayList<Any>()
