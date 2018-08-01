@@ -94,7 +94,7 @@ class VaultWithCashTest {
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
         issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock(), MEGA_CORP_KEY)
-        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock())
+        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock<IdentityService>())
         notary = notaryServices.myInfo.legalIdentitiesAndCerts.single().party
     }
 
