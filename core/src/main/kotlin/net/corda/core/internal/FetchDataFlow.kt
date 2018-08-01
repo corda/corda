@@ -49,7 +49,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
 
     class HashNotFound(val requested: SecureHash) : FlowException()
 
-    class IllegalTransactionRequest(val requested: SecureHash) : FlowException("Illegally trying to access transaction: ${requested}")
+    class IllegalTransactionRequest(val requested: SecureHash) : FlowException("Illegal attempt to request a transaction (${requested}) that is not in the transitive dependency graph of the sent transaction.")
 
     @CordaSerializable
     data class Result<out T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
@@ -66,7 +66,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     }
 
     @Suspendable
-    @Throws(HashNotFound::class, IllegalTransactionRequest::class)
+    @Throws(HashNotFound::class)
     override fun call(): Result<T> {
         // Load the items we have from disk and figure out which we're missing.
         val (fromDisk, toFetch) = loadWhatWeHave()

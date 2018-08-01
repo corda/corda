@@ -6,8 +6,10 @@ import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.sequence
+import net.corda.core.utilities.unwrap
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
@@ -33,6 +35,8 @@ class ResolveTransactionsFlowTest {
     private lateinit var megaCorp: Party
     private lateinit var miniCorp: Party
     private lateinit var notary: Party
+
+    private lateinit var rootTx: SignedTransaction
 
     @Before
     fun setup() {
@@ -161,12 +165,31 @@ class ResolveTransactionsFlowTest {
     }
 
     @Test
+    fun `Requesting a transaction while having the right to see it succeeds`() {
+        val (_, stx2) = makeTransactions()
+        val p = TestNoRightsVendingFlow(miniCorp, toVend = stx2, toRequest = stx2)
+        val future = megaCorpNode.startFlow(p)
+        mockNet.runNetwork()
+        future.getOrThrow()
+    }
+
+    @Test
     fun `Requesting a transaction without having the right to see it results in exception`() {
         val (_, stx2) = makeTransactions()
-        val p = TestWithRightsFlow(stx2, megaCorp)
-        val future = miniCorpNode.startFlow(p)
+        val (_, stx3) = makeTransactions()
+        val p = TestNoRightsVendingFlow(miniCorp, toVend = stx2, toRequest = stx3)
+        val future = megaCorpNode.startFlow(p)
         mockNet.runNetwork()
-        assertFailsWith<FetchDataFlow.DownloadedVsRequestedSizeMismatch> { future.getOrThrow() }
+        assertFailsWith<FetchDataFlow.IllegalTransactionRequest> { future.getOrThrow() }
+    }
+
+    @Test
+    fun `Requesting a transaction twice results in exception`() {
+        val (_, stx2) = makeTransactions()
+        val p = TestResolveTwiceVendingFlow(miniCorp, stx2)
+        val future = megaCorpNode.startFlow(p)
+        mockNet.runNetwork()
+        assertFailsWith<FetchDataFlow.IllegalTransactionRequest> { future.getOrThrow() }
     }
 
     // DOCSTART 2
@@ -196,6 +219,7 @@ class ResolveTransactionsFlowTest {
     }
     // DOCEND 2
 
+
     @InitiatingFlow
     private open class TestFlow(val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<Unit>() {
         constructor(txHashes: Set<SecureHash>, otherSide: Party, txCountLimit: Int? = null) : this(otherSide, { ResolveTransactionsFlow(txHashes, it) }, txCountLimit = txCountLimit)
@@ -209,7 +233,6 @@ class ResolveTransactionsFlowTest {
             subFlow(resolveTransactionsFlow)
         }
     }
-
     @Suppress("unused")
     @InitiatedBy(TestFlow::class)
     private class TestResponseFlow(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
@@ -217,21 +240,47 @@ class ResolveTransactionsFlowTest {
         override fun call() = subFlow(TestNoSecurityDataVendingFlow(otherSideSession))
     }
 
+    // Used by the no-rights test
     @InitiatingFlow
-    private open class TestWithRightsFlow(val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow) : FlowLogic<Unit>() {
-        constructor(stx: SignedTransaction, otherSide: Party) : this(otherSide, { ResolveTransactionsFlow(stx, it) })
-
+    private class TestNoRightsVendingFlow(val otherSide: Party, val toVend: SignedTransaction, val toRequest: SignedTransaction) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val session = initiateFlow(otherSide)
-            subFlow( resolveTransactionsFlowFactory(session))
+            session.send(toRequest)
+            subFlow(DataVendingFlow(session, toVend))
+        }
+    }
+    @Suppress("unused")
+    @InitiatedBy(TestNoRightsVendingFlow::class)
+    private open class TestResponseResolveNoRightsFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val noRightsTx = otherSideSession.receive<SignedTransaction>().unwrap { it }
+            otherSideSession.receive<Any>().unwrap { it }
+            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(noRightsTx.inputs.first().txhash), FetchDataFlow.DataType.TRANSACTION)).unwrap { it }
+            otherSideSession.send(FetchDataFlow.Request.End)
         }
     }
 
-    @Suppress("unused")
-    @InitiatedBy(TestWithRightsFlow::class)
-    private class TestResponseWithRightsFlow(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
+    //Used by the resolve twice test
+    @InitiatingFlow
+    private class TestResolveTwiceVendingFlow(val otherSide: Party, val tx: SignedTransaction) : FlowLogic<Unit>() {
         @Suspendable
-        override fun call() = subFlow(SendStateAndRefFlow(otherSideSession, emptyList()))
+        override fun call() {
+            val session = initiateFlow(otherSide)
+            subFlow(DataVendingFlow(session, tx))
+        }
+    }
+    @Suppress("unused")
+    @InitiatedBy(TestResolveTwiceVendingFlow::class)
+    private open class TestResponseResolveTwiceFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val tx = otherSideSession.receive<SignedTransaction>().unwrap { it }
+            val parent1 = tx.inputs.first().txhash
+            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(parent1), FetchDataFlow.DataType.TRANSACTION)).unwrap { it }
+            otherSideSession.sendAndReceive<Any>(FetchDataFlow.Request.Data(NonEmptySet.of(parent1), FetchDataFlow.DataType.TRANSACTION)).unwrap { it }
+            otherSideSession.send(FetchDataFlow.Request.End)
+        }
     }
 }

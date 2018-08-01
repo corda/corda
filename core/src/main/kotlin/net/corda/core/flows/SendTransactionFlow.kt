@@ -48,7 +48,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
         // Depending on who called this flow, the type of the initial payload is different.
         // The authorisation logic is to maintain a dynamic list of transactions that the caller is authorised to make based on the transactions that were made already.
         // Each time an authorised transaction is requested, the input transactions are added to the list.
-        // Todo: should we remove a txId from the list once it has been requested? This would keep the list smaller, but it would fail if the requester asks for the same tx twice. Is that desired?
+        // Once a transaction has been requested, it will be removed from the authorised list. This means that it is a protocol violation to request a transaction twice.
         val authorisedTransactions = when (payload) {
             is NotarisationPayload -> TransactionAuthorisationFilter().addAuthorised(getInputTransactions(payload.signedTransaction))
             is SignedTransaction -> TransactionAuthorisationFilter().addAuthorised(getInputTransactions(payload))
@@ -85,6 +85,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                     }
                     val tx = serviceHub.validatedTransactions.getTransaction(txId)
                             ?: throw FetchDataFlow.HashNotFound(txId)
+                    authorisedTransactions.removeAuthorised(tx.id)
                     authorisedTransactions.addAuthorised(getInputTransactions(tx))
                     tx
                 }
@@ -99,20 +100,22 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
     @Suspendable
     private fun getInputTransactions(tx: SignedTransaction): Set<SecureHash> = tx.inputs.map { it.txhash }.toSet()
 
-    class TransactionAuthorisationFilter(val validRequests: MutableSet<SecureHash> = mutableSetOf(), val acceptAll: Boolean = false) {
-        @Suspendable
-        fun isAuthorised(txId: SecureHash) = acceptAll || validRequests.contains(txId)
+    private class TransactionAuthorisationFilter(private val authorisedTransactions: MutableSet<SecureHash> = mutableSetOf(), val acceptAll: Boolean = false) {
+        fun isAuthorised(txId: SecureHash) = acceptAll || authorisedTransactions.contains(txId)
 
-        @Suspendable
         fun addAuthorised(txs: Set<SecureHash>): TransactionAuthorisationFilter {
-            validRequests.addAll(txs)
+            authorisedTransactions.addAll(txs)
             return this
+        }
+
+        fun removeAuthorised(txId: SecureHash) {
+            authorisedTransactions.remove(txId)
         }
     }
 }
 
 /**
- * This is a wildcard payload to be used by the invoker of the [DataVendingFlow] to allow unlimited access to it's vault.
+ * This is a wildcard payload to be used by the invoker of the [DataVendingFlow] to allow unlimited access to its vault.
  *
  * Todo Fails with a serialization exception if it is not a list. Why?
  */
