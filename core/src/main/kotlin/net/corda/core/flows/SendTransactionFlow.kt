@@ -47,7 +47,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
 
         // Depending on who called this flow, the type of the payload is different
         // Maintain a list of requests that the caller is allowed to make based on the transactions that she already requested
-        // Todo: should we remove a txId from the set once it has been requested? This would keep the list smaller?
+        // Todo: should we remove a txId from the list once it has been requested? This would keep the list smaller, but it would fail if the requester asks for the same tx twice. Is that desired?
         val validRequests: TransactionFilter = when (payload) {
             is NotarisationPayload -> TransactionFilter().addAccepted(getValidRequests(payload.signedTransaction))
             is SignedTransaction -> TransactionFilter().addAccepted(getValidRequests(payload))
@@ -112,6 +112,8 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
 
 /**
  * This is a wildcard payload to be used by the invoker of the [DataVendingFlow] to allow unlimited access to it's vault.
+ *
+ * Todo Fails with a serialization exception if it is not a list. Why?
  */
 @CordaSerializable
 object RetrieveAnyTransactionPayload : ArrayList<Any>()

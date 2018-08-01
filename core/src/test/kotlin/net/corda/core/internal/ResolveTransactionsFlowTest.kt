@@ -1,7 +1,6 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
@@ -161,6 +160,15 @@ class ResolveTransactionsFlowTest {
         }
     }
 
+    @Test
+    fun `Requesting a transaction without having the right to see it results in exception`() {
+        val (_, stx2) = makeTransactions()
+        val p = TestWithRightsFlow(stx2, megaCorp)
+        val future = miniCorpNode.startFlow(p)
+        mockNet.runNetwork()
+        assertFailsWith<FetchDataFlow.DownloadedVsRequestedSizeMismatch> { future.getOrThrow() }
+    }
+
     // DOCSTART 2
     private fun makeTransactions(signFirstTX: Boolean = true, withAttachment: SecureHash? = null): Pair<SignedTransaction, SignedTransaction> {
         // Make a chain of custody of dummy states and insert into node A.
@@ -189,7 +197,7 @@ class ResolveTransactionsFlowTest {
     // DOCEND 2
 
     @InitiatingFlow
-    private class TestFlow(val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<Unit>() {
+    private open class TestFlow(val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<Unit>() {
         constructor(txHashes: Set<SecureHash>, otherSide: Party, txCountLimit: Int? = null) : this(otherSide, { ResolveTransactionsFlow(txHashes, it) }, txCountLimit = txCountLimit)
         constructor(stx: SignedTransaction, otherSide: Party) : this(otherSide, { ResolveTransactionsFlow(stx, it) })
 
@@ -206,6 +214,24 @@ class ResolveTransactionsFlowTest {
     @InitiatedBy(TestFlow::class)
     private class TestResponseFlow(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
         @Suspendable
-        override fun call() = subFlow(TestDataVendingFlow(otherSideSession))
+        override fun call() = subFlow(TestNoSecurityDataVendingFlow(otherSideSession))
+    }
+
+    @InitiatingFlow
+    private open class TestWithRightsFlow(val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow) : FlowLogic<Unit>() {
+        constructor(stx: SignedTransaction, otherSide: Party) : this(otherSide, { ResolveTransactionsFlow(stx, it) })
+
+        @Suspendable
+        override fun call() {
+            val session = initiateFlow(otherSide)
+            subFlow( resolveTransactionsFlowFactory(session))
+        }
+    }
+
+    @Suppress("unused")
+    @InitiatedBy(TestWithRightsFlow::class)
+    private class TestResponseWithRightsFlow(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
+        @Suspendable
+        override fun call() = subFlow(SendStateAndRefFlow(otherSideSession, emptyList()))
     }
 }
