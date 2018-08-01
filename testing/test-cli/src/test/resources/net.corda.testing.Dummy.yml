@@ -1,0 +1,57 @@
+- commandName: "<main class>"
+  positionalParams:
+  - parameterName: "0"
+    parameterType: "java.net.InetAddress"
+    required: true
+    multiParam: false
+  - parameterName: "1"
+    parameterType: "int"
+    required: true
+    multiParam: false
+  params:
+  - parameterName: "--directory"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+  - parameterName: "-d"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+- commandName: "status"
+  positionalParams: []
+  params:
+  - parameterName: "--font"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+  - parameterName: "--pattern"
+    parameterType: "java.util.regex.Pattern"
+    required: false
+    multiParam: true
+  - parameterName: "-f"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+  - parameterName: "-p"
+    parameterType: "java.util.regex.Pattern"
+    required: false
+    multiParam: true
+- commandName: "ls"
+  positionalParams:
+  - parameterName: "0"
+    parameterType: "java.lang.String"
+    required: true
+    multiParam: false
+  - parameterName: "1"
+    parameterType: "int"
+    required: true
+    multiParam: false
+  params:
+  - parameterName: "--depth"
+    parameterType: "java.lang.Integer"
+    required: false
+    multiParam: false
+  - parameterName: "-d"
+    parameterType: "java.lang.Integer"
+    required: false
+    multiParam: false
