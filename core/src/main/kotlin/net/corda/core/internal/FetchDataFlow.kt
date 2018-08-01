@@ -158,7 +158,7 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
                         logger.debug("Attachment ${attachment.id} already inserted.")
                     }
                 } else {
-                    logger.info("Attachment ${attachment.id} already exists, skipping.")
+                    logger.debug("Attachment ${attachment.id} already exists, skipping.")
                 }
             }
         }
