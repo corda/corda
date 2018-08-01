@@ -1,12 +1,2 @@
 rootProject.name = 'buildSrc'
 include 'canonicalizer'
-
-buildCache {
-    local {
-        enabled = !isCiServer
-    }
-    remote(HttpBuildCache) {
-        url = gradleBuildCacheURL
-        push = isCiServer
-    }
-}
