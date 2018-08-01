@@ -77,6 +77,10 @@ buildscript {
     // Updates [131, 161] also have zip compression bugs on MacOS (High Sierra).
     ext.java8_minUpdateVersion = '171'
 
+    // used by Gradle build cache
+    ext.isCiServer = System.getenv().containsKey("CI")
+    ext.gradleBuildCacheURL = System.getenv().containsKey("GRADLE_BUILD_CACHE_URL") ? System.getenv().get("GRADLE_BUILD_CACHE_URL") : 'http://localhost:5071/cache/'
+
     repositories {
         mavenLocal()
         mavenCentral()
@@ -108,9 +112,6 @@ buildscript {
         classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
         classpath "org.owasp:dependency-check-gradle:${dependency_checker_version}"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
-
-        classpath "com.vanniktech:gradle-dependency-graph-generator-plugin:0.5.0"
-
         classpath 'com.gradle:build-scan-plugin:1.15.1'
     }
 }
@@ -131,10 +132,6 @@ apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
-
-apply plugin: 'project-report'
-apply plugin: "com.vanniktech.dependency.graph.generator"
-
 apply plugin: 'com.gradle.build-scan'
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
@@ -416,24 +413,6 @@ if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BU
 wrapper {
     gradleVersion = "4.8.1"
     distributionType = Wrapper.DistributionType.ALL
-}
-
-import com.vanniktech.dependency.graph.generator.DependencyGraphGeneratorPlugin
-import com.vanniktech.dependency.graph.generator.DependencyGraphGeneratorExtension.Generator
-import guru.nidi.graphviz.attribute.Color
-import guru.nidi.graphviz.attribute.Style
-
-plugins.apply(DependencyGraphGeneratorPlugin)
-
-def cordaGenerator = new Generator(
-        "corda", // Suffix for our Gradle task.
-        { dependency -> dependency.getModuleGroup().startsWith("net.corda") },
-        { dependency -> false }, // Include transitive dependencies.
-        { node, dependency -> node.add(Style.FILLED, Color.rgb("#ffcb2b")) }, // Give them some color.
-)
-
-dependencyGraphGenerator {
-    generators = [ Generator.ALL, cordaGenerator ]
 }
 
 buildScan {
