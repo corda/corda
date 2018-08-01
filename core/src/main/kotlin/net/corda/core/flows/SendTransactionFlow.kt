@@ -44,12 +44,20 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
         // The first payload will be the transaction data, subsequent payload will be the transaction/attachment data.
         var payload = payload
 
+        // Depending on who called this flow, the type of the payload is different
         // Maintain a list of requests that the caller is allowed to make based on the transactions that she already requested
         // Todo: should we remove a txId from the set once it has been requested? This would keep the list smaller?
         val validRequests = when (payload) {
             is NotarisationPayload -> getValidRequests(payload.signedTransaction)
             is SignedTransaction -> getValidRequests(payload)
-            else -> throw Exception("what is ${payload} ?") //todo
+            is List<*> -> payload.flatMap { stateAndRef ->
+                if(stateAndRef is StateAndRef<*>){
+                    getValidRequests(serviceHub.validatedTransactions.getTransaction(stateAndRef.ref.txhash)!!)
+                }else{
+                    throw Exception("Unknown payload type: ${stateAndRef!!::class.java} ?")
+                }
+            }
+            else -> throw Exception("Unknown payload type: ${payload::class.java} ?")
         }.toMutableSet()
 
         // This loop will receive [FetchDataFlow.Request] continuously until the `otherSideSession` has all the data they need

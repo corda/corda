@@ -66,7 +66,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     }
 
     @Suspendable
-    @Throws(HashNotFound::class)
+    @Throws(HashNotFound::class, IllegalTransactionRequest::class)
     override fun call(): Result<T> {
         // Load the items we have from disk and figure out which we're missing.
         val (fromDisk, toFetch) = loadWhatWeHave()
