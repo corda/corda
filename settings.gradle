@@ -61,9 +61,14 @@ buildCache {
         enabled = false
     }
     remote(HttpBuildCache) {
-//        url = 'http://localhost:5071/cache/'
-        // CI server: gradle-build-cache
-        url = 'http://40.114.193.246:80/cache/'
+        // Local build cache
+        //url = 'http://localhost:5071/cache/'
+        // CI server (original instance): gradle-build-cache
+        //url = 'http://40.114.193.246:80/cache/'
+        // CI server (2nd instance): gradle-cache
+        url = 'http://13.73.145.203:5071/cache/'
+        // Azure DevTest Labs: gradle-cache
+        //url = 'http://gradle-cache.northeurope.cloudapp.azure.com:5071/cache/'
         push = true
     }
 }
