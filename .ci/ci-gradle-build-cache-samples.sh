@@ -4,7 +4,7 @@ source .ci/ci-gradle-build-cache-init.sh
 
 # Samples
 echo ":samples:attachment-demo"
-cd  ../samples/attachment-demo
+cd  samples/attachment-demo
 time ../../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean integrationTest --build-cache ${PERFORM_GRADLE_SCAN}
 
 echo ":samples:bank-of-corda-demo"
