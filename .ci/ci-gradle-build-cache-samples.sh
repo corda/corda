@@ -1,12 +1,6 @@
 #!/bin/bash
 
-set -x
-
-USE_GRADLE_DAEMON="${USE_GRADLE_DAEMON:-false}"
-GRADLE_CACHE_DEBUG="${GRADLE_CACHE_DEBUG:-false}"
-PERFORM_GRADLE_SCAN="${PERFORM_GRADLE_SCAN:---scan}"
-
-echo "Using Gradle Build Cache: $(cat settings.gradle | grep ^\ *url)"
+source .ci/ci-gradle-build-cache-init.sh
 
 # Samples
 echo ":samples:attachment-demo"
