@@ -45,16 +45,17 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
         // The first payload will be the transaction data, subsequent payload will be the transaction/attachment data.
         var payload = payload
 
-        // Depending on who called this flow, the type of the payload is different
-        // Maintain a list of requests that the caller is allowed to make based on the transactions that she already requested
+        // Depending on who called this flow, the type of the initial payload is different.
+        // The authorisation logic is to maintain a dynamic list of transactions that the caller is authorised to make based on the transactions that were made already.
+        // Each time an authorised transaction is requested, the input transactions are added to the list.
         // Todo: should we remove a txId from the list once it has been requested? This would keep the list smaller, but it would fail if the requester asks for the same tx twice. Is that desired?
-        val validRequests: TransactionFilter = when (payload) {
-            is NotarisationPayload -> TransactionFilter().addAccepted(getValidRequests(payload.signedTransaction))
-            is SignedTransaction -> TransactionFilter().addAccepted(getValidRequests(payload))
-            is RetrieveAnyTransactionPayload -> TransactionFilter(acceptAll = true)
-            is List<*> -> TransactionFilter().addAccepted(payload.flatMap { stateAndRef ->
+        val authorisedTransactions = when (payload) {
+            is NotarisationPayload -> TransactionAuthorisationFilter().addAuthorised(getInputTransactions(payload.signedTransaction))
+            is SignedTransaction -> TransactionAuthorisationFilter().addAuthorised(getInputTransactions(payload))
+            is RetrieveAnyTransactionPayload -> TransactionAuthorisationFilter(acceptAll = true)
+            is List<*> -> TransactionAuthorisationFilter().addAuthorised(payload.flatMap { stateAndRef ->
                 if (stateAndRef is StateAndRef<*>) {
-                    getValidRequests(serviceHub.validatedTransactions.getTransaction(stateAndRef.ref.txhash)!!) + stateAndRef.ref.txhash
+                    getInputTransactions(serviceHub.validatedTransactions.getTransaction(stateAndRef.ref.txhash)!!) + stateAndRef.ref.txhash
                 } else {
                     throw Exception("Unknown payload type: ${stateAndRef!!::class.java} ?")
                 }
@@ -79,12 +80,12 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
 
             payload = when (dataRequest.dataType) {
                 FetchDataFlow.DataType.TRANSACTION -> dataRequest.hashes.map { txId ->
-                    if (!validRequests.accept(txId)) {
+                    if (!authorisedTransactions.isAuthorised(txId)) {
                         throw FetchDataFlow.IllegalTransactionRequest(txId)
                     }
                     val tx = serviceHub.validatedTransactions.getTransaction(txId)
                             ?: throw FetchDataFlow.HashNotFound(txId)
-                    validRequests.addAccepted(getValidRequests(tx))
+                    authorisedTransactions.addAuthorised(getInputTransactions(tx))
                     tx
                 }
                 FetchDataFlow.DataType.ATTACHMENT -> dataRequest.hashes.map {
@@ -96,14 +97,14 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
     }
 
     @Suspendable
-    private fun getValidRequests(currentPayload: SignedTransaction): Set<SecureHash> = currentPayload.inputs.map { it.txhash }.toSet()
+    private fun getInputTransactions(tx: SignedTransaction): Set<SecureHash> = tx.inputs.map { it.txhash }.toSet()
 
-    class TransactionFilter(val validRequests: MutableSet<SecureHash> = mutableSetOf<SecureHash>(), val acceptAll: Boolean = false) {
+    class TransactionAuthorisationFilter(val validRequests: MutableSet<SecureHash> = mutableSetOf(), val acceptAll: Boolean = false) {
         @Suspendable
-        fun accept(txId: SecureHash) = acceptAll || validRequests.contains(txId)
+        fun isAuthorised(txId: SecureHash) = acceptAll || validRequests.contains(txId)
 
         @Suspendable
-        fun addAccepted(txs: Set<SecureHash>): TransactionFilter {
+        fun addAuthorised(txs: Set<SecureHash>): TransactionAuthorisationFilter {
             validRequests.addAll(txs)
             return this
         }
