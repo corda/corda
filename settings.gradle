@@ -68,7 +68,7 @@ if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
 }
 
 ext.isCiServer = System.getenv().containsKey("CI")
-ext.gradleBuildCacheURL = System.getenv().containsKey("GRADLE_BUILD_CACHE_URL")
+ext.gradleBuildCacheURL = System.getenv().containsKey("GRADLE_BUILD_CACHE_URL") ? System.getenv().get("GRADLE_BUILD_CACHE_URL") : 'http://localhost:5071/cache/'
 
 buildCache {
     local {
