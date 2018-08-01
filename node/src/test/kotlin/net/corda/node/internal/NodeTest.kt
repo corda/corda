@@ -169,6 +169,7 @@ class NodeTest {
                 rpcSettings = NodeRpcSettings(address = fakeAddress, adminAddress = null, ssl = null),
                 messagingServerAddress = null,
                 notary = null
+
         )
     }
 }

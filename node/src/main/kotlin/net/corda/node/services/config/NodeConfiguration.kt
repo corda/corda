@@ -70,6 +70,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
     val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
     val cordappDirectories: List<Path> get() = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
+    val jmxReporterType : JmxReporterType? get() = defaultJmxReporterType
 
     fun validate(): List<String>
 
@@ -86,7 +87,16 @@ interface NodeConfiguration : NodeSSLConfiguration {
         const val defaultAttachmentCacheBound = 1024L
 
         const val cordappDirectoriesKey = "cordappDirectories"
+
+        val defaultJmxReporterType = JmxReporterType.JOLOKIA
     }
+}
+
+/**
+ * Currently registered JMX Reporters
+ */
+enum class JmxReporterType {
+    JOLOKIA, NEW_RELIC
 }
 
 data class DevModeOptions(val disableCheckpointChecker: Boolean = false, val allowCompatibilityZone: Boolean = false)
@@ -208,7 +218,8 @@ data class NodeConfigurationImpl(
         private val jarDirs: List<String> = emptyList(),
         override val flowMonitorPeriodMillis: Duration = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS,
         override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS,
-        override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
+        override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT),
+        override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA
 ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()

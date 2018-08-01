@@ -1,10 +1,13 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
+import com.codahale.metrics.MetricFilter
+import com.codahale.metrics.MetricRegistry
+import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
+import com.palominolabs.metrics.newrelic.NewRelicReporter
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
@@ -39,10 +42,7 @@ import net.corda.node.serialization.kryo.KryoServerSerializationScheme
 import net.corda.node.services.Permissions
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.SecurityConfiguration
-import net.corda.node.services.config.shouldInitCrashShell
-import net.corda.node.services.config.shouldStartLocalShell
+import net.corda.node.services.config.*
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.utilities.AddressUtils
@@ -67,6 +67,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.system.exitProcess
 import rx.Observable
+import java.util.concurrent.TimeUnit
 
 class NodeWithInfo(val node: Node, val info: NodeInfo) {
     val services: StartedNodeServices = object : StartedNodeServices, ServiceHubInternal by node.services, FlowStarter by node.flowStarter {}
@@ -373,18 +374,8 @@ open class Node(configuration: NodeConfiguration,
         val nodeInfo: NodeInfo = super.start()
         nodeReadyFuture.thenMatch({
             serverThread.execute {
-                // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
-                //
-                // https://jolokia.org/agent/jvm.html
-                JmxReporter.forRegistry(services.monitoringService.metrics).inDomain("net.corda").createsObjectNamesWith { _, domain, name ->
-                    // Make the JMX hierarchy a bit better organised.
-                    val category = name.substringBefore('.')
-                    val subName = name.substringAfter('.', "")
-                    if (subName == "")
-                        ObjectName("$domain:name=$category")
-                    else
-                        ObjectName("$domain:type=$category,name=$subName")
-                }.build().start()
+
+                registerJmxReporter(services.monitoringService.metrics)
 
                 _startupComplete.set(Unit)
             }
@@ -395,6 +386,47 @@ open class Node(configuration: NodeConfiguration,
             stop()
         }
         return nodeInfo
+    }
+
+    /**
+     * A hook to allow configuration override of the JmxReporter being used.
+     */
+    fun registerJmxReporter(metrics: MetricRegistry) {
+        staticLog.info("Registering JMX reporter:")
+        when (configuration.jmxReporterType) {
+            JmxReporterType.JOLOKIA -> registerJolokiaReporter(metrics)
+            JmxReporterType.NEW_RELIC -> registerNewRelicReporter(metrics)
+        }
+    }
+
+    private fun registerJolokiaReporter(registry: MetricRegistry) {
+        staticLog.info("Registering Jolokia JMX reporter:")
+        // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
+        //
+        // https://jolokia.org/agent/jvm.html
+        JmxReporter.forRegistry(registry).inDomain("net.corda").createsObjectNamesWith { _, domain, name ->
+            // Make the JMX hierarchy a bit better organised.
+            val category = name.substringBefore('.')
+            val subName = name.substringAfter('.', "")
+            if (subName == "")
+                ObjectName("$domain:name=$category")
+            else
+                ObjectName("$domain:type=$category,name=$subName")
+        }.build().start()
+    }
+
+    private fun registerNewRelicReporter (registry: MetricRegistry) {
+        staticLog.info("Registering New Relic JMX reporter:")
+        val reporter = NewRelicReporter.forRegistry(registry)
+                .name("new relic reporter")
+                .filter(MetricFilter.ALL)
+                .attributeFilter(AllEnabledMetricAttributeFilter())
+                .rateUnit(TimeUnit.SECONDS)
+                .durationUnit(TimeUnit.MILLISECONDS)
+                .metricNamePrefix("CorDapp/")
+                .build()
+
+        reporter.start(1, TimeUnit.MINUTES)
     }
 
     override val rxIoScheduler: Scheduler get() = Schedulers.io()

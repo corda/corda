@@ -208,6 +208,21 @@ class NodeConfigurationImplTest {
         assertEquals(compatibilityZoneURL, configuration.networkServices!!.networkMapURL)
     }
 
+    @Test
+    fun `jmxReporterType is not null and defaults to Jokolia`() {
+
+        var rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
+        val nodeConfig = rawConfig.parseAsNodeConfiguration()
+        assertTrue(JmxReporterType.JOLOKIA.toString() == nodeConfig.jmxReporterType.toString())
+    }
+
+    @Test
+    fun `jmxReporterType is not null and defaults to New Relic`() {
+        var rawConfig = ConfigFactory.parseResources("test-working-config-newrelic.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+        val nodeConfig = rawConfig.parseAsNodeConfiguration()
+        assertTrue(JmxReporterType.NEW_RELIC.toString() == nodeConfig.jmxReporterType.toString())
+    }
+
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfiguration {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }
