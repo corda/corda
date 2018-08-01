@@ -4,7 +4,7 @@ source .ci/ci-gradle-build-cache-init.sh
 
 # Tools
 echo ":tools:blobinspector"
-cd ../tools/blobinspector
+cd tools/blobinspector
 time ../../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean test install --build-cache ${PERFORM_GRADLE_SCAN}
 
 echo ":tools:bootstrapper"
