@@ -41,5 +41,5 @@ time ../../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.g
 
 # docs example code
 echo ":docs:source:example-code"
-cd ../docs/source/example-code
-time ../../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean test integrationTest --build-cache ${PERFORM_GRADLE_SCAN}
+cd ../../docs/source/example-code
+time ../../../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean test integrationTest --build-cache ${PERFORM_GRADLE_SCAN}
