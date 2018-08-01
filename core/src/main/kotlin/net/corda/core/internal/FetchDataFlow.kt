@@ -18,6 +18,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
+import java.nio.file.FileAlreadyExistsException
 import java.util.*
 
 /**
@@ -149,9 +150,15 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
         for (attachment in downloaded) {
             with(serviceHub.attachments) {
                 if (!hasAttachment(attachment.id)) {
-                    importAttachment(attachment.open(), "$P2P_UPLOADER:${otherSideSession.counterparty.name}", null)
+                    try {
+                        importAttachment(attachment.open(), "$P2P_UPLOADER:${otherSideSession.counterparty.name}", null)
+                    } catch (e: FileAlreadyExistsException) {
+                        // This can happen when another transaction will insert the same attachment during this transaction.
+                        // The outcome is the same (the attachment is imported), so we can ignore this exception.
+                        logger.debug("Attachment ${attachment.id} already inserted.")
+                    }
                 } else {
-                    logger.info("Attachment ${attachment.id} already exists, skipping.")
+                    logger.debug("Attachment ${attachment.id} already exists, skipping.")
                 }
             }
         }
