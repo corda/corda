@@ -26,15 +26,14 @@ import java.security.CodeSigner
 import java.security.cert.X509Certificate
 import java.util.jar.JarInputStream
 
-// Possible attachment uploaders
 const val DEPLOYED_CORDAPP_UPLOADER = "app"
 const val RPC_UPLOADER = "rpc"
-const val TEST_UPLOADER = "test"
 const val P2P_UPLOADER = "p2p"
 const val UNKNOWN_UPLOADER = "unknown"
 
-fun isUploaderTrusted(uploader: String?) =
-        uploader?.let { it in listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER, TEST_UPLOADER) } ?: false
+private val TRUSTED_UPLOADERS = listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER)
+
+fun isUploaderTrusted(uploader: String?): Boolean = uploader in TRUSTED_UPLOADERS
 
 @KeepForDJVM
 abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {

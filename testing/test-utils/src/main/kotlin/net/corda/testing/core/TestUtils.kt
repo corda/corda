@@ -35,6 +35,7 @@ import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.cert.X509Certificate
+import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -117,6 +118,18 @@ fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {
 fun getTestPartyAndCertificate(name: CordaX500Name, publicKey: PublicKey): PartyAndCertificate {
     return getTestPartyAndCertificate(Party(name, publicKey))
 }
+
+
+private val count = AtomicInteger(0)
+/**
+ * Randomise a party name to avoid clashes with other tests
+ */
+fun makeUnique(name: CordaX500Name) = name.copy(commonName =
+    if (name.commonName == null) {
+        count.incrementAndGet().toString()
+    } else {
+        "${ name.commonName }_${ count.incrementAndGet() }"
+    })
 
 /**
  * A class that encapsulates a test identity containing a [CordaX500Name] and a [KeyPair], alongside a range

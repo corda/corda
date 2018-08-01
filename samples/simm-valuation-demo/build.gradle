@@ -104,7 +104,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         extraConfig = [
                 custom: [
                         jvmArgs: ["-Xmx1g"]
-                ]
+                ],
+               'h2Settings.address' : 'localhost:10038'
         ]
     }
     node {
@@ -122,7 +123,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         extraConfig = [
                 custom: [
                         jvmArgs: ["-Xmx1g"]
-                ]
+                ],
+                'h2Settings.address' : 'localhost:10039'
         ]
     }
     node {
@@ -140,7 +142,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         extraConfig = [
                 custom: [
                         jvmArgs: ["-Xmx1g"]
-                ]
+                ],
+                'h2Settings.address' : 'localhost:10040'
         ]
     }
     node {
@@ -158,7 +161,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         extraConfig = [
                 custom: [
                         jvmArgs: ["-Xmx1g"]
-                ]
+                ],
+                'h2Settings.address' : 'localhost:10041'
         ]
     }
 }

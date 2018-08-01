@@ -54,10 +54,12 @@ class BankOfCordaCordform : CordformDefinition() {
                 adminAddress("localhost:10004")
             }
             devMode(true)
+            extraConfig = mapOf("h2Settings" to mapOf("address" to "localhost:10016"))
         }
         node {
             name(BOC_NAME)
-            extraConfig = mapOf("custom" to mapOf("issuableCurrencies" to listOf("USD")))
+            extraConfig = mapOf("custom" to mapOf("issuableCurrencies" to listOf("USD")),
+                    "h2Settings" to mapOf("address" to "localhost:10017"))
             p2pPort(10005)
             rpcSettings {
                 address("localhost:$BOC_RPC_PORT")
@@ -77,6 +79,7 @@ class BankOfCordaCordform : CordformDefinition() {
             webPort(10010)
             rpcUsers(User(BIGCORP_RPC_USER, BIGCORP_RPC_PWD, setOf(all())))
             devMode(true)
+            extraConfig = mapOf("h2Settings" to mapOf("address" to "localhost:10018"))
         }
     }
 

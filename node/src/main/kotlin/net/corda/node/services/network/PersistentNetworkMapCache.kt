@@ -80,9 +80,7 @@ class NetworkMapCacheImpl(
     }
 }
 
-/**
- * Extremely simple in-memory cache of the network map.
- */
+/** Database-based network map cache. */
 @ThreadSafe
 open class PersistentNetworkMapCache(private val database: CordaPersistence) : SingletonSerializeAsToken(), NetworkMapCacheBaseInternal {
     companion object {

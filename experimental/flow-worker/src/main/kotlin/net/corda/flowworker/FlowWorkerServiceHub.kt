@@ -242,7 +242,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
         servicesForResolution.start(networkParameters)
         persistentNetworkMapCache.start(networkParameters.notaries)
 
-        database.hikariStart(configuration.dataSourceProperties, configuration.database, schemaService)
+        database.startHikariPool(configuration.dataSourceProperties, configuration.database, schemaService)
         identityService.start(trustRoot, listOf(myInfo.legalIdentitiesAndCerts.first().certificate, nodeCa))
 
         database.transaction {

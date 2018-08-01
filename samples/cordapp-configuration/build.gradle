@@ -32,10 +32,11 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             port 10003
             adminPort 10004
         }
+        extraConfig = ['h2Settings.address' : 'localhost:10005']
     }
     node {
         name "O=Bank A,L=London,C=GB"
-        p2pPort 10005
+        p2pPort 10006
         cordapps = []
         rpcUsers = ext.rpcUsers
         // This configures the default cordapp for this node
@@ -46,10 +47,11 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             port 10007
             adminPort 10008
         }
+        extraConfig = ['h2Settings.address' : 'localhost:10009']
     }
     node {
         name "O=Bank B,L=New York,C=US"
-        p2pPort 10009
+        p2pPort 10010
         cordapps = []
         rpcUsers = ext.rpcUsers
         // This configures the default cordapp for this node
@@ -60,5 +62,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             port 10011
             adminPort 10012
         }
+        extraConfig = ['h2Settings.address' : 'localhost:10013']
     }
 }

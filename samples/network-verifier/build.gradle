@@ -24,7 +24,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             port 10003
             adminPort 10004
         }
-        h2Port   20004
+        extraConfig = ['h2Settings.address' : 'localhost:20004']
     }
     node {
         name "O=Bank A,L=London,C=GB"
@@ -35,6 +35,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             port 10007
             adminPort 10008
         }
+        extraConfig = ['h2Settings.address' : 'localhost:0']
     }
     node {
         name "O=Bank B,L=New York,C=US"
@@ -45,5 +46,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             port 10011
             adminPort 10012
         }
+        extraConfig = ['h2Settings.address' : 'localhost:0']
     }
 }

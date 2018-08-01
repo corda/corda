@@ -24,6 +24,7 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.node.cordapp.CordappLoader
+import net.corda.node.services.persistence.AttachmentStorageInternal
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 
@@ -99,7 +100,13 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
             cordapps.filter { !it.contractClassNames.isEmpty() }.map {
                 it.jarPath.openStream().use { stream ->
                     try {
-                        attachmentStorage.importAttachment(stream, DEPLOYED_CORDAPP_UPLOADER, null)
+                        // We can't make attachmentStorage a AttachmentStorageInternal as that ends up requiring
+                        // MockAttachmentStorage to implement it.
+                        if (attachmentStorage is AttachmentStorageInternal) {
+                            attachmentStorage.privilegedImportAttachment(stream, DEPLOYED_CORDAPP_UPLOADER, null)
+                        } else {
+                            attachmentStorage.importAttachment(stream, DEPLOYED_CORDAPP_UPLOADER, null)
+                        }
                     } catch (faee: java.nio.file.FileAlreadyExistsException) {
                         AttachmentId.parse(faee.message!!)
                     }
