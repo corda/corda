@@ -7,6 +7,7 @@ import picocli.CommandLine
 import picocli.CommandLine.*
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
@@ -48,29 +49,48 @@ class Main : Runnable {
     var verbose: Boolean = false
 
     @Option(names = ["--install-shell-extensions"], description = ["Install bootstrapper alias and autocompletion for bash and zsh"])
-    var install: Boolean = false
+    var installShellExtensions: Boolean = false
 
-    // Return the lines in the file if it exists, else return an empty mutable list
-    private fun getFileLines(filePath: Path): MutableList<String> {
-        return if (filePath.exists()) {
-            filePath.toFile().readLines().toMutableList()
-        } else {
-            emptyList<String>().toMutableList()
+    private class SettingsFile(val filePath: Path) {
+        private val lines: MutableList<String> by lazy { getFileLines() }
+        var fileModified: Boolean = false
+
+        // Return the lines in the file if it exists, else return an empty mutable list
+        private fun getFileLines(): MutableList<String> {
+            return if (filePath.exists()) {
+                filePath.toFile().readLines().toMutableList()
+            } else {
+                emptyList<String>().toMutableList()
+            }
         }
-    }
 
-    private fun MutableList<String>.addOrReplaceIfStartsWith(startsWith: String, replaceWith: String) {
-        val index = this.indexOfFirst { it.startsWith(startsWith) }
-        if (index >= 0) {
-            this[index] = replaceWith
-        } else {
-            this.add(replaceWith)
+        fun addOrReplaceIfStartsWith(startsWith: String, replaceWith: String) {
+            val index = lines.indexOfFirst { it.startsWith(startsWith) }
+            if (index >= 0) {
+                if (lines[index] != replaceWith) {
+                    lines[index] = replaceWith
+                    fileModified = true
+                }
+            } else {
+                lines.add(replaceWith)
+                fileModified = true
+            }
         }
-    }
 
-    private fun MutableList<String>.addIfNotExists(line: String) {
-        if (!this.contains(line)) {
-            this.add(line)
+        fun addIfNotExists(line: String) {
+            if (!lines.contains(line)) {
+                lines.add(line)
+                fileModified = true
+            }
+        }
+
+        fun updateAndBackupIfNecessary() {
+            if (fileModified) {
+                val backupFilePath = filePath.parent / "${filePath.fileName}.backup"
+                println("Updating settings in ${filePath.fileName} - existing settings file has been backed up to $backupFilePath")
+                if (filePath.exists()) filePath.copyTo(backupFilePath, REPLACE_EXISTING)
+                filePath.writeLines(lines)
+            }
         }
     }
 
@@ -95,31 +115,23 @@ class Main : Runnable {
     private fun installShellExtensions(alias: String) {
         // Get jar location and generate alias command
         val command = "alias $alias='java -jar \"${jarLocation.toStringWithDeWindowsfication()}\"'"
-
         generateAutoCompleteFile(alias)
 
         // Get bash settings file
-        val bashSettingsFile = userHome / ".bashrc"
-        val bashSettingsFileLines = getFileLines(bashSettingsFile).toMutableList()
-
-        println("Updating bash settings files")
+        val bashSettingsFile = SettingsFile(userHome / ".bashrc")
         // Replace any existing bootstrapper alias. There can be only one.
-        bashSettingsFileLines.addOrReplaceIfStartsWith("alias $alias", command)
-
+        bashSettingsFile.addOrReplaceIfStartsWith("alias $alias", command)
         val completionFileCommand = "for bcfile in ~/.completion/* ; do . \$bcfile; done"
-        bashSettingsFileLines.addIfNotExists(completionFileCommand)
+        bashSettingsFile.addIfNotExists(completionFileCommand)
+        bashSettingsFile.updateAndBackupIfNecessary()
 
-        bashSettingsFile.writeLines(bashSettingsFileLines)
         // Get zsh settings file
-        val zshSettingsFile = userHome / ".zshrc"
-        val zshSettingsFileLines = getFileLines(zshSettingsFile).toMutableList()
-
-        println("Updating zsh settings files")
-        zshSettingsFileLines.addIfNotExists("autoload -U +X compinit && compinit")
-        zshSettingsFileLines.addIfNotExists("autoload -U +X bashcompinit && bashcompinit")
-        zshSettingsFileLines.addOrReplaceIfStartsWith("alias $alias", command)
-        zshSettingsFileLines.addIfNotExists(completionFileCommand)
-        zshSettingsFile.writeLines(zshSettingsFileLines)
+        val zshSettingsFile = SettingsFile(userHome / ".zshrc")
+        zshSettingsFile.addIfNotExists("autoload -U +X compinit && compinit")
+        zshSettingsFile.addIfNotExists("autoload -U +X bashcompinit && bashcompinit")
+        zshSettingsFile.addOrReplaceIfStartsWith("alias $alias", command)
+        zshSettingsFile.addIfNotExists(completionFileCommand)
+        zshSettingsFile.updateAndBackupIfNecessary()
 
         println("Installation complete, $alias is available in bash with autocompletion. ")
         println("Type `$alias <options>` from the commandline.")
@@ -143,9 +155,9 @@ class Main : Runnable {
     }
 
     private fun installOrUpdateShellExtensions(alias: String) {
-        if (install) {
+        if (installShellExtensions) {
             installShellExtensions(alias)
-            return
+            exitProcess(0)
         } else {
             checkForAutoCompleteUpdate(alias)
         }
