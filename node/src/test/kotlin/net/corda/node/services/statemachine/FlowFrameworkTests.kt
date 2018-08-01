@@ -53,47 +53,41 @@ class FlowFrameworkTests {
         init {
             LogHelper.setLevel("+net.corda.flow")
         }
+    }
 
-        private lateinit var mockNet: InternalMockNetwork
-        private lateinit var aliceNode: TestStartedNode
-        private lateinit var bobNode: TestStartedNode
-        private lateinit var alice: Party
-        private lateinit var bob: Party
-        private lateinit var notaryIdentity: Party
-        private val receivedSessionMessages = ArrayList<SessionTransfer>()
+    private lateinit var mockNet: InternalMockNetwork
+    private lateinit var aliceNode: TestStartedNode
+    private lateinit var bobNode: TestStartedNode
+    private lateinit var alice: Party
+    private lateinit var bob: Party
+    private lateinit var notaryIdentity: Party
+    private val receivedSessionMessages = ArrayList<SessionTransfer>()
 
-        @BeforeClass
-        @JvmStatic
-        fun beforeClass() {
-            mockNet = InternalMockNetwork(
-                    cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
-                    servicePeerAllocationStrategy = RoundRobin()
-            )
+    @Before
+    fun setUpMockNet() {
+        mockNet = InternalMockNetwork(
+                cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                servicePeerAllocationStrategy = RoundRobin()
+        )
 
-            aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
-            bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
+        aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
+        bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
 
-            // Extract identities
-            alice = aliceNode.info.singleIdentity()
-            bob = bobNode.info.singleIdentity()
-            notaryIdentity = mockNet.defaultNotaryIdentity
+        // Extract identities
+        alice = aliceNode.info.singleIdentity()
+        bob = bobNode.info.singleIdentity()
+        notaryIdentity = mockNet.defaultNotaryIdentity
 
-            receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
-        }
+        receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
+    }
 
-        private fun receivedSessionMessagesObservable(): Observable<SessionTransfer> {
-            return mockNet.messagingNetwork.receivedMessages.toSessionTransfers()
-        }
-
-        @AfterClass @JvmStatic
-        fun afterClass() {
-            mockNet.stopNodes()
-        }
-
+    private fun receivedSessionMessagesObservable(): Observable<SessionTransfer> {
+        return mockNet.messagingNetwork.receivedMessages.toSessionTransfers()
     }
 
     @After
     fun cleanUp() {
+        mockNet.stopNodes()
         receivedSessionMessages.clear()
     }
 
@@ -474,45 +468,38 @@ class FlowFrameworkTripartyTests {
         private lateinit var charlie: Party
         private lateinit var notaryIdentity: Party
         private val receivedSessionMessages = ArrayList<SessionTransfer>()
+    }
 
-        @BeforeClass
-        @JvmStatic
-        fun beforeClass() {
-            mockNet = InternalMockNetwork(
-                    cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
-                    servicePeerAllocationStrategy = RoundRobin()
-            )
+    @Before
+    fun setUpGlobalMockNet() {
+        mockNet = InternalMockNetwork(
+                cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                servicePeerAllocationStrategy = RoundRobin()
+        )
 
-            aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
-            bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
-            charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
+        aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
+        bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
+        charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
 
 
-            // Extract identities
-            alice = aliceNode.info.singleIdentity()
-            bob = bobNode.info.singleIdentity()
-            charlie = charlieNode.info.singleIdentity()
-            notaryIdentity = mockNet.defaultNotaryIdentity
+        // Extract identities
+        alice = aliceNode.info.singleIdentity()
+        bob = bobNode.info.singleIdentity()
+        charlie = charlieNode.info.singleIdentity()
+        notaryIdentity = mockNet.defaultNotaryIdentity
 
-            receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
-        }
-
-        @AfterClass @JvmStatic
-        fun afterClass() {
-            mockNet.stopNodes()
-        }
-
-        private fun receivedSessionMessagesObservable(): Observable<SessionTransfer> {
-            return mockNet.messagingNetwork.receivedMessages.toSessionTransfers()
-        }
-
+        receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
     }
 
     @After
     fun cleanUp() {
+        mockNet.stopNodes()
         receivedSessionMessages.clear()
     }
 
+    private fun receivedSessionMessagesObservable(): Observable<SessionTransfer> {
+        return mockNet.messagingNetwork.receivedMessages.toSessionTransfers()
+    }
 
     @Test
     fun `sending to multiple parties`() {

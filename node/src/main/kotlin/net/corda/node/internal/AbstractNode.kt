@@ -659,6 +659,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         } else {
             Observable.empty()
         }
+        check(initiatingFlowClass !in flowFactories.keys) {
+            "$initiatingFlowClass is attempting to register multiple initiated flows"
+        }
         flowFactories[initiatingFlowClass] = flowFactory
         return observable
     }
