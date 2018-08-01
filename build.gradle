@@ -77,10 +77,6 @@ buildscript {
     // Updates [131, 161] also have zip compression bugs on MacOS (High Sierra).
     ext.java8_minUpdateVersion = '171'
 
-    // used by Gradle build cache
-    ext.isCiServer = System.getenv().containsKey("CI")
-    ext.gradleBuildCacheURL = System.getenv().containsKey("GRADLE_BUILD_CACHE_URL") ? System.getenv().get("GRADLE_BUILD_CACHE_URL") : 'http://localhost:5071/cache/'
-
     repositories {
         mavenLocal()
         mavenCentral()
