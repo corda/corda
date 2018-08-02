@@ -59,6 +59,8 @@ include 'samples:cordapp-configuration'
 include 'samples:network-verifier'
 include 'serialization'
 
+apply from: new File(settingsDir, 'buildCacheSettings.gradle')
+
 if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
     include 'core-deterministic'
     include 'core-deterministic:testing'
