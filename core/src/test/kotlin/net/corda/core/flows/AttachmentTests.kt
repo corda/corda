@@ -116,7 +116,7 @@ class AttachmentTests : WithMockNet {
     @InitiatedBy(InitiatingFetchAttachmentsFlow::class)
     private class FetchAttachmentsResponse(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
         @Suspendable
-        override fun call() = subFlow(TestDataVendingFlow(otherSideSession))
+        override fun call() = subFlow(TestNoSecurityDataVendingFlow(otherSideSession))
     }
 
     //region Generators
