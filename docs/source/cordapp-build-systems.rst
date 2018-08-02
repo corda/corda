@@ -19,8 +19,18 @@ JAR will contain:
 
 Build tools
 -----------
-In the instructions that follow, we assume you are using ``gradle`` and the ``cordformation`` plugin to build your
-CorDapp. You can find examples of building a CorDapp using these tools in the ``build.gradle`` file of the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the `Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
+In the instructions that follow, we assume you are using Gradle and the ``cordformation`` plugin to build your
+CorDapp. You can find examples of building a CorDapp using these tools in the 
+`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the 
+`Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
+
+To ensure you are using the correct version of Gradle, you should use the provided Gradle Wrapper by copying across
+the following folder and files from the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ or the 
+`Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ to the root of your project:
+
+* ``gradle/``
+* ``gradlew``
+* ``gradlew.bat``
 
 Setting your dependencies
 -------------------------
@@ -101,7 +111,10 @@ For further information about managing dependencies, see
 
 Example
 ^^^^^^^
-Below is a sample of what a CorDapp's Gradle dependencies block might look like. When building your own CorDapp, you should base yourself on the ``build.gradle`` file of the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the `Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
+Below is a sample of what a CorDapp's Gradle dependencies block might look like. When building your own CorDapp, you should 
+base yourself on the ``build.gradle`` file of the 
+`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ or the
+`Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
 
 .. container:: codeset
 
@@ -135,13 +148,14 @@ Below is a sample of what a CorDapp's Gradle dependencies block might look like.
 
 Creating the CorDapp JAR
 ------------------------
-Once your dependencies are set correctly, you can build your CorDapp JAR using the gradle ``jar`` task:
+Once your dependencies are set correctly, you can build your CorDapp JAR(s) using the Gradle ``jar`` task
 
 * Unix/Mac OSX: ``./gradlew jar``
 
 * Windows: ``gradlew.bat jar``
 
-The CorDapp JAR will be output to the ``build/libs`` folder.
+Each of the project's modules will be compiled into its own CorDapp JAR. You can find these CorDapp JARs in the ``build/libs`` 
+folders of each of the project's modules.
 
 .. warning:: The hash of the generated CorDapp JAR is not deterministic, as it depends on variables such as the
    timestamp at creation. Nodes running the same CorDapp must therefore ensure they are using the exact same CorDapp
@@ -158,9 +172,9 @@ Installing the CorDapp JAR
 .. note:: Before installing a CorDapp, you must create one or more nodes to install it on. For instructions, please see
    :doc:`generating-a-node`.
 
-At start-up, nodes will load any CorDapps present in their ``cordapps`` folder. Therefore, in order to install a CorDapp on
-a node, the CorDapp JAR must be added to the ``<node_dir>/cordapps/`` folder (where ``node_dir`` is the folder in which
-the node's JAR and configuration files are stored) and the node restarted.
+At start-up, nodes will load any CorDapps present in their ``cordapps`` folder. In order to install a CorDapp on a node, the 
+CorDapp JAR must be added to the ``<node_dir>/cordapps/`` folder (where ``node_dir`` is the folder in which the node's JAR 
+and configuration files are stored) and the node restarted.
 
 CorDapp configuration files
 ---------------------------
@@ -175,6 +189,3 @@ CorDapp configuration can be accessed from ``CordappContext::config`` whenever a
 
 There is an example project that demonstrates in ``samples` called ``cordapp-configuration`` and API documentation in
 <api/kotlin/corda/net.corda.core.cordapp/index.html>`_.
-
-
-
