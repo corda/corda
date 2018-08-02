@@ -78,6 +78,9 @@ echo ":node:test --tests net.corda.node.services.events.*"
 echo ":node:test --tests net.corda.node.services.config.*"
 ../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean test --tests net.corda.node.services.config.* --build-cache ${PERFORM_GRADLE_SCAN}; echo $?
 
+echo ":node:test --tests net.corda.node.services.*Test*"
+../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean test --tests net.corda.node.services.F*Test* --tests net.corda.node.services.N*Test* --tests net.corda.node.services.R*Test* --tests net.corda.node.services.S*Test* --tests net.corda.node.services.T*Test* --build-cache ${PERFORM_GRADLE_SCAN}; echo $?
+
 echo ":node:test --tests net.corda.node.utilities.*"
 ../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean test --tests net.corda.node.utilities.* --build-cache ${PERFORM_GRADLE_SCAN}; echo $?
 
@@ -93,5 +96,5 @@ echo ":node:test --tests net.corda.node.messaging.*"
 echo ":node:test --tests net.corda.node.internal.*"
 ../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean test --tests net.corda.node.internal.* --build-cache ${PERFORM_GRADLE_SCAN}; echo $?
 
-echo ":node:test --tests net.corda.node.*Test"
-../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean test --tests net.corda.node.CordaRPCOpsImplTest --tests net.corda.node.NodeArgsPArserTest --tests SerialFilterTests --build-cache ${PERFORM_GRADLE_SCAN}; echo $?
+echo ":node:test --tests net.corda.node.*Test*"
+../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean test --tests net.corda.node.C*Test* --tests net.corda.node.N*Test* --tests S*Test* --build-cache ${PERFORM_GRADLE_SCAN}; echo $?
