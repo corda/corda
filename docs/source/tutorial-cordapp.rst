@@ -165,33 +165,45 @@ Building the example CorDapp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Open a terminal window in the ``cordapp-example`` directory
 
-* Build the test nodes with our CorDapp using the following command:
+* Run the ``deployNodes`` Gradle task to build four nodes with our CorDapp already installed on them:
 
   * Unix/Mac OSX: ``./gradlew deployNodes``
 
   * Windows: ``gradlew.bat deployNodes``
 
-  This will automatically build four nodes with our CorDapp already installed
-
 .. note:: CorDapps can be written in any language targeting the JVM. In our case, we've provided the example source in
    both Kotlin (``/kotlin-source/src``) and Java (``/java-source/src``). Since both sets of source files are
    functionally identical, we will refer to the Kotlin version throughout the documentation.
 
-* After the build finishes, you will see the generated nodes in the ``kotlin-source/build/nodes`` folder
+* After the build finishes, you will see the following output in the ``kotlin-source/build/nodes`` folder:
 
-  * There will be a folder for each generated node, plus a ``runnodes`` shell script (or batch file on Windows) to run
-    all the nodes simultaneously
+  * A folder for each generated node
+  * A ``runnodes`` shell script for running all the nodes simultaneously on osX
+  * A ``runnodes.bat`` batch file for running all the nodes simultaneously on Windows
 
-  * Each node in the ``nodes`` folder has the following structure:
+* Each node in the ``nodes`` folder will have the following structure:
 
-    .. sourcecode:: none
+  .. sourcecode:: none
+      
+      . nodeName
+      ├── additional-node-infos  // 
+      ├── certificates
+      ├── corda.jar              // The Corda node runtime
+      ├── corda-webserver.jar    // The development node webserver runtime
+      ├── cordapps               // The node's CorDapps
+      │   ├── corda-finance-3.2-corda.jar
+      │   └── cordapp-example-0.1.jar
+      ├── drivers
+      ├── logs
+      ├── network-parameters
+      ├── node.conf              // The node's configuration file
+      ├── nodeInfo-<HASH>        // The hash will be different each time you generate a node
+      └── persistence.mv.db      // The node's database
 
-        . nodeName
-        ├── corda.jar              // The Corda node runtime.
-        ├── corda-webserver.jar    // The node development webserver.
-        ├── node.conf              // The node configuration file.
-        └── cordapps               // The node's CorDapps.
-
+.. note:: ``deployNodes`` is a utility task to create an entirely new set of nodes for testing your CorDapp. In production, 
+   you would instead create a single node as described in :doc:`generating-a-node` and build your CorDapp JARs as described 
+   in :doc:`cordapp-build-systems`.
+      
 Running the example CorDapp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Start the nodes by running the following command from the root of the ``cordapp-example`` folder:
@@ -440,8 +452,8 @@ The nodes can be configured to communicate as a network even when distributed ac
    are distributed across machines. Otherwise, the nodes will not be able to communicate.
 
 .. note:: If you are using H2 and wish to use the same ``h2port`` value for two or more nodes, you must only assign them that
-   value after the nodes have been moved to their individual machines. The initial bootstrapping process requires access to the 
-   nodes' databases and if two nodes share the same H2 port, the process will fail.
+   value after the nodes have been moved to their individual machines. The initial bootstrapping process requires access to 
+   the nodes' databases and if two nodes share the same H2 port, the process will fail.
 
 Testing your CorDapp
 --------------------
