@@ -56,15 +56,4 @@ include 'samples:cordapp-configuration'
 include 'samples:network-verifier'
 include 'serialization'
 
-ext.isCiServer = System.getenv().containsKey("CI")
-ext.gradleBuildCacheURL = System.getenv().containsKey("GRADLE_BUILD_CACHE_URL") ? System.getenv().get("GRADLE_BUILD_CACHE_URL") : 'http://localhost:5071/cache/'
-
-buildCache {
-    local {
-        enabled = !isCiServer
-    }
-    remote(HttpBuildCache) {
-        url = gradleBuildCacheURL
-        push = isCiServer
-    }
-}
+apply from: new File(settingsDir, 'buildCacheSettings.gradle')
