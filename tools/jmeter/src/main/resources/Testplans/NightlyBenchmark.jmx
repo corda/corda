@@ -61,7 +61,7 @@
         </collectionProp>
       </Arguments>
       <hashTree/>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Empty Flow 200 Thread Group ${__machineName}" enabled="false">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Empty Flow 200 Thread Group ${__machineName}" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -542,7 +542,7 @@
         </JavaSampler>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Cash Issue 200 Thread Group ${__machineName}" enabled="false">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Cash Issue 200 Thread Group ${__machineName}" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -649,9 +649,9 @@
                 <stringProp name="Argument.value">${otherPartyName}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
-              <elementProp name="useCoinSelection" elementType="Argument">
-                <stringProp name="Argument.name">useCoinSelection</stringProp>
-                <stringProp name="Argument.value">false</stringProp>
+              <elementProp name="numberOfStatesPerTx" elementType="Argument">
+                <stringProp name="Argument.name">numberOfStatesPerTx</stringProp>
+                <stringProp name="Argument.value">1</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="anonymousIdentities" elementType="Argument">
@@ -661,7 +661,7 @@
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="classname">com.r3.corda.jmeter.CashIssueAndPaySampler</stringProp>
+          <stringProp name="classname">com.r3.corda.jmeter.CashPaySampler</stringProp>
         </JavaSampler>
         <hashTree/>
       </hashTree>
@@ -718,9 +718,9 @@
                 <stringProp name="Argument.value">${otherPartyName}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
-              <elementProp name="useCoinSelection" elementType="Argument">
-                <stringProp name="Argument.name">useCoinSelection</stringProp>
-                <stringProp name="Argument.value">false</stringProp>
+              <elementProp name="numberOfStatesPerTx" elementType="Argument">
+                <stringProp name="Argument.name">numberOfStatesPerTx</stringProp>
+                <stringProp name="Argument.value">1</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="anonymousIdentities" elementType="Argument">
@@ -730,7 +730,7 @@
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="classname">com.r3.corda.jmeter.CashIssueAndPaySampler</stringProp>
+          <stringProp name="classname">com.r3.corda.jmeter.CashPaySampler</stringProp>
         </JavaSampler>
         <hashTree/>
       </hashTree>
@@ -787,9 +787,9 @@
                 <stringProp name="Argument.value">${otherPartyName}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
-              <elementProp name="useCoinSelection" elementType="Argument">
-                <stringProp name="Argument.name">useCoinSelection</stringProp>
-                <stringProp name="Argument.value">false</stringProp>
+              <elementProp name="numberOfStatesPerTx" elementType="Argument">
+                <stringProp name="Argument.name">numberOfStatesPerTx</stringProp>
+                <stringProp name="Argument.value">1</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="anonymousIdentities" elementType="Argument">
@@ -799,7 +799,7 @@
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="classname">com.r3.corda.jmeter.CashIssueAndPaySampler</stringProp>
+          <stringProp name="classname">com.r3.corda.jmeter.CashPaySampler</stringProp>
         </JavaSampler>
         <hashTree/>
       </hashTree>
@@ -856,9 +856,9 @@
                 <stringProp name="Argument.value">${otherPartyName}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
-              <elementProp name="useCoinSelection" elementType="Argument">
-                <stringProp name="Argument.name">useCoinSelection</stringProp>
-                <stringProp name="Argument.value">false</stringProp>
+              <elementProp name="numberOfStatesPerTx" elementType="Argument">
+                <stringProp name="Argument.name">numberOfStatesPerTx</stringProp>
+                <stringProp name="Argument.value">1</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="anonymousIdentities" elementType="Argument">
@@ -868,7 +868,7 @@
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="classname">com.r3.corda.jmeter.CashIssueAndPaySampler</stringProp>
+          <stringProp name="classname">com.r3.corda.jmeter.CashPaySampler</stringProp>
         </JavaSampler>
         <hashTree/>
       </hashTree>
@@ -925,9 +925,9 @@
                 <stringProp name="Argument.value">${otherPartyName}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
-              <elementProp name="useCoinSelection" elementType="Argument">
-                <stringProp name="Argument.name">useCoinSelection</stringProp>
-                <stringProp name="Argument.value">false</stringProp>
+              <elementProp name="numberOfStatesPerTx" elementType="Argument">
+                <stringProp name="Argument.name">numberOfStatesPerTx</stringProp>
+                <stringProp name="Argument.value">1</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="anonymousIdentities" elementType="Argument">
@@ -937,7 +937,7 @@
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="classname">com.r3.corda.jmeter.CashIssueAndPaySampler</stringProp>
+          <stringProp name="classname">com.r3.corda.jmeter.CashPaySampler</stringProp>
         </JavaSampler>
         <hashTree/>
       </hashTree>
@@ -994,9 +994,9 @@
                 <stringProp name="Argument.value">${otherPartyName}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
-              <elementProp name="useCoinSelection" elementType="Argument">
-                <stringProp name="Argument.name">useCoinSelection</stringProp>
-                <stringProp name="Argument.value">false</stringProp>
+              <elementProp name="numberOfStatesPerTx" elementType="Argument">
+                <stringProp name="Argument.name">numberOfStatesPerTx</stringProp>
+                <stringProp name="Argument.value">1</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="anonymousIdentities" elementType="Argument">
@@ -1006,7 +1006,7 @@
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="classname">com.r3.corda.jmeter.CashIssueAndPaySampler</stringProp>
+          <stringProp name="classname">com.r3.corda.jmeter.CashPaySampler</stringProp>
         </JavaSampler>
         <hashTree/>
       </hashTree>
@@ -1063,9 +1063,9 @@
                 <stringProp name="Argument.value">${otherPartyName}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
-              <elementProp name="useCoinSelection" elementType="Argument">
-                <stringProp name="Argument.name">useCoinSelection</stringProp>
-                <stringProp name="Argument.value">false</stringProp>
+              <elementProp name="numberOfStatesPerTx" elementType="Argument">
+                <stringProp name="Argument.name">numberOfStatesPerTx</stringProp>
+                <stringProp name="Argument.value">1</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
               <elementProp name="anonymousIdentities" elementType="Argument">
@@ -1075,7 +1075,7 @@
               </elementProp>
             </collectionProp>
           </elementProp>
-          <stringProp name="classname">com.r3.corda.jmeter.CashIssueAndPaySampler</stringProp>
+          <stringProp name="classname">com.r3.corda.jmeter.CashPaySampler</stringProp>
         </JavaSampler>
         <hashTree/>
       </hashTree>

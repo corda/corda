@@ -50,6 +50,8 @@ abstract class BaseFlowSampler : AbstractJavaSamplerClient() {
 
     private var labelValue: String? = null
 
+    protected open var flowResult: Any? = null
+
     override fun getDefaultParameters(): Arguments {
         // Add copies of all args, since they seem to be mutable.
         return Arguments().apply {
@@ -96,13 +98,14 @@ abstract class BaseFlowSampler : AbstractJavaSamplerClient() {
             result.sampleLabel = labelValue ?: flowInvoke.flowLogicClass.simpleName
             result.latencyEnd()
             try {
-                val flowResult = handle.returnValue.get()
+                flowResult = handle.returnValue.get()
                 result.sampleEnd()
                 result.apply {
                     isSuccessful = true
                     additionalFlowResponseProcessing(context, this, flowResult)
                 }
             } catch (e: Exception) {
+                flowResult = null
                 result.sampleEnd()
                 e.printStackTrace()
                 result.apply {

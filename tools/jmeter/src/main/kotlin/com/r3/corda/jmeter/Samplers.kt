@@ -13,10 +13,12 @@ package com.r3.corda.jmeter
 import com.r3.corda.enterprise.perftestcordapp.DOLLARS
 import com.r3.corda.enterprise.perftestcordapp.POUNDS
 import com.r3.corda.enterprise.perftestcordapp.flows.*
+import net.corda.core.contracts.StateRef
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.getOrThrow
 import org.apache.jmeter.config.Argument
 import org.apache.jmeter.protocol.java.sampler.JavaSamplerContext
 import org.apache.jmeter.samplers.SampleResult
@@ -90,8 +92,8 @@ class CashIssueSampler : AbstractSampler() {
 class CashIssueAndPaySampler : AbstractSampler() {
     companion object JMeterProperties {
         val otherParty = Argument("otherPartyName", "", "<meta>", "The X500 name of the payee.")
-        val coinSelection = Argument("useCoinSelection", "true", "<meta>", "True to use coin selection and false (or anything else) to avoid coin selection.")
-        val anonymousIdentities = Argument("anonymousIdentities", "true", "<meta>", "True to use anonymous identities and false (or anything else) to use well known identities.")
+        val coinSelection = Argument("useCoinSelection", "false", "<meta>", "True to use coin selection and false (or anything else) to avoid coin selection.")
+        val anonymousIdentities = Argument("anonymousIdentities", "false", "<meta>", "True to use anonymous identities and false (or anything else) to use well known identities.")
     }
 
     lateinit var counterParty: Party
@@ -232,4 +234,51 @@ class LinearStateBatchNotariseSampler : AbstractSampler() {
         }
         return result
     }
+}
+
+/**
+ * A sampler that issues cash once per sampler, and then generates a transaction to pay 1 dollar "numberOfStatesPerTx" times
+ * to a specified party per sample, thus invoking the notary and the payee via P2P.
+ *
+ * This allows us to test performance with different numbers of states per transaction, and to eliminate issuance from
+ * each sample (unlike CashIssueAndPaySampler).
+ */
+class CashPaySampler : AbstractSampler() {
+    companion object JMeterProperties {
+        val otherParty = Argument("otherPartyName", "", "<meta>", "The X500 name of the payee.")
+        val numberOfStatesPerTx = Argument("numberOfStatesPerTx", "1", "<meta>", "The number of payment states per transaction.")
+        val anonymousIdentities = Argument("anonymousIdentities", "false", "<meta>", "True to use anonymous identities and false (or anything else) to use well known identities.")
+    }
+
+    lateinit var counterParty: Party
+    var numberOfStatesPerTxCount: Int = 1
+    var useAnonymousIdentities: Boolean = true
+    private var inputIndex = 0
+
+    override fun setupTest(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext) {
+        getNotaryIdentity(rpcProxy, testContext)
+        counterParty = getIdentity(rpcProxy, testContext, otherParty)
+        numberOfStatesPerTxCount = testContext.getParameter(numberOfStatesPerTx.name, numberOfStatesPerTx.value).toInt()
+        useAnonymousIdentities = testContext.getParameter(anonymousIdentities.name, anonymousIdentities.value).toBoolean()
+
+        // Now issue lots of USD
+        val amount = 1_000_000_000.DOLLARS
+        val flowInvoke = FlowInvoke<CashIssueFlow>(CashIssueFlow::class.java, arrayOf(amount, OpaqueBytes.of(1), notaryIdentity))
+        val handle = rpcProxy.startFlowDynamic(flowInvoke.flowLogicClass, *(flowInvoke.args))
+        flowResult = handle.returnValue.getOrThrow()
+    }
+
+    override fun createFlowInvoke(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext): FlowInvoke<*> {
+        // Change is always Nth output
+        val input = StateRef((flowResult as AbstractCashFlow.Result).id, inputIndex)
+        val amount = 1.DOLLARS
+        inputIndex = numberOfStatesPerTxCount
+        return FlowInvoke<CashPaymentFromKnownStatesFlow>(CashPaymentFromKnownStatesFlow::class.java, arrayOf(setOf(input), numberOfStatesPerTxCount, amount, counterParty, useAnonymousIdentities))
+    }
+
+    override fun teardownTest(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext) {
+    }
+
+    override val additionalArgs: Set<Argument>
+        get() = setOf(notary, otherParty, numberOfStatesPerTx, anonymousIdentities)
 }
