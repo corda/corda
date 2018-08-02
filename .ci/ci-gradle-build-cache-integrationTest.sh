@@ -40,8 +40,8 @@ echo ":node:integrationTest --tests net.corda.node.persistence.*"
 echo ":node:integrationTest --tests net.corda.node.utilities.*"
 ../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean integrationTest --tests net.corda.node.utilities.* --build-cache ${PERFORM_GRADLE_SCAN}
 
-echo ":node:integrationTest --tests net.corda.node.*Test"
-../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean integrationTest --tests net.corda.node.A*Test --tests net.corda.node.B*Test --tests net.corda.node.C*Test --tests net.corda.node.N*Test --build-cache ${PERFORM_GRADLE_SCAN}
+echo ":node:integrationTest --tests net.corda.node.*Test*"
+../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean integrationTest --tests net.corda.node.A*Test* --tests net.corda.node.B*Test* --tests net.corda.node.C*Test* --tests net.corda.node.N*Test* --build-cache ${PERFORM_GRADLE_SCAN}
 
 echo ":node:integrationTest --tests net.corda.services.messaging.*"
 ../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean integrationTest --tests net.corda.services.messaging.* --build-cache ${PERFORM_GRADLE_SCAN}
@@ -61,5 +61,5 @@ echo ":node:integrationTest --tests net.corda.node.services.rpc.*"
 echo ":node:integrationTest --tests net.corda.node.services.statemachine.*"
 ../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean integrationTest --tests net.corda.node.services.statemachine.* --build-cache ${PERFORM_GRADLE_SCAN}
 
-echo ":node:integrationTest --tests net.corda.node.services.*Test"
-../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean integrationTest --tests net.corda.node.services.A*Test --tests net.corda.node.services.B*Test --tests net.corda.node.services.R*Test --build-cache ${PERFORM_GRADLE_SCAN}
+echo ":node:integrationTest --tests net.corda.node.services.*Test*"
+../gradlew --stacktrace -Dorg.gradle.daemon=${USE_GRADLE_DAEMON} -Dorg.gradle.caching.debug=${GRADLE_CACHE_DEBUG} clean integrationTest --tests net.corda.node.services.A*Test* --tests net.corda.node.services.B*Test* --tests net.corda.node.services.R*Test* --build-cache ${PERFORM_GRADLE_SCAN}
