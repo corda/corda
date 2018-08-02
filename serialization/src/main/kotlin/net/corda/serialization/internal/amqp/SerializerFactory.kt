@@ -13,6 +13,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.carpenter.*
+import net.corda.serialization.internal.reflection.inferTypeVariables
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.*
@@ -122,7 +123,8 @@ open class SerializerFactory(
                 declaredType,
                 "Declared types of $declaredType are not supported.")
 
-        val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
+        val actualType: Type = if (actualClass == null) declaredType
+            else inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
 
         val serializer = when {
         // Declared class may not be set to Collection, but actual class could be a collection.
@@ -164,78 +166,6 @@ open class SerializerFactory(
         serializersByDescriptor.putIfAbsent(serializer.typeDescriptor, serializer)
 
         return serializer
-    }
-
-    /**
-     * Try and infer concrete types for any generics type variables for the actual class encountered,
-     * based on the declared type.
-     */
-    // TODO: test GenericArrayType
-    private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>,
-                                   declaredType: Type): Type? = when (declaredType) {
-        is ParameterizedType -> inferTypeVariables(actualClass, declaredClass, declaredType)
-    // Nothing to infer, otherwise we'd have ParameterizedType
-        is Class<*> -> actualClass
-        is GenericArrayType -> {
-            val declaredComponent = declaredType.genericComponentType
-            inferTypeVariables(actualClass?.componentType, declaredComponent.asClass()!!, declaredComponent)?.asArray()
-        }
-        is TypeVariable<*> -> actualClass
-        is WildcardType -> actualClass
-        else -> null
-    }
-
-    /**
-     * Try and infer concrete types for any generics type variables for the actual class encountered, based on the declared
-     * type, which must be a [ParameterizedType].
-     */
-    private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>, declaredType: ParameterizedType): Type? {
-        if (actualClass == null || declaredClass == actualClass) {
-            return null
-        } else if (declaredClass.isAssignableFrom(actualClass)) {
-            return if (actualClass.typeParameters.isNotEmpty()) {
-                // The actual class can never have type variables resolved, due to the JVM's use of type erasure, so let's try and resolve them
-                // Search for declared type in the inheritance hierarchy and then see if that fills in all the variables
-                val implementationChain: List<Type>? = findPathToDeclared(actualClass, declaredType, mutableListOf())
-                if (implementationChain != null) {
-                    val start = implementationChain.last()
-                    val rest = implementationChain.dropLast(1).drop(1)
-                    val resolver = rest.reversed().fold(TypeResolver().where(start, declaredType)) { resolved, chainEntry ->
-                        val newResolved = resolved.resolveType(chainEntry)
-                        TypeResolver().where(chainEntry, newResolved)
-                    }
-                    // The end type is a special case as it is a Class, so we need to fake up a ParameterizedType for it to get the TypeResolver to do anything.
-                    val endType = DeserializedParameterizedType(actualClass, actualClass.typeParameters)
-                    val resolvedType = resolver.resolveType(endType)
-                    resolvedType
-                } else throw AMQPNotSerializableException(declaredType,
-                        "No inheritance path between actual $actualClass and declared $declaredType.")
-            } else actualClass
-        } else throw AMQPNotSerializableException(
-                declaredType,
-                "Found object of type $actualClass in a property expecting $declaredType")
-    }
-
-    // Stop when reach declared type or return null if we don't find it.
-    private fun findPathToDeclared(startingType: Type, declaredType: Type, chain: MutableList<Type>): List<Type>? {
-        chain.add(startingType)
-        val startingClass = startingType.asClass()
-        if (startingClass == declaredType.asClass()) {
-            // We're done...
-            return chain
-        }
-        // Now explore potential options of superclass and all interfaces
-        val superClass = startingClass?.genericSuperclass
-        val superClassChain = if (superClass != null) {
-            val resolved = TypeResolver().where(startingClass.asParameterizedType(), startingType.asParameterizedType()).resolveType(superClass)
-            findPathToDeclared(resolved, declaredType, ArrayList(chain))
-        } else null
-        if (superClassChain != null) return superClassChain
-        for (iface in startingClass?.genericInterfaces ?: emptyArray()) {
-            val resolved = TypeResolver().where(startingClass!!.asParameterizedType(), startingType.asParameterizedType()).resolveType(iface)
-            return findPathToDeclared(resolved, declaredType, ArrayList(chain)) ?: continue
-        }
-        return null
     }
 
     /**
