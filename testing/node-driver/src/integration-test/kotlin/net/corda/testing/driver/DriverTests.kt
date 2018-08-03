@@ -136,13 +136,13 @@ class DriverTests {
     @Test
     fun `driver rejects multiple nodes with the same name`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-            assertThatThrownBy {
+            assertThatIllegalArgumentException().isThrownBy {
                 listOf(
                         newNode(DUMMY_BANK_A_NAME)(),
                         newNode(DUMMY_BANK_B_NAME)(),
                         newNode(DUMMY_BANK_A_NAME)()
                 ).transpose().getOrThrow()
-            }.isInstanceOf(IllegalArgumentException::class.java)
+            }
         }
     }
 
@@ -150,9 +150,22 @@ class DriverTests {
     fun `driver rejects multiple nodes with the same name parallel`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val nodes = listOf(newNode(DUMMY_BANK_A_NAME), newNode(DUMMY_BANK_B_NAME), newNode(DUMMY_BANK_A_NAME))
-            assertThatThrownBy {
+            assertThatIllegalArgumentException().isThrownBy {
                 nodes.parallelStream().map { it.invoke() }.toList().transpose().getOrThrow()
-            }.isInstanceOf(IllegalArgumentException::class.java)
+            }
+        }
+    }
+
+    @Test
+    fun `driver rejects multiple nodes with the same organisation name`() {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+            listOf(
+                    newNode(CordaX500Name(commonName = "Notary", organisation = "R3CEV", locality = "New York", country = "US"))(),
+                    newNode(DUMMY_BANK_A_NAME)()
+            ).transpose().getOrThrow()
+            assertThatIllegalArgumentException().isThrownBy {
+                newNode(CordaX500Name(commonName = "Regulator", organisation = "R3CEV", locality = "New York", country = "US"))().getOrThrow()
+            }
         }
     }
 

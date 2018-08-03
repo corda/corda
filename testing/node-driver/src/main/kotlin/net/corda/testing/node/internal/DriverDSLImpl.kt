@@ -938,7 +938,10 @@ private class NetworkVisibilityController {
     fun register(name: CordaX500Name): VisibilityHandle {
         val handle = VisibilityHandle()
         nodeVisibilityHandles.locked {
-            require(putIfAbsent(name, handle) == null) { "Node with name $name is already started or starting" }
+            require(name.organisation !in keys.map(CordaX500Name::organisation)) {
+                "Node with organisation name ${name.organisation} is already started or starting"
+            }
+            put(name, handle)
         }
         return handle
     }
