@@ -3,11 +3,31 @@ Database access when running H2
 
 .. contents::
 
+Configuring the username and password
+-------------------------------------
+
+The database (a file called ``persistence.mv.db``) is created when the node first starts up. By default, it has an
+administrator user ``sa`` and a blank password. The node requires the user with administrator permissions in order to
+creates tables upon the first startup or after deploying new CorDapps with their own tables. The database password is
+required only when the H2 database is exposed on non-localhost address (which is disabled by default).
+
+This username and password can be changed in node configuration:
+
+ .. sourcecode:: groovy
+     dataSourceProperties = {
+        dataSource.user = [USER]
+        dataSource.password = [PASSWORD]
+    }
+
+Note that changing the user/password for the existing node in ``node.conf`` will not update them in the H2 database.
+You need to log into the database first to create a new user or change a user's password.
+
 Connecting via a socket on a running node
 -----------------------------------------
 
 Configuring the port
 ^^^^^^^^^^^^^^^^^^^^
+
 Nodes backed by an H2 database will not expose this database by default. To configure the node to expose its internal
 database over a socket which can be browsed using any tool that can use JDBC drivers, you must specify the full network
 address (interface and port) using the ``h2Settings`` syntax in the node configuration.
@@ -28,8 +48,8 @@ If you want H2 to auto-select a port (mimicking the old ``h2Port`` behaviour), y
       address: "localhost:0"
   }
 
-If remote access is required, the address can be changed to ``0.0.0.0``.
-The node requires a database password to be set when the database is exposed on the network interface to listen on.
+If remote access is required, the address can be changed to ``0.0.0.0`` to listen on all interfaces. A password must be
+set for the database user before doing so.
 
 .. sourcecode:: groovy
 
@@ -43,12 +63,10 @@ The node requires a database password to be set when the database is exposed on 
 .. note:: The previous ``h2Port`` syntax is now deprecated. ``h2Port`` will continue to work but the database will only
    be accessible on localhost.
 
-Configuring the JDBC URL, username and password
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The JDBC URL defaults to a random value. The username defaults to ``sa`` and the password defaults to a blank password.
-
-These defaults can be modified in the :doc:`corda-configuration-file` using the ``dataSourceProperties`` configuration
-block.
+Configuring the JDBC URL
+^^^^^^^^^^^^^^^^^^^^^^^^
+The JDBC URL defaults to a random value. Like the username and password, these defaults can be modified in the
+:doc:`corda-configuration-file` using the ``dataSourceProperties`` configuration block.
 
 Connecting to the database
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
