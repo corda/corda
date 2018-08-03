@@ -28,7 +28,10 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.*
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -113,12 +116,23 @@ class NodeVaultService(
             log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }
 
             val session = currentDBSession()
+            val now = clock.instant()
             producedStateRefsMap.forEach { stateAndRef ->
+                val uuid = if (stateAndRef.value.state.data is FungibleAsset<*>) {
+                    FlowStateMachineImpl.currentStateMachine()?.id?.uuid?.toString()
+                } else null
+                if (uuid != null) {
+                    FlowStateMachineImpl.currentStateMachine()?.hasSoftLockedStates = true
+                    log.trace { "Reserving soft lock for flow id $uuid and state ${stateAndRef.key}" }
+                }
                 val state = VaultSchemaV1.VaultStates(
                         notary = stateAndRef.value.state.notary,
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
-                        recordedTime = clock.instant())
+                        recordedTime = now,
+                        lockId = uuid,
+                        lockUpdateTime = if (uuid == null) null else now
+                )
                 state.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(state)
             }
@@ -126,11 +140,11 @@ class NodeVaultService(
                 val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
                 state?.run {
                     stateStatus = Vault.StateStatus.CONSUMED
-                    consumedTime = clock.instant()
+                    consumedTime = now
                     // remove lock (if held)
                     if (lockId != null) {
                         lockId = null
-                        lockUpdateTime = clock.instant()
+                        lockUpdateTime = now
                         log.trace("Releasing soft lock on consumed state: $stateRef")
                     }
                     session.save(state)
@@ -250,14 +264,6 @@ class NodeVaultService(
                 // flowId was required by SoftLockManager to perform auto-registration of soft locks for new states
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
                 val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
-                if (uuid != null) {
-                    val fungible = netUpdate.produced.filter { it.state.data is FungibleAsset<*> }
-                    if (fungible.isNotEmpty()) {
-                        val stateRefs = fungible.map { it.ref }.toNonEmptySet()
-                        log.trace { "Reserving soft locks for flow id $uuid and states $stateRefs" }
-                        softLockReserve(uuid, stateRefs)
-                    }
-                }
                 persistentStateService.persist(vaultUpdate.produced)
                 updatesPublisher.onNext(vaultUpdate)
             }
