@@ -19,11 +19,6 @@ interface FingerPrinter {
      * of said type such that any modification to any sub element wll generate a different fingerprint
      */
     fun fingerprint(type: Type): String
-
-    /**
-     * If required, associate an instance of the fingerprinter with a specific serializer factory
-     */
-    fun setOwner(factory: SerializerFactory)
 }
 
 // Representation of the current state of fingerprinting
@@ -62,8 +57,7 @@ internal data class FingerPrintingState(val hasher: Hasher, val typesSeen: Set<T
  * Implementation of the finger printing mechanism used by default
  */
 @KeepForDJVM
-class SerializerFingerPrinter : FingerPrinter {
-    private lateinit var factory: SerializerFactory
+class SerializerFingerPrinter(val factory: SerializerFactory) : FingerPrinter {
 
     companion object {
         private const val ARRAY_HASH: String = "Array = true"
@@ -75,10 +69,6 @@ class SerializerFingerPrinter : FingerPrinter {
 
         internal fun fingerprintForDescriptors(vararg typeDescriptors: String): String =
             FingerPrintingState.initial.write(typeDescriptors.joinToString()).fingerprint
-    }
-
-    override fun setOwner(factory: SerializerFactory) {
-        this.factory = factory
     }
 
     /**

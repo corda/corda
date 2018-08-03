@@ -55,7 +55,7 @@ open class SerializerFactory(
         val whitelist: ClassWhitelist,
         val classCarpenter: ClassCarpenter,
         private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
-        val fingerPrinter: FingerPrinter = SerializerFingerPrinter(),
+        val fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
         private val serializersByType: MutableMap<Type, AMQPSerializer<Any>>,
         val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>>,
         private val customSerializers: MutableList<SerializerFor>,
@@ -67,13 +67,13 @@ open class SerializerFactory(
     constructor(whitelist: ClassWhitelist,
                 classCarpenter: ClassCarpenter,
                 evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
-                fingerPrinter: FingerPrinter = SerializerFingerPrinter(),
+                fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
                 onlyCustomSerializers: Boolean = false
     ) : this(
             whitelist,
             classCarpenter,
             evolutionSerializerGetter,
-            fingerPrinter,
+            fingerPrinterConstructor,
             ConcurrentHashMap(),
             ConcurrentHashMap(),
             CopyOnWriteArrayList(),
@@ -87,18 +87,16 @@ open class SerializerFactory(
                 carpenterClassLoader: ClassLoader,
                 lenientCarpenter: Boolean = false,
                 evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
-                fingerPrinter: FingerPrinter = SerializerFingerPrinter(),
+                fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
                 onlyCustomSerializers: Boolean = false
     ) : this(
             whitelist,
             ClassCarpenterImpl(whitelist, carpenterClassLoader, lenientCarpenter),
             evolutionSerializerGetter,
-            fingerPrinter,
+            fingerPrinterConstructor,
             onlyCustomSerializers)
 
-    init {
-        fingerPrinter.setOwner(this)
-    }
+    val fingerPrinter by lazy { fingerPrinterConstructor(this) }
 
     val classloader: ClassLoader get() = classCarpenter.classloader
 
