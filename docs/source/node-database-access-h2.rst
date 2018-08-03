@@ -63,27 +63,16 @@ set for the database user before doing so.
 .. note:: The previous ``h2Port`` syntax is now deprecated. ``h2Port`` will continue to work but the database will only
    be accessible on localhost.
 
-Configuring the JDBC URL
-^^^^^^^^^^^^^^^^^^^^^^^^
-The JDBC URL defaults to a random value. Like the username and password, these defaults can be modified in the
-:doc:`corda-configuration-file` using the ``dataSourceProperties`` configuration block.
-
 Connecting to the database
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 The JDBC URL is printed during node startup to the log and will typically look like this:
 
      ``jdbc:h2:tcp://localhost:31339/node``
 
-Any database browsing tool that supports JDBC can be used. Below are two examples.
+Any database browsing tool that supports JDBC can be used.
 
-IntelliJ Ultimate edition
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-IntelliJ Ultimate edition has an integrated tool. Just open the database window and add an H2 data source with the
-JDBC URL above. You will now be able to browse the tables and row data within them.
-
-H2 Console
-~~~~~~~~~~
+Connecting using the H2 Console
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * Download the **last stable** `h2 platform-independent zip <http://www.h2database.com/html/download.html>`_, unzip the
   zip, and navigate in a terminal window to the unzipped folder
