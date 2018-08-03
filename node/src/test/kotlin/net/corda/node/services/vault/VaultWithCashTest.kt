@@ -45,7 +45,7 @@ import kotlin.test.fail
 
 class VaultWithCashTest {
     private companion object {
-        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName, "net.corda.core.contracts")
         val BOB = TestIdentity(BOB_NAME, 80).party
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
@@ -83,7 +83,7 @@ class VaultWithCashTest {
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
         issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock(), MEGA_CORP_KEY)
-        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock())
+        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock<IdentityService>())
         notary = notaryServices.myInfo.legalIdentitiesAndCerts.single().party
     }
 

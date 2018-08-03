@@ -1,54 +1,59 @@
 package net.corda.confidential
 
+import com.natpryce.hamkrest.MatchResult
+import com.natpryce.hamkrest.Matcher
+import com.natpryce.hamkrest.equalTo
 import net.corda.core.identity.*
-import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.*
+import net.corda.testing.internal.matchers.allOf
+import net.corda.testing.internal.matchers.flow.willReturn
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
-import org.junit.Before
 import org.junit.Test
 import kotlin.test.*
+import com.natpryce.hamkrest.assertion.assert
+import net.corda.core.crypto.DigitalSignature
+import net.corda.testing.internal.matchers.hasOnlyEntries
+import net.corda.testing.node.internal.TestStartedNode
+import org.junit.AfterClass
+import java.security.PublicKey
 
 class SwapIdentitiesFlowTests {
-    private lateinit var mockNet: InternalMockNetwork
+    companion object {
+        private val mockNet = InternalMockNetwork(networkSendManuallyPumped = false, threadPerNode = true)
 
-    @Before
-    fun setup() {
-        // We run this in parallel threads to help catch any race conditions that may exist.
-        mockNet = InternalMockNetwork(networkSendManuallyPumped = false, threadPerNode = true)
+        @AfterClass
+        @JvmStatic
+        fun tearDown() = mockNet.stopNodes()
     }
+
+    private val aliceNode = mockNet.createPartyNode(makeUnique(ALICE_NAME))
+    private val bobNode = mockNet.createPartyNode(makeUnique(BOB_NAME))
+    private val charlieNode = mockNet.createPartyNode(makeUnique(CHARLIE_NAME))
+    private val alice = aliceNode.info.singleIdentity()
+    private val bob = bobNode.info.singleIdentity()
 
     @Test
     fun `issue key`() {
-        // Set up values we'll need
-        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
-        val bobNode = mockNet.createPartyNode(BOB_NAME)
-        val alice = aliceNode.info.singleIdentity()
-        val bob = bobNode.services.myInfo.singleIdentity()
-
-        // Run the flows
-        val requesterFlow = aliceNode.services.startFlow(SwapIdentitiesFlow(bob)).resultFuture
-
-        // Get the results
-        val actual: Map<Party, AnonymousParty> = requesterFlow.getOrThrow().toMap()
-        assertEquals(2, actual.size)
-        // Verify that the generated anonymous identities do not match the well known identities
-        val aliceAnonymousIdentity = actual[alice] ?: throw IllegalStateException()
-        val bobAnonymousIdentity = actual[bob] ?: throw IllegalStateException()
-        assertNotEquals<AbstractParty>(alice, aliceAnonymousIdentity)
-        assertNotEquals<AbstractParty>(bob, bobAnonymousIdentity)
-
-        // Verify that the anonymous identities look sane
-        assertEquals(alice.name, aliceNode.database.transaction { aliceNode.services.identityService.wellKnownPartyFromAnonymous(aliceAnonymousIdentity)!!.name })
-        assertEquals(bob.name, bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(bobAnonymousIdentity)!!.name })
-
-        // Verify that the nodes have the right anonymous identities
-        assertTrue { aliceAnonymousIdentity.owningKey in aliceNode.services.keyManagementService.keys }
-        assertTrue { bobAnonymousIdentity.owningKey in bobNode.services.keyManagementService.keys }
-        assertFalse { aliceAnonymousIdentity.owningKey in bobNode.services.keyManagementService.keys }
-        assertFalse { bobAnonymousIdentity.owningKey in aliceNode.services.keyManagementService.keys }
-
-        mockNet.stopNodes()
+        assert.that(
+            aliceNode.services.startFlow(SwapIdentitiesFlow(bob)),
+            willReturn(
+                hasOnlyEntries(
+                    alice to allOf(
+                        !equalTo<AbstractParty>(alice),
+                        aliceNode.resolvesToWellKnownParty(alice),
+                        aliceNode.holdsOwningKey(),
+                        !bobNode.holdsOwningKey()
+                    ),
+                    bob to allOf(
+                        !equalTo<AbstractParty>(bob),
+                        bobNode.resolvesToWellKnownParty(bob),
+                        bobNode.holdsOwningKey(),
+                        !aliceNode.holdsOwningKey()
+                    )
+                )
+            )
+        )
     }
 
     /**
@@ -56,58 +61,101 @@ class SwapIdentitiesFlowTests {
      */
     @Test
     fun `verifies identity name`() {
-        // Set up values we'll need
-        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
-        val bobNode = mockNet.createPartyNode(BOB_NAME)
-        val charlieNode = mockNet.createPartyNode(CHARLIE_NAME)
-        val bob: Party = bobNode.services.myInfo.singleIdentity()
-        val notBob = charlieNode.database.transaction {
-            charlieNode.services.keyManagementService.freshKeyAndCert(charlieNode.services.myInfo.singleIdentityAndCert(), false)
+        val notBob = charlieNode.issueFreshKeyAndCert()
+        val signature = charlieNode.signSwapIdentitiesFlowData(notBob, notBob.owningKey)
+        assertFailsWith<SwapIdentitiesException>(
+            "Certificate subject must match counterparty's well known identity.") {
+            aliceNode.validateSwapIdentitiesFlow(bob, notBob, signature)
         }
-        val sigData = SwapIdentitiesFlow.buildDataToSign(notBob)
-        val signature = charlieNode.services.keyManagementService.sign(sigData, notBob.owningKey)
-        assertFailsWith<SwapIdentitiesException>("Certificate subject must match counterparty's well known identity.") {
-            SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob, notBob, signature.withoutKey())
-        }
-
-        mockNet.stopNodes()
     }
 
     /**
      * Check that flow is actually validating its the signature presented by the counterparty.
      */
     @Test
-    fun `verifies signature`() {
-        // Set up values we'll need
-        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
-        val bobNode = mockNet.createPartyNode(BOB_NAME)
-        val alice: PartyAndCertificate = aliceNode.info.singleIdentityAndCert()
-        val bob: PartyAndCertificate = bobNode.info.singleIdentityAndCert()
-        // Check that the right name but wrong key is rejected
-        val evilBobNode = mockNet.createPartyNode(BOB_NAME)
+    fun `verification rejects signature if name is right but key is wrong`() {
+        val evilBobNode = mockNet.createPartyNode(bobNode.info.singleIdentity().name)
         val evilBob = evilBobNode.info.singleIdentityAndCert()
-        evilBobNode.database.transaction {
-            val anonymousEvilBob = evilBobNode.services.keyManagementService.freshKeyAndCert(evilBob, false)
-            val sigData = SwapIdentitiesFlow.buildDataToSign(evilBob)
-            val signature = evilBobNode.services.keyManagementService.sign(sigData, anonymousEvilBob.owningKey)
-            assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob.party, anonymousEvilBob, signature.withoutKey())
-            }
-        }
-        // Check that the right signing key, but wrong identity is rejected
-        val anonymousAlice: PartyAndCertificate = aliceNode.database.transaction {
-            aliceNode.services.keyManagementService.freshKeyAndCert(alice, false)
-        }
-        bobNode.database.transaction {
-            bobNode.services.keyManagementService.freshKeyAndCert(bob, false)
-        }.let { anonymousBob ->
-            val sigData = SwapIdentitiesFlow.buildDataToSign(anonymousAlice)
-            val signature = bobNode.services.keyManagementService.sign(sigData, anonymousBob.owningKey)
-            assertFailsWith<SwapIdentitiesException>("Signature does not match the given identity and nonce.") {
-                SwapIdentitiesFlow.validateAndRegisterIdentity(aliceNode.services.identityService, bob.party, anonymousBob, signature.withoutKey())
-            }
-        }
+        val anonymousEvilBob = evilBobNode.issueFreshKeyAndCert()
+        val signature = evilBobNode.signSwapIdentitiesFlowData(evilBob, anonymousEvilBob.owningKey)
 
-        mockNet.stopNodes()
+        assertFailsWith<SwapIdentitiesException>(
+                "Signature does not match the given identity and nonce") {
+            aliceNode.validateSwapIdentitiesFlow(bob, anonymousEvilBob, signature)
+        }
     }
+
+    @Test
+    fun `verification rejects signature if key is right but name is wrong`() {
+        val anonymousAlice = aliceNode.issueFreshKeyAndCert()
+        val anonymousBob = bobNode.issueFreshKeyAndCert()
+        val signature = bobNode.signSwapIdentitiesFlowData(anonymousAlice, anonymousBob.owningKey)
+
+        assertFailsWith<SwapIdentitiesException>(
+                "Signature does not match the given identity and nonce.") {
+                aliceNode.validateSwapIdentitiesFlow(bob, anonymousBob, signature)
+        }
+    }
+
+    //region Operations
+    private fun TestStartedNode.issueFreshKeyAndCert() = database.transaction {
+        services.keyManagementService.freshKeyAndCert(services.myInfo.singleIdentityAndCert(), false)
+    }
+
+    private fun TestStartedNode.signSwapIdentitiesFlowData(party: PartyAndCertificate, owningKey: PublicKey) =
+            services.keyManagementService.sign(
+                    SwapIdentitiesFlow.buildDataToSign(party),
+                    owningKey)
+
+    private fun TestStartedNode.validateSwapIdentitiesFlow(
+            party: Party,
+            counterparty: PartyAndCertificate,
+            signature: DigitalSignature.WithKey) =
+            SwapIdentitiesFlow.validateAndRegisterIdentity(
+                    services.identityService,
+                    party,
+                    counterparty,
+                    signature.withoutKey()
+            )
+    //endregion
+
+    //region Matchers
+    private fun TestStartedNode.resolvesToWellKnownParty(party: Party) = object : Matcher<AnonymousParty> {
+        override val description = """
+            is resolved by "${this@resolvesToWellKnownParty.info.singleIdentity().name}" to well-known party "${party.name}"
+        """.trimIndent()
+
+        override fun invoke(actual: AnonymousParty): MatchResult {
+            val resolvedName = services.identityService.wellKnownPartyFromAnonymous(actual)!!.name
+            return if (resolvedName == party.name) {
+                MatchResult.Match
+            } else {
+                MatchResult.Mismatch("was resolved to $resolvedName")
+            }
+        }
+    }
+
+    private data class HoldsOwningKeyMatcher(val node: TestStartedNode, val negated: Boolean = false) : Matcher<AnonymousParty> {
+        private fun sayNotIf(negation: Boolean) = if (negation) { "not " } else { "" }
+
+        override val description =
+                "has an owning key which is ${sayNotIf(negated)}held by ${node.info.singleIdentity().name}"
+
+        override fun invoke(actual: AnonymousParty) =
+                if (negated != actual.owningKey in node.services.keyManagementService.keys) {
+                    MatchResult.Match
+                } else {
+                    MatchResult.Mismatch("""
+                    had an owning key which was ${sayNotIf(!negated)}held by ${node.info.singleIdentity().name}
+                    """.trimIndent())
+                }
+
+        override fun not(): Matcher<AnonymousParty> {
+            return copy(negated=!negated)
+        }
+    }
+
+    private fun TestStartedNode.holdsOwningKey() = HoldsOwningKeyMatcher(this)
+    //endregion
+
 }

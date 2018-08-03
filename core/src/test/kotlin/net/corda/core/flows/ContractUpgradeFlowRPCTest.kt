@@ -8,8 +8,8 @@ import com.natpryce.hamkrest.isA
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.flows.matchers.rpc.willReturn
-import net.corda.core.flows.matchers.rpc.willThrow
+import net.corda.testing.internal.matchers.rpc.willReturn
+import net.corda.testing.internal.matchers.rpc.willThrow
 import net.corda.core.flows.mixins.WithContracts
 import net.corda.core.flows.mixins.WithFinality
 import net.corda.core.messaging.CordaRPCOps

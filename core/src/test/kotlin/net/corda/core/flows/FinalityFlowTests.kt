@@ -2,8 +2,8 @@ package net.corda.core.flows
 
 import com.natpryce.hamkrest.and
 import com.natpryce.hamkrest.assertion.assert
-import net.corda.core.flows.matchers.flow.willReturn
-import net.corda.core.flows.matchers.flow.willThrow
+import net.corda.testing.internal.matchers.flow.willReturn
+import net.corda.testing.internal.matchers.flow.willThrow
 import net.corda.core.flows.mixins.WithFinality
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
@@ -21,7 +21,7 @@ import org.junit.Test
 class FinalityFlowTests : WithFinality {
     companion object {
         private val CHARLIE = TestIdentity(CHARLIE_NAME, 90).party
-        private val classMockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts.asset"))
+        private val classMockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts.asset","net.corda.finance.schemas"))
 
         @JvmStatic
         @AfterClass

@@ -5,8 +5,8 @@ import com.natpryce.hamkrest.*
 import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.matchers.flow.willReturn
-import net.corda.core.flows.matchers.flow.willThrow
+import net.corda.testing.internal.matchers.flow.willReturn
+import net.corda.testing.internal.matchers.flow.willThrow
 import net.corda.core.flows.mixins.WithMockNet
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -16,6 +16,7 @@ import net.corda.core.internal.hash
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.makeUnique
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
@@ -115,18 +116,18 @@ class AttachmentTests : WithMockNet {
     @InitiatedBy(InitiatingFetchAttachmentsFlow::class)
     private class FetchAttachmentsResponse(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
         @Suspendable
-        override fun call() = subFlow(TestDataVendingFlow(otherSideSession))
+        override fun call() = subFlow(TestNoSecurityDataVendingFlow(otherSideSession))
     }
 
     //region Generators
     override fun makeNode(name: CordaX500Name) =
-        mockNet.createPartyNode(randomise(name)).apply {
+        mockNet.createPartyNode(makeUnique(name)).apply {
             registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         }
 
     // Makes a node that doesn't do sanity checking at load time.
     private fun makeBadNode(name: CordaX500Name) = mockNet.createNode(
-            InternalMockNodeParameters(legalName = randomise(name)),
+            InternalMockNodeParameters(legalName = makeUnique(name)),
             nodeFactory = { args, _ ->
                 object : InternalMockNetwork.MockNode(args) {
                     override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = false }
