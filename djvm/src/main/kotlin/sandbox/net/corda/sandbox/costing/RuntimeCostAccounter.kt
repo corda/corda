@@ -73,6 +73,7 @@ object RuntimeCostAccounter {
      */
     @JvmStatic
     fun recordArrayAllocation(length: Int, typeName: String) {
+        require(length >= 0) { "Length must be a positive integer" }
         val size = allocationCosts.getOrDefault(typeName, 16)
         context.runtimeCosts.allocationCost.increment(length * size)
     }
@@ -85,6 +86,8 @@ object RuntimeCostAccounter {
      */
     @JvmStatic
     fun recordArrayAllocation(length: Int, typeSize: Int) {
+        require(length >= 0) { "Length must be a positive integer" }
+        require(typeSize >= 0) { "Type size must be a positive integer" }
         context.runtimeCosts.allocationCost.increment(length * typeSize)
     }
 

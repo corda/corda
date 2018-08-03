@@ -1,18 +1,40 @@
 package net.corda.djvm.analysis
 
+import java.security.Security
+
 /**
- * Functionality for resolving the class name of a sandboxed or sandboxable class.
+ * Functionality for resolving the class name of a sandboxable class.
  *
- * @property whitelist Whitelisted classes and members.
+ * The resolution of a class name entails determining whether the class can be instrumented or not. This means that the
+ * following criteria need to be satisfied:
+ *  - The class do not reside in the "java/lang" package.
+ *  - The class has not been explicitly pinned.
+ *  - The class does not already reside in the top-level package named [sandboxPrefix].
+ *
+ * If these criteria have been satisfied, the fully-qualified class name will be derived by prepending [sandboxPrefix]
+ * to it. Note that [ClassLoader] will not allow defining a class in a package whose fully-qualified class name starts
+ * with "java/". That will result in the class loader throwing [SecurityException]. Also, some values map onto types
+ * defined in "java/lang/", e.g., [Integer] and [String]. These cannot be trivially moved into a different package due
+ * to the internal mechanisms of the JVM.
+ *
  * @property pinnedClasses Classes that have already been declared in the sandbox namespace and that should be made
  * available inside the sandboxed environment.
  * @property sandboxPrefix The package name prefix to use for classes loaded into a sandbox.
  */
 class ClassResolver(
-        private val whitelist: Whitelist,
         private val pinnedClasses: Set<String>,
         private val sandboxPrefix: String
 ) {
+
+    private val nativeClasses = "^java/lang/.*".toRegex()
+
+    private val pinnedPackagePrefixes = PrefixTree()
+
+    init {
+        for (prefix in Security.getProperty("package.definition").split(",")) {
+            pinnedPackagePrefixes.add(prefix)
+        }
+    }
 
     /**
      * Resolve the class name from a fully qualified name.
@@ -90,8 +112,7 @@ class ClassResolver(
      * Resolve class name from a fully qualified name.
      */
     private fun resolveName(name: String): String {
-        // Currently, whitelisted classes are not transformed and put into the sandbox namespace.
-        return if (name.isBlank() || isPinnedClass(name)) {
+        return if (isPinnedOrNativeClass(name)) {
             name
         } else {
             "$sandboxPrefix$name"
@@ -99,9 +120,13 @@ class ClassResolver(
     }
 
     /**
-     * Check if class is pinned.
+     * Check if class is native or pinned.
      */
-    private fun isPinnedClass(name: String): Boolean = whitelist.matches(name) || name in pinnedClasses || sandboxRegex.matches(name)
+    private fun isPinnedOrNativeClass(name: String): Boolean {
+        return nativeClasses.matches(name) ||
+                name in pinnedClasses ||
+                sandboxRegex.matches(name)
+    }
 
     private val sandboxRegex = "^$sandboxPrefix.*$".toRegex()
 

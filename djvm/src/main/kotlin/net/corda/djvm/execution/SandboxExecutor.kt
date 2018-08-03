@@ -63,7 +63,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
         logger.trace("Executing {} with input {}...", runnableClass, input)
         val classSources = listOf(runnableClass)
         val context = AnalysisContext.fromConfiguration(configuration.analysisConfiguration, classSources)
-        val result = IsolatedRunnable(runnableClass.qualifiedClassName, configuration, context).run {
+        val result = IsolatedTask(runnableClass.qualifiedClassName, configuration, context).run {
             validate(context, classLoader, classSources)
             val loadedClass = classLoader.loadClassAndBytes(runnableClass, context)
             val instance = loadedClass.type.newInstance()
@@ -102,7 +102,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
      */
     fun load(classSource: ClassSource): LoadedClass {
         val context = AnalysisContext.fromConfiguration(configuration.analysisConfiguration, listOf(classSource))
-        val result = IsolatedRunnable("LoadClass", configuration, context).run {
+        val result = IsolatedTask("LoadClass", configuration, context).run {
             classLoader.loadClassAndBytes(classSource, context)
         }
         return result.output ?: throw ClassNotFoundException(classSource.qualifiedClassName)
@@ -122,7 +122,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
     fun validate(vararg classSources: ClassSource): ReferenceValidationSummary {
         logger.trace("Validating {}...", classSources)
         val context = AnalysisContext.fromConfiguration(configuration.analysisConfiguration, classSources.toList())
-        val result = IsolatedRunnable("Validation", configuration, context).run {
+        val result = IsolatedTask("Validation", configuration, context).run {
             validate(context, classLoader, classSources.toList())
         }
         logger.trace("Validation of {} resulted in {}", classSources, result)

@@ -100,14 +100,15 @@ abstract class ClassCommand : CommandBase() {
         }
     }
 
-    protected fun printCosts(costs: Map<String, Long>) {
+    protected fun printCosts(costs: CostSummary) {
         if (disableTracing) {
             return
         }
         printInfo("Runtime Cost Summary:")
-        for ((name, cost) in costs) {
-            printInfo(" - $name = @|yellow $cost|@")
-        }
+        printInfo(" - allocations = @|yellow ${costs.allocations}|@")
+        printInfo(" - invocations = @|yellow ${costs.invocations}|@")
+        printInfo(" - jumps = @|yellow ${costs.jumps}|@")
+        printInfo(" - throws = @|yellow ${costs.throws}|@")
         printInfo()
     }
 

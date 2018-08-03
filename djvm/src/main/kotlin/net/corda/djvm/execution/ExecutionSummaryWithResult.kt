@@ -8,5 +8,5 @@ package net.corda.djvm.execution
  */
 class ExecutionSummaryWithResult<out TResult>(
         val result: TResult? = null,
-        costs: Map<String, Long> = emptyMap()
+        costs: CostSummary = CostSummary.empty
 ) : ExecutionSummary(costs)

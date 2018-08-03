@@ -8,5 +8,5 @@ package net.corda.djvm.execution
  * @property costs The costs accumulated when running the sandboxed code.
  */
 open class ExecutionSummary(
-        val costs: Map<String, Long> = emptyMap()
+        val costs: CostSummary = CostSummary.empty
 )

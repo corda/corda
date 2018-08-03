@@ -125,9 +125,7 @@ open class Whitelist private constructor(
                 // TODO This is a snapshot of what's currently in our deterministic rt.jar build
                 // The plan is to strip down this to [Whitelist.MINIMAL] and fully rely on sandbox rule verification and
                 // runtime instrumentation.
-                val jdk = Whitelist.fromResource("jdk8-deterministic.dat.gz")
-                val kotlin = Whitelist.fromResource("kotlin-deterministic.dat.gz")
-                return jdk + kotlin
+                return Whitelist.fromResource("jdk8-deterministic.dat.gz")
             }
 
         /**

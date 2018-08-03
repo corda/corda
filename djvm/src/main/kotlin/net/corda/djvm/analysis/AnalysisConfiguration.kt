@@ -40,7 +40,7 @@ class AnalysisConfiguration(
     /**
      * Functionality used to resolve the qualified name and relevant information about a class.
      */
-    val classResolver: ClassResolver = ClassResolver(whitelist, pinnedClasses, SANDBOX_PREFIX)
+    val classResolver: ClassResolver = ClassResolver(pinnedClasses, SANDBOX_PREFIX)
 
     companion object {
         /**

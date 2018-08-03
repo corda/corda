@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * Container for running a task in an isolated environment.
  */
-class IsolatedRunnable(
+class IsolatedTask(
         private val identifier: String,
         private val configuration: SandboxConfiguration,
         private val context: AnalysisContext
@@ -22,12 +22,12 @@ class IsolatedRunnable(
     /**
      * Run an action in an isolated environment.
      */
-    fun <T> run(action: IsolatedRunnable.() -> T?): Result<T> {
+    fun <T> run(action: IsolatedTask.() -> T?): Result<T> {
         val runnable = this
-        val threadName = "Sandbox-$identifier-${uniqueIdentifier.getAndIncrement()}"
+        val threadName = "DJVM-$identifier-${uniqueIdentifier.getAndIncrement()}"
         val completionLatch = CountDownLatch(1)
         var output: T? = null
-        var costs = mapOf<String, Long>()
+        var costs = CostSummary.empty
         var exception: Throwable? = null
         Thread {
             logger.trace("Entering isolated runtime environment...")
@@ -39,11 +39,11 @@ class IsolatedRunnable(
                     exception = ex
                     null
                 }
-                costs = mapOf(
-                        "allocations" to runtimeCosts.allocationCost.value,
-                        "invocations" to runtimeCosts.invocationCost.value,
-                        "jumps" to runtimeCosts.jumpCost.value,
-                        "throws" to runtimeCosts.throwCost.value
+                costs = CostSummary(
+                        runtimeCosts.allocationCost.value,
+                        runtimeCosts.invocationCost.value,
+                        runtimeCosts.jumpCost.value,
+                        runtimeCosts.throwCost.value
                 )
             }
             logger.trace("Exiting isolated runtime environment...")
@@ -72,9 +72,9 @@ class IsolatedRunnable(
     }
 
     /**
-     * The result of a run of an [IsolatedRunnable].
+     * The result of a run of an [IsolatedTask].
      *
-     * @property identifier The identifier of the [IsolatedRunnable].
+     * @property identifier The identifier of the [IsolatedTask].
      * @property output The result of the run, if successful.
      * @property costs Captured runtime costs as reported at the end of the run.
      * @property messages The messages collated during the run.
@@ -83,7 +83,7 @@ class IsolatedRunnable(
     data class Result<T>(
             val identifier: String,
             val output: T?,
-            val costs: Map<String, Long>,
+            val costs: CostSummary,
             val messages: MessageCollection,
             val exception: Throwable?
     )
@@ -101,7 +101,7 @@ class IsolatedRunnable(
          */
         private val uniqueIdentifier = AtomicLong(0)
 
-        private val logger = loggerFor<IsolatedRunnable>()
+        private val logger = loggerFor<IsolatedTask>()
 
     }
 

@@ -11,7 +11,8 @@ import net.corda.djvm.validation.RuleContext
 import org.objectweb.asm.Label
 
 /**
- * Rule that checks for attempted catches of [ThreadDeath], [ThresholdViolationException], [Error] or [Throwable].
+ * Rule that checks for attempted catches of [ThreadDeath], [ThresholdViolationException], [StackOverflowError],
+ * [OutOfMemoryError], [Error] or [Throwable].
  */
 @Suppress("unused")
 class DisallowCatchingBlacklistedExceptions : InstructionRule(), Emitter {
@@ -23,6 +24,10 @@ class DisallowCatchingBlacklistedExceptions : InstructionRule(), Emitter {
                     (instruction.typeName in disallowedExceptionTypes)
             fail("Disallowed catch of ThreadDeath exception") given
                     (instruction.typeName == threadDeathException)
+            fail("Disallowed catch of stack overflow exception") given
+                    (instruction.typeName == stackOverflowException)
+            fail("Disallowed catch of out of memory exception") given
+                    (instruction.typeName == outOfMemoryException)
             fail("Disallowed catch of threshold violation exception") given
                     (instruction.typeName.endsWith(ThresholdViolationException::class.java.simpleName))
         }
@@ -44,6 +49,8 @@ class DisallowCatchingBlacklistedExceptions : InstructionRule(), Emitter {
     companion object {
 
         private const val threadDeathException = "java/lang/ThreadDeath"
+        private const val stackOverflowException = "java/lang/StackOverflowError"
+        private const val outOfMemoryException = "java/lang/OutOfMemoryError"
 
         // Any of [ThreadDeath]'s throwable super-classes need explicit checking.
         private val disallowedExceptionTypes = setOf(
