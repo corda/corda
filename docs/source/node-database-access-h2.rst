@@ -14,6 +14,7 @@ required only when the H2 database is exposed on non-localhost address (which is
 This username and password can be changed in node configuration:
 
  .. sourcecode:: groovy
+
      dataSourceProperties = {
         dataSource.user = [USER]
         dataSource.password = [PASSWORD]
@@ -95,6 +96,9 @@ interface for you to query them using SQL.
 Connecting directly to the node's ``persistence.mv.db`` file
 ------------------------------------------------------------
 
-You can also use the H2 Console to connect directly to the node's ``persistence.mv.db`` file:
+You can also use the H2 Console to connect directly to the node's ``persistence.mv.db`` file. Ensure the node is off
+before doing so, as access to the database file requires exclusive access. If the node is still running, the H2 Console
+will return the following error:
+``Database may be already in use: null. Possible solutions: close all other connection(s); use the server mode [90020-196]``.
 
     ``jdbc:h2:~/path/to/file/persistence``
