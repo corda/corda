@@ -119,10 +119,7 @@ open class SerializerFactory(
         // can be useful to enable but will be *extremely* chatty if you do
         logger.trace { "Get Serializer for $actualClass ${declaredType.typeName}" }
 
-        val declaredClass = declaredType.asClass() ?: throw AMQPNotSerializableException(
-                declaredType,
-                "Declared types of $declaredType are not supported.")
-
+        val declaredClass = declaredType.asClass()
         val actualType: Type = if (actualClass == null) declaredType
             else inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
 
@@ -279,7 +276,7 @@ open class SerializerFactory(
         // TODO: class loader logic, and compare the schema.
         val type = typeForName(typeNotation.name, classloader)
         return get(
-                type.asClass() ?: throw AMQPNotSerializableException(type, "Unable to build composite type for $type"),
+                type.asClass(),
                 type)
     }
 
@@ -332,7 +329,7 @@ open class SerializerFactory(
         // super type.  Could be done, but do we need it?
         for (customSerializer in customSerializers) {
             if (customSerializer.isSerializerFor(clazz)) {
-                val declaredSuperClass = declaredType.asClass()?.superclass
+                val declaredSuperClass = declaredType.asClass().superclass
 
 
                 return if (declaredSuperClass == null

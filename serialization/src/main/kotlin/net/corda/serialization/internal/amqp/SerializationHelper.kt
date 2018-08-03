@@ -31,7 +31,7 @@ import kotlin.reflect.jvm.javaType
  * annotated with [@ConstructorForDeserialization].  It will report an error if more than one constructor is annotated.
  */
 fun constructorForDeserialization(type: Type): KFunction<Any>? {
-    val clazz: Class<*> = type.asClass()!!
+    val clazz: Class<*> = type.asClass()
     if (clazz.isConcreteClass) {
         var preferredCandidate: KFunction<Any>? = clazz.kotlin.primaryConstructor
         var annotatedCount = 0
@@ -80,7 +80,7 @@ fun <T : Any> propertiesForSerialization(
             if (kotlinConstructor != null) {
                 propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
             } else {
-                propertiesForSerializationFromAbstract(type.asClass()!!, type, factory)
+                propertiesForSerializationFromAbstract(type.asClass(), type, factory)
             }.sortedWith(PropertyAccessor)
     )
 }
@@ -459,21 +459,23 @@ fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
     }
 }
 
-internal fun Type.asClass(): Class<*>? {
-    return when {
-        this is Class<*> -> this
-        this is ParameterizedType -> this.rawType.asClass()
-        this is GenericArrayType -> this.genericComponentType.asClass()?.arrayClass()
-        this is TypeVariable<*> -> this.bounds.first().asClass()
-        this is WildcardType -> this.upperBounds.first().asClass()
-        else -> null
+internal fun Type.asClass(): Class<*> {
+    return when(this) {
+        is Class<*> -> this
+        is ParameterizedType -> this.rawType.asClass()
+        is GenericArrayType -> this.genericComponentType.asClass().arrayClass()
+        is TypeVariable<*> -> this.bounds.first().asClass()
+        is WildcardType -> this.upperBounds.first().asClass()
+        // Per https://docs.oracle.com/javase/8/docs/api/java/lang/reflect/Type.html,
+        // there is nothing else that it can be, so this can never happen.
+        else -> throw UnsupportedOperationException("Cannot convert $this to class")
     }
 }
 
 internal fun Type.asArray(): Type? {
-    return when {
-        this is Class<*> -> this.arrayClass()
-        this is ParameterizedType -> DeserializedGenericArrayType(this)
+    return when(this) {
+        is Class<*> -> this.arrayClass()
+        is ParameterizedType -> DeserializedGenericArrayType(this)
         else -> null
     }
 }
@@ -506,7 +508,7 @@ internal fun Type.isSubClassOf(type: Type): Boolean {
 // ByteArrays, primitives and boxed primitives are not stored in the object history
 internal fun suitableForObjectReference(type: Type): Boolean {
     val clazz = type.asClass()
-    return type != ByteArray::class.java && (clazz != null && !clazz.isPrimitive && !Primitives.unwrap(clazz).isPrimitive)
+    return type != ByteArray::class.java && (!clazz.isPrimitive && !Primitives.unwrap(clazz).isPrimitive)
 }
 
 /**
@@ -519,7 +521,7 @@ internal enum class CommonPropertyNames {
 
 
 fun ClassWhitelist.requireWhitelisted(type: Type) {
-    if (!this.isWhitelisted(type.asClass()!!)) {
+    if (!this.isWhitelisted(type.asClass())) {
         throw AMQPNotSerializableException(
                 type,
                 "Class \"$type\" is not on the whitelist or annotated with @CordaSerializable.")

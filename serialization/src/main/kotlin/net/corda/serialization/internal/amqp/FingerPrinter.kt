@@ -11,7 +11,7 @@ import java.lang.reflect.*
 import java.util.*
 
 /**
- * Should be implemented by classes which wish to provide plugable fingerprinting og types for a [SerializerFactory]
+ * Should be implemented by classes which wish to provide pluggable fingerprinting og types for a [SerializerFactory]
  */
 @KeepForDJVM
 interface FingerPrinter {
@@ -187,7 +187,7 @@ class SerializerFingerPrinter : FingerPrinter {
             factory: SerializerFactory,
             debugIndent: Int = 0): Hasher {
         // Hash the class + properties + interfaces
-        val name = type.asClass()?.name
+        val name = type.asClass().name
                 ?: throw AMQPNotSerializableException(type, "Expected only Class or ParameterizedType but found $type")
 
         propertiesForSerialization(constructorForDeserialization(type), contextType ?: type, factory)

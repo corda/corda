@@ -74,7 +74,7 @@ abstract class EvolutionSerializer(
          * TODO: rename annotation
          */
         private fun getEvolverConstructor(type: Type, oldArgs: Map<String, OldParam>): KFunction<Any>? {
-            val clazz: Class<*> = type.asClass()!!
+            val clazz: Class<*> = type.asClass()
 
             if (!clazz.isConcreteClass) return null
 
@@ -189,7 +189,7 @@ abstract class EvolutionSerializer(
             // return the synthesised object which is, given the absence of a constructor, a no op
             val constructor = getEvolverConstructor(new.type, readersAsSerialized) ?: return new
 
-            val classProperties = new.type.asClass()?.propertyDescriptors() ?: emptyMap()
+            val classProperties = new.type.asClass().propertyDescriptors()
 
             return if (classProperties.isNotEmpty() && constructor.parameters.isEmpty()) {
                 makeWithSetters(new, factory, constructor, readersAsSerialized, classProperties)

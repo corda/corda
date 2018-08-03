@@ -15,7 +15,7 @@ fun inferTypeVariables(actualClass: Class<*>,
     is ParameterizedType -> inferTypeVariables(actualClass, declaredClass, declaredType)
     is GenericArrayType -> {
         val declaredComponent = declaredType.genericComponentType
-        inferTypeVariables(actualClass.componentType, declaredComponent.asClass()!!, declaredComponent)?.asArray()
+        inferTypeVariables(actualClass.componentType, declaredComponent.asClass(), declaredComponent)?.asArray()
     }
     // Nothing to infer, otherwise we'd have ParameterizedType
     is Class<*> -> actualClass
@@ -44,7 +44,7 @@ private fun inferTypeVariables(actualClass: Class<*>, declaredClass: Class<*>, d
     }
     // The actual class can never have type variables resolved, due to the JVM's use of type erasure, so let's try and resolve them
     // Search for declared type in the inheritance hierarchy and then see if that fills in all the variables
-    val implementationChain: List<Type> = findPathToDeclared(actualClass, declaredType)
+    val implementationChain: List<Type> = findPathToDeclared(actualClass, declaredType)?.toList()
             ?: throw AMQPNotSerializableException(
                     declaredType,
                     "No inheritance path between actual $actualClass and declared $declaredType.")
@@ -61,54 +61,35 @@ private fun inferTypeVariables(actualClass: Class<*>, declaredClass: Class<*>, d
 }
 
 // Stop when reach declared type or return null if we don't find it.
-private fun findPathToDeclared(startingType: Type, declaredType: Type, chain: List<Type> = emptyList()): List<Type>? {
+private fun findPathToDeclared(startingType: Type, declaredType: Type, chain: Sequence<Type> = emptySequence()): Sequence<Type>? {
     val extendedChain = chain + startingType
-    val startingClass = startingType.asClass() ?: return null
+    val startingClass = startingType.asClass()
 
     if (startingClass == declaredType.asClass()) {
         // We're done...
         return extendedChain
     }
 
-    // Now explore potential options of superclass and all interfaces
-    return findPathViaGenericSuperclass(startingClass, startingType, declaredType, extendedChain)
-        ?: findPathViaInterfaces(startingClass, startingType, declaredType, extendedChain)
-}
-
-private fun findPathViaInterfaces(startingClass: Class<*>, startingType: Type, declaredType: Type, extendedChain: List<Type>): List<Type>? {
-    for (iface in startingClass.genericInterfaces) {
-        val resolved = TypeResolver().where(startingClass.asParameterizedType(), startingType.asParameterizedType()).resolveType(iface)
-        return findPathToDeclared(resolved, declaredType, extendedChain) ?: continue
+    val resolver = { type: Type ->
+        TypeResolver().where(
+                startingClass.asParameterizedType(),
+                startingType.asParameterizedType())
+                .resolveType(type)
     }
-    return null
+
+    // Now explore potential options of superclass and all interfaces
+    return findPathViaGenericSuperclass(startingClass, resolver, declaredType, extendedChain)
+        ?: findPathViaInterfaces(startingClass, resolver, declaredType, extendedChain)
 }
 
-private fun findPathViaGenericSuperclass(startingClass: Class<*>, startingType: Type, declaredType: Type, extendedChain: List<Type>): List<Type>? {
+private fun findPathViaInterfaces(startingClass: Class<*>, resolver: (Type) -> Type, declaredType: Type, extendedChain: Sequence<Type>): Sequence<Type>? =
+    startingClass.genericInterfaces.asSequence().map {
+        findPathToDeclared(resolver(it), declaredType, extendedChain)
+    }.filterNotNull().firstOrNull()
+
+
+private fun findPathViaGenericSuperclass(startingClass: Class<*>, resolver: (Type) -> Type, declaredType: Type, extendedChain: Sequence<Type>): Sequence<Type>? {
     val superClass = startingClass.genericSuperclass ?: return null
-    val resolved = TypeResolver().where(startingClass.asParameterizedType(), startingType.asParameterizedType()).resolveType(superClass)
-    return findPathToDeclared(resolved, declaredType, extendedChain)
-}
-/*
-if (startingClass == null) {
-    return null
+    return findPathToDeclared(resolver(superClass), declaredType, extendedChain)
 }
 
-// Now explore potential options of superclass and all interfaces
-return getPathToGenericSuperclass(startingClass, startingType, declaredType, extendedChain)
-        ?: findPathToGenericInterface(startingClass, startingType, declaredType, extendedChain)
-}
-
-private fun findPathToGenericInterface(startingClass: Class<*>, startingType: Type, declaredType: Type, extendedChain: List<Type>): List<Type>? {
-for (iface in startingClass.genericInterfaces) {
-    val resolved = TypeResolver().where(startingClass.asParameterizedType(), startingType.asParameterizedType()).resolveType(iface)
-    return findPathToDeclared(resolved, declaredType, extendedChain) ?: continue
-}
-return null
-}
-
-private fun getPathToGenericSuperclass(startingClass: Class<*>, startingType: Type, declaredType: Type, extendedChain: List<Type>): List<Type>? {
-val superClass = startingClass.genericSuperclass
-val resolved = TypeResolver().where(superClass.asParameterizedType(), startingType.asParameterizedType()).resolveType(superClass)
-return findPathToDeclared(resolved, declaredType, extendedChain)
-}
-    */
