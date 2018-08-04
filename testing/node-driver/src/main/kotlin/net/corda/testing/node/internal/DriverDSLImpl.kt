@@ -917,6 +917,71 @@ class DriverDSLImpl(
     }
 }
 
+/**
+ * Keeps track of how many nodes each node sees and gates nodes from completing their startNode [CordaFuture] until all
+ * current nodes see everyone.
+ */
+private class NetworkVisibilityController {
+    private val nodeVisibilityHandles = ThreadBox(HashMap<String, VisibilityHandle>())
+
+    fun register(name: CordaX500Name): VisibilityHandle {
+        val handle = VisibilityHandle()
+        nodeVisibilityHandles.locked {
+            require(name.organisation !in keys) {
+                "Node with organisation name ${name.organisation} is already started or starting"
+            }
+            put(name.organisation, handle)
+        }
+        return handle
+    }
+
+    private fun checkIfAllVisible() {
+        nodeVisibilityHandles.locked {
+            val minView = values.stream().mapToInt { it.visibleNodeCount }.min().orElse(0)
+            if (minView >= size) {
+                values.forEach { it.future.set(Unit) }
+            }
+        }
+    }
+
+    inner class VisibilityHandle : AutoCloseable {
+        internal val future = openFuture<Unit>()
+        internal var visibleNodeCount = 0
+        private var subscription: Subscription? = null
+
+        fun listen(rpc: CordaRPCOps): CordaFuture<Unit> {
+            check(subscription == null)
+            val (snapshot, updates) = rpc.networkMapFeed()
+            visibleNodeCount = snapshot.size
+            checkIfAllVisible()
+            subscription = updates.subscribe {
+                when (it) {
+                    is NetworkMapCache.MapChange.Added -> {
+                        visibleNodeCount++
+                        checkIfAllVisible()
+                    }
+                    is NetworkMapCache.MapChange.Removed -> {
+                        visibleNodeCount--
+                        checkIfAllVisible()
+                    }
+                    is NetworkMapCache.MapChange.Modified -> {
+                        // Nothing to do here but better being exhaustive.
+                    }
+                }
+            }
+            return future
+        }
+
+        override fun close() {
+            subscription?.unsubscribe()
+            nodeVisibilityHandles.locked {
+                values -= this@VisibilityHandle
+                checkIfAllVisible()
+            }
+        }
+    }
+}
+
 interface InternalDriverDSL : DriverDSL, CordformContext {
     private companion object {
         private val DEFAULT_POLL_INTERVAL = 500.millis
