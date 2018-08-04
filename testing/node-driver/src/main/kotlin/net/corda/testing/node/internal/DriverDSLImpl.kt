@@ -933,15 +933,15 @@ class DriverDSLImpl(
  * current nodes see everyone.
  */
 private class NetworkVisibilityController {
-    private val nodeVisibilityHandles = ThreadBox(HashMap<CordaX500Name, VisibilityHandle>())
+    private val nodeVisibilityHandles = ThreadBox(HashMap<String, VisibilityHandle>())
 
     fun register(name: CordaX500Name): VisibilityHandle {
         val handle = VisibilityHandle()
         nodeVisibilityHandles.locked {
-            require(name.organisation !in keys.map(CordaX500Name::organisation)) {
+            require(name.organisation !in keys) {
                 "Node with organisation name ${name.organisation} is already started or starting"
             }
-            put(name, handle)
+            put(name.organisation, handle)
         }
         return handle
     }
