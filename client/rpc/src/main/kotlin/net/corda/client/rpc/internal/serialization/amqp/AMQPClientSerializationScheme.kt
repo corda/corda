@@ -14,7 +14,6 @@ import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.amqpMagic
 import net.corda.serialization.internal.amqp.custom.RxNotificationSerializer
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * When set as the serialization scheme for a process, sets it to be the Corda AMQP implementation.
@@ -54,7 +53,7 @@ class AMQPClientSerializationScheme(
 
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         return SerializerFactory(context.whitelist, context.deserializationClassLoader, context.lenientCarpenterEnabled).apply {
-            register(RpcClientObservableSerializer)
+            register(RpcClientObservableDeSerializer)
             register(RpcClientCordaFutureSerializer(this))
             register(RxNotificationSerializer(this))
         }
