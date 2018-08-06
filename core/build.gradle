@@ -162,7 +162,3 @@ scanApi {
 publish {
     name jar.baseName
 }
-
-compileTestJava {
-    options.encoding = 'UTF-8'
-}
