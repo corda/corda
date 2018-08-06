@@ -5,7 +5,7 @@ import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.RemovalListener
 import com.nhaarman.mockito_kotlin.mock
-import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableSerializer
+import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSerializer
 import net.corda.core.context.Trace
 import net.corda.core.internal.ThreadBox
 import net.corda.node.internal.serialization.testutils.AMQPRoundTripRPCSerializationScheme
@@ -90,7 +90,7 @@ class RoundTripObservableSerializerTests {
         val serverSerializationContext = RpcServerObservableSerializer.createContext(
                 serializationContext, serverObservableContext)
 
-        val clientSerializationContext = RpcClientObservableSerializer.createContext(
+        val clientSerializationContext = RpcClientObservableDeSerializer.createContext(
                 serializationContext, clientObservableContext).withProperty(RPCApi.RpcRequestOrObservableIdKey, id)
 
 
