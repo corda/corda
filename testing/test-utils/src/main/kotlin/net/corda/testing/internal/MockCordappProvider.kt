@@ -3,12 +3,11 @@ package net.corda.testing.internal
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.TEST_UPLOADER
+import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.cordapp.CordappLoader
-import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.testing.services.MockAttachmentStorage
 import java.nio.file.Paths
@@ -50,7 +49,7 @@ class MockCordappProvider(
         return if (!existingAttachment.isEmpty()) {
             existingAttachment.keys.first()
         } else {
-            attachments.importContractAttachment(contractClassNames, TEST_UPLOADER, data.inputStream())
+            attachments.importContractAttachment(contractClassNames, DEPLOYED_CORDAPP_UPLOADER, data.inputStream())
         }
     }
 }

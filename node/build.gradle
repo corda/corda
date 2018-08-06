@@ -166,6 +166,9 @@ dependencies {
     // Apache Shiro: authentication, authorization and session management.
     compile "org.apache.shiro:shiro-core:${shiro_version}"
 
+    //Picocli for command line interface
+    compile "info.picocli:picocli:$picocli_version"
+
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"

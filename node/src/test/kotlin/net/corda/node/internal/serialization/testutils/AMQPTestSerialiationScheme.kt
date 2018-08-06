@@ -1,6 +1,6 @@
 package net.corda.node.internal.serialization.testutils
 
-import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableSerializer
+import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSerializer
 import net.corda.core.context.Trace
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
@@ -29,7 +29,7 @@ class AMQPRoundTripRPCSerializationScheme(
 ) {
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         return SerializerFactory(AllWhitelist, javaClass.classLoader).apply {
-            register(RpcClientObservableSerializer)
+            register(RpcClientObservableDeSerializer)
         }
     }
 
@@ -45,7 +45,7 @@ class AMQPRoundTripRPCSerializationScheme(
 
     fun rpcClientSerializerFactory(observableContext: ClientObservableContext, id: Trace.InvocationId) =
             rpcClientSerializerFactory(
-                    RpcClientObservableSerializer.createContext(serializationContext, observableContext)
+                    RpcClientObservableDeSerializer.createContext(serializationContext, observableContext)
                         .withProperty(RPCApi.RpcRequestOrObservableIdKey, id))
 
     fun rpcServerSerializerFactory(observableContext: TestObservableContext) =

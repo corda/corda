@@ -23,8 +23,7 @@ class VaultQueryExceptionsTests : VaultQueryParties by rule {
             override val cordappPackages = listOf(
                     "net.corda.testing.contracts",
                     "net.corda.finance.contracts",
-                    CashSchemaV1::class.packageName,
-                    DummyLinearStateSchemaV1::class.packageName) - SampleCashSchemaV3::class.packageName
+                    DummyLinearStateSchemaV1::class.packageName)
         }
     }
 
@@ -43,9 +42,6 @@ class VaultQueryExceptionsTests : VaultQueryParties by rule {
     @Test
     fun `query attempting to use unregistered schema`() {
         database.transaction {
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
-            vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
-            vaultFiller.fillWithSomeTestCash(100.SWISS_FRANCS, notaryServices, 1, DUMMY_CASH_ISSUER)
             // CashSchemaV3 NOT registered with NodeSchemaService
             val logicalExpression = builder { SampleCashSchemaV3.PersistentCashState::currency.equal(GBP.currencyCode) }
             val criteria = VaultCustomQueryCriteria(logicalExpression)

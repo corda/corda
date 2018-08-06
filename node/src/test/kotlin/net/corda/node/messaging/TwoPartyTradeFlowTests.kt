@@ -47,7 +47,6 @@ import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.VaultFiller
-import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.*
 import net.corda.testing.node.ledger
@@ -75,7 +74,7 @@ import kotlin.test.assertTrue
 @RunWith(Parameterized::class)
 class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     companion object {
-        private val cordappPackages = setOf("net.corda.finance.contracts")
+        private val cordappPackages = listOf("net.corda.finance.contracts", "net.corda.finance.schemas")
         @JvmStatic
         @Parameterized.Parameters(name = "Anonymous = {0}")
         fun data(): Collection<Boolean> = listOf(true, false)
@@ -225,7 +224,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             aliceNode.internals.disableDBCloseOnStop()
             bobNode.internals.disableDBCloseOnStop()
 
-            val bobAddr = bobNode.network.myAddress as InMemoryMessagingNetwork.PeerHandle
+            val bobAddr = bobNode.network.myAddress
             mockNet.runNetwork() // Clear network map registration messages
 
             val notary = mockNet.defaultNotaryIdentity

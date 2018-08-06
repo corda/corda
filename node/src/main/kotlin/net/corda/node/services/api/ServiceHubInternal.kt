@@ -21,6 +21,7 @@ import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapUpdater
+import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -105,6 +106,7 @@ interface ServiceHubInternal : ServiceHub {
         }
     }
 
+    override val attachments: AttachmentStorageInternal
     override val vaultService: VaultServiceInternal
     /**
      * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.

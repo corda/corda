@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.persistence
 
 import co.paralleluniverse.strands.Strand
+import org.hibernate.BaseSessionEventListener
 import org.hibernate.Session
 import org.hibernate.Transaction
 import rx.subjects.PublishSubject
@@ -21,6 +22,9 @@ class DatabaseTransaction(
 ) {
     val id: UUID = UUID.randomUUID()
 
+    val flushing: Boolean get() = _flushingCount > 0
+    private var _flushingCount = 0
+
     val connection: Connection by lazy(LazyThreadSafetyMode.NONE) {
         database.dataSource.connection.apply {
             autoCommit = false
@@ -30,6 +34,27 @@ class DatabaseTransaction(
 
     private val sessionDelegate = lazy {
         val session = database.entityManagerFactory.withOptions().connection(connection).openSession()
+        session.addEventListeners(object : BaseSessionEventListener() {
+            override fun flushStart() {
+                _flushingCount++
+                super.flushStart()
+            }
+
+            override fun flushEnd(numberOfEntities: Int, numberOfCollections: Int) {
+                super.flushEnd(numberOfEntities, numberOfCollections)
+                _flushingCount--
+            }
+
+            override fun partialFlushStart() {
+                _flushingCount++
+                super.partialFlushStart()
+            }
+
+            override fun partialFlushEnd(numberOfEntities: Int, numberOfCollections: Int) {
+                super.partialFlushEnd(numberOfEntities, numberOfCollections)
+                _flushingCount--
+            }
+        })
         hibernateTransaction = session.beginTransaction()
         session
     }

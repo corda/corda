@@ -12,12 +12,8 @@ import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.AbstractAttachment
-import net.corda.core.internal.UNKNOWN_UPLOADER
-import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.readFully
+import net.corda.core.internal.*
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.*
@@ -50,9 +46,11 @@ class NodeAttachmentService(
         private val database: CordaPersistence,
         attachmentContentCacheSize: Long = NodeConfiguration.defaultAttachmentContentCacheSize,
         attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
-) : AttachmentStorage, SingletonSerializeAsToken() {
+) : AttachmentStorageInternal, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
+
+        private val PRIVILEGED_UPLOADERS = listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER, P2P_UPLOADER, UNKNOWN_UPLOADER)
 
         // Just iterate over the entries with verification enabled: should be good enough to catch mistakes.
         // Note that JarInputStream won't throw any kind of error at all if the file stream is in fact not
@@ -228,10 +226,9 @@ class NodeAttachmentService(
         }
     }
 
-    private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
-            attachmentCacheBound,
-            { key -> Optional.ofNullable(createAttachment(key)) }
-    )
+    private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(attachmentCacheBound) { key ->
+        Optional.ofNullable(createAttachment(key))
+    }
 
     private fun createAttachment(key: SecureHash): Attachment? {
         val content = attachmentContentCache.get(key)!!
@@ -258,6 +255,18 @@ class NodeAttachmentService(
     }
 
     override fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
+        require(uploader !in PRIVILEGED_UPLOADERS) { "$uploader is a reserved uploader token" }
+        if (uploader.startsWith("$P2P_UPLOADER:")) {
+            // FetchAttachmentsFlow is in core and thus doesn't have access to AttachmentStorageInternal to call
+            // privilegedImportAttachment
+            require(Thread.currentThread().stackTrace.any { it.className == FetchAttachmentsFlow::class.java.name }) {
+                "$P2P_UPLOADER is a reserved uploader token prefix"
+            }
+        }
+        return import(jar, uploader, filename)
+    }
+
+    override fun privilegedImportAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
         return import(jar, uploader, filename)
     }
 
@@ -282,7 +291,13 @@ class NodeAttachmentService(
                 if (!hasAttachment(id)) {
                     checkIsAValidJAR(bytes.inputStream())
                     val session = currentDBSession()
-                    val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename, contractClassNames = contractClassNames)
+                    val attachment = NodeAttachmentService.DBAttachment(
+                            attId = id.toString(),
+                            content = bytes,
+                            uploader = uploader,
+                            filename = filename,
+                            contractClassNames = contractClassNames
+                    )
                     session.save(attachment)
                     attachmentCount.inc()
                     log.info("Stored new attachment $id")
@@ -295,10 +310,12 @@ class NodeAttachmentService(
     }
 
     @Suppress("OverridingDeprecatedMember")
-    override fun importOrGetAttachment(jar: InputStream): AttachmentId = try {
-        import(jar, UNKNOWN_UPLOADER, null)
-    } catch (faee: java.nio.file.FileAlreadyExistsException) {
-        AttachmentId.parse(faee.message!!)
+    override fun importOrGetAttachment(jar: InputStream): AttachmentId {
+        return try {
+            import(jar, UNKNOWN_UPLOADER, null)
+        } catch (faee: java.nio.file.FileAlreadyExistsException) {
+            AttachmentId.parse(faee.message!!)
+        }
     }
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {

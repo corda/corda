@@ -65,6 +65,8 @@ class RpcServerObservableSerializer : CustomSerializer.Implements<Observable<*>>
             input: DeserializationInput,
             context: SerializationContext
     ): Observable<*> {
+        // Note: this type of server Serializer is never meant to read postings arriving from clients.
+        // I.e. Observables cannot be used as parameters for RPC methods and can only be used as return values.
         throw UnsupportedOperationException()
     }
 

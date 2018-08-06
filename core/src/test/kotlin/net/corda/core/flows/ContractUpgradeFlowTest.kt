@@ -3,8 +3,8 @@ package net.corda.core.flows
 import com.natpryce.hamkrest.*
 import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.contracts.*
-import net.corda.core.flows.matchers.flow.willReturn
-import net.corda.core.flows.matchers.flow.willThrow
+import net.corda.testing.internal.matchers.flow.willReturn
+import net.corda.testing.internal.matchers.flow.willThrow
 import net.corda.core.flows.mixins.WithContracts
 import net.corda.core.flows.mixins.WithFinality
 import net.corda.core.identity.AbstractParty
@@ -33,7 +33,7 @@ import java.util.*
 
 class ContractUpgradeFlowTest : WithContracts, WithFinality {
     companion object {
-        private val classMockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
+        private val classMockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows", "net.corda.finance.schemas"))
 
         @JvmStatic
         @AfterClass
@@ -80,9 +80,9 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
         // Party A initiates contract upgrade flow, expected to succeed this time.
         assert.that(
             aliceNode.initiateDummyContractUpgrade(atx),
-            willReturn(
-                aliceNode.hasDummyContractUpgradeTransaction()
-                and bobNode.hasDummyContractUpgradeTransaction()))
+                willReturn(
+                        aliceNode.hasDummyContractUpgradeTransaction()
+                                and bobNode.hasDummyContractUpgradeTransaction()))
     }
 
     private fun TestStartedNode.issueCash(amount: Amount<Currency> = Amount(1000, USD)) =

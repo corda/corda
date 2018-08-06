@@ -16,7 +16,6 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.internal.notary.NotaryService
-import net.corda.node.services.api.StartedNodeServices
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
@@ -42,7 +41,12 @@ import net.corda.node.serialization.kryo.KryoServerSerializationScheme
 import net.corda.node.services.Permissions
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.config.*
+import net.corda.node.services.api.StartedNodeServices
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.SecurityConfiguration
+import net.corda.node.services.config.shouldInitCrashShell
+import net.corda.node.services.config.shouldStartLocalShell
+import net.corda.node.services.config.JmxReporterType
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.utilities.AddressUtils
@@ -55,18 +59,21 @@ import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.serialization.internal.*
+import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.net.BindException
+import java.net.InetAddress
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.system.exitProcess
-import rx.Observable
 import java.util.concurrent.TimeUnit
 
 class NodeWithInfo(val node: Node, val info: NodeInfo) {
@@ -196,7 +203,7 @@ open class Node(configuration: NodeConfiguration,
     override fun startMessagingService(rpcOps: RPCOps, nodeInfo: NodeInfo, myNotaryIdentity: PartyAndCertificate?, networkParameters: NetworkParameters) {
         require(nodeInfo.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
 
-        val client = network as P2PMessagingClient
+        network as P2PMessagingClient
 
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
@@ -220,7 +227,7 @@ open class Node(configuration: NodeConfiguration,
             startLocalRpcBroker(securityManager)
         }
 
-        val bridgeControlListener = BridgeControlListener(configuration, client.serverAddress, networkParameters.maxMessageSize)
+        val bridgeControlListener = BridgeControlListener(configuration, network.serverAddress, networkParameters.maxMessageSize)
 
         printBasicNodeInfo("Advertised P2P messaging addresses", nodeInfo.addresses.joinToString())
         val rpcServerConfiguration = RPCServerConfiguration.DEFAULT
@@ -249,8 +256,8 @@ open class Node(configuration: NodeConfiguration,
             closeOnStop()
             init(rpcOps, securityManager)
         }
-        client.closeOnStop()
-        client.start(
+        network.closeOnStop()
+        network.start(
                 myIdentity = nodeInfo.legalIdentities[0].owningKey,
                 serviceIdentity = if (nodeInfo.legalIdentities.size == 1) null else nodeInfo.legalIdentities[1].owningKey,
                 advertisedAddress = nodeInfo.addresses[0],
@@ -333,13 +340,20 @@ open class Node(configuration: NodeConfiguration,
 
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
             val effectiveH2Settings = configuration.effectiveH2Settings
-
+            //forbid execution of arbitrary code via SQL except those classes required by H2 itself
+            System.setProperty("h2.allowedClasses", "org.h2.mvstore.db.MVTableEngine,org.locationtech.jts.geom.Geometry,org.h2.server.TcpServer")
             if (effectiveH2Settings?.address != null) {
+                if (!InetAddress.getByName(effectiveH2Settings.address.host).isLoopbackAddress
+                        && configuration.dataSourceProperties.getProperty("dataSource.password").isBlank()) {
+                    throw CouldNotCreateDataSourceException("Database password is required for H2 server listening on ${InetAddress.getByName(effectiveH2Settings.address.host)}.")
+                }
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
+                val baseDir = Paths.get(databaseName).parent.toString()
                 val server = org.h2.tools.Server.createTcpServer(
                         "-tcpPort", effectiveH2Settings.address.port.toString(),
                         "-tcpAllowOthers",
                         "-tcpDaemon",
+                        "-baseDir", baseDir,
                         "-key", "node", databaseName)
                 // override interface that createTcpServer listens on (which is always 0.0.0.0)
                 System.setProperty("h2.bindAddress", effectiveH2Settings.address.host)

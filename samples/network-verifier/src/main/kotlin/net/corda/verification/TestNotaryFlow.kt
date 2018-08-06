@@ -11,6 +11,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+import co.paralleluniverse.fibers.Suspendable
 
 
 @StartableByRPC
@@ -23,7 +24,7 @@ class TestNotaryFlow : FlowLogic<String>() {
 
     override val progressTracker: ProgressTracker = ProgressTracker(ISSUING, ISSUED, DESTROYING, FINALIZED)
 
-
+    @Suspendable
     override fun call(): String {
         val issueBuilder = TransactionBuilder()
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
