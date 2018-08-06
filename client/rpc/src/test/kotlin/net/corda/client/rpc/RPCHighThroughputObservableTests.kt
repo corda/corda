@@ -1,6 +1,7 @@
 package net.corda.client.rpc
 
 import net.corda.core.messaging.RPCOps
+import net.corda.core.utilities.millis
 import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.node.internal.rpcDriver
 import org.junit.Test
@@ -11,10 +12,10 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 @RunWith(Parameterized::class)
-class RPCLargeObservableTests : AbstractRPCTest() {
+class RPCHighThroughputObservableTests : AbstractRPCTest() {
 
     private fun RPCDriverDSL.testProxy(): TestOps {
-        return testProxy<TestOps>(TestOpsImpl()).ops
+        return testProxy<TestOps>(TestOpsImpl(), queueDrainTimeout = 10.millis).ops
     }
 
     internal interface TestOps : RPCOps {

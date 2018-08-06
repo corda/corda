@@ -243,7 +243,7 @@ class RPCServer(
         }
     }
 
-    fun close(queueDrainTimeout: Duration = 1.hours) {
+    fun close(queueDrainTimeout: Duration = 5.seconds) {
         // Putting Stop message onto the queue will eventually make senderThread to stop.
         sendJobQueue.put(RpcSendJob.Stop)
         senderThread?.join(queueDrainTimeout.toMillis())
