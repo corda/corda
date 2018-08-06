@@ -34,7 +34,7 @@ class IdentitySyncFlowTests {
     fun before() {
         // We run this in parallel threads to help catch any race conditions that may exist.
         mockNet = InternalMockNetwork(
-                cordappPackages = listOf("net.corda.finance.contracts.asset"),
+                cordappPackages = listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"),
                 networkSendManuallyPumped = false,
                 threadPerNode = true
         )

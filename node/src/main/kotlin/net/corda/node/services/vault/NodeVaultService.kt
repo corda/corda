@@ -14,7 +14,9 @@ import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.*
 import net.corda.core.utilities.*
+import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
+import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.*
 import org.hibernate.Session
@@ -48,7 +50,8 @@ class NodeVaultService(
         private val clock: Clock,
         private val keyManagementService: KeyManagementService,
         private val servicesForResolution: ServicesForResolution,
-        hibernateConfig: HibernateConfiguration
+        private val hibernateConfig: HibernateConfiguration,
+        private val schemaService: SchemaService
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
         private val log = contextLogger()
@@ -64,6 +67,7 @@ class NodeVaultService(
     }
 
     private val mutex = ThreadBox(InnerState())
+    private val persistentStateService = PersistentStateService(schemaService)
 
     private fun recordUpdate(update: Vault.Update<ContractState>): Vault.Update<ContractState> {
         if (!update.isEmpty()) {
@@ -200,6 +204,7 @@ class NodeVaultService(
                 // flowId required by SoftLockManager to perform auto-registration of soft locks for new states
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
                 val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
+                persistentStateService.persist(vaultUpdate.produced)
                 updatesPublisher.onNext(vaultUpdate)
             }
         }

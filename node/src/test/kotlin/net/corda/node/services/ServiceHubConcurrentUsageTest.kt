@@ -24,7 +24,7 @@ import java.util.concurrent.CountDownLatch
 
 class ServiceHubConcurrentUsageTest {
 
-    private val mockNet = InternalMockNetwork(listOf(Cash::class.packageName))
+    private val mockNet = InternalMockNetwork(listOf(Cash::class.packageName, "net.corda.finance.schemas"))
 
     @After
     fun stopNodes() {
