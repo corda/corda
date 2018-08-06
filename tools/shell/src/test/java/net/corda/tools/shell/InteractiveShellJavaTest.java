@@ -152,7 +152,7 @@ public class InteractiveShellJavaTest {
 
     @Test
     public void flowStartWithComplexTypes() throws InteractiveShell.NoApplicableConstructor {
-        check("amount: \u00A310", "10.00 GBP", FlowA.class);
+        check("amount: £10", "10.00 GBP", FlowA.class);
     }
 
     @Test
