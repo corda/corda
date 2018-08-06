@@ -83,6 +83,7 @@ class CordaPersistence(
         // Check not in read-only mode.
         transaction {
             check(!connection.metaData.isReadOnly) { "Database should not be readonly." }
+            validateOrFixIncorrectInfoHostsTableColumnName(connection)
             checkCorrectAttachmentsContractsTableName(connection)
             checkCorrectCheckpointTypeOnPostgres(connection)
         }
@@ -283,14 +284,54 @@ private fun checkCorrectAttachmentsContractsTableName(connection: Connection) {
     fun warning(incorrectName: String, version: String) = "The database contains the older table name $incorrectName instead of $correctName, see upgrade notes to migrate from Corda database version $version https://docs.corda.net/head/upgrade-notes.html."
 
     if (!connection.metaData.getTables(null, null, correctName, null).next()) {
-        if (connection.metaData.getTables(null, null, incorrectV30Name, null).next()) { throw DatabaseIncompatibleException(warning(incorrectV30Name, "3.0")) }
-        if (connection.metaData.getTables(null, null, incorrectV31Name, null).next()) { throw DatabaseIncompatibleException(warning(incorrectV31Name, "3.1")) }
+        val metaData = connection.metaData
+        if (connection.metaData.getTables(null, null, incorrectV30Name, null).next()) {
+            if (metaData.databaseProductName == "H2") {
+                connection.createStatement().execute("ALTER TABLE $incorrectV30Name RENAME TO $correctName")
+                connection.commit()
+            } else {
+                throw DatabaseIncompatibleException(warning(incorrectV30Name, "3.0"))
+            }
+        }
+        if (connection.metaData.getTables(null, null, incorrectV31Name, null).next()) {
+            if (metaData.databaseProductName == "H2") {
+                connection.createStatement().execute("ALTER TABLE $incorrectV31Name RENAME TO $correctName")
+                connection.commit()
+            } else {
+                throw DatabaseIncompatibleException(warning(incorrectV31Name, "3.1"))
+            }
+        }
+    }
+}
+
+private fun validateOrFixIncorrectInfoHostsTableColumnName(connection: Connection) = validateOrRenameColumn(connection, "NODE_INFO_HOSTS",  "HOST_NAME", "HOST")
+
+private fun validateOrRenameColumn(connection: Connection, table: String, correctColumnName: String, incorrectColumnName: String) {
+
+    fun warning() = "The database table $table contains the older column name $incorrectColumnName instead of $correctColumnName, " +
+            "see upgrade notes to migrate from Corda database version https://docs.corda.net/head/upgrade-notes.html."
+    val metaData = connection.metaData
+    val resultSet = metaData.getColumns(null, null, table, incorrectColumnName)
+    if (resultSet.next()) {
+        val name = resultSet.getString("COLUMN_NAME")
+        if (name == incorrectColumnName) {
+            if (metaData.databaseProductName == "H2") {
+                try {
+                    connection.createStatement().execute("ALTER TABLE $table ALTER COLUMN $incorrectColumnName RENAME TO $correctColumnName")
+                    connection.commit()
+                } catch (exp: SQLException) {
+                    throw DatabaseIncompatibleException("Failed to upgrade table $table. " + warning())
+                }
+            } else {
+                throw DatabaseIncompatibleException(warning())
+            }
+        }
     }
 }
 
 private fun checkCorrectCheckpointTypeOnPostgres(connection: Connection) {
     val metaData = connection.metaData
-    if (metaData.getDatabaseProductName() != "PostgreSQL") {
+    if (metaData.databaseProductName != "PostgreSQL") {
         return
     }
 
