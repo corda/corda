@@ -275,9 +275,12 @@ will be freed automatically.
    printed to the logs and the observable will be unsubscribed for you. But don't rely on this, as garbage collection
    is non-deterministic.
 
+.. note:: Observables can only be used as return arguments of an RPC call. It is not currently possible to pass
+Observables as parameters to the RPC methods.
+
 Futures
 -------
-A method can also return a ``ListenableFuture`` in its object graph and it will be treated in a similar manner to
+A method can also return a ``CordaFuture`` in its object graph and it will be treated in a similar manner to
 observables. Calling the ``cancel`` method on the future will unsubscribe it from any future value and release any resources.
 
 Versioning
