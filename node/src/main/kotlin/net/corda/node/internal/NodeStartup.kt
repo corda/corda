@@ -35,7 +35,7 @@ import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
-import net.corda.node.utilities.registration.UnableToRegisterNodeWithDoormanException
+import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.internal.addShutdownHook
@@ -154,13 +154,13 @@ open class NodeStartup(val args: Array<String>) {
             if (cmdlineOptions.nodeRegistrationOption != null) {
                 // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
                 registerWithNetwork(conf, versionInfo, cmdlineOptions.nodeRegistrationOption)
-                // At this point the node registration was succesfull. We can delete the marker file.
+                // At this point the node registration was successful. We can delete the marker file.
                 deleteNodeRegistrationMarker(cmdlineOptions.baseDirectory)
                 return true
             }
             logStartupInfo(versionInfo, cmdlineOptions, conf)
-        } catch (e: UnableToRegisterNodeWithDoormanException) {
-            logger.warn("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.")
+        } catch (e: NodeRegistrationException) {
+            logger.warn("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.", e)
             return false
         } catch (e: Exception) {
             logger.error("Exception during node registration", e)
