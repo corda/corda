@@ -590,7 +590,7 @@ class SingleThreadedStateMachineManager(
     private fun scheduleTimeoutException(flow: Flow, retryCount: Int): ScheduledFuture<*> {
         return with(serviceHub.configuration.flowTimeout) {
             val timeoutDelaySeconds = timeout.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
-            val jitteredDelaySeconds = maxOf(1L ,timeoutDelaySeconds/2 + (Random().nextDouble() * timeoutDelaySeconds/2).toLong())
+            val jitteredDelaySeconds = maxOf(1L, timeoutDelaySeconds/2 + (Math.random() * timeoutDelaySeconds/2).toLong())
             timeoutScheduler.schedule({
                 val event = Event.Error(FlowTimeoutException(maxRestartCount))
                 flow.fiber.scheduleEvent(event)
