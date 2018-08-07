@@ -3,7 +3,7 @@ package net.corda.deterministic.common
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.internal.TEST_UPLOADER
+import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -18,8 +18,9 @@ class TransactionVerificationRequest(val wtxToVerify: SerializedBytes<WireTransa
     fun toLedgerTransaction(): LedgerTransaction {
         val deps = dependencies.map { it.deserialize() }.associateBy(WireTransaction::id)
         val attachments = attachments.map { it.deserialize<Attachment>() }
-        val attachmentMap = attachments.mapNotNull { it as? MockContractAttachment }
-                .associateBy(Attachment::id) { ContractAttachment(it, it.contract, uploader=TEST_UPLOADER) }
+        val attachmentMap = attachments
+                .mapNotNull { it as? MockContractAttachment }
+                .associateBy(Attachment::id) { ContractAttachment(it, it.contract, uploader = DEPLOYED_CORDAPP_UPLOADER) }
         val contractAttachmentMap = emptyMap<ContractClassName, ContractAttachment>()
         @Suppress("DEPRECATION")
         return wtxToVerify.deserialize().toLedgerTransaction(

@@ -4,6 +4,7 @@ import com.google.common.collect.Maps;
 import net.corda.core.serialization.SerializationContext;
 import net.corda.core.serialization.SerializationFactory;
 import net.corda.core.serialization.SerializedBytes;
+import net.corda.serialization.internal.amqp.AMQPNotSerializableException;
 import net.corda.serialization.internal.amqp.SchemaKt;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import org.junit.Before;
@@ -43,7 +44,7 @@ public final class ForbiddenLambdaSerializationTests {
             assertThat(throwable)
                     .isNotNull()
                     .isInstanceOf(NotSerializableException.class)
-                    .hasMessageContaining(getClass().getName());
+                    .hasMessageContaining("Serializer does not support synthetic classes");
         });
     }
 
@@ -61,7 +62,7 @@ public final class ForbiddenLambdaSerializationTests {
             assertThat(throwable)
                     .isNotNull()
                     .isInstanceOf(NotSerializableException.class)
-                    .hasMessageContaining(getClass().getName());
+                    .hasMessageContaining("Serializer does not support synthetic classes");
         });
     }
 

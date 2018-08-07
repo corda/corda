@@ -32,6 +32,7 @@ class E2ETestKeyManagementService(val identityService: IdentityService) : Single
     private val mutex = ThreadBox(InnerState())
     // Accessing this map clones it.
     override val keys: Set<PublicKey> get() = mutex.locked { keys.keys }
+    val keyPairs: Set<KeyPair> get() = mutex.locked { keys.map { KeyPair(it.key, it.value) }.toSet() }
 
     override fun start(initialKeyPairs: Set<KeyPair>) {
         mutex.locked {

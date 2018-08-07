@@ -32,8 +32,8 @@ abstract class EvolutionSerializer(
         clazz: Type,
         factory: SerializerFactory,
         protected val oldReaders: Map<String, OldParam>,
-        override val kotlinConstructor: KFunction<Any>?) : ObjectSerializer(clazz, factory) {
-
+        override val kotlinConstructor: KFunction<Any>?
+) : ObjectSerializer(clazz, factory) {
     // explicitly set as empty to indicate it's unused by this type of serializer
     override val propertySerializers = PropertySerializersEvolution()
 
@@ -137,7 +137,8 @@ abstract class EvolutionSerializer(
                     if ((isKotlin && !it.value.type.isMarkedNullable)
                             || (!isKotlin && isJavaPrimitive(it.value.type.jvmErasure.java))
                     ) {
-                        throw NotSerializableException(
+                        throw AMQPNotSerializableException(
+                                new.type,
                                 "New parameter \"${it.value.name}\" is mandatory, should be nullable for evolution " +
                                         "to work, isKotlinClass=$isKotlin type=${it.value.type}")
                     }
@@ -180,7 +181,7 @@ abstract class EvolutionSerializer(
                     OldParam(-1, PropertySerializer.make(it.name, EvolutionPropertyReader(),
                             it.getTypeAsClass(factory.classloader), factory))
                 } catch (e: ClassNotFoundException) {
-                    throw NotSerializableException(e.message)
+                    throw AMQPNotSerializableException(new.type, e.message ?: "")
                 }
             }
 

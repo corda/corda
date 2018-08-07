@@ -73,6 +73,7 @@ see changes to this list.
 * dmytrobr
 * Edward Greenwood (State Street)
 * Elendu Uche (APPZONE)
+* Emanuel Russo (NTT DATA Italy)
 * Farzad Pezeshkpour (RBS)
 * fracting
 * Frederic Dalibard (Natixis)

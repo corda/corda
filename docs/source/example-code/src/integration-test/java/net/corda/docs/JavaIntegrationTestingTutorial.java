@@ -18,9 +18,7 @@ import net.corda.testing.node.User;
 import org.junit.Test;
 import rx.Observable;
 
-import java.util.Currency;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -40,7 +38,7 @@ public class JavaIntegrationTestingTutorial {
         // START 1
         driver(new DriverParameters()
                 .withStartNodesInProcess(true)
-                .withExtraCordappPackagesToScan(singletonList("net.corda.finance.contracts.asset")), dsl -> {
+                .withExtraCordappPackagesToScan(Arrays.asList("net.corda.finance.contracts.asset", "net.corda.finance.schemas")), dsl -> {
 
             User aliceUser = new User("aliceUser", "testPassword1", new HashSet<>(asList(
                     startFlow(CashIssueAndPaymentFlow.class),

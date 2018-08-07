@@ -1,6 +1,7 @@
 package net.corda.core.transactions
 
 import co.paralleluniverse.strands.Strand
+import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
@@ -9,9 +10,11 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.ensureMinimumPlatformVersion
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
@@ -74,7 +77,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         for (t in items) {
             when (t) {
                 is StateAndRef<*> -> addInputState(t)
-                is ReferencedStateAndRef<*> -> @Suppress("DEPRECATION") addReferenceState(t) // Will remove when feature finalised.
+                is ReferencedStateAndRef<*> -> addReferenceState(t)
                 is SecureHash -> addAttachment(t)
                 is TransactionState<*> -> addOutputState(t)
                 is StateAndContract -> addOutputState(t.state, t.contract)
@@ -95,11 +98,18 @@ open class TransactionBuilder @JvmOverloads constructor(
      * [HashAttachmentConstraint].
      *
      * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
+     *
+     * @throws ZoneVersionTooLowException if there are reference states and the zone minimum platform version is less than 4.
      */
     @Throws(MissingContractAttachments::class)
     fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services)
 
+    @CordaInternal
     internal fun toWireTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext? = null): WireTransaction {
+        val referenceStates = referenceStates()
+        if (referenceStates.isNotEmpty()) {
+            services.ensureMinimumPlatformVersion(4, "Reference states")
+        }
 
         // Resolves the AutomaticHashConstraints to HashAttachmentConstraints or WhitelistedByZoneAttachmentConstraint based on a global parameter.
         // The AutomaticHashConstraint allows for less boiler plate when constructing transactions since for the typical case the named contract
@@ -109,14 +119,27 @@ open class TransactionBuilder @JvmOverloads constructor(
             when {
                 state.constraint !== AutomaticHashConstraint -> state
                 useWhitelistedByZoneAttachmentConstraint(state.contract, services.networkParameters) -> state.copy(constraint = WhitelistedByZoneAttachmentConstraint)
-                else -> services.cordappProvider.getContractAttachmentID(state.contract)?.let {
-                    state.copy(constraint = HashAttachmentConstraint(it))
-                } ?: throw MissingContractAttachments(listOf(state))
+                else -> {
+                    services.cordappProvider.getContractAttachmentID(state.contract)?.let {
+                        state.copy(constraint = HashAttachmentConstraint(it))
+                    } ?: throw MissingContractAttachments(listOf(state))
+                }
             }
         }
 
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
-            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + makeContractAttachments(services.cordappProvider), notary, window, referenceStates()), privacySalt)
+            WireTransaction(
+                    WireTransaction.createComponentGroups(
+                            inputStates(),
+                            resolvedOutputs,
+                            commands,
+                            attachments + makeContractAttachments(services.cordappProvider),
+                            notary,
+                            window,
+                            referenceStates
+                    ),
+                    privacySalt
+            )
         }
     }
 
@@ -169,12 +192,9 @@ open class TransactionBuilder @JvmOverloads constructor(
     /**
      * Adds a reference input [StateRef] to the transaction.
      *
-     * This feature was added in version 4 of Corda, so will throw an exception for any Corda networks with a minimum
-     * platform version less than 4.
-     *
-     * @throws UncheckedVersionException
+     * Note: Reference states are only supported on Corda networks running a minimum platform version of 4.
+     * [toWireTransaction] will throw an [IllegalStateException] if called in such an environment.
      */
-    @Deprecated(message = "Feature not yet released. Pending stabilisation.")
     open fun addReferenceState(referencedStateAndRef: ReferencedStateAndRef<*>): TransactionBuilder {
         val stateAndRef = referencedStateAndRef.stateAndRef
         referencesWithTransactionState.add(stateAndRef.state)
@@ -283,10 +303,10 @@ open class TransactionBuilder @JvmOverloads constructor(
         return this
     }
 
-    /** Returns an immutable list of input [StateRefs]. */
+    /** Returns an immutable list of input [StateRef]s. */
     fun inputStates(): List<StateRef> = ArrayList(inputs)
 
-    /** Returns an immutable list of reference input [StateRefs]. */
+    /** Returns an immutable list of reference input [StateRef]s. */
     fun referenceStates(): List<StateRef> = ArrayList(references)
 
     /** Returns an immutable list of attachment hashes. */
@@ -302,7 +322,10 @@ open class TransactionBuilder @JvmOverloads constructor(
      * Sign the built transaction and return it. This is an internal function for use by the service hub, please use
      * [ServiceHub.signInitialTransaction] instead.
      */
-    fun toSignedTransaction(keyManagementService: KeyManagementService, publicKey: PublicKey, signatureMetadata: SignatureMetadata, services: ServicesForResolution): SignedTransaction {
+    fun toSignedTransaction(keyManagementService: KeyManagementService,
+                            publicKey: PublicKey,
+                            signatureMetadata: SignatureMetadata,
+                            services: ServicesForResolution): SignedTransaction {
         val wtx = toWireTransaction(services)
         val signableData = SignableData(wtx.id, signatureMetadata)
         val sig = keyManagementService.sign(signableData, publicKey)

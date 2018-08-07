@@ -1,25 +1,33 @@
 package net.corda.node.services.persistence
 
+import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.*
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.Sort
+import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.startFlow
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
+import java.io.ByteArrayOutputStream
+import java.io.OutputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
@@ -30,7 +38,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
-class NodeAttachmentStorageTest {
+class NodeAttachmentServiceTest {
     // Use an in memory file system for testing attachment storage.
     private lateinit var fs: FileSystem
     private lateinit var database: CordaPersistence
@@ -185,7 +193,7 @@ class NodeAttachmentStorageTest {
     @Ignore("We need to be able to restart nodes - make importing attachments idempotent?")
     @Test
     fun `duplicates not allowed`() {
-        val (testJar, _) = makeTestJar()
+        val (testJar) = makeTestJar()
         testJar.read {
             storage.importAttachment(it, "test", null)
         }
@@ -198,7 +206,7 @@ class NodeAttachmentStorageTest {
 
     @Test
     fun `corrupt entry throws exception`() {
-        val (testJar, _) = makeTestJar()
+        val (testJar) = makeTestJar()
         val id = database.transaction {
             val id = testJar.read { storage.importAttachment(it, "test", null) }
 
@@ -233,23 +241,68 @@ class NodeAttachmentStorageTest {
         }
     }
 
+    @Test
+    fun `using reserved uploader tokens`() {
+        val (testJar) = makeTestJar()
+
+        fun assertImportFails(uploader: String) {
+            testJar.read {
+                assertThatIllegalArgumentException().isThrownBy {
+                    storage.importAttachment(it, uploader, null)
+                }.withMessageContaining(uploader)
+            }
+        }
+
+        database.transaction {
+            assertImportFails(DEPLOYED_CORDAPP_UPLOADER)
+            assertImportFails(P2P_UPLOADER)
+            assertImportFails(RPC_UPLOADER)
+            assertImportFails(UNKNOWN_UPLOADER)
+        }
+
+        // Import an attachment similar to how net.corda.core.internal.FetchAttachmentsFlow does it.
+        InternalMockNetwork(threadPerNode = true).use { mockNet ->
+            val node = mockNet.createNode()
+            val result = node.services.startFlow(FetchAttachmentsFlow()).resultFuture
+            assertThatIllegalArgumentException().isThrownBy {
+                result.getOrThrow()
+            }.withMessageContaining(P2P_UPLOADER)
+        }
+    }
+
+    // Not the real FetchAttachmentsFlow!
+    private class FetchAttachmentsFlow : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val baos = ByteArrayOutputStream()
+            makeTestJar(baos)
+            serviceHub.attachments.importAttachment(baos.toByteArray().inputStream(), "$P2P_UPLOADER:${ourIdentity.name}", null)
+        }
+    }
+
     private var counter = 0
     private fun makeTestJar(extraEntries: List<Pair<String, String>> = emptyList()): Pair<Path, SecureHash> {
         counter++
         val file = fs.getPath("$counter.jar")
-        file.write {
-            val jar = JarOutputStream(it)
-            jar.putNextEntry(JarEntry("test1.txt"))
-            jar.write("This is some useful content".toByteArray())
-            jar.closeEntry()
-            jar.putNextEntry(JarEntry("test2.txt"))
-            jar.write("Some more useful content".toByteArray())
-            extraEntries.forEach {
-                jar.putNextEntry(JarEntry(it.first))
-                jar.write(it.second.toByteArray())
-            }
-            jar.closeEntry()
-        }
+        makeTestJar(file.outputStream(), extraEntries)
         return Pair(file, file.readAll().sha256())
+    }
+
+    private companion object {
+        private fun makeTestJar(output: OutputStream, extraEntries: List<Pair<String, String>> = emptyList()) {
+            output.use {
+                val jar = JarOutputStream(it)
+                jar.putNextEntry(JarEntry("test1.txt"))
+                jar.write("This is some useful content".toByteArray())
+                jar.closeEntry()
+                jar.putNextEntry(JarEntry("test2.txt"))
+                jar.write("Some more useful content".toByteArray())
+                extraEntries.forEach {
+                    jar.putNextEntry(JarEntry(it.first))
+                    jar.write(it.second.toByteArray())
+                }
+                jar.closeEntry()
+            }
+        }
     }
 }

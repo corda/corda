@@ -70,6 +70,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
         rpcUsers = rpcUsersList
         useTestClock true
+        extraConfig = ['h2Settings.address' : 'localhost:10024']
     }
     node {
         name "O=Bank A,L=London,C=GB"
@@ -81,6 +82,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
         rpcUsers = rpcUsersList
         useTestClock true
+        extraConfig = ['h2Settings.address' : 'localhost:10027']
     }
     node {
         name "O=Bank B,L=New York,C=US"
@@ -92,6 +94,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         cordapps = ["${project.group}:finance:$corda_release_version"]
         rpcUsers = rpcUsersList
         useTestClock true
+        extraConfig = ['h2Settings.address' : 'localhost:10030']
     }
     node {
         name "O=Regulator,L=Moscow,C=RU"
@@ -104,6 +107,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
         rpcUsers = rpcUsersList
         useTestClock true
+        extraConfig = ['h2Settings.address' : 'localhost:10033']
     }
 
 }

@@ -53,7 +53,6 @@ import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.*
 import net.corda.node.services.persistence.*
-import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
 import net.corda.node.services.transactions.*
@@ -107,15 +106,12 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
  * sweeping up the Node into the Kryo checkpoint serialization via any flows holding a reference to ServiceHub.
  */
 // TODO Log warning if this node is a notary but not one of the ones specified in the network parameters, both for core and custom
-
-// In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
-// AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
 abstract class AbstractNode<S>(val configuration: NodeConfiguration,
-                                             val platformClock: CordaClock,
-                                             protected val versionInfo: VersionInfo,
-                                             protected val cordappLoader: CordappLoader,
-                                             protected val serverThread: AffinityExecutor.ServiceAffinityExecutor,
-                                             private val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
+                               val platformClock: CordaClock,
+                               protected val versionInfo: VersionInfo,
+                               protected val cordappLoader: CordappLoader,
+                               protected val serverThread: AffinityExecutor.ServiceAffinityExecutor,
+                               private val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
 
@@ -180,6 +176,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount).tokenize()
     val contractUpgradeService = ContractUpgradeServiceImpl().tokenize()
     val auditService = DummyAuditService().tokenize()
+    @Suppress("LeakingThis")
+    protected val network: MessagingService = makeMessagingService().tokenize()
     val services = ServiceHubInternalImpl().tokenize()
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
@@ -194,8 +192,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             configuration.drainingModePollPeriod,
             unfinishedSchedules = busyNodeLatch
     ).tokenize().closeOnStop()
-    // TODO Making this non-lateinit requires MockNode being able to create a blank InMemoryMessaging instance
-    protected lateinit var network: MessagingService
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
     private val flowFactories = ConcurrentHashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
@@ -224,7 +220,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private var _started: S? = null
 
     private fun <T : Any> T.tokenize(): T {
-        tokenizableServices?.add(this) ?: throw IllegalStateException("The tokenisable services list has already been finialised")
+        tokenizableServices?.add(this) ?: throw IllegalStateException("The tokenisable services list has already been finalised")
         return this
     }
 
@@ -243,10 +239,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private fun initKeyStore(): X509Certificate {
         if (configuration.devMode) {
-            log.warn("The Corda node is running in developer mode. This is not suitable for production usage.")
             configuration.configureWithDevSSLCertificate()
-        } else {
-            log.info("The Corda node is running in production mode. If this is a developer environment you can set 'devMode=true' in the node.conf file.")
         }
         return validateKeyStore()
     }
@@ -286,10 +279,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         log.info("Node starting up ...")
 
-        // TODO First thing we do is create the MessagingService. This should have been done by the c'tor but it's not
-        // possible (yet) to due restriction from MockNode
-        network = makeMessagingService().tokenize()
-
         val trustRoot = initKeyStore()
         val nodeCa = configuration.loadNodeKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_CA)
         initialiseJVMAgents()
@@ -325,12 +314,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
+        services.start(nodeInfo, netParams)
         networkMapUpdater.start(trustRoot, signedNetParams.raw.hash, signedNodeInfo.raw.hash)
         startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         return database.transaction {
-            services.start(nodeInfo, netParams)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             attachments.start()
             cordappProvider.start(netParams.whitelistedContractImplementations)
@@ -341,7 +330,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             contractUpgradeService.start()
             vaultService.start()
             ScheduledActivityObserver.install(vaultService, schedulerService, flowLogicRefFactory)
-            HibernateObserver.install(vaultService.rawUpdates, database.hibernateConfig, schemaService)
 
             val frozenTokenizableServices = tokenizableServices!!
             tokenizableServices = null
@@ -671,6 +659,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         } else {
             Observable.empty()
         }
+        check(initiatingFlowClass !in flowFactories.keys) {
+            "$initiatingFlowClass is attempting to register multiple initiated flows"
+        }
         flowFactories[initiatingFlowClass] = flowFactory
         return observable
     }
@@ -740,7 +731,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun startDatabase() {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        database.hikariStart(props)
+        database.startHikariPool(props)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -871,7 +862,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun makeVaultService(keyManagementService: KeyManagementService,
                                         services: ServicesForResolution,
                                         database: CordaPersistence): VaultServiceInternal {
-        return NodeVaultService(platformClock, keyManagementService, services, database)
+        return NodeVaultService(platformClock, keyManagementService, services, database, schemaService)
     }
 
     /** Load configured JVM agents */
@@ -906,7 +897,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val transactionVerifierService: TransactionVerifierService get() = this@AbstractNode.transactionVerifierService
         override val contractUpgradeService: ContractUpgradeService get() = this@AbstractNode.contractUpgradeService
         override val auditService: AuditService get() = this@AbstractNode.auditService
-        override val attachments: AttachmentStorage get() = this@AbstractNode.attachments
+        override val attachments: AttachmentStorageInternal get() = this@AbstractNode.attachments
         override val networkService: MessagingService get() = network
         override val clock: Clock get() = platformClock
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
@@ -1003,7 +994,7 @@ fun configureDatabase(hikariProperties: Properties,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                       schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
     val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, hikariProperties)
-    persistence.hikariStart(hikariProperties)
+    persistence.startHikariPool(hikariProperties)
     return persistence
 }
 
@@ -1022,7 +1013,7 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters)
 }
 
-fun CordaPersistence.hikariStart(hikariProperties: Properties) {
+fun CordaPersistence.startHikariPool(hikariProperties: Properties) {
     try {
         start(DataSourceFactory.createDataSource(hikariProperties))
     } catch (ex: Exception) {
