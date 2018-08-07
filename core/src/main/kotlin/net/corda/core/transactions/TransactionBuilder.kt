@@ -17,7 +17,6 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import java.security.PublicKey
@@ -51,7 +50,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         protected val references: MutableList<StateRef> = arrayListOf()
 ) {
     private val inputsWithTransactionState = arrayListOf<StateAndRef<*>>()
-    private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
+    private val referencesWithTransactionState = arrayListOf<StateAndRef<*>>()
 
     /**
      * Creates a copy of the builder.
@@ -103,10 +102,10 @@ open class TransactionBuilder @JvmOverloads constructor(
      * @throws ZoneVersionTooLowException if there are reference states and the zone minimum platform version is less than 4.
      */
     @Throws(MissingContractAttachments::class)
-    @Deprecated("Please use the new method that throws better exceptions.", replaceWith = ReplaceWith("toWireTransactionNew"))
+    @Deprecated("Please use the new method that throws better exceptions.", replaceWith = ReplaceWith("toWireTransaction2"))
     fun toWireTransaction(services: ServicesForResolution): WireTransaction {
         try {
-            return toWireTransactionNew(services)
+            return toWireTransaction2(services)
         } catch (e: TransactionBuildingException) {
             throw MissingContractAttachments(states = emptyList(), wrappedException = e)
         }
@@ -119,7 +118,7 @@ open class TransactionBuilder @JvmOverloads constructor(
      * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
      */
     @Throws(TransactionBuildingException::class)
-    fun toWireTransactionNew(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services)
+    fun toWireTransaction2(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services)
 
     @CordaInternal
     internal fun toWireTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext? = null): WireTransaction {
@@ -143,7 +142,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         }
 
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
-            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + contractAttachments.values.distinct(), notary, window), privacySalt)
+            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + contractAttachments.values.distinct(), notary, window, referenceStates()), privacySalt)
         }
     }
 
@@ -152,21 +151,28 @@ open class TransactionBuilder @JvmOverloads constructor(
     }
 
     /**
+     * todo - this method should also implement the constraint propagation logic as described here: ENT-2222
+     *
      * This method is responsible for selecting the contract attachments to be used for the current transaction.
+     * The contract attachments are used to create a deterministic Classloader to deserialise the transaction and to run the contract verification.
      *
-     * The logic depends on the input states:
+     * The selection logic depends on the Attachment Constraints of the input, output and reference states.
      *
-     * * For input states with [HashAttachmentConstraint], if the attachment with the hash is installed by the current node, then it will be inherited to the output states.
-     * * For input states with [WhitelistedByZoneAttachmentConstraint] or custom [AttachmentConstraint] implementations, then the currently installed cordapp version is used.
+     * * For input states with [HashAttachmentConstraint], if an attachment with that hash is installed on the current node, then it will be inherited by the output states. Otherwise a [MissingContractAttachments] is thrown.
      *
-     * It is called *before* the [AutomaticConstraint] on output states is transformed into a real constraint.
+     * * For input states with [WhitelistedByZoneAttachmentConstraint] or a [AlwaysAcceptAttachmentConstraint] implementations, then the currently installed cordapp version is used.
      *
-     * For outputs states, the only case (so far) that can really affect the contract jar selection is manually setting a specific HashConstraint on an output state.
+     * * For outputs states, the only case (so far) that can really affect the contract jar selection is manually setting a specific HashConstraint on an output state.
      * The other constraints won't point to an actual jar version, but to some rules that the jar needs to obey.
+     *
+     * * Reference states behave like normal input states from the constraint POV.
+     *
+     * This function is called *before* the [AutomaticConstraint] on output states is resolved into a real constraint (based on the output of this method).
+     * Todo - move the
      */
     private fun determineContractAttachments(services: ServicesForResolution): Map<ContractClassName, AttachmentId> {
-        // Reference inputs not included as it is not necessary to verify them.
-        val inputContracts = inputsWithTransactionState.map { inputState ->
+
+        val inputContracts = (inputsWithTransactionState + referencesWithTransactionState).map { inputState ->
             val constraint = inputState.state.constraint
             val contractClassName = inputState.state.contract
 
@@ -201,6 +207,8 @@ open class TransactionBuilder @JvmOverloads constructor(
                     state.contract to attachment
                 }
 
+        //todo this.attachments - Handle the case when the cordapp developer has already specified an attachment version to be used
+
         // Check that there is only one hash per contract. E.g.: 2 input states with different HashConstraints
         val grouped = (outputContracts + inputContracts)
                 .groupBy { it.first }
@@ -214,7 +222,7 @@ open class TransactionBuilder @JvmOverloads constructor(
     }
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
-    fun toLedgerTransaction(services: ServiceHub) = toWireTransactionNew(services).toLedgerTransaction(services)
+    fun toLedgerTransaction(services: ServiceHub) = toWireTransaction2(services).toLedgerTransaction(services)
 
     internal fun toLedgerTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
         return toWireTransactionWithContext(services, serializationContext).toLedgerTransaction(services)
@@ -240,7 +248,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         }
     }
 
-    private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.notary }.toSet().size == 1
+    private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.state.notary }.toSet().size == 1
 
     /**
      * Adds a reference input [StateRef] to the transaction.
@@ -250,7 +258,7 @@ open class TransactionBuilder @JvmOverloads constructor(
      */
     open fun addReferenceState(referencedStateAndRef: ReferencedStateAndRef<*>): TransactionBuilder {
         val stateAndRef = referencedStateAndRef.stateAndRef
-        referencesWithTransactionState.add(stateAndRef.state)
+        referencesWithTransactionState.add(stateAndRef)
 
         // It is likely the case that users of reference states do not have permission to change the notary assigned
         // to a reference state. Even if users _did_ have this permission the result would likely be a bunch of
@@ -329,6 +337,7 @@ open class TransactionBuilder @JvmOverloads constructor(
      * signing [PublicKey]s.
      */
     fun addCommand(data: CommandData, vararg keys: PublicKey) = addCommand(Command(data, listOf(*keys)))
+
     fun addCommand(data: CommandData, keys: List<PublicKey>) = addCommand(Command(data, keys))
 
     /**
@@ -379,7 +388,7 @@ open class TransactionBuilder @JvmOverloads constructor(
                             publicKey: PublicKey,
                             signatureMetadata: SignatureMetadata,
                             services: ServicesForResolution): SignedTransaction {
-        val wtx = toWireTransactionNew(services)
+        val wtx = toWireTransaction2(services)
         val signableData = SignableData(wtx.id, signatureMetadata)
         val sig = keyManagementService.sign(signableData, publicKey)
         return SignedTransaction(wtx, listOf(sig))

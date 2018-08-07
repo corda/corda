@@ -558,7 +558,7 @@ class NodeVaultServiceTest {
         val issueBuilder = TransactionBuilder(notary).apply {
             Cash().generateIssue(this, amount, anonymousIdentity.party.anonymise(), identity.party)
         }
-        val issueTx = issueBuilder.toWireTransactionNew(bocServices)
+        val issueTx = issueBuilder.toWireTransaction2(bocServices)
         val cashState = StateAndRef(issueTx.outputs.single(), StateRef(issueTx.id, 0))
 
         // ensure transaction contract state is persisted in DBStorage
@@ -572,7 +572,7 @@ class NodeVaultServiceTest {
             val moveBuilder = TransactionBuilder(notary).apply {
                 Cash.generateSpend(services, this, Amount(1000, GBP), identity, thirdPartyIdentity)
             }
-            val moveTx = moveBuilder.toWireTransactionNew(services)
+            val moveTx = moveBuilder.toWireTransaction2(services)
             vaultService.notify(StatesToRecord.ONLY_RELEVANT, moveTx)
         }
         val expectedMoveUpdate = Vault.Update(setOf(cashState), emptySet(), null)
@@ -632,7 +632,7 @@ class NodeVaultServiceTest {
                 Cash.generateSpend(services, this, Amount(amount.quantity, GBP), identity, thirdPartyIdentity.party.anonymise())
             }
         }
-        val moveTx = moveTxBuilder.toWireTransactionNew(services)
+        val moveTx = moveTxBuilder.toWireTransaction2(services)
 
         // ensure transaction contract state is persisted in DBStorage
         val signedMoveTx = services.signInitialTransaction(moveTxBuilder)
@@ -663,7 +663,7 @@ class NodeVaultServiceTest {
         val txb = TransactionBuilder(DUMMY_NOTARY)
         txb.addOutputState(Cash.State(MEGA_CORP.ref(0), 100.DOLLARS, MINI_CORP), Cash::class.java.name)
         txb.addCommand(Cash.Commands.Move(), MEGA_CORP_PUBKEY)
-        val wtx = txb.toWireTransactionNew(services)
+        val wtx = txb.toWireTransaction2(services)
         database.transaction {
             vaultService.notify(StatesToRecord.ONLY_RELEVANT, wtx)
         }
@@ -691,7 +691,7 @@ class NodeVaultServiceTest {
         val txb = TransactionBuilder(DUMMY_NOTARY)
         coins.map { txb.addOutputState(TransactionState(Cash.State(it, nodeIdentity), Cash.PROGRAM_ID, DUMMY_NOTARY)) }
         txb.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
-        val issueTx = txb.toWireTransactionNew(services)
+        val issueTx = txb.toWireTransaction2(services)
 
         // ensure transaction contract state is persisted in DBStorage
         val signedIssuedTx = services.signInitialTransaction(txb)
@@ -714,7 +714,7 @@ class NodeVaultServiceTest {
         val txb = TransactionBuilder(DUMMY_NOTARY)
         coins.map { txb.addOutputState(TransactionState(Cash.State(it, nodeIdentity), Cash.PROGRAM_ID, DUMMY_NOTARY)) }
         txb.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
-        val issueTx = txb.toWireTransactionNew(services)
+        val issueTx = txb.toWireTransaction2(services)
 
         // ensure transaction contract state is persisted in DBStorage
         val signedIssuedTx = services.signInitialTransaction(txb)

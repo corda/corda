@@ -130,7 +130,7 @@ class NodeInterestRatesTest {
     fun `refuse to sign with no relevant commands`() {
         database.transaction {
             val tx = makeFullTx()
-            val wtx1 = tx.toWireTransactionNew(services)
+            val wtx1 = tx.toWireTransaction2(services)
             fun filterAllOutputs(elem: Any): Boolean {
                 return when (elem) {
                     is TransactionState<ContractState> -> true
@@ -141,7 +141,7 @@ class NodeInterestRatesTest {
             val ftx1 = wtx1.buildFilteredTransaction(Predicate(::filterAllOutputs))
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx1) }
             tx.addCommand(Cash.Commands.Move(), ALICE_PUBKEY)
-            val wtx2 = tx.toWireTransactionNew(services)
+            val wtx2 = tx.toWireTransaction2(services)
             val ftx2 = wtx2.buildFilteredTransaction(Predicate { x -> filterCmds(x) })
             assertFalse(wtx1.id == wtx2.id)
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx2) }
@@ -155,7 +155,7 @@ class NodeInterestRatesTest {
             val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
             tx.addCommand(fix, identity.owningKey)
             // Sign successfully.
-            val wtx = tx.toWireTransactionNew(services)
+            val wtx = tx.toWireTransaction2(services)
             val ftx = wtx.buildFilteredTransaction(Predicate { fixCmdFilter(it) })
             val signature = oracle.sign(ftx)
             wtx.checkSignature(signature)
@@ -169,7 +169,7 @@ class NodeInterestRatesTest {
             val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
             val badFix = Fix(fixOf, BigDecimal("0.6789"))
             tx.addCommand(badFix, identity.owningKey)
-            val wtx = tx.toWireTransactionNew(services)
+            val wtx = tx.toWireTransaction2(services)
             val ftx = wtx.buildFilteredTransaction(Predicate { fixCmdFilter(it) })
             val e1 = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.sign(ftx) }
             assertEquals(fixOf, e1.fix)
@@ -189,7 +189,7 @@ class NodeInterestRatesTest {
                 }
             }
             tx.addCommand(fix, identity.owningKey)
-            val wtx = tx.toWireTransactionNew(services)
+            val wtx = tx.toWireTransaction2(services)
             val ftx = wtx.buildFilteredTransaction(Predicate(::filtering))
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx) }
         }
@@ -198,7 +198,7 @@ class NodeInterestRatesTest {
     @Test
     fun `empty partial transaction to sign`() {
         val tx = makeFullTx()
-        val wtx = tx.toWireTransactionNew(services)
+        val wtx = tx.toWireTransaction2(services)
         val ftx = wtx.buildFilteredTransaction(Predicate { false })
         assertFailsWith<IllegalArgumentException> { oracle.sign(ftx) } // It throws failed requirement (as it is empty there is no command to check and sign).
     }

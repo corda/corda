@@ -86,7 +86,7 @@ class OracleNodeTearOffTests {
         future.getOrThrow()
 
         // We should now have a valid rate on our tx from the oracle.
-        val fix = tx.toWireTransactionNew(aliceNode.services).commands.map { it  }.first()
+        val fix = tx.toWireTransaction2(aliceNode.services).commands.map { it  }.first()
         assertEquals(fixOf, (fix.value as Fix).of)
         // Check that the response contains the valid rate, which is within the supplied tolerance
         assertEquals(BigDecimal("0.678"), (fix.value as Fix).value)
