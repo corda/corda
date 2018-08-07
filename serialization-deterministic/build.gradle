@@ -17,13 +17,13 @@ configurations {
 
 dependencies {
     compileOnly project(':serialization')
-    compileOnly "$quasar_group:quasar-core:$quasar_version:jdk8"
 
     // Configure these by hand. It should be a minimal subset of dependencies,
     // and without any obviously non-deterministic ones such as Hibernate.
     runtimeLibraries project(path: ':core-deterministic', configuration: 'runtimeArtifacts')
     runtimeLibraries "org.apache.qpid:proton-j:$protonj_version"
     runtimeLibraries "org.iq80.snappy:snappy:$snappy_version"
+    runtimeLibraries "com.google.guava:guava:$guava_version"
 }
 
 jar {
@@ -49,6 +49,7 @@ task patchSerialization(type: Zip, dependsOn: serializationJarTask) {
         exclude 'net/corda/serialization/internal/DefaultWhitelist*'
         exclude 'net/corda/serialization/internal/amqp/AMQPSerializerFactories*'
         exclude 'net/corda/serialization/internal/amqp/AMQPStreams*'
+        exclude 'net/corda/serialization/internal/amqp/AMQPSerializationThreadContext*'
     }
 
     reproducibleFileOrder = true
@@ -58,14 +59,14 @@ task patchSerialization(type: Zip, dependsOn: serializationJarTask) {
 import proguard.gradle.ProGuardTask
 task predeterminise(type: ProGuardTask, dependsOn: project(':core-deterministic').assemble) {
     injars patchSerialization
-    outjars "$buildDir/proguard/pre-deterministic-${project.version}.jar"
+    outjars file("$buildDir/proguard/pre-deterministic-${project.version}.jar")
 
-    libraryjars "$javaHome/lib/rt.jar"
-    libraryjars "$javaHome/lib/jce.jar"
-    libraryjars "$javaHome/lib/ext/sunec.jar"
+    libraryjars file("$javaHome/lib/rt.jar")
+    libraryjars file("$javaHome/lib/jce.jar")
+    libraryjars file("$javaHome/lib/ext/sunec.jar")
     configurations.compileOnly.forEach {
-        if (originalJar.path != it.path) {
-            libraryjars it.path, filter: '!META-INF/versions/**'
+        if (originalJar != it) {
+            libraryjars it, filter: '!META-INF/versions/**'
         }
     }
 
@@ -74,6 +75,7 @@ task predeterminise(type: ProGuardTask, dependsOn: project(':core-deterministic'
     dontpreverify
     dontobfuscate
     dontoptimize
+    dontnote
     printseeds
     verbose
 
@@ -94,17 +96,20 @@ task jarFilter(type: JarFilterTask) {
         forRemove = [
             "co.paralleluniverse.fibers.Suspendable"
         ]
+        forSanitise = [
+            "net.corda.core.DeleteForDJVM"
+        ]
     }
 }
 
 task determinise(type: ProGuardTask) {
     injars jarFilter
-    outjars "$buildDir/proguard/$jarBaseName-${project.version}.jar"
+    outjars file("$buildDir/proguard/$jarBaseName-${project.version}.jar")
 
-    libraryjars "$javaHome/lib/rt.jar"
-    libraryjars "$javaHome/lib/jce.jar"
+    libraryjars file("$javaHome/lib/rt.jar")
+    libraryjars file("$javaHome/lib/jce.jar")
     configurations.runtimeLibraries.forEach {
-        libraryjars it.path, filter: '!META-INF/versions/**'
+        libraryjars it, filter: '!META-INF/versions/**'
     }
 
     // Analyse the JAR for dead code, and remove (some of) it.
@@ -114,6 +119,7 @@ task determinise(type: ProGuardTask) {
     keepattributes '*'
     keepdirectories
     dontobfuscate
+    dontnote
     printseeds
     verbose
 
@@ -137,7 +143,7 @@ task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
     libraryjars deterministic_rt_jar
 
     configurations.runtimeLibraries.forEach {
-        libraryjars it.path, filter: '!META-INF/versions/**'
+        libraryjars it, filter: '!META-INF/versions/**'
     }
 
     keepattributes '*'

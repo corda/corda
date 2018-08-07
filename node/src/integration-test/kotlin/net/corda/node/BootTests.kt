@@ -22,10 +22,9 @@ import java.io.*
 import kotlin.test.assertEquals
 
 class BootTests {
-
     @Test
     fun `java deserialization is disabled`() {
-        driver {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val user = User("u", "p", setOf(startFlow<ObjectInputStreamFlow>()))
             val future = CordaRPCClient(startNode(rpcUsers = listOf(user)).getOrThrow().rpcAddress).
                     start(user.username, user.password).proxy.startFlow(::ObjectInputStreamFlow).returnValue
@@ -36,7 +35,7 @@ class BootTests {
 
     @Test
     fun `double node start doesn't write into log file`() {
-        driver(DriverParameters(isDebug = true)) {
+        driver(DriverParameters(notarySpecs = emptyList())) {
             val alice = startNode(providedName = ALICE_NAME).get()
             val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }

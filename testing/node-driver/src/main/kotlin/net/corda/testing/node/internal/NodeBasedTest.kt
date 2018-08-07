@@ -1,5 +1,6 @@
 package net.corda.testing.node.internal
 
+import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
@@ -7,18 +8,19 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
+import net.corda.node.internal.NodeWithInfo
 import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
-import net.corda.node.internal.cordapp.CordappLoader
+
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
-import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.testing.node.User
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.getFreeLocalPorts
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.testThreadFactory
+import net.corda.testing.node.User
 import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Before
@@ -29,10 +31,12 @@ import java.nio.file.Path
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
-// TODO Some of the logic here duplicates what's in the driver
+// TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't support this, and it's a property of the Corda JAR)
 abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyList()) {
     companion object {
         private val WHITESPACE = "\\s++".toRegex()
+
+        private val logger = loggerFor<NodeBasedTest>()
     }
 
     @Rule
@@ -43,8 +47,9 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     val tempFolder = TemporaryFolder()
 
     private lateinit var defaultNetworkParameters: NetworkParametersCopier
-    private val nodes = mutableListOf<StartedNode<Node>>()
+    private val nodes = mutableListOf<NodeWithInfo>()
     private val nodeInfos = mutableListOf<NodeInfo>()
+    private val portAllocation = PortAllocation.Incremental(10000)
 
     init {
         System.setProperty("consoleLogLevel", Level.DEBUG.name().toLowerCase())
@@ -67,10 +72,10 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
             // Wait until ports are released
             val portNotBoundChecks = nodes.flatMap {
                 listOf(
-                        it.internals.configuration.p2pAddress.let { addressMustNotBeBoundFuture(shutdownExecutor, it) },
-                        it.internals.configuration.rpcOptions.address?.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
+                        addressMustNotBeBoundFuture(shutdownExecutor, it.node.configuration.p2pAddress),
+                        addressMustNotBeBoundFuture(shutdownExecutor, it.node.configuration.rpcOptions.address)
                 )
-            }.filterNotNull()
+            }
             nodes.clear()
             portNotBoundChecks.transpose().getOrThrow()
         } finally {
@@ -82,10 +87,9 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     fun startNode(legalName: CordaX500Name,
                   platformVersion: Int = 1,
                   rpcUsers: List<User> = emptyList(),
-                  configOverrides: Map<String, Any> = emptyMap()): StartedNode<Node> {
+                  configOverrides: Map<String, Any> = emptyMap()): NodeWithInfo {
         val baseDirectory = baseDirectory(legalName).createDirectories()
-        val localPort = getFreeLocalPorts("localhost", 3)
-        val p2pAddress = configOverrides["p2pAddress"] ?: localPort[0].toString()
+        val p2pAddress = configOverrides["p2pAddress"] ?: portAllocation.nextHostAndPort().toString()
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
@@ -93,27 +97,38 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                         "myLegalName" to legalName.toString(),
                         "p2pAddress" to p2pAddress,
                         "devMode" to true,
-                        "rpcSettings.address" to localPort[1].toString(),
-                        "rpcSettings.adminAddress" to localPort[2].toString(),
+                        "rpcSettings.address" to portAllocation.nextHostAndPort().toString(),
+                        "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString(),
                         "rpcUsers" to rpcUsers.map { it.toConfig().root().unwrapped() }
                 ) + configOverrides
         )
 
-        val parsedConfig = config.parseAsNodeConfiguration().also { nodeConfiguration ->
+        val cordapps =  cordappsForPackages(getCallerPackage(NodeBasedTest::class)?.let { cordappPackages + it } ?: cordappPackages)
+
+        val existingCorDappDirectoriesOption = if (config.hasPath(NodeConfiguration.cordappDirectoriesKey)) config.getStringList(NodeConfiguration.cordappDirectoriesKey) else emptyList()
+
+        val cordappDirectories = existingCorDappDirectoriesOption + TestCordappDirectories.cached(cordapps).map { it.toString() }
+
+        val specificConfig = config.withValue(NodeConfiguration.cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories))
+
+        val parsedConfig = specificConfig.parseAsNodeConfiguration().also { nodeConfiguration ->
             val errors = nodeConfiguration.validate()
             if (errors.isNotEmpty()) {
                 throw IllegalStateException("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
             }
         }
+
         defaultNetworkParameters.install(baseDirectory)
-        val node = InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion), cordappPackages).start()
-        nodes += node
+        val node = InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion))
+        val nodeInfo = node.start()
+        val nodeWithInfo = NodeWithInfo(node, nodeInfo)
+        nodes += nodeWithInfo
         ensureAllNetworkMapCachesHaveAllNodeInfos()
         thread(name = legalName.organisation) {
-            node.internals.run()
+            node.run()
         }
 
-        return node
+        return nodeWithInfo
     }
 
     protected fun baseDirectory(legalName: CordaX500Name): Path {
@@ -121,7 +136,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     }
 
     private fun ensureAllNetworkMapCachesHaveAllNodeInfos() {
-        val runningNodes = nodes.filter { it.internals.started != null }
+        val runningNodes = nodes.filter { it.node.started != null }
         val runningNodesInfo = runningNodes.map { it.info }
         for (node in runningNodes)
             for (nodeInfo in runningNodesInfo) {
@@ -130,8 +145,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     }
 }
 
-class InProcessNode(
-        configuration: NodeConfiguration, versionInfo: VersionInfo, cordappPackages: List<String>) : Node(
-        configuration, versionInfo, false, CordappLoader.createDefaultWithTestPackages(configuration, cordappPackages)) {
-    override fun getRxIoScheduler() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
+class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo) : Node(configuration, versionInfo, false) {
+
+    override val rxIoScheduler get() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
 }

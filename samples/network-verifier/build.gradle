@@ -1,0 +1,51 @@
+apply plugin: 'kotlin'
+apply plugin: 'java'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.cordformation'
+
+dependencies {
+    cordaCompile project(":core")
+    cordaCompile project(":node-api")
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+
+    testCompile project(":test-utils")
+    testCompile "junit:junit:$junit_version"
+}
+
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+    ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
+
+    directory "./build/nodes"
+    node {
+        name "O=Notary Service,L=Zurich,C=CH"
+        notary = [validating : false]
+        p2pPort 10002
+        rpcSettings {
+            port 10003
+            adminPort 10004
+        }
+        extraConfig = ['h2Settings.address' : 'localhost:20004']
+    }
+    node {
+        name "O=Bank A,L=London,C=GB"
+        p2pPort 10005
+        cordapps = []
+        rpcUsers = ext.rpcUsers
+        rpcSettings {
+            port 10007
+            adminPort 10008
+        }
+        extraConfig = ['h2Settings.address' : 'localhost:0']
+    }
+    node {
+        name "O=Bank B,L=New York,C=US"
+        p2pPort 10009
+        cordapps = []
+        rpcUsers = ext.rpcUsers
+        rpcSettings {
+            port 10011
+            adminPort 10012
+        }
+        extraConfig = ['h2Settings.address' : 'localhost:0']
+    }
+}

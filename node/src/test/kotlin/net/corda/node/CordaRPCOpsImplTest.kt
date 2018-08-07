@@ -24,11 +24,9 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.GBP
-import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.internal.StartedNode
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
@@ -40,9 +38,10 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.expect
 import net.corda.testing.core.expectEvents
 import net.corda.testing.core.sequence
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.testActor
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.*
@@ -72,7 +71,7 @@ class CordaRPCOpsImplTest {
     }
 
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var aliceNode: StartedNode<MockNode>
+    private lateinit var aliceNode: TestStartedNode
     private lateinit var alice: Party
     private lateinit var notary: Party
     private lateinit var rpc: CordaRPCOps
@@ -82,7 +81,7 @@ class CordaRPCOpsImplTest {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts.asset", "net.corda.finance.schemas"))
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         rpc = aliceNode.rpcOps
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
@@ -157,6 +156,7 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `issue and move`() {
+        @Suppress("DEPRECATION")
         withPermissions(invokeRpc(CordaRPCOps::stateMachinesFeed),
                 invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
                 invokeRpc("vaultTrackBy"),
@@ -168,11 +168,7 @@ class CordaRPCOpsImplTest {
                 vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
             }
 
-            val result = rpc.startFlow(::CashIssueFlow,
-                    100.DOLLARS,
-                    OpaqueBytes(ByteArray(1, { 1 })),
-                    notary
-            )
+            val result = rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notary)
 
             mockNet.runNetwork()
 
@@ -247,7 +243,7 @@ class CordaRPCOpsImplTest {
     fun `cash command by user not permissioned for cash`() {
         withoutAnyPermissions {
             assertThatExceptionOfType(PermissionException::class.java).isThrownBy {
-                rpc.startFlow(::CashIssueFlow, Amount(100, USD), OpaqueBytes(ByteArray(1, { 1 })), notary)
+                rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notary)
             }
         }
     }

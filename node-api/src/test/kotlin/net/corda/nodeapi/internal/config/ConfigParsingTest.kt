@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.config
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory.empty
 import com.typesafe.config.ConfigRenderOptions.defaults
 import com.typesafe.config.ConfigValueFactory
@@ -8,12 +9,14 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import org.assertj.core.api.Assertions.*
+import org.hibernate.exception.DataException
 import org.junit.Test
 import java.net.URL
 import java.nio.file.Path
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
+import javax.security.auth.x500.X500Principal
 import kotlin.reflect.full.primaryConstructor
 
 class ConfigParsingTest {
@@ -40,8 +43,16 @@ class ConfigParsingTest {
     @Test
     fun Boolean() {
         testPropertyType<BooleanData, BooleanListData, Boolean>(true, false)
+        assertThat(config(Pair("value", "false")).parseAs<BooleanData>().value).isEqualTo(false)
+        assertThat(config(Pair("value", "False")).parseAs<BooleanData>().value).isEqualTo(false)
+        assertThat(config(Pair("value", "FALSE")).parseAs<BooleanData>().value).isEqualTo(false)
+        assertThat(config(Pair("value", "true")).parseAs<BooleanData>().value).isEqualTo(true)
+        assertThat(config(Pair("value", "True")).parseAs<BooleanData>().value).isEqualTo(true)
+        assertThat(config(Pair("value", "TRUE")).parseAs<BooleanData>().value).isEqualTo(true)
+        assertThatThrownBy { config(Pair("value", "stilton")).parseAs<BooleanData>().value }
+                .isInstanceOf(ConfigException.WrongType::class.java)
+                .hasMessageContaining("hardcoded value: value has type STRING rather than BOOLEAN")
     }
-
     @Test
     fun Enum() {
         testPropertyType<EnumData, EnumListData, TestEnum>(TestEnum.Value2, TestEnum.Value1, valuesToString = true)
@@ -82,6 +93,11 @@ class ConfigParsingTest {
     @Test
     fun URL() {
         testPropertyType<URLData, URLListData, URL>(URL("http://localhost:1234"), URL("http://localhost:1235"), valuesToString = true)
+    }
+
+    @Test
+    fun X500Principal() {
+        testPropertyType<X500PrincipalData, X500PrincipalListData, X500Principal>(X500Principal("C=US, L=New York, CN=Corda Root CA, OU=Corda, O=R3 HoldCo LLC"), X500Principal("O=Bank A,L=London,C=GB"), valuesToString = true)
     }
 
     @Test
@@ -227,6 +243,36 @@ class ConfigParsingTest {
         }
     }
 
+    @Test
+    fun `parse with provided parser`() {
+        val type1Config = mapOf("type" to "1", "value" to "type 1 value")
+        val type2Config = mapOf("type" to "2", "value" to "type 2 value")
+
+        val configuration = config("values" to listOf(type1Config, type2Config))
+        val objects = configuration.parseAs<TestObjects>()
+
+        assertThat(objects.values).containsExactly(TestObject.Type1("type 1 value"), TestObject.Type2("type 2 value"))
+    }
+
+    class TestParser : ConfigParser<TestObject> {
+        override fun parse(config: Config): TestObject {
+            val type = config.getInt("type")
+            return when (type) {
+                1 -> config.parseAs<TestObject.Type1>(onUnknownKeys = UnknownConfigKeysPolicy.IGNORE::handle)
+                2 -> config.parseAs<TestObject.Type2>(onUnknownKeys = UnknownConfigKeysPolicy.IGNORE::handle)
+                else -> throw IllegalArgumentException("Unsupported Object type : '$type'")
+            }
+        }
+    }
+
+    data class TestObjects(val values: List<TestObject>)
+
+    @CustomConfigParser(TestParser::class)
+    sealed class TestObject {
+        data class Type1(val value: String) : TestObject()
+        data class Type2(val value: String) : TestObject()
+    }
+
     private inline fun <reified S : SingleData<V>, reified L : ListData<V>, V : Any> testPropertyType(
             value1: V,
             value2: V,
@@ -294,6 +340,8 @@ class ConfigParsingTest {
     data class PathListData(override val values: List<Path>) : ListData<Path>
     data class URLData(override val value: URL) : SingleData<URL>
     data class URLListData(override val values: List<URL>) : ListData<URL>
+    data class X500PrincipalData(override val value: X500Principal) : SingleData<X500Principal>
+    data class X500PrincipalListData(override val values: List<X500Principal>) : ListData<X500Principal>
     data class UUIDData(override val value: UUID) : SingleData<UUID>
     data class UUIDListData(override val values: List<UUID>) : ListData<UUID>
     data class CordaX500NameData(override val value: CordaX500Name) : SingleData<CordaX500Name>
@@ -310,6 +358,7 @@ class ConfigParsingTest {
             require(positive > 0) { "$positive is not positive" }
         }
     }
+
     data class OldData(
             @OldConfig("oldValue")
             val newValue: String)

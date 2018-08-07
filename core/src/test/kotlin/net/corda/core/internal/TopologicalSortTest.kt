@@ -21,11 +21,12 @@ import rx.Observable
 import java.util.*
 
 class TopologicalSortTest {
-    class DummyTransaction(
+    class DummyTransaction constructor(
             override val id: SecureHash,
             override val inputs: List<StateRef>,
-            val numberOfOutputs: Int,
-            override val notary: Party
+            @Suppress("CanBeParameter") val numberOfOutputs: Int,
+            override val notary: Party,
+            override val references: List<StateRef> = emptyList()
     ) : CoreTransaction() {
         override val outputs: List<TransactionState<ContractState>> = (1..numberOfOutputs).map {
             TransactionState(DummyState(), "", notary)
@@ -78,7 +79,7 @@ class TopologicalSortTest {
         }
 
         // Swap two random items
-        transactions.combine(Generator.intRange(0, N - 1), Generator.intRange(0, N - 2)) { txs, i, j ->
+        transactions.combine(Generator.intRange(0, N - 1), Generator.intRange(0, N - 2)) { txs, i, _ ->
             val k = 0 // if (i == j) i + 1 else j
             val tmp = txs[i]
             txs[i] = txs[k]
@@ -94,7 +95,7 @@ class TopologicalSortTest {
         }
     }
 
-    fun checkTopologicallyOrdered(txs: List<SignedTransaction>) {
+    private fun checkTopologicallyOrdered(txs: List<SignedTransaction>) {
         val outputs = HashSet<StateRef>()
         for (tx in txs) {
             if (!outputs.containsAll(tx.inputs)) {

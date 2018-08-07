@@ -11,6 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.packageName
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
@@ -44,7 +45,7 @@ import kotlin.test.fail
 
 class VaultWithCashTest {
     private companion object {
-        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName, "net.corda.core.contracts")
         val BOB = TestIdentity(BOB_NAME, 80).party
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
@@ -64,7 +65,7 @@ class VaultWithCashTest {
     private val servicesKey = generateKeyPair()
     lateinit var services: MockServices
     private lateinit var vaultFiller: VaultFiller
-    lateinit var issuerServices: MockServices
+    private lateinit var issuerServices: MockServices
     val vaultService: VaultService get() = services.vaultService
     lateinit var database: CordaPersistence
     private lateinit var notaryServices: MockServices
@@ -77,12 +78,12 @@ class VaultWithCashTest {
                 cordappPackages,
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
                 TestIdentity(MEGA_CORP.name, servicesKey),
-                moreKeys = dummyNotary.keyPair)
+                moreKeys = *arrayOf(dummyNotary.keyPair))
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
         issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock(), MEGA_CORP_KEY)
-        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock())
+        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock<IdentityService>())
         notary = notaryServices.myInfo.legalIdentitiesAndCerts.single().party
     }
 
@@ -130,7 +131,7 @@ class VaultWithCashTest {
                 database.transaction {
                     // A tx that spends our money.
                     val spendTXBuilder = TransactionBuilder(DUMMY_NOTARY)
-                    Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, BOB)
+                    Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, services.myInfo.legalIdentitiesAndCerts.single(), BOB)
                     val spendPTX = services.signInitialTransaction(spendTXBuilder, freshKey)
                     notaryServices.addSignature(spendPTX)
                 }
@@ -178,7 +179,7 @@ class VaultWithCashTest {
         val first = backgroundExecutor.fork {
             database.transaction {
                 val txn1Builder = TransactionBuilder(DUMMY_NOTARY)
-                Cash.generateSpend(services, txn1Builder, 60.DOLLARS, BOB)
+                Cash.generateSpend(services, txn1Builder, 60.DOLLARS, services.myInfo.legalIdentitiesAndCerts.single(), BOB)
                 val ptxn1 = notaryServices.signInitialTransaction(txn1Builder)
                 val txn1 = services.addSignature(ptxn1, freshKey)
                 println("txn1: ${txn1.id} spent ${((txn1.tx.outputs[0].data) as Cash.State).amount}")
@@ -209,7 +210,7 @@ class VaultWithCashTest {
         val second = backgroundExecutor.fork {
             database.transaction {
                 val txn2Builder = TransactionBuilder(DUMMY_NOTARY)
-                Cash.generateSpend(services, txn2Builder, 80.DOLLARS, BOB)
+                Cash.generateSpend(services, txn2Builder, 80.DOLLARS, services.myInfo.legalIdentitiesAndCerts.single(), BOB)
                 val ptxn2 = notaryServices.signInitialTransaction(txn2Builder)
                 val txn2 = services.addSignature(ptxn2, freshKey)
                 println("txn2: ${txn2.id} spent ${((txn2.tx.outputs[0].data) as Cash.State).amount}")
@@ -333,7 +334,7 @@ class VaultWithCashTest {
         database.transaction {
             // A tx that spends our money.
             val spendTXBuilder = TransactionBuilder(DUMMY_NOTARY)
-            Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, BOB)
+            Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, services.myInfo.legalIdentitiesAndCerts.single(), BOB)
             val spendPTX = notaryServices.signInitialTransaction(spendTXBuilder)
             val spendTX = services.addSignature(spendPTX, freshKey)
             services.recordTransactions(spendTX)

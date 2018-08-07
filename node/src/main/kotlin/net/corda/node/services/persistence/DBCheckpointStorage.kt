@@ -10,13 +10,12 @@ import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.Serializable
 import java.util.*
 import java.util.stream.Stream
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
-import javax.persistence.Lob
+import org.hibernate.annotations.Type
 
 /**
  * Simple checkpoint key value storage in DB.
@@ -31,18 +30,27 @@ class DBCheckpointStorage : CheckpointStorage {
             @Column(name = "checkpoint_id", length = 64, nullable = false)
             var checkpointId: String = "",
 
-            @Lob
+            @Type(type = "corda-blob")
             @Column(name = "checkpoint_value", nullable = false)
             var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
-    ) : Serializable
+    )
 
     override fun addCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>) {
-        currentDBSession().saveOrUpdate(DBCheckpoint().apply {
+        currentDBSession().save(DBCheckpoint().apply {
             checkpointId = id.uuid.toString()
             this.checkpoint = checkpoint.bytes
             log.debug { "Checkpoint $checkpointId, size=${this.checkpoint.size}" }
         })
     }
+
+    override fun updateCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>) {
+        currentDBSession().update(DBCheckpoint().apply {
+            checkpointId = id.uuid.toString()
+            this.checkpoint = checkpoint.bytes
+            log.debug { "Checkpoint $checkpointId, size=${this.checkpoint.size}" }
+        })
+    }
+
 
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
         val session = currentDBSession()

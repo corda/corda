@@ -4,18 +4,8 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.sha256
-import net.corda.core.crypto.sign
-import net.corda.core.flows.NotarisationPayload
-import net.corda.core.flows.NotarisationRequest
-import net.corda.core.flows.NotarisationRequestSignature
-import net.corda.core.flows.NotaryError
-import net.corda.core.flows.NotaryException
-import net.corda.core.flows.NotaryFlow
+import net.corda.core.crypto.*
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.messaging.MessageRecipients
@@ -27,7 +17,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.issueInvalidState
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.statemachine.InitialSessionMessage
@@ -36,12 +25,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.TestClock
-import net.corda.testing.node.internal.InMemoryMessage
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.MessagingServiceSpy
-import net.corda.testing.node.internal.setMessagingServiceSpy
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -55,14 +39,14 @@ import kotlin.test.assertTrue
 
 class ValidatingNotaryServiceTests {
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var notaryNode: StartedNode<InternalMockNetwork.MockNode>
-    private lateinit var aliceNode: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var notaryNode: TestStartedNode
+    private lateinit var aliceNode: TestStartedNode
     private lateinit var notary: Party
     private lateinit var alice: Party
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"))
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         notaryNode = mockNet.defaultNotaryNode
         notary = mockNet.defaultNotaryIdentity
@@ -307,7 +291,7 @@ class ValidatingNotaryServiceTests {
     }
 
     private fun runNotarisationAndInterceptClientPayload(payloadModifier: (NotarisationPayload) -> NotarisationPayload) {
-        aliceNode.setMessagingServiceSpy(object : MessagingServiceSpy(aliceNode.network) {
+        aliceNode.setMessagingServiceSpy(object : MessagingServiceSpy() {
             override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
                 val messageData = message.data.deserialize<Any>() as? InitialSessionMessage
                 val payload = messageData?.firstPayload!!.deserialize()
@@ -317,7 +301,6 @@ class ValidatingNotaryServiceTests {
                     val alteredMessageData = messageData.copy(firstPayload = alteredPayload.serialize())
                     val alteredMessage = InMemoryMessage(message.topic, OpaqueBytes(alteredMessageData.serialize().bytes), message.uniqueMessageId)
                     messagingService.send(alteredMessage, target)
-
                 } else {
                     messagingService.send(message, target)
                 }

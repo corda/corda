@@ -12,19 +12,11 @@ import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.AbstractAttachment
-import net.corda.core.internal.UNKNOWN_UPLOADER
-import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.readFully
+import net.corda.core.internal.*
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationToken
-import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.SerializeAsTokenContext
-import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
@@ -38,22 +30,12 @@ import net.corda.nodeapi.internal.withContractsInJar
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
-import java.io.Serializable
 import java.nio.file.Paths
 import java.time.Instant
 import java.util.*
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.CollectionTable
-import javax.persistence.Column
-import javax.persistence.ElementCollection
-import javax.persistence.Entity
-import javax.persistence.ForeignKey
-import javax.persistence.Id
-import javax.persistence.Index
-import javax.persistence.JoinColumn
-import javax.persistence.Lob
-import javax.persistence.Table
+import javax.persistence.*
 
 /**
  * Stores attachments using Hibernate to database.
@@ -61,14 +43,14 @@ import javax.persistence.Table
 @ThreadSafe
 class NodeAttachmentService(
         metrics: MetricRegistry,
+        private val database: CordaPersistence,
         attachmentContentCacheSize: Long = NodeConfiguration.defaultAttachmentContentCacheSize,
-        attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound,
-        private val database: CordaPersistence
-) : AttachmentStorage, SingletonSerializeAsToken(
-) {
-
+        attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
+) : AttachmentStorageInternal, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
+
+        private val PRIVILEGED_UPLOADERS = listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER, P2P_UPLOADER, UNKNOWN_UPLOADER)
 
         // Just iterate over the entries with verification enabled: should be good enough to catch mistakes.
         // Note that JarInputStream won't throw any kind of error at all if the file stream is in fact not
@@ -115,7 +97,7 @@ class NodeAttachmentService(
             @CollectionTable(name = "${NODE_DATABASE_PREFIX}attachments_contracts", joinColumns = [(JoinColumn(name = "att_id", referencedColumnName = "att_id"))],
                     foreignKey = ForeignKey(name = "FK__ctr_class__attachments"))
             var contractClassNames: List<ContractClassName>? = null
-    ) : Serializable
+    )
 
     @VisibleForTesting
     var checkAttachmentsOnLoad = true
@@ -123,14 +105,12 @@ class NodeAttachmentService(
     private val attachmentCount = metrics.counter("Attachments")
 
     fun start() {
-        database.transaction {
-            val session = currentDBSession()
-            val criteriaBuilder = session.criteriaBuilder
-            val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-            criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
-            val count = session.createQuery(criteriaQuery).singleResult
-            attachmentCount.inc(count)
-        }
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
+        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
+        val count = session.createQuery(criteriaQuery).singleResult
+        attachmentCount.inc(count)
     }
 
     @CordaSerializable
@@ -246,10 +226,9 @@ class NodeAttachmentService(
         }
     }
 
-    private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
-            attachmentCacheBound,
-            { key -> Optional.ofNullable(createAttachment(key)) }
-    )
+    private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(attachmentCacheBound) { key ->
+        Optional.ofNullable(createAttachment(key))
+    }
 
     private fun createAttachment(key: SecureHash): Attachment? {
         val content = attachmentContentCache.get(key)!!
@@ -276,6 +255,18 @@ class NodeAttachmentService(
     }
 
     override fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
+        require(uploader !in PRIVILEGED_UPLOADERS) { "$uploader is a reserved uploader token" }
+        if (uploader.startsWith("$P2P_UPLOADER:")) {
+            // FetchAttachmentsFlow is in core and thus doesn't have access to AttachmentStorageInternal to call
+            // privilegedImportAttachment
+            require(Thread.currentThread().stackTrace.any { it.className == FetchAttachmentsFlow::class.java.name }) {
+                "$P2P_UPLOADER is a reserved uploader token prefix"
+            }
+        }
+        return import(jar, uploader, filename)
+    }
+
+    override fun privilegedImportAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
         return import(jar, uploader, filename)
     }
 
@@ -300,7 +291,13 @@ class NodeAttachmentService(
                 if (!hasAttachment(id)) {
                     checkIsAValidJAR(bytes.inputStream())
                     val session = currentDBSession()
-                    val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename, contractClassNames = contractClassNames)
+                    val attachment = NodeAttachmentService.DBAttachment(
+                            attId = id.toString(),
+                            content = bytes,
+                            uploader = uploader,
+                            filename = filename,
+                            contractClassNames = contractClassNames
+                    )
                     session.save(attachment)
                     attachmentCount.inc()
                     log.info("Stored new attachment $id")
@@ -313,10 +310,12 @@ class NodeAttachmentService(
     }
 
     @Suppress("OverridingDeprecatedMember")
-    override fun importOrGetAttachment(jar: InputStream): AttachmentId = try {
-        import(jar, UNKNOWN_UPLOADER, null)
-    } catch (faee: java.nio.file.FileAlreadyExistsException) {
-        AttachmentId.parse(faee.message!!)
+    override fun importOrGetAttachment(jar: InputStream): AttachmentId {
+        return try {
+            import(jar, UNKNOWN_UPLOADER, null)
+        } catch (faee: java.nio.file.FileAlreadyExistsException) {
+            AttachmentId.parse(faee.message!!)
+        }
     }
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {

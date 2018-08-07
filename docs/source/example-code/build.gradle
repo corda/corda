@@ -24,6 +24,11 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/kotlin')
         }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
     }
 }
 
@@ -81,6 +86,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             adminAddress "localhost:10013"
         }
         webPort 10004
+        extraConfig = ['h2Settings.address' : 'localhost:10014']
         cordapps = []
     }
     node {
@@ -91,6 +97,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             adminAddress "localhost:10016"
         }
         webPort 10007
+        extraConfig = ['h2Settings.address' : 'localhost:10017']
         cordapps = []
         rpcUsers = [
                 ['username' : "user",

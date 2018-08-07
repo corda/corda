@@ -11,12 +11,9 @@ import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.packageName
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -26,8 +23,8 @@ import kotlin.test.assertEquals
 
 class IdempotentFlowTests {
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var nodeA: StartedNode<InternalMockNetwork.MockNode>
-    private lateinit var nodeB: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var nodeA: TestStartedNode
+    private lateinit var nodeB: TestStartedNode
 
     companion object {
         val executionCounter = AtomicInteger(0)
@@ -37,7 +34,7 @@ class IdempotentFlowTests {
 
     @Before
     fun start() {
-        mockNet = InternalMockNetwork(threadPerNode = true, cordappPackages = listOf(this.javaClass.packageName))
+        mockNet = InternalMockNetwork(threadPerNode = true, cordappsForAllNodes = cordappsForPackages(this.javaClass.packageName))
         nodeA = mockNet.createNode(InternalMockNodeParameters(
                 legalName = CordaX500Name("Alice", "AliceCorp", "GB"),
                 configOverrides = {

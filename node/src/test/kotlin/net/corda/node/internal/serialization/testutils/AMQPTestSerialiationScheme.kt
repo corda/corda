@@ -1,6 +1,6 @@
 package net.corda.node.internal.serialization.testutils
 
-import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableSerializer
+import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSerializer
 import net.corda.core.context.Trace
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
@@ -11,6 +11,7 @@ import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
 import net.corda.client.rpc.internal.ObservableContext as ClientObservableContext
 
 /**
@@ -22,13 +23,13 @@ import net.corda.client.rpc.internal.ObservableContext as ClientObservableContex
 class AMQPRoundTripRPCSerializationScheme(
         private val serializationContext: SerializationContext,
         cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
-        serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>)
+        serializerFactoriesForContexts: AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>)
     : AbstractAMQPSerializationScheme(
         cordappCustomSerializers, serializerFactoriesForContexts
 ) {
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         return SerializerFactory(AllWhitelist, javaClass.classLoader).apply {
-            register(RpcClientObservableSerializer)
+            register(RpcClientObservableDeSerializer)
         }
     }
 
@@ -44,7 +45,7 @@ class AMQPRoundTripRPCSerializationScheme(
 
     fun rpcClientSerializerFactory(observableContext: ClientObservableContext, id: Trace.InvocationId) =
             rpcClientSerializerFactory(
-                    RpcClientObservableSerializer.createContext(serializationContext, observableContext)
+                    RpcClientObservableDeSerializer.createContext(serializationContext, observableContext)
                         .withProperty(RPCApi.RpcRequestOrObservableIdKey, id))
 
     fun rpcServerSerializerFactory(observableContext: TestObservableContext) =

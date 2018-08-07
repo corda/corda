@@ -17,8 +17,6 @@ configurations {
 
 dependencies {
     compileOnly project(':core')
-    compileOnly "com.google.guava:guava:$guava_version"
-    compileOnly "$quasar_group:quasar-core:$quasar_version:jdk8"
 
     // Configure these by hand. It should be a minimal subset of core's dependencies,
     // and without any obviously non-deterministic ones such as Hibernate.
@@ -28,7 +26,6 @@ dependencies {
     runtimeLibraries "org.bouncycastle:bcprov-jdk15on:$bouncycastle_version"
     runtimeLibraries "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
     runtimeLibraries "com.google.code.findbugs:jsr305:$jsr305_version"
-    runtimeLibraries "com.google.guava:guava:$guava_version"
     runtimeLibraries "net.i2p.crypto:eddsa:$eddsa_version"
     runtimeLibraries "org.slf4j:slf4j-api:$slf4j_version"
 }
@@ -62,22 +59,23 @@ task patchCore(type: Zip, dependsOn: coreJarTask) {
 import proguard.gradle.ProGuardTask
 task predeterminise(type: ProGuardTask) {
     injars patchCore
-    outjars "$buildDir/proguard/pre-deterministic-${project.version}.jar"
+    outjars file("$buildDir/proguard/pre-deterministic-${project.version}.jar")
 
-    libraryjars "$javaHome/lib/rt.jar"
-    libraryjars "$javaHome/lib/jce.jar"
+    libraryjars file("$javaHome/lib/rt.jar")
+    libraryjars file("$javaHome/lib/jce.jar")
     configurations.compileOnly.forEach {
-        if (originalJar.path != it.path) {
-            libraryjars it.path, filter: '!META-INF/versions/**'
+        if (originalJar != it) {
+            libraryjars it, filter: '!META-INF/versions/**'
         }
     }
 
     keepattributes '*'
     keepdirectories
-    dontwarn '**$1$1'
+    dontwarn '**$1$1,org.hibernate.annotations.*'
     dontpreverify
     dontobfuscate
     dontoptimize
+    dontnote
     printseeds
     verbose
 
@@ -99,19 +97,23 @@ task jarFilter(type: JarFilterTask) {
             "net.corda.core.StubOutForDJVM"
         ]
         forRemove = [
-            "co.paralleluniverse.fibers.Suspendable"
+            "co.paralleluniverse.fibers.Suspendable",
+            "org.hibernate.annotations.Immutable"
+        ]
+        forSanitise = [
+            "net.corda.core.DeleteForDJVM"
         ]
     }
 }
 
 task determinise(type: ProGuardTask) {
     injars jarFilter
-    outjars "$buildDir/proguard/$jarBaseName-${project.version}.jar"
+    outjars file("$buildDir/proguard/$jarBaseName-${project.version}.jar")
 
-    libraryjars "$javaHome/lib/rt.jar"
-    libraryjars "$javaHome/lib/jce.jar"
+    libraryjars file("$javaHome/lib/rt.jar")
+    libraryjars file("$javaHome/lib/jce.jar")
     configurations.runtimeLibraries.forEach {
-        libraryjars it.path, filter: '!META-INF/versions/**'
+        libraryjars it, filter: '!META-INF/versions/**'
     }
 
     // Analyse the JAR for dead code, and remove (some of) it.
@@ -121,6 +123,7 @@ task determinise(type: ProGuardTask) {
     keepattributes '*'
     keepdirectories
     dontobfuscate
+    dontnote
     printseeds
     verbose
 
@@ -150,7 +153,7 @@ task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
     libraryjars deterministic_rt_jar
 
     configurations.runtimeLibraries.forEach {
-        libraryjars it.path, filter: '!META-INF/versions/**'
+        libraryjars it, filter: '!META-INF/versions/**'
     }
 
     keepattributes '*'

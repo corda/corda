@@ -97,7 +97,7 @@ class PrivatePropertyTests {
             @ConstructorForDeserialization
             constructor() : this(0, 0)
 
-            fun setA(a: Int, b: Int) { this.a = a }
+            fun setA(a: Int, @Suppress("UNUSED_PARAMETER") b: Int) { this.a = a }
             fun getA() = a
         }
 
@@ -123,7 +123,7 @@ class PrivatePropertyTests {
             SerializationOutput(factory).serialize(c1)
         }.isInstanceOf(NotSerializableException::class.java).hasMessageContaining(
                 "Defined setter for parameter a takes parameter of type class java.lang.String " +
-                        "yet underlying type is int ")
+                        "yet underlying type is int")
     }
 
     @Test

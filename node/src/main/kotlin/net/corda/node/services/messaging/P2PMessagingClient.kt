@@ -38,6 +38,7 @@ import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.requireMessageSize
+import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
@@ -70,36 +71,30 @@ import javax.annotation.concurrent.ThreadSafe
  * @param config The configuration of the node, which is used for controlling the message redelivery options.
  * @param versionInfo All messages from the node carry the version info and received messages are checked against this for compatibility.
  * @param serverAddress The host and port of the Artemis broker.
- * @param myIdentity The primary identity of the node, which defines the messaging address for externally received messages.
- * It is also used to construct the myAddress field, which is ultimately advertised in the network map.
- * @param serviceIdentity An optional second identity if the node is also part of a group address, for example a notary.
  * @param nodeExecutor The received messages are marshalled onto the server executor to prevent Netty buffers leaking during fiber suspends.
  * @param database The nodes database, which is used to deduplicate messages.
- * @param advertisedAddress The externally advertised version of the Artemis broker address used to construct myAddress and included
- * in the network map data.
- * @param maxMessageSize A bound applied to the message size.
  */
 @ThreadSafe
 class P2PMessagingClient(val config: NodeConfiguration,
                          private val versionInfo: VersionInfo,
-                         private val serverAddress: NetworkHostAndPort,
-                         private val myIdentity: PublicKey,
-                         private val serviceIdentity: PublicKey?,
+                         val serverAddress: NetworkHostAndPort,
                          private val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                          private val database: CordaPersistence,
                          private val networkMap: NetworkMapCacheInternal,
-                         advertisedAddress: NetworkHostAndPort = serverAddress,
-                         private val maxMessageSize: Int,
                          private val isDrainingModeOn: () -> Boolean,
                          private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>
-) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver, AutoCloseable {
+) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver {
     companion object {
         private val log = contextLogger()
+    }
 
-        class NodeClientMessage(override val topic: String, override val data: ByteSequence, override val uniqueMessageId: DeduplicationId, override val senderUUID: String?, override val additionalHeaders: Map<String, String>) : Message {
-            override val debugTimestamp: Instant = Instant.now()
-            override fun toString() = "$topic#${String(data.bytes)}"
-        }
+    private class NodeClientMessage(override val topic: String,
+                                    override val data: ByteSequence,
+                                    override val uniqueMessageId: DeduplicationId,
+                                    override val senderUUID: String?,
+                                    override val additionalHeaders: Map<String, String>) : Message {
+        override val debugTimestamp: Instant = Instant.now()
+        override fun toString() = "$topic#${String(data.bytes)}"
     }
 
     private class InnerState {
@@ -120,7 +115,12 @@ class P2PMessagingClient(val config: NodeConfiguration,
     /** A registration to handle messages of different types */
     data class HandlerRegistration(val topic: String, val callback: Any) : MessageHandlerRegistration
 
-    override val myAddress: SingleMessageRecipient = NodeAddress(myIdentity, advertisedAddress)
+    private lateinit var myIdentity: PublicKey
+    private var serviceIdentity: PublicKey? = null
+    private lateinit var advertisedAddress: NetworkHostAndPort
+    private var maxMessageSize: Int = -1
+
+    override val myAddress: SingleMessageRecipient get() = NodeAddress(myIdentity, advertisedAddress)
     override val ourSenderUUID = UUID.randomUUID().toString()
 
     private val state = ThreadBox(InnerState())
@@ -132,7 +132,19 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private val deduplicator = P2PMessageDeduplicator(database)
     internal var messagingExecutor: MessagingExecutor? = null
 
-    fun start() {
+    /**
+     * @param myIdentity The primary identity of the node, which defines the messaging address for externally received messages.
+     * It is also used to construct the myAddress field, which is ultimately advertised in the network map.
+     * @param serviceIdentity An optional second identity if the node is also part of a group address, for example a notary.
+     * @param advertisedAddress The externally advertised version of the Artemis broker address used to construct myAddress and included
+     * in the network map data.
+     * @param maxMessageSize A bound applied to the message size.
+     */
+    fun start(myIdentity: PublicKey, serviceIdentity: PublicKey?, maxMessageSize: Int, advertisedAddress: NetworkHostAndPort = serverAddress) {
+        this.myIdentity = myIdentity
+        this.serviceIdentity = serviceIdentity
+        this.advertisedAddress = advertisedAddress
+        this.maxMessageSize = maxMessageSize
         state.locked {
             started = true
             log.info("Connecting to message broker: $serverAddress")
@@ -168,7 +180,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 inboxes += RemoteInboxAddress(it).queueName
             }
 
-            inboxes.forEach { createQueueIfAbsent(it, producerSession!!) }
+            inboxes.forEach { createQueueIfAbsent(it, producerSession!!, exclusive = true) }
+
             p2pConsumer = P2PMessagingConsumer(inboxes, createNewSession, isDrainingModeOn, drainingModeWasChangedEvents)
 
             messagingExecutor = MessagingExecutor(
@@ -469,14 +482,14 @@ class P2PMessagingClient(val config: NodeConfiguration,
             val internalTargetQueue = (address as? ArtemisAddress)?.queueName
                     ?: throw IllegalArgumentException("Not an Artemis address")
             state.locked {
-                createQueueIfAbsent(internalTargetQueue, producerSession!!)
+                createQueueIfAbsent(internalTargetQueue, producerSession!!, exclusive = address !is ServiceAddress)
             }
             internalTargetQueue
         }
     }
 
     /** Attempts to create a durable queue on the broker which is bound to an address of the same name. */
-    private fun createQueueIfAbsent(queueName: String, session: ClientSession) {
+    private fun createQueueIfAbsent(queueName: String, session: ClientSession, exclusive: Boolean) {
         fun sendBridgeCreateMessage() {
             val keyHash = queueName.substring(PEERS_PREFIX.length)
             val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
@@ -495,7 +508,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 val queueQuery = session.queueQuery(SimpleString(queueName))
                 if (!queueQuery.isExists) {
                     log.info("Create fresh queue $queueName bound on same address")
-                    session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
+                    session.createQueue(queueName, RoutingType.ANYCAST, queueName, null, true, false,
+                            ActiveMQDefaultConfiguration.getDefaultMaxQueueConsumers(),
+                            ActiveMQDefaultConfiguration.getDefaultPurgeOnNoConsumers(), exclusive, null)
                     sendBridgeCreateMessage()
                 }
             }

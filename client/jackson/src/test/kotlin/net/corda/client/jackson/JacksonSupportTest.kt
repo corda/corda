@@ -392,6 +392,11 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     @Test
+    fun Instant() {
+        testToStringSerialisation(Instant.now())
+    }
+
+    @Test
     fun `Date is treated as Instant`() {
         val date = Date()
         val json = mapper.valueToTree<TextNode>(date)

@@ -10,10 +10,10 @@ import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
+import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.amqpMagic
 import net.corda.serialization.internal.amqp.custom.RxNotificationSerializer
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * When set as the serialization scheme for a process, sets it to be the Corda AMQP implementation.
@@ -21,12 +21,12 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class AMQPClientSerializationScheme(
             cordappCustomSerializers: Set<SerializationCustomSerializer<*,*>>,
-            serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
+            serializerFactoriesForContexts: AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
     ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, serializerFactoriesForContexts) {
-    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, ConcurrentHashMap())
+    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, AccessOrderLinkedHashMap { 128 })
 
     @Suppress("UNUSED")
-    constructor() : this(emptySet(), ConcurrentHashMap())
+    constructor() : this(emptySet(), AccessOrderLinkedHashMap { 128 })
 
     companion object {
         /** Call from main only. */
@@ -52,8 +52,8 @@ class AMQPClientSerializationScheme(
     }
 
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
-        return SerializerFactory(context.whitelist, ClassLoader.getSystemClassLoader(), context.lenientCarpenterEnabled).apply {
-            register(RpcClientObservableSerializer)
+        return SerializerFactory(context.whitelist, context.deserializationClassLoader, context.lenientCarpenterEnabled).apply {
+            register(RpcClientObservableDeSerializer)
             register(RpcClientCordaFutureSerializer(this))
             register(RxNotificationSerializer(this))
         }

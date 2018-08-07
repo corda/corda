@@ -3,8 +3,8 @@ package net.corda.testing.dsl
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
-import net.corda.core.crypto.*
 import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
 import net.corda.core.internal.UNKNOWN_UPLOADER
@@ -14,9 +14,9 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.services.MockAttachmentStorage
-import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.core.dummyCommand
+import net.corda.testing.internal.MockCordappProvider
+import net.corda.testing.services.MockAttachmentStorage
 import java.io.InputStream
 import java.security.PublicKey
 import java.util.*
@@ -96,6 +96,12 @@ data class TestTransactionDSLInterpreter private constructor(
     override fun input(stateRef: StateRef) {
         val state = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
         transactionBuilder.addInputState(StateAndRef(state, stateRef))
+    }
+
+    override fun reference(stateRef: StateRef) {
+        val state = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
+        @Suppress("DEPRECATION") // Will remove when feature finalised.
+        transactionBuilder.addReferenceState(StateAndRef(state, stateRef).referenced())
     }
 
     override fun output(contractClassName: ContractClassName,
@@ -282,7 +288,7 @@ data class TestLedgerDSLInterpreter private constructor(
             copy().dsl()
 
     override fun attachment(attachment: InputStream): SecureHash {
-        return services.attachments.importAttachment(attachment, UNKNOWN_UPLOADER, null)
+        return services.attachments.importAttachment(attachment, "TestDSL", null)
     }
 
     override fun verifies(): EnforceVerifyOrFail {
@@ -293,7 +299,8 @@ data class TestLedgerDSLInterpreter private constructor(
                 val wtx = value.transaction
                 val ltx = wtx.toLedgerTransaction(services)
                 ltx.verify()
-                val doubleSpend = wtx.inputs.intersect(usedInputs)
+                val allInputs = wtx.inputs union wtx.references
+                val doubleSpend = allInputs intersect usedInputs
                 if (!doubleSpend.isEmpty()) {
                     val txIds = mutableListOf(wtx.id)
                     doubleSpend.mapTo(txIds) { it.txhash }

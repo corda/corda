@@ -17,7 +17,6 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.http.HttpApi
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.addressMustBeBound
@@ -54,7 +53,7 @@ class DriverTests {
 
     @Test
     fun `simple node startup and shutdown`() {
-        val handle = driver {
+        val handle = driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(providedName = DUMMY_REGULATOR_NAME)
             nodeMustBeUp(node)
         }
@@ -86,15 +85,6 @@ class DriverTests {
                 assertThat(bob.rpc.networkMapSnapshot().flatMap { it.legalIdentities }).contains(defaultNotaryIdentity)
             }
         }
-    }
-
-    @Test
-    fun `random free port allocation`() {
-        val nodeHandle = driver(DriverParameters(portAllocation = RandomFree, notarySpecs = emptyList())) {
-            val nodeInfo = startNode(providedName = DUMMY_BANK_A_NAME)
-            nodeMustBeUp(nodeInfo)
-        }
-        nodeMustBeDown(nodeHandle)
     }
 
     @Test
@@ -144,25 +134,22 @@ class DriverTests {
     }
 
     @Test
-    fun `driver rejects multiple nodes with the same name`() {
+    fun `driver rejects multiple nodes with the same name parallel`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-            assertThatThrownBy {
-                listOf(
-                        newNode(DUMMY_BANK_A_NAME)(),
-                        newNode(DUMMY_BANK_B_NAME)(),
-                        newNode(DUMMY_BANK_A_NAME)()
-                ).transpose().getOrThrow()
-            }.isInstanceOf(IllegalArgumentException::class.java)
+            val nodes = listOf(newNode(DUMMY_BANK_A_NAME), newNode(DUMMY_BANK_B_NAME), newNode(DUMMY_BANK_A_NAME))
+            assertThatIllegalArgumentException().isThrownBy {
+                nodes.parallelStream().map { it.invoke() }.toList().transpose().getOrThrow()
+            }
         }
     }
 
     @Test
-    fun `driver rejects multiple nodes with the same name parallel`() {
+    fun `driver rejects multiple nodes with the same organisation name`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-            val nodes = listOf(newNode(DUMMY_BANK_A_NAME), newNode(DUMMY_BANK_B_NAME), newNode(DUMMY_BANK_A_NAME))
-            assertThatThrownBy {
-                nodes.parallelStream().map { it.invoke() }.toList().transpose().getOrThrow()
-            }.isInstanceOf(IllegalArgumentException::class.java)
+            newNode(CordaX500Name(commonName = "Notary", organisation = "R3CEV", locality = "New York", country = "US"))().getOrThrow()
+            assertThatIllegalArgumentException().isThrownBy {
+                newNode(CordaX500Name(commonName = "Regulator", organisation = "R3CEV", locality = "New York", country = "US"))().getOrThrow()
+            }
         }
     }
 

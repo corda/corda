@@ -1,3 +1,15 @@
+// Import private compile time constants
+buildscript {
+    def properties = new Properties()
+    file("$projectDir/src/main/resources/build.properties").withInputStream { properties.load(it) }
+
+    ext.jolokia_version = properties.getProperty('jolokiaAgentVersion')
+}
+
+plugins {
+    id 'com.google.cloud.tools.jib' version '0.9.4'
+}
+
 apply plugin: 'kotlin'
 // Java Persistence API support: create no-arg constructor
 // see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
@@ -8,14 +20,6 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda node modules'
-
-// Import private compile time constants
-buildscript {
-    def properties = new Properties()
-    file("$projectDir/src/main/resources/build.properties").withInputStream { properties.load(it) }
-
-    ext.jolokia_version = properties.getProperty('jolokiaAgentVersion')
-}
 
 //noinspection GroovyAssignabilityCheck
 configurations {
@@ -39,6 +43,12 @@ sourceSets {
             srcDir file('src/integration-test/resources')
         }
     }
+}
+
+jib.container {
+  mainClass = "net.corda.node.Corda"
+  args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
+  jvmFlags = ['-Xmx1g', "-javaagent:/app/libs/quasar-core-${quasar_version}.jar"]
 }
 
 // Use manual resource copying of log4j2.xml rather than source sets.
@@ -73,7 +83,7 @@ dependencies {
 
     // Kryo: object graph serialization.
     compile "com.esotericsoftware:kryo:4.0.0"
-    compile "de.javakaffee:kryo-serializers:0.41"
+    compile "de.javakaffee:kryo-serializers:0.42"
 
     compile "com.google.guava:guava:$guava_version"
 
@@ -119,6 +129,7 @@ dependencies {
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
     testCompile project(':finance')
+    testCompile project(':finance:isolated')
 
     // sample test schemas
     testCompile project(path: ':finance', configuration: 'testArtifacts')
@@ -154,6 +165,9 @@ dependencies {
 
     // Apache Shiro: authentication, authorization and session management.
     compile "org.apache.shiro:shiro-core:${shiro_version}"
+
+    //Picocli for command line interface
+    compile "info.picocli:picocli:$picocli_version"
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"

@@ -72,9 +72,10 @@ absolute path to the node's base directory.
                   If this parameter is set to `false` the rigorous CRL checking takes place, meaning that each certificate in the
                   certificate path being checked needs to have the CRL distribution point extension set and pointing to a URL serving a valid CRL.
 
+.. _databaseConfiguration:
+
 :database: Database configuration:
 
-        :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
         :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
             ``java.sql.Connection``, but without the ``TRANSACTION_`` prefix. Defaults to REPEATABLE_READ.
         :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
@@ -83,7 +84,9 @@ absolute path to the node's base directory.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
     the only configuration that has been tested, although in the future full support for other storage layers will be validated.
 
-:h2port: A number that's used to pick the H2 JDBC server port. If not set a randomly chosen port will be used.
+:h2Port: Deprecated. Use ``h2Settings`` instead.
+
+:h2Settings:  Sets the H2 JDBC server host and port. See :doc:`node-database-access-h2`. For non-localhost address the database passowrd needs to be set in ``dataSourceProperties``.
 
 :messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
 
@@ -132,7 +135,7 @@ absolute path to the node's base directory.
     :validating: Boolean to determine whether the notary is a validating or non-validating one.
 
     :serviceLegalName: If the node is part of a distributed cluster, specify the legal name of the cluster. At runtime, Corda
-    checks whether this name matches the name of the certificate of the notary cluster.
+        checks whether this name matches the name of the certificate of the notary cluster.
 
     :raft: If part of a distributed Raft cluster specify this config object, with the following settings:
 

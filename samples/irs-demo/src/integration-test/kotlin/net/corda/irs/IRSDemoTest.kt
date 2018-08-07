@@ -53,23 +53,20 @@ class IRSDemoTest {
         springDriver(DriverParameters(
                 useTestClock = true,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = rpcUsers)),
-                isDebug = true,
                 extraCordappPackagesToScan = listOf("net.corda.irs")
         )) {
-            val (nodeA, nodeB) = listOf(
+            val (controller, nodeA, nodeB) = listOf(
+                    defaultNotaryNode,
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = rpcUsers),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = rpcUsers),
                     startNode(providedName = CordaX500Name("Regulator", "Moscow", "RU"))
             ).map { it.getOrThrow() }
-            val controller = defaultNotaryNode.getOrThrow()
 
             log.info("All nodes started")
 
-            val controllerAddrFuture = startSpringBootWebapp(IrsDemoWebApplication::class.java, controller, "/api/irs/demodate")
-            val nodeAAddrFuture = startSpringBootWebapp(IrsDemoWebApplication::class.java, nodeA, "/api/irs/demodate")
-            val nodeBAddrFuture = startSpringBootWebapp(IrsDemoWebApplication::class.java, nodeB, "/api/irs/demodate")
-            val (controllerAddr, nodeAAddr, nodeBAddr) =
-                    listOf(controllerAddrFuture, nodeAAddrFuture, nodeBAddrFuture).map { it.getOrThrow().listenAddress }
+            val (controllerAddr, nodeAAddr, nodeBAddr) = listOf(controller, nodeA, nodeB).map {
+                startSpringBootWebapp(IrsDemoWebApplication::class.java, it, "/api/irs/demodate")
+            }.map { it.getOrThrow().listenAddress }
 
             log.info("All webservers started")
 

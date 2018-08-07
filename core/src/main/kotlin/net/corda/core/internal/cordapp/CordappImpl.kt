@@ -33,4 +33,16 @@ data class CordappImpl(
      * TODO: Also add [SchedulableFlow] as a Cordapp class
      */
     override val cordappClasses = ((rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass }).map { it.name } + contractClassNames)
+
+    data class Info(override val shortName: String, override val vendor: String, override val version: String): Cordapp.Info {
+        companion object {
+            private const val UNKNOWN_VALUE = "Unknown"
+
+            val UNKNOWN = Info(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE)
+        }
+
+        override fun hasUnknownFields(): Boolean {
+            return setOf(shortName, vendor, version).any { it == UNKNOWN_VALUE }
+        }
+    }
 }

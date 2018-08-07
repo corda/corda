@@ -15,12 +15,12 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
 import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
 import org.junit.Ignore
 import org.junit.Test
-import java.io.Serializable
 import javax.persistence.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -32,7 +32,7 @@ class NodeSchemaServiceTest {
      */
     @Test
     fun `registering custom schemas for testing with MockNode`() {
-        val mockNet = InternalMockNetwork(cordappPackages = listOf(DummyLinearStateSchemaV1::class.packageName))
+        val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(DummyLinearStateSchemaV1::class.packageName))
         val mockNode = mockNet.createNode()
         val schemaService = mockNode.services.schemaService
         assertTrue(schemaService.schemaOptions.containsKey(DummyLinearStateSchemaV1))
@@ -41,7 +41,7 @@ class NodeSchemaServiceTest {
 
     @Test
     fun `check node runs with minimal core schema set`() {
-        val mockNet = InternalMockNetwork(cordappPackages = emptyList())
+        val mockNet = InternalMockNetwork()
         val mockNode = mockNet.createNode()
         val schemaService = mockNode.services.schemaService
 
@@ -53,7 +53,7 @@ class NodeSchemaServiceTest {
 
     @Test
     fun `check node runs inclusive of notary node schema set`() {
-        val mockNet = InternalMockNetwork(cordappPackages = emptyList())
+        val mockNet = InternalMockNetwork()
         val mockNotaryNode = mockNet.notaryNodes.first()
         val schemaService = mockNotaryNode.services.schemaService
 
@@ -65,8 +65,6 @@ class NodeSchemaServiceTest {
 
     /**
      * Note: this test verifies auto-scanning to register identified [MappedSchema] schemas.
-     *       By default, Driver uses the caller package for auto-scanning:
-     *       System.setProperty("net.corda.node.cordapp.scan.packages", callerPackage)
      */
     @Test
     fun `auto scanning of custom schemas for testing with Driver`() {
@@ -142,7 +140,7 @@ object TestSchema : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::clas
     @Suppress("unused")
     @Entity
     @Table(name = "Children")
-    class Child : Serializable {
+    class Child {
         @Id
         @GeneratedValue
         @Column(name = "child_id", unique = true, nullable = false)

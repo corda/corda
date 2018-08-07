@@ -13,13 +13,17 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
+import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.MAX_MESSAGE_SIZE
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.DEV_INTERMEDIATE_CA
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.rigorousMock
@@ -46,6 +50,7 @@ import java.io.Closeable
 import java.math.BigInteger
 import java.net.InetSocketAddress
 import java.security.KeyPair
+import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.Security
 import java.security.cert.X509CRL
@@ -65,7 +70,8 @@ class CertificateRevocationListNodeTests {
     private val ROOT_CA = DEV_ROOT_CA
     private lateinit var INTERMEDIATE_CA: CertificateAndKeyPair
 
-    private val serverPort = freePort()
+    private val portAllocation = PortAllocation.Incremental(10000)
+    private val serverPort = portAllocation.nextPort()
 
     private lateinit var server: CrlServer
 
@@ -244,7 +250,7 @@ class CertificateRevocationListNodeTests {
     @Test
     fun `AMPQ Client to Server connection succeeds when CRL cannot be obtained and soft fail is enabled`() {
         val crlCheckSoftFail = true
-        val (amqpServer, serverCert) = createServer(
+        val (amqpServer, _) = createServer(
                 serverPort,
                 crlCheckSoftFail = crlCheckSoftFail,
                 nodeCrlDistPoint = "http://${server.hostAndPort}/crl/invalid.crl")
@@ -335,16 +341,18 @@ class CertificateRevocationListNodeTests {
         val nodeCert = clientConfig.recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
         val clientTruststore = clientConfig.loadTrustStore().internal
         val clientKeystore = clientConfig.loadSslKeyStore().internal
+
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = clientKeystore
+            override val keyStorePrivateKeyPassword: CharArray = clientConfig.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = clientTruststore
+            override val crlCheckSoftFail: Boolean = crlCheckSoftFail
+            override val maxMessageSize: Int = maxMessageSize
+        }
         return Pair(AMQPClient(
                 listOf(NetworkHostAndPort("localhost", targetPort)),
                 setOf(ALICE_NAME, CHARLIE_NAME),
-                PEER_USER,
-                PEER_USER,
-                clientKeystore,
-                clientConfig.keyStorePassword,
-                clientTruststore,
-                crlCheckSoftFail,
-                maxMessageSize = maxMessageSize), nodeCert)
+                amqpConfig), nodeCert)
     }
 
     private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME,
@@ -363,16 +371,17 @@ class CertificateRevocationListNodeTests {
         val nodeCert = serverConfig.recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
         val serverTruststore = serverConfig.loadTrustStore().internal
         val serverKeystore = serverConfig.loadSslKeyStore().internal
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = serverKeystore
+            override val keyStorePrivateKeyPassword: CharArray = serverConfig.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = serverTruststore
+            override val crlCheckSoftFail: Boolean = crlCheckSoftFail
+            override val maxMessageSize: Int = maxMessageSize
+        }
         return Pair(AMQPServer(
                 "0.0.0.0",
                 port,
-                PEER_USER,
-                PEER_USER,
-                serverKeystore,
-                serverConfig.keyStorePassword,
-                serverTruststore,
-                crlCheckSoftFail,
-                maxMessageSize = maxMessageSize), nodeCert)
+                amqpConfig), nodeCert)
     }
 
     private fun SSLConfiguration.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {

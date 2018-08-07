@@ -10,7 +10,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
-import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableSerializer
+import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSerializer
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
@@ -155,7 +155,7 @@ class RPCClientProxyHandler(
     private val observablesToReap = ThreadBox(object {
         var observables = ArrayList<InvocationId>()
     })
-    private val serializationContextWithObservableContext = RpcClientObservableSerializer.createContext(serializationContext, observableContext)
+    private val serializationContextWithObservableContext = RpcClientObservableDeSerializer.createContext(serializationContext, observableContext)
 
     private fun createRpcObservableMap(): RpcObservableMap {
         val onObservableRemove = RemovalListener<InvocationId, UnicastSubject<Notification<*>>> { key, _, cause ->
@@ -559,7 +559,7 @@ private typealias RpcReplyMap = ConcurrentHashMap<InvocationId, SettableFuture<A
 private typealias CallSiteMap = ConcurrentHashMap<InvocationId, Throwable?>
 
 /**
- * Holds a context available during Kryo deserialisation of messages that are expected to contain Observables.
+ * Holds a context available during de-serialisation of messages that are expected to contain Observables.
  *
  * @param observableMap holds the Observables that are ultimately exposed to the user.
  * @param hardReferenceStore holds references to Observables we want to keep alive while they are subscribed to.

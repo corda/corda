@@ -1,15 +1,11 @@
 package net.corda.core.identity
 
-import com.google.common.collect.ImmutableSet
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.LegalNameValidator
+import net.corda.core.internal.toAttributesMap
+import net.corda.core.internal.toX500Name
 import net.corda.core.internal.unspecifiedCountry
-import net.corda.core.internal.x500Name
 import net.corda.core.serialization.CordaSerializable
-import org.bouncycastle.asn1.ASN1Encodable
-import org.bouncycastle.asn1.ASN1ObjectIdentifier
-import org.bouncycastle.asn1.x500.AttributeTypeAndValue
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
 import java.util.*
 import javax.security.auth.x500.X500Principal
@@ -82,33 +78,17 @@ data class CordaX500Name(val commonName: String?,
         const val MAX_LENGTH_COMMON_NAME = 64
 
         private val supportedAttributes = setOf(BCStyle.O, BCStyle.C, BCStyle.L, BCStyle.CN, BCStyle.ST, BCStyle.OU)
-        private val countryCodes: Set<String> = ImmutableSet.copyOf(Locale.getISOCountries() + unspecifiedCountry)
+        private val countryCodes: Set<String> = setOf(*Locale.getISOCountries(), unspecifiedCountry)
 
         @JvmStatic
         fun build(principal: X500Principal): CordaX500Name {
-            val x500Name = X500Name.getInstance(principal.encoded)
-            val attrsMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = x500Name.rdNs
-                    .flatMap { it.typesAndValues.asList() }
-                    .groupBy(AttributeTypeAndValue::getType, AttributeTypeAndValue::getValue)
-                    .mapValues {
-                        require(it.value.size == 1) { "Duplicate attribute ${it.key}" }
-                        it.value[0]
-                    }
-
-            // Supported attribute checks.
-            (attrsMap.keys - supportedAttributes).let { unsupported ->
-                require(unsupported.isEmpty()) {
-                    "The following attribute${if (unsupported.size > 1) "s are" else " is"} not supported in Corda: " +
-                            unsupported.map { BCStyle.INSTANCE.oidToDisplayName(it) }
-                }
-            }
-
+            val attrsMap = principal.toAttributesMap(supportedAttributes)
             val CN = attrsMap[BCStyle.CN]?.toString()
             val OU = attrsMap[BCStyle.OU]?.toString()
-            val O = attrsMap[BCStyle.O]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an O attribute")
-            val L = attrsMap[BCStyle.L]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an L attribute")
+            val O = requireNotNull(attrsMap[BCStyle.O]?.toString()) { "Corda X.500 names must include an O attribute" }
+            val L = requireNotNull(attrsMap[BCStyle.L]?.toString()) { "Corda X.500 names must include an L attribute" }
             val ST = attrsMap[BCStyle.ST]?.toString()
-            val C = attrsMap[BCStyle.C]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an C attribute")
+            val C = requireNotNull(attrsMap[BCStyle.C]?.toString()) { "Corda X.500 names must include an C attribute" }
             return CordaX500Name(CN, OU, O, L, ST, C)
         }
 
@@ -122,7 +102,7 @@ data class CordaX500Name(val commonName: String?,
     /** Return the [X500Principal] equivalent of this name. */
     val x500Principal: X500Principal
         get() {
-            return _x500Principal ?: X500Principal(this.x500Name.encoded).also { _x500Principal = it }
+            return _x500Principal ?: X500Principal(this.toX500Name().encoded).also { _x500Principal = it }
         }
 
     override fun toString(): String = x500Principal.toString()

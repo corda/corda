@@ -53,6 +53,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address "localhost:10003"
             adminAddress "localhost:10004"
         }
+        extraConfig = ['h2Settings.address' : 'localhost:10012']
     }
     node {
         name "O=Bank A,L=London,C=GB"
@@ -63,6 +64,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address "localhost:10006"
             adminAddress "localhost:10007"
         }
+        extraConfig = ['h2Settings.address' : 'localhost:10013']
     }
     node {
         name "O=Bank B,L=New York,C=US"
@@ -74,6 +76,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         webPort 10010
         cordapps = []
         rpcUsers = ext.rpcUsers
+        extraConfig = ['h2Settings.address' : 'localhost:10014']
     }
 }
 

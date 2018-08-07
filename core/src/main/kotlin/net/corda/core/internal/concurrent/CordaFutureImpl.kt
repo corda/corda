@@ -1,8 +1,8 @@
 package net.corda.core.internal.concurrent
 
-import net.corda.core.internal.VisibleForTesting
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.match
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import org.slf4j.Logger

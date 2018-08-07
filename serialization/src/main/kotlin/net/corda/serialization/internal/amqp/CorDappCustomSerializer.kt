@@ -1,12 +1,12 @@
 package net.corda.serialization.internal.amqp
 
+import com.google.common.reflect.TypeToken
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
-import java.io.NotSerializableException
 import java.lang.reflect.Type
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.jvm.jvmErasure
@@ -45,15 +45,19 @@ const val PROXY_TYPE = 1
  */
 class CorDappCustomSerializer(
         private val serializer: SerializationCustomSerializer<*, *>,
-        factory: SerializerFactory) : AMQPSerializer<Any>, SerializerFor {
+        factory: SerializerFactory
+) : AMQPSerializer<Any>, SerializerFor {
     override val revealSubclassesInSchema: Boolean get() = false
+
     private val types = serializer::class.supertypes.filter { it.jvmErasure == SerializationCustomSerializer::class }
             .flatMap { it.arguments }
             .map { it.type!!.javaType }
 
     init {
         if (types.size != 2) {
-            throw NotSerializableException("Unable to determine serializer parent types")
+            throw AMQPNotSerializableException(
+                    CorDappCustomSerializer::class.java,
+                    "Unable to determine serializer parent types")
         }
     }
 
@@ -85,6 +89,12 @@ class CorDappCustomSerializer(
     ) = uncheckedCast<SerializationCustomSerializer<*, *>, SerializationCustomSerializer<Any?, Any?>>(
             serializer).fromProxy(uncheckedCast(proxySerializer.readObject(obj, schemas, input, context)))!!
 
-    override fun isSerializerFor(clazz: Class<*>) = clazz == type
+    /**
+     * For 3rd party plugin serializers we are going to exist on exact type matching. i.e. we will
+     * not support base class serializers for derivedtypes
+     */
+    override fun isSerializerFor(clazz: Class<*>) : Boolean {
+        return type.asClass()?.let { TypeToken.of(it) == TypeToken.of(clazz) } ?: false
+    }
 }
 

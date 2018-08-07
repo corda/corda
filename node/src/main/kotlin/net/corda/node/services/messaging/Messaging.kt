@@ -26,7 +26,7 @@ import javax.annotation.concurrent.ThreadSafe
  * is *reliable* and as such messages may be stored to disk once queued.
  */
 @ThreadSafe
-interface MessagingService {
+interface MessagingService : AutoCloseable {
     /**
      * A unique identifier for this sender that changes whenever a node restarts.  This is used in conjunction with a sequence
      * number for message de-duplication at the recipient.
@@ -144,13 +144,6 @@ interface ReceivedMessage : Message {
     val senderSeqNo: Long?
     /** True if a flow session init message */
     val isSessionInit: Boolean
-}
-
-/** A singleton that's useful for validating topic strings */
-object TopicStringValidator {
-    private val regex = "[a-zA-Z0-9.]+".toPattern()
-    /** @throws IllegalArgumentException if the given topic contains invalid characters */
-    fun check(tag: String) = require(regex.matcher(tag).matches())
 }
 
 /**

@@ -41,18 +41,24 @@ fun constructorForDeserialization(type: Type): KFunction<Any>? {
         for (kotlinConstructor in kotlinConstructors) {
             if (preferredCandidate == null && kotlinConstructors.size == 1) {
                 preferredCandidate = kotlinConstructor
-            } else if (preferredCandidate == null && kotlinConstructors.size == 2 && hasDefault && kotlinConstructor.parameters.isNotEmpty()) {
+            } else if (preferredCandidate == null &&
+                    kotlinConstructors.size == 2 &&
+                    hasDefault &&
+                    kotlinConstructor.parameters.isNotEmpty()
+            ) {
                 preferredCandidate = kotlinConstructor
             } else if (kotlinConstructor.findAnnotation<ConstructorForDeserialization>() != null) {
                 if (annotatedCount++ > 0) {
-                    throw NotSerializableException("More than one constructor for $clazz is annotated with @ConstructorForDeserialization.")
+                    throw AMQPNotSerializableException(
+                            type,
+                            "More than one constructor for $clazz is annotated with @ConstructorForDeserialization.")
                 }
                 preferredCandidate = kotlinConstructor
             }
         }
 
         return preferredCandidate?.apply { isAccessible = true }
-                ?: throw NotSerializableException("No constructor for deserialization found for $clazz.")
+                ?: throw AMQPNotSerializableException(type, "No constructor for deserialization found for $clazz.")
     } else {
         return null
     }
@@ -249,13 +255,14 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
             // with the case we don't know the case of A when the parameter doesn't match a property
             // but has a getter
             val matchingProperty = classProperties[name] ?: classProperties[name.capitalize()]
-            ?: throw NotSerializableException(
+            ?: throw AMQPNotSerializableException(type,
                     "Constructor parameter - \"$name\" -  doesn't refer to a property of \"$clazz\"")
 
             // If the property has a getter we'll use that to retrieve it's value from the instance, if it doesn't
             // *for *know* we switch to a reflection based method
             val propertyReader = if (matchingProperty.getter != null) {
-                val getter = matchingProperty.getter ?: throw NotSerializableException(
+                val getter = matchingProperty.getter ?: throw AMQPNotSerializableException(
+                        type,
                         "Property has no getter method for - \"$name\" - of \"$clazz\". If using Java and the parameter name"
                                 + "looks anonymous, check that you have the -parameters option specified in the "
                                 + "Java compiler. Alternately, provide a proxy serializer "
@@ -263,7 +270,8 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
 
                 val returnType = resolveTypeVariables(getter.genericReturnType, type)
                 if (!constructorParamTakesReturnTypeOfGetter(returnType, getter.genericReturnType, param.value)) {
-                    throw NotSerializableException(
+                    throw AMQPNotSerializableException(
+                            type,
                             "Property - \"$name\" - has type \"$returnType\" on \"$clazz\" but differs from constructor " +
                                     "parameter type \"${param.value.type.javaType}\"")
                 }
@@ -271,12 +279,13 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
                 Pair(PublicPropertyReader(getter), returnType)
             } else {
                 val field = classProperties[name]!!.field
-                        ?: throw NotSerializableException("No property matching constructor parameter named - \"$name\" - " +
+                        ?: throw AMQPNotSerializableException(type,
+                                "No property matching constructor parameter named - \"$name\" - " +
                                 "of \"$clazz\". If using Java, check that you have the -parameters option specified " +
                                 "in the Java compiler. Alternately, provide a proxy serializer " +
                                 "(SerializationCustomSerializer) if recompiling isn't an option")
 
-                Pair(PrivatePropertyReader(field, type), field.genericType)
+                Pair(PrivatePropertyReader(field, type), resolveTypeVariables(field.genericType, type))
             }
 
             this += PropertyAccessorConstructor(
@@ -304,22 +313,28 @@ fun propertiesForSerializationFromSetters(
             if (getter == null || setter == null) return@forEach
 
             if (setter.parameterCount != 1) {
-                throw NotSerializableException("Defined setter for parameter ${property.value.field?.name} " +
-                        "takes too many arguments")
+                throw AMQPNotSerializableException(
+                        type,
+                        "Defined setter for parameter ${property.value.field?.name} takes too many arguments")
             }
 
             val setterType = setter.genericParameterTypes[0]!!
 
             if ((property.value.field != null) &&
-                    (!(TypeToken.of(property.value.field?.genericType!!).isSupertypeOf(setterType)))) {
-                throw NotSerializableException("Defined setter for parameter ${property.value.field?.name} " +
+                    (!(TypeToken.of(property.value.field?.genericType!!).isSupertypeOf(setterType)))
+            ) {
+                throw AMQPNotSerializableException(
+                        type,
+                        "Defined setter for parameter ${property.value.field?.name} " +
                         "takes parameter of type $setterType yet underlying type is " +
                         "${property.value.field?.genericType!!}")
             }
 
             // Make sure the getter returns the same type (within inheritance bounds) the setter accepts.
             if (!(TypeToken.of(getter.genericReturnType).isSupertypeOf(setterType))) {
-                throw NotSerializableException("Defined setter for parameter ${property.value.field?.name} " +
+                throw AMQPNotSerializableException(
+                        type,
+                        "Defined setter for parameter ${property.value.field?.name} " +
                         "takes parameter of type $setterType yet the defined getter returns a value of type " +
                         "${getter.returnType} [${getter.genericReturnType}]")
             }
@@ -427,7 +442,7 @@ fun Data.writeReferencedObject(refObject: ReferencedObject) {
     exit() // exit described
 }
 
-private fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
+fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
     val resolvedType = if (contextType != null) TypeToken.of(contextType).resolveType(actualType).type else actualType
     // TODO: surely we check it is concrete at this point with no TypeVariables
     return if (resolvedType is TypeVariable<*>) {
@@ -436,7 +451,9 @@ private fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
             SerializerFactory.AnyType
         } else if (bounds.size == 1) {
             resolveTypeVariables(bounds[0], contextType)
-        } else throw NotSerializableException("Got bounded type $actualType but only support single bound.")
+        } else throw AMQPNotSerializableException(
+                actualType,
+                "Got bounded type $actualType but only support single bound.")
     } else {
         resolvedType
     }
@@ -478,7 +495,7 @@ internal fun Type.asParameterizedType(): ParameterizedType {
     return when (this) {
         is Class<*> -> this.asParameterizedType()
         is ParameterizedType -> this
-        else -> throw NotSerializableException("Don't know how to convert to ParameterizedType")
+        else -> throw AMQPNotSerializableException(this, "Don't know how to convert to ParameterizedType")
     }
 }
 
@@ -499,32 +516,13 @@ internal enum class CommonPropertyNames {
     IncludeInternalInfo,
 }
 
-/**
- * Utility function which helps tracking the path in the object graph when exceptions are thrown.
- * Since there might be a chain of nested calls it is useful to record which part of the graph caused an issue.
- * Path information is added to the message of the exception being thrown.
- */
-internal inline fun <T> ifThrowsAppend(strToAppendFn: () -> String, block: () -> T): T {
-    try {
-        return block()
-    } catch (th: Throwable) {
-        th.setMessage("${strToAppendFn()} -> ${th.message}")
-        throw th
-    }
-}
 
-/**
- * Not a public property so will have to use reflection
- */
-private fun Throwable.setMessage(newMsg: String) {
-    val detailMessageField = Throwable::class.java.getDeclaredField("detailMessage")
-    detailMessageField.isAccessible = true
-    detailMessageField.set(this, newMsg)
-}
 
 fun ClassWhitelist.requireWhitelisted(type: Type) {
     if (!this.isWhitelisted(type.asClass()!!)) {
-        throw NotSerializableException("Class $type is not on the whitelist or annotated with @CordaSerializable.")
+        throw AMQPNotSerializableException(
+                type,
+                "Class \"$type\" is not on the whitelist or annotated with @CordaSerializable.")
     }
 }
 

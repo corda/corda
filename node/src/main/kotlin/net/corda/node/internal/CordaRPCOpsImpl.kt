@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import net.corda.client.rpc.notUsed
+import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
@@ -17,26 +18,12 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
 import net.corda.core.internal.sign
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.DataFeed
-import net.corda.core.messaging.FlowHandle
-import net.corda.core.messaging.FlowHandleImpl
-import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.FlowProgressHandleImpl
-import net.corda.core.messaging.ParametersUpdateInfo
-import net.corda.core.messaging.RPCReturnsObservables
-import net.corda.core.messaging.StateMachineInfo
-import net.corda.core.messaging.StateMachineTransactionMapping
-import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
-import net.corda.core.node.services.vault.AttachmentSort
-import net.corda.core.node.services.vault.PageSpecification
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
@@ -48,6 +35,7 @@ import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import rx.Observable
 import java.io.InputStream
+import java.net.ConnectException
 import java.security.PublicKey
 import java.time.Instant
 
@@ -72,11 +60,10 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun acceptNewNetworkParameters(parametersHash: SecureHash) {
-        services.networkMapUpdater.acceptNewNetworkParameters(
-                parametersHash,
-                // TODO When multiple identities design will be better specified this should be signature from node operator.
-                { hash -> hash.serialize().sign { services.keyManagementService.sign(it.bytes, services.myInfo.legalIdentities[0].owningKey) } }
-        )
+        // TODO When multiple identities design will be better specified this should be signature from node operator.
+        services.networkMapUpdater.acceptNewNetworkParameters(parametersHash) { hash ->
+            hash.serialize().sign { services.keyManagementService.sign(it.bytes, services.myInfo.legalIdentities[0].owningKey) }
+        }
     }
 
     override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {
@@ -189,7 +176,7 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun uploadAttachment(jar: InputStream): SecureHash {
-        return services.attachments.importAttachment(jar, RPC_UPLOADER, null)
+        return services.attachments.privilegedImportAttachment(jar, RPC_UPLOADER, null)
     }
 
     override fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash {
@@ -230,6 +217,17 @@ internal class CordaRPCOpsImpl(
 
     override fun clearNetworkMapCache() {
         services.networkMapCache.clearNetworkMapCache()
+    }
+
+    override fun refreshNetworkMapCache() {
+        try {
+            services.networkMapUpdater.updateNetworkMapCache()
+        } catch (e: Exception) {
+            when (e) {
+                is ConnectException -> throw CordaRuntimeException("There is connection problem to network map. The possible causes are incorrect configuration or network map service being down")
+                else -> throw e
+            }
+        }
     }
 
     override fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T> {

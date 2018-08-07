@@ -4,7 +4,6 @@ import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
@@ -25,27 +24,29 @@ import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DummyFungibleContract
 import net.corda.finance.schemas.CashSchemaV1
+import net.corda.finance.schemas.SampleCashSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
 import net.corda.node.internal.configureDatabase
-import net.corda.node.services.schema.ContractStateAndRef
-import net.corda.node.services.schema.HibernateObserver
-import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.schema.ContractStateAndRef
+import net.corda.node.services.schema.PersistentStateService
+import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.NodeVaultService
+import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.DummyDealStateSchemaV1
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV2
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
-import net.corda.testing.internal.vault.DummyLinearStateSchemaV2
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
@@ -74,18 +75,18 @@ class HibernateConfigurationTest {
     val testSerialization = SerializationEnvironmentRule()
     lateinit var services: MockServices
     private lateinit var vaultFiller: VaultFiller
-    lateinit var bankServices: MockServices
-    lateinit var issuerServices: MockServices
-    lateinit var notaryServices: MockServices
+    private lateinit var bankServices: MockServices
+    private lateinit var issuerServices: MockServices
+    private lateinit var notaryServices: MockServices
     lateinit var database: CordaPersistence
     val vault: VaultService get() = services.vaultService
 
     // Hibernate configuration objects
     lateinit var hibernateConfig: HibernateConfiguration
-    lateinit var hibernatePersister: HibernateObserver
-    lateinit var sessionFactory: SessionFactory
-    lateinit var entityManager: EntityManager
-    lateinit var criteriaBuilder: CriteriaBuilder
+    private lateinit var hibernatePersister: PersistentStateService
+    private lateinit var sessionFactory: SessionFactory
+    private lateinit var entityManager: EntityManager
+    private lateinit var criteriaBuilder: CriteriaBuilder
 
     // Identities used
     private lateinit var identity: Party
@@ -93,14 +94,14 @@ class HibernateConfigurationTest {
     private lateinit var notary: Party
 
     // test States
-    lateinit var cashStates: List<StateAndRef<Cash.State>>
+    private lateinit var cashStates: List<StateAndRef<Cash.State>>
 
     @Before
     fun setUp() {
-        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset")
+        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", "net.corda.finance.schemas")
         bankServices = MockServices(cordappPackages, BOC.name, rigorousMock(), BOC_KEY)
-        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock())
-        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock())
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock<IdentityService>())
+        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock<IdentityService>())
         notary = notaryServices.myInfo.singleIdentity()
         val dataSourceProps = makeTestDataSourceProperties()
         val identityService = rigorousMock<IdentityService>().also { mock ->
@@ -110,7 +111,7 @@ class HibernateConfigurationTest {
                 doReturn(it.party).whenever(mock).wellKnownPartyFromX500Name(it.name)
             }
         }
-        val schemaService = NodeSchemaService()
+        val schemaService = NodeSchemaService(extraSchemas = setOf(CashSchemaV1, SampleCashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, DummyLinearStateSchemaV1, DummyLinearStateSchemaV2, DummyDealStateSchemaV1))
         database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
         database.transaction {
             hibernateConfig = database.hibernateConfig
@@ -119,7 +120,7 @@ class HibernateConfigurationTest {
             services = object : MockServices(cordappPackages, BOB_NAME, rigorousMock<IdentityServiceInternal>().also {
                 doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == BOB_NAME })
             }, generateKeyPair(), dummyNotary.keyPair) {
-                override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, hibernateConfig, database)
+                override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, database, schemaService).apply { start() }
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         (validatedTransactions as WritableTransactionStorage).addTransaction(stx)
@@ -131,7 +132,7 @@ class HibernateConfigurationTest {
                 override fun jdbcSession() = database.createSession()
             }
             vaultFiller = VaultFiller(services, dummyNotary, notary, ::Random)
-            hibernatePersister = HibernateObserver.install(services.vaultService.rawUpdates, hibernateConfig, schemaService)
+            hibernatePersister = PersistentStateService(schemaService)
         }
 
         identity = services.myInfo.singleIdentity()
@@ -690,7 +691,7 @@ class HibernateConfigurationTest {
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
 
         queryResults.forEach {
-            val cashState = (services.loadState(toStateRef(it.stateRef!!)) as TransactionState<Cash.State>).data
+            val cashState = services.loadState(toStateRef(it.stateRef!!)).data as Cash.State
             println("${it.stateRef} with owner: ${cashState.owner.owningKey.toBase58String()}")
         }
 
@@ -774,7 +775,7 @@ class HibernateConfigurationTest {
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
         queryResults.forEach {
-            val cashState = (services.loadState(toStateRef(it.stateRef!!)) as TransactionState<Cash.State>).data
+            val cashState = services.loadState(toStateRef(it.stateRef!!)).data as Cash.State
             println("${it.stateRef} with owner ${cashState.owner.owningKey.toBase58String()} and participants ${cashState.participants.map { it.owningKey.toBase58String() }}")
         }
 
@@ -913,6 +914,6 @@ class HibernateConfigurationTest {
     }
 
     private fun toStateRef(pStateRef: PersistentStateRef): StateRef {
-        return StateRef(SecureHash.parse(pStateRef.txId!!), pStateRef.index!!)
+        return StateRef(SecureHash.parse(pStateRef.txId), pStateRef.index)
     }
 }

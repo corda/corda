@@ -32,7 +32,6 @@ import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import java.io.Serializable
 import java.nio.file.Path
 import java.time.Clock
 import java.util.concurrent.CompletableFuture
@@ -94,7 +93,7 @@ class RaftUniquenessProvider(
             var value: String? = "",
             @Column(name = "raft_log_index", nullable = false)
             var index: Long = 0
-    ) : Serializable
+    )
 
     /** Directory storing the Raft log and state machine snapshots */
     private val storagePath: Path = transportConfiguration.baseDirectory
@@ -191,14 +190,17 @@ class RaftUniquenessProvider(
             txId: SecureHash,
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow?) {
+            timeWindow: TimeWindow?,
+            references: List<StateRef>
+    ) {
         log.debug { "Attempting to commit input states: ${states.joinToString()}" }
         val commitCommand = CommitTransaction(
                 states,
                 txId,
                 callerIdentity.name.toString(),
                 requestSignature.serialize().bytes,
-                timeWindow
+                timeWindow,
+                references
         )
         val commitError = client.submit(commitCommand).get()
         if (commitError != null) throw NotaryInternalException(commitError)

@@ -9,29 +9,48 @@ first public Beta (:ref:`Milestone 12 <changelog_m12>`), to :ref:`V1.0 <changelo
 
 General rules
 -------------
-Always remember to update the version identifiers in your project gradle file:
+* Always remember to update the version identifiers in your project gradle file:
 
 .. sourcecode:: shell
 
-    ext.corda_release_version = '1.0.0'
-    ext.corda_gradle_plugins_version = '1.0.0'
+    ext.corda_release_version = 'x.y.0'
+    ext.corda_gradle_plugins_version = 'x.y.0'
 
-It may be necessary to update the version of major dependencies:
+* It may also be necessary to update the version of major dependencies:
 
 .. sourcecode:: shell
 
-    ext.kotlin_version = '1.1.4'
-    ext.quasar_version = '0.7.9'
+    ext.kotlin_version = 'x.y.z'
+    ext.quasar_version = 'x.y.z'
 
-Please consult the relevant release notes of the release in question. If not specified, you may assume the
-versions you are currently using are still in force.
+* Please consult the relevant release notes of the release in question. If not specified, you may assume the
+  versions you are currently using are still in force
+  
+  * We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes
 
-We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes.
+* To run database upgrades against H2, you'll need to connect to the node's database without starting the node. You can 
+  do this by connecting directly to the node's ``persistence.mv.db`` file. See :ref:`h2_relative_path`
 
 UNRELEASED
 ----------
 
 <<< Fill this in >>>
+
+* Database upgrade - Change the type of the ``checkpoint_value``.
+This will address the issue that the `vacuum` function is unable to clean up deleted checkpoints as they are still referenced from the ``pg_shdepend`` table.
+
+For Postgres:
+
+  .. sourcecode:: sql
+
+    ALTER TABLE node_checkpoints ALTER COLUMN checkpoint_value set data type bytea;
+
+For H2:
+
+  .. sourcecode:: sql
+
+    ALTER TABLE node_checkpoints ALTER COLUMN checkpoint_value set data type VARBINARY(33554432);
+
 
 * API change: ``net.corda.core.schemas.PersistentStateRef`` fields (``index`` and ``txId``) incorrectly marked as nullable are now non-nullable,
   :doc:`changelog` contains the explanation.
@@ -67,11 +86,40 @@ UNRELEASED
   No action is needed for default node tables as ``PersistentStateRef`` is used as Primary Key only and the backing columns are automatically not nullable
   or custom Cordapp entities using ``PersistentStateRef`` as Primary Key.
 
-* H2 database upgrade - the table with a typo has been change, for each database instance and schema run the following SQL statement:
+v3.1 to v3.2
+------------
 
-    ALTER TABLE [schema].NODE_ATTCHMENTS_CONTRACTS RENAME TO NODE_ATTACHMENTS_CONTRACTS;
+Gradle Plugin Version
+^^^^^^^^^^^^^^^^^^^^^
 
-  Schema is optional, run SQL when the node is not running.
+You will need to update the ``corda_release_version`` identifier in your project gradle file.
+
+.. sourcecode:: shell
+
+  ext.corda_release_version = '3.2-corda'
+
+Database schema changes
+^^^^^^^^^^^^^^^^^^^^^^^
+
+* Database upgrade - a typo has been corrected in the ``NODE_ATTACHMENTS_CONTRACTS`` table name.
+  When upgrading from versions 3.0 or 3.1, run the following command:
+
+  .. sourcecode:: sql
+
+     ALTER TABLE [schema].NODE_ATTCHMENTS_CONTRACTS RENAME TO NODE_ATTACHMENTS_CONTRACTS;
+
+  .. note::
+    Schema name is optional, run SQL when the node is not running.
+
+* Postgres database upgrade - Change the type of the ``checkpoint_value`` column to ``bytea``.
+  This will address the issue that the `vacuum` function is unable to clean up deleted checkpoints as they are still referenced from the ``pg_shdepend`` table.
+
+  .. sourcecode:: sql
+
+    ALTER TABLE node_checkpoints ALTER COLUMN checkpoint_value set data type bytea using null;
+
+  .. important::
+     The Corda node will fail on startup if the database was not updated with the above commands.
 
 v3.0 to v3.1
 ------------

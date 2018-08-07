@@ -8,11 +8,11 @@ import net.corda.bootstrapper.context.Context
 import net.corda.bootstrapper.nodes.NodeAdder
 import net.corda.bootstrapper.nodes.NodeInstantiator
 import net.corda.bootstrapper.toSingleFuture
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
 import java.io.File
 
 class CommandLineInterface {
-
 
     fun run(parsedArgs: CliParser) {
         val baseDir = parsedArgs.baseDirectory
@@ -24,7 +24,6 @@ class CommandLineInterface {
             val (_, context) = NetworkBuilder.instance()
                     .withBasedir(baseDir)
                     .withNetworkName(networkName)
-                    .withNodeCounts(parsedArgs.nodes)
                     .onNodeBuild { builtNode -> println("Built node: ${builtNode.name} to image: ${builtNode.localImageId}") }
                     .onNodePushed { pushedNode -> println("Pushed node: ${pushedNode.name} to: ${pushedNode.remoteImageName}") }
                     .onNodeInstance { instance ->
@@ -37,18 +36,18 @@ class CommandLineInterface {
                     .build().getOrThrow()
             persistContext(contextFile, objectMapper, context)
         } else {
-            val context = setupContextFromExisting(contextFile, objectMapper, networkName)
+            val context = setupContextFromExisting(contextFile, objectMapper)
             val (_, instantiator, _) = Backend.fromContext(context, cacheDir)
             val nodeAdder = NodeAdder(context, NodeInstantiator(instantiator, context))
             parsedArgs.nodesToAdd.map {
-                nodeAdder.addNode(context, Constants.ALPHA_NUMERIC_ONLY_REGEX.replace(it.toLowerCase(), ""))
+                nodeAdder.addNode(context, Constants.ALPHA_NUMERIC_ONLY_REGEX.replace(it.key.toLowerCase(), ""), CordaX500Name.parse(it.value))
             }.toSingleFuture().getOrThrow()
             persistContext(contextFile, objectMapper, context)
         }
 
     }
 
-    private fun setupContextFromExisting(contextFile: File, objectMapper: ObjectMapper, networkName: String): Context {
+    private fun setupContextFromExisting(contextFile: File, objectMapper: ObjectMapper): Context {
         return contextFile.let {
             if (it.exists()) {
                 it.inputStream().use {

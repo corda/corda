@@ -22,7 +22,7 @@ buildscript {
     ext.capsule_version = '1.0.1'
 
     ext.asm_version = '5.0.4'
-    ext.artemis_version = '2.5.0'
+    ext.artemis_version = '2.6.2'
     ext.jackson_version = '2.9.5'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
@@ -39,6 +39,7 @@ buildscript {
     ext.fileupload_version = '1.3.3'
     ext.junit_version = '4.12'
     ext.mockito_version = '2.18.3'
+    ext.hamkrest_version = '1.4.2.2'
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
@@ -64,11 +65,11 @@ buildscript {
     ext.proguard_version = constants.getProperty('proguardVersion')
     ext.jsch_version = '0.1.54'
     ext.commons_cli_version = '1.4'
-    ext.protonj_version = '0.27.1'
+    ext.protonj_version = '0.27.1' // This is now aligned with the Artemis version, but retaining in case we ever need to diverge again for a bug fix.
     ext.snappy_version = '0.4'
     ext.fast_classpath_scanner_version = '2.12.3'
     ext.jcabi_manifests_version = '1.1'
-    ext.picocli_version = '3.0.0'
+    ext.picocli_version = '3.3.0'
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
     // ext.deterministic_idea_sdk = '1.8 (Deterministic)'
@@ -98,11 +99,11 @@ buildscript {
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
         classpath "net.corda.plugins:cordapp:$gradle_plugins_version"
         classpath "net.corda.plugins:api-scanner:$gradle_plugins_version"
+        classpath "net.corda.plugins:jar-filter:$gradle_plugins_version"
         classpath "net.sf.proguard:proguard-gradle:$proguard_version"
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
         classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
-        classpath "org.ajoberstar:grgit:1.1.0"
         classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
         classpath "org.owasp:dependency-check-gradle:${dependency_checker_version}"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
@@ -117,7 +118,7 @@ plugins {
 }
 
 ext {
-    corda_revision = org.ajoberstar.grgit.Grgit.open(file('.')).head().id
+    corda_revision = "git rev-parse HEAD".execute().text.trim()
 }
 
 apply plugin: 'project-report'
@@ -141,10 +142,6 @@ allprojects {
     apply plugin: 'org.owasp.dependencycheck'
     apply plugin: 'kotlin-allopen'
 
-    // This line works around a serious performance regression in the Kotlin 1.2.50 gradle plugin, it's fixed in 1.2.51
-    // TODO: Remove when we upgrade past Kotlin 1.2.51
-    inspectClassesForKotlinIC.enabled = false
-
     allOpen {
         annotations(
                 "javax.persistence.Entity",
@@ -163,6 +160,7 @@ allprojects {
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
+        options.encoding = 'UTF-8'
     }
 
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
@@ -172,6 +170,7 @@ allprojects {
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
             freeCompilerArgs = ['-Xjvm-default=compatibility']
+            allWarningsAsErrors = project.hasProperty('compilation.allWarningsAsErrors') ? project.property('compilation.allWarningsAsErrors').toBoolean() : true
         }
     }
 
@@ -187,7 +186,7 @@ allprojects {
     }
 
     tasks.withType(Test) {
-        failFast = true
+        failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : true
 
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperty 'java.io.tmpdir', buildDir.absolutePath
@@ -219,6 +218,9 @@ allprojects {
                 force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
                 force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
                 force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+
+                // Force dependencies to use the same version of Guava as Corda.
+                force "com.google.guava:guava:$guava_version"
 
                 // Demand that everything uses our given version of Netty.
                 eachDependency { details ->
@@ -385,20 +387,20 @@ artifactory {
 
         defaults {
             // Root project applies the plugin (for this block) but does not need to be published
-            if(project != rootProject) {
+            if (project != rootProject) {
                 publications(project.extensions.publish.name())
             }
         }
     }
 }
 
-task generateApi(type: net.corda.plugins.GenerateApi){
+task generateApi(type: net.corda.plugins.GenerateApi) {
     baseName = "api-corda"
 }
 
 // This exists to reduce CI build time when the envvar is set (can save up to 40 minutes)
-if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUILD') != null)) {
-    if(file('corda-docs-only-build').exists()) {
+if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUILD') != null)) {
+    if (file('corda-docs-only-build').exists()) {
         logger.info("Tests are disabled due to presence of file 'corda-docs-only-build' in the project root")
     } else {
         logger.info("Tests are disabled due to the presence of envvar CORDA_DOCS_ONLY_BUILD")
@@ -410,7 +412,7 @@ if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUI
         }
 
         it.afterEvaluate {
-            if(it.tasks.findByName("integrationTest") != null) {
+            if (it.tasks.findByName("integrationTest") != null) {
                 integrationTest {
                     exclude '*/**'
                 }
@@ -418,7 +420,7 @@ if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUI
         }
 
         it.afterEvaluate {
-            if(it.tasks.findByName("smokeTest") != null) {
+            if (it.tasks.findByName("smokeTest") != null) {
                 smokeTest {
                     exclude '*/**'
                 }

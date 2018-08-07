@@ -1,4 +1,4 @@
-@file:Suppress("UNUSED_VARIABLE", "unused")
+@file:Suppress("UNUSED_VARIABLE", "unused", "DEPRECATION")
 
 package net.corda.docs
 
@@ -257,6 +257,10 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         -----------------------------------------**/
         progressTracker.currentStep = OTHER_TX_COMPONENTS
 
+        // Reference input states are constructed from StateAndRefs.
+        // DOCSTART 55
+        val referenceState: ReferencedStateAndRef<DummyState> = ourStateAndRef.referenced()
+        // DOCEND 55
         // Output states are constructed from scratch.
         // DOCSTART 22
         val ourOutputState: DummyState = DummyState()

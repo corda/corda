@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.test.spring
 
 import net.corda.core.concurrent.CordaFuture
@@ -72,16 +74,14 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
     }
 
     private fun startApplication(handle: NodeHandle, debugPort: Int?, clazz: Class<*>): Process {
-        val className = clazz.canonicalName
-        return ProcessUtilities.startJavaProcessImpl(
-                className = className, // cannot directly get class for this, so just use string
+        return ProcessUtilities.startJavaProcess(
+                className = clazz.canonicalName, // cannot directly get class for this, so just use string
                 jdwpPort = debugPort,
                 extraJvmArguments = listOf(
                         "-Dname=node-${handle.p2pAddress}-webserver",
                         "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}"
                         // Inherit from parent process
                 ),
-                classpath = ProcessUtilities.defaultClassPath,
                 workingDirectory = handle.baseDirectory,
                 arguments = listOf(
                         "--base-directory", handle.baseDirectory.toString(),
@@ -89,8 +89,7 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
                         "--corda.host=${handle.rpcAddress}",
                         "--corda.user=${handle.rpcUsers.first().username}",
                         "--corda.password=${handle.rpcUsers.first().password}"
-                ),
-                maximumHeapSize = null
+                )
         )
     }
 }

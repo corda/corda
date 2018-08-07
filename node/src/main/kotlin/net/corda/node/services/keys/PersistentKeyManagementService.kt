@@ -3,7 +3,6 @@ package net.corda.node.services.keys
 import net.corda.core.crypto.*
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.utilities.AppendOnlyPersistentMap
@@ -11,7 +10,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
-import java.io.Serializable
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -28,8 +26,7 @@ import javax.persistence.Lob
  * This class needs database transactions to be in-flight during method calls and init.
  */
 class PersistentKeyManagementService(val identityService: IdentityService,
-                                     initialKeys: Set<KeyPair>,
-                                     private val database: CordaPersistence) : SingletonSerializeAsToken(), KeyManagementService {
+                                     private val database: CordaPersistence) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
@@ -45,7 +42,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
             @Lob
             @Column(name = "private_key", nullable = false)
             var privateKey: ByteArray = EMPTY_BYTE_ARRAY
-    ) : Serializable {
+    ) {
         constructor(publicKey: PublicKey, privateKey: PrivateKey)
             : this(publicKey.toStringShort(), publicKey.encoded, privateKey.encoded)
     }
@@ -64,13 +61,10 @@ class PersistentKeyManagementService(val identityService: IdentityService,
         }
     }
 
-    val keysMap = createKeyMap()
+    private val keysMap = createKeyMap()
 
-    init {
-        // TODO this should be in a start function, not in an init block.
-        database.transaction {
-            initialKeys.forEach({ it -> keysMap.addWithDuplicatesAllowed(it.public, it.private) })
-        }
+    override fun start(initialKeyPairs: Set<KeyPair>) {
+        initialKeyPairs.forEach { keysMap.addWithDuplicatesAllowed(it.public, it.private) }
     }
 
     override val keys: Set<PublicKey> get() = database.transaction { keysMap.allPersisted().map { it.first }.toSet() }
@@ -87,8 +81,9 @@ class PersistentKeyManagementService(val identityService: IdentityService,
         return keyPair.public
     }
 
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate =
-            freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {
+        return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey))
+    }
 
     private fun getSigner(publicKey: PublicKey): ContentSigner = getSigner(getSigningKeyPair(publicKey))
 

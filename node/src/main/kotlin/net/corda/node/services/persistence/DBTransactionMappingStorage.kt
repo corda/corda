@@ -1,21 +1,22 @@
 package net.corda.node.services.persistence
 
-import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
-import net.corda.node.utilities.*
+import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import rx.subjects.PublishSubject
-import java.io.Serializable
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.Entity
+import javax.persistence.Id
 
 /**
  * Database storage of a txhash -> state machine id mapping.
@@ -35,7 +36,7 @@ class DBTransactionMappingStorage(private val database: CordaPersistence) : Stat
 
             @Column(name = "state_machine_run_id", length = 36, nullable = true)
             var stateMachineRunId: String? = ""
-    ) : Serializable
+    )
 
     private companion object {
         fun createMap(): AppendOnlyPersistentMap<SecureHash, StateMachineRunId, DBTransactionMapping, String> {

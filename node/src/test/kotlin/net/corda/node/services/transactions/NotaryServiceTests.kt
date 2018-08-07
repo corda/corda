@@ -10,14 +10,11 @@ import net.corda.core.internal.NotaryChangeTransactionBuilder
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.StartedNode
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetworkNotarySpec
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -26,14 +23,14 @@ import kotlin.test.assertFailsWith
 class NotaryServiceTests {
     private lateinit var mockNet: InternalMockNetwork
     private lateinit var notaryServices: ServiceHub
-    private lateinit var aliceNode: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var aliceNode: TestStartedNode
     private lateinit var notary: Party
     private lateinit var alice: Party
 
     @Before
     fun setup() {
         mockNet = InternalMockNetwork(
-                cordappPackages = listOf("net.corda.testing.contracts"),
+                cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"),
                 notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME, validating = false))
         )
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
@@ -54,7 +51,7 @@ class NotaryServiceTests {
 
     internal companion object {
         /** This is used by both [NotaryServiceTests] and [ValidatingNotaryServiceTests]. */
-        fun notariseWithTooManyInputs(node: StartedNode<InternalMockNetwork.MockNode>, party: Party, notary: Party, network: InternalMockNetwork) {
+        fun notariseWithTooManyInputs(node: TestStartedNode, party: Party, notary: Party, network: InternalMockNetwork) {
             val stx = generateTransaction(node, party, notary)
 
             val future = node.services.startFlow(DummyClientFlow(stx, notary)).resultFuture
@@ -62,7 +59,7 @@ class NotaryServiceTests {
             assertFailsWith<NotaryException> { future.getOrThrow() }
         }
 
-        private fun generateTransaction(node: StartedNode<InternalMockNetwork.MockNode>, party: Party, notary: Party): SignedTransaction {
+        private fun generateTransaction(node: TestStartedNode, party: Party, notary: Party): SignedTransaction {
             val txHash = SecureHash.randomSHA256()
             val inputs = (1..10_005).map { StateRef(txHash, it) }
             val tx = NotaryChangeTransactionBuilder(inputs, notary, party).build()

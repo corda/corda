@@ -6,7 +6,6 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -14,11 +13,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.core.TestIdentity
-import net.corda.testing.core.getTestPartyAndCertificate
+import net.corda.testing.core.*
 import net.corda.testing.internal.DEV_INTERMEDIATE_CA
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -27,14 +22,10 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
-/**
- * Tests for the in memory identity service.
- */
 class PersistentIdentityServiceTests {
     private companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
@@ -51,16 +42,19 @@ class PersistentIdentityServiceTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private lateinit var database: CordaPersistence
-    private lateinit var identityService: IdentityService
+    private lateinit var identityService: PersistentIdentityService
 
     @Before
     fun setup() {
-        val identityServiceRef = AtomicReference<IdentityService>()
-        // Do all of this in a database transaction so anything that might need a connection has one.
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(),
-                { name -> identityServiceRef.get().wellKnownPartyFromX500Name(name) },
-                { party -> identityServiceRef.get().wellKnownPartyFromAnonymous(party) })
-        identityService = PersistentIdentityService(DEV_ROOT_CA.certificate, database).also(identityServiceRef::set)
+        identityService = PersistentIdentityService()
+        database = configureDatabase(
+                makeTestDataSourceProperties(),
+                DatabaseConfig(),
+                identityService::wellKnownPartyFromX500Name,
+                identityService::wellKnownPartyFromAnonymous
+        )
+        identityService.database = database
+        identityService.start(DEV_ROOT_CA.certificate)
     }
 
     @After
@@ -204,7 +198,10 @@ class PersistentIdentityServiceTests {
         identityService.verifyAndRegisterIdentity(anonymousBob)
 
         // Create new identity service mounted onto same DB
-        val newPersistentIdentityService = PersistentIdentityService(DEV_ROOT_CA.certificate, database)
+        val newPersistentIdentityService = PersistentIdentityService().also {
+            it.database = database
+            it.start(DEV_ROOT_CA.certificate)
+        }
 
         newPersistentIdentityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())
         newPersistentIdentityService.assertOwnership(bob.party, anonymousBob.party.anonymise())

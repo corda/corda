@@ -511,6 +511,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     }
 
     @Test
+    fun `generics from java are supported`() {
+        val obj = DummyOptional<String>("YES")
+        serdes(obj, SerializerFactory(EmptyWhitelist, ClassLoader.getSystemClassLoader()))
+    }
+
+    @Test
     fun `test throwables serialize`() {
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         factory.register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(factory))
@@ -888,6 +894,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     class GenericSubclass(param: OtherGeneric<String>) : GenericSuperclass<String>(param) {
         override fun equals(other: Any?): Boolean = other is GenericSubclass // This is a bit lame but we just want to check it doesn't throw exceptions
+        override fun hashCode(): Int = javaClass.hashCode()
     }
 
     @Test
@@ -966,8 +973,11 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         assertSame(objCopy.a, objCopy.b)
     }
 
-    data class Spike private constructor(val a: String) {
+    class Spike private constructor(val a: String) {
         constructor() : this("a")
+
+        override fun equals(other: Any?): Boolean = other is Spike && other.a == this.a
+        override fun hashCode(): Int = a.hashCode()
     }
 
     @Test
@@ -1028,7 +1038,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         serdes(obj, factory, factory2)
     }
 
-    data class ByteArrays(val a: ByteArray, val b: ByteArray)
+    class ByteArrays(val a: ByteArray, val b: ByteArray)
 
     @Test
     fun `test byte arrays not reference counted`() {
@@ -1162,7 +1172,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     }
 
     //
-    // Example stacktrace that this test is tryint to reproduce
+    // Example stacktrace that this test is trying to reproduce
     //
     // java.lang.IllegalArgumentException:
     //      net.corda.core.contracts.TransactionState ->
@@ -1179,10 +1189,6 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     //
     @Test
     fun reproduceWrongNumberOfArguments() {
-        val field = SerializerFactory::class.java.getDeclaredField("serializersByType").apply {
-            this.isAccessible = true
-        }
-
         data class C(val a: Amount<Currency>)
 
         val factory = testDefaultFactoryNoEvolution()
@@ -1337,7 +1343,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         val bytes = SerializationOutput(testDefaultFactory()).serialize(i)
 
         try {
-            val i2 = DeserializationInput(testDefaultFactory()).deserialize(bytes)
+            DeserializationInput(testDefaultFactory()).deserialize(bytes)
         } catch (e: NotSerializableException) {
             throw Error("Deserializing serialized \$C should not throw")
         }

@@ -2,7 +2,6 @@ Serialization
 =============
 
 .. toctree::
-
    :caption: Other docs
    :maxdepth: 1
 
@@ -10,3 +9,4 @@ Serialization
    cordapp-custom-serializers
    serialization-default-evolution.rst
    serialization-enum-evolution.rst
+   blob-inspector

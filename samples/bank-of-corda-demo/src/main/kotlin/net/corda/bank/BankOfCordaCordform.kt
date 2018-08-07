@@ -21,9 +21,16 @@ import kotlin.system.exitProcess
 
 val BIGCORP_NAME = CordaX500Name(organisation = "BigCorporation", locality = "New York", country = "US")
 private val NOTARY_NAME = CordaX500Name(organisation = "Notary Service", locality = "Zurich", country = "CH")
-private const val BOC_RPC_PORT = 10006
+const val BOC_RPC_PORT = 10006
+const val BIGCORP_RPC_PORT = 10009
 private const val BOC_RPC_ADMIN_PORT = 10015
 private const val BOC_WEB_PORT = 10007
+
+const val BOC_RPC_USER = "bankUser"
+const val BOC_RPC_PWD = "test"
+
+const val BIGCORP_RPC_USER = "bigCorpUser"
+const val BIGCORP_RPC_PWD = "test"
 
 class BankOfCordaCordform : CordformDefinition() {
 
@@ -37,29 +44,32 @@ class BankOfCordaCordform : CordformDefinition() {
                 adminAddress("localhost:10004")
             }
             devMode(true)
+            extraConfig = mapOf("h2Settings" to mapOf("address" to "localhost:10016"))
         }
         node {
             name(BOC_NAME)
-            extraConfig = mapOf("custom" to mapOf("issuableCurrencies" to listOf("USD")))
+            extraConfig = mapOf("custom" to mapOf("issuableCurrencies" to listOf("USD")),
+                    "h2Settings" to mapOf("address" to "localhost:10017"))
             p2pPort(10005)
             rpcSettings {
                 address("localhost:$BOC_RPC_PORT")
                 adminAddress("localhost:$BOC_RPC_ADMIN_PORT")
             }
             webPort(BOC_WEB_PORT)
-            rpcUsers(User("bankUser", "test", setOf(all())))
+            rpcUsers(User(BOC_RPC_USER, BOC_RPC_PWD, setOf(all())))
             devMode(true)
         }
         node {
             name(BIGCORP_NAME)
             p2pPort(10008)
             rpcSettings {
-                address("localhost:10009")
+                address("localhost:$BIGCORP_RPC_PORT")
                 adminAddress("localhost:10011")
             }
             webPort(10010)
-            rpcUsers(User("bigCorpUser", "test", setOf(all())))
+            rpcUsers(User(BIGCORP_RPC_USER, BIGCORP_RPC_PWD, setOf(all())))
             devMode(true)
+            extraConfig = mapOf("h2Settings" to mapOf("address" to "localhost:10018"))
         }
     }
 
@@ -113,8 +123,7 @@ object IssueCash {
         return BankOfCordaClientApi.requestRPCIssue(NetworkHostAndPort("localhost", BOC_RPC_PORT), createParams(amount, NOTARY_NAME))
     }
 
-    @VisibleForTesting
-    fun requestWebIssue(amount: Amount<Currency>) {
+    private fun requestWebIssue(amount: Amount<Currency>) {
         BankOfCordaClientApi.requestWebIssue(NetworkHostAndPort("localhost", BOC_WEB_PORT), createParams(amount, NOTARY_NAME))
     }
 

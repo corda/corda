@@ -1,7 +1,7 @@
 package net.corda.core.contracts
 
-import net.corda.finance.*
 import net.corda.core.contracts.Amount.Companion.sumOrZero
+import net.corda.finance.*
 import org.junit.Test
 import java.math.BigDecimal
 import java.util.*
@@ -161,5 +161,11 @@ class AmountTests {
         assertEquals(originalTotals[Pair(partyC, USD)], newTotals3[Pair(partyC, USD)])
         assertEquals(originalTotals[Pair(partyA, GBP)], newTotals3[Pair(partyA, GBP)])
         assertEquals(originalTotals[Pair(partyB, GBP)], newTotals3[Pair(partyB, GBP)])
+    }
+
+    @Test
+    fun testGbpParse() {
+        assertEquals(POUNDS(10), Amount.parseCurrency("10 GBP"))
+        assertEquals(POUNDS(11), Amount.parseCurrency("£11"))
     }
 }

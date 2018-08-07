@@ -1,9 +1,7 @@
 package net.corda.core
 
-import kotlin.annotation.AnnotationRetention.*
+import kotlin.annotation.AnnotationRetention.BINARY
 import kotlin.annotation.AnnotationTarget.*
-import kotlin.annotation.Retention
-import kotlin.annotation.Target
 
 /**
  * We expect that almost every non-deterministic element can have its bytecode

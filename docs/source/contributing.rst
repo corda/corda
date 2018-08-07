@@ -1,14 +1,9 @@
-Contributing
-============
-
-Corda is an open-source project and contributions are welcome. Our contributing philosophy is described in 
-`CONTRIBUTING.md <https://github.com/corda/corda/blob/master/CONTRIBUTING.md>`_. This guide explains the mechanics 
-of contributing to Corda.
-
-.. contents::
+How to contribute
+=================
 
 Identifying an area to contribute
 ---------------------------------
+
 There are several ways to identify an area where you can contribute to Corda:
 
 * Browse issues labelled as ``good first issue`` in the
@@ -26,7 +21,12 @@ Making the required changes
 
 1. Create a fork of the master branch of the `Corda repo <https://github.com/corda/corda>`_
 2. Clone the fork to your local machine
-3. Make the changes, in accordance with the :doc:`code style guide </codestyle>`
+3. Build Corda by following the instructions :doc:`here </building-corda>`
+4. Make the changes, in accordance with the :doc:`code style guide </codestyle>`
+
+Extending the flow state machine
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+You can find instructions on how to extend the flow state machine :doc:`here </contributing-flow-state-machines>`
 
 Things to check
 ^^^^^^^^^^^^^^^
@@ -106,7 +106,6 @@ Running the API scanner
 ^^^^^^^^^^^^^^^^^^^^^^^
 Your changes must also not break compatibility with existing public API. We have an API scanning tool which runs as part of the build
 process which can be used to flag up any accidental changes, which is detailed :doc:`here </api-scanner>`.
-
 
 Updating the docs
 -----------------

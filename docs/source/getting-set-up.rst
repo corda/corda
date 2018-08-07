@@ -6,7 +6,7 @@ Software requirements
 Corda uses industry-standard tools:
 
 * **Oracle JDK 8 JVM** - minimum supported version **8u171**
-* **IntelliJ IDEA** - supported versions **2017.x** and **2018.x**
+* **IntelliJ IDEA** - supported versions **2017.x** and **2018.x** (with Kotlin plugin version |kotlin_version|)
 * **Git**
 
 We also use Gradle and Kotlin, but you do not need to install them. A standalone Gradle wrapper is provided, and it 
@@ -24,18 +24,18 @@ Please note:
   `here <https://medium.com/@octskyward/why-kotlin-is-my-next-programming-language-c25c001e26e3>`_. If you're
   unfamiliar with Kotlin, there is an official
   `getting started guide <https://kotlinlang.org/docs/tutorials/>`_, and a series of
-  `Kotlin Koans <https://kotlinlang.org/docs/tutorials/koans.html>`_.
+  `Kotlin Koans <https://kotlinlang.org/docs/tutorials/koans.html>`_
 
-* IntelliJ IDEA is recommended due to the strength of its Kotlin integration.
+* IntelliJ IDEA is recommended due to the strength of its Kotlin integration
 
 Following these software recommendations will minimize the number of errors you encounter, and make it easier for
 others to provide support. However, if you do use other tools, we'd be interested to hear about any issues that arise.
 
 Set-up instructions
 -------------------
-The instructions below will allow you to set up a Corda development environment and run a basic CorDapp. If you have
-any issues, please consult the :doc:`troubleshooting` page, or reach out on `Slack <http://slack.corda.net/>`_,
-`Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ or the `forums <https://discourse.corda.net/>`_.
+The instructions below will allow you to set up your development environment for running Corda and writing CorDapps. If 
+you have any issues, please reach out on `Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ or via
+`our Slack channels <http://slack.corda.net/>`_.
 
 The set-up instructions are available for the following platforms:
 
@@ -43,12 +43,14 @@ The set-up instructions are available for the following platforms:
 
 * :ref:`mac-label` (or `in video form <https://vimeo.com/217462230>`__)
 
+* :ref:`deb-ubuntu-label`
+
 .. _windows-label:
 
 Windows
 -------
 
-.. warning:: If you are using a Mac machine, please follow the :ref:`mac-label` instructions instead.
+.. warning:: If you are using a Mac or a Debian/Ubuntu machine, please follow the :ref:`mac-label` or :ref:`deb-ubuntu-label` instructions instead.
 
 Java
 ^^^^
@@ -71,46 +73,14 @@ IntelliJ
 ^^^^^^^^
 1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?code=IIC
 2. Download and run the executable to install IntelliJ Community Edition (use the default settings)
-
-Download a sample project
-^^^^^^^^^^^^^^^^^^^^^^^^^
-1. Open a command prompt
-2. Clone the ``cordapp-example`` repo by running ``git clone https://github.com/corda/cordapp-example``
-3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
-
-Run from the command prompt
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-1. From the ``cordapp-example`` folder, deploy the nodes by running ``gradlew deployNodes``
-2. Start the nodes by running ``call kotlin-source/build/nodes/runnodes.bat``
-3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
-4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
-
-Run from IntelliJ
-^^^^^^^^^^^^^^^^^
-1. Open IntelliJ Community Edition
-2. On the splash screen, click ``Open`` (do **not** click ``Import Project``) and select the ``cordapp-example`` folder
-
-.. warning:: If you click ``Import Project`` instead of ``Open``, the project's run configurations will be erased!
-
-3. Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
-   clicking ``New...``, clicking ``JDK``, and navigating to ``C:\\Program Files\\Java\\jdk1.8.0_XXX`` (where ``XXX`` is
-   the latest minor version number). Click ``OK``
-4. Again under ``File`` then ``Project Structure``, select ``Modules``. Click ``+``, then ``Import Module``, then select
-   the ``cordapp-example`` folder and click ``Open``. Choose to ``Import module from external model``, select
-   ``Gradle``, click ``Next`` then ``Finish`` (leaving the defaults) and ``OK``
-5. Wait for the indexing to finish (a progress bar will display at the bottom-right of the IntelliJ window until indexing
-   is complete)
-6. At the top-right of the screen, to the left of the green ``play`` arrow, you should see a dropdown. In that
-   dropdown, select ``Run Example Cordapp - Kotlin`` and click the green ``play`` arrow.
-7. Wait until the run windows displays the message ``Webserver started up in XX.X sec``
-8. Test the CorDapp is running correctly by visiting the front end at `http://localhost:10009/web/example/
+3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version|
 
 .. _mac-label:
 
 Mac
 ---
 
-.. warning:: If you are using a Windows machine, please follow the :ref:`windows-label` instructions instead.
+.. warning:: If you are using a Windows or a Debian/Ubuntu machine, please follow the :ref:`windows-label` or :ref:`deb-ubuntu-label` instructions instead.
 
 Java
 ^^^^
@@ -125,49 +95,48 @@ IntelliJ
 ^^^^^^^^
 1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?platform=mac&code=IIC
 2. Download and run the executable to install IntelliJ Community Edition (use the default settings)
+3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version|
 
-Download a sample project
-^^^^^^^^^^^^^^^^^^^^^^^^^
-1. Open a terminal
-2. Clone the ``cordapp-example`` repo by running ``git clone https://github.com/corda/cordapp-example``
-3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
+.. _deb-ubuntu-label:
 
-Run from the terminal
-^^^^^^^^^^^^^^^^^^^^^
-1. From the ``cordapp-example`` folder, deploy the nodes by running ``./gradlew deployNodes``
-2. Start the nodes by running ``kotlin-source/build/nodes/runnodes``. Do not click while 7 additional terminal windows start up.
-3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
-4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
+Debian/Ubuntu
+-------------
 
-Run from IntelliJ
-^^^^^^^^^^^^^^^^^
-1. Open IntelliJ Community Edition
-2. On the splash screen, click ``Open`` (do **not** click ``Import Project``) and select the ``cordapp-example`` folder
+.. warning:: If you are using a Mac or a Windows machine, please follow the :ref:`mac-label` or :ref:`windows-label` instructions instead.
 
-.. warning:: If you click ``Import Project`` instead of ``Open``, the project's run configurations will be erased!
+These instructions were tested on Ubuntu Desktop 18.04 LTS.
 
-3. Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
-   clicking ``New...``, clicking ``JDK``, and navigating to ``C:\\Program Files\\Java\\jdk1.8.0_XXX`` (where ``XXX`` is
-   the latest minor version number). Click ``OK``
-4. Again under ``File`` then ``Project Structure``, select ``Modules``. Click ``+``, then ``Import Module``, then select
-   the ``cordapp-example`` folder and click ``Open``. Choose to ``Import module from external model``, select
-   ``Gradle``, click ``Next`` then ``Finish`` (leaving the defaults) and ``OK``
-5. Wait for the indexing to finish (a progress bar will display at the bottom-right of the IntelliJ window until indexing
-   is complete)
-6. At the top-right of the screen, to the left of the green ``play`` arrow, you should see a dropdown. In that
-   dropdown, select ``Run Example Cordapp - Kotlin`` and click the green ``play`` arrow.
-7. Wait until the run windows displays the message ``Webserver started up in XX.X sec``
-8. Test the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
+Java
+^^^^
+1. Open a new terminal and add the Oracle PPA to your repositories by typing ``sudo add-apt-repository ppa:webupd8team/java``. Press ENTER when prompted.
+2. Update your packages list with the command ``sudo apt update``
+3. Install the Oracle JDK 8 by typing ``sudo apt install oracle-java8-installer``. Press Y when prompted and agree to the licence terms.
+4. Verify that the JDK was installed correctly by running ``java -version``
+
+Git
+^^^^
+1. From the terminal, Git can be installed using apt with the command ``sudo apt install git``
+2. Verify that git was installed correctly by typing ``git --version``
+
+IntelliJ
+^^^^^^^^
+Jetbrains offers a pre-built snap package that allows for easy, one-step installation of IntelliJ onto Ubuntu.
+
+1. To download the snap, navigate to https://snapcraft.io/intellij-idea-community
+2. Click ``Install``, then ``View in Desktop Store``. Choose ``Ubuntu Software`` in the Launch Application window.
+3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version|
+
 
 Next steps
 ----------
-First, explore the example CorDapp you just ran :doc:`here <tutorial-cordapp>`.
+First, run the :doc:`example CorDapp <tutorial-cordapp>`.
 
-Next, read through :doc:`Corda Key Concepts <key-concepts>` to understand how Corda works.
+Next, read through the :doc:`Corda Key Concepts <key-concepts>` to understand how Corda works.
 
 By then, you'll be ready to start writing your own CorDapps. Learn how to do this in the
-:doc:`Hello, World tutorial <hello-world-introduction>`. You may want to refer to the API documentation, the
-:doc:`flow cookbook <flow-cookbook>` and the `samples <https://www.corda.net/samples/>`_ along the way.
+:doc:`Hello, World tutorial <hello-world-introduction>`. You may want to refer to the
+:doc:`API documentation <corda-api>`, the :doc:`flow cookbook <flow-cookbook>` and the
+`samples <https://www.corda.net/samples/>`_ along the way.
 
-If you encounter any issues, please see the :doc:`troubleshooting` page, or ask on
-`Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ or via `our Slack channels <http://slack.corda.net/>`_.
+If you encounter any issues, please ask on `Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ or via
+`our Slack channels <http://slack.corda.net/>`_.

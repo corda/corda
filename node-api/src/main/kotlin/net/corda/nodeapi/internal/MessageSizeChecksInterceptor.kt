@@ -22,7 +22,7 @@ class ArtemisMessageSizeChecksInterceptor(maxMessageSize: Int) : MessageSizeChec
 }
 
 class AmqpMessageSizeChecksInterceptor(maxMessageSize: Int) : MessageSizeChecksInterceptor<AMQPMessage>(maxMessageSize), AmqpInterceptor {
-    override fun getMessageSize(packet: AMQPMessage?): Int? = packet?.length
+    override fun getMessageSize(packet: AMQPMessage?): Int? = packet?.encodeSize
 }
 
 /**

@@ -186,6 +186,7 @@ class NodeTerminalView : Fragment() {
         invoke = ::pollCashBalances
     )
 
+    @Suppress("DEPRECATION")
     private fun initialise(config: NodeConfigWrapper, ops: CordaRPCOps) {
         try {
             val (txInit, txNext) = ops.internalVerifiedTransactionsFeed()

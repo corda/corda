@@ -22,7 +22,6 @@ import net.corda.core.utilities.debug
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
-import java.io.Serializable
 import java.time.Clock
 import java.time.Instant
 import java.util.*
@@ -39,7 +38,7 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
 
             @Column(name = "consuming_transaction_id", nullable = true)
             val consumingTxHash: String?
-    ) : Serializable
+    )
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_request_log")
@@ -62,7 +61,7 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
 
             @Column(name = "request_timestamp", nullable = false)
             var requestDate: Instant
-    ) : Serializable
+    )
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_states")
@@ -104,10 +103,12 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
             txId: SecureHash,
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow?) {
+            timeWindow: TimeWindow?,
+            references: List<StateRef>
+    ) {
         mutex.locked {
             logRequest(txId, callerIdentity, requestSignature)
-            val conflictingStates = findAlreadyCommitted(states, commitLog)
+            val conflictingStates = findAlreadyCommitted(states, references, commitLog)
             if (conflictingStates.isNotEmpty()) {
                 handleConflicts(txId, conflictingStates)
             } else {
@@ -127,12 +128,23 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
         session.persist(request)
     }
 
-    private fun findAlreadyCommitted(states: List<StateRef>, commitLog: AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef>): LinkedHashMap<StateRef, StateConsumptionDetails> {
+    private fun findAlreadyCommitted(
+            states: List<StateRef>,
+            references: List<StateRef>,
+            commitLog: AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef>
+    ): LinkedHashMap<StateRef, StateConsumptionDetails> {
         val conflictingStates = LinkedHashMap<StateRef, StateConsumptionDetails>()
-        for (inputState in states) {
-            val consumingTx = commitLog[inputState]
-            if (consumingTx != null) conflictingStates[inputState] = StateConsumptionDetails(consumingTx.sha256())
+
+        fun checkConflicts(toCheck: List<StateRef>, type: StateConsumptionDetails.ConsumedStateType) {
+            return toCheck.forEach { stateRef ->
+                val consumingTx = commitLog[stateRef]
+                if (consumingTx != null) conflictingStates[stateRef] = StateConsumptionDetails(consumingTx.sha256(), type)
+            }
         }
+
+        checkConflicts(states, StateConsumptionDetails.ConsumedStateType.INPUT_STATE)
+        checkConflicts(references, StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
+
         return conflictingStates
     }
 

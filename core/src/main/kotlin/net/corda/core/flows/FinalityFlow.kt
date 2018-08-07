@@ -92,7 +92,7 @@ class FinalityFlow(val transaction: SignedTransaction,
 
     private fun needsNotarySignature(stx: SignedTransaction): Boolean {
         val wtx = stx.tx
-        val needsNotarisation = wtx.inputs.isNotEmpty() || wtx.timeWindow != null
+        val needsNotarisation = wtx.inputs.isNotEmpty() || wtx.references.isNotEmpty() || wtx.timeWindow != null
         return needsNotarisation && hasNoNotarySignature(stx)
     }
 

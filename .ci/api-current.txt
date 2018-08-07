@@ -4359,7 +4359,7 @@ public interface net.corda.core.schemas.QueryableState extends net.corda.core.co
   @NotNull
   public abstract Iterable<net.corda.core.schemas.MappedSchema> supportedSchemas()
 ##
-public interface net.corda.core.schemas.StatePersistable extends java.io.Serializable
+public interface net.corda.core.schemas.StatePersistable
 ##
 public interface net.corda.core.serialization.ClassWhitelist
   public abstract boolean hasListed(Class<?>)
@@ -5828,6 +5828,8 @@ public interface net.corda.testing.driver.DriverDSL
   @NotNull
   public abstract net.corda.core.concurrent.CordaFuture<net.corda.testing.driver.NodeHandle> startNode(net.corda.testing.driver.NodeParameters, net.corda.core.identity.CordaX500Name, java.util.List<net.corda.testing.node.User>, net.corda.testing.driver.VerifierType, java.util.Map<String, ?>, Boolean, String)
   @NotNull
+  public abstract net.corda.core.concurrent.CordaFuture<net.corda.testing.driver.NodeHandle> startNode(net.corda.testing.driver.NodeParameters, net.corda.core.identity.CordaX500Name, java.util.List<net.corda.testing.node.User>, net.corda.testing.driver.VerifierType, java.util.Map<String, ?>, Boolean, String, java.util.Set<? extends net.corda.testing.driver.TestCorDapp>, boolean)
+  @NotNull
   public abstract net.corda.core.concurrent.CordaFuture<net.corda.testing.driver.WebserverHandle> startWebserver(net.corda.testing.driver.NodeHandle)
   @NotNull
   public abstract net.corda.core.concurrent.CordaFuture<net.corda.testing.driver.WebserverHandle> startWebserver(net.corda.testing.driver.NodeHandle, String)
@@ -5835,6 +5837,11 @@ public interface net.corda.testing.driver.DriverDSL
 public final class net.corda.testing.driver.DriverParameters extends java.lang.Object
   public <init>()
   public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean, boolean)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean, boolean, java.util.Set<? extends net.corda.testing.driver.TestCorDapp>)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Set<? extends net.corda.testing.driver.TestCorDapp>)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, boolean, boolean)
+  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, boolean, boolean, java.util.Set<? extends net.corda.testing.driver.TestCorDapp>)
   public final boolean component1()
   @NotNull
   public final java.util.List<String> component10()
@@ -6027,6 +6034,75 @@ public static final class net.corda.testing.driver.PortAllocation$Incremental ex
   public final java.util.concurrent.atomic.AtomicInteger getPortCounter()
   public int nextPort()
 ##
+@DoNotImplement
+public interface net.corda.testing.driver.TestCorDapp
+  @NotNull
+  public abstract java.util.Set<Class<?>> getClasses()
+  @NotNull
+  public abstract String getName()
+  @NotNull
+  public abstract java.util.Set<java.net.URL> getResources()
+  @NotNull
+  public abstract String getTitle()
+  @NotNull
+  public abstract String getVendor()
+  @NotNull
+  public abstract String getVersion()
+  @NotNull
+  public abstract java.nio.file.Path packageAsJarInDirectory(java.nio.file.Path)
+  public abstract void packageAsJarWithPath(java.nio.file.Path)
+##
+public static final class net.corda.testing.driver.TestCorDapp$Factory extends java.lang.Object
+  public <init>()
+  @NotNull
+  public static final net.corda.testing.driver.TestCorDapp$Mutable create(String, String, String, String, java.util.Set<? extends Class<?>>, kotlin.jvm.functions.Function2<? super String, ? super java.net.URL, Boolean>)
+  public static final net.corda.testing.driver.TestCorDapp$Factory$Companion Companion
+##
+public static final class net.corda.testing.driver.TestCorDapp$Factory$Companion extends java.lang.Object
+  @NotNull
+  public final net.corda.testing.driver.TestCorDapp$Mutable create(String, String, String, String, java.util.Set<? extends Class<?>>, kotlin.jvm.functions.Function2<? super String, ? super java.net.URL, Boolean>)
+##
+@DoNotImplement
+public static interface net.corda.testing.driver.TestCorDapp$Mutable extends net.corda.testing.driver.TestCorDapp
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable minus(Class<?>)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable minusPackage(Package)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable minusPackage(String)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable minusPackages(Package, Package...)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable minusPackages(String, String...)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable minusPackages(java.util.Set<String>)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable minusResource(String, java.net.URL)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable plus(Class<?>)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable plusPackage(Package)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable plusPackage(String)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable plusPackages(Package, Package...)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable plusPackages(String, String...)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable plusPackages(java.util.Set<String>)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable plusResource(String, java.net.URL)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable withClasses(java.util.Set<? extends Class<?>>)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable withName(String)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable withTitle(String)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable withVendor(String)
+  @NotNull
+  public abstract net.corda.testing.driver.TestCorDapp$Mutable withVersion(String)
+##
 public final class net.corda.testing.driver.VerifierType extends java.lang.Enum
   protected <init>()
   public static net.corda.testing.driver.VerifierType valueOf(String)
@@ -6170,6 +6246,8 @@ public class net.corda.testing.node.MockNetwork extends java.lang.Object
   @NotNull
   public final net.corda.testing.node.StartedMockNode createNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>, java.util.List<String>)
   @NotNull
+  public final net.corda.testing.node.StartedMockNode createNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>, java.util.Set<? extends net.corda.testing.driver.TestCorDapp>)
+  @NotNull
   public final net.corda.testing.node.StartedMockNode createNode(net.corda.testing.node.MockNodeParameters)
   @NotNull
   public final net.corda.testing.node.StartedMockNode createPartyNode(net.corda.core.identity.CordaX500Name)
@@ -6185,6 +6263,8 @@ public class net.corda.testing.node.MockNetwork extends java.lang.Object
   public final net.corda.testing.node.UnstartedMockNode createUnstartedNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>)
   @NotNull
   public final net.corda.testing.node.UnstartedMockNode createUnstartedNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>, java.util.List<String>)
+  @NotNull
+  public final net.corda.testing.node.UnstartedMockNode createUnstartedNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>, java.util.Set<? extends net.corda.testing.driver.TestCorDapp>)
   @NotNull
   public final net.corda.testing.node.UnstartedMockNode createUnstartedNode(net.corda.testing.node.MockNodeParameters)
   @NotNull
@@ -6266,6 +6346,7 @@ public final class net.corda.testing.node.MockNodeParameters extends java.lang.O
   public <init>()
   public <init>(Integer, net.corda.core.identity.CordaX500Name, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>)
   public <init>(Integer, net.corda.core.identity.CordaX500Name, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>, java.util.List<String>)
+  public <init>(Integer, net.corda.core.identity.CordaX500Name, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>, java.util.Set<? extends net.corda.testing.driver.TestCorDapp>)
   @Nullable
   public final Integer component1()
   @Nullable
@@ -6278,6 +6359,8 @@ public final class net.corda.testing.node.MockNodeParameters extends java.lang.O
   public final net.corda.testing.node.MockNodeParameters copy(Integer, net.corda.core.identity.CordaX500Name, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>)
   @NotNull
   public final net.corda.testing.node.MockNodeParameters copy(Integer, net.corda.core.identity.CordaX500Name, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>, java.util.List<String>)
+  @NotNull
+  public final net.corda.testing.node.MockNodeParameters copy(Integer, net.corda.core.identity.CordaX500Name, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>, java.util.Set<? extends net.corda.testing.driver.TestCorDapp>)
   public boolean equals(Object)
   @NotNull
   public final kotlin.jvm.functions.Function1<net.corda.node.services.config.NodeConfiguration, Object> getConfigOverrides()
@@ -6300,14 +6383,14 @@ public final class net.corda.testing.node.MockNodeParameters extends java.lang.O
 ##
 public class net.corda.testing.node.MockServices extends java.lang.Object implements net.corda.core.node.ServiceHub
   public <init>()
-  public <init>(java.util.List<String>)
-  public <init>(java.util.List<String>, net.corda.core.identity.CordaX500Name)
-  public <init>(java.util.List<String>, net.corda.core.identity.CordaX500Name, java.security.KeyPair, java.security.KeyPair...)
-  public <init>(java.util.List<String>, net.corda.core.identity.CordaX500Name, net.corda.core.node.services.IdentityService)
-  public <init>(java.util.List<String>, net.corda.core.identity.CordaX500Name, net.corda.core.node.services.IdentityService, java.security.KeyPair, java.security.KeyPair...)
-  public <init>(java.util.List<String>, net.corda.testing.core.TestIdentity, net.corda.core.node.services.IdentityService, net.corda.core.node.NetworkParameters, java.security.KeyPair...)
-  public <init>(java.util.List<String>, net.corda.testing.core.TestIdentity, net.corda.core.node.services.IdentityService, java.security.KeyPair...)
-  public <init>(java.util.List<String>, net.corda.testing.core.TestIdentity, java.security.KeyPair...)
+  public <init>(Iterable<String>)
+  public <init>(Iterable<String>, net.corda.core.identity.CordaX500Name)
+  public <init>(Iterable<String>, net.corda.core.identity.CordaX500Name, java.security.KeyPair, java.security.KeyPair...)
+  public <init>(Iterable<String>, net.corda.core.identity.CordaX500Name, net.corda.core.node.services.IdentityService)
+  public <init>(Iterable<String>, net.corda.core.identity.CordaX500Name, net.corda.core.node.services.IdentityService, java.security.KeyPair, java.security.KeyPair...)
+  public <init>(Iterable<String>, net.corda.testing.core.TestIdentity, net.corda.core.node.services.IdentityService, net.corda.core.node.NetworkParameters, java.security.KeyPair...)
+  public <init>(Iterable<String>, net.corda.testing.core.TestIdentity, net.corda.core.node.services.IdentityService, java.security.KeyPair...)
+  public <init>(Iterable<String>, net.corda.testing.core.TestIdentity, java.security.KeyPair...)
   public <init>(net.corda.core.identity.CordaX500Name)
   public <init>(net.corda.core.identity.CordaX500Name, java.security.KeyPair, java.security.KeyPair...)
   public <init>(net.corda.core.identity.CordaX500Name, net.corda.core.node.services.IdentityService)
@@ -6436,6 +6519,10 @@ public final class net.corda.testing.node.NotarySpec extends java.lang.Object
   public final net.corda.testing.driver.VerifierType getVerifierType()
   public int hashCode()
   public String toString()
+##
+public interface net.corda.testing.node.ResponderFlowFactory
+  @NotNull
+  public abstract F invoke(net.corda.core.flows.FlowSession)
 ##
 public final class net.corda.testing.node.StartedMockNode extends java.lang.Object
   @NotNull

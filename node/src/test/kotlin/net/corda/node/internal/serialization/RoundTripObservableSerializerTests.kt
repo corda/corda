@@ -5,7 +5,7 @@ import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.RemovalListener
 import com.nhaarman.mockito_kotlin.mock
-import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableSerializer
+import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSerializer
 import net.corda.core.context.Trace
 import net.corda.core.internal.ThreadBox
 import net.corda.node.internal.serialization.testutils.AMQPRoundTripRPCSerializationScheme
@@ -13,13 +13,13 @@ import net.corda.node.internal.serialization.testutils.serializationContext
 import net.corda.node.serialization.amqp.RpcServerObservableSerializer
 import net.corda.node.services.messaging.ObservableSubscription
 import net.corda.nodeapi.RPCApi
+import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.SerializationOutput
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Test
 import rx.Notification
 import rx.Observable
-import rx.Subscription
 import rx.subjects.UnicastSubject
 import java.time.Instant
 import java.util.*
@@ -38,7 +38,7 @@ class RoundTripObservableSerializerTests {
                 .maximumSize(100)
                 .build()
 
-        subMap.put(id, ObservableSubscription(mock<Subscription>()))
+        subMap.put(id, ObservableSubscription(mock()))
 
         return subMap
     }
@@ -48,7 +48,7 @@ class RoundTripObservableSerializerTests {
     })
 
     private fun createRpcObservableMap(): Cache<Trace.InvocationId, UnicastSubject<Notification<*>>> {
-        val onObservableRemove = RemovalListener<Trace.InvocationId, UnicastSubject<Notification<*>>> { key, value, cause ->
+        val onObservableRemove = RemovalListener<Trace.InvocationId, UnicastSubject<Notification<*>>> { key, _, _ ->
             val observableId = key!!
 
             observablesToReap.locked { observables.add(observableId) }
@@ -60,7 +60,7 @@ class RoundTripObservableSerializerTests {
     @Test
     fun roundTripTest1() {
         val serializationScheme = AMQPRoundTripRPCSerializationScheme(
-                serializationContext, emptySet(), ConcurrentHashMap())
+                serializationContext, emptySet(), AccessOrderLinkedHashMap { 128 })
 
         // Fake up a message ID, needs to be used on both "sides". The server setting it in the subscriptionMap,
         // the client as a property of the deserializer which, in the actual RPC client, is pulled off of
@@ -85,16 +85,16 @@ class RoundTripObservableSerializerTests {
 
 
         // What we're actually going to serialize then deserialize
-        val obs = Observable.create<Int>({ 12 })
+        val obs = Observable.create<Int> { Math.random() }
 
         val serverSerializationContext = RpcServerObservableSerializer.createContext(
                 serializationContext, serverObservableContext)
 
-        val clientSerializationContext = RpcClientObservableSerializer.createContext(
+        val clientSerializationContext = RpcClientObservableDeSerializer.createContext(
                 serializationContext, clientObservableContext).withProperty(RPCApi.RpcRequestOrObservableIdKey, id)
 
 
         val blob = SerializationOutput(serverSerializer).serialize(obs, serverSerializationContext)
-        val obs2 = DeserializationInput(clientSerializer).deserialize(blob, clientSerializationContext)
+        DeserializationInput(clientSerializer).deserialize(blob, clientSerializationContext)
     }
 }

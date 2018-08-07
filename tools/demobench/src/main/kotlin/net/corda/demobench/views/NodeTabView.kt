@@ -145,9 +145,11 @@ class NodeTabView : Fragment() {
             hbox {
                 button("Add CorDapp") {
                     setOnAction {
-                        val app = (chooser.showOpenDialog(null) ?: return@setOnAction).toPath()
-                        if (!cordapps.contains(app)) {
-                            cordapps.add(app)
+                        (chooser.showOpenMultipleDialog(null) ?: return@setOnAction).forEach {
+                            val app = it.toPath()
+                            if (!cordapps.contains(app)) {
+                                cordapps.add(app)
+                            }
                         }
                     }
 

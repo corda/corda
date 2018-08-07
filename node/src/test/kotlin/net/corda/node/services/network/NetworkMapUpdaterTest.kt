@@ -22,7 +22,6 @@ import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned
@@ -62,9 +61,9 @@ class NetworkMapUpdaterTest {
 
     @Before
     fun setUp() {
-        server = NetworkMapServer(cacheExpiryMs.millis, PortAllocation.Incremental(10000).nextHostAndPort())
-        val hostAndPort = server.start()
-        networkMapClient = NetworkMapClient(URL("http://${hostAndPort.host}:${hostAndPort.port}"), DEV_ROOT_CA.certificate)
+        server = NetworkMapServer(cacheExpiryMs.millis)
+        val address = server.start()
+        networkMapClient = NetworkMapClient(URL("http://$address")).apply { start(DEV_ROOT_CA.certificate) }
     }
 
     @After
@@ -74,8 +73,12 @@ class NetworkMapUpdaterTest {
         server.close()
     }
 
-    private fun setUpdater(ourNodeHash: SecureHash? = null, extraNetworkMapKeys: List<UUID> = emptyList(), netMapClient: NetworkMapClient? = networkMapClient) {
-        updater = NetworkMapUpdater(networkMapCache, fileWatcher, netMapClient, server.networkParameters.serialize().hash, ourNodeHash, baseDir, extraNetworkMapKeys)
+    private fun setUpdater(extraNetworkMapKeys: List<UUID> = emptyList(), netMapClient: NetworkMapClient? = networkMapClient) {
+        updater = NetworkMapUpdater(networkMapCache, fileWatcher, netMapClient, baseDir, extraNetworkMapKeys)
+    }
+
+    private fun startUpdater(ourNodeHash: SecureHash = SecureHash.randomSHA256()) {
+        updater.start(DEV_ROOT_CA.certificate, server.networkParameters.serialize().hash, ourNodeHash)
     }
 
     @Test
@@ -92,7 +95,7 @@ class NetworkMapUpdaterTest {
         // Not subscribed yet.
         verify(networkMapCache, times(0)).addNode(any())
 
-        updater.subscribeToNetworkMap()
+        startUpdater()
         networkMapClient.publish(signedNodeInfo2)
 
         // TODO: Remove sleep in unit test.
@@ -130,7 +133,7 @@ class NetworkMapUpdaterTest {
         networkMapClient.publish(signedNodeInfo3)
         networkMapClient.publish(signedNodeInfo4)
 
-        updater.subscribeToNetworkMap()
+        startUpdater()
         scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
@@ -163,7 +166,7 @@ class NetworkMapUpdaterTest {
         // Not subscribed yet.
         verify(networkMapCache, times(0)).addNode(any())
 
-        updater.subscribeToNetworkMap()
+        startUpdater()
 
         NodeInfoWatcher.saveToFile(nodeInfoDir, fileNodeInfoAndSigned)
         scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
@@ -184,7 +187,7 @@ class NetworkMapUpdaterTest {
         val newParameters = testNetworkParameters(epoch = 2)
         val updateDeadline = Instant.now().plus(1, ChronoUnit.DAYS)
         server.scheduleParametersUpdate(newParameters, "Test update", updateDeadline)
-        updater.subscribeToNetworkMap()
+        startUpdater()
         updates.expectEvents(isStrict = false) {
             sequence(
                     expect { update: ParametersUpdateInfo ->
@@ -202,12 +205,12 @@ class NetworkMapUpdaterTest {
         setUpdater()
         val newParameters = testNetworkParameters(epoch = 314)
         server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
-        updater.subscribeToNetworkMap()
+        startUpdater()
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
         val newHash = newParameters.serialize().hash
         val keyPair = Crypto.generateKeyPair()
-        updater.acceptNewNetworkParameters(newHash, { hash -> hash.serialize().sign(keyPair) })
+        updater.acceptNewNetworkParameters(newHash) { it.serialize().sign(keyPair) }
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
         val paramsFromFile = signedNetworkParams.verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
@@ -236,7 +239,7 @@ class NetworkMapUpdaterTest {
         setUpdater(netMapClient = null)
         val fileNodeInfoAndSigned1 = createNodeInfoAndSigned("Info from file 1")
         val fileNodeInfoAndSigned2 = createNodeInfoAndSigned("Info from file 2")
-        updater.subscribeToNetworkMap()
+        startUpdater()
 
         NodeInfoWatcher.saveToFile(nodeInfoDir, fileNodeInfoAndSigned1)
         NodeInfoWatcher.saveToFile(nodeInfoDir, fileNodeInfoAndSigned2)
@@ -269,7 +272,7 @@ class NetworkMapUpdaterTest {
         NodeInfoWatcher.saveToFile(nodeInfoDir, localSignedNodeInfo)
         // Publish to network map the one with lower serial.
         networkMapClient.publish(serverSignedNodeInfo)
-        updater.subscribeToNetworkMap()
+        startUpdater()
         scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
         verify(networkMapCache, times(1)).addNode(localNodeInfo)
         Thread.sleep(2L * cacheExpiryMs)
@@ -292,10 +295,10 @@ class NetworkMapUpdaterTest {
     fun `not remove own node info when it is not in network map yet`() {
         val (myInfo, signedMyInfo) = createNodeInfoAndSigned("My node info")
         val (_, signedOtherInfo) = createNodeInfoAndSigned("Other info")
-        setUpdater(ourNodeHash = signedMyInfo.raw.hash)
+        setUpdater()
         networkMapCache.addNode(myInfo) // Simulate behaviour on node startup when our node info is added to cache
         networkMapClient.publish(signedOtherInfo)
-        updater.subscribeToNetworkMap()
+        startUpdater(ourNodeHash = signedMyInfo.raw.hash)
         Thread.sleep(2L * cacheExpiryMs)
         verify(networkMapCache, never()).removeNode(myInfo)
         assertThat(server.networkMapHashes()).containsOnly(signedOtherInfo.raw.hash)
@@ -318,7 +321,7 @@ class NetworkMapUpdaterTest {
         // Not subscribed yet.
         verify(networkMapCache, times(0)).addNode(any())
 
-        updater.subscribeToNetworkMap()
+        startUpdater()
 
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)

@@ -6,12 +6,12 @@ CorDapps
 
    cordapp-overview
    writing-a-cordapp
+   debugging-a-cordapp
    upgrade-notes
    upgrading-cordapps
    cordapp-build-systems
    building-against-master
    corda-api
-   serialization-index
    secure-coding-guidelines
    flow-cookbook
    vault

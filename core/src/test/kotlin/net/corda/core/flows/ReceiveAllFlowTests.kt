@@ -1,24 +1,31 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import com.natpryce.hamkrest.assertion.assert
+import net.corda.testing.internal.matchers.flow.willReturn
+import net.corda.core.flows.mixins.WithMockNet
 import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.After
+import org.junit.AfterClass
 import org.junit.Test
 
-class ReceiveMultipleFlowTests {
-    private val mockNet = InternalMockNetwork(emptyList())
-    private val nodes = (0..2).map { mockNet.createPartyNode() }
-    @After
-    fun stopNodes() {
-        mockNet.stopNodes()
+
+class ReceiveMultipleFlowTests : WithMockNet {
+    companion object {
+        private val classMockNet = InternalMockNetwork()
+
+        @JvmStatic
+        @AfterClass
+        fun stopNodes() = classMockNet.stopNodes()
     }
+
+    override val mockNet = classMockNet
+
+    private val nodes = (0..2).map { mockNet.createPartyNode() }
 
     @Test
     fun showcase_flows_as_closures() {
@@ -49,10 +56,9 @@ class ReceiveMultipleFlowTests {
             } as FlowLogic<Unit>
         }
 
-        val flow = nodes[0].services.startFlow(initiatingFlow)
-        mockNet.runNetwork()
-        val receivedAnswer = flow.resultFuture.getOrThrow()
-        assertThat(receivedAnswer).isEqualTo(answer)
+        assert.that(
+                nodes[0].startFlowAndRunNetwork(initiatingFlow),
+                willReturn(answer as Any))
     }
 
     @Test
@@ -61,10 +67,10 @@ class ReceiveMultipleFlowTests {
         nodes[1].registerAnswer(AlgorithmDefinition::class, doubleValue)
         val stringValue = "Thriller"
         nodes[2].registerAnswer(AlgorithmDefinition::class, stringValue)
-        val flow = nodes[0].services.startFlow(ParallelAlgorithmMap(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity()))
-        mockNet.runNetwork()
-        val result = flow.resultFuture.getOrThrow()
-        assertThat(result).isEqualTo(doubleValue * stringValue.length)
+
+        assert.that(
+                nodes[0].startFlowAndRunNetwork(ParallelAlgorithmMap(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity())),
+                willReturn(doubleValue * stringValue.length))
     }
 
     @Test
@@ -73,12 +79,10 @@ class ReceiveMultipleFlowTests {
         nodes[1].registerAnswer(ParallelAlgorithmList::class, value1)
         val value2 = 6.0
         nodes[2].registerAnswer(ParallelAlgorithmList::class, value2)
-        val flow = nodes[0].services.startFlow(ParallelAlgorithmList(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity()))
-        mockNet.runNetwork()
-        val data = flow.resultFuture.getOrThrow()
-        assertThat(data[0]).isEqualTo(value1)
-        assertThat(data[1]).isEqualTo(value2)
-        assertThat(data.fold(1.0) { a, b -> a * b }).isEqualTo(value1 * value2)
+
+        assert.that(
+                nodes[0].startFlowAndRunNetwork(ParallelAlgorithmList(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity())),
+                willReturn(listOf(value1, value2)))
     }
 
     class ParallelAlgorithmMap(doubleMember: Party, stringMember: Party) : AlgorithmDefinition(doubleMember, stringMember) {

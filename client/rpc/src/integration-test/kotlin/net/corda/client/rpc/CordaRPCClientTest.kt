@@ -20,8 +20,7 @@ import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
+import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.common.internal.checkNotOnClasspath
 import net.corda.testing.core.*
@@ -35,7 +34,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import rx.subjects.PublishSubject
-import java.io.File.pathSeparator
 import java.net.URLClassLoader
 import java.nio.file.Paths
 import java.util.*
@@ -52,7 +50,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
         val rpcUser = User("user1", "test", permissions = setOf(all()))
     }
 
-    private lateinit var node: StartedNode<Node>
+    private lateinit var node: NodeWithInfo
     private lateinit var identity: Party
     private lateinit var client: CordaRPCClient
     private var connection: CordaRPCConnection? = null
@@ -64,7 +62,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
     @Before
     fun setUp() {
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
-        client = CordaRPCClient(node.internals.configuration.rpcOptions.address, CordaRPCClientConfiguration.DEFAULT.copy(
+        client = CordaRPCClient(node.node.configuration.rpcOptions.address, CordaRPCClientConfiguration.DEFAULT.copy(
             maxReconnectAttempts = 5
         ))
         identity = node.info.identityFromX500Name(ALICE_NAME)
@@ -129,7 +127,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
                 task.cancel(true)
                 latch.countDown()
             }.doOnCompleted {
-                        successful = (node.internals.started == null)
+                        successful = (node.node.started == null)
                         task.cancel(true)
                         latch.countDown()
                     }.subscribe()
@@ -231,16 +229,13 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
     @Test
     fun `additional class loader used by WireTransaction when it deserialises its components`() {
         val financeLocation = Cash::class.java.location.toPath().toString()
-        val classpathWithoutFinance = ProcessUtilities.defaultClassPath
-                .split(pathSeparator)
-                .filter { financeLocation !in it }
-                .joinToString(pathSeparator)
+        val classPathWithoutFinance = ProcessUtilities.defaultClassPath.filter { financeLocation !in it }
 
         // Create a Cash.State object for the StandaloneCashRpcClient to get
         node.services.startFlow(CashIssueFlow(100.POUNDS, OpaqueBytes.of(1), identity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()
         val outOfProcessRpc = ProcessUtilities.startJavaProcess<StandaloneCashRpcClient>(
-                classpath = classpathWithoutFinance,
-                arguments = listOf(node.internals.configuration.rpcOptions.address.toString(), financeLocation)
+                classPath = classPathWithoutFinance,
+                arguments = listOf(node.node.configuration.rpcOptions.address.toString(), financeLocation)
         )
         assertThat(outOfProcessRpc.waitFor()).isZero()  // i.e. no exceptions were thrown
     }

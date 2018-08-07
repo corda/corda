@@ -10,8 +10,11 @@ dependencies {
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
 
+    testCompile(project(':test-utils')) {
+        exclude module: 'node-api'
+        exclude module: 'finance'
+    }
     testCompile project(':test-utils')
-    testCompile "junit:junit:$junit_version"
 }
 
 jar {
@@ -24,7 +27,7 @@ jar {
     manifest {
         attributes(
                 'Automatic-Module-Name': 'net.corda.blobinspector',
-                'Main-Class': 'net.corda.blobinspector.MainKt'
+                'Main-Class': 'net.corda.blobinspector.BlobInspectorKt'
         )
     }
 }

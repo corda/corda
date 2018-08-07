@@ -40,7 +40,7 @@ see changes to this list.
 * BMO
 * Bob Crozier (AIA)
 * Bogdan Paunescu (R3)
-* Bruno Carvalhal
+* Bruno dos Santos Carvalhal (Ordina Nederland)
 * C-Otto
 * Cais Manai (R3)
 * Carl Worrall (BCS)
@@ -59,6 +59,7 @@ see changes to this list.
 * Clay Ratliff (Thoughtworks)
 * Clemens Wan (R3)
 * Clinton Alexander (R3)
+* Clyde D'Cruz (Persistent Systems Limited)
 * cncorda
 * Credit Suisse
 * cyrsis
@@ -69,8 +70,10 @@ see changes to this list.
 * David Lee (BCS)
 * Dinesh Rivankar (Persistent Systems Limited)
 * Dirk Hermans (KBC)
+* dmytrobr
 * Edward Greenwood (State Street)
 * Elendu Uche (APPZONE)
+* Emanuel Russo (NTT DATA Italy)
 * Farzad Pezeshkpour (RBS)
 * fracting
 * Frederic Dalibard (Natixis)
@@ -95,6 +98,7 @@ see changes to this list.
 * Johann Palychata (BNP Paribas)
 * johnnyychiu
 * Jonathan Sartin (R3)
+* Jonathan Sphar (R3)
 * Jose Coll (R3)
 * Jose Luu (Natixis)
 * Josh Lindl (BCS)
@@ -104,6 +108,7 @@ see changes to this list.
 * karnauskas
 * Kasia Streich (R3)
 * Kat Baker (R3)
+* Keerthi Nelaturu (Scotiabank)
 * Khaild Ahmed (Northern Trust)
 * Klaus Apolinario (Bradesco)
 * Koen Vingerhoets (KBC)
@@ -123,6 +128,7 @@ see changes to this list.
 * Massimo Morini
 * Mat Rizzo (R3)
 * Matt Britton (BCS)
+* Matthew Layton (TradeIX)
 * Matthew Nesbit (R3)
 * Matthijs van den Bos (ING)
 * Michal Kit (R3)
@@ -167,6 +173,7 @@ see changes to this list.
 * Sam Chadwick (Thomson Reuters)
 * Sasmit Sahu
 * Scott James
+* Sean Zhang (Wells Fargo)
 * Shams Asari (R3)
 * Siddhartha Sengupta (Tradewind Markets)
 * Simon Taylor (Barclays)
@@ -186,7 +193,7 @@ see changes to this list.
 * Tommy Lillehagen (R3)
 * tomtau
 * Tudor Malene (R3)
-* Tushar Singh Bora
+* Tushar Singh Bora (Accenture)
 * varunkm
 * Venelin Stoykov (INDUSTRIA)
 * verymahler

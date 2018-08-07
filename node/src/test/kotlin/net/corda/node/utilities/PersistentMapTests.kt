@@ -25,7 +25,7 @@ class PersistentMapTests {
                     }
                 },
                 persistentEntityClass = ContractUpgradeServiceImpl.DBContractUpgrade::class.java
-        )
+        ).apply { preload() }
     }
 
     @Test

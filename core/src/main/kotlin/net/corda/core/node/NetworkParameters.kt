@@ -1,5 +1,6 @@
 package net.corda.core.node
 
+import net.corda.core.CordaRuntimeException
 import net.corda.core.KeepForDJVM
 import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentId
@@ -60,6 +61,7 @@ data class NetworkParameters(
         require(epoch > 0) { "epoch must be at least 1" }
         require(maxMessageSize > 0) { "maxMessageSize must be at least 1" }
         require(maxTransactionSize > 0) { "maxTransactionSize must be at least 1" }
+        require(maxTransactionSize <= maxMessageSize) { "maxTransactionSize cannot be bigger than maxMessageSize" }
         require(!eventHorizon.isNegative) { "eventHorizon must be positive value" }
     }
 
@@ -105,3 +107,9 @@ data class NetworkParameters(
 @KeepForDJVM
 @CordaSerializable
 data class NotaryInfo(val identity: Party, val validating: Boolean)
+
+/**
+ * When a Corda feature cannot be used due to the node's compatibility zone not enforcing a high enough minimum platform
+ * version.
+ */
+class ZoneVersionTooLowException(message: String) : CordaRuntimeException(message)

@@ -1,11 +1,7 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.LinearState
-import net.corda.core.contracts.SchedulableState
-import net.corda.core.contracts.ScheduledActivity
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.contracts.*
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
@@ -14,15 +10,12 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
-import net.corda.node.internal.StartedNode
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -37,8 +30,8 @@ import kotlin.test.fail
 class ScheduledFlowsDrainingModeTest {
 
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var aliceNode: StartedNode<InternalMockNetwork.MockNode>
-    private lateinit var bobNode: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var aliceNode: TestStartedNode
+    private lateinit var bobNode: TestStartedNode
     private lateinit var notary: Party
     private lateinit var alice: Party
     private lateinit var bob: Party
@@ -51,7 +44,7 @@ class ScheduledFlowsDrainingModeTest {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"), threadPerNode = true)
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"), threadPerNode = true)
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
         notary = mockNet.defaultNotaryIdentity

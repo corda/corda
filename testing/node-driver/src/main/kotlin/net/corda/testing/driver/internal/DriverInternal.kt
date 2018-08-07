@@ -4,19 +4,15 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
+import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.OutOfProcess
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.User
 import rx.Observable
-import java.net.InetSocketAddress
-import java.net.ServerSocket
 import java.nio.file.Path
 
 interface NodeHandleInternal : NodeHandle {
@@ -59,9 +55,9 @@ data class InProcessImpl(
         override val useHTTPS: Boolean,
         private val nodeThread: Thread,
         private val onStopCallback: () -> Unit,
-        private val node: StartedNode<Node>
+        private val node: NodeWithInfo
 ) : InProcess, NodeHandleInternal {
-    val database: CordaPersistence = node.database
+    val database: CordaPersistence = node.node.database
     override val services: StartedNodeServices get() = node.services
     override val rpcUsers: List<User> = configuration.rpcUsers.map { User(it.username, it.password, it.permissions) }
     override fun stop() {
@@ -78,12 +74,3 @@ data class InProcessImpl(
 }
 
 val InProcess.internalServices: StartedNodeServices get() = services as StartedNodeServices
-
-object RandomFree : PortAllocation() {
-    override fun nextPort(): Int {
-        return ServerSocket().use {
-            it.bind(InetSocketAddress(0))
-            it.localPort
-        }
-    }
-}

@@ -97,7 +97,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
     protected val methodMap: Multimap<String, Method> = methodsFromType(targetType)
 
     /** A map of method name to parameter names for the target type. */
-    val methodParamNames: Map<String, List<String>> = targetType.declaredMethods.mapNotNull {
+    val methodParamNames: Map<String, List<String>> = targetType.declaredMethods.filterNot(Method::isSynthetic).mapNotNull {
         try {
             it.name to paramNamesFromMethod(it)
         } catch (e: KotlinReflectionInternalError) {
