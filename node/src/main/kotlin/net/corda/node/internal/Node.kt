@@ -392,7 +392,7 @@ open class Node(configuration: NodeConfiguration,
      * A hook to allow configuration override of the JmxReporter being used.
      */
     fun registerJmxReporter(metrics: MetricRegistry) {
-        staticLog.info("Registering JMX reporter:")
+        log.info("Registering JMX reporter:")
         when (configuration.jmxReporterType) {
             JmxReporterType.JOLOKIA -> registerJolokiaReporter(metrics)
             JmxReporterType.NEW_RELIC -> registerNewRelicReporter(metrics)
@@ -400,7 +400,7 @@ open class Node(configuration: NodeConfiguration,
     }
 
     private fun registerJolokiaReporter(registry: MetricRegistry) {
-        staticLog.info("Registering Jolokia JMX reporter:")
+        log.info("Registering Jolokia JMX reporter:")
         // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
         //
         // https://jolokia.org/agent/jvm.html
@@ -416,14 +416,14 @@ open class Node(configuration: NodeConfiguration,
     }
 
     private fun registerNewRelicReporter (registry: MetricRegistry) {
-        staticLog.info("Registering New Relic JMX reporter:")
+        log.info("Registering New Relic JMX Reporter:")
         val reporter = NewRelicReporter.forRegistry(registry)
-                .name("new relic reporter")
+                .name("New Relic Reporter")
                 .filter(MetricFilter.ALL)
                 .attributeFilter(AllEnabledMetricAttributeFilter())
                 .rateUnit(TimeUnit.SECONDS)
                 .durationUnit(TimeUnit.MILLISECONDS)
-                .metricNamePrefix("CorDapp/")
+                .metricNamePrefix("corda/")
                 .build()
 
         reporter.start(1, TimeUnit.MINUTES)
