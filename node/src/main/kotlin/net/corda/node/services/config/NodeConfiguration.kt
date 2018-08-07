@@ -29,7 +29,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigT
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
 import org.slf4j.Logger
-import sun.security.x509.X500Name
 import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
@@ -37,6 +36,7 @@ import java.util.*
 import javax.security.auth.x500.X500Principal
 
 val Int.MB: Long get() = this * 1024L * 1024L
+val Int.KB: Long get() = this * 1024L
 
 private val DEFAULT_FLOW_MONITOR_PERIOD_MILLIS: Duration = Duration.ofMinutes(1)
 private val DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS: Duration = Duration.ofMinutes(1)

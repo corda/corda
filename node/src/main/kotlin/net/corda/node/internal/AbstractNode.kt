@@ -906,7 +906,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun makeVaultService(keyManagementService: KeyManagementService,
                                         services: ServicesForResolution,
                                         database: CordaPersistence): VaultServiceInternal {
-        return NodeVaultService(platformClock, keyManagementService, services, database, schemaService)
+        return NodeVaultService(platformClock, keyManagementService, services, database, schemaService, configuration.transactionCacheSizeBytes)
     }
 
     /** Load configured JVM agents */
