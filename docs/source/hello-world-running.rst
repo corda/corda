@@ -70,7 +70,7 @@ the three node folders. Each node folder has the following structure:
 
         .
         |____corda.jar                     // The runnable node
-        |____corda-webserver.jar           // The node's webserver
+        |____corda-webserver.jar           // The node's webserver (The notary doesn't need a web server)
         |____node.conf                     // The node's configuration file
         |____cordapps
         |____java/kotlin-source-0.1.jar  // Our IOU CorDapp
@@ -85,7 +85,7 @@ Let's start the nodes by running the following commands from the root of the pro
     // On Mac
     build/nodes/runnodes
 
-This will start a terminal window for each node, and an additional terminal window for each node's webserver - eight
+This will start a terminal window for each node, and an additional terminal window for each node's webserver - five
 terminal windows in all. Give each node a moment to start - you'll know it's ready when its terminal windows displays
 the message, "Welcome to the Corda interactive shell.".
 
@@ -105,7 +105,7 @@ commands.
 .. note:: Local terminal shell is available only in a development mode. In production environment SSH server can be enabled.
     More about SSH and how to connect can be found on the :doc:`shell` page.
 
-We want to create an IOU of 100 with PartyB. We start the ``IOUFlow`` by typing:
+We want to create an IOU of 99 with PartyB. We start the ``IOUFlow`` by typing:
 
 .. container:: codeset
 
