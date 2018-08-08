@@ -146,7 +146,7 @@ open class NodeStartup(val args: Array<String>) {
             }
             logStartupInfo(versionInfo, cmdlineOptions, conf)
         } catch (e: NodeRegistrationException) {
-            logger.warn("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.", e)
+            logger.error("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.", e)
             return false
         } catch (e: Exception) {
             logger.error("Exception during node registration", e)
