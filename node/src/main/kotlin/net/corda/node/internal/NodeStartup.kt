@@ -172,7 +172,6 @@ open class NodeStartup(val args: Array<String>) {
             logger.error(e.message)
             return false
         } catch (e: DatabaseIncompatibleException) {
-            e.message?.let { Node.printWarning(it) }
             logger.error(e.message)
             return false
         } catch (e: Exception) {
@@ -181,8 +180,7 @@ open class NodeStartup(val args: Array<String>) {
                 return false
             }
             if (e.message?.startsWith("Unknown named curve:") == true) {
-                logger.error("Exception during node startup - ${e.message}. " +
-                        "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
+                logger.error("Exception during node startup - ${e.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
             } else {
                 logger.error("Exception during node startup", e)
             }
