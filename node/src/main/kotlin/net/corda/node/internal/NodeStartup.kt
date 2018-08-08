@@ -159,9 +159,6 @@ open class NodeStartup(val args: Array<String>) {
         } catch (e: MultipleCordappsForFlowException) {
             logger.error(e.message)
             return false
-        } catch (e: CouldNotCreateDataSourceException) {
-            logger.error(e.message, e.cause)
-            return false
         } catch (e: CheckpointIncompatibleException) {
             logger.error(e.message)
             return false
@@ -174,12 +171,15 @@ open class NodeStartup(val args: Array<String>) {
         } catch (e: DatabaseIncompatibleException) {
             logger.error(e.message)
             return false
+        } catch (e: CouldNotCreateDataSourceException) {
+            logger.error(e.message, e.cause)
+            return false
         } catch (e: Exception) {
             if (e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
                 logger.error("One of the ports required by the Corda node is already in use.")
                 return false
             }
-            if (e.message?.startsWith("Unknown named curve:") == true) {
+            if (e.isOpenJdkKnownIssue()) {
                 logger.error("Exception during node startup - ${e.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
             } else {
                 logger.error("Exception during node startup", e)
@@ -190,6 +190,8 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("Node exiting successfully")
         return true
     }
+
+    private fun Exception.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
 
     private fun checkRegistrationMode(): Boolean {
         // Parse the command line args just to get the base directory. The base directory is needed to determine
