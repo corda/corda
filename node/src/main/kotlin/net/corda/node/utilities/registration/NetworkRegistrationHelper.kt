@@ -18,6 +18,7 @@ import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.IOException
 import java.io.StringWriter
+import java.net.ConnectException
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStore
@@ -90,7 +91,14 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
 
         val keyPair = nodeKeyStore.loadOrCreateKeyPair(SELF_SIGNED_PRIVATE_KEY)
 
-        val requestId = submitOrResumeCertificateSigningRequest(keyPair)
+        val requestId = try {
+            submitOrResumeCertificateSigningRequest(keyPair)
+        } catch (e: Exception) {
+            if (e is ConnectException || e is ServiceUnavailableException || e is IOException) {
+                throw NodeRegistrationException(e)
+            }
+            throw e
+        }
 
         val certificates = try {
             pollServerForCertificates(requestId)
@@ -103,7 +111,7 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
         }
         validateCertificates(keyPair.public, certificates)
         storePrivateKeyWithCertificates(nodeKeyStore, keyPair, certificates, keyAlias)
-        onSuccess(keyPair, certificates, tlsCrlIssuerCert?.let { it.subjectX500Principal.toX500Name() })
+        onSuccess(keyPair, certificates, tlsCrlIssuerCert?.subjectX500Principal?.toX500Name())
         // All done, clean up temp files.
         requestIdStore.deleteIfExists()
     }
@@ -183,7 +191,7 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
                 if (idlePeriodDuration != null) {
                     Thread.sleep(idlePeriodDuration.toMillis())
                 } else {
-                    throw UnableToRegisterNodeWithDoormanException()
+                    throw NodeRegistrationException(e)
                 }
             }
         }
@@ -232,7 +240,7 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
     protected open fun isTlsCrlIssuerCertRequired(): Boolean = false
 }
 
-class UnableToRegisterNodeWithDoormanException : IOException()
+class NodeRegistrationException(cause: Throwable?) : IOException("Unable to contact node registration service", cause)
 
 class NodeRegistrationHelper(private val config: NodeConfiguration, certService: NetworkRegistrationService, regConfig: NodeRegistrationOption, computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) :
         NetworkRegistrationHelper(config,

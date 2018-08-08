@@ -347,7 +347,7 @@ class NetworkBootstrapper
             }
         } else {
             NetworkParameters(
-                    minimumPlatformVersion = 1,
+                    minimumPlatformVersion = 4,
                     notaries = notaryInfos,
                     modifiedTime = Instant.now(),
                     maxMessageSize = 10485760,

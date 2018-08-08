@@ -162,4 +162,10 @@ class AmountTests {
         assertEquals(originalTotals[Pair(partyA, GBP)], newTotals3[Pair(partyA, GBP)])
         assertEquals(originalTotals[Pair(partyB, GBP)], newTotals3[Pair(partyB, GBP)])
     }
+
+    @Test
+    fun testGbpParse() {
+        assertEquals(POUNDS(10), Amount.parseCurrency("10 GBP"))
+        assertEquals(POUNDS(11), Amount.parseCurrency("£11"))
+    }
 }

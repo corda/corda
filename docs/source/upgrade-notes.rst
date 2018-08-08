@@ -9,24 +9,27 @@ first public Beta (:ref:`Milestone 12 <changelog_m12>`), to :ref:`V1.0 <changelo
 
 General rules
 -------------
-Always remember to update the version identifiers in your project gradle file:
+* Always remember to update the version identifiers in your project gradle file:
 
 .. sourcecode:: shell
 
-    ext.corda_release_version = '1.0.0'
-    ext.corda_gradle_plugins_version = '1.0.0'
+    ext.corda_release_version = 'x.y.0'
+    ext.corda_gradle_plugins_version = 'x.y.0'
 
-It may be necessary to update the version of major dependencies:
+* It may also be necessary to update the version of major dependencies:
 
 .. sourcecode:: shell
 
-    ext.kotlin_version = '1.1.4'
-    ext.quasar_version = '0.7.9'
+    ext.kotlin_version = 'x.y.z'
+    ext.quasar_version = 'x.y.z'
 
-Please consult the relevant release notes of the release in question. If not specified, you may assume the
-versions you are currently using are still in force.
+* Please consult the relevant release notes of the release in question. If not specified, you may assume the
+  versions you are currently using are still in force
+  
+  * We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes
 
-We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes.
+* To run database upgrades against H2, you'll need to connect to the node's database without starting the node. You can 
+  do this by connecting directly to the node's ``persistence.mv.db`` file. See :ref:`h2_relative_path`
 
 UNRELEASED
 ----------

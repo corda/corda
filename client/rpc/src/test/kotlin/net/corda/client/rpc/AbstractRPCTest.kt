@@ -3,6 +3,7 @@ package net.corda.client.rpc
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.RPCOps
+import net.corda.core.utilities.seconds
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.node.User
@@ -13,6 +14,7 @@ import net.corda.testing.node.internal.startRpcClient
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.junit.Rule
 import org.junit.runners.Parameterized
+import java.time.Duration
 
 open class AbstractRPCTest {
     @Rule
@@ -44,19 +46,20 @@ open class AbstractRPCTest {
             ops: I,
             rpcUser: User = rpcTestUser,
             clientConfiguration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-            serverConfiguration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT
-    ): TestProxy<I> {
+            serverConfiguration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,
+            queueDrainTimeout: Duration = 5.seconds
+            ): TestProxy<I> {
         return when (mode) {
             RPCTestMode.InVm ->
-                startInVmRpcServer(ops = ops, rpcUser = rpcUser, configuration = serverConfiguration).flatMap {
+                startInVmRpcServer(ops = ops, rpcUser = rpcUser, configuration = serverConfiguration, queueDrainTimeout = queueDrainTimeout).flatMap {
                     startInVmRpcClient<I>(rpcUser.username, rpcUser.password, clientConfiguration).map {
-                        TestProxy(it, { startInVmArtemisSession(rpcUser.username, rpcUser.password) })
+                        TestProxy(it) { startInVmArtemisSession(rpcUser.username, rpcUser.password) }
                     }
                 }
             RPCTestMode.Netty ->
                 startRpcServer(ops = ops, rpcUser = rpcUser, configuration = serverConfiguration).flatMap { (broker) ->
                     startRpcClient<I>(broker.hostAndPort!!, rpcUser.username, rpcUser.password, clientConfiguration).map {
-                        TestProxy(it, { startArtemisSession(broker.hostAndPort!!, rpcUser.username, rpcUser.password) })
+                        TestProxy(it) { startArtemisSession(broker.hostAndPort!!, rpcUser.username, rpcUser.password) }
                     }
                 }
         }.get()
