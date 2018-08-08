@@ -14,6 +14,7 @@ import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
+import net.corda.node.internal.OperationOutcome.Companion.attempt
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
@@ -101,6 +102,7 @@ open class NodeStartup(val args: Array<String>) {
                 println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
             }
             val conf0 = conf0Result.getOrThrow()
+            // TODO sollecitom ask Thomas about this...
             if (cmdlineOptions.bootstrapRaftCluster) {
                 if (conf0 is NodeConfigurationImpl) {
                     println("Bootstrapping raft cluster (starting up as seed node).")
@@ -153,42 +155,88 @@ open class NodeStartup(val args: Array<String>) {
             return false
         }
 
-        try {
-            cmdlineOptions.baseDirectory.createDirectories()
-            startNode(conf, versionInfo, startTime, cmdlineOptions)
-        } catch (e: MultipleCordappsForFlowException) {
-            logger.error(e.message)
-            return false
-        } catch (e: CheckpointIncompatibleException) {
-            logger.error(e.message)
-            return false
-        } catch (e: AddressBindingException) {
-            logger.error(e.message)
-            return false
-        } catch (e: NetworkParametersReader.Error) {
-            logger.error(e.message)
-            return false
-        } catch (e: DatabaseIncompatibleException) {
-            logger.error(e.message)
-            return false
-        } catch (e: CouldNotCreateDataSourceException) {
-            logger.error(e.message, e.cause)
-            return false
-        } catch (e: Exception) {
-            if (e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
-                logger.error("One of the ports required by the Corda node is already in use.")
+        // TODO sollecitom refactor
+        val successful = attempt { startNode(conf, versionInfo, startTime, cmdlineOptions) }.doOnError { error ->
+
+            when {
+                error::class in setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class) -> {
+                    logger.error(error.message)
+                }
+                error is CouldNotCreateDataSourceException -> {
+                    logger.error(error.message, error.cause)
+                }
+                error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> {
+                    logger.error("One of the ports required by the Corda node is already in use.")
+                }
+                error.isOpenJdkKnownIssue() -> {
+                    logger.error("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
+                }
+                else -> {
+                    logger.error("Exception during node startup", error)
+                }
+            }
+        }.invoke().successful
+
+        if (successful) {
+            logger.info("Node exiting successfully")
+        }
+        return successful
+    }
+
+    private fun loadNodeConfiguration(cmdlineOptions: CmdLineOptions) {
+
+        val (rawConfig, conf0Result) = loadConfigFile(cmdlineOptions)
+        if (cmdlineOptions.devMode) {
+            println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
+        }
+        val conf0 = conf0Result.getOrThrow()
+        if (cmdlineOptions.bootstrapRaftCluster) {
+            if (conf0 is NodeConfigurationImpl) {
+                println("Bootstrapping raft cluster (starting up as seed node).")
+                // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
+                conf0.copy(notary = conf0.notary?.copy(raft = conf0.notary?.raft?.copy(clusterAddresses = emptyList())))
+            } else {
+                // TODO sollecitom throw exception instead
+                println("bootstrap-raft-notaries flag not recognized, exiting...")
                 return false
             }
-            if (e.isOpenJdkKnownIssue()) {
-                logger.error("Exception during node startup - ${e.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
-            } else {
-                logger.error("Exception during node startup", e)
-            }
+        } else {
+            conf0
+        }
+    }
+
+    private fun validateNodeConfiguration(configuration: NodeConfiguration) {
+
+        val errors = configuration.validate()
+        if (errors.isNotEmpty()) {
+            // TODO sollecitom throw exception instead
+            logger.error("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
             return false
         }
+    }
 
-        logger.info("Node exiting successfully")
-        return true
+    private fun registerWithNetwork(configuration: NodeConfiguration, versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions) {
+
+        banJavaSerialisation(configuration)
+        preNetworkRegistration(configuration)
+        if (cmdlineOptions.nodeRegistrationOption != null) {
+            // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
+            registerWithNetwork(configuration, versionInfo, cmdlineOptions.nodeRegistrationOption)
+            // At this point the node registration was successful. We can delete the marker file.
+            deleteNodeRegistrationMarker(cmdlineOptions.baseDirectory)
+            return true
+        }
+        logStartupInfo(versionInfo, cmdlineOptions, configuration)
+    }
+
+    private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) {
+
+        print(message)
+    }
+
+    private fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) {
+
+        print(message, error)
     }
 
     private fun Exception.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
@@ -241,6 +289,8 @@ open class NodeStartup(val args: Array<String>) {
     protected open fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
 
     protected open fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
+
+        cmdlineOptions.baseDirectory.createDirectories()
         val node = createNode(conf, versionInfo)
         if (cmdlineOptions.clearNetworkMapCache) {
             node.clearNetworkMapCache()
@@ -524,3 +574,69 @@ open class NodeStartup(val args: Array<String>) {
         }
     }
 }
+
+sealed class OperationOutcome<RESULT>(val successful: Boolean) {
+
+    companion object {
+        fun <RESULT> attempt(action: () -> RESULT): () -> OperationOutcome<RESULT> {
+
+            return {
+                try {
+                    Successful(action.invoke())
+                } catch (error: Exception) {
+                    Unsuccessful(error)
+                }
+            }
+        }
+    }
+
+    abstract fun <ACTION_RESULT> ifSuccessful(action: (RESULT) -> ACTION_RESULT): OperationOutcome<ACTION_RESULT>
+
+    abstract fun ifUnsuccessful(action: (Exception) -> Unit): OperationOutcome<RESULT>
+
+    data class Successful<RESULT>(val result: RESULT) : OperationOutcome<RESULT>(true) {
+
+        override fun <ACTION_RESULT> ifSuccessful(action: (RESULT) -> ACTION_RESULT): OperationOutcome<ACTION_RESULT> {
+
+            return attempt { action.invoke(result) }.invoke()
+        }
+
+        override fun ifUnsuccessful(action: (Exception) -> Unit): OperationOutcome<RESULT> {
+
+            return this
+        }
+    }
+
+    data class Unsuccessful<RESULT>(val error: Exception) : OperationOutcome<RESULT>(false) {
+
+        override fun <ACTION_RESULT> ifSuccessful(action: (RESULT) -> ACTION_RESULT): OperationOutcome<ACTION_RESULT> {
+
+            return Unsuccessful(error)
+        }
+
+        override fun ifUnsuccessful(action: (Exception) -> Unit): OperationOutcome<RESULT> {
+
+            action.invoke(error)
+            return this
+        }
+    }
+}
+
+fun <FIRST, SECOND> (() -> OperationOutcome<FIRST>).then(action: (FIRST) -> SECOND): () -> OperationOutcome<SECOND> {
+
+    return { invoke().ifSuccessful(action::invoke) }
+}
+
+fun <RESULT> (() -> OperationOutcome<RESULT>).doOnError(action: (Exception) -> Unit): () -> OperationOutcome<RESULT> {
+
+    return { invoke().ifUnsuccessful(action::invoke) }
+}
+
+fun main(args: Array<String>) {
+
+    val result = attempt<String> { throw RuntimeException("Boom") }.doOnError { error -> error.printStackTrace() }.then { sentence -> sentence.length }.invoke()
+    val result2 = attempt { "Hello functional" }.doOnError { error -> error.printStackTrace() }.then { sentence -> sentence.length }.invoke()
+    println(result)
+    println(result2)
+}
+
