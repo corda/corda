@@ -17,6 +17,7 @@
     <include file="migration/node-core.changelog-init.xml"/>
     <include file="migration/node-core.changelog-v3.xml"/>
     <include file="migration/node-core.changelog-v4.xml"/>
+    <include file="migration/node-core.changelog-v5.xml"/>
     <include file="migration/node-core.changelog-pkey.xml"/>
     <include file="migration/node-core.changelog-postgres-blob.xml"/>
 
