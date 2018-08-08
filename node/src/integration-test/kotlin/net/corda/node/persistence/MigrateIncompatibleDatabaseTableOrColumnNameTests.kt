@@ -18,14 +18,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class FailNodeOnNotMigratedAttachmentContractsTableNameTests {
+class MigrateIncompatibleDatabaseTableOrColumnNameTests {
     @Test
-    fun `node fixes table name not migrated from version 3 dot 0`() {
+    fun `node migrates node_attachemnts_contranst_class_name table name from version 3 dot 0`() {
         `node fixes incompatible table name`("NODE_ATTACHMENTS_CONTRACTS", "NODE_ATTACHMENTS_CONTRACT_CLASS_NAME")
     }
 
     @Test
-    fun `node fails table name not migrated from version 3 dot 1`() {
+    fun `node migrates node_attchemnts_contransts table name from version 3 dot 1`() {
         `node fixes incompatible table name`("NODE_ATTACHMENTS_CONTRACTS", "NODE_ATTCHMENTS_CONTRACTS")
     }
 
@@ -69,7 +69,7 @@ class FailNodeOnNotMigratedAttachmentContractsTableNameTests {
     }
 
     @Test
-    fun `node fixes node info hosts column name`() {
+    fun `node migrates to host_name column name`() {
         `node fixes incompatible column name`("NODE_INFO_HOSTS",  "HOST_NAME", "HOST")
     }
 
