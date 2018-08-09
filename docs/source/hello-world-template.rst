@@ -17,7 +17,7 @@ CorDapp onto a local test network of dummy nodes to test its functionality.
 
 CorDapps can be written in both Java and Kotlin, and will be providing the code in both languages in this tutorial.
 
-Note that there's no need to download and install Corda itself. Corda's required libraries will be downloaded
+Note that there's no need to download and install Corda itself. Corda V1.0's required libraries will be downloaded
 automatically from an online Maven repository.
 
 Downloading the template
