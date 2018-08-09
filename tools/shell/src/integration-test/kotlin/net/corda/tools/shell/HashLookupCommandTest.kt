@@ -37,8 +37,8 @@ class HashLookupCommandTest {
 
             val session = connectToShell(user, node)
 
-            testCommand(session, command = "hash-lookup ${txId.sha256()}", expected = "Found a matching transaction with Id: $txId")
-            testCommand(session, command = "hash-lookup ${SecureHash.randomSHA256()}", expected = "No matching transaction found")
+            testCommand(session, command = "hashLookup ${txId.sha256()}", expected = "Found a matching transaction with Id: $txId")
+            testCommand(session, command = "hashLookup ${SecureHash.randomSHA256()}", expected = "No matching transaction found")
 
             session.disconnect()
         }
