@@ -74,7 +74,7 @@
             <AppenderRef ref="Console-Appender-Println"/>
             <AppenderRef ref="RollingFile-Appender" />
         </Logger>
-        <Logger name="org.hibernate.SQL" level="info" additivity="false">
+        <Logger name="org.hibernate.SQL" level="debug" additivity="false">
             <AppenderRef ref="Console-Appender"/>
             <AppenderRef ref="RollingFile-Appender"/>
         </Logger>

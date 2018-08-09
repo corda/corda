@@ -17,6 +17,8 @@ import net.corda.finance.contracts.DealState
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.Obligation
 import net.corda.finance.contracts.asset.OnLedgerAsset
+import net.corda.testing.contracts.DummyContract
+import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.internal.chooseIdentityAndCert
@@ -201,6 +203,23 @@ class VaultFiller @JvmOverloads constructor(
         }
 
         return Vault(states)
+    }
+
+    /**
+     * Records a dummy state in the Vault (useful for creating random states when testing vault queries)
+     */
+    fun fillWithDummyState() : Vault<DummyState> {
+        val outputState = TransactionState(
+                data = DummyState(Random().nextInt(), participants = listOf(services.myInfo.singleIdentity())),
+                contract = DummyContract.PROGRAM_ID,
+                notary = defaultNotary.party
+        )
+        val builder = TransactionBuilder()
+                .addOutputState(outputState)
+                .addCommand(DummyCommandData, defaultNotary.party.owningKey)
+        val stxn = services.signInitialTransaction(builder)
+        services.recordTransactions(stxn)
+        return Vault(setOf(stxn.tx.outRef(0)))
     }
 
     /**

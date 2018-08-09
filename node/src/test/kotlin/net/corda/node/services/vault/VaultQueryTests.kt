@@ -1962,6 +1962,60 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     @Test
+    fun `composite query for fungible and linear states`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestLinearStates(1, "TEST1")
+            vaultFiller.fillWithSomeTestDeals(listOf("123"))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER, services.myInfo.singleIdentity())
+            vaultFiller.fillWithSomeTestCommodity(Amount(100, Commodity.getInstance("FCOJ")!!), notaryServices, DUMMY_OBLIGATION_ISSUER.ref(1))
+            vaultFiller.fillWithDummyState()
+            // all contract states query
+            val results = vaultService.queryBy<ContractState>()
+            assertThat(results.states).hasSize(5)
+            // linear states only query
+            val linearStateCriteria = LinearStateQueryCriteria()
+            val resultsLSC = vaultService.queryBy<ContractState>(linearStateCriteria)
+            assertThat(resultsLSC.states).hasSize(2)
+            // fungible asset states only query
+            val fungibleAssetStateCriteria = FungibleAssetQueryCriteria()
+            val resultsFASC = vaultService.queryBy<ContractState>(fungibleAssetStateCriteria)
+            assertThat(resultsFASC.states).hasSize(2)
+            // composite query for both linear and fungible asset states
+            val resultsComposite = vaultService.queryBy<ContractState>(fungibleAssetStateCriteria.and(linearStateCriteria))
+            assertThat(resultsComposite.states).hasSize(4)
+        }
+    }
+
+    @Test
+    fun `composite query for fungible and linear states for multiple participants`() {
+        database.transaction {
+            identitySvc.verifyAndRegisterIdentity(ALICE_IDENTITY)
+            identitySvc.verifyAndRegisterIdentity(BOB_IDENTITY)
+            identitySvc.verifyAndRegisterIdentity(CHARLIE_IDENTITY)
+            vaultFiller.fillWithSomeTestLinearStates(1, "TEST1", listOf(ALICE))
+            vaultFiller.fillWithSomeTestLinearStates(1,  "TEST2", listOf(BOB))
+            vaultFiller.fillWithSomeTestLinearStates(1,  "TEST3", listOf(CHARLIE))
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
+            vaultFiller.fillWithSomeTestCommodity(Amount(100, Commodity.getInstance("FCOJ")!!), notaryServices, DUMMY_OBLIGATION_ISSUER.ref(1))
+            vaultFiller.fillWithDummyState()
+            // all contract states query
+            val results = vaultService.queryBy<ContractState>()
+            assertThat(results.states).hasSize(6)
+            // linear states by participants only query
+            val linearStateCriteria = LinearStateQueryCriteria(participants = listOf(ALICE,BOB))
+            val resultsLSC = vaultService.queryBy<ContractState>(linearStateCriteria)
+            assertThat(resultsLSC.states).hasSize(2)
+            // fungible asset states by participants only query
+            val fungibleAssetStateCriteria = FungibleAssetQueryCriteria(participants = listOf(services.myInfo.singleIdentity()))
+            val resultsFASC = vaultService.queryBy<ContractState>(fungibleAssetStateCriteria)
+            assertThat(resultsFASC.states).hasSize(2)
+            // composite query for both linear and fungible asset states by participants
+            val resultsComposite = vaultService.queryBy<ContractState>(linearStateCriteria.or(fungibleAssetStateCriteria))
+            assertThat(resultsComposite.states).hasSize(4)
+        }
+    }
+
+    @Test
     fun `unconsumed linear heads where external id is null`() {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1")
