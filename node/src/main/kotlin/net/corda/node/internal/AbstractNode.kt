@@ -153,7 +153,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // TODO Break cyclic dependency
         identityService.database = database
     }
-    private val persistentNetworkMapCache = PersistentNetworkMapCache(database)
+    private val persistentNetworkMapCache = PersistentNetworkMapCache(database, configuration.myLegalName)
     val networkMapCache = NetworkMapCacheImpl(persistentNetworkMapCache, identityService, database).tokenize()
     val checkpointStorage = DBCheckpointStorage()
     @Suppress("LeakingThis")
@@ -262,7 +262,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     open fun generateAndSaveNodeInfo(): NodeInfo {
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
-        persistentNetworkMapCache.start(notaries = emptyList())
         val trustRoot = initKeyStore()
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         startDatabase()
@@ -270,6 +269,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
         return database.use {
             it.transaction {
+                persistentNetworkMapCache.start(notaries = emptyList())
                 val (_, nodeInfoAndSigned) = updateNodeInfo(identity, identityKeyPair, publish = false)
                 nodeInfoAndSigned.nodeInfo
             }
@@ -279,9 +279,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     fun clearNetworkMapCache() {
         Node.printBasicNodeInfo("Clearing network map cache entries")
         log.info("Starting clearing of network map cache entries...")
-        persistentNetworkMapCache.start(notaries = emptyList())
         startDatabase()
         database.use {
+            persistentNetworkMapCache.start(notaries = emptyList())
             persistentNetworkMapCache.clearNetworkMapCache()
         }
     }
@@ -317,7 +317,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
         servicesForResolution.start(netParams)
-        persistentNetworkMapCache.start(netParams.notaries)
 
         startDatabase()
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
@@ -339,6 +338,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
+            persistentNetworkMapCache.start(netParams.notaries)
             networkMapCache.start()
             updateNodeInfo(identity, identityKeyPair, publish = true)
         }

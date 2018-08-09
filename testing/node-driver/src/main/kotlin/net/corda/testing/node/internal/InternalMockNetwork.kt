@@ -92,6 +92,7 @@ data class MockNodeArgs(
         val version: VersionInfo = MOCK_VERSION_INFO
 )
 
+// TODO We don't need a parameters object as this is internal only
 data class InternalMockNodeParameters(
         val forcedID: Int? = null,
         val legalName: CordaX500Name? = null,
@@ -157,7 +158,8 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                                val testDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
                                val networkParameters: NetworkParameters = testNetworkParameters(),
                                val defaultFactory: (MockNodeArgs, CordappLoader?) -> MockNode = { args, cordappLoader -> cordappLoader?.let { MockNode(args, it) } ?: MockNode(args) },
-                               val cordappsForAllNodes: Set<TestCorDapp> = emptySet()) : AutoCloseable {
+                               val cordappsForAllNodes: Set<TestCorDapp> = emptySet(),
+                               val autoVisibleNodes: Boolean = true) : AutoCloseable {
     init {
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
         // This SFTP support loads BouncyCastle, which we want to avoid.
@@ -369,6 +371,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         }
 
         private fun advertiseNodeToNetwork(newNode: TestStartedNode) {
+            if (!mockNet.autoVisibleNodes) return
             mockNet.nodes
                     .mapNotNull { it.started }
                     .forEach { existingNode ->
