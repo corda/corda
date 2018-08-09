@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.readFully
@@ -98,7 +99,9 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
     }
 
     @Suspendable
-    private fun getInputTransactions(tx: SignedTransaction): Set<SecureHash> = tx.inputs.map { it.txhash }.toSet()
+    private fun getInputTransactions(tx: SignedTransaction): Set<SecureHash> {
+        return tx.inputs.map(StateRef::txhash).toSet() + tx.references.map(StateRef::txhash).toSet()
+    }
 
     private class TransactionAuthorisationFilter(private val authorisedTransactions: MutableSet<SecureHash> = mutableSetOf(), val acceptAll: Boolean = false) {
         fun isAuthorised(txId: SecureHash) = acceptAll || authorisedTransactions.contains(txId)
