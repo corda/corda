@@ -16,18 +16,17 @@ import net.corda.core.utilities.NetworkHostAndPort
 
 import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.internal.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
-import org.junit.After
-import org.junit.ClassRule
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 
 class PersistentNetworkMapCacheTest : IntegrationTest() {
     private companion object {
@@ -37,8 +36,7 @@ class PersistentNetworkMapCacheTest : IntegrationTest() {
 
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
-                CHARLIE_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(CHARLIE_NAME.toDatabaseSchemaName())
     }
 
     @Rule
@@ -46,8 +44,17 @@ class PersistentNetworkMapCacheTest : IntegrationTest() {
     val testSerialization = SerializationEnvironmentRule()
 
     private var portCounter = 1000
-    private val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
-    private val charlieNetMapCache = PersistentNetworkMapCache(database, CHARLIE.name)
+    //Enterprise only - objects created in the setup method, below initialized with dummy values to avoid need for nullable type declaration
+    private var database = CordaPersistence(DatabaseConfig(), emptySet())
+    private var charlieNetMapCache = PersistentNetworkMapCache(database, CHARLIE.name)
+
+    @Before()
+    fun setup() {
+        //Enterprise only - for test in database mode ensure the remote database is setup before creating CordaPersistence
+        super.setUp()
+        database = configureDatabase(makeTestDataSourceProperties(CHARLIE_NAME.toDatabaseSchemaName()), makeTestDatabaseProperties(CHARLIE_NAME.toDatabaseSchemaName()), { null }, { null })
+        charlieNetMapCache = PersistentNetworkMapCache(database, CHARLIE.name)
+    }
 
     @After
     fun cleanUp() {
