@@ -18,18 +18,27 @@ import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.After
+import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.Test
 
-class PersistentNetworkMapCacheTest  {
+class PersistentNetworkMapCacheTest : IntegrationTest() {
     private companion object {
         val ALICE = TestIdentity(ALICE_NAME, 70)
         val BOB = TestIdentity(BOB_NAME, 80)
         val CHARLIE = TestIdentity(CHARLIE_NAME, 90)
+
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
+                CHARLIE_NAME.toDatabaseSchemaName())
     }
 
     @Rule
