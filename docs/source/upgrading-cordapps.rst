@@ -334,13 +334,14 @@ running.
 
 5. Stop the nodes
 ^^^^^^^^^^^^^^^^^
-Have each node operator stop their node. They should do a :ref:`node drain <draining_the_node>` first to avoid the 
-definition of states or contracts changing whilst a flow is in progress.
+Have each node operator stop their node. If you are also changing flow definitions, you should perform a 
+:ref:`node drain <draining_the_node>` first to avoid the definition of states or contracts changing whilst a flow is 
+in progress.
 
 6. Re-run the network bootstrapper
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you're using the network bootstrapper instead of a network map server and have defined any new contracts, you need to 
-re-run the network bootstrapper. See :doc:`network-bootstrapper`.
+re-run the network bootstrapper to whitelist the new contracts. See :doc:`network-bootstrapper`.
 
 7. Restart the nodes
 ^^^^^^^^^^^^^^^^^^^^
