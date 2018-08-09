@@ -17,19 +17,46 @@ someone building a CorDapp on Corda 3.2 should use the ``release-V3`` branch of 
 
 Build system
 ------------
-The template is set up to be built using Gradle. A Gradle wrapper is provided in the ``wrapper`` folder, and the
-dependencies are defined in the ``build.gradle`` files. See :doc:`cordapp-build-systems` for more information.
+The template is built using Gradle. A Gradle wrapper is provided in the ``wrapper`` folder, and the dependencies are
+defined in the ``build.gradle`` files. See :doc:`cordapp-build-systems` for more information.
 
-Structure
----------
-The templates are split into two modules:
+No templates are currently provided for Maven or other build systems.
 
-* A ``cordapp-contracts-states`` module containing classes such as contracts and states that will be sent across the
-  wire as part of a flow
-* A ``cordapp`` module containing the remaining classes
+Modules
+-------
+Typically, a Cordapp contains all the classes required for it to be used standalone. However, some Cordapps are
+only libraries for other Cordapps and cannot be run standalone.
 
-Each module will be compiled into its own CorDapp. This minimises the size of the JAR that has to be sent across the
-wire when nodes are agreeing ledger updates.
+The source code for a CorDapp is divided into one or more modules, each of which will be compiled into a separate JAR.
+Together, these JARs represent a single CorDapp. For example, the templates are split into two modules:
+
+* A ``cordapp-contracts-states`` module containing the contracts and states
+* A ``cordapp`` module containing the remaining classes that depends on the ``cordapp-contracts-states`` module
+
+These modules will be compiled into two JARs - a ``cordapp-contracts-states`` JAR and a ``cordapp`` JAR - which
+together represent the Template CorDapp.
+
+The ``cordapp-states-contract`` module contains only contracts and/or states, as well as any required
+dependencies. Each time a contract is used in a transaction, the entire JAR containing the contract's definition is
+attached to the transaction. This is to ensure that the exact same contract and state definitions are used when
+verifying this transaction at a later date. Because of this, you will want to keep this module, and therefore the
+resulting JAR file, as small as possible to reduce the size of your transactions and keep your node performant.
+
+While the templates use two modules, this structure is not prescriptive:
+
+* A library CorDapp containing only contracts and states would only need a single module
+
+* In a CorDapp with multiple sets of contracts and states that **do not** depend on each other, each independent set of
+  contracts and states would go in a separate module to reduce transaction sizes
+
+* In a CorDapp with multiple sets of contracts and states that **do** depend on each other, either keep them in the
+  same module or create separate modules that depend on each other
+
+* The module containing the flows and other classes can be structured in any way because it is not attached to
+  transactions
+
+Template structure
+------------------
 
 Module one - cordapp-contracts-states
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

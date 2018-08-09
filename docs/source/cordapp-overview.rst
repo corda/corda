@@ -11,7 +11,7 @@ Corda node owners can invoke over RPC:
 
 CorDapp components
 ------------------
-CorDapps take the form of JAR files containing class definitions written in Java and/or Kotlin.
+CorDapps take the form of a set of JAR files containing class definitions written in Java and/or Kotlin.
 
 These class definitions will commonly include the following elements:
 
