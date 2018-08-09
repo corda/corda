@@ -1,5 +1,5 @@
-Client RPC
-==========
+Interacting with a node
+=======================
 
 .. contents::
 

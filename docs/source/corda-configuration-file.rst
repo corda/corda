@@ -1,4 +1,4 @@
-Node configuration
+Configuring a node
 ==================
 
 .. contents::
