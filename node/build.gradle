@@ -190,7 +190,7 @@ dependencies {
     // Jolokia JVM monitoring agent, required to push logs through slf4j
     compile "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
     // Optional New Relic JVM reporter, used to push metrics to the configured account associated with a newrelic.yml configuration. See https://mvnrepository.com/artifact/com.palominolabs.metrics/metrics-new-relic
-    compile group: 'com.palominolabs.metrics', name: 'metrics-new-relic', version: '1.1.1'
+    compile "com.palominolabs.metrics:metrics-new-relic:${metrics_new_relic_version}"
 }
 
 task integrationTest(type: Test) {
