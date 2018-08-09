@@ -245,6 +245,13 @@ absolute path to the node's base directory.
 
 :flowMonitorSuspensionLoggingThresholdMillis: Threshold ``Duration`` suspended flows waiting for IO need to exceed before they are logged. Default value is ``60 seconds``.
 
+:jmxReporterType:  Provides an option for registering an alternative JMX reporter. Available options are ``JOLOKIA`` and ``NEW_RELIC``. If no value is provided, ``JOLOKIA`` will be used.
+
+                    .. note:: The Jolokia configuration is provided by default.  The New Relic configuration leverages the Dropwizard_ NewRelicReporter solution. See `Introduction to New Relic for Java`_ for details on how to get started and how to install the New Relic Java agent.
+
+                        .. _Dropwizard: https://metrics.dropwizard.io/3.2.3/manual/third-party.html
+                        .. _Introduction to New Relic for Java: https://docs.newrelic.com/docs/agents/java-agent/getting-started/introduction-new-relic-java
+
 Examples
 --------
 
