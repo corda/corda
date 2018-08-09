@@ -159,7 +159,7 @@ open class NodeStartup(val args: Array<String>) {
         val successful = attempt { startNode(conf, versionInfo, startTime, cmdlineOptions) }.doOnError { error ->
 
             when {
-                error::class in setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class) -> {
+                error.isExpectedWhenStartingNode() -> {
                     logger.error(error.message)
                 }
                 error is CouldNotCreateDataSourceException -> {
@@ -183,51 +183,55 @@ open class NodeStartup(val args: Array<String>) {
         return successful
     }
 
-    private fun loadNodeConfiguration(cmdlineOptions: CmdLineOptions) {
+    private fun Exception.isExpectedWhenStartingNode() = this::class in startNodeExpectedErrors
 
-        val (rawConfig, conf0Result) = loadConfigFile(cmdlineOptions)
-        if (cmdlineOptions.devMode) {
-            println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
-        }
-        val conf0 = conf0Result.getOrThrow()
-        if (cmdlineOptions.bootstrapRaftCluster) {
-            if (conf0 is NodeConfigurationImpl) {
-                println("Bootstrapping raft cluster (starting up as seed node).")
-                // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
-                conf0.copy(notary = conf0.notary?.copy(raft = conf0.notary?.raft?.copy(clusterAddresses = emptyList())))
-            } else {
-                // TODO sollecitom throw exception instead
-                println("bootstrap-raft-notaries flag not recognized, exiting...")
-                return false
-            }
-        } else {
-            conf0
-        }
-    }
+    private val startNodeExpectedErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
 
-    private fun validateNodeConfiguration(configuration: NodeConfiguration) {
+//    private fun loadNodeConfiguration(cmdlineOptions: CmdLineOptions) {
+//
+//        val (rawConfig, conf0Result) = loadConfigFile(cmdlineOptions)
+//        if (cmdlineOptions.devMode) {
+//            println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
+//        }
+//        val conf0 = conf0Result.getOrThrow()
+//        if (cmdlineOptions.bootstrapRaftCluster) {
+//            if (conf0 is NodeConfigurationImpl) {
+//                println("Bootstrapping raft cluster (starting up as seed node).")
+//                // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
+//                conf0.copy(notary = conf0.notary?.copy(raft = conf0.notary?.raft?.copy(clusterAddresses = emptyList())))
+//            } else {
+//                // TODO sollecitom throw exception instead
+//                println("bootstrap-raft-notaries flag not recognized, exiting...")
+//                return false
+//            }
+//        } else {
+//            conf0
+//        }
+//    }
 
-        val errors = configuration.validate()
-        if (errors.isNotEmpty()) {
-            // TODO sollecitom throw exception instead
-            logger.error("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
-            return false
-        }
-    }
-
-    private fun registerWithNetwork(configuration: NodeConfiguration, versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions) {
-
-        banJavaSerialisation(configuration)
-        preNetworkRegistration(configuration)
-        if (cmdlineOptions.nodeRegistrationOption != null) {
-            // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
-            registerWithNetwork(configuration, versionInfo, cmdlineOptions.nodeRegistrationOption)
-            // At this point the node registration was successful. We can delete the marker file.
-            deleteNodeRegistrationMarker(cmdlineOptions.baseDirectory)
-            return true
-        }
-        logStartupInfo(versionInfo, cmdlineOptions, configuration)
-    }
+//    private fun validateNodeConfiguration(configuration: NodeConfiguration) {
+//
+//        val errors = configuration.validate()
+//        if (errors.isNotEmpty()) {
+//            // TODO sollecitom throw exception instead
+//            logger.error("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
+//            return false
+//        }
+//    }
+//
+//    private fun registerWithNetwork(configuration: NodeConfiguration, versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions) {
+//
+//        banJavaSerialisation(configuration)
+//        preNetworkRegistration(configuration)
+//        if (cmdlineOptions.nodeRegistrationOption != null) {
+//            // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
+//            registerWithNetwork(configuration, versionInfo, cmdlineOptions.nodeRegistrationOption)
+//            // At this point the node registration was successful. We can delete the marker file.
+//            deleteNodeRegistrationMarker(cmdlineOptions.baseDirectory)
+//            return true
+//        }
+//        logStartupInfo(versionInfo, cmdlineOptions, configuration)
+//    }
 
     private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) {
 
@@ -634,7 +638,8 @@ fun <RESULT> (() -> OperationOutcome<RESULT>).doOnError(action: (Exception) -> U
 
 fun main(args: Array<String>) {
 
-    val result = attempt<String> { throw RuntimeException("Boom") }.doOnError { error -> error.printStackTrace() }.then { sentence -> sentence.length }.invoke()
+    // TODO sollecitom this is a problem, for the first `doOnError` doesn't "consume" the exception, so that it gets processed twice. Could be fixed but not sure this approach is correct.
+    val result = attempt<String> { throw RuntimeException("Boom") }.doOnError { error -> error.printStackTrace() }.then { sentence -> sentence.length }.doOnError { error -> error.printStackTrace() }.invoke()
     val result2 = attempt { "Hello functional" }.doOnError { error -> error.printStackTrace() }.then { sentence -> sentence.length }.invoke()
     println(result)
     println(result2)
