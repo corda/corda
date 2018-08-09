@@ -10,127 +10,171 @@
 
 package net.corda.node.services.network
 
-import net.corda.core.crypto.generateKeyPair
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 
+import net.corda.node.internal.configureDatabase
+import net.corda.node.internal.schemas.NodeInfoSchemaV1
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.testing.core.*
+import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
-import net.corda.node.internal.NodeWithInfo
-import net.corda.testing.core.*
-import net.corda.testing.node.internal.NodeBasedTest
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.internal.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.Before
-import org.junit.ClassRule
-import org.junit.Test
-import kotlin.test.assertEquals
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
+import org.junit.*
 
-// TODO Clean up these tests, they were written with old network map design in place.
-class PersistentNetworkMapCacheTest : NodeBasedTest() {
-    companion object {
-        val ALICE = TestIdentity(ALICE_NAME, 70).party
-        val BOB = TestIdentity(BOB_NAME, 80).party
-        val DUMMY_REGULATOR = TestIdentity(CordaX500Name("Regulator A", "Paris", "FR"), 100).party
+class PersistentNetworkMapCacheTest : IntegrationTest() {
+    private companion object {
+        val ALICE = TestIdentity(ALICE_NAME, 70)
+        val BOB = TestIdentity(BOB_NAME, 80)
+        val CHARLIE = TestIdentity(CHARLIE_NAME, 90)
 
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(DUMMY_REGULATOR.name.toDatabaseSchemaName(), ALICE.name.toDatabaseSchemaName(),
-                BOB.name.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(CHARLIE_NAME.toDatabaseSchemaName())
     }
-    private val partiesList = listOf(DUMMY_REGULATOR, ALICE, BOB)
-    private val addressesMap = HashMap<CordaX500Name, NetworkHostAndPort>()
-    private val infos = HashSet<NodeInfo>()
 
-    @Before
-    fun start() {
-        val nodes = startNodesWithPort(partiesList)
-        nodes.forEach {
-            infos.add(it.info)
-            addressesMap[it.info.singleIdentity().name] = it.info.addresses[0]
-            it.dispose() // We want them to communicate with NetworkMapService to save data to cache.
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+
+    private var portCounter = 1000
+    //Enterprise only - objects created in the setup method, below initialized with dummy values to avoid need for nullable type declaration
+    private var database = CordaPersistence(DatabaseConfig(), emptySet())
+    private var charlieNetMapCache = PersistentNetworkMapCache(database, CHARLIE.name)
+
+    @Before()
+    fun setup() {
+        //Enterprise only - for test in database mode ensure the remote database is setup before creating CordaPersistence
+        super.setUp()
+        database = configureDatabase(makeTestDataSourceProperties(CHARLIE_NAME.toDatabaseSchemaName()), makeTestDatabaseProperties(CHARLIE_NAME.toDatabaseSchemaName()), { null }, { null })
+        charlieNetMapCache = PersistentNetworkMapCache(database, CHARLIE.name)
+    }
+
+    @After
+    fun cleanUp() {
+        database.close()
+    }
+
+    @Test
+    fun addNode() {
+        val alice = createNodeInfo(listOf(ALICE))
+        charlieNetMapCache.addNode(alice)
+        assertThat(charlieNetMapCache.nodeReady).isDone()
+        val fromDb = database.transaction {
+            session.createQuery(
+                    "from ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name}",
+                    NodeInfoSchemaV1.PersistentNodeInfo::class.java
+            ).resultList.map { it.toNodeInfo() }
         }
+        assertThat(fromDb).containsOnly(alice)
+    }
+
+    @Test
+    fun `adding the node's own node-info doesn't complete the nodeReady future`() {
+        val charlie = createNodeInfo(listOf(CHARLIE))
+        charlieNetMapCache.addNode(charlie)
+        assertThat(charlieNetMapCache.nodeReady).isNotDone()
+        assertThat(charlieNetMapCache.getNodeByLegalName(CHARLIE.name)).isEqualTo(charlie)
+    }
+
+    @Test
+    fun `starting with just the node's own node-info in the db`() {
+        val charlie = createNodeInfo(listOf(CHARLIE))
+        saveNodeInfoIntoDb(charlie)
+        assertThat(charlieNetMapCache.allNodes).containsOnly(charlie)
+        charlieNetMapCache.start(emptyList())
+        assertThat(charlieNetMapCache.nodeReady).isNotDone()
+    }
+
+    @Test
+    fun `starting with another node-info in the db`() {
+        val alice = createNodeInfo(listOf(ALICE))
+        saveNodeInfoIntoDb(alice)
+        assertThat(charlieNetMapCache.allNodes).containsOnly(alice)
+        charlieNetMapCache.start(emptyList())
+        assertThat(charlieNetMapCache.nodeReady).isDone()
     }
 
     @Test
     fun `unknown legal name`() {
-        val alice = startNodesWithPort(listOf(ALICE))[0]
-        val netMapCache = alice.services.networkMapCache
-        assertThat(netMapCache.getNodesByLegalName(DUMMY_NOTARY_NAME)).isEmpty()
-        assertThat(netMapCache.getNodeByLegalName(DUMMY_NOTARY_NAME)).isNull()
-        assertThat(netMapCache.getPeerByLegalName(DUMMY_NOTARY_NAME)).isNull()
-        assertThat(netMapCache.getPeerCertificateByLegalName(DUMMY_NOTARY_NAME)).isNull()
+        charlieNetMapCache.addNode(createNodeInfo(listOf(ALICE)))
+        assertThat(charlieNetMapCache.getNodesByLegalName(DUMMY_NOTARY_NAME)).isEmpty()
+        assertThat(charlieNetMapCache.getNodeByLegalName(DUMMY_NOTARY_NAME)).isNull()
+        assertThat(charlieNetMapCache.getPeerByLegalName(DUMMY_NOTARY_NAME)).isNull()
+        assertThat(charlieNetMapCache.getPeerCertificateByLegalName(DUMMY_NOTARY_NAME)).isNull()
     }
 
     @Test
     fun `nodes in distributed service`() {
-        val alice = startNodesWithPort(listOf(ALICE))[0]
-        val netMapCache = alice.services.networkMapCache
+        charlieNetMapCache.addNode(createNodeInfo(listOf(ALICE)))
 
-        val distributedIdentity = TestIdentity(DUMMY_NOTARY_NAME).identity
+        val distributedIdentity = TestIdentity(DUMMY_NOTARY_NAME)
+
         val distServiceNodeInfos = (1..2).map {
-            val nodeInfo = NodeInfo(
-                    addresses = listOf(NetworkHostAndPort("localhost", 1000 + it)),
-                    legalIdentitiesAndCerts = listOf(TestIdentity.fresh("Org-$it").identity, distributedIdentity),
-                    platformVersion = 3,
-                    serial = 1
-            )
-            netMapCache.addNode(nodeInfo)
+            val nodeInfo = createNodeInfo(identities = listOf(TestIdentity.fresh("Org-$it"), distributedIdentity))
+            charlieNetMapCache.addNode(nodeInfo)
             nodeInfo
         }
 
-        assertThat(netMapCache.getNodesByLegalName(DUMMY_NOTARY_NAME)).containsOnlyElementsOf(distServiceNodeInfos)
-        assertThatExceptionOfType(IllegalArgumentException::class.java)
-                .isThrownBy { netMapCache.getNodeByLegalName(DUMMY_NOTARY_NAME) }
+        assertThat(charlieNetMapCache.getNodesByLegalName(DUMMY_NOTARY_NAME)).containsOnlyElementsOf(distServiceNodeInfos)
+        assertThatIllegalArgumentException()
+                .isThrownBy { charlieNetMapCache.getNodeByLegalName(DUMMY_NOTARY_NAME) }
                 .withMessageContaining(DUMMY_NOTARY_NAME.toString())
     }
 
     @Test
     fun `get nodes by owning key and by name`() {
-        val alice = startNodesWithPort(listOf(ALICE))[0]
-        val netCache = alice.services.networkMapCache
-        val res = netCache.getNodeByLegalIdentity(alice.info.singleIdentity())
-        assertEquals(alice.info, res)
-        val res2 = netCache.getNodeByLegalName(DUMMY_REGULATOR.name)
-        assertEquals(infos.singleOrNull { DUMMY_REGULATOR.name in it.legalIdentities.map { it.name } }, res2)
+        val alice = createNodeInfo(listOf(ALICE))
+        charlieNetMapCache.addNode(alice)
+        assertThat(charlieNetMapCache.getNodesByLegalIdentityKey(ALICE.publicKey)).containsOnly(alice)
+        assertThat(charlieNetMapCache.getNodeByLegalName(ALICE.name)).isEqualTo(alice)
     }
 
     @Test
     fun `get nodes by address`() {
-        val alice = startNodesWithPort(listOf(ALICE))[0]
-        val netCache = alice.services.networkMapCache
-        val res = netCache.getNodeByAddress(alice.info.addresses[0])
-        assertEquals(alice.info, res)
+        val alice = createNodeInfo(listOf(ALICE))
+        charlieNetMapCache.addNode(alice)
+        assertThat(charlieNetMapCache.getNodeByAddress(alice.addresses[0])).isEqualTo(alice)
     }
 
-    // This test has to be done as normal node not mock, because MockNodes don't have addresses.
     @Test
     fun `insert two node infos with the same host and port`() {
-        val aliceNode = startNode(ALICE_NAME)
-        val charliePartyCert = getTestPartyAndCertificate(CHARLIE_NAME, generateKeyPair().public)
-        val aliceCache = aliceNode.services.networkMapCache
-        aliceCache.addNode(aliceNode.info.copy(legalIdentitiesAndCerts = listOf(charliePartyCert)))
-        val res = aliceCache.allNodes.filter { aliceNode.info.addresses[0] in it.addresses }
-        assertEquals(2, res.size)
+        val alice = createNodeInfo(listOf(ALICE))
+        charlieNetMapCache.addNode(alice)
+        val bob = createNodeInfo(listOf(BOB), address = alice.addresses[0])
+        charlieNetMapCache.addNode(bob)
+        val nodeInfos = charlieNetMapCache.allNodes.filter { alice.addresses[0] in it.addresses }
+        assertThat(nodeInfos).hasSize(2)
     }
 
-    @Test
-    fun `restart node with DB map cache`() {
-        val alice = startNodesWithPort(listOf(ALICE))[0]
-        val partyNodes = alice.services.networkMapCache.allNodes
-        assertEquals(infos.size, partyNodes.size)
-        assertEquals(infos.flatMap { it.legalIdentities }.toSet(), partyNodes.flatMap { it.legalIdentities }.toSet())
+    private fun createNodeInfo(identities: List<TestIdentity>,
+                               address: NetworkHostAndPort = NetworkHostAndPort("localhost", portCounter++)): NodeInfo {
+        return NodeInfo(
+                addresses = listOf(address),
+                legalIdentitiesAndCerts = identities.map { it.identity },
+                platformVersion = 3,
+                serial = 1
+        )
     }
 
-    // HELPERS
-    // Helper function to restart nodes with the same host and port.
-    private fun startNodesWithPort(nodesToStart: List<Party>, customRetryIntervalMs: Long? = null): List<NodeWithInfo> {
-        return nodesToStart.map { party ->
-            val configOverrides = (addressesMap[party.name]?.let { mapOf("p2pAddress" to it.toString()) } ?: emptyMap()) +
-                    (customRetryIntervalMs?.let { mapOf("activeMQServer.bridge.retryIntervalMs" to it.toString()) } ?: emptyMap())
-            startNode(party.name, configOverrides = configOverrides)
+    private fun saveNodeInfoIntoDb(nodeInfo: NodeInfo) {
+        database.transaction {
+            session.save(NodeInfoSchemaV1.PersistentNodeInfo(
+                    id = 0,
+                    hash = nodeInfo.serialize().hash.toString(),
+                    addresses = nodeInfo.addresses.map { NodeInfoSchemaV1.DBHostAndPort.fromHostAndPort(it) },
+                    legalIdentitiesAndCerts = nodeInfo.legalIdentitiesAndCerts.mapIndexed { idx, elem ->
+                        NodeInfoSchemaV1.DBPartyAndCertificate(elem, isMain = idx == 0)
+                    },
+                    platformVersion = nodeInfo.platformVersion,
+                    serial = nodeInfo.serial
+            ))
         }
     }
 }

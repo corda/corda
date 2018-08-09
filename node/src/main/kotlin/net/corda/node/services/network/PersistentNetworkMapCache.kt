@@ -13,7 +13,6 @@ package net.corda.node.services.network
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -22,7 +21,6 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -32,7 +30,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.NetworkMapCacheBaseInternal
-import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
@@ -44,45 +41,10 @@ import java.security.PublicKey
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 
-class NetworkMapCacheImpl(
-        private val networkMapCacheBase: NetworkMapCacheBaseInternal,
-        private val identityService: IdentityService,
-        private val database: CordaPersistence
-) : NetworkMapCacheBaseInternal by networkMapCacheBase, NetworkMapCacheInternal, SingletonSerializeAsToken() {
-    companion object {
-        private val logger = contextLogger()
-    }
-
-    fun start() {
-        networkMapCacheBase.allNodes.forEach { it.legalIdentitiesAndCerts.forEach { identityService.verifyAndRegisterIdentity(it) } }
-        networkMapCacheBase.changed.subscribe { mapChange ->
-            // TODO how should we handle network map removal
-            if (mapChange is MapChange.Added) {
-                mapChange.node.legalIdentitiesAndCerts.forEach {
-                    try {
-                        identityService.verifyAndRegisterIdentity(it)
-                    } catch (ignore: Exception) {
-                        // Log a warning to indicate node info is not added to the network map cache.
-                        logger.warn("Node info for :'${it.name}' is not added to the network map due to verification error.")
-                    }
-                }
-            }
-        }
-    }
-
-    override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
-        return database.transaction {
-            val wellKnownParty = identityService.wellKnownPartyFromAnonymous(party)
-            wellKnownParty?.let {
-                getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
-            }
-        }
-    }
-}
-
 /** Database-based network map cache. */
 @ThreadSafe
-open class PersistentNetworkMapCache(private val database: CordaPersistence) : SingletonSerializeAsToken(), NetworkMapCacheBaseInternal {
+open class PersistentNetworkMapCache(private val database: CordaPersistence,
+                                     private val myLegalName: CordaX500Name) : SingletonSerializeAsToken(), NetworkMapCacheBaseInternal {
     companion object {
         private val logger = contextLogger()
     }
@@ -115,6 +77,15 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence) : S
 
     fun start(notaries: List<NotaryInfo>) {
         this.notaries = notaries
+        val otherNodeInfoCount = database.transaction {
+            session.createQuery(
+                    "select count(*) from ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n join n.legalIdentitiesAndCerts i where i.name != :myLegalName")
+                    .setParameter("myLegalName", myLegalName.toString())
+                    .singleResult as Long
+        }
+        if (otherNodeInfoCount > 0) {
+            _nodeReady.set(null)
+        }
     }
 
     override fun getNodeByHash(nodeHash: SecureHash): NodeInfo? {
@@ -212,7 +183,9 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence) : S
                 logger.info("Previous node was identical to incoming one - doing nothing")
             }
         }
-        _nodeReady.set(null)
+        if (node.legalIdentities[0].name != myLegalName) {
+            _nodeReady.set(null)
+        }
         logger.debug { "Done adding node with info: $node" }
     }
 

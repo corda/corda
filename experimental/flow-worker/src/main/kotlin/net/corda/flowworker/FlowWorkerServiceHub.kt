@@ -97,7 +97,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
         identityService.database = database
     }
 
-    private val persistentNetworkMapCache = PersistentNetworkMapCache(database)
+    private val persistentNetworkMapCache = PersistentNetworkMapCache(database, myInfo.legalIdentities[0].name)
     override val networkMapCache = NetworkMapCacheImpl(persistentNetworkMapCache, identityService, database).tokenize()
     private val checkpointStorage = DBCheckpointStorage()
     @Suppress("LeakingThis")
