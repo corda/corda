@@ -11,16 +11,21 @@ Interacting with a node
 
 Overview
 --------
-Corda provides a client library that allows you to easily write clients in a JVM-compatible language to interact
-with a running node. The library connects to the node using a message queue protocol and then provides a simple RPC
-interface to interact with the node. You make calls on a Java object as normal, and the marshalling back and forth is
-handled for you.
+You should interact with your node using the `CordaRPCClient`_ library. This library that allows you to easily
+write clients in a JVM-compatible language to interact with a running node. The library connects to the node using a
+message queue protocol and then provides a simple RPC interface to interact with the node. You make calls on a JVM
+object as normal, and the marshalling back and forth is handled for you.
+
+.. warning:: The built-in Corda webserver is deprecated and unsuitable for production use. If you want to interact with
+   your node via HTTP, you will need to stand up your own webserver, then create an RPC connection between your node
+   and this webserver using the `CordaRPCClient`_ library. You can find an example of how to do this
+   `here <https://github.com/corda/spring-webserver>`_.
 
 Connecting to a node via RPC
 ----------------------------
-You connect to a node over RPC using the `CordaRPCClient`_ class. `CordaRPCClient`_ provides a ``start`` method
-that returns a `CordaRPCConnection`_. A `CordaRPCConnection`_ allows you to access an implementation of the
-`CordaRPCOps`_ interface with ``proxy`` to interact with a node.
+`CordaRPCClient`_ provides a ``start`` method that takes the node's RPC address and returns a `CordaRPCConnection`_.
+`CordaRPCConnection`_ provides a ``proxy`` method that takes an RPC username and password and returns a `CordaRPCOps`_
+object that you can use to interact with the node.
 
 Here is an example of using `CordaRPCClient`_ to connect to a node and log the current time on its internal clock:
 
@@ -35,10 +40,6 @@ Here is an example of using `CordaRPCClient`_ to connect to a node and log the c
       :language: java
       :start-after: START 1
       :end-before: END 1
-
-If you want to interact with your node via HTTP, you will need to stand up a webserver, then create an RPC connection
-to your node from this webserver. You can find an example of how to do this
-`here <https://github.com/corda/spring-webserver>`_.
 
 .. warning:: The returned `CordaRPCConnection`_ is somewhat expensive to create and consumes a small amount of
    server side resources. When you're done with it, call ``close`` on it. Alternatively you may use the ``use``
