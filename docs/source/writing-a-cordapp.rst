@@ -1,47 +1,28 @@
-Writing a CorDapp
+CorDapp structure
 =================
 
 .. contents::
 
-Overview
---------
-CorDapps can be written in either Java, Kotlin, or a combination of the two. Each CorDapp component takes the form
-of a JVM class that subclasses or implements a Corda library type:
-
-* Flows subclass ``FlowLogic``
-* States implement ``ContractState``
-* Contracts implement ``Contract``
-* Services subclass ``SingletonSerializationToken``
-* Serialisation whitelists implement ``SerializationWhitelist``
-
-Web content and RPC clients
----------------------------
-For testing purposes, CorDapps may also include:
-
-* **APIs and static web content**: These are served by Corda's built-in webserver. This webserver is not
-  production-ready, and should be used for testing purposes only
-
-* **RPC clients**: These are programs that automate the process of interacting with a node via RPC
-
-In production, a production-ready webserver should be used, and these files should be moved into a different module or
-project so that they do not bloat the CorDapp at build time.
-
 .. _cordapp-structure:
 
-Structure and dependencies
---------------------------
-You should base your project on the Java template (for CorDapps written in Java) or the Kotlin template (for CorDapps
-written in Kotlin):
+Template CorDapps
+-----------------
+You should base your project on one of the following templates:
 
-* `Java Template CorDapp <https://github.com/corda/cordapp-template-java>`_
-* `Kotlin Template CorDapp <https://github.com/corda/cordapp-template-kotlin>`_
+* `Java Template CorDapp <https://github.com/corda/cordapp-template-java>`_ (for CorDapps written in Java)
+* `Kotlin Template CorDapp <https://github.com/corda/cordapp-template-kotlin>`_ (for CorDapps written in Kotlin)
 
-Please checkout the branch of the template that corresponds to the version of Corda you are using. For example, someone
-building a CorDapp on Corda 3 should use the ``release-V3`` branch of the template.
+Please use the branch of the template that corresponds to the major version of Corda you are using. For example,
+someone building a CorDapp on Corda 3.2 should use the ``release-V3`` branch of the template.
 
-The required dependencies are defined by the ``build.gradle`` file in the root directory of the template.
+Build system
+------------
+The template is set up to be built using Gradle. A Gradle wrapper is provided in the ``wrapper`` folder, and the
+dependencies are defined in the ``build.gradle`` files. See :doc:`cordapp-build-systems` for more information.
 
-The project should be split into two modules:
+Structure
+---------
+The templates are split into two modules:
 
 * A ``cordapp-contracts-states`` module containing classes such as contracts and states that will be sent across the
   wire as part of a flow
@@ -52,7 +33,7 @@ wire when nodes are agreeing ledger updates.
 
 Module one - cordapp-contracts-states
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Here is the structure of the ``src`` directory for the ``cordapp-contracts-states`` module:
+Here is the structure of the ``src`` directory for the ``cordapp-contracts-states`` module of the Java template:
 
 .. parsed-literal::
 
@@ -74,7 +55,7 @@ CorDapp.
 
 Module two - cordapp
 ^^^^^^^^^^^^^^^^^^^^
-Here is the structure of the ``src`` directory for the ``cordapp`` module:
+Here is the structure of the ``src`` directory for the ``cordapp`` module of the Java template:
 
 .. parsed-literal::
 
@@ -116,37 +97,27 @@ The ``src`` directory is structured as follows:
 
 Within ``main``, we have the following directories:
 
-* ``resources/META-INF/services`` contains registries of the CorDapp's serialisation whitelists and web plugins
-* ``resources/certificates`` contains dummy certificates for test purposes
-* ``resources/templateWeb`` contains a dummy front-end
-* ``java`` (or ``kotlin`` in the Kotlin template), which includes the source-code for our CorDapp
+* ``java``, which contains the source-code for our CorDapp:
 
-The source-code for our CorDapp breaks down as follows:
+    * ``TemplateFlow.java``, which contains a template ``FlowLogic`` subclass
+    * ``TemplateState.java``, which contains a template ``ContractState`` implementation
+    * ``TemplateContract.java``, which contains a template ``Contract`` implementation
+    * ``TemplateSerializationWhitelist.java``, which contains a template ``SerializationWhitelist`` implementation
+    * ``TemplateApi.java``, which contains a template API for the deprecated Corda webserver
+    * ``TemplateWebPlugin.java``, which registers the API and front-end for the deprecated Corda webserver
+    * ``TemplateClient.java``, which contains a template RPC client for interacting with our CorDapp
 
-* ``TemplateFlow.java``, which contains a dummy ``FlowLogic`` subclass
-* ``TemplateState.java``, which contains a dummy ``ContractState`` implementation
-* ``TemplateContract.java``, which contains a dummy ``Contract`` implementation
-* ``TemplateSerializationWhitelist.java``, which contains a dummy ``SerializationWhitelist`` implementation
+* ``resources/META-INF/services``, which contains various registries:
 
-In developing your CorDapp, you should start by modifying these classes to define the components of your CorDapp. A
-single CorDapp can define multiple flows, states, and contracts.
+    * ``net.corda.core.serialization.SerializationWhitelist``, which registers the CorDapp's serialisation whitelists
+    * ``net.corda.webserver.services.WebServerPluginRegistry``, which registers the CorDapp's web plugins
 
-The template also includes a web API and RPC client:
+* ``resources/templateWeb``, which contains a template front-end
 
-* ``TemplateApi.java``
-* ``TemplateClient.java``
-* ``TemplateWebPlugin.java``
+In a production CorDapp:
 
-These are for testing purposes and would be removed in a production CorDapp.
+* We would remove the files related to the deprecated Corda webserver (``TemplateApi.java``,
+  ``TemplateWebPlugin.java``, ``resources/templateWeb``, and ``net.corda.webserver.services.WebServerPluginRegistry``)
+  and replace them with a production-ready webserver
 
-Resources
----------
-In writing a CorDapp, these pages may be particularly helpful:
-
-* :doc:`getting-set-up`, to set up your development environment.
-* The :doc:`hello-world-introduction` tutorial to write your first CorDapp.
-* :doc:`cordapp-build-systems` to build and run your CorDapp.
-* The `API docs </api/javadoc/index.html>`_ to read about the API available in developing CorDapps.
-* There is also a :doc:`cheat-sheet` recapping the key types.
-* The :doc:`flow-cookbook` to see code examples of how to perform common flow tasks.
-* `Sample CorDapps <https://www.corda.net/samples/>`_ showing various parts of Corda's functionality.
+* We would also move ``TemplateClient.java`` into a separate module so that it is not included in the CorDapp
