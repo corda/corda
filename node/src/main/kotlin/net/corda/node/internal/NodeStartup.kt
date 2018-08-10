@@ -8,13 +8,22 @@ import io.netty.channel.unix.Errors
 import joptsimple.OptionParser
 import joptsimple.util.PathConverter
 import net.corda.core.crypto.Crypto
-import net.corda.core.internal.*
+import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
+import net.corda.core.internal.exists
+import net.corda.core.internal.location
+import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
-import net.corda.node.*
-import net.corda.node.internal.OperationOutcome.Companion.attempt
+import net.corda.node.CmdLineOptions
+import net.corda.node.NodeArgsParser
+import net.corda.node.NodeRegistrationOption
+import net.corda.node.SerialFilter
+import net.corda.node.VersionInfo
+import net.corda.node.defaultSerialFilter
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
@@ -23,8 +32,8 @@ import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
-import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.node.utilities.registration.NodeRegistrationException
+import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.internal.addShutdownHook
@@ -48,13 +57,13 @@ import kotlin.system.exitProcess
 
 /** This class is responsible for starting a Node from command line arguments. */
 open class NodeStartup(val args: Array<String>) {
+
     companion object {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         const val LOGS_DIRECTORY_NAME = "logs"
         const val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
         private const val INITIAL_REGISTRATION_MARKER = ".initialregistration"
     }
-
 
     /**
      * @return true if the node startup was successful. This value is intended to be the exit code of the process.
@@ -155,93 +164,28 @@ open class NodeStartup(val args: Array<String>) {
             return false
         }
 
-        // TODO sollecitom refactor
-        val successful = attempt { startNode(conf, versionInfo, startTime, cmdlineOptions) }.doOnError { error ->
-
+        val nodeStarted = attempt { startNode(conf, versionInfo, startTime, cmdlineOptions) }.doOnSuccess { logger.info("Node exiting successfully") }.doOnException { error ->
             when {
-                error.isExpectedWhenStartingNode() -> {
-                    logger.error(error.message)
-                }
-                error is CouldNotCreateDataSourceException -> {
-                    logger.error(error.message, error.cause)
-                }
-                error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> {
-                    logger.error("One of the ports required by the Corda node is already in use.")
-                }
-                error.isOpenJdkKnownIssue() -> {
-                    logger.error("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
-                }
-                else -> {
-                    logger.error("Exception during node startup", error)
-                }
+                error.isExpectedWhenStartingNode() -> error.logAsExpected()
+                error is CouldNotCreateDataSourceException -> error.logAsUnexpected()
+                error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")
+                error.isOpenJdkKnownIssue() -> error.logAsExpected("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
+                else -> error.logAsUnexpected("Exception during node startup")
             }
-        }.invoke().successful
-
-        if (successful) {
-            logger.info("Node exiting successfully")
         }
-        return successful
+        return nodeStarted.isSuccess
     }
+
+    // TODO sollecitom re-evaluate
+    private fun <RESULT> attempt(action: () -> RESULT): Try<RESULT>  = Try.on(action)
 
     private fun Exception.isExpectedWhenStartingNode() = this::class in startNodeExpectedErrors
 
     private val startNodeExpectedErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
 
-//    private fun loadNodeConfiguration(cmdlineOptions: CmdLineOptions) {
-//
-//        val (rawConfig, conf0Result) = loadConfigFile(cmdlineOptions)
-//        if (cmdlineOptions.devMode) {
-//            println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
-//        }
-//        val conf0 = conf0Result.getOrThrow()
-//        if (cmdlineOptions.bootstrapRaftCluster) {
-//            if (conf0 is NodeConfigurationImpl) {
-//                println("Bootstrapping raft cluster (starting up as seed node).")
-//                // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
-//                conf0.copy(notary = conf0.notary?.copy(raft = conf0.notary?.raft?.copy(clusterAddresses = emptyList())))
-//            } else {
-//                // TODO sollecitom throw exception instead
-//                println("bootstrap-raft-notaries flag not recognized, exiting...")
-//                return false
-//            }
-//        } else {
-//            conf0
-//        }
-//    }
+    private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print(message)
 
-//    private fun validateNodeConfiguration(configuration: NodeConfiguration) {
-//
-//        val errors = configuration.validate()
-//        if (errors.isNotEmpty()) {
-//            // TODO sollecitom throw exception instead
-//            logger.error("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
-//            return false
-//        }
-//    }
-//
-//    private fun registerWithNetwork(configuration: NodeConfiguration, versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions) {
-//
-//        banJavaSerialisation(configuration)
-//        preNetworkRegistration(configuration)
-//        if (cmdlineOptions.nodeRegistrationOption != null) {
-//            // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
-//            registerWithNetwork(configuration, versionInfo, cmdlineOptions.nodeRegistrationOption)
-//            // At this point the node registration was successful. We can delete the marker file.
-//            deleteNodeRegistrationMarker(cmdlineOptions.baseDirectory)
-//            return true
-//        }
-//        logStartupInfo(versionInfo, cmdlineOptions, configuration)
-//    }
-
-    private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) {
-
-        print(message)
-    }
-
-    private fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) {
-
-        print(message, error)
-    }
+    private fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print(message, error)
 
     private fun Exception.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
 
@@ -254,13 +198,8 @@ open class NodeStartup(val args: Array<String>) {
         // restart.
         val optionParser = OptionParser()
         optionParser.allowsUnrecognizedOptions()
-        val baseDirectoryArg = optionParser
-                .accepts("base-directory", "The node working directory where all the files are kept")
-                .withRequiredArg()
-                .withValuesConvertedBy(PathConverter())
-                .defaultsTo(Paths.get("."))
-        val isRegistrationArg =
-                optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
+        val baseDirectoryArg = optionParser.accepts("base-directory", "The node working directory where all the files are kept").withRequiredArg().withValuesConvertedBy(PathConverter()).defaultsTo(Paths.get("."))
+        val isRegistrationArg = optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
         val optionSet = optionParser.parse(*args)
         val baseDirectory = optionSet.valueOf(baseDirectoryArg).normalize().toAbsolutePath()
         // If the node was started with `--initial-registration`, create marker file.
@@ -319,12 +258,12 @@ open class NodeStartup(val args: Array<String>) {
             val console: Console? = System.console()
 
             when (console) {
-            // In this case, the JVM is not connected to the console so we need to exit
+                // In this case, the JVM is not connected to the console so we need to exit
                 null -> {
                     println("Not connected to console. Exiting")
                     exitProcess(1)
                 }
-            // Otherwise we can proceed normally
+                // Otherwise we can proceed normally
                 else -> {
                     while (true) {
                         val keystorePassword1 = console.readPassword("Enter the keystore password => ")
@@ -397,10 +336,9 @@ open class NodeStartup(val args: Array<String>) {
             if (conf.shouldStartSSHDaemon()) {
                 Node.printBasicNodeInfo("SSH server listening on port", conf.sshd!!.port.toString())
             }
-        },
-                { th ->
-                    logger.error("Unexpected exception during registration", th)
-                })
+        }, { th ->
+            logger.error("Unexpected exception during registration", th)
+        })
         node.run()
     }
 
@@ -427,8 +365,7 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     protected open fun registerWithNetwork(conf: NodeConfiguration, versionInfo: VersionInfo, nodeRegistrationConfig: NodeRegistrationOption) {
-        val compatibilityZoneURL = conf.networkServices?.doormanURL ?: throw RuntimeException(
-                "compatibilityZoneURL or networkServices must be configured!")
+        val compatibilityZoneURL = conf.networkServices?.doormanURL ?: throw RuntimeException("compatibilityZoneURL or networkServices must be configured!")
 
         println()
         println("******************************************************************")
@@ -456,12 +393,7 @@ open class NodeStartup(val args: Array<String>) {
         // Manifest properties are only available if running from the corda jar
         fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
-        return VersionInfo(
-                manifestValue("Corda-Platform-Version")?.toInt() ?: 1,
-                manifestValue("Corda-Release-Version") ?: "Unknown",
-                manifestValue("Corda-Revision") ?: "Unknown",
-                manifestValue("Corda-Vendor") ?: "Unknown"
-        )
+        return VersionInfo(manifestValue("Corda-Platform-Version")?.toInt() ?: 1, manifestValue("Corda-Release-Version") ?: "Unknown", manifestValue("Corda-Revision") ?: "Unknown", manifestValue("Corda-Vendor") ?: "Unknown")
     }
 
     private fun enforceSingleNodeIsRunning(baseDirectory: Path) {
@@ -509,11 +441,7 @@ open class NodeStartup(val args: Array<String>) {
             // User is probably on macOS and experiencing this problem: http://stackoverflow.com/questions/10064581/how-can-i-eliminate-slow-resolving-loading-of-localhost-virtualhost-a-2-3-secon
             //
             // Also see https://bugs.openjdk.java.net/browse/JDK-8143378
-            val messages = listOf(
-                    "Your computer took over a second to resolve localhost due an incorrect configuration. Corda will work but start very slowly until this is fixed. ",
-                    "Please see https://docs.corda.net/troubleshooting.html#slow-localhost-resolution for information on how to fix this. ",
-                    "It will only take a few seconds for you to resolve."
-            )
+            val messages = listOf("Your computer took over a second to resolve localhost due an incorrect configuration. Corda will work but start very slowly until this is fixed. ", "Please see https://docs.corda.net/troubleshooting.html#slow-localhost-resolution for information on how to fix this. ", "It will only take a few seconds for you to resolve.")
             logger.warn(messages.joinToString(""))
             Emoji.renderIfSupported {
                 print(Ansi.ansi().fgBrightRed())
@@ -541,107 +469,12 @@ open class NodeStartup(val args: Array<String>) {
         AnsiConsole.systemInstall()
 
         Emoji.renderIfSupported {
-            val messages = arrayListOf(
-                    "The only distributed ledger that pays\nhomage to Pac Man in its logo.",
-                    "You know, I was a banker\nonce ... but I lost interest. ${Emoji.bagOfCash}",
-                    "It's not who you know, it's who you know\nknows what you know you know.",
-                    "It runs on the JVM because QuickBasic\nis apparently not 'professional' enough.",
-                    "\"It's OK computer, I go to sleep after\ntwenty minutes of inactivity too!\"",
-                    "It's kind of like a block chain but\ncords sounded healthier than chains.",
-                    "Computer science and finance together.\nYou should see our crazy Christmas parties!",
-                    "I met my bank manager yesterday and asked\nto check my balance ... he pushed me over!",
-                    "A banker with nobody around may find\nthemselves .... a-loan! <applause>",
-                    "Whenever I go near my bank I get\nwithdrawal symptoms ${Emoji.coolGuy}",
-                    "There was an earthquake in California,\na local bank went into de-fault.",
-                    "I asked for insurance if the nearby\nvolcano erupted. They said I'd be covered.",
-                    "I had an account with a bank in the\nNorth Pole, but they froze all my assets ${Emoji.santaClaus}",
-                    "Check your contracts carefully. The fine print\nis usually a clause for suspicion ${Emoji.santaClaus}",
-                    "Some bankers are generous ...\nto a vault! ${Emoji.bagOfCash} ${Emoji.coolGuy}",
-                    "What you can buy for a dollar these\ndays is absolute non-cents! ${Emoji.bagOfCash}",
-                    "Old bankers never die, they\njust... pass the buck",
-                    "I won $3M on the lottery so I donated a quarter\nof it to charity. Now I have $2,999,999.75.",
-                    "There are two rules for financial success:\n1) Don't tell everything you know.",
-                    "Top tip: never say \"oops\", instead\nalways say \"Ah, Interesting!\"",
-                    "Computers are useless. They can only\ngive you answers.  -- Picasso"
-            )
+            val messages = arrayListOf("The only distributed ledger that pays\nhomage to Pac Man in its logo.", "You know, I was a banker\nonce ... but I lost interest. ${Emoji.bagOfCash}", "It's not who you know, it's who you know\nknows what you know you know.", "It runs on the JVM because QuickBasic\nis apparently not 'professional' enough.", "\"It's OK computer, I go to sleep after\ntwenty minutes of inactivity too!\"", "It's kind of like a block chain but\ncords sounded healthier than chains.", "Computer science and finance together.\nYou should see our crazy Christmas parties!", "I met my bank manager yesterday and asked\nto check my balance ... he pushed me over!", "A banker with nobody around may find\nthemselves .... a-loan! <applause>", "Whenever I go near my bank I get\nwithdrawal symptoms ${Emoji.coolGuy}", "There was an earthquake in California,\na local bank went into de-fault.", "I asked for insurance if the nearby\nvolcano erupted. They said I'd be covered.", "I had an account with a bank in the\nNorth Pole, but they froze all my assets ${Emoji.santaClaus}", "Check your contracts carefully. The fine print\nis usually a clause for suspicion ${Emoji.santaClaus}", "Some bankers are generous ...\nto a vault! ${Emoji.bagOfCash} ${Emoji.coolGuy}", "What you can buy for a dollar these\ndays is absolute non-cents! ${Emoji.bagOfCash}", "Old bankers never die, they\njust... pass the buck", "I won $3M on the lottery so I donated a quarter\nof it to charity. Now I have $2,999,999.75.", "There are two rules for financial success:\n1) Don't tell everything you know.", "Top tip: never say \"oops\", instead\nalways say \"Ah, Interesting!\"", "Computers are useless. They can only\ngive you answers.  -- Picasso")
 
-            if (Emoji.hasEmojiTerminal)
-                messages += "Kind of like a regular database but\nwith emojis, colours and ascii art. ${Emoji.coolGuy}"
+            if (Emoji.hasEmojiTerminal) messages += "Kind of like a regular database but\nwith emojis, colours and ascii art. ${Emoji.coolGuy}"
             val (msg1, msg2) = messages.randomOrNull()!!.split('\n')
 
-            println(Ansi.ansi().newline().fgBrightRed().a(
-                    """   ______               __""").newline().a(
-                    """  / ____/     _________/ /___ _""").newline().a(
-                    """ / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
-                    """/ /___  /_/ / /  / /_/ / /_/ /          """).fgBrightBlue().a(msg2).newline().fgBrightRed().a(
-                    """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").newline().newline().reset())
+            println(Ansi.ansi().newline().fgBrightRed().a("""   ______               __""").newline().a("""  / ____/     _________/ /___ _""").newline().a(""" / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a("""/ /___  /_/ / /  / /_/ / /_/ /          """).fgBrightBlue().a(msg2).newline().fgBrightRed().a("""\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").newline().newline().reset())
         }
     }
 }
-
-sealed class OperationOutcome<RESULT>(val successful: Boolean) {
-
-    companion object {
-        fun <RESULT> attempt(action: () -> RESULT): () -> OperationOutcome<RESULT> {
-
-            return {
-                try {
-                    Successful(action.invoke())
-                } catch (error: Exception) {
-                    Unsuccessful(error)
-                }
-            }
-        }
-    }
-
-    abstract fun <ACTION_RESULT> ifSuccessful(action: (RESULT) -> ACTION_RESULT): OperationOutcome<ACTION_RESULT>
-
-    abstract fun ifUnsuccessful(action: (Exception) -> Unit): OperationOutcome<RESULT>
-
-    data class Successful<RESULT>(val result: RESULT) : OperationOutcome<RESULT>(true) {
-
-        override fun <ACTION_RESULT> ifSuccessful(action: (RESULT) -> ACTION_RESULT): OperationOutcome<ACTION_RESULT> {
-
-            return attempt { action.invoke(result) }.invoke()
-        }
-
-        override fun ifUnsuccessful(action: (Exception) -> Unit): OperationOutcome<RESULT> {
-
-            return this
-        }
-    }
-
-    data class Unsuccessful<RESULT>(val error: Exception) : OperationOutcome<RESULT>(false) {
-
-        override fun <ACTION_RESULT> ifSuccessful(action: (RESULT) -> ACTION_RESULT): OperationOutcome<ACTION_RESULT> {
-
-            return Unsuccessful(error)
-        }
-
-        override fun ifUnsuccessful(action: (Exception) -> Unit): OperationOutcome<RESULT> {
-
-            action.invoke(error)
-            return this
-        }
-    }
-}
-
-fun <FIRST, SECOND> (() -> OperationOutcome<FIRST>).then(action: (FIRST) -> SECOND): () -> OperationOutcome<SECOND> {
-
-    return { invoke().ifSuccessful(action::invoke) }
-}
-
-fun <RESULT> (() -> OperationOutcome<RESULT>).doOnError(action: (Exception) -> Unit): () -> OperationOutcome<RESULT> {
-
-    return { invoke().ifUnsuccessful(action::invoke) }
-}
-
-fun main(args: Array<String>) {
-
-    // TODO sollecitom this is a problem, for the first `doOnError` doesn't "consume" the exception, so that it gets processed twice. Could be fixed but not sure this approach is correct.
-    val result = attempt<String> { throw RuntimeException("Boom") }.doOnError { error -> error.printStackTrace() }.then { sentence -> sentence.length }.doOnError { error -> error.printStackTrace() }.invoke()
-    val result2 = attempt { "Hello functional" }.doOnError { error -> error.printStackTrace() }.then { sentence -> sentence.length }.invoke()
-    println(result)
-    println(result2)
-}
-
