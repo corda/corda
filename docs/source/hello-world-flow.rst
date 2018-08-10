@@ -140,7 +140,7 @@ Signing the transaction
 Now that we have a valid transaction proposal, we need to sign it. Once the transaction is signed, no-one will be able
 to modify the transaction without invalidating this signature. This effectively makes the transaction immutable.
 
-We sign the transaction using ``ServiceHub.toSignedTransaction``, which returns a ``SignedTransaction``. A
+We sign the transaction using ``ServiceHub.signInitialTransaction``, which returns a ``SignedTransaction``. A
 ``SignedTransaction`` is an object that pairs a transaction with a list of signatures over that transaction.
 
 Finalising the transaction
