@@ -517,7 +517,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /**
-     * If the [serviceClass] is a notary service, it will only be enable if the "custom" flag is set in
+     * If the [serviceClass] is a notary service, it will only be enabled if the "custom" flag is set in
      * the notary configuration.
      */
     private fun isNotaryService(serviceClass: Class<*>) = NotaryService::class.java.isAssignableFrom(serviceClass)
@@ -564,28 +564,38 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private fun <T : SerializeAsToken> installCordaService(flowStarter: FlowStarter, serviceClass: Class<T>, myNotaryIdentity: PartyAndCertificate?) {
         serviceClass.requireAnnotation<CordaService>()
+
         val service = try {
-            val serviceContext = AppServiceHubImpl<T>(services, flowStarter)
-            if (isNotaryService(serviceClass)) {
-                myNotaryIdentity ?: throw IllegalStateException("Trying to install a notary service but no notary identity specified")
-                val constructor = serviceClass.getDeclaredConstructor(AppServiceHub::class.java, PublicKey::class.java).apply { isAccessible = true }
-                serviceContext.serviceInstance = constructor.newInstance(serviceContext, myNotaryIdentity.owningKey)
-                serviceContext.serviceInstance
-            } else {
-                try {
-                    val extendedServiceConstructor = serviceClass.getDeclaredConstructor(AppServiceHub::class.java).apply { isAccessible = true }
-                    serviceContext.serviceInstance = extendedServiceConstructor.newInstance(serviceContext)
-                    serviceContext.serviceInstance
-                } catch (ex: NoSuchMethodException) {
-                    val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java).apply { isAccessible = true }
-                    log.warn("${serviceClass.name} is using legacy CordaService constructor with ServiceHub parameter. " +
-                            "Upgrade to an AppServiceHub parameter to enable updated API features.")
-                    constructor.newInstance(services)
-                }
-            }
+           if (isNotaryService(serviceClass)) {
+               myNotaryIdentity ?: throw IllegalStateException("Trying to install a notary service but no notary identity specified")
+               try {
+                   val constructor = serviceClass.getDeclaredConstructor(ServiceHubInternal::class.java, PublicKey::class.java).apply { isAccessible = true }
+                   constructor.newInstance(services, myNotaryIdentity.owningKey )
+               } catch (ex: NoSuchMethodException) {
+                   val constructor = serviceClass.getDeclaredConstructor(AppServiceHub::class.java, PublicKey::class.java).apply { isAccessible = true }
+                   val serviceContext = AppServiceHubImpl<T>(services, flowStarter)
+                   val service = constructor.newInstance(serviceContext, myNotaryIdentity.owningKey)
+                   serviceContext.serviceInstance = service
+                   service
+               }
+           } else {
+               try {
+                   val serviceContext = AppServiceHubImpl<T>(services, flowStarter)
+                   val extendedServiceConstructor = serviceClass.getDeclaredConstructor(AppServiceHub::class.java).apply { isAccessible = true }
+                   val service = extendedServiceConstructor.newInstance(serviceContext)
+                   serviceContext.serviceInstance = service
+                   service
+               } catch (ex: NoSuchMethodException) {
+                   val constructor = serviceClass.getDeclaredConstructor(ServiceHub::class.java).apply { isAccessible = true }
+                   log.warn("${serviceClass.name} is using legacy CordaService constructor with ServiceHub parameter. " +
+                           "Upgrade to an AppServiceHub parameter to enable updated API features.")
+                   constructor.newInstance(services)
+               }
+           }
         } catch (e: InvocationTargetException) {
             throw ServiceInstantiationException(e.cause)
         }
+
         cordappServices.putInstance(serviceClass, service)
 
         if (service is NotaryService) handleCustomNotaryService(service)

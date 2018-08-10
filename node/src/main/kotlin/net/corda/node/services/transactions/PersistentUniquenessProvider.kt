@@ -1,5 +1,6 @@
 package net.corda.node.services.transactions
 
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
@@ -8,29 +9,34 @@ import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.identity.Party
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.notary.NotaryInternalException
-import net.corda.core.internal.notary.UniquenessProvider
-import net.corda.core.internal.notary.isConsumedByTheSameTx
-import net.corda.core.internal.notary.validateTimeWindow
+import net.corda.core.internal.concurrent.OpenFuture
+import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.notary.*
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.serialization.internal.CordaSerializationEncoding
 import java.time.Clock
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.LinkedBlockingQueue
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
+import kotlin.concurrent.thread
 
 /** A RDBMS backed Uniqueness provider */
 @ThreadSafe
-class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, SingletonSerializeAsToken() {
+class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersistence) : AsyncUniquenessProvider, SingletonSerializeAsToken() {
+
     @MappedSuperclass
     class BaseComittedState(
             @EmbeddedId
@@ -63,15 +69,31 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
             var requestDate: Instant
     )
 
+    private data class CommitRequest(
+            val states: List<StateRef>,
+            val txId: SecureHash,
+            val callerIdentity: Party,
+            val requestSignature: NotarisationRequestSignature,
+            val timeWindow: TimeWindow?,
+            val references: List<StateRef>,
+            val future: OpenFuture<AsyncUniquenessProvider.Result>)
+
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_states")
     class CommittedState(id: PersistentStateRef, consumingTxHash: String) : BaseComittedState(id, consumingTxHash)
 
-    private class InnerState {
-        val commitLog = createMap()
-    }
+    private val commitLog = createMap()
 
-    private val mutex = ThreadBox(InnerState())
+    private val requestQueue = LinkedBlockingQueue<CommitRequest>(100_000)
+
+    /** A request processor thread. */
+    private val processorThread = thread(name = "Notary request queue processor", isDaemon = true) {
+        try {
+            processRequests()
+        } catch (e: InterruptedException) {
+        }
+        log.debug { "Shutting down with ${requestQueue.size} in-flight requests unprocessed." }
+    }
 
     companion object {
         private val log = contextLogger()
@@ -99,23 +121,25 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
                 )
     }
 
-    override fun commit(
+
+    /**
+     * Generates and adds a [CommitRequest] to the request queue. If the request queue is full, this method will block
+     * until space is available.
+     *
+     * Returns a future that will complete once the request is processed, containing the commit [Result].
+     */
+    override fun commitAsync(
             states: List<StateRef>,
             txId: SecureHash,
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
             references: List<StateRef>
-    ) {
-        mutex.locked {
-            logRequest(txId, callerIdentity, requestSignature)
-            val conflictingStates = findAlreadyCommitted(states, references, commitLog)
-            if (conflictingStates.isNotEmpty()) {
-                handleConflicts(txId, conflictingStates)
-            } else {
-                handleNoConflicts(timeWindow, states, txId, commitLog)
-            }
-        }
+    ): CordaFuture<AsyncUniquenessProvider.Result> {
+        val future = openFuture<AsyncUniquenessProvider.Result>()
+        val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references, future)
+        requestQueue.put(request)
+        return future
     }
 
     private fun logRequest(txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature) {
@@ -149,6 +173,25 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
         return conflictingStates
     }
 
+    private fun commitOne(
+            states: List<StateRef>,
+            txId: SecureHash,
+            callerIdentity: Party,
+            requestSignature: NotarisationRequestSignature,
+            timeWindow: TimeWindow?,
+            references: List<StateRef>
+    ) {
+        database.transaction {
+            logRequest(txId, callerIdentity, requestSignature)
+            val conflictingStates = findAlreadyCommitted(states, references, commitLog)
+            if (conflictingStates.isNotEmpty()) {
+                handleConflicts(txId, conflictingStates)
+            } else {
+                handleNoConflicts(timeWindow, states, txId, commitLog)
+            }
+        }
+    }
+
     private fun handleConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
         if (isConsumedByTheSameTx(txId.sha256(), conflictingStates)) {
             log.debug { "Transaction $txId already notarised" }
@@ -170,5 +213,33 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
         } else {
             throw NotaryInternalException(outsideTimeWindowError)
         }
+    }
+
+    private fun processRequests() {
+        while (!Thread.interrupted()) {
+            processRequest(requestQueue.take())
+        }
+    }
+
+    private fun processRequest(request: CommitRequest) {
+        try {
+            commitOne(request.states, request.txId, request.callerIdentity, request.requestSignature, request.timeWindow, request.references)
+            respondWithSuccess(request)
+        } catch (e: Exception) {
+            log.warn("Error processing commit request", e)
+            respondWithError(request, e)
+        }
+    }
+
+    private fun respondWithError(request: CommitRequest, exception: Exception) {
+            if (exception is NotaryInternalException) {
+                request.future.set(AsyncUniquenessProvider.Result.Failure(exception.error))
+            } else {
+                request.future.setException(NotaryInternalException(NotaryError.General(Exception("Internal service error."))))
+            }
+    }
+
+    private fun respondWithSuccess(request: CommitRequest) {
+        request.future.set(AsyncUniquenessProvider.Result.Success)
     }
 }
