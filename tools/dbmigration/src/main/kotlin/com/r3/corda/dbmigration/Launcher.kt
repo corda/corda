@@ -133,7 +133,7 @@ private fun runCommand(options: OptionSet, parser: OptionParser) {
                 errorAndExit("Not a valid node folder. Could not find the config file: '$config'.")
             }
             val nodeConfig = ConfigHelper.loadConfig(baseDirectory, config).parseAsNodeConfiguration()
-            val cordappLoader = JarScanningCordappLoader.fromDirectories(setOf(baseDirectory))
+            val cordappLoader = JarScanningCordappLoader.fromDirectories(setOf(baseDirectory, baseDirectory / "cordapps"))
 
             val schemaService = NodeSchemaService(extraSchemas = cordappLoader.cordappSchemas, includeNotarySchemas = nodeConfig.notary != null)
 
