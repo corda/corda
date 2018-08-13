@@ -1176,7 +1176,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     @Test
     fun `pagination not specified but more than default results available`() {
         expectedEx.expect(VaultQueryException::class.java)
-        expectedEx.expectMessage("Please specify a `PageSpecification`")
+        expectedEx.expectMessage("provide a `PageSpecification(pageNumber, pageSize)`")
 
         database.transaction {
             vaultFiller.fillWithSomeTestCash(201.DOLLARS, notaryServices, 201, DUMMY_CASH_ISSUER)
