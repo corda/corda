@@ -157,6 +157,7 @@ see changes to this list.
 * Richard Crook (RBS)
 * Richard Gendal Brown (R3)
 * Richard Green (R3)
+* Richard Green (Blocksure)
 * Rick Parker (R3)
 * Roberto Karpinski (Bradesco)
 * Robin Green (CIBC)
