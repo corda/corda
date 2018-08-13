@@ -22,17 +22,24 @@ interface FingerPrinter {
 }
 
 // Representation of the current state of fingerprinting
-internal data class FingerPrintingState(val hasher: Hasher, val typesSeen: Set<Type>, val contextType: Type?) {
+internal data class FingerPrintingState(val hasher: Hasher, val typesSeen: MutableSet<Type>, val contextType: Type?) {
     companion object {
         val initial get() = FingerPrintingState(
                 Hashing.murmur3_128().newHasher(),
-                emptySet(),
+                mutableSetOf(),
                 null
         )
+
+        private const val ARRAY_HASH: String = "Array = true"
+        private const val ENUM_HASH: String = "Enum = true"
+        private const val ALREADY_SEEN_HASH: String = "Already seen = true"
+        private const val NULLABLE_HASH: String = "Nullable = true"
+        private const val NOT_NULLABLE_HASH: String = "Nullable = false"
+        private const val ANY_TYPE_HASH: String = "Any type = true"
     }
 
     // Move to a state which has seen the given type, and has it as its context.
-    fun observe(type: Type) = copy(typesSeen = typesSeen + type, contextType = type)
+    fun observe(type: Type) = copy(typesSeen = typesSeen.apply { add(type) }, contextType = type)
 
     // Test whether we are in a state in which we have already seen the given type.
     //
@@ -46,8 +53,24 @@ internal data class FingerPrintingState(val hasher: Hasher, val typesSeen: Set<T
             && (type !is TypeVariable<*>)
             && (type !is WildcardType)
 
-    // Move to a state in which the given characters have been written into the hasher.
-    fun write(chars: CharSequence) = copy(hasher = hasher.putUnencodedChars(chars))
+    // Move to a state in which the given character sequences have been written into the hasher.
+    fun write(vararg charSequences: CharSequence) = copy(hasher = charSequences.fold(hasher, Hasher::putUnencodedChars))
+
+    fun writeAlreadySeen() = write(ALREADY_SEEN_HASH)
+    fun writeArray() = write(ARRAY_HASH)
+    fun writeAnyType() = write("?$ANY_TYPE_HASH")
+
+    // ensures any change to the enum (adding constants) will trigger the need for evolution
+    fun writeEnum(type: Class<*>) = write(type.enumConstants.joinToString(), type.name, ENUM_HASH)
+    fun writePrimitiveOrCollection(type: Class<*>) = write(type.name)
+
+    // TODO: name collision is too likely for kotlin objects, we need to introduce some
+    // reference to the CorDapp but maybe reference to the JAR in the short term.
+    fun writeKotlinObject(type: Class<*>) = write(type.name)
+
+    fun writePropSerializer(prop: PropertyAccessor) = write(
+            prop.serializer.name,
+            if (prop.serializer.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
 
     // Obtain the fingerprint from the hasher.
     val fingerprint: String get() = hasher.hash().asBytes().toBase64()
@@ -60,13 +83,6 @@ internal data class FingerPrintingState(val hasher: Hasher, val typesSeen: Set<T
 class SerializerFingerPrinter(val factory: SerializerFactory) : FingerPrinter {
 
     companion object {
-        private const val ARRAY_HASH: String = "Array = true"
-        private const val ENUM_HASH: String = "Enum = true"
-        private const val ALREADY_SEEN_HASH: String = "Already seen = true"
-        private const val NULLABLE_HASH: String = "Nullable = true"
-        private const val NOT_NULLABLE_HASH: String = "Nullable = false"
-        private const val ANY_TYPE_HASH: String = "Any type = true"
-
         internal fun fingerprintForDescriptors(vararg typeDescriptors: String): String =
             FingerPrintingState.initial.write(typeDescriptors.joinToString()).fingerprint
     }
@@ -80,19 +96,19 @@ class SerializerFingerPrinter(val factory: SerializerFactory) : FingerPrinter {
      * different.
      */
     override fun fingerprint(type: Type): String =
-        fingerprintForType(type, FingerPrintingState.initial).fingerprint
+        FingerPrintingState.initial.fingerprintForType(type).fingerprint
 
     // This method concatenates various elements of the types recursively as unencoded strings into the hasher,
     // effectively creating a unique string for a type which we then hash in the calling function above.
-    private fun fingerprintForType(type: Type, state: FingerPrintingState): FingerPrintingState =
-        if (state.hasSeen(type)) state.write(ALREADY_SEEN_HASH)
+    private fun FingerPrintingState.fingerprintForType(type: Type): FingerPrintingState =
+        if (hasSeen(type)) writeAlreadySeen()
         else ifThrowsAppend(
             { type.typeName },
-            { fingerprintForNewType(type, state.observe(type)) })
+            { observe(type).fingerprintForNewType(type) })
 
-    private fun fingerprintForNewType(type: Type, state: FingerPrintingState): FingerPrintingState =
+    private fun FingerPrintingState.fingerprintForNewType(type: Type): FingerPrintingState =
         when (type) {
-            is ParameterizedType -> fingerprintForParameterizedType(type, state)
+            is ParameterizedType -> fingerprintForParameterizedType(type)
             // Previously, we drew a distinction between TypeVariable, WildcardType, and AnyType, changing
             // the signature of the fingerprinted object. This, however, doesn't work as it breaks bi-
             // directional fingerprints. That is, fingerprinting a concrete instance of a generic
@@ -107,65 +123,55 @@ class SerializerFingerPrinter(val factory: SerializerFactory) : FingerPrinter {
             // end up breaking into the evolver when we shouldn't or, worse, evoking the carpenter.
             is SerializerFactory.AnyType,
             is WildcardType,
-            is TypeVariable<*> -> state.write("?$ANY_TYPE_HASH")
-            is Class<*> -> fingerprintForClass(type, state)
+            is TypeVariable<*> -> writeAnyType()
+            is Class<*> -> fingerprintForClass(type)
             // Hash the element type + some array hash
-            is GenericArrayType -> fingerprintForType(type.genericComponentType, state).write(ARRAY_HASH)
+            is GenericArrayType -> fingerprintForType(type.genericComponentType).writeArray()
             else -> throw AMQPNotSerializableException(type, "Don't know how to hash")
         }
 
-    private fun fingerprintForClass(type: Class<*>, state: FingerPrintingState): FingerPrintingState = when {
-        type.isArray -> fingerprintForType(type.componentType, state).write(ARRAY_HASH)
-        type.isPrimitiveOrCollection -> state.write(type.name)
-        type.isEnum ->
-            // ensures any change to the enum (adding constants) will trigger the need for evolution
-            state.write("${type.enumConstants.joinToString()}${type.name}$ENUM_HASH")
-        else -> state.fingerprintWithCustomSerializerOrElse(type, type) {
-            if (type.kotlinObjectInstance != null) {
-                // TODO: name collision is too likely for kotlin objects, we need to introduce some
-                // reference to the CorDapp but maybe reference to the JAR in the short term.
-                write(type.name)
-            } else {
-                fingerprintForObject(type, this)
-            }
+    private fun FingerPrintingState.fingerprintForClass(type: Class<*>): FingerPrintingState = when {
+        type.isArray -> fingerprintForType(type.componentType).writeArray()
+        type.isPrimitiveOrCollection -> writePrimitiveOrCollection(type)
+        type.isEnum -> writeEnum(type)
+        else -> fingerprintWithCustomSerializerOrElse(type, type) {
+            if (type.kotlinObjectInstance != null)writeKotlinObject(type)
+            else fingerprintForObject(type)
         }
     }
 
-    private fun fingerprintForParameterizedType(type: ParameterizedType, state: FingerPrintingState): FingerPrintingState {
+    private fun FingerPrintingState.fingerprintForParameterizedType(type: ParameterizedType): FingerPrintingState {
         // Hash the rawType + params
         val clazz = type.asClass()
 
-        val startingState = if (clazz.isCollectionOrMap) state.write(clazz.name)
-        else state.fingerprintWithCustomSerializerOrElse(clazz, type) {
-            fingerprintForObject(type, this)
+        val startingState = if (clazz.isCollectionOrMap) writePrimitiveOrCollection(clazz)
+        else fingerprintWithCustomSerializerOrElse(clazz, type) {
+            fingerprintForObject(type)
         }
 
         // ... and concatenate the type data for each parameter type.
         return type.actualTypeArguments.fold(startingState) { orig, paramType ->
-            fingerprintForType(paramType, orig)
+            orig.fingerprintForType(paramType)
         }
     }
 
-    private fun fingerprintForObject(type: Type, state: FingerPrintingState): FingerPrintingState {
+    private fun FingerPrintingState.fingerprintForObject(type: Type): FingerPrintingState {
         // Hash the class + properties + interfaces
         val name = type.asClass().name
 
         val withProperties = propertiesForSerialization(
                 constructorForDeserialization(type),
-                state.contextType ?: type,
+                contextType ?: type,
                 factory)
                 .serializationOrder
-                .fold(state.write(name)) { orig, prop ->
-                    fingerprintForType(prop.serializer.resolvedType, orig)
-                        .write("${prop.serializerName}${prop.mandatoryNess}")
+                .fold(write(name)) { orig, prop ->
+                    orig.fingerprintForType(prop.serializer.resolvedType)
+                        .writePropSerializer(prop)
                 }
         return interfacesForSerialization(type, factory).fold(withProperties) { orig, iface ->
-            fingerprintForType(iface, orig)
+            orig.fingerprintForType(iface)
         }
     }
-
-    private val PropertyAccessor.serializerName get() = serializer.name
-    private val PropertyAccessor.mandatoryNess get() = if (serializer.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH
 
     private val Class<*>.isCollectionOrMap get() =
             (Collection::class.java.isAssignableFrom(this) || Map::class.java.isAssignableFrom(this))
