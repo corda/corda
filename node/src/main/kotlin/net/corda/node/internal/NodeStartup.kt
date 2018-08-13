@@ -131,17 +131,32 @@ open class NodeStartup(val args: Array<String>) {
         return attempt { startNode(configuration, versionInfo, startTime, cmdlineOptions) }.doOnSuccess { logger.info("Node exiting successfully") }.doOnException(handleStartError).isSuccess
     }
 
-    private fun <RESULT> attempt(action: () -> RESULT): Try<RESULT>  = Try.on(action)
+    private fun <RESULT> attempt(action: () -> RESULT): Try<RESULT> = Try.on(action)
 
     private fun Exception.isExpectedWhenStartingNode() = this::class in startNodeExpectedErrors
 
     private val startNodeExpectedErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
 
-    private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print(message)
+    private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print("$message [${errorCode()}]")
 
-    private fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print(message, error)
+    private fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message [${errorCode()}]", error)
 
     private fun Exception.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
+
+    private fun Exception.errorCode(): String {
+
+        val hash = staticLocationBasedHash()
+        return Integer.toOctalString(hash)
+    }
+
+    private fun Throwable.staticLocationBasedHash(visited: Set<Throwable> = setOf(this)): Int {
+
+        val cause = this.cause
+        return when {
+            cause != null && !visited.contains(cause) -> Objects.hash(this::class.java.name, stackTrace, cause.staticLocationBasedHash(visited +  cause))
+            else -> Objects.hash(this::class.java.name, stackTrace)
+        }
+    }
 
     private val handleRegistrationError = { error: Exception ->
         when (error) {
@@ -161,7 +176,7 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     private fun handleConfigurationLoadingError(configFile: Path) = { error: Exception ->
-        when(error) {
+        when (error) {
             is UnknownConfigurationKeysException -> error.logAsExpected()
             is ConfigException.IO -> error.logAsExpected(configFileNotFoundMessage(configFile), ::println)
             else -> error.logAsUnexpected("Unexpected error whilst reading node configuration")
