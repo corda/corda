@@ -8,22 +8,12 @@ import io.netty.channel.unix.Errors
 import joptsimple.OptionParser
 import joptsimple.util.PathConverter
 import net.corda.core.crypto.Crypto
-import net.corda.core.internal.Emoji
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
-import net.corda.core.internal.exists
-import net.corda.core.internal.location
-import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
-import net.corda.node.CmdLineOptions
-import net.corda.node.NodeArgsParser
-import net.corda.node.NodeRegistrationOption
-import net.corda.node.SerialFilter
-import net.corda.node.VersionInfo
-import net.corda.node.defaultSerialFilter
+import net.corda.node.*
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
@@ -32,8 +22,8 @@ import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
-import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.node.utilities.registration.NodeRegistrationHelper
+import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.internal.addShutdownHook
@@ -65,6 +55,7 @@ open class NodeStartup(val args: Array<String>) {
         const val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
         private const val INITIAL_REGISTRATION_MARKER = ".initialregistration"
     }
+
 
     /**
      * @return true if the node startup was successful. This value is intended to be the exit code of the process.
@@ -218,8 +209,13 @@ open class NodeStartup(val args: Array<String>) {
         // restart.
         val optionParser = OptionParser()
         optionParser.allowsUnrecognizedOptions()
-        val baseDirectoryArg = optionParser.accepts("base-directory", "The node working directory where all the files are kept").withRequiredArg().withValuesConvertedBy(PathConverter()).defaultsTo(Paths.get("."))
-        val isRegistrationArg = optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
+        val baseDirectoryArg = optionParser
+                .accepts("base-directory", "The node working directory where all the files are kept")
+                .withRequiredArg()
+                .withValuesConvertedBy(PathConverter())
+                .defaultsTo(Paths.get("."))
+        val isRegistrationArg =
+                optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
         val optionSet = optionParser.parse(*args)
         val baseDirectory = optionSet.valueOf(baseDirectoryArg).normalize().toAbsolutePath()
         // If the node was started with `--initial-registration`, create marker file.
@@ -278,12 +274,12 @@ open class NodeStartup(val args: Array<String>) {
             val console: Console? = System.console()
 
             when (console) {
-                // In this case, the JVM is not connected to the console so we need to exit
+            // In this case, the JVM is not connected to the console so we need to exit
                 null -> {
                     println("Not connected to console. Exiting")
                     exitProcess(1)
                 }
-                // Otherwise we can proceed normally
+            // Otherwise we can proceed normally
                 else -> {
                     while (true) {
                         val keystorePassword1 = console.readPassword("Enter the keystore password => ")
@@ -356,9 +352,10 @@ open class NodeStartup(val args: Array<String>) {
             if (conf.shouldStartSSHDaemon()) {
                 Node.printBasicNodeInfo("SSH server listening on port", conf.sshd!!.port.toString())
             }
-        }, { th ->
-            logger.error("Unexpected exception during registration", th)
-        })
+        },
+                { th ->
+                    logger.error("Unexpected exception during registration", th)
+                })
         node.run()
     }
 
@@ -385,7 +382,8 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     protected open fun registerWithNetwork(conf: NodeConfiguration, versionInfo: VersionInfo, nodeRegistrationConfig: NodeRegistrationOption) {
-        val compatibilityZoneURL = conf.networkServices?.doormanURL ?: throw RuntimeException("compatibilityZoneURL or networkServices must be configured!")
+        val compatibilityZoneURL = conf.networkServices?.doormanURL ?: throw RuntimeException(
+                "compatibilityZoneURL or networkServices must be configured!")
 
         println()
         println("******************************************************************")
@@ -413,7 +411,12 @@ open class NodeStartup(val args: Array<String>) {
         // Manifest properties are only available if running from the corda jar
         fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
-        return VersionInfo(manifestValue("Corda-Platform-Version")?.toInt() ?: 1, manifestValue("Corda-Release-Version") ?: "Unknown", manifestValue("Corda-Revision") ?: "Unknown", manifestValue("Corda-Vendor") ?: "Unknown")
+        return VersionInfo(
+                manifestValue("Corda-Platform-Version")?.toInt() ?: 1,
+                manifestValue("Corda-Release-Version") ?: "Unknown",
+                manifestValue("Corda-Revision") ?: "Unknown",
+                manifestValue("Corda-Vendor") ?: "Unknown"
+        )
     }
 
     private fun enforceSingleNodeIsRunning(baseDirectory: Path) {
@@ -461,7 +464,11 @@ open class NodeStartup(val args: Array<String>) {
             // User is probably on macOS and experiencing this problem: http://stackoverflow.com/questions/10064581/how-can-i-eliminate-slow-resolving-loading-of-localhost-virtualhost-a-2-3-secon
             //
             // Also see https://bugs.openjdk.java.net/browse/JDK-8143378
-            val messages = listOf("Your computer took over a second to resolve localhost due an incorrect configuration. Corda will work but start very slowly until this is fixed. ", "Please see https://docs.corda.net/troubleshooting.html#slow-localhost-resolution for information on how to fix this. ", "It will only take a few seconds for you to resolve.")
+            val messages = listOf(
+                    "Your computer took over a second to resolve localhost due an incorrect configuration. Corda will work but start very slowly until this is fixed. ",
+                    "Please see https://docs.corda.net/troubleshooting.html#slow-localhost-resolution for information on how to fix this. ",
+                    "It will only take a few seconds for you to resolve."
+            )
             logger.warn(messages.joinToString(""))
             Emoji.renderIfSupported {
                 print(Ansi.ansi().fgBrightRed())
