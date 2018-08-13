@@ -16,7 +16,8 @@ Deploy Corda node
 
 Browse to https://portal.azure.com and log in with your Microsoft account.
 
-**STEP 1: Create a Resource Group**
+STEP 1: Create a Resource Group
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Click on the "Resource groups" link in the side nav in the Azure Portal and then click "Add":
 
@@ -26,7 +27,8 @@ Fill in the form and click "Create":
 
 .. image:: resources/azure-rg-2.png
 
-**STEP 2: Launch the VM**
+STEP 2: Launch the VM
+~~~~~~~~~~~~~~~~~~~~~
 
 At the top of the left sidenav click on the button with the green cross "Create a resource".
 
@@ -44,7 +46,7 @@ Click on "OK":
 
 .. image:: resources/azure-vm-form.png
 
-Choose the "D4S_V3 Standard" option and click "Select":
+Choose a size ("D4S_V3 Standard" is recommended if available) and click "Select":
 
 .. image:: resources/azure-instance-type.png
 
@@ -52,15 +54,13 @@ Click on "Public IP address" to open the "Settings" panel
 
 .. image:: resources/azure-vm-settings.png
 
-Set the IP address to "Static" under "Assignment".
+Set the IP address to "Static" under "Assignment" and click "OK":
 
 .. note:: This is so the IP address for your node does not change frequently in the global network map.
 
 .. image:: resources/azure-set-static-ip.png
 
-Click "OK".
-
-Next click on "Network security group (firewall)":
+Next toggle "Network Security Group" to advanced and click on "Network security group (firewall)":
 
 .. image:: resources/azure-nsg.png
 
@@ -69,9 +69,10 @@ node respectively:
 
 .. code:: bash
 
-    Port range: 10002, Priority: 1041  Name: Port_10002
-    Port range: 10003, Priority: 1042  Name: Port_10003
-    Port range: 8080, Priority: 1043  Name: Port_8080
+    Destination port ranges: 10002, Priority: 1041  Name: Port_10002
+    Destination port ranges: 10003, Priority: 1042  Name: Port_10003
+    Destination port ranges: 8080, Priority: 1043  Name: Port_8080
+    Destination port ranges: 22, Priority: 1044  Name: Port_22
 
 .. note:: The priority has to be unique number in the range 900 (highest) and 4096 (lowest) priority. Make sure each
     rule has a unique priority or there will be a validation failure and error message.
@@ -86,7 +87,8 @@ Click "Create" and wait a few minutes for your instance to be provisioned and st
 
 .. image:: resources/azure-create-vm.png
 
-**STEP 3: Connect to your VM and set up the environment**
+STEP 3: Connect to your VM and set up the environment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Once your instance is running click on the "Connect" button and copy the ssh command:
 
@@ -97,17 +99,20 @@ you configured earlier to log into the remote VM:
 
 .. image:: resources/azure-shell.png
 
-**STEP 4: Download and set up your Corda node**
+STEP 4: Download and set up your Corda node
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now that your Azure environment is configured you can switch to the Testnet web application and click on the
-copy-to-clipboard button to get a one-time installation script.
+Now that your Azure environment is configured you can switch to the
+`Testnet web application <https://testnet.corda.network/platform>`_ and click "Copy" to get a one-time installation
+script.
 
 .. note:: If you have not already set up your account on Testnet, please visit https://testnet.corda.network and sign
     up.
 
-.. image:: resources/testnet-platform.png
+.. note:: You can generate as many Testnet identites as you like by refreshing this page to generate a new one-time
+    link.
 
-You can generate as many Testnet identites as you like by refreshing this page to generate a new one-time link.
+.. image:: resources/testnet-platform.png
 	   
 In the terminal of your cloud instance, paste the command you just copied to install and run your Corda node:
 
@@ -124,15 +129,20 @@ You can follow the progress of the installation by typing the following command 
 
     tail -f /opt/corda/logs/node-<VM-NAME>.log
 
-Once the node has booted up, you can navigate to the external web address of the instance on port 8080. If everything
-is working, you should see the following:
+Once the node has booted up, you can navigate to the external web address of the instance on port 8080:
+
+.. code:: bash
+
+    http://<PUBLIC-IP-ADDRESS>:8080/
+
+If everything is working, you should see the following:
 
 .. image:: resources/installed-cordapps.png
 
 Testing your deployment
 -----------------------
 
-To test your deployment is working correctly, follow the instructions in :doc:`testnet-explorer-corda` to set up the
-Finance CorDapp and issue cash to a counterparty.
+To test that your deployment is working correctly, follow the instructions in :doc:`testnet-explorer-corda` to set up
+the Finance CorDapp and issue cash to a counterparty.
 
 This will also demonstrate how to install a custom CorDapp.
