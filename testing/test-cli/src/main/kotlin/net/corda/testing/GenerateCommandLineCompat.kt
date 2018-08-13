@@ -39,7 +39,7 @@ class CommandLineCompatibilityChecker {
                 .map {
                     val type = it.second.type()
                     ParameterDescription(it.first, type.componentType?.canonicalName
-                            ?: type.canonicalName, it.second.required(), isMultiple(type))
+                            ?: type.canonicalName, it.second.required(), isMultiple(type), determineAcceptableOptions(type))
                 }
 
         val positionals = commandSpec.positionalParameters().sortedBy { it.index() }.map {
@@ -50,8 +50,16 @@ class CommandLineCompatibilityChecker {
         return CommandDescription(it.commandName, positionals, options)
     }
 
+    private fun determineAcceptableOptions(type: Class<*>?): List<String> {
+        return if (type?.isEnum == true) {
+            type.enumConstants.map { it.toString() }
+        } else {
+            emptyList()
+        }
+    }
+
     data class CommandDescription(val commandName: String, val positionalParams: List<ParameterDescription>, val params: List<ParameterDescription>)
-    data class ParameterDescription(val parameterName: String, val parameterType: String, val required: Boolean, val multiParam: Boolean)
+    data class ParameterDescription(val parameterName: String, val parameterType: String, val required: Boolean, val multiParam: Boolean, val acceptableValues: List<String> = emptyList())
 
     fun isMultiple(clazz: Class<*>): Boolean {
         return Iterable::class.java.isAssignableFrom(clazz) || Array<Any>::class.java.isAssignableFrom(clazz)
@@ -74,7 +82,7 @@ class CommandLineCompatibilityChecker {
         val newIsSuperSetOfOld = newSet.containsAll(oldSet)
         return if (!newIsSuperSetOfOld) {
             oldSet.filterNot { newSet.contains(it) }.map {
-                CliBackwardsCompatibilityValidationCheck("SubCommand: $it has been removed from the CLI interface")
+                CommandsChangedError("SubCommand: $it has been removed from the CLI")
             }
         } else {
             emptyList()
@@ -85,14 +93,14 @@ class CommandLineCompatibilityChecker {
         if (old.commandName != new.commandName) {
             throw IllegalArgumentException("Commands must match (${old.commandName} != ${new.commandName})")
         }
-        val oldSet = old.params.sortedBy { it.parameterName }.toSet()
-        val newSet = new.params.sortedBy { it.parameterName }.toSet()
+        val oldSet = old.params.map { it.parameterName }.toSet()
+        val newSet = new.params.map { it.parameterName }.toSet()
 
         val newIsSuperSetOfOld = newSet.containsAll(oldSet)
 
         return if (!newIsSuperSetOfOld) {
             oldSet.filterNot { newSet.contains(it) }.map {
-                CliBackwardsCompatibilityValidationCheck("Parameter: ${it.parameterName} has been removed from subcommand: ${old.commandName}")
+                OptionsChangedError("Parameter: $it has been removed from subcommand: ${old.commandName}")
             }
         } else {
             emptyList()
@@ -108,7 +116,7 @@ class CommandLineCompatibilityChecker {
         val newIsSuperSetOfOld = newSet.containsAll(oldSet)
         return if (!newIsSuperSetOfOld) {
             oldSet.filterNot { newSet.contains(it) }.map {
-                CliBackwardsCompatibilityValidationCheck("Positional Parameter [ ${it.parameterName} ] has been removed from subcommand: ${old.commandName}")
+                PositionalArgumentsChangedError("Positional Parameter [ ${it.parameterName} ] has been removed from subcommand: ${old.commandName}")
             }
         } else {
             emptyList()
@@ -120,9 +128,24 @@ class CommandLineCompatibilityChecker {
         val oldMap = old.params.map { it.parameterName to it.parameterType }.toMap()
         val newMap = new.params.map { it.parameterName to it.parameterType }.toMap()
 
-        return oldMap.filter { newMap[it.key] != null && newMap[it.key] != it.value }.map {
-            CliBackwardsCompatibilityValidationCheck("Parameter [ ${it.key} has changed from type: ${it.value} to ${newMap[it.key]}")
+        val changedTypes = oldMap.filter { newMap[it.key] != null && newMap[it.key] != it.value }.map {
+            TypesChangedError("Parameter [ ${it.key} has changed from type: ${it.value} to ${newMap[it.key]}")
         }
+        val oldAcceptableTypes = old.params.map { it.parameterName to it.acceptableValues }.toMap()
+        val newAcceptableTypes = new.params.map { it.parameterName to it.acceptableValues }.toMap()
+        val potentiallyChanged = oldAcceptableTypes.filter { newAcceptableTypes[it.key] != null && newAcceptableTypes[it.key]!!.toSet() != it.value.toSet() }
+        val missingEnumErrors = potentiallyChanged.map {
+            val oldEnums = it.value
+            val newEnums = newAcceptableTypes[it.key]!!
+            if (!newEnums.containsAll(oldEnums)) {
+                val toPrint = oldEnums.toMutableSet()
+                toPrint.removeAll(newAcceptableTypes[it.key]!!)
+                TypesChangedError(it.key + " on command ${old.commandName} previously accepted: $oldEnums, and now is missing $toPrint}")
+            } else {
+                null
+            }
+        }.filterNotNull()
+        return changedTypes + missingEnumErrors
 
     }
 
@@ -147,5 +170,8 @@ class CommandLineCompatibilityChecker {
     }
 }
 
-
-data class CliBackwardsCompatibilityValidationCheck(val message: String)
+open class CliBackwardsCompatibilityValidationCheck(val message: String)
+class OptionsChangedError(error: String) : CliBackwardsCompatibilityValidationCheck(error)
+class TypesChangedError(error: String) : CliBackwardsCompatibilityValidationCheck(error)
+class CommandsChangedError(error: String) : CliBackwardsCompatibilityValidationCheck(error)
+class PositionalArgumentsChangedError(error: String) : CliBackwardsCompatibilityValidationCheck(error)
