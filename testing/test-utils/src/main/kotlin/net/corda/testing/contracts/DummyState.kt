@@ -10,4 +10,6 @@ data class DummyState @JvmOverloads constructor (
         /** Some information that the state represents for test purposes. **/
         val magicNumber: Int = 0,
         override val participants: List<AbstractParty> = listOf()) : ContractState {
+
+    fun copy(magicNumber: Int = this.magicNumber) = DummyState(magicNumber)
 }

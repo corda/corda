@@ -266,7 +266,7 @@ public class FlowCookbookJava {
             // DOCEND 22
             // Or as copies of other states with some properties changed.
             // DOCSTART 23
-            DummyState ourOtherOutputState = ourOutputState.copy(77, Collections.emptyList());
+            DummyState ourOtherOutputState = ourOutputState.copy(77);
             // DOCEND 23
 
             // We then need to pair our output state with a contract.
