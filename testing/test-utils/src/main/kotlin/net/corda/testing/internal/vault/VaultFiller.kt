@@ -98,6 +98,7 @@ class VaultFiller @JvmOverloads constructor(
     fun fillWithSomeTestLinearStates(numberToCreate: Int,
                                      externalId: String? = null,
                                      participants: List<AbstractParty> = emptyList(),
+                                     uniqueIdentifier: UniqueIdentifier? = null,
                                      linearString: String = "",
                                      linearNumber: Long = 0L,
                                      linearBoolean: Boolean = false,
@@ -110,7 +111,7 @@ class VaultFiller @JvmOverloads constructor(
             // Issue a Linear state
             val dummyIssue = TransactionBuilder(notary = defaultNotary.party).apply {
                 addOutputState(DummyLinearContract.State(
-                        linearId = UniqueIdentifier(externalId),
+                        linearId = uniqueIdentifier ?: UniqueIdentifier(externalId),
                         participants = participants.plus(me),
                         linearString = linearString,
                         linearNumber = linearNumber,

@@ -1449,11 +1449,12 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     @Test
     fun `unconsumed deal states sorted`() {
         database.transaction {
-            val linearStates = vaultFiller.fillWithSomeTestLinearStates(10)
+            vaultFiller.fillWithSomeTestLinearStates(10)
+            val uid = UniqueIdentifier("999")
+            vaultFiller.fillWithSomeTestLinearStates(1, uniqueIdentifier = uid)
             vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789"))
-            val uid = linearStates.states.first().state.data.linearId.id
 
-            val linearStateCriteria = LinearStateQueryCriteria(uuid = listOf(uid))
+            val linearStateCriteria = LinearStateQueryCriteria(uuid = listOf(uid.id))
             val dealStateCriteria = LinearStateQueryCriteria(externalId = listOf("123", "456", "789"))
             val compositeCriteria = linearStateCriteria or dealStateCriteria
 
@@ -1980,9 +1981,12 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             val fungibleAssetStateCriteria = FungibleAssetQueryCriteria()
             val resultsFASC = vaultService.queryBy<ContractState>(fungibleAssetStateCriteria)
             assertThat(resultsFASC.states).hasSize(2)
-            // composite query for both linear and fungible asset states
-            val resultsComposite = vaultService.queryBy<ContractState>(fungibleAssetStateCriteria.and(linearStateCriteria))
-            assertThat(resultsComposite.states).hasSize(4)
+            // composite OR query for both linear and fungible asset states (eg. all states in either Fungible and Linear states tables)
+            val resultsCompositeOr = vaultService.queryBy<ContractState>(fungibleAssetStateCriteria.or(linearStateCriteria))
+            assertThat(resultsCompositeOr.states).hasSize(4)
+            // composite AND query for both linear and fungible asset states (eg. all states in both Fungible and Linear states tables)
+            val resultsCompositeAnd = vaultService.queryBy<ContractState>(fungibleAssetStateCriteria.and(linearStateCriteria))
+            assertThat(resultsCompositeAnd.states).hasSize(0)
         }
     }
 
