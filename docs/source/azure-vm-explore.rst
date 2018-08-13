@@ -109,13 +109,14 @@ copy-to-clipboard button to get a one-time installation script.
 
 You can generate as many Testnet identites as you like by refreshing this page to generate a new one-time link.
 	   
-In the terminal of your cloud instance paste the command you just copied to install and run your unique Corda node:
+In the terminal of your cloud instance, paste the command you just copied to install and run your Corda node:
 
 .. code:: bash
 
     sudo ONE_TIME_DOWNLOAD_KEY=YOUR_UNIQUE_DOWNLOAD_KEY_HERE bash -c "$(curl -L https://testnet.corda.network/api/user/node/install.sh)"
 
-.. warning:: This command will execute the install script as ROOT on your cloud instance. You may wish to examine the script prior to executing it on your machine. 
+.. warning:: This command will execute the install script as ROOT on your cloud instance. You may wish to examine the
+    script prior to executing it on your machine.
 
 You can follow the progress of the installation by typing the following command in your terminal:
 
