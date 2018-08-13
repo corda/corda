@@ -1,7 +1,6 @@
 package net.corda.serialization.internal.amqp
 
 import com.google.common.primitives.Primitives
-import com.google.common.reflect.TypeResolver
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
@@ -13,7 +12,6 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.carpenter.*
-import net.corda.serialization.internal.reflection.inferTypeVariables
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.*

@@ -1,7 +1,6 @@
-package net.corda.serialization.internal.reflection
+package net.corda.serialization.internal.amqp
 
 import com.google.common.reflect.TypeResolver
-import net.corda.serialization.internal.amqp.*
 import java.lang.reflect.*
 
 /**
