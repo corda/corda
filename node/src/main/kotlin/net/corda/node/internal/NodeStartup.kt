@@ -102,7 +102,7 @@ open class NodeStartup(val args: Array<String>) {
 
         val errors = configuration.validate()
         if (errors.isNotEmpty()) {
-            logger.error("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
+            logger.error("Invalid node configuration. Errors were:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
             return false
         }
 
@@ -116,6 +116,7 @@ open class NodeStartup(val args: Array<String>) {
 
             // At this point the node registration was successful. We can delete the marker file.
             deleteNodeRegistrationMarker(cmdlineOptions.baseDirectory)
+            return true
         }
 
         logStartupInfo(versionInfo, cmdlineOptions, configuration)
@@ -129,9 +130,9 @@ open class NodeStartup(val args: Array<String>) {
 
     private val startNodeExpectedErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
 
-    private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print("$message [${errorCode()}]")
+    private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print("$message [errorCode=${errorCode()}]")
 
-    private fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message [${errorCode()}]", error)
+    private fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message [errorCode=${errorCode()}]", error)
 
     private fun Exception.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
 
@@ -179,7 +180,7 @@ open class NodeStartup(val args: Array<String>) {
         return """
                 Unable to load the node config file from '$configFile'.
 
-                Try experimenting with the --base-directory flag to change which directory the node
+                Try setting the --base-directory flag to change which directory the node
                 is looking in, or use the --config-file flag to specify it explicitly.
             """.trimIndent()
     }
