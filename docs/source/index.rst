@@ -1,8 +1,7 @@
 Welcome to Corda !
 ==================
 
-`Corda <https://www.corda.net/>`_ is a blockchain-inspired open source distributed ledger platform. If you’d like a
-quick introduction to distributed ledgers and how Corda is different, then watch this short video:
+`Corda <https://www.corda.net/>`_ is an open-source blockchain platform. If you’d like a quick introduction to blockchains and how Corda is different, then watch this short video:
 
 .. raw:: html
 
