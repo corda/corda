@@ -61,11 +61,10 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
 
     override fun doParse(optionSet: OptionSet): CmdLineOptions {
         require(optionSet.nonOptionArguments().isEmpty()) { "Unrecognized argument(s): ${optionSet.nonOptionArguments().joinToString(separator = ", ")}"}
-        require(!optionSet.has(baseDirectoryArg) || !optionSet.has(configFileArg)) {
-            "${baseDirectoryArg.options()[0]} and ${configFileArg.options()[0]} cannot be specified together"
-        }
+
         val baseDirectory = optionSet.valueOf(baseDirectoryArg).normalize().toAbsolutePath()
-        val configFile = baseDirectory / optionSet.valueOf(configFileArg)
+        val configFilePath = Paths.get(optionSet.valueOf(configFileArg))
+        val configFile = if (configFilePath.isAbsolute) configFilePath else baseDirectory / configFilePath.toString()
         val loggingLevel = optionSet.valueOf(loggerLevel)
         val logToConsole = optionSet.has(logToConsoleArg)
         val isRegistration = optionSet.has(isRegistrationArg)
