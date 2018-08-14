@@ -3,6 +3,7 @@ package net.corda.serialization.internal.amqp
 import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
 import net.corda.core.KeepForDJVM
+import net.corda.core.internal.isConcreteClass
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.utilities.toBase64
 import net.corda.serialization.internal.amqp.SerializerFactory.Companion.isPrimitive
@@ -173,7 +174,7 @@ internal class FingerPrintingState(private val factory: SerializerFactory) {
 
     private fun propertiesForSerialization(type: Type): List<PropertyAccessor> {
         return propertiesForSerialization(
-                constructorForDeserialization(type),
+                if (type.asClass().isConcreteClass) constructorForDeserialization(type) else null,
                 currentContext ?: type,
                 factory).serializationOrder
     }

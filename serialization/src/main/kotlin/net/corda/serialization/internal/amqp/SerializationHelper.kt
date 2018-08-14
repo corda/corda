@@ -31,8 +31,11 @@ import kotlin.reflect.jvm.javaType
  * Otherwise, if there is a Kotlin primary constructor, it selects that, and if not it selects either the unique
  * constructor or, if there are two and one is the default no-argument constructor, the non-default constructor.
  */
-fun constructorForDeserialization(type: Type): KFunction<Any>? {
-    val clazz = type.asClass().apply { if (!isConcreteClass) return null }
+fun constructorForDeserialization(type: Type): KFunction<Any> {
+    val clazz = type.asClass().apply {
+        if (!isConcreteClass) throw AMQPNotSerializableException(type,
+                "Cannot find deserialisation constructor for non-concrete class $this")
+    }
 
     val kotlinCtors = clazz.kotlin.constructors
 
