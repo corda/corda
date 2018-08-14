@@ -102,10 +102,14 @@ data class PropertyDescriptor(var field: Field?, var setter: Method?, var getter
     fun preferredGetter(): Method? = getter ?: iser
 }
 
-object PropertyDescriptorsRegex {
+private object PropertyDescriptorsRegex {
     // match an uppercase letter that also has a corresponding lower case equivalent
     val re = Regex("(?<type>get|set|is)(?<var>\\p{Lu}.*)")
 }
+
+private val Class<*>.superclassChain: Sequence<Class<*>> get() = generateSequence(this, Class<*>::getSuperclass)
+private val Sequence<Class<*>>.declaredFields: Sequence<Field> get() = flatMap { it.declaredFields.asSequence() }
+private val Sequence<Class<*>>.declaredMethods: Sequence<Method> get() = flatMap { it.declaredMethods.asSequence() }
 
 /**
  * Collate the properties of a class and match them with their getter and setter
@@ -126,26 +130,21 @@ object PropertyDescriptorsRegex {
 fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
     val classProperties = mutableMapOf<String, PropertyDescriptor>()
 
-    var clazz: Class<out Any?>? = this
+    val fieldProperties = superclassChain.declaredFields.map { property ->
+        property.name to PropertyDescriptor(property, null, null, null)
+    }.toMap()
 
-    do {
-        clazz!!.declaredFields.forEach { property ->
-            classProperties.computeIfAbsent(property.name) {
-                PropertyDescriptor()
-            }.apply {
-                this.field = property
-            }
-        }
-        clazz = clazz.superclass
-    } while (clazz != null)
+    classProperties.putAll(fieldProperties)
 
     //
     // Running as two loops rather than one as we need to ensure we have captured all of the properties
     // before looking for interacting methods and need to cope with the class hierarchy introducing
     // new  properties / methods
     //
-    clazz = this
-    do {
+    superclassChain.declaredMethods
+            .filter { it.isPublic && it.name != "getClass" }
+            .forEach { func ->
+
         // Note: It is possible for a class to have multiple instances of a function where the types
         // differ. For example:
         //      interface I<out T> { val a: T }
@@ -157,10 +156,6 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
         //
         // In addition, only getters that take zero parameters and setters that take a single
         // parameter will be considered
-        clazz!!.declaredMethods?.map { func ->
-            if (!func.isPublic) return@map
-            if (func.name == "getClass") return@map
-
             PropertyDescriptorsRegex.re.find(func.name)?.apply {
                 // matching means we have an func getX where the property could be x or X
                 // so having pre-loaded all of the properties we try to match to either case. If that
@@ -203,8 +198,7 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
                 }
             }
         }
-        clazz = clazz.superclass
-    } while (clazz != null)
+
 
     return classProperties
 }
