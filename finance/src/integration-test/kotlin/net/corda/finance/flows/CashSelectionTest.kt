@@ -16,6 +16,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.InProcessImpl
+import net.corda.testing.driver.internal.OutOfProcessImpl
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
@@ -23,8 +24,8 @@ class CashSelectionTest {
 
     @Test
     fun `unconsumed cash states`() {
-        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
-            val node = startNode().getOrThrow() as InProcessImpl
+        driver(DriverParameters(startNodesInProcess = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+            val node = startNode().getOrThrow()
             val issuerRef = OpaqueBytes.of(0)
             val issuedAmount = 1000.DOLLARS
 
