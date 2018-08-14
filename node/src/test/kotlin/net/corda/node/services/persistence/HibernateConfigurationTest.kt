@@ -14,6 +14,7 @@ import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
@@ -629,6 +630,52 @@ class HibernateConfigurationTest {
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
         assertThat(queryResults).hasSize(10)
+    }
+
+    /**
+     *  Composite OR query
+     */
+    @Test
+    fun `composite or query across VaultStates, VaultLinearStates and DummyLinearStates`() {
+        val uniqueID456 = UniqueIdentifier("456")
+        database.transaction {
+            vaultFiller.fillWithSomeTestLinearStates(1, externalId = "123", linearString = "123", linearNumber = 123, linearBoolean = true)
+            vaultFiller.fillWithSomeTestLinearStates(1, uniqueIdentifier = uniqueID456)
+            vaultFiller.fillWithSomeTestLinearStates(1, externalId = "789")
+        }
+        val sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, DummyLinearStateSchemaV1)
+        val criteriaBuilder = sessionFactory.criteriaBuilder
+        val entityManager = sessionFactory.createEntityManager()
+
+        // structure query
+        val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
+        val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
+        val vaultLinearStates = criteriaQuery.from(VaultSchemaV1.VaultLinearStates::class.java)
+        val dummyLinearStates = criteriaQuery.from(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java)
+
+        criteriaQuery.select(vaultStates)
+        val joinPredicate1 = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultLinearStates.get<PersistentStateRef>("stateRef"))
+        val joinPredicate2 = criteriaBuilder.and(criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), dummyLinearStates.get<PersistentStateRef>("stateRef")))
+
+        // and predicates on VaultLinearStates
+        val andLinearStatesPredicate1 = criteriaBuilder.and(criteriaBuilder.equal(vaultLinearStates.get<String>("externalId"), uniqueID456.externalId))
+        val andLinearStatesPredicate2 = criteriaBuilder.and(criteriaBuilder.equal(vaultLinearStates.get<UUID>("uuid"), uniqueID456.id))
+        val andLinearStatesPredicate = criteriaBuilder.and(andLinearStatesPredicate1, andLinearStatesPredicate2)
+
+        // and predicates on PersistentDummyLinearState
+        val andDummyLinearStatesPredicate1 = criteriaBuilder.and(criteriaBuilder.equal(dummyLinearStates.get<String>("linearString"), "123"))
+        val andDummyLinearStatesPredicate2 = criteriaBuilder.and(criteriaBuilder.equal(dummyLinearStates.get<Long>("linearNumber"), 123L))
+        val andDummyLinearStatesPredicate3 = criteriaBuilder.and(criteriaBuilder.equal(dummyLinearStates.get<Boolean>("linearBoolean"), true))
+        val andDummyLinearStatesPredicate = criteriaBuilder.and(andDummyLinearStatesPredicate1, criteriaBuilder.and(andDummyLinearStatesPredicate2, andDummyLinearStatesPredicate3))
+
+        // or predicates
+        val orPredicates = criteriaBuilder.or(andLinearStatesPredicate, andDummyLinearStatesPredicate)
+
+        criteriaQuery.where(joinPredicate1, joinPredicate2, orPredicates)
+
+        // execute query
+        val queryResults = entityManager.createQuery(criteriaQuery).resultList
+        assertThat(queryResults).hasSize(2)
     }
 
     /**

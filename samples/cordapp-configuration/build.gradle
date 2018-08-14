@@ -16,14 +16,17 @@ apply plugin: 'net.corda.plugins.cordformation'
 dependencies {
     cordaCompile project(":core")
     cordaCompile project(":node-api")
-    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaRuntime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    runtimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
-    ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
-
-    directory "./build/nodes"
+    directory file("$buildDir/nodes")
+    nodeDefaults {
+        cordapps = []
+        rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
+    }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]
@@ -32,13 +35,12 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             port 10003
             adminPort 10004
         }
+        rpcUsers = []
         extraConfig = ['h2Settings.address' : 'localhost:10005']
     }
     node {
         name "O=Bank A,L=London,C=GB"
         p2pPort 10006
-        cordapps = []
-        rpcUsers = ext.rpcUsers
         // This configures the default cordapp for this node
         projectCordapp {
             config "someStringValue=test"
@@ -52,8 +54,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     node {
         name "O=Bank B,L=New York,C=US"
         p2pPort 10010
-        cordapps = []
-        rpcUsers = ext.rpcUsers
         // This configures the default cordapp for this node
         projectCordapp {
             config project.file("src/config.conf")

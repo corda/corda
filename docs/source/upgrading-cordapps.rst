@@ -297,21 +297,22 @@ s participants agree to the proposed upgrade. The following combinations of upgr
 * A state is upgraded while the contract stays the same.
 * The state and the contract are updated simultaneously.
 
-The procedure for updating a state or a contract using a flag-day approach is quite simple:
+Performing explicit contract and state upgrades
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* Update and test the state or contract.
-* Produce a new CorDapp JAR file and distribute it to all the relevant parties.
-* Each node operator stops their node, replaces the existing JAR with the new one, and restarts. They may wish to do
-  a node drain first to avoid the definition of states or contracts changing whilst a flow is in progress.
-* Run the contract upgrade authorisation flow for each state that requires updating on every node.
-* For each state, one node should run the contract upgrade initiation flow, which will contact the rest.
+1. Preserve the existing state and contract definitions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Currently, all nodes must **permanently** keep **all** old state and contract definitions on their node's classpath
 
-Update Process
-~~~~~~~~~~~~~~
+.. note:: Once the contract-code-as-an-attachment feature has been implemented, nodes will only be required to keep the
+   old state and contract definitions on their node's classpath for the duration of the upgrade
 
-Writing the new state and contract definitions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Start by updating the contract and/or state definitions. There are no restrictions on how states are updated. However,
+Changing a state or contract's package constitutes a definition change. If you want to move a state or contract
+definition to a new package, you must also preserve the definition in the old package
+
+2. Write the new state and contract definitions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Update the contract and/or state definitions. There are no restrictions on how states are updated. However,
 upgraded contracts must implement the ``UpgradedContract`` interface. This interface is defined as:
 
 .. sourcecode:: kotlin
@@ -341,16 +342,40 @@ For example, in case of hash constraints the hash of the legacy JAR file should 
     override val legacyContractConstraint: AttachmentConstraint
         get() = HashAttachmentConstraint(SecureHash.parse("E02BD2B9B010BBCE49C0D7C35BECEF2C79BEB2EE80D902B54CC9231418A4FA0C"))
 
-Authorising the upgrade
-^^^^^^^^^^^^^^^^^^^^^^^
-Once the new states and contracts are on the classpath for all the relevant nodes, the next step is for all nodes to
-run the ``ContractUpgradeFlow.Authorise`` flow. This flow takes a ``StateAndRef`` of the state to update as well as a
-reference to the new contract, which must implement the ``UpgradedContract`` interface.
+3. Create the new CorDapp JAR
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Produce a new CorDapp JAR file. This JAR file should only contain the new contract and state definitions.
+
+4. Distribute the new CorDapp JAR
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Place the new CorDapp JAR file in the ``cordapps`` folder of all the relevant nodes. You can do this while the nodes are still
+running.
+
+5. Stop the nodes
+^^^^^^^^^^^^^^^^^
+Have each node operator stop their node. If you are also changing flow definitions, you should perform a
+:ref:`node drain <draining_the_node>` first to avoid the definition of states or contracts changing whilst a flow is
+in progress.
+
+6. Re-run the network bootstrapper
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If you're using the network bootstrapper instead of a network map server and have defined any new contracts, you need to
+re-run the network bootstrapper to whitelist the new contracts. See :doc:`network-bootstrapper`.
+
+7. Restart the nodes
+^^^^^^^^^^^^^^^^^^^^
+Have each node operator restart their node.
+
+8. Authorise the upgrade
+^^^^^^^^^^^^^^^^^^^^^^^^
+Now that new states and contracts are on the classpath for all the relevant nodes, the next step is for all node to run the
+``ContractUpgradeFlow.Authorise`` flow. This flow takes a ``StateAndRef`` of the state to update as well as a reference
+to the new contract, which must implement the ``UpgradedContract`` interface.
 
 At any point, a node administrator may de-authorise a contract upgrade by running the
 ``ContractUpgradeFlow.Deauthorise`` flow.
 
-Performing the upgrade
+9. Perform the upgrade
 ^^^^^^^^^^^^^^^^^^^^^^
 Once all nodes have performed the authorisation process, a participant must be chosen to initiate the upgrade via the
 ``ContractUpgradeFlow.Initiate`` flow for each state object. This flow has the following signature:

@@ -22,7 +22,7 @@ import net.corda.core.utilities.unwrap
 abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: TrustedAuthorityNotaryService) : FlowLogic<Void?>() {
     companion object {
         // TODO: Determine an appropriate limit and also enforce in the network parameters and the transaction builder.
-        private const val maxAllowedInputs = 10_000
+        private const val maxAllowedInputsAndReferences = 10_000
     }
 
     @Suspendable
@@ -51,9 +51,10 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
 
     /** Checks whether the number of input states is too large. */
     protected fun checkInputs(inputs: List<StateRef>) {
-        if (inputs.size > maxAllowedInputs) {
+        if (inputs.size > maxAllowedInputsAndReferences) {
             val error = NotaryError.TransactionInvalid(
-                    IllegalArgumentException("A transaction cannot have more than $maxAllowedInputs inputs, received: ${inputs.size}")
+                    IllegalArgumentException("A transaction cannot have more than $maxAllowedInputsAndReferences " +
+                            "inputs or references, received: ${inputs.size}")
             )
             throw NotaryInternalException(error)
         }
