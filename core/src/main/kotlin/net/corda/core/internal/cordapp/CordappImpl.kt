@@ -39,21 +39,13 @@ data class CordappImpl(
             override val shortName: String,
             override val vendor: String,
             override val version: String,
-            override val minPlatformVersion: Int = 1,
-            override val targetPlatformVersion: Int = 1
+            override val minPlatformVersion: Int,
+            override val targetPlatformVersion: Int
     ): Cordapp.Info {
-        init {
-            require(minPlatformVersion > 0) {
-                "minPlatformVersion must be positive."
-            }
-            require(minPlatformVersion <= targetPlatformVersion) {
-                "minPlatformVersion must not be greater than targetPlatformVersion."
-            }
-        }
         companion object {
             private const val UNKNOWN_VALUE = "Unknown"
 
-            val UNKNOWN = Info(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE)
+            val UNKNOWN = Info(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE, 1, 1)
         }
 
         override fun hasUnknownFields(): Boolean {
