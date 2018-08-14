@@ -69,15 +69,13 @@ fun constructorForDeserialization(type: Type): KFunction<Any> {
 fun <T : Any> propertiesForSerialization(
         kotlinConstructor: KFunction<T>?,
         type: Type,
-        factory: SerializerFactory): PropertySerializers {
-    return PropertySerializers.make(
+        factory: SerializerFactory): PropertySerializers =PropertySerializers.make(
             if (kotlinConstructor != null) {
                 propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
             } else {
                 propertiesForSerializationFromAbstract(type.asClass(), type, factory)
             }.sortedWith(PropertyAccessor)
     )
-}
 
 /**
  * Encapsulates the property of a class and its potential getter and setter methods.
@@ -89,27 +87,33 @@ fun <T : Any> propertiesForSerialization(
  * locating a function named getXyz for the property named in field as xyz.
  */
 @KeepForDJVM
-data class PropertyDescriptor(var field: Field?, var setter: Method?, var getter: Method?, var iser: Method?) {
+sealed class PropertyDescriptor2 {
+    data class FieldOnly(val field: Field): PropertyDescriptor2()
+    data class ReadOnly(val getter: Method): PropertyDescriptor2()
+    data class ReadWrite(val getter: Method, val setter: Method): PropertyDescriptor2()
+}
+/**
+ * Encapsulates the property of a class and its potential getter and setter methods.
+ *
+ * @property field a property of a class.
+ * @property setter the method of a class that sets the field. Determined by locating
+ * a function called setXyz on the class for the property named in field as xyz.
+ * @property getter the method of a class that returns a fields value. Determined by
+ * locating a function named getXyz for the property named in field as xyz.
+ */
+@KeepForDJVM
+data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter: Method?) {
     override fun toString() = StringBuilder("").apply {
         appendln("Property - ${field?.name ?: "null field"}\n")
         appendln("  getter - ${getter?.name ?: "no getter"}")
         appendln("  setter - ${setter?.name ?: "no setter"}")
-        appendln("  iser   - ${iser?.name ?: "no isXYZ defined"}")
     }.toString()
-
-    constructor() : this(null, null, null, null)
-
-    fun preferredGetter(): Method? = getter ?: iser
 }
 
 private object PropertyDescriptorsRegex {
     // match an uppercase letter that also has a corresponding lower case equivalent
     val re = Regex("(?<type>get|set|is)(?<var>\\p{Lu}.*)")
 }
-
-private val Class<*>.superclassChain: Sequence<Class<*>> get() = generateSequence(this, Class<*>::getSuperclass)
-private val Sequence<Class<*>>.declaredFields: Sequence<Field> get() = flatMap { it.declaredFields.asSequence() }
-private val Sequence<Class<*>>.declaredMethods: Sequence<Method> get() = flatMap { it.declaredMethods.asSequence() }
 
 /**
  * Collate the properties of a class and match them with their getter and setter
@@ -123,84 +127,101 @@ private val Sequence<Class<*>>.declaredMethods: Sequence<Method> get() = flatMap
  *      getExampleProperty
  *      isExampleProperty
  *
- * Where setExampleProperty must return a type compatible with exampleProperty, getExampleProperty must
+ * Where getExampleProperty must return a type compatible with exampleProperty, setExampleProperty must
  * take a single parameter of a type compatible with exampleProperty and isExampleProperty must
  * return a boolean
  */
 fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
-    val classProperties = mutableMapOf<String, PropertyDescriptor>()
+    val fieldProperties = superclassChain().declaredFields().byName()
 
-    val fieldProperties = superclassChain.declaredFields.map { property ->
-        property.name to PropertyDescriptor(property, null, null, null)
-    }.toMap()
+    return superclassChain().declaredMethods()
+            .thatArePublic()
+            .thatArePropertyMethods()
+            .withValidSignature()
+            .byNameAndClassifier(fieldProperties.keys)
+            .toClassProperties(fieldProperties)
+}
 
-    classProperties.putAll(fieldProperties)
+// Generate the sequence of classes starting with this class and ascending through it superclasses.
+private fun  Class<*>.superclassChain() = generateSequence(this, Class<*>::getSuperclass)
 
-    //
-    // Running as two loops rather than one as we need to ensure we have captured all of the properties
-    // before looking for interacting methods and need to cope with the class hierarchy introducing
-    // new  properties / methods
-    //
-    superclassChain.declaredMethods
-            .filter { it.isPublic && it.name != "getClass" }
-            .forEach { func ->
+// Obtain the fields declared by all classes in this sequence of classes.
+private fun Sequence<Class<*>>.declaredFields() = flatMap { it.declaredFields.asSequence() }
 
-        // Note: It is possible for a class to have multiple instances of a function where the types
-        // differ. For example:
-        //      interface I<out T> { val a: T }
-        //      class D(override val a: String) : I<String>
-        // instances of D will have both
-        //      getA - returning a String (java.lang.String) and
-        //      getA - returning an Object (java.lang.Object)
-        // In this instance we take the most derived object
-        //
-        // In addition, only getters that take zero parameters and setters that take a single
-        // parameter will be considered
-            PropertyDescriptorsRegex.re.find(func.name)?.apply {
-                // matching means we have an func getX where the property could be x or X
-                // so having pre-loaded all of the properties we try to match to either case. If that
-                // fails the getter doesn't refer to a property directly, but may refer to a constructor
-                // parameter that shadows a property
-                val properties =
-                        classProperties[groups[2]!!.value] ?: classProperties[groups[2]!!.value.decapitalize()] ?:
-                        // take into account those constructor properties that don't directly map to a named
-                        // property which are, by default, already added to the map
-                        classProperties.computeIfAbsent(groups[2]!!.value) { PropertyDescriptor() }
+// Obtain the methods declared by all classes in this sequence of classes.
+private fun Sequence<Class<*>>.declaredMethods() = flatMap { it.declaredMethods.asSequence() }
 
-                properties.apply {
-                    when (groups[1]!!.value) {
-                        "set" -> {
-                            if (func.parameterCount == 1) {
-                                if (setter == null) setter = func
-                                else if (TypeToken.of(setter!!.genericReturnType).isSupertypeOf(func.genericReturnType)) {
-                                    setter = func
-                                }
-                            }
-                        }
-                        "get" -> {
-                            if (func.parameterCount == 0) {
-                                if (getter == null) getter = func
-                                else if (TypeToken.of(getter!!.genericReturnType).isSupertypeOf(func.genericReturnType)) {
-                                    getter = func
-                                }
-                            }
-                        }
-                        "is" -> {
-                            if (func.parameterCount == 0) {
-                                val rtnType = TypeToken.of(func.genericReturnType)
-                                if ((rtnType == TypeToken.of(Boolean::class.java))
-                                        || (rtnType == TypeToken.of(Boolean::class.javaObjectType))) {
-                                    if (iser == null) iser = func
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+private fun Sequence<Field>.byName() = map { it.name to it }.toMap()
+
+// Select only those methods that are public (and are not the "getClass" method)
+private fun Sequence<Method>.thatArePublic() = filter  { it.isPublic && it.name != "getClass" }
+
+// Select only those methods that are isX/getX/setX methods
+private fun Sequence<Method>.thatArePropertyMethods() = map { method ->
+    PropertyDescriptorsRegex.re.find(method.name)?.let {
+        PropertyNamedMethod(
+                method,
+                it.groups[2]!!.value,
+                FieldClassifier.valueOf(it.groups[1]!!.value.toUpperCase()))
+    }
+}.filterNotNull()
+
+// Pick only those methods whose signatures are valid, discarding the remainder without warning.
+private fun Sequence<PropertyNamedMethod>.withValidSignature() = filter { it.hasValidSignature() }
+
+// Group methods by field name, decapitalising the name to match the name of the underlying field where available
+private fun Sequence<PropertyNamedMethod>.byFieldName(fieldNames: Set<String>) =
+    groupBy {
+        if (it.fieldName.decapitalize() in fieldNames) it.fieldName.decapitalize()
+        else it.fieldName }
+
+private fun List<PropertyNamedMethod>.leastGenericByClassifier() =
+        groupBy(PropertyNamedMethod::fieldClassifier, PropertyNamedMethod::method)
+                .pickLeastGeneric()
+
+// Group methods by name and classifier, picking the method with the least generic signature if there is more than one
+// of a given name and type.
+private fun Sequence<PropertyNamedMethod>.byNameAndClassifier(fieldNames: Set<String>) =
+        byFieldName(fieldNames).mapValues { it.value.leastGenericByClassifier() }
+
+private enum class FieldClassifier { GET, SET, IS }
+
+private data class PropertyNamedMethod(val method: Method, val fieldName: String, val fieldClassifier: FieldClassifier) {
+    // Validate the method's signature against its classifier
+    fun hasValidSignature(): Boolean = when(fieldClassifier) {
+        FieldClassifier.GET -> method.parameterCount == 0 && method.returnType != Void.TYPE
+        FieldClassifier.SET -> method.parameterCount == 1 && method.returnType == Void.TYPE
+        FieldClassifier.IS -> method.parameterCount == 0 &&
+                (method.returnType == Boolean::class.java ||
+                method.returnType == Boolean::class.javaObjectType)
+    }
+}
+
+// Construct a map of PropertyDescriptors by name, by merging the raw field map with the map of classified property methods
+private fun Map<String, Map<FieldClassifier, Method>>.toClassProperties(fieldMap: Map<String, Field>): Map<String, PropertyDescriptor> =
+        fieldMap.getFieldsWithoutAccessors(keys) +
+        mapValues {
+            PropertyDescriptor(
+                    fieldMap[it.key] ?: fieldMap[it.key.decapitalize()],
+                    it.value[FieldClassifier.SET],
+                    it.value[FieldClassifier.GET] ?: it.value[FieldClassifier.IS]
+            )
         }
 
+// Get only those fields in the field map for which we do not have accessor methods
+private fun Map<String, Field>.getFieldsWithoutAccessors(accessorNames: Set<String>) =
+        filterKeys { it !in accessorNames }
+        .mapValues { PropertyDescriptor(it.value, null, null) }
 
-    return classProperties
+// Select the least generic from a list of methods having the same field classifier
+private fun Map<FieldClassifier, List<Method>>.pickLeastGeneric() = mapValues { when(it.key) {
+    FieldClassifier.IS -> it.value.first()
+    FieldClassifier.GET -> it.value.reduce(leastGenericBy { genericReturnType })
+    FieldClassifier.SET -> it.value.reduce(leastGenericBy { genericParameterTypes[0]} )
+}}
+
+private fun leastGenericBy(feature: Method.() -> Type): (Method, Method) -> Method = { left, right ->
+    if (TypeToken.of(left.feature()).isSupertypeOf(right.feature())) right else left
 }
 
 /**
@@ -249,13 +270,7 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
             // If the property has a getter we'll use that to retrieve it's value from the instance, if it doesn't
             // *for *know* we switch to a reflection based method
             val propertyReader = if (matchingProperty.getter != null) {
-                val getter = matchingProperty.getter ?: throw AMQPNotSerializableException(
-                        type,
-                        "Property has no getter method for - \"$name\" - of \"$clazz\". If using Java and the parameter name"
-                                + "looks anonymous, check that you have the -parameters option specified in the "
-                                + "Java compiler. Alternately, provide a proxy serializer "
-                                + "(SerializationCustomSerializer) if recompiling isn't an option.")
-
+                val getter = matchingProperty.getter
                 val returnType = resolveTypeVariables(getter.genericReturnType, type)
                 if (!constructorParamTakesReturnTypeOfGetter(returnType, getter.genericReturnType, param.value)) {
                     throw AMQPNotSerializableException(
@@ -295,7 +310,7 @@ fun propertiesForSerializationFromSetters(
         var idx = 0
 
         properties.forEach { property ->
-            val getter: Method? = property.value.preferredGetter()
+            val getter: Method? = property.value.getter
             val setter: Method? = property.value.setter
 
             if (getter == null || setter == null) return@forEach
