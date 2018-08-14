@@ -81,7 +81,7 @@ fun main(args: Array<String>) {
         log.error(e.message)
         exitProcess(1)
     } catch (e: Exception) {
-        log.error("Exception during node startup", e)
+        log.error("Exception during webserver startup", e)
         exitProcess(1)
     }
 }

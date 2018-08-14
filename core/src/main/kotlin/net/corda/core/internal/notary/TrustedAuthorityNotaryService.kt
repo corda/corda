@@ -26,7 +26,14 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
      * this method does not throw an exception when input states are present multiple times within the transaction.
      */
     @JvmOverloads
-    fun commitInputStates(inputs: List<StateRef>, txId: SecureHash, caller: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef> = emptyList()) {
+    fun commitInputStates(
+            inputs: List<StateRef>,
+            txId: SecureHash,
+            caller: Party,
+            requestSignature: NotarisationRequestSignature,
+            timeWindow: TimeWindow?,
+            references: List<StateRef> = emptyList()
+    ) {
         try {
             uniquenessProvider.commit(inputs, txId, caller, requestSignature, timeWindow, references)
         } catch (e: NotaryInternalException) {

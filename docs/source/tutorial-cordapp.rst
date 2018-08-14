@@ -286,12 +286,12 @@ Each node webserver exposes the following endpoints:
 
 There is also a web front-end served from ``/web/example``.
 
-.. warning:: The content in ``web/example`` is only available for demonstration purposes and does not implement
+.. warning:: The content in ``/web/example`` is only available for demonstration purposes and does not implement
    anti-XSS, anti-XSRF or other security techniques. Do not use this code in production.
 
 Creating an IOU via the endpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-An IOU can be created by sending a PUT request to the ``api/example/create-iou`` endpoint directly, or by using the
+An IOU can be created by sending a PUT request to the ``/api/example/create-iou`` endpoint directly, or by using the
 the web form served from ``/web/example``.
 
 To create an IOU between PartyA and PartyB, run the following command from the command line:

@@ -16,8 +16,10 @@ import net.corda.core.identity.AbstractParty
 /**
  * Dummy state for use in testing. Not part of any contract, not even the [DummyContract].
  */
-data class DummyState(
+data class DummyState @JvmOverloads constructor (
         /** Some information that the state represents for test purposes. **/
-        val magicNumber: Int = 0) : ContractState {
-    override val participants: List<AbstractParty> get() = emptyList()
+        val magicNumber: Int = 0,
+        override val participants: List<AbstractParty> = listOf()) : ContractState {
+
+    fun copy(magicNumber: Int = this.magicNumber) = DummyState(magicNumber)
 }

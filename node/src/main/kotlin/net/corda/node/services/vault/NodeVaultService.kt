@@ -520,9 +520,9 @@ class NodeVaultService(
             val results = query.resultList
 
             // final pagination check (fail-fast on too many results when no pagination specified)
-            if (!skipPagingChecks && paging.isDefault && results.size > DEFAULT_PAGE_SIZE)
-                throw VaultQueryException("Please specify a `PageSpecification` as there are more results [${results.size}] than the default page size [$DEFAULT_PAGE_SIZE]")
-
+            if (!skipPagingChecks && paging.isDefault && results.size > DEFAULT_PAGE_SIZE) {
+                throw VaultQueryException("There are ${results.size} results, which exceeds the limit of $DEFAULT_PAGE_SIZE for queries that do not specify paging. In order to retrieve these results, provide a `PageSpecification(pageNumber, pageSize)` to the method invoked.")
+            }
             val statesAndRefs: MutableList<StateAndRef<T>> = mutableListOf()
             val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
             val otherResults: MutableList<Any> = mutableListOf()

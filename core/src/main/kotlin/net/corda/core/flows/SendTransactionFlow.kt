@@ -108,7 +108,9 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
     }
 
     @Suspendable
-    private fun getInputTransactions(tx: SignedTransaction): Set<SecureHash> = tx.inputs.map { it.txhash }.toSet()
+    private fun getInputTransactions(tx: SignedTransaction): Set<SecureHash> {
+        return tx.inputs.map { it.txhash }.toSet() + tx.references.map { it.txhash }.toSet()
+    }
 
     private class TransactionAuthorisationFilter(private val authorisedTransactions: MutableSet<SecureHash> = mutableSetOf(), val acceptAll: Boolean = false) {
         fun isAuthorised(txId: SecureHash) = acceptAll || authorisedTransactions.contains(txId)

@@ -233,17 +233,35 @@ object BFTSMaRt {
          */
         abstract fun executeCommand(command: ByteArray): ByteArray?
 
-        protected fun commitInputStates(states: List<StateRef>, txId: SecureHash, callerName: CordaX500Name, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?) {
+        private fun checkConflict(
+                conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>,
+                states: List<StateRef>,
+                type: StateConsumptionDetails.ConsumedStateType
+        ) {
+            states.forEach { stateRef ->
+                commitLog[stateRef]?.let { conflictingStates[stateRef] = StateConsumptionDetails(it.sha256(), type) }
+            }
+        }
+
+        protected fun commitInputStates(
+                states: List<StateRef>,
+                txId: SecureHash,
+                callerName: CordaX500Name,
+                requestSignature: NotarisationRequestSignature,
+                timeWindow: TimeWindow?,
+                references: List<StateRef> = emptyList()
+        ) {
             log.debug { "Attempting to commit inputs for transaction: $txId" }
             services.database.transaction {
                 logRequest(txId, callerName, requestSignature)
                 val conflictingStates = LinkedHashMap<StateRef, StateConsumptionDetails>()
-                for (state in states) {
-                    commitLog[state]?.let { conflictingStates[state] = StateConsumptionDetails(it.sha256()) }
-                }
+
+                checkConflict(conflictingStates, states, StateConsumptionDetails.ConsumedStateType.INPUT_STATE)
+                checkConflict(conflictingStates, references, StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
+
                 if (conflictingStates.isNotEmpty()) {
                     if (!isConsumedByTheSameTx(txId.sha256(), conflictingStates)) {
-                        log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
+                        log.debug { "Failure, input states or references already committed: ${conflictingStates.keys}" }
                         throw NotaryInternalException(NotaryError.Conflict(txId, conflictingStates))
                     }
                 } else {

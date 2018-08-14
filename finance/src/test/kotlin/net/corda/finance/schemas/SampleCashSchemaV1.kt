@@ -34,7 +34,7 @@ object SampleCashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
     override val migrationResource = "sample-cash-v1.changelog-init"
 
     @Entity
-    @Table(name = "contract_cash_states_v1", indexes = [Index(name = "ccy_code_idx", columnList = "ccy_code"), Index(name = "pennies_idx", columnList = "pennies")])
+    @Table(name = "contract_cash_states_v1", indexes = [Index(name = "ccy_code_idx1", columnList = "ccy_code"), Index(name = "pennies_idx1", columnList = "pennies")])
     class PersistentCashState(
             @Column(name = "owner_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var ownerHash: String,

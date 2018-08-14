@@ -58,8 +58,8 @@ dependencies {
     cordapp project(':samples:simm-valuation-demo:flows')
 
     // Corda integration dependencies
-    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaRuntime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
     cordaCompile project(':webserver')
 
@@ -87,20 +87,22 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
-    ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
-
-    directory "./build/nodes"
+    directory file("$buildDir/nodes")
+    nodeDefaults {
+        cordapp project(':finance')
+        cordapp project(':samples:simm-valuation-demo:contracts-states')
+        cordapp project(':samples:simm-valuation-demo:flows')
+        rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
+    }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]
         p2pPort 10002
-        cordapp project(':finance')
-        cordapp project(':samples:simm-valuation-demo:contracts-states')
-        cordapp project(':samples:simm-valuation-demo:flows')
         rpcSettings {
             address "localhost:10014"
             adminAddress "localhost:10015"
         }
+        rpcUsers = []
         extraConfig = [
                 custom: [
                         jvmArgs: ["-Xmx1g"]
@@ -116,10 +118,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address("localhost:10016")
             adminAddress("localhost:10017")
         }
-        cordapp project(':finance')
-        cordapp project(':samples:simm-valuation-demo:contracts-states')
-        cordapp project(':samples:simm-valuation-demo:flows')
-        rpcUsers = ext.rpcUsers
         extraConfig = [
                 custom: [
                         jvmArgs: ["-Xmx1g"]
@@ -135,10 +133,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address("localhost:10026")
             adminAddress("localhost:10027")
         }
-        cordapp project(':finance')
-        cordapp project(':samples:simm-valuation-demo:contracts-states')
-        cordapp project(':samples:simm-valuation-demo:flows')
-        rpcUsers = ext.rpcUsers
         extraConfig = [
                 custom: [
                         jvmArgs: ["-Xmx1g"]
@@ -154,10 +148,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address("localhost:10036")
             adminAddress("localhost:10037")
         }
-        cordapp project(':finance')
-        cordapp project(':samples:simm-valuation-demo:contracts-states')
-        cordapp project(':samples:simm-valuation-demo:flows')
-        rpcUsers = ext.rpcUsers
         extraConfig = [
                 custom: [
                         jvmArgs: ["-Xmx1g"]
