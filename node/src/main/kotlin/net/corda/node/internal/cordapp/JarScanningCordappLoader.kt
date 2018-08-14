@@ -24,8 +24,10 @@ import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.util.*
+import java.util.jar.Manifest
 import kotlin.reflect.KClass
 import kotlin.streams.toList
+import java.util.jar.JarInputStream
 
 /**
  * Handles CorDapp loading and classpath scanning of CorDapp JARs
@@ -111,6 +113,8 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun RestrictedScanResult.toCordapp(url: RestrictedURL): Cordapp {
 
+        val name = url.url.toPath().fileName.toString().removeSuffix(".jar")
+        val info = url.url.openStream().let(::JarInputStream).use { it.manifest }.toCordappInfo(name)
         return CordappImpl(
                 findContractClassNames(this),
                 findInitiatedFlows(this),
@@ -123,7 +127,9 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 findCustomSchemas(this),
                 findAllFlows(this),
                 url.url,
-                getJarHash(url.url)
+                info,
+                getJarHash(url.url),
+                name
         )
     }
 

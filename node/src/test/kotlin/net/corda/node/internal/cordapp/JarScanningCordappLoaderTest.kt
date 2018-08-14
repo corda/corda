@@ -107,6 +107,15 @@ class JarScanningCordappLoaderTest {
         loader.appClassLoader.loadClass(isolatedFlowName)
     }
 
+    @Test
+    fun `cordapp classloader does not load cordapps whose minPlatformVersion is greater than the node's platformVersion`() {
+        // load jar with
+    }
+
+    @Test
+    fun `cordapp classloader returns correct values for minPlatformVersion and targetVersion`() {
+
+    }
     private fun cordappLoaderForPackages(packages: Iterable<String>): CordappLoader {
 
         val cordapps = cordappsForPackages(packages)
