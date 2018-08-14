@@ -58,9 +58,6 @@ class CommandLineCompatibilityChecker {
         }
     }
 
-    data class CommandDescription(val commandName: String, val positionalParams: List<ParameterDescription>, val params: List<ParameterDescription>)
-    data class ParameterDescription(val parameterName: String, val parameterType: String, val required: Boolean, val multiParam: Boolean, val acceptableValues: List<String> = emptyList())
-
     fun isMultiple(clazz: Class<*>): Boolean {
         return Iterable::class.java.isAssignableFrom(clazz) || Array<Any>::class.java.isAssignableFrom(clazz)
     }
@@ -112,7 +109,7 @@ class CommandLineCompatibilityChecker {
             throw IllegalArgumentException("Commands must match (${old.commandName} != ${new.commandName})")
         }
         val oldSet = old.positionalParams.sortedBy { it.parameterName }.toSet()
-        val newSet = new.positionalParams.sortedBy { it.parameterName }.toSet()
+        val newSet = new.positionalParams.sortedBy { it.parameterName}.toSet()
         val newIsSuperSetOfOld = newSet.containsAll(oldSet)
         return if (!newIsSuperSetOfOld) {
             oldSet.filterNot { newSet.contains(it) }.map {
@@ -140,7 +137,7 @@ class CommandLineCompatibilityChecker {
             if (!newEnums.containsAll(oldEnums)) {
                 val toPrint = oldEnums.toMutableSet()
                 toPrint.removeAll(newAcceptableTypes[it.key]!!)
-                TypesChangedError(it.key + " on command ${old.commandName} previously accepted: $oldEnums, and now is missing $toPrint}")
+                EnumOptionsChangedError(it.key + " on command ${old.commandName} previously accepted: $oldEnums, and now is missing $toPrint}")
             } else {
                 null
             }
@@ -156,6 +153,17 @@ class CommandLineCompatibilityChecker {
                 ?: throw IllegalStateException("no Descriptor for $commandLineToCheckName found on classpath")
         val old = readCommandDescription(resourceAsStream)
         val new = topoSort(CommandLine(instance))
+        return checkCommandLineIsBackwardsCompatible(old, new)
+    }
+
+
+    fun checkBackwardsCompatibility(old: CommandLine, new: CommandLine): List<CliBackwardsCompatibilityValidationCheck> {
+        val topoSortOld= topoSort(old)
+        val topoSortNew= topoSort(new)
+        return checkCommandLineIsBackwardsCompatible(topoSortOld, topoSortNew)
+    }
+
+    private fun checkCommandLineIsBackwardsCompatible(old: List<CommandDescription>, new: List<CommandDescription>): List<CliBackwardsCompatibilityValidationCheck> {
         val results = ArrayList<CliBackwardsCompatibilityValidationCheck>()
         results += checkAllCommandsArePresent(old, new)
         for (oldCommand in old) {
@@ -173,5 +181,8 @@ class CommandLineCompatibilityChecker {
 open class CliBackwardsCompatibilityValidationCheck(val message: String)
 class OptionsChangedError(error: String) : CliBackwardsCompatibilityValidationCheck(error)
 class TypesChangedError(error: String) : CliBackwardsCompatibilityValidationCheck(error)
+class EnumOptionsChangedError(error: String) : CliBackwardsCompatibilityValidationCheck(error)
 class CommandsChangedError(error: String) : CliBackwardsCompatibilityValidationCheck(error)
 class PositionalArgumentsChangedError(error: String) : CliBackwardsCompatibilityValidationCheck(error)
+data class CommandDescription(val commandName: String, val positionalParams: List<ParameterDescription>, val params: List<ParameterDescription>)
+data class ParameterDescription(val parameterName: String, val parameterType: String, val required: Boolean, val multiParam: Boolean, val acceptableValues: List<String> = emptyList())
