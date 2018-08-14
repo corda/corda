@@ -70,7 +70,7 @@ class DeliverSessionMessageTransition(
             is SessionState.Initiating -> {
                 // Create the new session state that is now Initiated.
                 val initiatedSession = SessionState.Initiated(
-                        peerParty = event.sender,
+                        peerPartyName = event.sender.name,
                         peerFlowInfo = message.initiatedFlowInfo,
                         receivedMessages = emptyList(),
                         initiatedState = InitiatedSessionState.Live(message.initiatedSessionId),
@@ -83,7 +83,7 @@ class DeliverSessionMessageTransition(
                 // Send messages that were buffered pending confirmation of session.
                 val sendActions = sessionState.bufferedMessages.map { (deduplicationId, bufferedMessage) ->
                     val existingMessage = ExistingSessionMessage(message.initiatedSessionId, bufferedMessage)
-                    Action.SendExisting(initiatedSession.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID))
+                    Action.SendExisting(initiatedSession.peerPartyName, existingMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID))
                 }
                 actions.addAll(sendActions)
                 currentState = currentState.copy(checkpoint = newCheckpoint)

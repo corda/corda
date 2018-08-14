@@ -223,7 +223,7 @@ class TopLevelTransition(
             if (state is SessionState.Initiated && state.initiatedState is InitiatedSessionState.Live) {
                 val message = ExistingSessionMessage(state.initiatedState.peerSinkSessionId, EndSessionMessage)
                 val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, index, state)
-                Action.SendExisting(state.peerParty, message, SenderDeduplicationId(deduplicationId, currentState.senderUUID))
+                Action.SendExisting(state.peerPartyName, message, SenderDeduplicationId(deduplicationId, currentState.senderUUID))
             } else {
                 null
             }

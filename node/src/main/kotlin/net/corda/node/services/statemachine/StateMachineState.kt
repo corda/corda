@@ -4,6 +4,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
@@ -120,7 +121,7 @@ sealed class SessionState {
      * @property errors if not empty the session is in an errored state.
      */
     data class Initiated(
-            val peerParty: Party,
+            val peerPartyName: CordaX500Name,
             val peerFlowInfo: FlowInfo,
             val receivedMessages: List<DataSessionMessage>,
             val initiatedState: InitiatedSessionState,

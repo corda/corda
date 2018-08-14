@@ -44,7 +44,7 @@ class UnstartedFlowTransition(
     private fun TransitionBuilder.initialiseInitiatedSession(flowStart: FlowStart.Initiated) {
         val initiatingMessage = flowStart.initiatingMessage
         val initiatedState = SessionState.Initiated(
-                peerParty = flowStart.peerSession.counterparty,
+                peerPartyName = flowStart.peerSession.partyName,
                 initiatedState = InitiatedSessionState.Live(initiatingMessage.initiatorSessionId),
                 peerFlowInfo = FlowInfo(
                         flowVersion = flowStart.senderCoreFlowVersion ?: initiatingMessage.flowVersion,
@@ -67,7 +67,7 @@ class UnstartedFlowTransition(
         )
         actions.add(
                 Action.SendExisting(
-                        flowStart.peerSession.counterparty,
+                        flowStart.peerSession.partyName,
                         sessionMessage,
                         SenderDeduplicationId(DeduplicationId.createForNormal(currentState.checkpoint, 0, initiatedState), currentState.senderUUID)
                 )

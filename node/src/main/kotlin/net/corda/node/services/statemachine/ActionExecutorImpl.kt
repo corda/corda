@@ -143,7 +143,7 @@ class ActionExecutorImpl(
                 val sinkSessionId = sessionState.initiatedState.peerSinkSessionId
                 val existingMessage = ExistingSessionMessage(sinkSessionId, errorMessage)
                 val deduplicationId = DeduplicationId.createForError(errorMessage.errorId, sinkSessionId)
-                flowMessaging.sendSessionMessage(sessionState.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, action.senderUUID))
+                flowMessaging.sendSessionMessage(sessionState.peerPartyName, existingMessage, SenderDeduplicationId(deduplicationId, action.senderUUID))
             }
         }
     }
@@ -173,7 +173,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeSendExisting(action: Action.SendExisting) {
-        flowMessaging.sendSessionMessage(action.peerParty, action.message, action.deduplicationId)
+        flowMessaging.sendSessionMessage(action.peerPartyName, action.message, action.deduplicationId)
     }
 
     @Suspendable

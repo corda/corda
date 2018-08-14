@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowAsyncOperation
 import net.corda.node.services.messaging.DeduplicationHandler
@@ -31,7 +32,7 @@ sealed class Action {
      * Send a session message to a [peerParty] with which we have an established session.
      */
     data class SendExisting(
-            val peerParty: Party,
+            val peerPartyName: CordaX500Name,
             val message: ExistingSessionMessage,
             val deduplicationId: SenderDeduplicationId
     ) : Action()
