@@ -1,4 +1,4 @@
-# CorDapp Platform Version
+# CorDapp Minimum and Target Platform Version
 
 ## Overview
 
@@ -24,13 +24,16 @@ In the future it might make sense to integrate the minimum and target versions i
 
 ## Timeline
 
-This is intended as a long-term solution.
+This is intended as a long-term solution. Where and how the version information is stored could be changed once we migrate to Java 9
 
 ## Requirements
   
 * The node should be able to check the minimum and platform version when loading the Cordapp ([see Jira](https://r3-cev.atlassian.net/browse/CORDA-470))  
 
 ## Design Decisions
+
+
+
 
 * How are the minimum- and target version stored and encoded?
     * The minimum- and target platform version are written to the Manifest of the CorDapps JAR.
@@ -55,11 +58,14 @@ This is intended as a long-term solution.
 * How can code inside the node find out the minimum and target version of the app that is calling it?
     * The node's CorDapp loader reads these values from the Manifest when loading the CorDapp
     * It should be up to the node operator how this error is handled (what should be the default?)
-    * produces an error and refuses to load the CorDapp when values are invalid
-    * Would it be enough to add them to `net.corda.core.cordapp.CorDapp`?
+        * Log an error and shut down the node
+        * Log a warning and continue without loading the CorDapp
+    * Would it be enough to add them to `net.corda.core.cordapp.Cordapp`?
 * How can code inside the CorDapp find out its target version?
-    * If this information is in `CorDapp`, it can be obtained via the `CorDappContext` from the serviceHub.
+    * If this information is in `Cordapp`, it can be obtained via the `CorDappContext` from the serviceHub. (Is this enough, or should it be a globally accesible constant?)
 * The node's platform version is already accessible to CorDapps `serviceHub.nodeInfo`
+
+* The check for minPlatformVersion should be performed in the CorDapp as well as in the Node.
 
 List of design decisions identified in defining the target solution.
 
@@ -67,17 +73,26 @@ For each item, please complete the attached [Design Decision template](decisions
 
 ## Design
 
-Think about:
+Testing: How can developers make sure that their CorDapp runs on a newer platform version?
 
-* backwards compatibility impact.
+Suppose our target platform version is 5, and a newer platform version 6 is released. We want to find out if our CorDapp works as expected (without raising the target version)
 
-* Data model & serialization impact and changes required.
+Implications for platform developers:
 
-* Versioning, upgradability, migration=
-* Management: audit, alerting, monitoring, backup/recovery, archiving
+* Make sure CorDapps do not call APIs newer than their target Version
+    Check at CorDapp load time?
+    
+* When modifying existing APIs, do target version checks
+    ```
+    // in node
+    if( targetVersion < SOME_SPECIFIC_VERSION ) {
+        oldBehaviour()
+    } else {
+        newBehaviour()
+    }
+    ```
 
-* Logging
+Further considerations:
 
-* Testability
-
-Introduce `targetPlatformversion` and `minPlatformVersion` 
+* Additional benefit: Third-party libraries can be made backwards-compatible. 
+* Linting: detect when trying to use APIs from a newer version
