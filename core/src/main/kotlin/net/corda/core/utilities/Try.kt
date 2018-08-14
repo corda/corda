@@ -81,8 +81,9 @@ sealed class Try<out A> {
         return doOnFailure { error ->
             if (error is Exception) {
                 action.invoke(error)
+            } else {
+                throw error
             }
-            throw error
         }
     }
 

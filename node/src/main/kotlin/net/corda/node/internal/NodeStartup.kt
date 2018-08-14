@@ -126,7 +126,7 @@ open class NodeStartup(val args: Array<String>) {
 
     private fun <RESULT> attempt(action: () -> RESULT): Try<RESULT> = Try.on(action)
 
-    private fun Exception.isExpectedWhenStartingNode() = this::class in startNodeExpectedErrors
+    private fun Exception.isExpectedWhenStartingNode() = startNodeExpectedErrors.any { error -> error.isInstance(this) }
 
     private val startNodeExpectedErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
 
