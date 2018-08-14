@@ -10,7 +10,6 @@ import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.codec.Data
-import java.io.NotSerializableException
 import java.lang.reflect.*
 import java.lang.reflect.Field
 import java.util.*
@@ -26,42 +25,34 @@ import kotlin.reflect.jvm.javaType
 /**
  * Code for finding the constructor we will use for deserialization.
  *
- * If there's only one constructor, it selects that.  If there are two and one is the default, it selects the other.
- * Otherwise it starts with the primary constructor in kotlin, if there is one, and then will override this with any that is
- * annotated with [@ConstructorForDeserialization].  It will report an error if more than one constructor is annotated.
+ * If any constructor is uniquely annotated with [@ConstructorForDeserialization], then that constructor is chosen.
+ * An error is reported if more than one constructor is annotated.
+ *
+ * Otherwise, if there is a Kotlin primary constructor, it selects that, and if not it selects either the unique
+ * constructor or, if there are two and one is the default no-argument constructor, the non-default constructor.
  */
 fun constructorForDeserialization(type: Type): KFunction<Any>? {
-    val clazz: Class<*> = type.asClass()
-    if (clazz.isConcreteClass) {
-        var preferredCandidate: KFunction<Any>? = clazz.kotlin.primaryConstructor
-        var annotatedCount = 0
-        val kotlinConstructors = clazz.kotlin.constructors
-        val hasDefault = kotlinConstructors.any { it.parameters.isEmpty() }
+    val clazz = type.asClass().apply { if (!isConcreteClass) return null }
 
-        for (kotlinConstructor in kotlinConstructors) {
-            if (preferredCandidate == null && kotlinConstructors.size == 1) {
-                preferredCandidate = kotlinConstructor
-            } else if (preferredCandidate == null &&
-                    kotlinConstructors.size == 2 &&
-                    hasDefault &&
-                    kotlinConstructor.parameters.isNotEmpty()
-            ) {
-                preferredCandidate = kotlinConstructor
-            } else if (kotlinConstructor.findAnnotation<ConstructorForDeserialization>() != null) {
-                if (annotatedCount++ > 0) {
-                    throw AMQPNotSerializableException(
-                            type,
-                            "More than one constructor for $clazz is annotated with @ConstructorForDeserialization.")
-                }
-                preferredCandidate = kotlinConstructor
+    val kotlinCtors = clazz.kotlin.constructors
+
+    val annotatedCtors = kotlinCtors.filter { it.findAnnotation<ConstructorForDeserialization>() != null }
+    if (annotatedCtors.size > 1) throw AMQPNotSerializableException(
+            type,
+            "More than one constructor for $clazz is annotated with @ConstructorForDeserialization.")
+
+    val defaultCtor = kotlinCtors.firstOrNull { it.parameters.isEmpty() }
+    val nonDefaultCtors = kotlinCtors.filter { it != defaultCtor }
+
+    val preferredCandidate = annotatedCtors.firstOrNull() ?:
+            clazz.kotlin.primaryConstructor ?:
+            when(nonDefaultCtors.size) {
+                1 -> nonDefaultCtors.first()
+                0 -> defaultCtor ?: throw AMQPNotSerializableException(type, "No constructor found for $clazz.")
+                else -> throw AMQPNotSerializableException(type, "No unique non-default constructor found for $clazz.")
             }
-        }
 
-        return preferredCandidate?.apply { isAccessible = true }
-                ?: throw AMQPNotSerializableException(type, "No constructor for deserialization found for $clazz.")
-    } else {
-        return null
-    }
+    return preferredCandidate.apply { isAccessible = true }
 }
 
 /**
