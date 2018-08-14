@@ -67,10 +67,6 @@ This is intended as a long-term solution. Where and how the version information 
 
 * The check for minPlatformVersion should be performed in the CorDapp as well as in the Node.
 
-List of design decisions identified in defining the target solution.
-
-For each item, please complete the attached [Design Decision template](decisions/decision.md)
-
 ## Design
 
 Testing: How can developers make sure that their CorDapp runs on a newer platform version?
