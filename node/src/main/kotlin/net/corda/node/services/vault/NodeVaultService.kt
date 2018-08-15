@@ -18,7 +18,10 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.*
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -104,13 +107,37 @@ class NodeVaultService(
 
             val session = currentDBSession()
             producedStateRefsMap.forEach { stateAndRef ->
-                val state = VaultSchemaV1.VaultStates(
+                val stateOnly = stateAndRef.value.state.data
+                // TODO: Optimise this.
+                //
+                // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
+                // node. The behaviour is as follows:
+                //
+                // 1) All vault updates marked as RELEVANT will, of, course all have isRelevant = true.
+                // 2) For ALL_VISIBLE updates, those which are not relevant will have isRelevant = false.
+                //
+                // This is useful when it comes to querying for fungible states, when we do not want non-relevant states
+                // included in the result.
+                //
+                // The same functionality could be obtained by passing in a list of participants to the vault query,
+                // however this:
+                //
+                // * requires a join on the participants table which results in slow queries.
+                // * states may flip from being non-relevant to relevant
+                // * it's more complicated for CorDapp developers
+                //
+                // Adding a new column in the "VaultStates" table was considered the best approach.
+                val keys = stateOnly.participants.map { it.owningKey }
+                val isRelevant = isRelevant(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
+                val stateToAdd = VaultSchemaV1.VaultStates(
                         notary = stateAndRef.value.state.notary,
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
-                        recordedTime = clock.instant())
-                state.stateRef = PersistentStateRef(stateAndRef.key)
-                session.save(state)
+                        recordedTime = clock.instant(),
+                        isRelevant = if (isRelevant) Vault.StateRelevance.RELEVANT else Vault.StateRelevance.NOT_RELEVANT
+                )
+                stateToAdd.stateRef = PersistentStateRef(stateAndRef.key)
+                session.save(stateToAdd)
             }
             consumedStateRefs.forEach { stateRef ->
                 val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
@@ -224,7 +251,11 @@ class NodeVaultService(
             (0..(refsList.size - 1) / pageSize).forEach {
                 val offset = it * pageSize
                 val limit = minOf(offset + pageSize, refsList.size)
-                val page = queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(stateRefs = refsList.subList(offset, limit))).states
+                // TODO: Add all visible here. fuck sake.
+                val page = queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(
+                        stateRefs = refsList.subList(offset, limit),
+                        isRelevant = Vault.StateRelevance.ALL
+                )).states
                 states.addAll(page)
             }
         }
@@ -477,7 +508,8 @@ class NodeVaultService(
                                     vaultState.stateStatus,
                                     vaultState.notary,
                                     vaultState.lockId,
-                                    vaultState.lockUpdateTime))
+                                    vaultState.lockUpdateTime,
+                                    vaultState.isRelevant))
                         } else {
                             // TODO: improve typing of returned other results
                             log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }

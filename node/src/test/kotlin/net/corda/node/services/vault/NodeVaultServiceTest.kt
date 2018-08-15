@@ -28,6 +28,8 @@ import net.corda.finance.utils.sumCash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.testing.contracts.DummyContract
+import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
@@ -51,7 +53,7 @@ import kotlin.test.assertTrue
 
 class NodeVaultServiceTest {
     private companion object {
-        val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+        val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName, "net.corda.testing.contracts")
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
         val bankOfCorda = TestIdentity(BOC_NAME)
@@ -726,5 +728,44 @@ class NodeVaultServiceTest {
             vaultService.queryBy<Cash.State>().states.size
         }
         assertThat(recordedStates).isEqualTo(coins.size)
+    }
+
+    @Test
+    fun `test state relevance criteria`() {
+        fun createTx(number: Int, vararg participants: Party): SignedTransaction {
+            return services.signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).apply {
+                addOutputState(DummyState(number, participants.toList()), DummyContract.PROGRAM_ID)
+                addCommand(DummyCommandData, listOf(megaCorp.publicKey))
+            })
+        }
+
+        fun List<StateAndRef<DummyState>>.getNumbers() = map { it.state.data.magicNumber }.toSet()
+
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(1, megaCorp.party)))
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(2, miniCorp.party)))
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(3, miniCorp.party, megaCorp.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(4, miniCorp.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(5, bankOfCorda.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(6, megaCorp.party, bankOfCorda.party)))
+        services.recordTransactions(StatesToRecord.NONE, listOf(createTx(7, bankOfCorda.party)))
+
+        // Test one.
+        // StateRelevance is RELEVANT by default. This should return two states.
+        val resultOne = vaultService.queryBy<DummyState>().states.getNumbers()
+        assertEquals(setOf(1, 3, 6), resultOne)
+
+        // Test two.
+        // StateRelevance set to NOT_RELEVANT.
+        val criteriaTwo = VaultQueryCriteria(isRelevant = Vault.StateRelevance.NOT_RELEVANT)
+        val resultTwo = vaultService.queryBy<DummyState>(criteriaTwo).states.getNumbers()
+        assertEquals(setOf(4, 5), resultTwo)
+
+        // Test three.
+        // StateRelevance set to ALL.
+        val criteriaThree = VaultQueryCriteria(isRelevant = Vault.StateRelevance.ALL)
+        val resultThree = vaultService.queryBy<DummyState>(criteriaThree).states.getNumbers()
+        assertEquals(setOf(1, 3, 4, 5, 6), resultThree)
+
+        // We should never see 2 or 7.
     }
 }

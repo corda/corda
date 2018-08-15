@@ -5,6 +5,7 @@ import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.StatesToRecord
+import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.LedgerTransaction
@@ -102,7 +103,10 @@ internal class UseRefState(val linearId: UniqueIdentifier) : FlowLogic<SignedTra
     @Suspendable
     override fun call(): SignedTransaction {
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
-        val query = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(linearId))
+        val query = QueryCriteria.LinearStateQueryCriteria(
+                linearId = listOf(linearId),
+                isRelevant = Vault.StateRelevance.ALL
+        )
         val referenceState = serviceHub.vaultService.queryBy<ContractState>(query).states.single()
         return subFlow(FinalityFlow(
                 transaction = serviceHub.signInitialTransaction(TransactionBuilder(notary = notary).apply {

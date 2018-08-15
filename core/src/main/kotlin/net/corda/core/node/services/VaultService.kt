@@ -106,6 +106,11 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     }
 
     @CordaSerializable
+    enum class StateRelevance {
+        RELEVANT, NOT_RELEVANT, ALL
+    }
+
+    @CordaSerializable
     enum class UpdateType {
         GENERAL, NOTARY_CHANGE, CONTRACT_UPGRADE
     }
@@ -131,14 +136,40 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                                            val otherResults: List<Any>)
 
     @CordaSerializable
-    data class StateMetadata(val ref: StateRef,
-                             val contractStateClassName: String,
-                             val recordedTime: Instant,
-                             val consumedTime: Instant?,
-                             val status: Vault.StateStatus,
-                             val notary: AbstractParty?,
-                             val lockId: String?,
-                             val lockUpdateTime: Instant?)
+    data class StateMetadata @JvmOverloads constructor(
+            val ref: StateRef,
+            val contractStateClassName: String,
+            val recordedTime: Instant,
+            val consumedTime: Instant?,
+            val status: Vault.StateStatus,
+            val notary: AbstractParty?,
+            val lockId: String?,
+            val lockUpdateTime: Instant?,
+            val isRelevant: Vault.StateRelevance = StateRelevance.RELEVANT
+    ) {
+        fun copy(
+                ref: StateRef = this.ref,
+                contractStateClassName: String = this.contractStateClassName,
+                recordedTime: Instant = this.recordedTime,
+                consumedTime: Instant? = this.consumedTime,
+                status: Vault.StateStatus = this.status,
+                notary: AbstractParty? = this.notary,
+                lockId: String? = this.lockId,
+                lockUpdateTime: Instant? = this.lockUpdateTime
+        ): StateMetadata {
+            return StateMetadata(
+                    ref,
+                    contractStateClassName,
+                    recordedTime,
+                    consumedTime,
+                    status,
+                    notary,
+                    lockId,
+                    lockUpdateTime,
+                    StateRelevance.RELEVANT
+            )
+        }
+    }
 
     companion object {
         @Deprecated("No longer used. The vault does not emit empty updates")
@@ -181,7 +212,11 @@ interface VaultService {
      */
     @DeleteForDJVM
     fun whenConsumed(ref: StateRef): CordaFuture<Vault.Update<ContractState>> {
-        val query = QueryCriteria.VaultQueryCriteria(stateRefs = listOf(ref), status = Vault.StateStatus.CONSUMED)
+        val query = QueryCriteria.VaultQueryCriteria(
+                stateRefs = listOf(ref),
+                status = Vault.StateStatus.CONSUMED,
+                isRelevant = Vault.StateRelevance.ALL
+        )
         val result = trackBy<ContractState>(query)
         val snapshot = result.snapshot.states
         return if (snapshot.isNotEmpty()) {
