@@ -216,6 +216,8 @@ You manually process received messages as follows:
 When ``networkSendManuallyPumped`` is set to ``true``, nodes will automatically process the messages they receive. You 
 can block until all messages have been processed using ``MockNetwork.waitQuiescent()``.
 
+.. warning:: If ``threadPerNode`` is set to ``true``, ``networkSendManuallyPumped`` must also be set to ``true``.
+
 Running flows
 ^^^^^^^^^^^^^
 
