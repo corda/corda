@@ -4,9 +4,10 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-
 Database management
 ===================
+
+.. contents::
 
 Corda - the platform, and the installed third-party CorDapps store their data in a relational database (see
 :doc:`api-persistence`). When Corda is first installed, or when a new CorDapp is installed, associated tables, indexes,
@@ -155,22 +156,21 @@ database before executing the migration scripts.
 Database management tool
 ------------------------
 
-The database management tool is distributed as a standalone jar file named ``tools-database-manager-${corda_version}.jar``.
+The database management tool is distributed as a standalone JAR file named ``tools-database-manager-${corda_version}.jar``.
 It is intended to be used by Corda Enterprise node administrators.
 
 Currently it has these features:
 
-    1. It allows running the migration on the database (``--execute-migration`` )
-    2. Offers the option to inspect the actual SQL statements that will be run as part of the current migration (``--dry-run`` )
-    3. Sometimes, when a node or the database management tool crashes while running migrations, Liquibase will not release the lock.
-       This can happen during some long database operation, or when an admin kills the process.
-       ( This cannot happen during normal operation of a node. Only during the migration process.)
-       See: <http://www.liquibase.org/documentation/databasechangeloglock_table.html>.
-       The tool provides a "release-lock" command that would forcibly unlock the database migration process.
-    4. When a CorDapp that does not is ready to be deployed on a Corda Enterprise production node,
-       using this tool, the CorDapp can be "lifted" (``--create-migration-sql-for-cordapp``).
-       The reason this is needed is because those CorDapps don't handle this enterprise level concern.
-       See below for details.
+    1. ``--create-migration-sql-for-cordapp``: Creates migration scripts for each ``MappedSchema`` in a CorDapp. Each 
+       ``MappedSchema`` in a CorDapp installed on a Corda Enterprise node requires the creation of a new table in the 
+       node's database. It is bad practice to apply these changesets to a production database automatically. Instead, 
+       migration scripts must be generated for each schema. These can then be inspected before being applied
+    2. ``--dry-run``: Inspects the actual SQL statements that will be run as part of a migration job
+    3. ``--execute-migration``: Runs migration scripts on the node's database
+    4. ``--release-lock``: Forces the release of database locks. Sometimes, when a node or the database management 
+       tool crashes while running migrations, Liquibase will not release the lock. This can happen during some long 
+       database operations, or when an admin kills the process (this cannot happen during normal operation of a node, 
+       only during the migration process - see: <http://www.liquibase.org/documentation/databasechangeloglock_table.html>) 
 
 It has the following command line options:
 
@@ -223,24 +223,19 @@ as above, either to do a dry run or execute the migrations.
 
 The same is true when installing or upgrading a CorDapp. Do a dry run, check the SQL, then trigger a migration.
 
-Node administrator installing a CorDapp targeted at the open source node
-------------------------------------------------------------------------
+Node administrator installing a CorDapp
+---------------------------------------
+If a CorDapp does not include the required migration scripts for each ``MappedSchema``, these can be generated and inspected before 
+being applied as follows:
 
-The open source Corda codebase does not have support for Liquibase, so CorDapps contributed by the OS community
-will not have this concern addressed by their original developers.
-
-To help Corda Enterprise users, we offer support in the database management tool for "lifting" a CorDapp to support Liquibase.
-
-These are the steps:
-
-1. Deploy the CorDapp on your node (copy the jar into the ``cordapps`` folder)
+1. Deploy the CorDapp on your node (copy the JAR into the ``cordapps`` folder)
 2. Find out the name of the ``MappedSchema`` containing the new contract state entities.
-3. Call the database management tool: ``java -jar tools-database-manager-3.0.0.jar --base-directory /path/to/node --create-migration-sql-for-cordapp com.example.MyMappedSchema``
+3. Call the database management tool: ``java -jar tools-database-manager-${corda_version}.jar --base-directory /path/to/node --create-migration-sql-for-cordapp com.example.MyMappedSchema``
    This will generate a file called ``my-mapped-schema.changelog-master.sql`` in a folder called ``migration`` in the ``base-directory``.
    In case you don't specify the actual ``MappedSchema`` name, the tool will generate one SQL file for each schema defined in the CorDapp
 4. Inspect the file(s) to make sure it is correct. This is a standard SQL file with some Liquibase metadata as comments.
-5. Create a jar with the ``migration`` folder (by convention it could be named: ``originalCorDappName-migration.jar``),
-   and deploy this jar together with the CorDapp, e.g. run the following command in the node base directory
+5. Create a JAR with the ``migration`` folder (by convention it could be named: ``originalCorDappName-migration.jar``),
+   and deploy this JAR together with the CorDapp, e.g. run the following command in the node base directory
    ``jar cvf /path/to/node/cordapps/MyCordapp-migration.jar migration``.
 6. To make sure that the new migration will be used, do a dry run with the database management tool and inspect the output file.
 
