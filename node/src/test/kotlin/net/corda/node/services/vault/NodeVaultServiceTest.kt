@@ -5,7 +5,9 @@ import com.nhaarman.mockito_kotlin.argThat
 import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.NullKeys
+import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.*
 import net.corda.core.internal.NotaryChangeTransactionBuilder
@@ -37,8 +39,7 @@ import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -54,7 +55,7 @@ import kotlin.test.assertTrue
 
 class NodeVaultServiceTest {
     private companion object {
-        val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+        val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName, "net.corda.testing.internal.vault")
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
         val bankOfCorda = TestIdentity(BOC_NAME)
@@ -717,5 +718,22 @@ class NodeVaultServiceTest {
             vaultService.queryBy<Cash.State>().states.size
         }
         assertThat(recordedStates).isEqualTo(coins.size)
+    }
+
+    @Test
+    fun `record a transaction with number of inputs greater than vault page size`() {
+        val notary = dummyNotary
+        val issuerKey = notary.keyPair
+        val signatureMetadata = SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(issuerKey.public).schemeNumberID)
+        val states = database.transaction {
+            vaultFiller.fillWithSomeTestLinearStates(PageSpecification().pageSize + 1).states
+        }
+
+        database.transaction {
+            val statesExitingTx = TransactionBuilder(notary.party).withItems(*states.toList().toTypedArray()).addCommand(dummyCommand())
+            val signedStatesExitingTx = services.signInitialTransaction(statesExitingTx).withAdditionalSignature(issuerKey, signatureMetadata)
+
+            assertThatCode { services.recordTransactions(signedStatesExitingTx) }.doesNotThrowAnyException()
+        }
     }
 }
