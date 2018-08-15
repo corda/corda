@@ -73,7 +73,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
 
     abstract class CommonQueryCriteria : QueryCriteria() {
         abstract val status: Vault.StateStatus
-        open val isRelevant: Vault.StateRelevance = Vault.StateRelevance.ALL
+        open val isParticipant: Vault.StateRelevance = Vault.StateRelevance.ALL
         abstract val contractStateTypes: Set<Class<out ContractState>>?
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
@@ -90,7 +90,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val notary: List<AbstractParty>? = null,
             val softLockingCondition: SoftLockingCondition? = null,
             val timeCondition: TimeCondition? = null,
-            override val isRelevant: Vault.StateRelevance = Vault.StateRelevance.RELEVANT
+            override val isParticipant: Vault.StateRelevance = Vault.StateRelevance.RELEVANT
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
@@ -126,15 +126,22 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val externalId: List<String>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val isRelevant: Vault.StateRelevance = Vault.StateRelevance.RELEVANT
+            override val isParticipant: Vault.StateRelevance = Vault.StateRelevance.RELEVANT
     ) : CommonQueryCriteria() {
         constructor(
                 participants: List<AbstractParty>? = null,
                 linearId: List<UniqueIdentifier>? = null,
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
                 contractStateTypes: Set<Class<out ContractState>>? = null,
-                isRelevant: Vault.StateRelevance = Vault.StateRelevance.RELEVANT
+                isRelevant: Vault.StateRelevance
         ) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes, isRelevant)
+
+        constructor(
+                participants: List<AbstractParty>? = null,
+                linearId: List<UniqueIdentifier>? = null,
+                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                contractStateTypes: Set<Class<out ContractState>>? = null
+        ) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes)
 
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
@@ -170,7 +177,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val issuerRef: List<OpaqueBytes>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val isRelevant: Vault.StateRelevance = Vault.StateRelevance.RELEVANT
+            override val isParticipant: Vault.StateRelevance = Vault.StateRelevance.RELEVANT
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
@@ -211,7 +218,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val expression: CriteriaExpression<L, Boolean>,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val isRelevant: Vault.StateRelevance = Vault.StateRelevance.RELEVANT
+            override val isParticipant: Vault.StateRelevance = Vault.StateRelevance.RELEVANT
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)

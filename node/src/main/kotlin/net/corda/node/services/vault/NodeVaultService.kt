@@ -113,8 +113,8 @@ class NodeVaultService(
                 // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
                 // node. The behaviour is as follows:
                 //
-                // 1) All vault updates marked as RELEVANT will, of, course all have isRelevant = true.
-                // 2) For ALL_VISIBLE updates, those which are not relevant will have isRelevant = false.
+                // 1) All vault updates marked as RELEVANT will, of, course all have isParticipant = true.
+                // 2) For ALL_VISIBLE updates, those which are not relevant will have isParticipant = false.
                 //
                 // This is useful when it comes to querying for fungible states, when we do not want non-relevant states
                 // included in the result.
@@ -128,13 +128,13 @@ class NodeVaultService(
                 //
                 // Adding a new column in the "VaultStates" table was considered the best approach.
                 val keys = stateOnly.participants.map { it.owningKey }
-                val isRelevant = isRelevant(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
+                val isRelevant = isParticipant(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
                 val stateToAdd = VaultSchemaV1.VaultStates(
                         notary = stateAndRef.value.state.notary,
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
                         recordedTime = clock.instant(),
-                        isRelevant = if (isRelevant) Vault.StateRelevance.RELEVANT else Vault.StateRelevance.NOT_RELEVANT
+                        isParticipant = if (isRelevant) Vault.StateRelevance.RELEVANT else Vault.StateRelevance.NOT_RELEVANT
                 )
                 stateToAdd.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(stateToAdd)
@@ -188,7 +188,7 @@ class NodeVaultService(
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
                 StatesToRecord.ONLY_RELEVANT -> tx.outputs.withIndex().filter {
-                    isRelevant(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet())
+                    isParticipant(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet())
                 }
                 StatesToRecord.ALL_VISIBLE -> tx.outputs.withIndex()
             }.map { tx.outRef<ContractState>(it.index) }
@@ -217,7 +217,7 @@ class NodeVaultService(
             val myKeys by lazy { keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } }) }
             val (consumedStateAndRefs, producedStates) = ltx.inputs.zip(ltx.outputs).filter { (_, output) ->
                 if (statesToRecord == StatesToRecord.ONLY_RELEVANT) {
-                    isRelevant(output.data, myKeys.toSet())
+                    isParticipant(output.data, myKeys.toSet())
                 } else {
                     true
                 }
@@ -254,7 +254,7 @@ class NodeVaultService(
                 // TODO: Add all visible here. fuck sake.
                 val page = queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(
                         stateRefs = refsList.subList(offset, limit),
-                        isRelevant = Vault.StateRelevance.ALL
+                        isParticipant = Vault.StateRelevance.ALL
                 )).states
                 states.addAll(page)
             }
@@ -427,9 +427,11 @@ class NodeVaultService(
     }
 
     @VisibleForTesting
-    internal fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
+    internal fun isParticipant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
         val keysToCheck = when (state) {
-            is OwnableState -> listOf(state.owner.owningKey)
+        // Sometimes developers forget to add the owning key to participants for OwnableStates.
+        // TODO: This logic should probably be moved to OwnableState so we can just do a simple intersection here.
+            is OwnableState -> (state.participants.map { it.owningKey } + state.owner.owningKey).toSet()
             else -> state.participants.map { it.owningKey }
         }
         return keysToCheck.any { it in myKeys }
@@ -509,7 +511,7 @@ class NodeVaultService(
                                     vaultState.notary,
                                     vaultState.lockId,
                                     vaultState.lockUpdateTime,
-                                    vaultState.isRelevant))
+                                    vaultState.isParticipant))
                         } else {
                             // TODO: improve typing of returned other results
                             log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }

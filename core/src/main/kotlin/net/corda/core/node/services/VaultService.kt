@@ -11,6 +11,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
+import net.corda.core.node.services.Vault.StateRelevance.*
 import net.corda.core.node.services.Vault.StateStatus
 import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.CordaSerializable
@@ -105,6 +106,11 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         UNCONSUMED, CONSUMED, ALL
     }
 
+    /**
+     * If the querying node is a participant in a state then it is classed as [RELEVANT]. If the querying node is not
+     * a participant in a state then it is classed as [NOT_RELEVANT]. If both [RELEVANT] and [NOT_RELEVANT] states are
+     * required then the [ALL] flag can be used.
+     */
     @CordaSerializable
     enum class StateRelevance {
         RELEVANT, NOT_RELEVANT, ALL
@@ -215,7 +221,7 @@ interface VaultService {
         val query = QueryCriteria.VaultQueryCriteria(
                 stateRefs = listOf(ref),
                 status = Vault.StateStatus.CONSUMED,
-                isRelevant = Vault.StateRelevance.ALL
+                isParticipant = Vault.StateRelevance.ALL
         )
         val result = trackBy<ContractState>(query)
         val snapshot = result.snapshot.states
