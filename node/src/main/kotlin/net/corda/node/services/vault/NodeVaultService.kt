@@ -535,7 +535,7 @@ class NodeVaultService(
                 val contractTypes = deriveContractTypes(it)
                 contractTypes.map {
                     val contractStateType = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
-                    contractStateType.add(it.name)
+                    contractStateType.add(concreteType.name)
                 }
             }
         }
