@@ -201,19 +201,20 @@ CorDapps specific to their role in the network.
 
 Running the network
 ^^^^^^^^^^^^^^^^^^^
+When using a ``MockNetwork``, you must be careful to ensure that all the nodes have processed all the relevant messages 
+before making assertions about the result of performing some action. For example, if you start a flow to update the ledger 
+but don't wait until all the nodes involved have processed all the resulting messages, your nodes' vaults may not be in 
+the state you expect.
 
-Regular Corda nodes automatically process received messages. When using a ``MockNetwork`` with
-``networkSendManuallyPumped`` set to ``false``, you must manually initiate the processing of received messages.
-
+When ``networkSendManuallyPumped`` is set to ``false``, you must manually initiate the processing of received messages. 
 You manually process received messages as follows:
 
-* ``StartedMockNode.pumpReceive`` to process a single message from the node's queue
-
-* ``MockNetwork.runNetwork`` to process all the messages in every node's queue. This may generate additional messages
-  that must in turn be processed
-
-    * ``network.runNetwork(-1)`` (the default in Kotlin) will exchange messages until there are no further messages to
+* ``StartedMockNode.pumpReceive()`` processes a single message from the node's queue
+* ``MockNetwork.runNetwork()`` processes all the messages in every node's queue until there are no further messages to
       process
+      
+When ``networkSendManuallyPumped`` is set to ``true``, nodes will automatically process the messages they receive. You 
+can block until all messages have been processed using ``MockNetwork.waitQuiescent()``.
 
 Running flows
 ^^^^^^^^^^^^^
