@@ -47,7 +47,7 @@ class AttachmentsClassLoaderStaticContractTests {
 
     class AttachmentDummyContract : Contract {
         companion object {
-            private const val ATTACHMENT_PROGRAM_ID = "net.corda.nodeapi.internal.AttachmentsClassLoaderStaticContractTests\$AttachmentDummyContract"
+            const val ATTACHMENT_PROGRAM_ID = "net.corda.nodeapi.internal.AttachmentsClassLoaderStaticContractTests\$AttachmentDummyContract"
         }
 
         data class State(val magicNumber: Int = 0) : ContractState {
@@ -83,7 +83,14 @@ class AttachmentsClassLoaderStaticContractTests {
         cordappProviderImpl.start(testNetworkParameters().whitelistedContractImplementations)
         doReturn(cordappProviderImpl).whenever(it).cordappProvider
         doReturn(testNetworkParameters()).whenever(it).networkParameters
-        doReturn(attachments).whenever(it).attachments
+        val attachmentStorage = rigorousMock<AttachmentStorage>()
+        doReturn(attachmentStorage).whenever(it).attachments
+        val attachment = rigorousMock<ContractAttachment>()
+        doReturn(attachment).whenever(attachmentStorage).openAttachment(any())
+        doReturn(it.cordappProvider.getContractAttachmentID(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID)).whenever(attachment).id
+        doReturn(setOf(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID)).whenever(attachment).allContracts
+        doReturn("app").whenever(attachment).uploader
+        doReturn(emptyList<Party>()).whenever(attachment).signers
     }
 
     @Test

@@ -1,9 +1,6 @@
 package net.corda.node.services.schema
 
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -70,7 +67,7 @@ class PersistentStateServiceTests {
         val persistentStateService = PersistentStateService(schemaService)
         database.transaction {
             val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
-            persistentStateService.persist(setOf(StateAndRef(TransactionState(TestState(), DummyContract.PROGRAM_ID, MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0))))
+            persistentStateService.persist(setOf(StateAndRef(TransactionState(TestState(), DummyContract.PROGRAM_ID, MEGA_CORP, constraint = AlwaysAcceptAttachmentConstraint), StateRef(SecureHash.sha256("dummy"), 0))))
             currentDBSession().flush()
             val parentRowCountResult = connection.prepareStatement("select count(*) from Parents").executeQuery()
             parentRowCountResult.next()

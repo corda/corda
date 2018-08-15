@@ -2,6 +2,7 @@ package net.corda.node.internal.cordapp
 
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
+import net.corda.core.contracts.warnContractWithoutConstraintPropagation
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -67,7 +68,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
          */
         fun fromJarUrls(scanJars: List<URL>) = JarScanningCordappLoader(scanJars.map { it.restricted() })
 
-        private fun URL.restricted(rootPackageName: String? = null) =  RestrictedURL(this, rootPackageName)
+        private fun URL.restricted(rootPackageName: String? = null) = RestrictedURL(this, rootPackageName)
 
         private fun jarUrlsInDirectory(directory: Path): List<URL> {
 
@@ -169,7 +170,11 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     }
 
     private fun findContractClassNames(scanResult: RestrictedScanResult): List<String> {
-        return coreContractClasses.flatMap { scanResult.getNamesOfClassesImplementing(it) }.distinct()
+        val contractClasses = coreContractClasses.flatMap { scanResult.getNamesOfClassesImplementing(it) }.distinct()
+        for (contractClass in contractClasses) {
+            contractClass.warnContractWithoutConstraintPropagation(appClassLoader)
+        }
+        return contractClasses
     }
 
     private fun findPlugins(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {
@@ -273,7 +278,9 @@ abstract class CordappLoaderTemplate : CordappLoader {
         cordapps.flatMap { corDapp -> corDapp.allFlows.map { flow -> flow to corDapp } }
                 .groupBy { it.first }
                 .mapValues {
-                    if(it.value.size > 1) { throw MultipleCordappsForFlowException("There are multiple CorDapp JARs on the classpath for flow ${it.value.first().first.name}: [ ${it.value.joinToString { it.second.name }} ].")  }
+                    if (it.value.size > 1) {
+                        throw MultipleCordappsForFlowException("There are multiple CorDapp JARs on the classpath for flow ${it.value.first().first.name}: [ ${it.value.joinToString { it.second.name }} ].")
+                    }
                     it.value.single().second
                 }
     }

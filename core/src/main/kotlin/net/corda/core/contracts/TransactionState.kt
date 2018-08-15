@@ -58,7 +58,8 @@ data class TransactionState<out T : ContractState> @JvmOverloads constructor(
         /**
          * A validator for the contract attachments on the transaction.
          */
-        val constraint: AttachmentConstraint = AutomaticHashConstraint) {
+        val constraint: AttachmentConstraint = AutomaticPlaceholderConstraint) {
+
     private companion object {
         val logger = loggerFor<TransactionState<*>>()
     }
