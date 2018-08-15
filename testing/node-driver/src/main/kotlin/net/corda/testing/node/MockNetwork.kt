@@ -71,7 +71,7 @@ data class MockNodeParameters constructor(
  * Immutable builder for configuring a [MockNetwork]. Kotlin users can also use named parameters to the constructor
  * of [MockNetwork], which is more convenient.
  *
- * @property networkSendManuallyPumped If true then messages will not be routed from sender to receiver until you use
+ * @property networkSendManuallyPumped If false then messages will not be routed from sender to receiver until you use
  * the [MockNetwork.runNetwork] method. This is useful for writing single-threaded unit test code that can examine the
  * state of the mock network before and after a message is sent, without races and without the receiving node immediately
  * sending a response. The default is false, so you must call runNetwork.
@@ -280,7 +280,7 @@ inline fun <reified F : FlowLogic<*>> StartedMockNode.registerResponderFlow(
  * @property cordappPackages A [List] of cordapp packages to scan for any cordapp code, e.g. contract verification code, flows and services.
  * @property defaultParameters A [MockNetworkParameters] object which contains the same parameters as the constructor, provided
  * as a convenience for Java users.
- * @property networkSendManuallyPumped If true then messages will not be routed from sender to receiver until you use
+ * @property networkSendManuallyPumped If false then messages will not be routed from sender to receiver until you use
  * the [MockNetwork.runNetwork] method. This is useful for writing single-threaded unit test code that can examine the
  * state of the mock network before and after a message is sent, without races and without the receiving node immediately
  * sending a response. The default is false, so you must call runNetwork.
