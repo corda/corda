@@ -6,46 +6,29 @@ We want to give CorDapps the ability to specify which versions of the platform t
 
 This will make it easier for CorDapp developers to support multiple platform versions, and enable CorDapp developers to ["tweak behaviour and [...] opt in to changes that might be breaking (e.g. sandboxing)"](https://cordaledger.slack.com/archives/C3J04VC3V/p1534170356000500).
 
-This document proposes that CorDapps will have metadata associated with them specifying a Minimum Platform Version and a Target Platform Version. The Minimum Platform Version of a CorDapp would indicate that a Corda Node would have to be running at least this version of the Corda platform in order to be able to run this CorDapp. The Target Platform Version of a CorDapp would indicate that it was tested for this Version of the Corda Platform.
+This document proposes that CorDapps will have metadata associated with them specifying a Minimum Platform Version and a Target Platform Version. The Minimum Platform Version of a CorDapp would indicate that a Corda Node would have to be running at least this version of the Corda platform in order to be able to run this CorDapp. The Target Platform Version of a CorDapp would indicate that it was tested for this version of the Corda Platform.
 
 For reference, see the corresponding [discussion on the #design channel](https://cordaledger.slack.com/archives/C3J04VC3V/p1534169936000321) and [this ticket in Jira](https://r3-cev.atlassian.net/browse/CORDA-470).
 
 ## Background
 
-### Platform Version (Corda)
- The platform version is an integer representing the API version of the Corda platform ([see docs](https://docs.corda.net/head/versioning.html#versioning)). 
+* *Platform Version (Corda)* An integer representing the API version of the Corda platform ([see docs](https://docs.corda.net/head/versioning.html#versioning)). 
 
-### Platform Version (Node)
+* *Platform Version (Node)* The value of the Corda Platform Version that a node is running and advertising to the network.
 
-The value of the Corda Platform Version that a node is running and advertising to the network.
-
-### Minimum Platform Version (Network)
-
-Set by the network zone operator. The minimum platform version is distributed with the network parameters as `minimumPlatformVersion`.
+* *Minimum Platform Version (Network)* Set by the network zone operator. The minimum platform version is distributed with the network parameters as `minimumPlatformVersion`.
  [From the docs:](https://docs.corda.net/network-map.html#network-parameters)
 > 	The minimum platform version that the nodes must be running. Any node which is below this will not start.
  
-### Minimum Target Version (Network)
+* *Minimum Target Version (Network)* Does not exist yet. We are planning to introduce the Minimum Target Version as part of the Network Parameters. This document assumes that it indicates to nodes in the network that they should not run CorDapps with a target version lower than this.
 
-Does not exist yet. We are planning to introduce the Minimum Target Version as part of the Network Parameters. This document assumes that the semantics of `minimumTargetVersion` would be similar to `minimumPlatformVersion`, i.e. nodes with a target version lower than the network's minimum target version will refuse to start.
+* *Target Platform Version (CorDapp)* Introduced in this document. Indicates that a CorDapp was tested with this version of the Corda Platform and should be run at this API level if possible.
 
-### CorDapp Versioning
-
-(https://docs.corda.net/head/versioning.html#versioning)
-
-### Target Platform Version (CorDapp)
-
-Introduced in this document. Indicates that a CorDapp was tested with this version of the Corda Platform and should be run at this API level if possible.
-
-### Minimum Platform Version (CorDapp)
-
-Introduced in this document. Indicates the minimum version of the Corda platform that a Corda Node has to run in order to be able to run a CorDapp.
-
+* *Minimum Platform Version (CorDapp)* Introduced in this document. Indicates the minimum version of the Corda platform that a Corda Node has to run in order to be able to run a CorDapp.
 
 ## Goals
 
-Define the semantics of Target Platform Version and Minimum Platform Version attributes for CorDapps.
-~Describe how target and platform versions would be specified by CorDapp developers. Define how these values can be accessed by the node and the CorDapp itself.~  
+Define the semantics of Target Platform Version and Minimum Platform Version attributes for CorDapps. Describe how target and platform versions would be specified by CorDapp developers. Define how these values can be accessed by the node and the CorDapp itself.
 
 ## Non-goals
 
@@ -55,31 +38,40 @@ This document does not concern itself with how the _Minimum Target Version_ shou
 
 ## Timeline
 
-This is intended as a long-term solution. Where and how the version information is stored could be changed once we migrate to Java 9
+This is intended as a long-term solution. 
 
 ## Requirements
   
-* The node should be able to check the minimum and platform version when loading the Cordapp ([see Jira](https://r3-cev.atlassian.net/browse/CORDA-470))  
+* The CorDapp's Minimum and Target Platform Version must be accessible to nodes at CorDapp load time, so they decide whether to load this CorDapp or not and to make the minimum and target version information available ([see Jira](https://r3-cev.atlassian.net/browse/CORDA-470))  .
 
 * The node's Platform Version must be accessible to CorDapps
-
-* The CorDapp's Minimum Platform Version must be accessible to nodes at CorDapp load time, so they decide whether to load this CorDapp or not.
 
 * The CorDapp's Target Platform Version must be accessible to the node when running CorDapps.
 
 ## Design Decisions
 
-Should the check for minPlatformVersion be performed in the CorDapp as well as in the Node?
+ Corda nodes running a Platform Version that is lower than the version which will introduce the changes described in this document will not check the minimum version of CorDapps. Thus, they will attempt to run CorDapps with a `minPlatformVersion` higher than their platform version. 
+To prevent this, the check for `minPlatformVersion` could be performed in the CorDapp as well as in the node. When a CorDapp detects that a node which is not fulfilling its `minPlatformVersion` requirement is attempting to run it, it could stop itself from being loaded (or react in a less drastic fashion). However, it may be desirable that the same CorDapp will keep working on some other, older nodes that are located in a different, private, network with fewer restrictions in place. 
+To allow for flexibility it seems reasonable to let CorDapp developers decide how to handle this situation.
+
 
 ## Design
 
-Testing: How can developers make sure that their CorDapp runs on a newer platform version? / Procedure when new Platform Version is released
+### Testing 
 
-Suppose our target platform version is 5, and a newer platform version 6 is released. We want to find out if our CorDapp works as expected (without raising the target version)
+Do CorDapp developers have to test their CorDapps on all Platform Versions v, `minPlatformVersion` <= v <= `targetPlatformVersion`?
 
-Implications for platform developers:
+Developers will need to make sure that their CorDapp runs on a newer platform version. A procedure that can be followed when a new platform version is released should be included in the documentation as a best practise.
 
-* Make sure CorDapps do not call APIs newer than their target Version
+* Suppose our target platform version is 5, and a newer platform version 6 is released. We want to find out if our CorDapp works as expected (without raising the target version)
+* A procedure could look like this:
+  - A new platform version is released/ anounced (network/ nodes not upgraded yet)
+  - CorDapp developers build their CorDapp against the new version, run/ test against nodes running the old/current version and nodes running the new versions. If this works, they can raise the target version of their CorDapp and test again.
+  - CorDapp developers test their old build against a node running the new versions
+    
+### Implications for platform developers
+
+* Should we/ can we make sure CorDapps do not call APIs newer than their target Version
     Check at CorDapp load time?
     
 * When modifying existing APIs, do target version checks
@@ -92,21 +84,11 @@ Implications for platform developers:
     }
     ```
 
-Further considerations:
+* Will all changes to existing APIs neet to receive version guards, or only some (breaking) changes?
 
-* Additional benefit: Third-party libraries can be made backwards-compatible. 
-* Linting: detect when trying to use APIs from a newer version
+* Changes to the Corda Platform that are not directly tied to the node calling the API may also need version guards.
 
-Open Questions
-
-What about the release-version? 
->  The release version is still useful and every MQ message the node sends attaches it to the release-version header property for debugging purposes.
-
-Changing/ Upgrading minimum and target version of a CorDapp: Should there be any constraints? (e.g. the target version of version 11 of a CorDapp must be greater than the target version of version 10)
-
-Interactions between minimum and target version and CorDapp/ Flow versioning? Anything to consider/ be aware of? https://docs.corda.net/head/upgrading-cordapps.html# 
-
-Implementation concerns
+## Technical Design
 
 * How are the minimum- and target version stored and encoded?
     * The minimum- and target platform version are written to the Manifest of the CorDapps JAR.
@@ -128,6 +110,7 @@ Implementation concerns
         }
     }
     ```
+    
 * How can code inside the node find out the minimum and target version of the app that is calling it?
     * The node's CorDapp loader reads these values from the Manifest when loading the CorDapp
     * It should be up to the node operator how this error is handled (what should be the default?)
@@ -138,17 +121,17 @@ Implementation concerns
     * If this information is in `Cordapp`, it can be obtained via the `CorDappContext` from the serviceHub.
 * The node's platform version is already accessible to CorDapps `serviceHub.nodeInfo`
 
-Examples
+## Observations/ Open Questions
 
-Let's assume that we have a CorDapp with Minimum Platform Version 5 and Target Platform Version 7
-A node running Platform Version 4 will not load this CorDapp
-A node running Platform Version 5 will load and run this CorDapp
-A node running Platform Version 6 Will load and run this CorDapp (at API level 6)
-A node running Platform Version 7 Will load and run this CorDapp (at API level 7)
-A node running Platform Version 8 Will load and run this CorDapp (at API level 7)
+Changing/ Upgrading minimum and target version of a CorDapp: Should there be any constraints? (e.g. the target version of version 11 of a CorDapp must be greater than the target version of version 10)
 
+Interactions between minimum and target version and CorDapp/ Flow versioning? Anything to consider/ be aware of? https://docs.corda.net/head/upgrading-cordapps.html# 
 
+https://docs.corda.net/head/versioning.html#versioning
 
+The version information advertised by nodes and CorDapps is not guaranteed to be correct. This is merely a convention and it is strongly advised that this convention be followed. This must be considered especially when thinking about security. It is not possible to enforce that a node advertising it's running a certain platform version is _actually_ running it. Same for CorDapp version(s). 
+
+The minPlatformVersion constrains the usage of the API to that API level:
 
 ```
 // in CorDapp
@@ -158,12 +141,23 @@ else
     newApi() // Problem: `newApi()` does not exist on the node, can't load CorDapp   
     
 ```
-Observations
 
 There is no guarantee with which API version a node is going to run a CorDapp, the Target Version merely indicates a preference (?). 
 
-Let's assume that we have a CorDapp with Minimum Platform Version 5 and Target Platform Version 6. A node advertising that it is running Platform Version 6 on a network with Minimum Platform Version 4 would be free to choose between running our CorDapp on Platform Version 5 or Platform Version 6.
+Example: Let's assume that we have a CorDapp with Minimum Platform Version 5 and Target Platform Version 7
+  * A node running Platform Version 4 will not load this CorDapp
+
+  * A node running Platform Version 5 will load and run this CorDapp (at API level 5)
+
+  * A node running Platform Version 6 Will load and run this CorDapp (at API level 6)
+
+  * A node running Platform Version 7 Will load and run this CorDapp (at API level 7)
+
+  * A node running Platform Version 8 Will load and run this CorDapp (at API level 7)
+
+Example: Let's assume that we have a CorDapp with Minimum Platform Version 5 and Target Platform Version 6. A node advertising that it is running Platform Version 6 on a network with Minimum Platform Version 4 would be free to choose between running our CorDapp on Platform Version 5 or Platform Version 6 (TODO should we define a convention for this?).
 
 
-CorDapp developers have to test their CorDapps on all Platform Versions v, `minPlatformVersion` <= v <= `targetPlatformVersion`
+Additional benefit: Third-party libraries can be made backwards-compatible. 
 
+It will be possible to do linting to detect when trying to use APIs from a newer version

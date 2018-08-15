@@ -1,16 +1,18 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
 
 --------------------------------------------
-Design Decision: <Description heading>
+Design Decision: Should the check for minPlatformVersion be performed in the CorDapp as well as in the Node?
 ============================================
 
 ## Background / Context
 
-Short outline of decision point.
+Nodes running a version lower than the one that will include the changes proposed here will run CorDapps with a `minPlatformVersion` higher than their platform version. 
+To prevent this, the check for `minPlatformVersion` could be performed in the CorDapp as well as in the node. 
+When a CorDapp detects that a node which is not fulfilling its `minPlatformVersion` requirement is attempting to run it, what should happen?
+Should the check for minPlatformVersion be performed in the CorDapp as well as in the Node?
 
 ## Options Analysis
 
-### A. <Option summary>
+### A. Only check in the Node
 
 #### Advantages
 
@@ -22,12 +24,11 @@ Short outline of decision point.
 1.    ​
 2.    ​
 
-### B. <Option summary>
+### B. Perform the check for minPlatformVersion in the CorDapp and the Node
 
 #### Advantages
 
-1. ​
-2. ​
+1.  Older nodes can be prevented from running a CorDapp that requires a newer platform version. ​
 
 #### Disadvantages
 
