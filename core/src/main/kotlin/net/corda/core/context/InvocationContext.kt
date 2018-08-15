@@ -103,7 +103,8 @@ sealed class InvocationOrigin {
     /**
      * Origin was an RPC call.
      */
-    data class RPC(private val actor: Actor) : InvocationOrigin() {
+    // Field `actor` needs to stay public for AMQP / JSON serialization to work.
+    data class RPC(val actor: Actor) : InvocationOrigin() {
         override fun principal() = Principal { actor.id.value }
     }
 
