@@ -12,9 +12,15 @@ Standalone database
 
 Running a node against a standalone database requires the following setup steps:
 
-* A node with the embedded H2 database creates the full database schema including users, permissions and tables definitions.
-  For a standalone database a database administrator needs to create database users/logins, an empty schema and permissions on the custom database.
-  Tables and sequences may be created by a database administrator, however a node can create the tables/sequences at startup if the ``database.runMigration`` ìs set to ``true``.
+* A database administrator needs to create database users/logins, an empty schema and permissions on the custom database.
+  Database user may be set with different permissions:
+
+  * Administrative permissions used for initial database setup (e.g. to create tables) - more flexible as allows the node
+    to create all tables during initial startup and it follows node behavior when using in-memory H2 database.
+  * Restricted permission for normal node operation to select/insert/delete data. It requires a database administrator
+    to create tables/sequences using :ref:`Database management tool <migration-tool>`.
+
+  The example DDL scripts (shown below) contain both variants of database user setup.
 * Add node JDBC connection properties to the `dataSourceProperties` entry and Hibernate properties to the `database` entry - see :ref:`Node configuration <database_properties_ref>`.
   Each node needs to use a separate database schema which requires a separate database user/login with a default schema set.
   Properties can be generated with the :ref:`deployNodes Cordform task <testing_cordform_ref>`.
@@ -31,13 +37,13 @@ Example configuration for supported standalone databases are shown below.
 In each configuration replace placeholders `[USER]`, `[PASSWORD]` and `[SCHEMA]`.
 
 .. note::
-   SQL database schema setup scripts are suitable for development purposes only.
+   SQL database schema setup scripts doesn't use grouping roles and doesn't contain database physical settings e.g. max disk space quota for a user.
 
 SQL Azure and SQL Server
 ````````````````````````
 Corda has been tested with SQL Server 2017 (14.0.3006.16) and Azure SQL (12.0.2000.8), using Microsoft JDBC Driver 6.2.
 
-To set up a database schema, use the following SQL:
+To set up a database schema with administrative permissions, run the following SQL:
 
 .. sourcecode:: sql
 
@@ -47,6 +53,16 @@ To set up a database schema, use the following SQL:
     CREATE USER [USER] FOR LOGIN [SCHEMA] WITH DEFAULT_SCHEMA = [SCHEMA];
     GRANT SELECT, INSERT, UPDATE, DELETE, VIEW DEFINITION, ALTER, REFERENCES ON SCHEMA::[SCHEMA] TO [USER];
     GRANT CREATE TABLE TO [USER];
+
+To set up a database schema with normal operation permissions, run the following SQL:
+
+.. sourcecode:: sql
+
+    --for Azure SQL, a login needs to be created on the master database and not on a user database
+    CREATE LOGIN [LOGIN] WITH PASSWORD = '[PASSWORD]';
+    CREATE SCHEMA [SCHEMA];
+    CREATE USER [USER] FOR LOGIN [LOGIN] WITH DEFAULT_SCHEMA = [SCHEMA];
+    GRANT SELECT, INSERT, UPDATE, DELETE, VIEW DEFINITION, REFERENCES ON SCHEMA::[SCHEMA] TO [USER];
 
 Example node configuration for SQL Azure:
 
@@ -62,10 +78,12 @@ Example node configuration for SQL Azure:
     database = {
         transactionIsolationLevel = READ_COMMITTED
         schema = [SCHEMA]
+        runMigration = [true|false]
     }
 
 Note that:
 
+* The ``runMigration`` is `false` or may be omitted for node setup with normal operation permissions
 * The ``database.schema`` property is optional
 * The minimum transaction isolation level ``database.transactionIsolationLevel`` is `READ_COMMITTED`
 * Ensure that the Microsoft JDBC driver JAR is copied to the ``./drivers`` subdirectory or if applicable specify a path in the ``jarDirs`` property,
@@ -150,7 +168,7 @@ Oracle
 ``````
 Corda supports Oracle 11g RC2 (with ojdbc6.jar) and Oracle 12c (ojdbc8.jar).
 
-To set up a database schema, use the following SQL:
+To set up a database schema with administrative permissions, run the following SQL:
 
 .. sourcecode:: sql
 
@@ -159,6 +177,39 @@ To set up a database schema, use the following SQL:
     GRANT CREATE SESSION TO [USER];
     GRANT CREATE TABLE TO [USER];
     GRANT CREATE SEQUENCE TO [USER];
+
+To set up a database schema with normal operation permissions:
+
+In Oracle database a user has full control over own schema because a schema is essentially the user account.
+In order to restrict the permissions two the database, two users needs to be created, the first one with administrative permissions (`ADMIN_USER` in SQL script),
+the second one with operation permissions (`USER` in the SQL script). Corda node will access the tables
+in the schema of the other user for which it has permissions to select/inser/delete data.
+
+.. sourcecode:: sql
+
+    CREATE USER [ADMIN_USER] IDENTIFIED BY [PASSWORD];
+    GRANT UNLIMITED TABLESPACE TO [ADMIN_USER];
+    GRANT CREATE SESSION TO [ADMIN_USER];
+    GRANT CREATE TABLE TO [ADMIN_USER];
+    GRANT CREATE SEQUENCE TO [ADMIN_USER];
+
+    CREATE USER [USER] identified by [PASSWORD];
+    GRANT CREATE SESSION TO [USER];
+    -- repeat for each table
+    GRANT SELECT, INSERT, UPDATE, DELETE ANY [ADMIN_USER].[TABLE] TO [USER];
+    GRANT SELECT ANY SEQUENCE TO [USER];
+
+When connecting via database user with normal operation permissions, all queries needs to be prefixes the the other schema name.
+Corda node doesn't guarantee to prefix each SQL query with a schema namespace.
+Additional node configuration entry allows to set current schema to ADMIN_USER while connecting to the database:
+
+.. sourcecode:: none
+
+    dataSourcePorperties {
+        [...]
+        connectionInitSql="alter session set current_schema=[ADMIN_USER]"
+    }
+
 
 Example node configuration for Oracle:
 
@@ -173,10 +224,12 @@ Example node configuration for Oracle:
     database = {
         transactionIsolationLevel = READ_COMMITTED
         schema = [SCHEMA]
+        runMigration = [true|false]
     }
 
 Note that:
 
+* The ``runMigration`` is `false` or may be omitted for node setup with normal operation permissions.
 * The ``database.schema`` property is optional
 * The minimum transaction isolation level ``database.transactionIsolationLevel`` is `READ_COMMITTED`
 * Ensure that the Oracle JDBC driver JAR is copied to the ``./drivers`` subdirectory or if applicable specify path in the ``jarDirs`` property
@@ -261,7 +314,7 @@ PostgreSQL
 ``````````
 Corda has been tested on PostgreSQL 9.6 database, using PostgreSQL JDBC Driver 42.1.4.
 
-To set up a database schema, use the following SQL:
+To set up a database schema with administration permissions:
 
 .. sourcecode:: sql
 
@@ -273,6 +326,21 @@ To set up a database schema, use the following SQL:
     GRANT USAGE, SELECT ON ALL sequences IN SCHEMA "[SCHEMA]" TO "[USER]";
     ALTER DEFAULT privileges IN SCHEMA "[SCHEMA]" GRANT USAGE, SELECT ON sequences TO "[USER]";
     ALTER ROLE "[USER]" SET search_path = "[SCHEMA]";
+
+To set up a database schema with normal operation permissions:
+The setup differs with admin access by lack of schema permission of CREATE.
+
+.. sourcecode:: sql
+
+    CREATE USER "[USER]" WITH LOGIN password '[PASSWORD]';
+    CREATE SCHEMA "[SCHEMA]";
+    GRANT USAGE ON SCHEMA "[SCHEMA]" TO "[USER]";
+    GRANT SELECT, INSERT, UPDATE, DELETE, REFERENCES ON ALL tables IN SCHEMA "[SCHEMA]" TO "[USER]";
+    ALTER DEFAULT privileges IN SCHEMA "[SCHEMA]" GRANT SELECT, INSERT, UPDATE, DELETE, REFERENCES ON tables TO "[USER]";
+    GRANT USAGE, SELECT ON ALL sequences IN SCHEMA "[SCHEMA]" TO "[USER]";
+    ALTER DEFAULT privileges IN SCHEMA "[SCHEMA]" GRANT USAGE, SELECT ON sequences TO "[USER]";
+    ALTER ROLE "[USER]" SET search_path = "[SCHEMA]";
+
 
 Example node configuration for PostgreSQL:
 
@@ -287,10 +355,12 @@ Example node configuration for PostgreSQL:
     database = {
         transactionIsolationLevel = READ_COMMITTED
         schema = [SCHEMA]
+        runMigration = [true|false]
     }
 
 Note that:
 
+* The ``runMigration`` is `false` or may be omitted for node setup with normal operation permissions
 * The ``database.schema`` property is optional
 * If you provide a custom ``database.schema``, its value must either match the ``dataSource.user`` value to end up
   on the standard schema search path according to the
@@ -301,17 +371,12 @@ Note that:
   this behaviour differs from Corda Open Source where the value is not wrapped in double quotes
 * Ensure that the PostgreSQL JDBC driver JAR is copied to the ``./drivers`` subdirectory or if applicable specify path in the ``jarDirs`` property
 
-To delete existing data from the database, run the following SQL:
+To delete existing data from the database, drop the existing schema and recreate it using the relevant setup script:
 
 .. sourcecode:: sql
 
     DROP SCHEMA IF EXISTS "[SCHEMA]" CASCADE;
-    CREATE SCHEMA "[SCHEMA]";
-    GRANT ALL ON SCHEMA "[SCHEMA]" TO "[USER]";
-    GRANT ALL ON ALL tables IN SCHEMA "[SCHEMA]" TO "[USER]";
-    ALTER DEFAULT privileges IN SCHEMA "[SCHEMA]" GRANT ALL ON tables TO "[USER]";
-    GRANT ALL ON ALL sequences IN SCHEMA "[SCHEMA]" TO "[USER]";
-    ALTER DEFAULT privileges IN SCHEMA "[SCHEMA]" GRANT ALL ON sequences TO "[USER]";
+
 
 Guideline for adding support for other databases
 ````````````````````````````````````````````````
