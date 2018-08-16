@@ -10,6 +10,7 @@ import net.corda.core.CordaException
 import net.corda.core.utilities.contextLogger
 import java.lang.reflect.Constructor
 import java.lang.reflect.Method
+import java.lang.reflect.Type
 import java.util.concurrent.Callable
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.reflect.KClass
@@ -173,7 +174,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         // and fail for that too.
         for ((index, method) in methods.withIndex()) {
             try {
-                val args = parseArguments(name, paramNamesFromMethod(method).zip(method.parameterTypes), argStr)
+                val args = parseArguments(name, paramNamesFromMethod(method).zip(method.genericParameterTypes), argStr)
                 return ParsedMethodCall(target, method, args)
             } catch (e: UnparseableCallException) {
                 if (index == methods.size - 1)
@@ -189,15 +190,16 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
      * @param methodNameHint A name that will be used in exceptions if thrown; not used for any other purpose.
      */
     @Throws(UnparseableCallException::class)
-    fun parseArguments(methodNameHint: String, parameters: List<Pair<String, Class<*>>>, args: String): Array<Any?> {
+    fun parseArguments(methodNameHint: String, parameters: List<Pair<String, Type>>, args: String): Array<Any?> {
         // If we have parameters, wrap them in {} to allow the Yaml parser to eat them on a single line.
         val parameterString = "{ $args }"
         val tree: JsonNode = om.readTree(parameterString) ?: throw UnparseableCallException(args)
         if (tree.size() > parameters.size) throw UnparseableCallException.TooManyParameters(methodNameHint, args)
         val inOrderParams: List<Any?> = parameters.mapIndexed { _, (argName, argType) ->
             val entry = tree[argName] ?: throw UnparseableCallException.MissingParameter(methodNameHint, argName, args)
+            val entryType = om.typeFactory.constructType(argType)
             try {
-                om.readValue(entry.traverse(om), argType)
+                om.readValue<Any>(entry.traverse(om), entryType)
             } catch (e: Exception) {
                 throw UnparseableCallException.FailedParse(e)
             }
