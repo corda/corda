@@ -105,7 +105,7 @@ internal class UseRefState(val linearId: UniqueIdentifier) : FlowLogic<SignedTra
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
         val query = QueryCriteria.LinearStateQueryCriteria(
                 linearId = listOf(linearId),
-                isRelevant = Vault.StateRelevance.ALL
+                isRelevant = Vault.StateModificationStatus.ALL
         )
         val referenceState = serviceHub.vaultService.queryBy<ContractState>(query).states.single()
         return subFlow(FinalityFlow(

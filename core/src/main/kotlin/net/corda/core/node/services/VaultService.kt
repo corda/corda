@@ -11,7 +11,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.node.services.Vault.StateRelevance.*
+import net.corda.core.node.services.Vault.StateModificationStatus.*
 import net.corda.core.node.services.Vault.StateStatus
 import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.CordaSerializable
@@ -107,13 +107,23 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     }
 
     /**
-     * If the querying node is a participant in a state then it is classed as [RELEVANT]. If the querying node is not
-     * a participant in a state then it is classed as [NOT_RELEVANT]. If both [RELEVANT] and [NOT_RELEVANT] states are
-     * required then the [ALL] flag can be used.
+     * If the querying node is a participant in a state then it is classed as [MODIFIABLE], although technically the
+     * state is only _potentially_ modifiable as the contract code may forbid them from performing any actions.
+     *
+     * If the querying node is not a participant in a state then it is classed as [NOT_MODIFIABLE]. These types of
+     * states can still be recorded in the vault if the transaction containing them was recorded with the
+     * [StatesToRecord.ALL_VISIBLE] flag. This will typically happen for things like reference data which can be
+     * referenced in transactions as a [ReferencedStateAndRef] but cannot be modified by any party but the maintainer.
+     *
+     * If both [MODIFIABLE] and [NOT_MODIFIABLE] states are required to be returned from a query, then the [ALL] flag
+     * can be used.
+     *
+     * NOTE: Default behaviour is for ALL STATES to be returned as this is how Corda behaved before the introduction of
+     * this query criterion.
      */
     @CordaSerializable
-    enum class StateRelevance {
-        RELEVANT, NOT_RELEVANT, ALL
+    enum class StateModificationStatus {
+        MODIFIABLE, NOT_MODIFIABLE, ALL
     }
 
     @CordaSerializable
@@ -142,7 +152,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                                            val otherResults: List<Any>)
 
     @CordaSerializable
-    data class StateMetadata @JvmOverloads constructor(
+    data class StateMetadata constructor(
             val ref: StateRef,
             val contractStateClassName: String,
             val recordedTime: Instant,
@@ -151,8 +161,18 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             val notary: AbstractParty?,
             val lockId: String?,
             val lockUpdateTime: Instant?,
-            val isRelevant: Vault.StateRelevance = StateRelevance.RELEVANT
+            val isModifiable: Vault.StateModificationStatus?
     ) {
+        constructor(ref: StateRef,
+                    contractStateClassName: String,
+                    recordedTime: Instant,
+                    consumedTime: Instant?,
+                    status: Vault.StateStatus,
+                    notary: AbstractParty?,
+                    lockId: String?,
+                    lockUpdateTime: Instant?
+        ) : this(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, null)
+
         fun copy(
                 ref: StateRef = this.ref,
                 contractStateClassName: String = this.contractStateClassName,
@@ -163,17 +183,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                 lockId: String? = this.lockId,
                 lockUpdateTime: Instant? = this.lockUpdateTime
         ): StateMetadata {
-            return StateMetadata(
-                    ref,
-                    contractStateClassName,
-                    recordedTime,
-                    consumedTime,
-                    status,
-                    notary,
-                    lockId,
-                    lockUpdateTime,
-                    StateRelevance.RELEVANT
-            )
+            return StateMetadata(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, null)
         }
     }
 
@@ -220,8 +230,7 @@ interface VaultService {
     fun whenConsumed(ref: StateRef): CordaFuture<Vault.Update<ContractState>> {
         val query = QueryCriteria.VaultQueryCriteria(
                 stateRefs = listOf(ref),
-                status = Vault.StateStatus.CONSUMED,
-                isParticipant = Vault.StateRelevance.ALL
+                status = Vault.StateStatus.CONSUMED
         )
         val result = trackBy<ContractState>(query)
         val snapshot = result.snapshot.states

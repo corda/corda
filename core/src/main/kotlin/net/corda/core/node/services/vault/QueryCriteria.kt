@@ -73,7 +73,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
 
     abstract class CommonQueryCriteria : QueryCriteria() {
         abstract val status: Vault.StateStatus
-        open val isParticipant: Vault.StateRelevance = Vault.StateRelevance.ALL
+        open val isModifiable: Vault.StateModificationStatus = Vault.StateModificationStatus.ALL
         abstract val contractStateTypes: Set<Class<out ContractState>>?
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
@@ -90,7 +90,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val notary: List<AbstractParty>? = null,
             val softLockingCondition: SoftLockingCondition? = null,
             val timeCondition: TimeCondition? = null,
-            override val isParticipant: Vault.StateRelevance = Vault.StateRelevance.RELEVANT
+            override val isModifiable: Vault.StateModificationStatus = Vault.StateModificationStatus.ALL
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
@@ -111,8 +111,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                     stateRefs,
                     notary,
                     softLockingCondition,
-                    timeCondition,
-                    Vault.StateRelevance.RELEVANT
+                    timeCondition
             )
         }
     }
@@ -126,14 +125,14 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val externalId: List<String>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val isParticipant: Vault.StateRelevance = Vault.StateRelevance.RELEVANT
+            override val isModifiable: Vault.StateModificationStatus = Vault.StateModificationStatus.ALL
     ) : CommonQueryCriteria() {
         constructor(
                 participants: List<AbstractParty>? = null,
                 linearId: List<UniqueIdentifier>? = null,
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
                 contractStateTypes: Set<Class<out ContractState>>? = null,
-                isRelevant: Vault.StateRelevance
+                isRelevant: Vault.StateModificationStatus
         ) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes, isRelevant)
 
         constructor(
@@ -160,8 +159,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                     uuid,
                     externalId,
                     status,
-                    contractStateTypes,
-                    Vault.StateRelevance.RELEVANT
+                    contractStateTypes
             )
         }
     }
@@ -177,7 +175,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val issuerRef: List<OpaqueBytes>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val isParticipant: Vault.StateRelevance = Vault.StateRelevance.RELEVANT
+            override val isModifiable: Vault.StateModificationStatus = Vault.StateModificationStatus.ALL
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
@@ -200,8 +198,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                     issuer,
                     issuerRef,
                     status,
-                    contractStateTypes,
-                    Vault.StateRelevance.RELEVANT
+                    contractStateTypes
             )
         }
     }
@@ -218,7 +215,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val expression: CriteriaExpression<L, Boolean>,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val isParticipant: Vault.StateRelevance = Vault.StateRelevance.RELEVANT
+            override val isModifiable: Vault.StateModificationStatus = Vault.StateModificationStatus.ALL
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
@@ -233,8 +230,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             return VaultCustomQueryCriteria(
                     expression,
                     status,
-                    contractStateTypes,
-                    Vault.StateRelevance.RELEVANT
+                    contractStateTypes
             )
         }
     }

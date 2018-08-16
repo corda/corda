@@ -113,28 +113,28 @@ class NodeVaultService(
                 // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
                 // node. The behaviour is as follows:
                 //
-                // 1) All vault updates marked as RELEVANT will, of, course all have isParticipant = true.
-                // 2) For ALL_VISIBLE updates, those which are not relevant will have isParticipant = false.
+                // 1) All vault updates marked as MODIFIABLE will, of, course all have isModifiable = true.
+                // 2) For ALL_VISIBLE updates, those which are not modifiable will have isModifiable = false.
                 //
-                // This is useful when it comes to querying for fungible states, when we do not want non-relevant states
+                // This is useful when it comes to querying for fungible states, when we do not want non-modifiable states
                 // included in the result.
                 //
                 // The same functionality could be obtained by passing in a list of participants to the vault query,
                 // however this:
                 //
-                // * requires a join on the participants table which results in slow queries.
-                // * states may flip from being non-relevant to relevant
+                // * requires a join on the participants table which results in slow queries
+                // * states may flip from being non-modifiable to modifiable
                 // * it's more complicated for CorDapp developers
                 //
                 // Adding a new column in the "VaultStates" table was considered the best approach.
                 val keys = stateOnly.participants.map { it.owningKey }
-                val isRelevant = isParticipant(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
+                val isModifiable = isModifiable(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
                 val stateToAdd = VaultSchemaV1.VaultStates(
                         notary = stateAndRef.value.state.notary,
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
                         recordedTime = clock.instant(),
-                        isParticipant = if (isRelevant) Vault.StateRelevance.RELEVANT else Vault.StateRelevance.NOT_RELEVANT
+                        isModifiable = if (isModifiable) Vault.StateModificationStatus.MODIFIABLE else Vault.StateModificationStatus.NOT_MODIFIABLE
                 )
                 stateToAdd.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(stateToAdd)
@@ -188,7 +188,7 @@ class NodeVaultService(
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
                 StatesToRecord.ONLY_RELEVANT -> tx.outputs.withIndex().filter {
-                    isParticipant(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet())
+                    isModifiable(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet())
                 }
                 StatesToRecord.ALL_VISIBLE -> tx.outputs.withIndex()
             }.map { tx.outRef<ContractState>(it.index) }
@@ -217,7 +217,7 @@ class NodeVaultService(
             val myKeys by lazy { keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } }) }
             val (consumedStateAndRefs, producedStates) = ltx.inputs.zip(ltx.outputs).filter { (_, output) ->
                 if (statesToRecord == StatesToRecord.ONLY_RELEVANT) {
-                    isParticipant(output.data, myKeys.toSet())
+                    isModifiable(output.data, myKeys.toSet())
                 } else {
                     true
                 }
@@ -251,11 +251,7 @@ class NodeVaultService(
             (0..(refsList.size - 1) / pageSize).forEach {
                 val offset = it * pageSize
                 val limit = minOf(offset + pageSize, refsList.size)
-                // TODO: Add all visible here. fuck sake.
-                val page = queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(
-                        stateRefs = refsList.subList(offset, limit),
-                        isParticipant = Vault.StateRelevance.ALL
-                )).states
+                val page = queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(stateRefs = refsList.subList(offset, limit))).states
                 states.addAll(page)
             }
         }
@@ -427,7 +423,7 @@ class NodeVaultService(
     }
 
     @VisibleForTesting
-    internal fun isParticipant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
+    internal fun isModifiable(state: ContractState, myKeys: Set<PublicKey>): Boolean {
         val keysToCheck = when (state) {
         // Sometimes developers forget to add the owning key to participants for OwnableStates.
         // TODO: This logic should probably be moved to OwnableState so we can just do a simple intersection here.
@@ -511,7 +507,7 @@ class NodeVaultService(
                                     vaultState.notary,
                                     vaultState.lockId,
                                     vaultState.lockUpdateTime,
-                                    vaultState.isParticipant))
+                                    vaultState.isModifiable))
                         } else {
                             // TODO: improve typing of returned other results
                             log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
