@@ -395,12 +395,15 @@ class NodeVaultService(
             return emptyList()
         }
 
-        // Enrich QueryCriteria with additional default attributes (such as soft locks)
+        // Enrich QueryCriteria with additional default attributes (such as soft locks).
+        // We only want to return MODIFIABLE states here.
         val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
         val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
         val enrichedCriteria = QueryCriteria.VaultQueryCriteria(
                 contractStateTypes = setOf(contractStateType),
-                softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)))
+                softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)),
+                isModifiable = Vault.StateModificationStatus.MODIFIABLE
+        )
         val results = queryBy(contractStateType, enrichedCriteria.and(eligibleStatesQuery), sorter)
 
         var claimedAmount = 0L
