@@ -121,7 +121,7 @@ private fun toPropertyAccessorConstructor(index: Int, param: KParameter, classPr
             "Constructor parameter - \"$name\" -  doesn't refer to a property of \"$clazz\"")
 
     // If the property has a getter we'll use that to retrieve it's value from the instance, if it doesn't
-    // *for *know* we switch to a reflection based method
+    // *for *now* we switch to a reflection based method
     val propertyReader = matchingProperty.getter?.let { getter ->
         getPublicPropertyReader(getter, type, param, name, clazz)
     } ?: matchingProperty.field?.let { field ->

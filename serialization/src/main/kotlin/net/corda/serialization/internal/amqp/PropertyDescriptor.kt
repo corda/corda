@@ -110,11 +110,11 @@ private fun Sequence<Method>.thatArePublic() = filter { it.isPublic && it.name !
 
 // Select only those methods that are isX/getX/setX methods
 private fun Sequence<Method>.thatArePropertyMethods() = map { method ->
-    propertyMethodRegex.find(method.name)?.let {
+    propertyMethodRegex.find(method.name)?.let { result ->
         PropertyNamedMethod(
                 method,
-                it.groups[2]!!.value,
-                MethodClassifier.valueOf(it.groups[1]!!.value.toUpperCase()))
+                result.groups[2]!!.value,
+                MethodClassifier.valueOf(result.groups[1]!!.value.toUpperCase()))
     }
 }.filterNotNull()
 

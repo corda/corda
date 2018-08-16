@@ -95,7 +95,6 @@ internal class FingerPrintingState(private val factory: SerializerFactory) {
         else -> throw AMQPNotSerializableException(type, "Don't know how to hash")
     }
 
-
     private fun fingerprintClass(type: Class<*>) = when {
         type.isArray -> fingerprintType(type.componentType).append(ARRAY_HASH)
         type.isPrimitiveOrCollection -> append(type.name)
@@ -108,9 +107,9 @@ internal class FingerPrintingState(private val factory: SerializerFactory) {
 
     private fun fingerprintParameterizedType(type: ParameterizedType) {
         // Hash the rawType + params
-        type.asClass().let {
-            if (it.isCollectionOrMap) append(it.name)
-            else fingerprintWithCustomSerializerOrElse(it, type) {
+        type.asClass().let { clazz ->
+            if (clazz.isCollectionOrMap) append(clazz.name)
+            else fingerprintWithCustomSerializerOrElse(clazz, type) {
                 fingerprintObject(type)
             }
         }
@@ -125,7 +124,7 @@ internal class FingerPrintingState(private val factory: SerializerFactory) {
         // Hash the class + properties + interfaces
         append(type.asClass().name)
 
-        propertiesForSerialization(type).forEach { prop ->
+        orderedPropertiesForSerialization(type).forEach { prop ->
             fingerprintType(prop.serializer.resolvedType)
             fingerprintPropSerialiser(prop)
         }
@@ -157,8 +156,10 @@ internal class FingerPrintingState(private val factory: SerializerFactory) {
     private fun fingerprintWithCustomSerializerOrElse(
             clazz: Class<*>,
             declaredType: Type,
-            defaultAction: () -> Unit): Unit =
-            factory.findCustomSerializer(clazz, declaredType)?.let { append(it.typeDescriptor) } ?: defaultAction()
+            defaultAction: () -> Unit)
+            : Unit = factory.findCustomSerializer(clazz, declaredType)?.let {
+        append(it.typeDescriptor)
+    } ?: defaultAction()
 
     // Test whether we are in a state in which we have already seen the given type.
     //
@@ -172,7 +173,7 @@ internal class FingerPrintingState(private val factory: SerializerFactory) {
             && (type !is TypeVariable<*>)
             && (type !is WildcardType)
 
-    private fun propertiesForSerialization(type: Type): List<PropertyAccessor> {
+    private fun orderedPropertiesForSerialization(type: Type): List<PropertyAccessor> {
         return propertiesForSerialization(
                 if (type.asClass().isConcreteClass) constructorForDeserialization(type) else null,
                 currentContext ?: type,
