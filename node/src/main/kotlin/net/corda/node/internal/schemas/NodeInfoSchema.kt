@@ -19,6 +19,8 @@ object NodeInfoSchemaV1 : MappedSchema(
         version = 1,
         mappedTypes = listOf(PersistentNodeInfo::class.java, DBPartyAndCertificate::class.java, DBHostAndPort::class.java, NodePropertiesPersistentStore.DBNodeProperty::class.java)
 ) {
+    override val migrationResource = "node-info.changelog-master"
+
     @Entity
     @Table(name = "node_infos")
     class PersistentNodeInfo(

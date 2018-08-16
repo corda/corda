@@ -16,6 +16,8 @@ import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
 import org.hibernate.annotations.Type
+import java.sql.Connection
+import java.sql.SQLException
 
 /**
  * Simple checkpoint key value storage in DB.
@@ -63,7 +65,7 @@ class DBCheckpointStorage : CheckpointStorage {
 
     override fun getCheckpoint(id: StateMachineRunId): SerializedBytes<Checkpoint>? {
         val bytes = currentDBSession().get(DBCheckpoint::class.java, id.uuid.toString())?.checkpoint ?: return null
-        return SerializedBytes<Checkpoint>(bytes)
+        return SerializedBytes(bytes)
     }
 
     override fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, SerializedBytes<Checkpoint>>> {
@@ -75,4 +77,18 @@ class DBCheckpointStorage : CheckpointStorage {
             StateMachineRunId(UUID.fromString(it.checkpointId)) to SerializedBytes<Checkpoint>(it.checkpoint)
         }
     }
+
+    override fun getCheckpointCount(connection: Connection): Long =
+        try {
+            connection.prepareStatement("select count(*) from node_checkpoints").use { ps ->
+                ps.executeQuery().use { rs ->
+                    rs.next()
+                    rs.getLong(1)
+                }
+            }
+        } catch (e: SQLException) {
+            // Happens when the table was not created yet.
+            0L
+        }
+
 }

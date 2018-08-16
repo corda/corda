@@ -1,0 +1,27 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<!--
+  ~ R3 Proprietary and Confidential
+  ~
+  ~ Copyright (c) 2018 R3 Limited.  All rights reserved.
+  ~
+  ~ The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+  ~
+  ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+  -->
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="R3.Corda" id="1525962920">
+        <addNotNullConstraint tableName="node_infos" columnName="node_info_hash" columnDataType="NVARCHAR(64)"/>
+        <addNotNullConstraint tableName="node_infos" columnName="platform_version" columnDataType="INT"/>
+        <addNotNullConstraint tableName="node_infos" columnName="serial" columnDataType="BIGINT"/>
+
+        <dropNotNullConstraint tableName="node_info_hosts" columnName="host" columnDataType="NVARCHAR(255)" />
+        <dropNotNullConstraint tableName="node_info_hosts" columnName="port" columnDataType="INT" />
+
+        <addNotNullConstraint tableName="node_info_party_cert" columnName="owning_key_hash" columnDataType="NVARCHAR(130)"/>
+        <addNotNullConstraint tableName="node_info_party_cert" columnName="party_cert_binary" columnDataType="blob"/>
+    </changeSet>
+</databaseChangeLog>

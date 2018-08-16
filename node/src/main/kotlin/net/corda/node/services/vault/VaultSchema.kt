@@ -26,6 +26,9 @@ object VaultSchema
 @CordaSerializable
 object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, version = 1,
         mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java, VaultTxnNote::class.java)) {
+
+    override val migrationResource = "vault-schema.changelog-master"
+
     @Entity
     @Table(name = "vault_states", indexes = [Index(name = "state_status_idx", columnList = "state_status"), Index(name = "lock_id_idx", columnList = "lock_id, state_status")])
     class VaultStates(
