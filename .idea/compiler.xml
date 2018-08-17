@@ -267,6 +267,7 @@
       <module name="shell_test" target="1.8" />
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
+      <module name="simm-valuation-demo_scenario" target="1.8" />
       <module name="simm-valuation-demo_scenarioTest" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
       <module name="smoke-test-utils_main" target="1.8" />

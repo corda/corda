@@ -10,13 +10,18 @@
 
 package net.corda.node.services.config
 
+import java.io.File
 import java.net.InetAddress
+import java.nio.file.Path
 
 data class EnterpriseConfiguration(
         val mutualExclusionConfiguration: MutualExclusionConfiguration,
         val useMultiThreadedSMM: Boolean = true,
         val tuning: PerformanceTuning = PerformanceTuning.default,
-        val externalBridge: Boolean? = null)
+        val externalBridge: Boolean? = null,
+        val enableCacheTracing: Boolean = false,
+        val traceTargetDirectory: Path = File(".").toPath()
+)
 
 data class MutualExclusionConfiguration(val on: Boolean = false,
                                         val machineName: String = defaultMachineName,
