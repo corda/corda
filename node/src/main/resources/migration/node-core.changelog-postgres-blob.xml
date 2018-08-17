@@ -16,7 +16,7 @@
 
         <dropColumn tableName="node_checkpoints" columnName="checkpoint_value"/>
         <addColumn tableName="node_checkpoints">
-            <column name="checkpoint_value" type="varbinary(33554432)">
+            <column name="checkpoint_value" type="bytea">
                 <constraints nullable="false"/>
             </column>
         </addColumn>

@@ -1016,12 +1016,7 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
 fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>) {
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties)
-        val schemaMigration = SchemaMigration(
-                schemas,
-                dataSource,
-                false,
-                databaseConfig
-        )
+        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig)
         schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         start(DataSourceFactory.createDataSource(hikariProperties))
     } catch (ex: Exception) {

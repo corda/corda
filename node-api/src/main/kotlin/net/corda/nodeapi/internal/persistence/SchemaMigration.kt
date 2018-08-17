@@ -29,7 +29,6 @@ import javax.sql.DataSource
 class SchemaMigration(
         val schemas: Set<MappedSchema>,
         val dataSource: DataSource,
-        val failOnMigrationMissing: Boolean,
         private val databaseConfig: DatabaseConfig,
         private val classLoader: ClassLoader = Thread.currentThread().contextClassLoader) {
 
@@ -47,7 +46,7 @@ class SchemaMigration(
                 migrateOlderDatabaseToUseLiquibase()
                 runMigration(existingCheckpoints)
             }
-            failOnMigrationMissing -> checkState()
+            else -> checkState()
         }
     }
 
@@ -91,11 +90,7 @@ class SchemaMigration(
                 val resource = getMigrationResource(mappedSchema, classLoader)
                 when {
                     resource != null -> resource
-                    failOnMigrationMissing -> throw MissingMigrationException(mappedSchema)
-                    else -> {
-                        logger.warn(MissingMigrationException.errorMessageFor(mappedSchema))
-                        null
-                    }
+                    else -> throw MissingMigrationException(mappedSchema)
                 }
             }
 
