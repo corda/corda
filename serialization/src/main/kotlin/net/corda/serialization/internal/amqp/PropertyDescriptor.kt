@@ -32,7 +32,7 @@ data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter
         getter?.apply {
             val getterType = genericReturnType
             field?.apply {
-                if (!TypeToken.of(getterType).isSupertypeOf(genericReturnType))
+                if (!getterType.isSupertypeOf(genericReturnType))
                     throw AMQPNotSerializableException(
                             declaringClass,
                             "Defined getter for parameter $name returns type $getterType " +
@@ -44,7 +44,7 @@ data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter
             val setterType = genericParameterTypes[0]!!
 
             field?.apply {
-                if (!TypeToken.of(genericType).isSupertypeOf(setterType))
+                if (!genericType.isSupertypeOf(setterType))
                     throw AMQPNotSerializableException(
                             declaringClass,
                             "Defined setter for parameter $name takes parameter of type $setterType " +
@@ -52,7 +52,7 @@ data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter
             }
 
             getter?.apply {
-                if (!TypeToken.of(genericReturnType).isSupertypeOf(setterType))
+                if (!genericReturnType.isSupertypeOf(setterType))
                     throw AMQPNotSerializableException(
                             declaringClass,
                             "Defined setter for parameter $name takes parameter of type $setterType, " +
@@ -61,6 +61,8 @@ data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter
         }
     }
 }
+
+private fun Type.isSupertypeOf(that: Type) = TypeToken.of(this).isSupertypeOf(that)
 
 // match an uppercase letter that also has a corresponding lower case equivalent
 private val propertyMethodRegex = Regex("(?<type>get|set|is)(?<var>\\p{Lu}.*)")
@@ -112,79 +114,85 @@ private fun Sequence<Method>.thatArePublic() = filter { it.isPublic && it.name !
 private fun Sequence<Method>.thatArePropertyMethods() = map { method ->
     propertyMethodRegex.find(method.name)?.let { result ->
         PropertyNamedMethod(
-                method,
                 result.groups[2]!!.value,
-                MethodClassifier.valueOf(result.groups[1]!!.value.toUpperCase()))
+                MethodClassifier.valueOf(result.groups[1]!!.value.toUpperCase()),
+                method)
     }
 }.filterNotNull()
 
 // Pick only those methods whose signatures are valid, discarding the remainder without warning.
 private fun Sequence<PropertyNamedMethod>.withValidSignature() = filter { it.hasValidSignature() }
 
-// Group methods by field name, decapitalising the name to match the name of the underlying field where available
-private fun Sequence<PropertyNamedMethod>.byFieldName(fieldNames: Set<String>) =
-        groupBy {
-            if (it.fieldName.decapitalize() in fieldNames) it.fieldName.decapitalize()
-            else it.fieldName
-        }
-
 // Group methods by name and classifier, picking the method with the least generic signature if there is more than one
 // of a given name and type.
 private fun Sequence<PropertyNamedMethod>.byNameAndClassifier(fieldNames: Set<String>) =
-        byFieldName(fieldNames).mapValues { it.value.leastGenericByClassifier() }
+        groupingBy { element -> getPropertyName(element, fieldNames) }
+        .fold(
+                // Put the first method into a map of methods by classifier
+                { _, (_, classifier, method) -> mutableMapOf(classifier to method) },
+                // Merge subsequent methods into the map
+                { _, collected, (_, classifier, method) ->
+                    mergeClassifiedMethodInto(collected, classifier, method)
+                })
 
-private fun List<PropertyNamedMethod>.leastGenericByClassifier() =
-        groupBy(PropertyNamedMethod::classifier, PropertyNamedMethod::method)
-                .pickLeastGeneric()
+private fun mergeClassifiedMethodInto(collected: MutableMap<MethodClassifier, Method>,
+                                      classifier: MethodClassifier, method: Method) =
+        collected.apply {
+            compute(classifier) { _, existingMethod -> pickMethod(existingMethod, method, classifier) }
+        }
+
+private fun pickMethod(existingMethod: Method?, method: Method, classifier: MethodClassifier): Method? {
+    return if (existingMethod == null) method
+    else when (classifier) {
+        IS -> existingMethod
+        GET -> leastGenericBy({ genericReturnType }, existingMethod, method)
+        SET -> leastGenericBy({ genericParameterTypes[0] }, existingMethod, method)
+    }
+}
+
+// Make the property name conform to the underlying field name, if there is one.
+private fun getPropertyName(element: PropertyNamedMethod, fieldNames: Set<String>) =
+        if (element.fieldName.decapitalize() in fieldNames) element.fieldName.decapitalize()
+        else element.fieldName
+
 
 // Which of the three types of property method the method is.
 private enum class MethodClassifier { GET, SET, IS }
 
-private data class PropertyNamedMethod(val method: Method, val fieldName: String, val classifier: MethodClassifier) {
+private data class PropertyNamedMethod(val fieldName: String, val classifier: MethodClassifier, val method: Method) {
     // Validate the method's signature against its classifier
-    fun hasValidSignature(): Boolean = when (classifier) {
-        GET -> method.parameterCount == 0 && method.returnType != Void.TYPE
-        SET -> method.parameterCount == 1 && method.returnType == Void.TYPE
-        IS -> method.parameterCount == 0 &&
-                (method.returnType == Boolean::class.java ||
-                        method.returnType == Boolean::class.javaObjectType)
+    fun hasValidSignature(): Boolean = method.run {
+        when (classifier) {
+            GET -> parameterCount == 0 && returnType != Void.TYPE
+            SET -> parameterCount == 1 && returnType == Void.TYPE
+            IS -> parameterCount == 0 &&
+                    (returnType == Boolean::class.java ||
+                            returnType == Boolean::class.javaObjectType)
+        }
     }
 }
 
-private fun Map<MethodClassifier, Method>.setter() = this[SET]
-private fun Map<MethodClassifier, Method>.getter() = this[GET] ?: this[IS]
-
 // Construct a map of PropertyDescriptors by name, by merging the raw field map with the map of classified property methods
-private fun Map<String, Map<MethodClassifier, Method>>.toClassProperties(fieldMap: Map<String, Field>): Map<String, PropertyDescriptor> =
+private fun Map<String, Map<MethodClassifier, Method>>.toClassProperties(fieldMap: Map<String, Field>) =
         fieldMap.getFieldsWithoutAccessors(keys) +
-                mapValues {
+                mapValues { (name, methods) ->
                     PropertyDescriptor(
-                            fieldMap[it.key],
-                            it.value.setter(),
-                            it.value.getter()
+                            fieldMap[name],
+                            methods[SET],
+                            methods[GET] ?: methods[IS]
                     )
                 }
 
 // Get only those fields in the field map for which we do not have accessor methods
 private fun Map<String, Field>.getFieldsWithoutAccessors(accessorNames: Set<String>) =
         filterKeys { it !in accessorNames }
-                .mapValues { PropertyDescriptor(it.value, null, null) }
-
-// Select the least generic from a list of methods having the same field classifier
-private fun Map<MethodClassifier, List<Method>>.pickLeastGeneric() = mapValues {
-    when (it.key) {
-        IS -> it.value.first()
-        GET -> it.value.reduce(leastGenericBy { genericReturnType })
-        SET -> it.value.reduce(leastGenericBy { genericParameterTypes[0] })
-    }
-}
+                .mapValues { (_, value) -> PropertyDescriptor(value, null, null) }
 
 // Select the least generic of two methods by a type associated with each.
-private fun leastGenericBy(feature: Method.() -> Type): (Method, Method) -> Method = { left, right ->
-    if (TypeToken.of(left.feature()).isSupertypeOf(right.feature())) right else left
-}
+private fun leastGenericBy(feature: Method.() -> Type, first: Method, second: Method) =
+        if (first.feature().isSupertypeOf(second.feature())) second else first
 
 // Throw an exception if any property descriptor is inconsistent, e.g. the types don't match
 private fun Map<String, PropertyDescriptor>.validated() = apply {
-    forEach { it.value.validate() }
+    forEach { _, value -> value.validate() }
 }
