@@ -486,6 +486,20 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             }
         }
 
+        // state relevance.
+        if (criteria.isModifiable != Vault.StateModificationStatus.ALL) {
+            val predicateID = Pair(VaultSchemaV1.VaultStates::isModifiable.name, EqualityComparisonOperator.EQUAL)
+            if (commonPredicates.containsKey(predicateID)) {
+                val existingStatus = ((commonPredicates[predicateID] as ComparisonPredicate).rightHandOperand as LiteralExpression).literal
+                if (existingStatus != criteria.isModifiable) {
+                    log.warn("Overriding previous attribute [${VaultSchemaV1.VaultStates::isModifiable.name}] value $existingStatus with ${criteria.status}")
+                    commonPredicates.replace(predicateID, criteriaBuilder.equal(vaultStates.get<Vault.StateModificationStatus>(VaultSchemaV1.VaultStates::isModifiable.name), criteria.isModifiable))
+                }
+            } else {
+                commonPredicates[predicateID] = criteriaBuilder.equal(vaultStates.get<Vault.StateModificationStatus>(VaultSchemaV1.VaultStates::isModifiable.name), criteria.isModifiable)
+            }
+        }
+
         // contract state types
         val contractStateTypes = deriveContractStateTypes(criteria.contractStateTypes)
         if (contractStateTypes.isNotEmpty()) {

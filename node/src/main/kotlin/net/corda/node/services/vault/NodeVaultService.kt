@@ -18,7 +18,10 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.*
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -104,13 +107,37 @@ class NodeVaultService(
 
             val session = currentDBSession()
             producedStateRefsMap.forEach { stateAndRef ->
-                val state = VaultSchemaV1.VaultStates(
+                val stateOnly = stateAndRef.value.state.data
+                // TODO: Optimise this.
+                //
+                // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
+                // node. The behaviour is as follows:
+                //
+                // 1) All vault updates marked as MODIFIABLE will, of, course all have isModifiable = true.
+                // 2) For ALL_VISIBLE updates, those which are not modifiable will have isModifiable = false.
+                //
+                // This is useful when it comes to querying for fungible states, when we do not want non-modifiable states
+                // included in the result.
+                //
+                // The same functionality could be obtained by passing in a list of participants to the vault query,
+                // however this:
+                //
+                // * requires a join on the participants table which results in slow queries
+                // * states may flip from being non-modifiable to modifiable
+                // * it's more complicated for CorDapp developers
+                //
+                // Adding a new column in the "VaultStates" table was considered the best approach.
+                val keys = stateOnly.participants.map { it.owningKey }
+                val isModifiable = isModifiable(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
+                val stateToAdd = VaultSchemaV1.VaultStates(
                         notary = stateAndRef.value.state.notary,
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
-                        recordedTime = clock.instant())
-                state.stateRef = PersistentStateRef(stateAndRef.key)
-                session.save(state)
+                        recordedTime = clock.instant(),
+                        isModifiable = if (isModifiable) Vault.StateModificationStatus.MODIFIABLE else Vault.StateModificationStatus.NOT_MODIFIABLE
+                )
+                stateToAdd.stateRef = PersistentStateRef(stateAndRef.key)
+                session.save(stateToAdd)
             }
             consumedStateRefs.forEach { stateRef ->
                 val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
@@ -161,7 +188,7 @@ class NodeVaultService(
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
                 StatesToRecord.ONLY_RELEVANT -> tx.outputs.withIndex().filter {
-                    isRelevant(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet())
+                    isModifiable(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet())
                 }
                 StatesToRecord.ALL_VISIBLE -> tx.outputs.withIndex()
             }.map { tx.outRef<ContractState>(it.index) }
@@ -190,7 +217,7 @@ class NodeVaultService(
             val myKeys by lazy { keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } }) }
             val (consumedStateAndRefs, producedStates) = ltx.inputs.zip(ltx.outputs).filter { (_, output) ->
                 if (statesToRecord == StatesToRecord.ONLY_RELEVANT) {
-                    isRelevant(output.data, myKeys.toSet())
+                    isModifiable(output.data, myKeys.toSet())
                 } else {
                     true
                 }
@@ -368,12 +395,15 @@ class NodeVaultService(
             return emptyList()
         }
 
-        // Enrich QueryCriteria with additional default attributes (such as soft locks)
+        // Enrich QueryCriteria with additional default attributes (such as soft locks).
+        // We only want to return MODIFIABLE states here.
         val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
         val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
         val enrichedCriteria = QueryCriteria.VaultQueryCriteria(
                 contractStateTypes = setOf(contractStateType),
-                softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)))
+                softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)),
+                isModifiable = Vault.StateModificationStatus.MODIFIABLE
+        )
         val results = queryBy(contractStateType, enrichedCriteria.and(eligibleStatesQuery), sorter)
 
         var claimedAmount = 0L
@@ -396,9 +426,11 @@ class NodeVaultService(
     }
 
     @VisibleForTesting
-    internal fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
+    internal fun isModifiable(state: ContractState, myKeys: Set<PublicKey>): Boolean {
         val keysToCheck = when (state) {
-            is OwnableState -> listOf(state.owner.owningKey)
+        // Sometimes developers forget to add the owning key to participants for OwnableStates.
+        // TODO: This logic should probably be moved to OwnableState so we can just do a simple intersection here.
+            is OwnableState -> (state.participants.map { it.owningKey } + state.owner.owningKey).toSet()
             else -> state.participants.map { it.owningKey }
         }
         return keysToCheck.any { it in myKeys }
@@ -477,7 +509,8 @@ class NodeVaultService(
                                     vaultState.stateStatus,
                                     vaultState.notary,
                                     vaultState.lockId,
-                                    vaultState.lockUpdateTime))
+                                    vaultState.lockUpdateTime,
+                                    vaultState.isModifiable))
                         } else {
                             // TODO: improve typing of returned other results
                             log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
