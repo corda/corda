@@ -1022,7 +1022,6 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
                 false,
                 databaseConfig
         )
-        schemaMigration.migrateDbWithoutLiquibase()
         schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         start(DataSourceFactory.createDataSource(hikariProperties))
     } catch (ex: Exception) {

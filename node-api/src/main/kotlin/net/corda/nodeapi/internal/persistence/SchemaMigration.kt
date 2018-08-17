@@ -43,7 +43,10 @@ class SchemaMigration(
      */
     fun nodeStartup(existingCheckpoints: Boolean) {
         when {
-            databaseConfig.initialiseSchema -> runMigration(existingCheckpoints)
+            databaseConfig.initialiseSchema -> {
+                migrateOlderDatabaseToUseLiquibase()
+                runMigration(existingCheckpoints)
+            }
             failOnMigrationMissing -> checkState()
         }
     }
@@ -59,7 +62,7 @@ class SchemaMigration(
     fun checkState() = doRunMigration(run = false, outputWriter = null, check = true)
 
     /**  Create a resourse accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
-    private class CustomResourceAccessor(val dynamicInclude: String, val  changelogList: List<String?>, val classLoader: ClassLoader ): ClassLoaderResourceAccessor(classLoader) {
+    private class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) : ClassLoaderResourceAccessor(classLoader) {
         override fun getResourcesAsStream(path: String): Set<InputStream> {
             if (path == dynamicInclude) {
                 // Create a map in Liquibase format including all migration files.
@@ -96,7 +99,7 @@ class SchemaMigration(
                 }
             }
 
-            val customResourceAccessor = CustomResourceAccessor( dynamicInclude, changelogList, classLoader)
+            val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
 
             val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
 
@@ -116,8 +119,9 @@ class SchemaMigration(
     private fun getLiquibaseDatabase(conn: JdbcConnection): Database {
         return DatabaseFactory.getInstance().findCorrectDatabaseImplementation(conn)
     }
+
     /** For existing database created before verions 4.0 add Liquibase support - creates DATABASECHANGELOG and DATABASECHANGELOGLOCK tables and mark changesets are executed. */
-    fun migrateDbWithoutLiquibase() : Boolean {
+    private fun migrateOlderDatabaseToUseLiquibase(): Boolean {
         val isExistingDBWithoutLiquibase = dataSource.connection.use {
             it.metaData.getTables(null, null, "NODE%", null).next() &&
                     !it.metaData.getTables(null, null, "DATABASECHANGELOG", null).next() &&
