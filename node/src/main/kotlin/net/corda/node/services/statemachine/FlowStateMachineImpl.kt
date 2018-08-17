@@ -188,7 +188,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     private fun checkDbTransaction(isPresent: Boolean) {
         if (isPresent) {
-            requireNotNull(contextTransactionOrNull)
+§            requireNotNull(contextTransactionOrNull) {
+                "Transaction context is missing. This might happen if a suspendable method is not annotated with @Suspendable annotation."
+            }
         } else {
             require(contextTransactionOrNull == null)
         }
