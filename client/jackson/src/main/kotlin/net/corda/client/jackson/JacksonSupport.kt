@@ -400,10 +400,10 @@ object JacksonSupport {
         }
     }
 
-    @Deprecated("This is an internal class, do not use")
+    @Deprecated("Do not use - Replaced by Corda's internal AmountDeserializer and TokenDeserializer classes")
     object AmountDeserializer : JsonDeserializer<Amount<*>>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): Amount<*> {
-            return if (parser.currentToken == JsonToken.VALUE_STRING) {
+            return if (parser.currentToken() == JsonToken.VALUE_STRING) {
                 Amount.parseCurrency(parser.text)
             } else {
                 val wrapper = parser.readValueAs<CurrencyAmountWrapper>()
