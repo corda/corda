@@ -45,11 +45,9 @@ class ArgsParser {
 
     fun parse(vararg args: String): CmdLineOptions {
         val optionSet = optionParser.parse(*args)
-        require(!optionSet.has(baseDirectoryArg) || !optionSet.has(configFileArg)) {
-            "${baseDirectoryArg.options()[0]} and ${configFileArg.options()[0]} cannot be specified together"
-        }
         val baseDirectory = Paths.get(optionSet.valueOf(baseDirectoryArg)).normalize().toAbsolutePath()
-        val configFile = baseDirectory / optionSet.valueOf(configFileArg)
+        val configFilePath = Paths.get(optionSet.valueOf(configFileArg))
+        val configFile = if (configFilePath.isAbsolute) configFilePath else baseDirectory / configFilePath.toString()
         val help = optionSet.has(helpArg)
         val loggingLevel = optionSet.valueOf(loggerLevel)
         val logToConsole = optionSet.has(logToConsoleArg)
