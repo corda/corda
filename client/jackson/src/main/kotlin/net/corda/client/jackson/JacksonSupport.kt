@@ -413,8 +413,7 @@ object JacksonSupport {
         }
     }
 
-    @Deprecated("No longer used",
-            replaceWith = ReplaceWith("Corda's internal AmountDeserializer and TokenDeserializer classes"))
+    @Deprecated("Do not use - Replaced by Corda's internal AmountDeserializer and TokenDeserializer classes")
     object AmountDeserializer : JsonDeserializer<Amount<*>>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): Amount<*> {
             return if (parser.currentToken() == JsonToken.VALUE_STRING) {
