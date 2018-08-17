@@ -95,10 +95,14 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     @Test
     fun `Amount(Currency) deserialization`() {
         val old = mapOf(
-                "quantity" to 2500000000,
-                "token" to "USD"
+            "quantity" to 2500000000,
+            "token" to "USD"
         )
         assertThat(mapper.convertValue<Amount<Currency>>(old)).isEqualTo(Amount(2_500_000_000, USD))
+    }
+
+    @Test
+    fun `Amount(Currency) Text deserialization`() {
         assertThat(mapper.convertValue<Amount<Currency>>(TextNode("$25000000"))).isEqualTo(Amount(2_500_000_000, USD))
     }
 

@@ -2,10 +2,9 @@
 
 package net.corda.client.jackson.internal
 
-import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.*
+import com.fasterxml.jackson.annotation.JsonCreator.Mode.*
 import com.fasterxml.jackson.annotation.JsonInclude.Include
-import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.annotation.JsonValue
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.JsonParser
@@ -13,6 +12,9 @@ import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
+import com.fasterxml.jackson.databind.deser.ContextualDeserializer
+import com.fasterxml.jackson.databind.deser.std.DelegatingDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.node.IntNode
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -40,15 +42,18 @@ import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.constructorForDeserialization
 import net.corda.serialization.internal.amqp.hasCordaSerializable
 import net.corda.serialization.internal.amqp.propertiesForSerialization
+import java.math.BigDecimal
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.time.Instant
+import java.util.*
 
 class CordaModule : SimpleModule("corda-core") {
     override fun setupModule(context: SetupContext) {
         super.setupModule(context)
 
         context.addBeanSerializerModifier(CordaSerializableBeanSerializerModifier())
+        context.addBeanDeserializerModifier(AmountBeanDeserializerModifier())
 
         context.setMixInAnnotations(PartyAndCertificate::class.java, PartyAndCertificateMixin::class.java)
         context.setMixInAnnotations(NetworkHostAndPort::class.java, NetworkHostAndPortMixin::class.java)
@@ -407,9 +412,78 @@ private interface SecureHashSHA256Mixin
 @JsonDeserialize(using = JacksonSupport.PublicKeyDeserializer::class)
 private interface PublicKeyMixin
 
+@Suppress("unused_parameter")
 @ToStringSerialize
-@JsonDeserialize(using = JacksonSupport.AmountDeserializer::class)
-private interface AmountMixin
+private abstract class AmountMixin @JsonCreator(mode = DISABLED) constructor(
+    quantity: Long,
+    displayTokenSize: BigDecimal,
+    token: Any
+) {
+    /**
+     * This mirrors the [Amount] constructor that we want Jackson to use, and
+     * requires that we also tell Jackson NOT to use [Amount]'s primary constructor.
+     */
+    @JsonCreator constructor(
+        @JsonProperty("quantity")
+        quantity: Long,
+
+        @JsonDeserialize(using = TokenDeserializer::class)
+        @JsonProperty("token")
+        token: Any
+    ) : this(quantity, Amount.getDisplayTokenSize(token), token)
+}
+
+/**
+ * Implements polymorphic deserialization for [Amount.token]. Kotlin must
+ * be able to determine the concrete [Amount] type at runtime, or it will
+ * fall back to using [Currency].
+ */
+private class TokenDeserializer(private val tokenType: Class<*>) : JsonDeserializer<Any>(), ContextualDeserializer {
+    @Suppress("unused")
+    constructor() : this(Currency::class.java)
+
+    override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): Any = parser.readValueAs(tokenType)
+
+    override fun createContextual(ctxt: DeserializationContext, property: BeanProperty?): TokenDeserializer {
+        if (property == null) return this
+        return TokenDeserializer(property.type.rawClass.let { type ->
+            if (type == Any::class.java) Currency::class.java else type
+        })
+    }
+}
+
+/**
+ * Intercepts bean-based deserialization for the generic [Amount] type.
+ */
+private class AmountBeanDeserializerModifier : BeanDeserializerModifier() {
+    override fun modifyDeserializer(config: DeserializationConfig, description: BeanDescription, deserializer: JsonDeserializer<*>): JsonDeserializer<*> {
+        val modified = super.modifyDeserializer(config, description, deserializer)
+        return if (Amount::class.java.isAssignableFrom(description.beanClass)) {
+            AmountDeserializer(modified)
+        } else {
+            modified
+        }
+    }
+}
+
+private class AmountDeserializer(delegate: JsonDeserializer<*>) : DelegatingDeserializer(delegate) {
+    override fun newDelegatingInstance(newDelegatee: JsonDeserializer<*>) = AmountDeserializer(newDelegatee)
+
+    override fun deserialize(parser: JsonParser, context: DeserializationContext?): Any {
+        return if (parser.currentToken() == JsonToken.VALUE_STRING) {
+            /*
+             * This is obviously specific to Amount<Currency>, and is here to
+             * preserve the original deserializing behaviour for this case.
+             */
+            Amount.parseCurrency(parser.text)
+        } else {
+            /*
+             * Otherwise continue deserializing our Bean as usual.
+             */
+            _delegatee.deserialize(parser, context)
+        }
+    }
+}
 
 @JsonDeserialize(using = JacksonSupport.OpaqueBytesDeserializer::class)
 private interface ByteSequenceMixin {
