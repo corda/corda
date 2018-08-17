@@ -1,27 +1,52 @@
-Client RPC
-==========
+.. highlight:: kotlin
+.. raw:: html
+
+   <script type="text/javascript" src="_static/jquery.js"></script>
+   <script type="text/javascript" src="_static/codesets.js"></script>
+
+Interacting with a node
+=======================
 
 .. contents::
 
 Overview
 --------
-Corda provides a client library that allows you to easily write clients in a JVM-compatible language to interact
-with a running node. The library connects to the node using a message queue protocol and then provides a simple RPC
-interface to interact with the node. You make calls on a Java object as normal, and the marshalling back and forth is
-handled for you.
+You should interact with your node using the `CordaRPCClient`_ library. This library that allows you to easily
+write clients in a JVM-compatible language to interact with a running node. The library connects to the node using a
+message queue protocol and then provides a simple RPC interface to interact with the node. You make calls on a JVM
+object as normal, and the marshalling back and forth is handled for you.
 
-The starting point for the client library is the `CordaRPCClient`_ class. `CordaRPCClient`_ provides a ``start`` method
-that returns a `CordaRPCConnection`_. A `CordaRPCConnection`_ allows you to access an implementation of the
-`CordaRPCOps`_ interface with ``proxy`` in Kotlin or ``getProxy()`` in Java. The observables that are returned by RPC
-operations can be subscribed to in order to receive an ongoing stream of updates from the node. More detail on this
-functionality is provided in the docs for the ``proxy`` method.
+.. warning:: The built-in Corda webserver is deprecated and unsuitable for production use. If you want to interact with
+   your node via HTTP, you will need to stand up your own webserver, then create an RPC connection between your node
+   and this webserver using the `CordaRPCClient`_ library. You can find an example of how to do this
+   `here <https://github.com/corda/spring-webserver>`_.
+
+Connecting to a node via RPC
+----------------------------
+`CordaRPCClient`_ provides a ``start`` method that takes the node's RPC address and returns a `CordaRPCConnection`_.
+`CordaRPCConnection`_ provides a ``proxy`` method that takes an RPC username and password and returns a `CordaRPCOps`_
+object that you can use to interact with the node.
+
+Here is an example of using `CordaRPCClient`_ to connect to a node and log the current time on its internal clock:
+
+.. container:: codeset
+
+   .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcExample.kt
+      :language: kotlin
+      :start-after: START 1
+      :end-before: END 1
+
+   .. literalinclude:: example-code/src/main/java/net/corda/docs/ClientRpcExampleJava.java
+      :language: java
+      :start-after: START 1
+      :end-before: END 1
 
 .. warning:: The returned `CordaRPCConnection`_ is somewhat expensive to create and consumes a small amount of
    server side resources. When you're done with it, call ``close`` on it. Alternatively you may use the ``use``
    method on `CordaRPCClient`_ which cleans up automatically after the passed in lambda finishes. Don't create
    a new proxy for every call you make - reuse an existing one.
 
-For a brief tutorial on using the RPC API, see :doc:`tutorial-clientrpc-api`.
+For further information on using the RPC API, see :doc:`tutorial-clientrpc-api`.
 
 RPC permissions
 ---------------
@@ -276,7 +301,7 @@ will be freed automatically.
    is non-deterministic.
 
 .. note:: Observables can only be used as return arguments of an RPC call. It is not currently possible to pass
-Observables as parameters to the RPC methods.
+   Observables as parameters to the RPC methods.
 
 Futures
 -------
@@ -306,7 +331,7 @@ side as if it was thrown from inside the called RPC method. These exceptions can
 
 Connection management
 ---------------------
-It is possible to not be able to connect to the server on the first attempt. In that case, the ``CordaRPCCLient.start()``
+It is possible to not be able to connect to the server on the first attempt. In that case, the ``CordaRPCClient.start()``
 method will throw an exception. The following code snippet is an example of how to write a simple retry mechanism for
 such situations:
 

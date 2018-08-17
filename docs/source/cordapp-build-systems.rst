@@ -1,5 +1,5 @@
-Building a CorDapp
-==================
+Building and installing a CorDapp
+=================================
 
 .. contents::
 
