@@ -14,22 +14,22 @@ import net.corda.testing.node.User
 import org.junit.Test
 import java.nio.file.Path
 import java.sql.DriverManager
-import kotlin.test.assertFailsWith
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class FailNodeOnNotMigratedAttachmentContractsTableNameTests {
+class MigrateIncompatibleDatabaseTableOrColumnNameTests {
     @Test
-    fun `node fails when detecting table name not migrated from version 3 dot 0`() {
-        `node fails when not detecting compatible table name`("NODE_ATTACHMENTS_CONTRACTS", "NODE_ATTACHMENTS_CONTRACT_CLASS_NAME")
+    fun `node migrates node_attachemnts_contranst_class_name table name from version 3 dot 0`() {
+        `node fixes incompatible table name`("NODE_ATTACHMENTS_CONTRACTS", "NODE_ATTACHMENTS_CONTRACT_CLASS_NAME")
     }
 
     @Test
-    fun `node fails when detecting table name not migrated from version 3 dot 1`() {
-        `node fails when not detecting compatible table name`("NODE_ATTACHMENTS_CONTRACTS", "NODE_ATTCHMENTS_CONTRACTS")
+    fun `node migrates node_attchemnts_contransts table name from version 3 dot 1`() {
+        `node fixes incompatible table name`("NODE_ATTACHMENTS_CONTRACTS", "NODE_ATTCHMENTS_CONTRACTS")
     }
 
-    private fun `node fails when not detecting compatible table name`(tableNameFromMapping: String, tableNameInDB: String) {
+    private fun `node fixes incompatible table name`(tableNameFromMapping: String, tableNameInDB: String) {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlow>(), Permissions.invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
         val baseDir: Path = driver(DriverParameters(
@@ -50,21 +50,23 @@ class FailNodeOnNotMigratedAttachmentContractsTableNameTests {
             // replace the correct table name with one from the former release
             DriverManager.getConnection("jdbc:h2:file://$baseDir/persistence", "sa", "").use {
                 it.createStatement().execute("ALTER TABLE $tableNameFromMapping RENAME TO $tableNameInDB")
+                it.createStatement().execute("DROP TABLE DATABASECHANGELOGLOCK")
+                it.createStatement().execute("DROP TABLE DATABASECHANGELOG")
                 it.commit()
             }
-            assertFailsWith(net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException::class) {
-                val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
-                nodeHandle.stop()
-            }
-             baseDir
+
+            startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
+            baseDir
         }
 
-        // check that the node didn't recreated the correct table matching it's entity mapping
-        val (hasTableFromMapping, hasTableFromDB) = DriverManager.getConnection("jdbc:h2:file://$baseDir/persistence", "sa", "").use {
-            Pair(it.metaData.getTables(null, null, tableNameFromMapping, null).next(),
-                    it.metaData.getTables(null, null, tableNameInDB, null).next())
+        // check that the node did recreated the correct table matching it's entity mapping
+        DriverManager.getConnection("jdbc:h2:file://$baseDir/persistence", "sa", "").use {
+            assertTrue(it.metaData.getTables(null, null, tableNameFromMapping, null).next())
+            assertFalse(it.metaData.getTables(null, null, tableNameInDB, null).next())
+            it.createStatement().executeQuery("SELECT COUNT(*) FROM $tableNameFromMapping").use {
+                assertTrue(it.next())
+                assertEquals(1, it.getInt(1))
+            }
         }
-        assertFalse(hasTableFromMapping)
-        assertTrue(hasTableFromDB)
     }
 }

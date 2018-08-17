@@ -20,5 +20,6 @@
     <include file="migration/node-core.changelog-v5.xml"/>
     <include file="migration/node-core.changelog-pkey.xml"/>
     <include file="migration/node-core.changelog-postgres-blob.xml"/>
+    <include file="migration/node-core.changelog-v8.xml"/>
 
 </databaseChangeLog>

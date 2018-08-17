@@ -17,7 +17,6 @@ import liquibase.Liquibase
 import liquibase.database.Database
 import liquibase.database.DatabaseFactory
 import liquibase.database.jvm.JdbcConnection
-import liquibase.lockservice.LockServiceFactory
 import liquibase.resource.ClassLoaderResourceAccessor
 import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.core.schemas.MappedSchema
@@ -59,12 +58,20 @@ class SchemaMigration(
      */
     fun checkState() = doRunMigration(run = false, outputWriter = null, check = true)
 
-    /**
-     * Can be used from an external tool to release the lock in case something went terribly wrong.
-     */
-    fun forceReleaseMigrationLock() {
-        dataSource.connection.use { connection ->
-            LockServiceFactory.getInstance().getLockService(getLiquibaseDatabase(JdbcConnection(connection))).forceReleaseLock()
+    /**  Create a resourse accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
+    private class CustomResourceAccessor(val dynamicInclude: String, val  changelogList: List<String?>, val classLoader: ClassLoader ): ClassLoaderResourceAccessor(classLoader) {
+        override fun getResourcesAsStream(path: String): Set<InputStream> {
+            if (path == dynamicInclude) {
+                // Create a map in Liquibase format including all migration files.
+                val includeAllFiles = mapOf("databaseChangeLog" to changelogList.filter { it != null }.map { file -> mapOf("include" to mapOf("file" to file)) })
+
+                // Transform it to json.
+                val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
+
+                // Return the json as a stream.
+                return setOf(ByteArrayInputStream(includeAllFilesJson))
+            }
+            return super.getResourcesAsStream(path)?.take(1)?.toSet() ?: emptySet()
         }
     }
 
@@ -89,23 +96,7 @@ class SchemaMigration(
                 }
             }
 
-            // Create a resourse accessor that aggregates the changelogs included in the schemas into one dynamic stream.
-            val customResourceAccessor = object : ClassLoaderResourceAccessor(classLoader) {
-                override fun getResourcesAsStream(path: String): Set<InputStream> {
-
-                    if (path == dynamicInclude) {
-                        // Create a map in Liquibase format including all migration files.
-                        val includeAllFiles = mapOf("databaseChangeLog" to changelogList.filter { it != null }.map { file -> mapOf("include" to mapOf("file" to file)) })
-
-                        // Transform it to json.
-                        val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
-
-                        // Return the json as a stream.
-                        return setOf(ByteArrayInputStream(includeAllFilesJson))
-                    }
-                    return super.getResourcesAsStream(path)?.take(1)?.toSet() ?: emptySet()
-                }
-            }
+            val customResourceAccessor = CustomResourceAccessor( dynamicInclude, changelogList, classLoader)
 
             val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
 
@@ -124,6 +115,53 @@ class SchemaMigration(
 
     private fun getLiquibaseDatabase(conn: JdbcConnection): Database {
         return DatabaseFactory.getInstance().findCorrectDatabaseImplementation(conn)
+    }
+    /** For existing database created before verions 4.0 add Liquibase support - creates DATABASECHANGELOG and DATABASECHANGELOGLOCK tables and mark changesets are executed. */
+    fun migrateDbWithoutLiquibase() : Boolean {
+        val isExistingDBWithoutLiquibase = dataSource.connection.use {
+            it.metaData.getTables(null, null, "NODE%", null).next() &&
+                    !it.metaData.getTables(null, null, "DATABASECHANGELOG", null).next() &&
+                    !it.metaData.getTables(null, null, "DATABASECHANGELOGLOCK", null).next()
+        }
+        if (isExistingDBWithoutLiquibase) {
+            // Virtual file name of the changelog that includes all schemas.
+            val dynamicInclude = "master.changelog.json"
+
+            dataSource.connection.use { connection ->
+
+                // Schema migrations pre release 4.0
+                val preV4Baseline =
+                        listOf("migration/common.changelog-init.xml",
+                                "migration/node-info.changelog-init.xml",
+                                "migration/node-info.changelog-v1.xml",
+                                "migration/node-info.changelog-v2.xml",
+                                "migration/node-core.changelog-init.xml",
+                                "migration/node-core.changelog-v3.xml",
+                                "migration/node-core.changelog-v4.xml",
+                                "migration/node-core.changelog-v5.xml",
+                                "migration/node-core.changelog-pkey.xml",
+                                "migration/node-core.changelog-postgres-blob.xml",
+                                "migration/vault-schema.changelog-init.xml",
+                                "migration/vault-schema.changelog-v3.xml",
+                                "migration/vault-schema.changelog-v4.xml",
+                                "migration/vault-schema.changelog-pkey.xml",
+                                "migration/cash.changelog-init.xml",
+                                "migration/cash.changelog-v1.xml",
+                                "migration/commercial-paper.changelog-init.xml",
+                                "migration/commercial-paper.changelog-v1.xml") +
+                                if (schemas.any { schema -> schema.migrationResource != null && schema.migrationResource == "node-notary.changelog-master" })
+                                    listOf("migration/node-notary.changelog-init.xml",
+                                            "migration/node-notary.changelog-v1.xml",
+                                            "migration/vault-schema.changelog-pkey.xml")
+                                else emptyList()
+
+                val customResourceAccessor = CustomResourceAccessor(dynamicInclude, preV4Baseline, classLoader)
+
+                val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
+                liquibase.changeLogSync(Contexts(), LabelExpression())
+            }
+        }
+        return isExistingDBWithoutLiquibase
     }
 }
 

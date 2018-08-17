@@ -5,6 +5,15 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
 
     <changeSet author="R3.Corda" id="modify checkpoint_value column type" dbms="postgresql">
+
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <sqlCheck expectedResult="bytea">
+                    SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'node_checkpoints' AND COLUMN_NAME = 'checkpoint_value'
+                </sqlCheck>
+            </not>
+        </preConditions>
+
         <dropColumn tableName="node_checkpoints" columnName="checkpoint_value"/>
         <addColumn tableName="node_checkpoints">
             <column name="checkpoint_value" type="varbinary(33554432)">
