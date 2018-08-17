@@ -92,7 +92,7 @@ class NodeWithInfo(val node: Node, val info: NodeInfo) {
 open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 private val initialiseSerialization: Boolean = true,
-                cordappLoader: CordappLoader = makeCordappLoader(configuration)
+                cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo.platformVersion)
 ) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
@@ -134,8 +134,8 @@ open class Node(configuration: NodeConfiguration,
         }
 
         private val sameVmNodeCounter = AtomicInteger()
-        private fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
-            return JarScanningCordappLoader.fromDirectories(configuration.cordappDirectories)
+        private fun makeCordappLoader(configuration: NodeConfiguration, platformVersion: Int): CordappLoader {
+            return JarScanningCordappLoader.fromDirectories(configuration.cordappDirectories, platformVersion)
         }
         // TODO: make this configurable.
         const val MAX_RPC_MESSAGE_SIZE = 10485760

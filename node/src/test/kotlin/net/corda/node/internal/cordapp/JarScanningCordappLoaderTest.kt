@@ -107,6 +107,45 @@ class JarScanningCordappLoaderTest {
         loader.appClassLoader.loadClass(isolatedFlowName)
     }
 
+    @Test
+    fun `cordapp classloader does not load cordapps whose minPlatformVersion is greater than the node's platformVersion`() {
+        // load jar with large minVersion
+        // make sure the platform version is set to a smaller number
+    }
+
+    @Test
+    fun `cordapp classloader sets target and min version to 1 if not specified`() {
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/no-min-or-target-version.jar")!!
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar))
+        loader.cordapps.forEach {
+            assertThat(it.info.targetPlatformVersion).isEqualTo(1)
+            assertThat(it.info.minPlatformVersion).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun `cordapp classloader returns correct values for minPlatformVersion and targetVersion`() {
+        // load jar with min and target version in manifest
+        // make sure classloader extracts correct values
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar))
+        // exclude the core cordapp
+        val cordapp = loader.cordapps.filter { it.cordappClasses.contains("net.corda.core.internal.cordapp.CordappImpl")}.single()
+        assertThat(cordapp.info.targetPlatformVersion).isEqualTo(3)
+        assertThat(cordapp.info.minPlatformVersion).isEqualTo(2)
+    }
+
+    @Test
+    fun `cordapp classloader sets target version to min version if target version is not specified`() {
+        // load jar with minVersion but not targetVersion in manifest
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-no-target.jar")!!
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar))
+        // exclude the core cordapp
+        val cordapp = loader.cordapps.filter { it.cordappClasses.contains("net.corda.core.internal.cordapp.CordappImpl")}.single()
+        assertThat(cordapp.info.targetPlatformVersion).isEqualTo(2)
+        assertThat(cordapp.info.minPlatformVersion).isEqualTo(2)
+    }
+
     private fun cordappLoaderForPackages(packages: Iterable<String>): CordappLoader {
 
         val cordapps = cordappsForPackages(packages)
