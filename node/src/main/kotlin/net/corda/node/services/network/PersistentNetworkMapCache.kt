@@ -67,7 +67,15 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
 
     fun start(notaries: List<NotaryInfo>) {
         this.notaries = notaries
-        _nodeReady.set(null)
+        val otherNodeInfoCount = database.transaction {
+            session.createQuery(
+                    "select count(*) from ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n join n.legalIdentitiesAndCerts i where i.name != :myLegalName")
+                    .setParameter("myLegalName", myLegalName.toString())
+                    .singleResult as Long
+        }
+        if (otherNodeInfoCount > 0) {
+            _nodeReady.set(null)
+        }
     }
 
     override fun getNodeByHash(nodeHash: SecureHash): NodeInfo? {
