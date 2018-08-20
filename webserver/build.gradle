@@ -38,7 +38,7 @@ dependencies {
     compile "org.eclipse.jetty:jetty-servlet:$jetty_version"
     compile "org.eclipse.jetty:jetty-webapp:$jetty_version"
     compile "javax.servlet:javax.servlet-api:3.1.0"
-    compile "org.jolokia:jolokia-war:$jolokia_version"
+    compile "org.jolokia:jolokia-core:$jolokia_version"
     compile "commons-fileupload:commons-fileupload:$fileupload_version"
 
     // Log4J: logging framework (with SLF4J bindings)
