@@ -9,7 +9,6 @@ import net.corda.djvm.validation.RuleContext
 /**
  * Rule that checks for illegal references to reflection APIs.
  */
-@Suppress("unused")
 class DisallowReflection : InstructionRule() {
 
     override fun validate(context: RuleContext, instruction: Instruction) = context.validate {

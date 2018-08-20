@@ -12,7 +12,6 @@ import org.objectweb.asm.Opcodes.*
  * monitoring instructions to [POP]'s, as these replacements will remove the object references that [MONITORENTER] and
  * [MONITOREXIT] anticipate to be on the stack.
  */
-@Suppress("unused")
 class IgnoreSynchronizedBlocks : InstructionRule(), Emitter {
 
     override fun validate(context: RuleContext, instruction: Instruction) = context.validate {

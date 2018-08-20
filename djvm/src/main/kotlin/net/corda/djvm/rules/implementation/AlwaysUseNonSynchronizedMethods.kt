@@ -12,7 +12,6 @@ import java.lang.reflect.Modifier
 /**
  * Definition provider that ensures that all methods are non-synchronized in the sandbox.
  */
-@Suppress("unused")
 class AlwaysUseNonSynchronizedMethods : MemberRule(), MemberDefinitionProvider {
 
     override fun validate(context: RuleContext, member: Member) = context.validate {

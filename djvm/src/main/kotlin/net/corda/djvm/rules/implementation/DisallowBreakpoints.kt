@@ -8,7 +8,6 @@ import net.corda.djvm.validation.RuleContext
 /**
  * Rule that checks for invalid breakpoint instructions.
  */
-@Suppress("unused")
 class DisallowBreakpoints : InstructionRule() {
 
     override fun validate(context: RuleContext, instruction: Instruction) = context.validate {

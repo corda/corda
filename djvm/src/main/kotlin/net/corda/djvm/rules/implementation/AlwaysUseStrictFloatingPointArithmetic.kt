@@ -11,8 +11,9 @@ import java.lang.reflect.Modifier
 
 /**
  * Definition provider that ensures that all methods use strict floating-point arithmetic in the sandbox.
+ *
+ * Note: Future JVM releases may make this pass obsolete; https://bugs.openjdk.java.net/browse/JDK-8175916.
  */
-@Suppress("unused")
 class AlwaysUseStrictFloatingPointArithmetic : MemberRule(), MemberDefinitionProvider {
 
     override fun validate(context: RuleContext, member: Member) = context.validate {

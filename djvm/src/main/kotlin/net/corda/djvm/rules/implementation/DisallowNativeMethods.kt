@@ -8,7 +8,6 @@ import java.lang.reflect.Modifier
 /**
  * Rule that checks for invalid use of native methods.
  */
-@Suppress("unused")
 class DisallowNativeMethods : MemberRule() {
 
     override fun validate(context: RuleContext, member: Member) = context.validate {

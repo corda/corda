@@ -15,7 +15,6 @@ import java.lang.reflect.Modifier
  * Definition provider that ensures that all objects inherit from a sandboxed version of [java.lang.Object], with a
  * deterministic `hashCode()` method.
  */
-@Suppress("unused")
 class AlwaysInheritFromSandboxedObject : ClassDefinitionProvider, Emitter {
 
     override fun define(context: AnalysisRuntimeContext, clazz: ClassRepresentation) = when {

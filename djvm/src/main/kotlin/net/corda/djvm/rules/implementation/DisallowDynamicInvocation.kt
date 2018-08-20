@@ -8,7 +8,6 @@ import net.corda.djvm.validation.RuleContext
 /**
  * Rule that checks for invalid dynamic invocations.
  */
-@Suppress("unused")
 class DisallowDynamicInvocation : InstructionRule() {
 
     override fun validate(context: RuleContext, instruction: Instruction) = context.validate {

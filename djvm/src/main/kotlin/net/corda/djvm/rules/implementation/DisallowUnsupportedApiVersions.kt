@@ -8,7 +8,6 @@ import org.objectweb.asm.Opcodes.*
 /**
  * Rule that checks for classes compiled for unsupported API versions.
  */
-@Suppress("unused")
 class DisallowUnsupportedApiVersions : ClassRule() {
 
     override fun validate(context: RuleContext, clazz: ClassRepresentation) = context.validate {

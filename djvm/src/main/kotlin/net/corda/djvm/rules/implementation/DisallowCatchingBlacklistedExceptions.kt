@@ -14,7 +14,6 @@ import org.objectweb.asm.Label
  * Rule that checks for attempted catches of [ThreadDeath], [ThresholdViolationException], [StackOverflowError],
  * [OutOfMemoryError], [Error] or [Throwable].
  */
-@Suppress("unused")
 class DisallowCatchingBlacklistedExceptions : InstructionRule(), Emitter {
 
     override fun validate(context: RuleContext, instruction: Instruction) = context.validate {

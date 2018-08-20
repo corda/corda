@@ -7,7 +7,6 @@ import net.corda.djvm.validation.RuleContext
 /**
  * Disallow loading of classes that have been defined in the 'sandbox' root package.
  */
-@Suppress("unused")
 class DisallowOverriddenSandboxPackage : ClassRule() {
 
     override fun validate(context: RuleContext, clazz: ClassRepresentation) = context.validate {

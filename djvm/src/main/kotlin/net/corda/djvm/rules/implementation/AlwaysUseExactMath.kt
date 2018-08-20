@@ -7,8 +7,11 @@ import org.objectweb.asm.Opcodes.*
 
 /**
  * Use exact integer and long arithmetic where possible.
+ *
+ * Note: Strictly speaking, this rule is not a requirement for determinism, but we believe it helps make code more
+ * robust. The outcome of enabling this rule is that arithmetical overflows for addition and multiplication operations
+ * will be thrown instead of silenced.
  */
-@Suppress("unused")
 class AlwaysUseExactMath : Emitter {
 
     override fun emit(context: EmitterContext, instruction: Instruction) = context.emit {
