@@ -21,14 +21,6 @@
         <delete tableName="node_attachments"/>
     </changeSet>
 
-    <changeSet author="R3.Corda" id="add_version_column_to_mutual_exclusion_table">
-        <addColumn tableName="node_mutual_exclusion">
-            <column name="version" type="BIGINT">
-                <constraints nullable="false"/>
-            </column>
-        </addColumn>
-    </changeSet>
-
     <changeSet author="R3.Corda" id="add_dedup_columns">
         <addColumn tableName="node_message_ids">
             <column name="sender" type="NVARCHAR(64)"/>

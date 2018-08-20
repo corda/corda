@@ -116,17 +116,6 @@
             <column name="transaction_value" type="blob"/>
         </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="create mutual exclusion">
-        <createTable tableName="node_mutual_exclusion">
-            <column name="mutual_exclusion_id" type="NCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="MACHINE_NAME" type="NVARCHAR(255)"/>
-            <column name="PID" type="NVARCHAR(255)"/>
-            <column name="MUTUAL_EXCLUSION_TIMESTAMP" type="timestamp"/>
-        </createTable>
-        <addPrimaryKey columnNames="mutual_exclusion_id" constraintName="node_mutual_exclusion_pkey" tableName="node_mutual_exclusion"/>
-    </changeSet>
     <changeSet author="R3.Corda" id="1511451595465-30">
         <addPrimaryKey columnNames="att_id" constraintName="node_attachments_pkey" tableName="node_attachments"/>
     </changeSet>

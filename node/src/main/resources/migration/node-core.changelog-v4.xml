@@ -33,8 +33,5 @@
 
         <addNotNullConstraint tableName="node_transactions" columnName="transaction_value" columnDataType="blob"/>
 
-        <addNotNullConstraint tableName="node_mutual_exclusion" columnName="MACHINE_NAME" columnDataType="NVARCHAR(255)"/>
-        <addNotNullConstraint tableName="node_mutual_exclusion" columnName="PID" columnDataType="NVARCHAR(255)"/>
-        <addNotNullConstraint tableName="node_mutual_exclusion" columnName="MUTUAL_EXCLUSION_TIMESTAMP" columnDataType="timestamp"/>
     </changeSet>
 </databaseChangeLog>
