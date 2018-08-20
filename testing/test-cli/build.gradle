@@ -1,0 +1,17 @@
+apply plugin: 'java'
+apply plugin: 'kotlin'
+
+dependencies {
+    compile group: 'info.picocli', name: 'picocli', version: '3.0.1'
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compile group: "com.fasterxml.jackson.dataformat", name: "jackson-dataformat-yaml", version: "2.9.0"
+    compile group: "com.fasterxml.jackson.core", name: "jackson-databind", version: "2.9.0"
+    compile "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.+"
+    compile "junit:junit:$junit_version"
+
+}
+compileKotlin {
+    kotlinOptions {
+        languageVersion = "1.2"
+    }
+}

@@ -38,6 +38,8 @@ import net.corda.finance.utils.sumCash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.testing.contracts.DummyContract
+import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
@@ -61,7 +63,7 @@ import kotlin.test.assertTrue
 
 class NodeVaultServiceTest {
     private companion object {
-        val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+        val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName, "net.corda.testing.contracts")
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
         val bankOfCorda = TestIdentity(BOC_NAME)
@@ -536,17 +538,17 @@ class NodeVaultServiceTest {
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
         val wellKnownCash = Cash.State(amount, identity.party)
         val myKeys = services.keyManagementService.filterMyKeys(listOf(wellKnownCash.owner.owningKey))
-        assertTrue { service.isRelevant(wellKnownCash, myKeys.toSet()) }
+        assertTrue { service.isModifiable(wellKnownCash, myKeys.toSet()) }
 
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
         val anonymousCash = Cash.State(amount, anonymousIdentity.party)
         val anonymousKeys = services.keyManagementService.filterMyKeys(listOf(anonymousCash.owner.owningKey))
-        assertTrue { service.isRelevant(anonymousCash, anonymousKeys.toSet()) }
+        assertTrue { service.isModifiable(anonymousCash, anonymousKeys.toSet()) }
 
         val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
         val thirdPartyCash = Cash.State(amount, thirdPartyIdentity)
         val thirdPartyKeys = services.keyManagementService.filterMyKeys(listOf(thirdPartyCash.owner.owningKey))
-        assertFalse { service.isRelevant(thirdPartyCash, thirdPartyKeys.toSet()) }
+        assertFalse { service.isModifiable(thirdPartyCash, thirdPartyKeys.toSet()) }
     }
 
     // TODO: Unit test linear state relevancy checks
@@ -736,5 +738,44 @@ class NodeVaultServiceTest {
             vaultService.queryBy<Cash.State>().states.size
         }
         assertThat(recordedStates).isEqualTo(coins.size)
+    }
+
+    @Test
+    fun `test state relevance criteria`() {
+        fun createTx(number: Int, vararg participants: Party): SignedTransaction {
+            return services.signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).apply {
+                addOutputState(DummyState(number, participants.toList()), DummyContract.PROGRAM_ID)
+                addCommand(DummyCommandData, listOf(megaCorp.publicKey))
+            })
+        }
+
+        fun List<StateAndRef<DummyState>>.getNumbers() = map { it.state.data.magicNumber }.toSet()
+
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(1, megaCorp.party)))
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(2, miniCorp.party)))
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(3, miniCorp.party, megaCorp.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(4, miniCorp.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(5, bankOfCorda.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(6, megaCorp.party, bankOfCorda.party)))
+        services.recordTransactions(StatesToRecord.NONE, listOf(createTx(7, bankOfCorda.party)))
+
+        // Test one.
+        // StateModificationStatus is MODIFIABLE by default. This should return two states.
+        val resultOne = vaultService.queryBy<DummyState>().states.getNumbers()
+        assertEquals(setOf(1, 3, 4, 5, 6), resultOne)
+
+        // Test two.
+        // StateModificationStatus set to NOT_MODIFIABLE.
+        val criteriaTwo = VaultQueryCriteria(isModifiable = Vault.StateModificationStatus.NOT_MODIFIABLE)
+        val resultTwo = vaultService.queryBy<DummyState>(criteriaTwo).states.getNumbers()
+        assertEquals(setOf(4, 5), resultTwo)
+
+        // Test three.
+        // StateModificationStatus set to ALL.
+        val criteriaThree = VaultQueryCriteria(isModifiable = Vault.StateModificationStatus.MODIFIABLE)
+        val resultThree = vaultService.queryBy<DummyState>(criteriaThree).states.getNumbers()
+        assertEquals(setOf(1, 3, 6), resultThree)
+
+        // We should never see 2 or 7.
     }
 }

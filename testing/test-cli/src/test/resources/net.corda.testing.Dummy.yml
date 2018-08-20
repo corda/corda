@@ -1,0 +1,77 @@
+- commandName: "<main class>"
+  positionalParams:
+  - parameterName: "0"
+    parameterType: "java.net.InetAddress"
+    required: true
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "1"
+    parameterType: "int"
+    required: true
+    multiParam: false
+    acceptableValues: []
+  params:
+  - parameterName: "--directory"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "-d"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+    acceptableValues: []
+- commandName: "status"
+  positionalParams: []
+  params:
+  - parameterName: "--pattern"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "--style"
+    parameterType: "net.corda.testing.DummyEnum"
+    required: false
+    multiParam: false
+    acceptableValues:
+    - "FULL"
+    - "DIR"
+    - "FILE"
+    - "DISK"
+  - parameterName: "-p"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "-s"
+    parameterType: "net.corda.testing.DummyEnum"
+    required: false
+    multiParam: false
+    acceptableValues:
+    - "FULL"
+    - "DIR"
+    - "FILE"
+    - "DISK"
+- commandName: "ls"
+  positionalParams:
+  - parameterName: "0"
+    parameterType: "java.lang.String"
+    required: true
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "1"
+    parameterType: "int"
+    required: true
+    multiParam: false
+    acceptableValues: []
+  params:
+  - parameterName: "--depth"
+    parameterType: "java.lang.Integer"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "-d"
+    parameterType: "java.lang.Integer"
+    required: false
+    multiParam: false
+    acceptableValues: []

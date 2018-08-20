@@ -517,7 +517,8 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
      */
     @JvmOverloads
     fun runNetwork(rounds: Int = -1) {
-        check(!networkSendManuallyPumped)
+        check(!networkSendManuallyPumped) { "MockNetwork.runNetwork() should only be used when networkSendManuallyPumped == false. " +
+                "You can use MockNetwork.waitQuiescent() to wait for all the nodes to process all the messages on their queues instead." }
         fun pumpAll() = messagingNetwork.endpoints.map { it.pumpReceive(false) }
 
         if (rounds == -1) {

@@ -70,6 +70,10 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             @Column(name = "lock_id", nullable = true)
             var lockId: String? = null,
 
+            /** Used to determine whether a state is modifiable by the recording node */
+            @Column(name = "is_modifiable", nullable = false)
+            var isModifiable: Vault.StateModificationStatus,
+
             /** refers to the last time a lock was taken (reserved) or updated (released, re-reserved) */
             @Column(name = "lock_timestamp", nullable = true)
             var lockUpdateTime: Instant? = null

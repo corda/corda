@@ -43,11 +43,14 @@ class CashSelectionH2Impl : AbstractCashSelection() {
     override fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean {
         connection.createStatement().use { it.execute("CALL SET(@t, CAST(0 AS BIGINT));") }
 
+        // state_status = 0 -> UNCONSUMED.
+        // is_modifiable = 0 -> MODIFIABLE.
         val selectJoin = """
                     SELECT vs.transaction_id, vs.output_index, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id
                     FROM vault_states AS vs, contract_cash_states AS ccs
                     WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
                     AND vs.state_status = 0
+                    AND vs.is_modifiable = 0
                     AND ccs.ccy_code = ? and @t < ?
                     AND (vs.lock_id = ? OR vs.lock_id is null)
                     """ +
