@@ -122,16 +122,26 @@ class PersistentIdentityService : SingletonSerializeAsToken(), IdentityServiceIn
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
+        return verifyAndRegisterIdentity(identity, false)
+    }
+
+    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
         return database.transaction {
-            verifyAndRegisterIdentity(trustAnchor, identity)
+            verifyAndRegisterIdentity(trustAnchor, identity, isNewRandomIdentity)
         }
     }
 
-    override fun registerIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
+    override fun registerIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
         val identityCertChain = identity.certPath.x509Certificates
         log.debug { "Registering identity $identity" }
         val key = mapToKey(identity)
-        keyToParties.addWithDuplicatesAllowed(key, identity)
+        if (isNewRandomIdentity) {
+            // Because this is supposed to be new and random, there's no way we have it in the database already, so skip the pessimistic check.
+            keyToParties.set(key, identity)
+        } else {
+            keyToParties.addWithDuplicatesAllowed(key, identity)
+        }
         // Always keep the first party we registered, as that's the well known identity
         principalToParties.addWithDuplicatesAllowed(identity.name, key, false)
         val parentId = mapToKey(identityCertChain[1].publicKey)
@@ -168,4 +178,15 @@ class PersistentIdentityService : SingletonSerializeAsToken(), IdentityServiceIn
 
     @Throws(UnknownAnonymousPartyException::class)
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) = database.transaction { super.assertOwnership(party, anonymousParty) }
+
+    lateinit var ourNames: Set<CordaX500Name>
+
+    // Allows us to cheaply eliminate keys we know belong to others by using the cache contents without triggering loading.
+    fun stripCachedPeerKeys(keys: Iterable<PublicKey>): Iterable<PublicKey> {
+        return keys.filter {
+            val party = keyToParties.getIfCached(mapToKey(it))?.party?.name
+            party == null || party in ourNames
+        }
+    }
+
 }
