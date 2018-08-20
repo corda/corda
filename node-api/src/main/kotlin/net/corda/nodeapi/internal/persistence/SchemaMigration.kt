@@ -1,13 +1,3 @@
-/*
- * R3 Proprietary and Confidential
- *
- * Copyright (c) 2018 R3 Limited.  All rights reserved.
- *
- * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
- *
- * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
- */
-
 package net.corda.nodeapi.internal.persistence
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -53,12 +43,12 @@ class SchemaMigration(
     /**
      * Will run the Liquibase migration on the actual database.
      */
-    fun runMigration(existingCheckpoints: Boolean) = doRunMigration(run = true, outputWriter = null, check = false, existingCheckpoints = existingCheckpoints)
+    private fun runMigration(existingCheckpoints: Boolean) = doRunMigration(run = true, outputWriter = null, check = false, existingCheckpoints = existingCheckpoints)
 
     /**
      * Ensures that the database is up to date with the latest migration changes.
      */
-    fun checkState() = doRunMigration(run = false, outputWriter = null, check = true)
+    private fun checkState() = doRunMigration(run = false, outputWriter = null, check = true)
 
     /**  Create a resourse accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
     private class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) : ClassLoaderResourceAccessor(classLoader) {
@@ -127,7 +117,6 @@ class SchemaMigration(
             val dynamicInclude = "master.changelog.json"
 
             dataSource.connection.use { connection ->
-
                 // Schema migrations pre release 4.0
                 val preV4Baseline =
                         listOf("migration/common.changelog-init.xml",
@@ -155,7 +144,6 @@ class SchemaMigration(
                                 else emptyList()
 
                 val customResourceAccessor = CustomResourceAccessor(dynamicInclude, preV4Baseline, classLoader)
-
                 val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
                 liquibase.changeLogSync(Contexts(), LabelExpression())
             }

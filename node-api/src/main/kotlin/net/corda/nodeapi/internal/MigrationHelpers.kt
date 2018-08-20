@@ -1,13 +1,3 @@
-/*
- * R3 Proprietary and Confidential
- *
- * Copyright (c) 2018 R3 Limited.  All rights reserved.
- *
- * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
- *
- * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
- */
-
 package net.corda.nodeapi.internal
 
 import com.google.common.base.CaseFormat
@@ -33,9 +23,8 @@ object MigrationHelpers {
         return "$MIGRATION_PREFIX/$declaredMigration.$DEFAULT_MIGRATION_EXTENSION"
     }
 
-    // SchemaName will be transformed from camel case to lower_hyphen
-    // then add ".changelog-master"
-    fun migrationResourceNameForSchema(schema: MappedSchema): String {
+    // SchemaName will be transformed from camel case to lower_hyphen then add ".changelog-master"
+    private fun migrationResourceNameForSchema(schema: MappedSchema): String {
         val name: String = schema::class.simpleName!!
         val fileName = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_HYPHEN, name)
         return "$MIGRATION_PREFIX/$fileName.$CHANGELOG_NAME"

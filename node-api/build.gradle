@@ -29,18 +29,16 @@ dependencies {
 
     compile "org.apache.qpid:proton-j:$protonj_version"
 
-    // For db migration
-    compile "org.liquibase:liquibase-core:$liquibase_version"
-    runtime 'com.mattbertolini:liquibase-slf4j:2.0.0'
-
     // FastClasspathScanner: classpath scanning - needed for the NetworkBootstrapper.
     compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
 
-    //For Liquibase
-    compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
-
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
+
+    // For db migration
+    compile "org.liquibase:liquibase-core:$liquibase_version"
+    compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    runtime 'com.mattbertolini:liquibase-slf4j:2.0.0'
 
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
