@@ -5905,7 +5905,7 @@ public class net.corda.client.jackson.StringToMethodCallParser extends java.lang
   @NotNull
   public final net.corda.client.jackson.StringToMethodCallParser<T>$ParsedMethodCall parse(T, String)
   @NotNull
-  public final Object[] parseArguments(String, java.util.List<? extends kotlin.Pair<String, ? extends Class<?>>>, String)
+  public final Object[] parseArguments(String, java.util.List<? extends kotlin.Pair<String, ? extends reflect.Type>>, String)
   public static final net.corda.client.jackson.StringToMethodCallParser$Companion Companion
 ##
 public static final class net.corda.client.jackson.StringToMethodCallParser$Companion extends java.lang.Object
