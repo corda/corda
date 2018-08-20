@@ -65,7 +65,7 @@ Developers will need to make sure that their CorDapp runs on a newer platform ve
 
 * Suppose our target platform version is 5, and a newer platform version 6 is released. We want to find out if our CorDapp works as expected (without raising the target version)
 * A procedure could look like this:
-  - A new platform version is released/ anounced (network/ nodes not upgraded yet)
+  - A new platform version is released/ announced (network/ nodes not upgraded yet)
   - CorDapp developers build their CorDapp against the new version, run/ test against nodes running the old/current version and nodes running the new versions. If this works, they can raise the target version of their CorDapp and test again.
   - CorDapp developers test their old build against a node running the new versions
     
