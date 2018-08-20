@@ -128,7 +128,6 @@ class SchemaMigration(
                                 "migration/node-core.changelog-v4.xml",
                                 "migration/node-core.changelog-v5.xml",
                                 "migration/node-core.changelog-pkey.xml",
-                                "migration/node-core.changelog-postgres-blob.xml",
                                 "migration/vault-schema.changelog-init.xml",
                                 "migration/vault-schema.changelog-v3.xml",
                                 "migration/vault-schema.changelog-v4.xml",
