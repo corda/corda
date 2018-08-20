@@ -177,7 +177,7 @@ object TwoPartyTradeFlow {
             val partSignedTx = serviceHub.signInitialTransaction(ptx, cashSigningPubKeys)
 
             // Sync up confidential identities in the transaction with our counterparty
-            subFlow(IdentitySyncFlow.Send(sellerSession, ptx.toWireTransaction(serviceHub)))
+            subFlow(IdentitySyncFlow.Send(sellerSession, ptx.toWireTransaction2(serviceHub)))
 
             // Send the signed transaction to the seller, who must then sign it themselves and commit
             // it to the ledger by sending it to the notary.

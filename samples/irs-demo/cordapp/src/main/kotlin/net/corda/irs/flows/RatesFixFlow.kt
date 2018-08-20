@@ -61,7 +61,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         tx.addCommand(fix, oracle.owningKey)
         beforeSigning(fix)
         progressTracker.currentStep = SIGNING
-        val mtx = tx.toWireTransaction(serviceHub).buildFilteredTransaction(Predicate { filtering(it) })
+        val mtx = tx.toWireTransaction2(serviceHub).buildFilteredTransaction(Predicate { filtering(it) })
         return subFlow(FixSignFlow(tx, oracle, mtx))
     }
     // DOCEND 2
@@ -118,7 +118,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
             val resp = oracleSession.sendAndReceive<TransactionSignature>(SignRequest(partialMerkleTx))
             return resp.unwrap { sig ->
                 check(oracleSession.counterparty.owningKey.isFulfilledBy(listOf(sig.by)))
-                tx.toWireTransaction(serviceHub).checkSignature(sig)
+                tx.toWireTransaction2(serviceHub).checkSignature(sig)
                 sig
             }
         }

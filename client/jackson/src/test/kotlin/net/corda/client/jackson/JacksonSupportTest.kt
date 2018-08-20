@@ -226,7 +226,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
                 commands = mutableListOf(Command(DummyCommandData, listOf(BOB_PUBKEY))),
                 window = TimeWindow.fromStartAndDuration(Instant.now(), 1.hours),
                 privacySalt = net.corda.core.contracts.PrivacySalt()
-        ).toWireTransaction(services)
+        ).toWireTransaction2(services)
         val stx = sign(wtx)
         partyObjectMapper.identities += listOf(MINI_CORP.party, DUMMY_NOTARY)
         val json = mapper.valueToTree<ObjectNode>(stx)

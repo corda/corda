@@ -7,7 +7,6 @@ import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
-import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -91,7 +90,7 @@ data class TestTransactionDSLInterpreter private constructor(
                     labelToIndexMap = HashMap(labelToIndexMap)
             )
 
-    internal fun toWireTransaction() = transactionBuilder.toWireTransaction(services)
+    internal fun toWireTransaction() = transactionBuilder.toWireTransaction2(services)
 
     override fun input(stateRef: StateRef) {
         val state = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)

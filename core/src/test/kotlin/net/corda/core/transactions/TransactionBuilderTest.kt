@@ -49,7 +49,7 @@ class TransactionBuilderTest {
         val builder = TransactionBuilder()
                 .addOutputState(outputState)
                 .addCommand(DummyCommandData, notary.owningKey)
-        val wtx = builder.toWireTransaction(services)
+        val wtx = builder.toWireTransaction2(services)
         assertThat(wtx.outputs).containsOnly(outputState)
         assertThat(wtx.commands).containsOnly(Command(DummyCommandData, notary.owningKey))
     }
@@ -60,7 +60,7 @@ class TransactionBuilderTest {
         val builder = TransactionBuilder()
                 .addOutputState(outputState)
                 .addCommand(DummyCommandData, notary.owningKey)
-        val wtx = builder.toWireTransaction(services)
+        val wtx = builder.toWireTransaction2(services)
         assertThat(wtx.outputs).containsOnly(outputState.copy(constraint = HashAttachmentConstraint(contractAttachmentId)))
     }
 
@@ -74,12 +74,12 @@ class TransactionBuilderTest {
                 .addCommand(DummyCommandData, notary.owningKey)
 
         doReturn(testNetworkParameters(minimumPlatformVersion = 3)).whenever(services).networkParameters
-        assertThatThrownBy { builder.toWireTransaction(services) }
+        assertThatThrownBy { builder.toWireTransaction2(services) }
                 .isInstanceOf(ZoneVersionTooLowException::class.java)
                 .hasMessageContaining("Reference states")
 
         doReturn(testNetworkParameters(minimumPlatformVersion = 4)).whenever(services).networkParameters
-        val wtx = builder.toWireTransaction(services)
+        val wtx = builder.toWireTransaction2(services)
         assertThat(wtx.references).containsOnly(referenceStateRef)
     }
 }
