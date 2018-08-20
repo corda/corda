@@ -138,8 +138,8 @@ private fun Sequence<PropertyNamedMethod>.byNameAndClassifier(fieldNames: Set<St
 }
 
 // Merge the given method into a map of methods by method classifier, picking the least generic method for each classifier.
-private fun MutableMap<MethodClassifier, Method>.merge(classifier: MethodClassifier, method: Method) = apply {
-    compute(classifier) { classifier, existingMethod ->
+private fun MutableMap<MethodClassifier, Method>.merge(classifier: MethodClassifier, method: Method): MutableMap<MethodClassifier, Method> {
+    compute(classifier) { _, existingMethod ->
         if (existingMethod == null) method
         else when (classifier) {
             IS -> existingMethod
@@ -147,6 +147,7 @@ private fun MutableMap<MethodClassifier, Method>.merge(classifier: MethodClassif
             SET -> leastGenericBy({ genericParameterTypes[0] }, existingMethod, method)
         }
     }
+    return this
 }
 
 // Make the property name conform to the underlying field name, if there is one.
