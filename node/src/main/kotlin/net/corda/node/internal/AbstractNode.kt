@@ -991,7 +991,7 @@ fun configureDatabase(hikariProperties: Properties,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                       schemaService: SchemaService = NodeSchemaService(),
-                      internalSchemas: Set<MappedSchema> = emptySet()): CordaPersistence {
+                      internalSchemas: Set<MappedSchema> = NodeSchemaService().internalSchemas()): CordaPersistence {
     val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, hikariProperties)
     persistence.startHikariPool(hikariProperties, databaseConfig, internalSchemas)
     return persistence
