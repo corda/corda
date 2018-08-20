@@ -47,7 +47,7 @@ open class MappedSchema(schemaFamily: Class<*>,
     val name: String = schemaFamily.name
 
     /**
-     * Points to a classpath resource containing the database changes for the [mappedTypes]
+     * Optional classpath resource containing the database changes for the [mappedTypes]
      */
     open val migrationResource: String? = null
 
