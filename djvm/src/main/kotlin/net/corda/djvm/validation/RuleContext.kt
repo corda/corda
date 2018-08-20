@@ -43,7 +43,7 @@ open class RuleContext(
         get() = analysisContext.configuration.whitelist
 
     /**
-     * Classes that has been explicitly defined in the sandbox namespace.
+     * Classes that have been explicitly defined in the sandbox namespace.
      */
     val pinnedClasses: Set<String>
         get() = analysisContext.configuration.pinnedClasses

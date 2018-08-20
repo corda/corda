@@ -6,7 +6,7 @@ import java.nio.file.Files
 
 @Command(
         name = "tree",
-        description = ["Show the hierarchy of the classes that has been created with the 'new' command."]
+        description = ["Show the hierarchy of the classes that have been created with the 'new' command."]
 )
 @Suppress("KDocMissingDocumentation")
 class TreeCommand : CommandBase() {
