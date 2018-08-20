@@ -1,10 +1,12 @@
 package net.corda.tools.shell;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.Lists;
 import kotlin.Pair;
 import net.corda.client.jackson.JacksonSupport;
+import net.corda.client.jackson.internal.ToStringSerialize;
 import net.corda.core.contracts.Amount;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.flows.FlowException;
@@ -26,18 +28,20 @@ import rx.Observable;
 
 import java.util.*;
 
+import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 
 public class InteractiveShellJavaTest {
     private static TestIdentity megaCorp = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
 
     // should guarantee that FlowA will have synthetic method to access this field
-    private static String synthetic = "synth";
+    private static final String synthetic = "synth";
 
     abstract static class StringFlow extends FlowLogic<String> {
         abstract String getA();
     }
 
+    @SuppressWarnings("unused")
     public static class FlowA extends StringFlow {
 
         private String a;
@@ -68,6 +72,18 @@ public class InteractiveShellJavaTest {
             this(party.getName().toString());
         }
 
+        public FlowA(Integer b, Amount<UserValue> amount) {
+            this(String.format("%d %s", amount.getQuantity() + (b == null ? 0 : b), amount.getToken()));
+        }
+
+        public FlowA(String[] b) {
+            this(String.join("+", b));
+        }
+
+        public FlowA(Amount<UserValue>[] amounts) {
+            this(String.join("++", Arrays.stream(amounts).map(Amount::toString).collect(toList())));
+        }
+
         @Nullable
         @Override
         public ProgressTracker getProgressTracker() {
@@ -75,7 +91,7 @@ public class InteractiveShellJavaTest {
         }
 
         @Override
-        public String call() throws FlowException {
+        public String call() {
             return a;
         }
 
@@ -106,9 +122,7 @@ public class InteractiveShellJavaTest {
             FlowSession session = initiateFlow(party);
 
 
-            Integer integer = session.receive(Integer.class).unwrap((i) -> {
-                return i;
-            });
+            Integer integer = session.receive(Integer.class).unwrap((i) -> i);
 
             return integer.toString();
 
@@ -117,6 +131,24 @@ public class InteractiveShellJavaTest {
         @Override
         String getA() {
             return a;
+        }
+    }
+
+    @ToStringSerialize
+    public static class UserValue {
+        private final String label;
+
+        public UserValue(@JsonProperty("label") String label) {
+            this.label = label;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        @Override
+        public String toString() {
+            return label;
         }
     }
 
@@ -159,9 +191,35 @@ public class InteractiveShellJavaTest {
     @Test
     public void flowStartWithNestedTypes() throws InteractiveShell.NoApplicableConstructor {
         check(
-                "pair: { first: $100.12, second: df489807f81c8c8829e509e1bcb92e6692b9dd9d624b7456435cb2f51dc82587 }",
-                "($100.12, df489807f81c8c8829e509e1bcb92e6692b9dd9d624b7456435cb2f51dc82587)",
-                FlowA.class);
+            "pair: { first: $100.12, second: df489807f81c8c8829e509e1bcb92e6692b9dd9d624b7456435cb2f51dc82587 }",
+            "(100.12 USD, DF489807F81C8C8829E509E1BCB92E6692B9DD9D624B7456435CB2F51DC82587)",
+            FlowA.class);
+    }
+
+    @Test
+    public void flowStartWithUserAmount() throws InteractiveShell.NoApplicableConstructor {
+        check(
+            "b: 500, amount: { \"quantity\": 10001, \"token\":{ \"label\": \"of value\" } }",
+            "10501 of value",
+            FlowA.class);
+    }
+
+    @Test
+    public void flowStartWithArrayType() throws InteractiveShell.NoApplicableConstructor {
+        check(
+            "b: [ One, Two, Three, Four ]",
+            "One+Two+Three+Four",
+            FlowA.class
+        );
+    }
+
+    @Test
+    public void flowStartWithArrayOfNestedType() throws InteractiveShell.NoApplicableConstructor {
+        check(
+            "amounts: [ { \"quantity\": 10, \"token\": { \"label\": \"(1)\" } }, { \"quantity\": 200, \"token\": { \"label\": \"(2)\" } } ]",
+            "10 (1)++200 (2)",
+            FlowA.class
+        );
     }
 
     @Test(expected = InteractiveShell.NoApplicableConstructor.class)

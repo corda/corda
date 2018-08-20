@@ -332,16 +332,16 @@ object InteractiveShell {
         for (ctor in clazz.constructors) {
             var paramNamesFromConstructor: List<String>? = null
             fun getPrototype(): List<String> {
-                val argTypes = ctor.parameterTypes.map { it.simpleName }
+                val argTypes = ctor.genericParameterTypes.map { it.typeName }
                 return paramNamesFromConstructor!!.zip(argTypes).map { (name, type) -> "$name: $type" }
             }
 
             try {
                 // Attempt construction with the given arguments.
                 paramNamesFromConstructor = parser.paramNamesFromConstructor(ctor)
-                val args = parser.parseArguments(clazz.name, paramNamesFromConstructor.zip(ctor.parameterTypes), inputData)
-                if (args.size != ctor.parameterTypes.size) {
-                    errors.add("${getPrototype()}: Wrong number of arguments (${args.size} provided, ${ctor.parameterTypes.size} needed)")
+                val args = parser.parseArguments(clazz.name, paramNamesFromConstructor.zip(ctor.genericParameterTypes), inputData)
+                if (args.size != ctor.genericParameterTypes.size) {
+                    errors.add("${getPrototype()}: Wrong number of arguments (${args.size} provided, ${ctor.genericParameterTypes.size} needed)")
                     continue
                 }
                 val flow = ctor.newInstance(*args) as FlowLogic<*>
@@ -355,10 +355,10 @@ object InteractiveShell {
             } catch (e: StringToMethodCallParser.UnparseableCallException.TooManyParameters) {
                 errors.add("${getPrototype()}: too many parameters")
             } catch (e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
-                val argTypes = ctor.parameterTypes.map { it.simpleName }
+                val argTypes = ctor.genericParameterTypes.map { it.typeName }
                 errors.add("$argTypes: <constructor missing parameter reflection data>")
             } catch (e: StringToMethodCallParser.UnparseableCallException) {
-                val argTypes = ctor.parameterTypes.map { it.simpleName }
+                val argTypes = ctor.genericParameterTypes.map { it.typeName }
                 errors.add("$argTypes: ${e.message}")
             }
         }

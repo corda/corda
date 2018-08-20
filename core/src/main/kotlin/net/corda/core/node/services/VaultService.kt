@@ -21,6 +21,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
+import net.corda.core.node.services.Vault.StateModificationStatus.*
 import net.corda.core.node.services.Vault.StateStatus
 import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.CordaSerializable
@@ -115,6 +116,26 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         UNCONSUMED, CONSUMED, ALL
     }
 
+    /**
+     * If the querying node is a participant in a state then it is classed as [MODIFIABLE], although technically the
+     * state is only _potentially_ modifiable as the contract code may forbid them from performing any actions.
+     *
+     * If the querying node is not a participant in a state then it is classed as [NOT_MODIFIABLE]. These types of
+     * states can still be recorded in the vault if the transaction containing them was recorded with the
+     * [StatesToRecord.ALL_VISIBLE] flag. This will typically happen for things like reference data which can be
+     * referenced in transactions as a [ReferencedStateAndRef] but cannot be modified by any party but the maintainer.
+     *
+     * If both [MODIFIABLE] and [NOT_MODIFIABLE] states are required to be returned from a query, then the [ALL] flag
+     * can be used.
+     *
+     * NOTE: Default behaviour is for ALL STATES to be returned as this is how Corda behaved before the introduction of
+     * this query criterion.
+     */
+    @CordaSerializable
+    enum class StateModificationStatus {
+        MODIFIABLE, NOT_MODIFIABLE, ALL
+    }
+
     @CordaSerializable
     enum class UpdateType {
         GENERAL, NOTARY_CHANGE, CONTRACT_UPGRADE
@@ -141,14 +162,40 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                                            val otherResults: List<Any>)
 
     @CordaSerializable
-    data class StateMetadata(val ref: StateRef,
-                             val contractStateClassName: String,
-                             val recordedTime: Instant,
-                             val consumedTime: Instant?,
-                             val status: Vault.StateStatus,
-                             val notary: AbstractParty?,
-                             val lockId: String?,
-                             val lockUpdateTime: Instant?)
+    data class StateMetadata constructor(
+            val ref: StateRef,
+            val contractStateClassName: String,
+            val recordedTime: Instant,
+            val consumedTime: Instant?,
+            val status: Vault.StateStatus,
+            val notary: AbstractParty?,
+            val lockId: String?,
+            val lockUpdateTime: Instant?,
+            val isModifiable: Vault.StateModificationStatus?
+    ) {
+        constructor(ref: StateRef,
+                    contractStateClassName: String,
+                    recordedTime: Instant,
+                    consumedTime: Instant?,
+                    status: Vault.StateStatus,
+                    notary: AbstractParty?,
+                    lockId: String?,
+                    lockUpdateTime: Instant?
+        ) : this(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, null)
+
+        fun copy(
+                ref: StateRef = this.ref,
+                contractStateClassName: String = this.contractStateClassName,
+                recordedTime: Instant = this.recordedTime,
+                consumedTime: Instant? = this.consumedTime,
+                status: Vault.StateStatus = this.status,
+                notary: AbstractParty? = this.notary,
+                lockId: String? = this.lockId,
+                lockUpdateTime: Instant? = this.lockUpdateTime
+        ): StateMetadata {
+            return StateMetadata(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, null)
+        }
+    }
 
     companion object {
         @Deprecated("No longer used. The vault does not emit empty updates")
@@ -191,7 +238,10 @@ interface VaultService {
      */
     @DeleteForDJVM
     fun whenConsumed(ref: StateRef): CordaFuture<Vault.Update<ContractState>> {
-        val query = QueryCriteria.VaultQueryCriteria(stateRefs = listOf(ref), status = Vault.StateStatus.CONSUMED)
+        val query = QueryCriteria.VaultQueryCriteria(
+                stateRefs = listOf(ref),
+                status = Vault.StateStatus.CONSUMED
+        )
         val result = trackBy<ContractState>(query)
         val snapshot = result.snapshot.states
         return if (snapshot.isNotEmpty()) {

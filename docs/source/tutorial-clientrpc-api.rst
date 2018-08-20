@@ -1,3 +1,9 @@
+.. highlight:: kotlin
+.. raw:: html
+
+   <script type="text/javascript" src="_static/jquery.js"></script>
+   <script type="text/javascript" src="_static/codesets.js"></script>
+
 .. _graphstream: http://graphstream-project.org/
 
 Using the client RPC API

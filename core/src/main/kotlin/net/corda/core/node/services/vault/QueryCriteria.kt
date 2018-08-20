@@ -83,6 +83,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
 
     abstract class CommonQueryCriteria : QueryCriteria() {
         abstract val status: Vault.StateStatus
+        open val isModifiable: Vault.StateModificationStatus = Vault.StateModificationStatus.ALL
         abstract val contractStateTypes: Set<Class<out ContractState>>?
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
@@ -92,50 +93,123 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     /**
      * VaultQueryCriteria: provides query by attributes defined in [VaultSchema.VaultStates]
      */
-    data class VaultQueryCriteria @JvmOverloads constructor(override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                                                            override val contractStateTypes: Set<Class<out ContractState>>? = null,
-                                                            val stateRefs: List<StateRef>? = null,
-                                                            val notary: List<AbstractParty>? = null,
-                                                            val softLockingCondition: SoftLockingCondition? = null,
-                                                            val timeCondition: TimeCondition? = null) : CommonQueryCriteria() {
+    data class VaultQueryCriteria @JvmOverloads constructor(
+            override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+            override val contractStateTypes: Set<Class<out ContractState>>? = null,
+            val stateRefs: List<StateRef>? = null,
+            val notary: List<AbstractParty>? = null,
+            val softLockingCondition: SoftLockingCondition? = null,
+            val timeCondition: TimeCondition? = null,
+            override val isModifiable: Vault.StateModificationStatus = Vault.StateModificationStatus.ALL
+    ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
             return parser.parseCriteria(this)
+        }
+
+        fun copy(
+                status: Vault.StateStatus = this.status,
+                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes,
+                stateRefs: List<StateRef>? = this.stateRefs,
+                notary: List<AbstractParty>? = this.notary,
+                softLockingCondition: SoftLockingCondition? = this.softLockingCondition,
+                timeCondition: TimeCondition? = this.timeCondition
+        ): VaultQueryCriteria {
+            return VaultQueryCriteria(
+                    status,
+                    contractStateTypes,
+                    stateRefs,
+                    notary,
+                    softLockingCondition,
+                    timeCondition
+            )
         }
     }
 
     /**
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
      */
-    data class LinearStateQueryCriteria @JvmOverloads constructor(val participants: List<AbstractParty>? = null,
-                                                                  val uuid: List<UUID>? = null,
-                                                                  val externalId: List<String>? = null,
-                                                                  override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                                                                  override val contractStateTypes: Set<Class<out ContractState>>? = null) : CommonQueryCriteria() {
-        constructor(participants: List<AbstractParty>? = null,
-                    linearId: List<UniqueIdentifier>? = null,
-                    status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                    contractStateTypes: Set<Class<out ContractState>>? = null) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes)
+    data class LinearStateQueryCriteria @JvmOverloads constructor(
+            val participants: List<AbstractParty>? = null,
+            val uuid: List<UUID>? = null,
+            val externalId: List<String>? = null,
+            override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+            override val contractStateTypes: Set<Class<out ContractState>>? = null,
+            override val isModifiable: Vault.StateModificationStatus = Vault.StateModificationStatus.ALL
+    ) : CommonQueryCriteria() {
+        constructor(
+                participants: List<AbstractParty>? = null,
+                linearId: List<UniqueIdentifier>? = null,
+                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                contractStateTypes: Set<Class<out ContractState>>? = null,
+                isRelevant: Vault.StateModificationStatus
+        ) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes, isRelevant)
+
+        constructor(
+                participants: List<AbstractParty>? = null,
+                linearId: List<UniqueIdentifier>? = null,
+                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                contractStateTypes: Set<Class<out ContractState>>? = null
+        ) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes)
 
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
             return parser.parseCriteria(this)
+        }
+
+        fun copy(
+                participants: List<AbstractParty>? = this.participants,
+                uuid: List<UUID>? = this.uuid,
+                externalId: List<String>? = this.externalId,
+                status: Vault.StateStatus = this.status,
+                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes
+        ): LinearStateQueryCriteria {
+            return LinearStateQueryCriteria(
+                    participants,
+                    uuid,
+                    externalId,
+                    status,
+                    contractStateTypes
+            )
         }
     }
 
     /**
      * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleStates]
      */
-    data class FungibleAssetQueryCriteria @JvmOverloads constructor(val participants: List<AbstractParty>? = null,
-                                                                    val owner: List<AbstractParty>? = null,
-                                                                    val quantity: ColumnPredicate<Long>? = null,
-                                                                    val issuer: List<AbstractParty>? = null,
-                                                                    val issuerRef: List<OpaqueBytes>? = null,
-                                                                    override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                                                                    override val contractStateTypes: Set<Class<out ContractState>>? = null) : CommonQueryCriteria() {
+    data class FungibleAssetQueryCriteria @JvmOverloads constructor(
+            val participants: List<AbstractParty>? = null,
+            val owner: List<AbstractParty>? = null,
+            val quantity: ColumnPredicate<Long>? = null,
+            val issuer: List<AbstractParty>? = null,
+            val issuerRef: List<OpaqueBytes>? = null,
+            override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+            override val contractStateTypes: Set<Class<out ContractState>>? = null,
+            override val isModifiable: Vault.StateModificationStatus = Vault.StateModificationStatus.ALL
+    ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
             return parser.parseCriteria(this)
+        }
+
+        fun copy(
+                participants: List<AbstractParty>? = this.participants,
+                owner: List<AbstractParty>? = this.owner,
+                quantity: ColumnPredicate<Long>? = this.quantity,
+                issuer: List<AbstractParty>? = this.issuer,
+                issuerRef: List<OpaqueBytes>? = this.issuerRef,
+                status: Vault.StateStatus = this.status,
+                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes
+        ): FungibleAssetQueryCriteria {
+            return FungibleAssetQueryCriteria(
+                    participants,
+                    owner,
+                    quantity,
+                    issuer,
+                    issuerRef,
+                    status,
+                    contractStateTypes
+            )
         }
     }
 
@@ -147,13 +221,27 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
      * Params
      *  [expression] refers to a (composable) type safe [CriteriaExpression]
      */
-    data class VaultCustomQueryCriteria<L : PersistentState> @JvmOverloads constructor
-    (val expression: CriteriaExpression<L, Boolean>,
-     override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-     override val contractStateTypes: Set<Class<out ContractState>>? = null) : CommonQueryCriteria() {
+    data class VaultCustomQueryCriteria<L : PersistentState> @JvmOverloads constructor(
+            val expression: CriteriaExpression<L, Boolean>,
+            override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+            override val contractStateTypes: Set<Class<out ContractState>>? = null,
+            override val isModifiable: Vault.StateModificationStatus = Vault.StateModificationStatus.ALL
+    ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
             return parser.parseCriteria(this)
+        }
+
+        fun copy(
+                expression: CriteriaExpression<L, Boolean> = this.expression,
+                status: Vault.StateStatus = this.status,
+                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes
+        ): VaultCustomQueryCriteria<L> {
+            return VaultCustomQueryCriteria(
+                    expression,
+                    status,
+                    contractStateTypes
+            )
         }
     }
 

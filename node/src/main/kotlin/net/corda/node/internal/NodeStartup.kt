@@ -111,106 +111,108 @@ open class NodeStartup(val args: Array<String>) {
 
         drawBanner(versionInfo)
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
-        val conf = try {
-            val (rawConfig, conf0Result) = loadConfigFile(cmdlineOptions)
-            if (cmdlineOptions.devMode) {
-                println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
-            }
-            val conf0 = conf0Result.getOrThrow()
-            if (cmdlineOptions.bootstrapRaftCluster) {
-                if (conf0 is NodeConfigurationImpl) {
-                    println("Bootstrapping raft cluster (starting up as seed node).")
-                    // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
-                    conf0.copy(notary = conf0.notary?.copy(raft = conf0.notary?.raft?.copy(clusterAddresses = emptyList())))
-                } else {
-                    println("bootstrap-raft-notaries flag not recognized, exiting...")
-                    return false
-                }
-            } else {
-                conf0
-            }
-        } catch (e: UnknownConfigurationKeysException) {
-            logger.error(e.message)
-            return false
-        } catch (e: ConfigException.IO) {
-            println("""
-                Unable to load the node config file from '${cmdlineOptions.configFile}'.
 
-                Try experimenting with the --base-directory flag to change which directory the node
-                is looking in, or use the --config-file flag to specify it explicitly.
-            """.trimIndent())
-            return false
-        } catch (e: Exception) {
-            logger.error("Unexpected error whilst reading node configuration", e)
-            return false
-        }
-        val errors = conf.validate()
+        val configuration = (attempt { loadConfiguration(cmdlineOptions) }.doOnException(handleConfigurationLoadingError(cmdlineOptions.configFile)) as? Try.Success)?.let(Try.Success<NodeConfiguration>::value) ?: return false
+
+        val errors = configuration.validate()
         if (errors.isNotEmpty()) {
-            logger.error("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
+            logger.error("Invalid node configuration. Errors were:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
             return false
         }
 
-        try {
-            banJavaSerialisation(conf)
-            preNetworkRegistration(conf)
-            if (cmdlineOptions.nodeRegistrationOption != null) {
-                // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
-                registerWithNetwork(conf, versionInfo, cmdlineOptions.nodeRegistrationOption)
-                // At this point the node registration was successful. We can delete the marker file.
-                deleteNodeRegistrationMarker(cmdlineOptions.baseDirectory)
-                return true
-            }
-            logStartupInfo(versionInfo, cmdlineOptions, conf)
-        } catch (e: NodeRegistrationException) {
-            logger.warn("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.", e)
-            return false
-        } catch (e: Exception) {
-            logger.error("Exception during node registration", e)
-            return false
+        attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success ?: return false
+
+        attempt { preNetworkRegistration(configuration) }.doOnException(handleRegistrationError) as? Try.Success ?: return false
+
+        cmdlineOptions.nodeRegistrationOption?.let {
+            // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
+            attempt { registerWithNetwork(configuration, versionInfo, cmdlineOptions.nodeRegistrationOption) }.doOnException(handleRegistrationError) as? Try.Success ?: return false
+
+            // At this point the node registration was successful. We can delete the marker file.
+            deleteNodeRegistrationMarker(cmdlineOptions.baseDirectory)
+            return true
         }
 
-        try {
-            cmdlineOptions.baseDirectory.createDirectories()
-            startNode(conf, versionInfo, startTime, cmdlineOptions)
+        logStartupInfo(versionInfo, cmdlineOptions, configuration)
 
-        } catch (e: DatabaseMigrationException) {
-            logger.error(e.message)
-            return false
-        } catch (e: MultipleCordappsForFlowException) {
-            logger.error(e.message)
-            return false
-        } catch (e: CouldNotCreateDataSourceException) {
-            logger.error(e.message, e.cause)
-            return false
-        } catch (e: CheckpointIncompatibleException) {
-            logger.error(e.message)
-            return false
-        } catch (e: AddressBindingException) {
-            logger.error(e.message)
-            return false
-        } catch (e: NetworkParametersReader.Error) {
-            logger.error(e.message)
-            return false
-        } catch (e: DatabaseIncompatibleException) {
-            e.message?.let { Node.printWarning(it) }
-            logger.error(e.message)
-            return false
-        } catch (e: Exception) {
-            if (e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
-                logger.error("One of the ports required by the Corda node is already in use.")
-                return false
-            }
-            if (e.message?.startsWith("Unknown named curve:") == true) {
-                logger.error("Exception during node startup - ${e.message}. " +
-                        "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
-            } else {
-                logger.error("Exception during node startup", e)
-            }
-            return false
+        return attempt { startNode(configuration, versionInfo, startTime, cmdlineOptions) }.doOnSuccess { logger.info("Node exiting successfully") }.doOnException(handleStartError).isSuccess
+    }
+
+    private fun <RESULT> attempt(action: () -> RESULT): Try<RESULT> = Try.on(action)
+
+    private fun Exception.isExpectedWhenStartingNode() = startNodeExpectedErrors.any { error -> error.isInstance(this) }
+
+    private val startNodeExpectedErrors = setOf(DatabaseMigrationException::class, MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
+
+    private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print("$message [errorCode=${errorCode()}]")
+
+    private fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message [errorCode=${errorCode()}]", error)
+
+    private fun Exception.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
+
+    private fun Exception.errorCode(): String {
+
+        val hash = staticLocationBasedHash()
+        return Integer.toOctalString(hash)
+    }
+
+    private fun Throwable.staticLocationBasedHash(visited: Set<Throwable> = setOf(this)): Int {
+
+        val cause = this.cause
+        return when {
+            cause != null && !visited.contains(cause) -> Objects.hash(this::class.java.name, stackTrace, cause.staticLocationBasedHash(visited +  cause))
+            else -> Objects.hash(this::class.java.name, stackTrace)
         }
+    }
 
-        logger.info("Node exiting successfully")
-        return true
+    private val handleRegistrationError = { error: Exception ->
+        when (error) {
+            is NodeRegistrationException -> error.logAsExpected("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.")
+            else -> error.logAsUnexpected("Exception during node registration")
+        }
+    }
+
+    private val handleStartError = { error: Exception ->
+        when {
+            error.isExpectedWhenStartingNode() -> error.logAsExpected()
+            error is CouldNotCreateDataSourceException -> error.logAsUnexpected()
+            error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")
+            error.isOpenJdkKnownIssue() -> error.logAsExpected("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
+            else -> error.logAsUnexpected("Exception during node startup")
+        }
+    }
+
+    private fun handleConfigurationLoadingError(configFile: Path) = { error: Exception ->
+        when (error) {
+            is UnknownConfigurationKeysException -> error.logAsExpected()
+            is ConfigException.IO -> error.logAsExpected(configFileNotFoundMessage(configFile), ::println)
+            else -> error.logAsUnexpected("Unexpected error whilst reading node configuration")
+        }
+    }
+
+    private fun configFileNotFoundMessage(configFile: Path): String {
+        return """
+                Unable to load the node config file from '$configFile'.
+
+                Try setting the --base-directory flag to change which directory the node
+                is looking in, or use the --config-file flag to specify it explicitly.
+            """.trimIndent()
+    }
+
+    private fun loadConfiguration(cmdlineOptions: CmdLineOptions): NodeConfiguration {
+
+        val (rawConfig, configurationResult) = loadConfigFile(cmdlineOptions)
+        if (cmdlineOptions.devMode) {
+            println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
+        }
+        val configuration = configurationResult.getOrThrow()
+        return if (cmdlineOptions.bootstrapRaftCluster) {
+            println("Bootstrapping raft cluster (starting up as seed node).")
+            // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
+            (configuration as NodeConfigurationImpl).copy(notary = configuration.notary?.copy(raft = configuration.notary?.raft?.copy(clusterAddresses = emptyList())))
+        } else {
+            configuration
+        }
     }
 
     private fun checkRegistrationMode(): Boolean {
@@ -252,7 +254,7 @@ open class NodeStartup(val args: Array<String>) {
                 marker.delete()
             }
         } catch (e: Exception) {
-            logger.warn("Could not delete the marker file that was created for `--initial-registration`.", e)
+            e.logAsUnexpected("Could not delete the marker file that was created for `--initial-registration`.", print = logger::warn)
         }
     }
 
@@ -261,6 +263,8 @@ open class NodeStartup(val args: Array<String>) {
     protected open fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
 
     protected open fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
+
+        cmdlineOptions.baseDirectory.createDirectories()
         val node = createNode(conf, versionInfo)
         if (cmdlineOptions.clearNetworkMapCache) {
             node.clearNetworkMapCache()

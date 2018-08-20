@@ -80,7 +80,8 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
                         .normalize()
                         .toAbsolutePath()
 
-        val configFile = baseDirectory / optionSet.valueOf(configFileArg)
+        val configFilePath = Paths.get(optionSet.valueOf(configFileArg))
+        val configFile = if (configFilePath.isAbsolute) configFilePath else baseDirectory / configFilePath.toString()
         val loggingLevel = optionSet.valueOf(loggerLevel)
         val logToConsole = optionSet.has(logToConsoleArg)
         val isRegistration = optionSet.has(isRegistrationArg)

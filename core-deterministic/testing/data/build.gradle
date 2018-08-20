@@ -32,6 +32,7 @@ test {
         includeTestsMatching "net.corda.deterministic.data.GenerateData"
     }
 }
+assemble.finalizedBy test
 
 artifacts {
     testData file: file("$buildDir/test-data.jar"), type: 'jar', builtBy: test

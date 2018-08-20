@@ -1,5 +1,5 @@
-Building a CorDapp
-==================
+Building and installing a CorDapp
+=================================
 
 .. contents::
 
@@ -187,5 +187,5 @@ These files are loaded when a CorDapp context is created and so can change durin
 
 CorDapp configuration can be accessed from ``CordappContext::config`` whenever a ``CordappContext`` is available.
 
-There is an example project that demonstrates in ``samples` called ``cordapp-configuration`` and API documentation in
-<api/kotlin/corda/net.corda.core.cordapp/index.html>`_.
+There is an example project that demonstrates in ``samples`` called ``cordapp-configuration`` and API documentation in
+`<api/kotlin/corda/net.corda.core.cordapp/index.html>`_.

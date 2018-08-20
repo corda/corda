@@ -10,8 +10,10 @@
 
 package net.corda.tools.shell
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import net.corda.client.jackson.JacksonSupport
+import net.corda.client.jackson.internal.ToStringSerialize
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -41,6 +43,9 @@ class InteractiveShellTest {
         constructor(amount: Amount<Currency>) : this(amount.toString())
         constructor(pair: Pair<Amount<Currency>, SecureHash.SHA256>) : this(pair.toString())
         constructor(party: Party) : this(party.name.toString())
+        constructor(b: Int?, amount: Amount<UserValue>) : this("${(b ?: 0) + amount.quantity} ${amount.token}")
+        constructor(b: Array<String>) : this(b.joinToString("+"))
+        constructor(amounts: Array<Amount<UserValue>>) : this(amounts.map(Amount<UserValue>::toString).joinToString("++"))
 
         override val progressTracker = ProgressTracker()
         override fun call() = a
@@ -75,8 +80,26 @@ class InteractiveShellTest {
 
     @Test
     fun flowStartWithNestedTypes() = check(
-            "pair: { first: $100.12, second: df489807f81c8c8829e509e1bcb92e6692b9dd9d624b7456435cb2f51dc82587 }",
-            "($100.12, df489807f81c8c8829e509e1bcb92e6692b9dd9d624b7456435cb2f51dc82587)"
+        input = "pair: { first: $100.12, second: df489807f81c8c8829e509e1bcb92e6692b9dd9d624b7456435cb2f51dc82587 }",
+        expected = "(100.12 USD, DF489807F81C8C8829E509E1BCB92E6692B9DD9D624B7456435CB2F51DC82587)"
+    )
+
+    @Test
+    fun flowStartWithArrayType() = check(
+        input = "b: [ One, Two, Three, Four ]",
+        expected = "One+Two+Three+Four"
+    )
+
+    @Test
+    fun flowStartWithUserAmount() = check(
+        input = """b: 500, amount: { "quantity": 10001, "token":{ "label": "of value" } }""",
+        expected = "10501 of value"
+    )
+
+    @Test
+    fun flowStartWithArrayOfNestedTypes() = check(
+        input = """amounts: [ { "quantity": 10, "token": { "label": "(1)" } }, { "quantity": 200, "token": { "label": "(2)" } } ]""",
+        expected = "10 (1)++200 (2)"
     )
 
     @Test(expected = InteractiveShell.NoApplicableConstructor::class)
@@ -90,4 +113,9 @@ class InteractiveShellTest {
 
     @Test
     fun party() = check("party: \"${megaCorp.name}\"", megaCorp.name.toString())
+
+    @ToStringSerialize
+    data class UserValue(@JsonProperty("label") val label: String) {
+        override fun toString() = label
+    }
 }
