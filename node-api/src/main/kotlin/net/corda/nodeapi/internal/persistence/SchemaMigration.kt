@@ -136,7 +136,7 @@ class SchemaMigration(
                                 "migration/cash.changelog-v1.xml",
                                 "migration/commercial-paper.changelog-init.xml",
                                 "migration/commercial-paper.changelog-v1.xml") +
-                                if (schemas.any { schema -> schema.migrationResource != null && schema.migrationResource == "node-notary.changelog-master" })
+                                if (schemas.any { schema -> schema.migrationResource == "node-notary.changelog-master" })
                                     listOf("migration/node-notary.changelog-init.xml",
                                             "migration/node-notary.changelog-v1.xml",
                                             "migration/vault-schema.changelog-pkey.xml")
@@ -163,7 +163,7 @@ class MissingMigrationException(@Suppress("MemberVisibilityCanBePrivate") val ma
 
 class OutstandingDatabaseChangesException(@Suppress("MemberVisibilityCanBePrivate") private val count: Int) : DatabaseMigrationException(errorMessageFor(count)) {
     internal companion object {
-        fun errorMessageFor(count: Int): String = "There are $count outstanding database changes that need to be run. Please use the advanced migration tool. See: https://docs.corda.r3.com/database-management.html"
+        fun errorMessageFor(count: Int): String = "There are $count outstanding database changes that need to be run."
     }
 }
 
@@ -171,3 +171,9 @@ class CheckpointsException : DatabaseMigrationException("Attempting to update th
         "This is dangerous because the node might not be able to restore the flows correctly and could consequently fail. " +
         "Updating the database would make reverting to the previous version more difficult. " +
         "Please drain your node first. See: https://docs.corda.net/upgrading-cordapps.html#flow-drains")
+
+class DatabaseIncompatibleException(@Suppress("MemberVisibilityCanBePrivate") private val reason: String) : DatabaseMigrationException(errorMessageFor(reason)) {
+    internal companion object {
+        fun errorMessageFor(reason: String): String = "Incompatible database schema version detected, please run the node with configuration option database.initialiseSchema=true. Reason: $reason"
+    }
+}

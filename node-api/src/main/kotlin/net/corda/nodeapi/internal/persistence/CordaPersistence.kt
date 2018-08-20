@@ -270,5 +270,3 @@ private fun Throwable.hasSQLExceptionCause(): Boolean =
         }
 
 class CouldNotCreateDataSourceException(override val message: String?, override val cause: Throwable? = null) : Exception()
-
-class DatabaseIncompatibleException(override val message: String?, override val cause: Throwable? = null) : Exception()
