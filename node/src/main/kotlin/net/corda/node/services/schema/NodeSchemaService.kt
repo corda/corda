@@ -34,7 +34,7 @@ import net.corda.node.services.vault.VaultSchemaV1
  * TODO: support plugins for schema version upgrading or custom mapping not supported by original [QueryableState].
  * TODO: create whitelisted tables when a CorDapp is first installed
  */
-class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNotarySchemas: Boolean = false) : SchemaService, SingletonSerializeAsToken() {
+class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet(), includeNotarySchemas: Boolean = false) : SchemaService, SingletonSerializeAsToken() {
     // Core Entities used by a Node
     object NodeCore
 
@@ -74,7 +74,9 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
                   Pair(NodeCoreV1, SchemaOptions())) +
      if (includeNotarySchemas) mapOf(Pair(NodeNotaryV1, SchemaOptions())) else emptyMap()
 
-    fun internalSchemas() = requiredSchemas.keys
+    fun internalSchemas() = requiredSchemas.keys + extraSchemas.filter { schema ->
+        schema::class.simpleName == "net.corda.finance.schemas.CashSchemaV1" || schema::class.simpleName == "net.corda.finance.schemas.CommercialPaperSchemaV1" }
+
     override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas + extraSchemas.associateBy({ it }, { SchemaOptions() })
 
     // Currently returns all schemas supported by the state, with no filtering or enrichment.

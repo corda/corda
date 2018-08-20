@@ -729,9 +729,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun startDatabase() {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        val schemasToMigrate = schemaService.internalSchemas() +
-                cordappLoader.cordappSchemas.filter { x -> x.name == "net.corda.finance.schemas.CashSchema" || x.name == "net.corda.finance.schemas.CommercialPaperSchema" }
-        database.startHikariPool(props, configuration.database, schemasToMigrate)
+        database.startHikariPool(props, configuration.database, schemaService.internalSchemas())
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -992,9 +990,10 @@ fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
-                      schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
+                      schemaService: SchemaService = NodeSchemaService(),
+                      internalSchemas: Set<MappedSchema> = emptySet()): CordaPersistence {
     val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, hikariProperties)
-    persistence.startHikariPool(hikariProperties, databaseConfig, schemaService.schemaOptions.keys)
+    persistence.startHikariPool(hikariProperties, databaseConfig, internalSchemas)
     return persistence
 }
 
@@ -1018,7 +1017,7 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
         val dataSource = DataSourceFactory.createDataSource(hikariProperties)
         val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig)
         schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
-        start(DataSourceFactory.createDataSource(hikariProperties))
+        start(dataSource)
     } catch (ex: Exception) {
         when {
             ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)

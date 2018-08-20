@@ -6,8 +6,8 @@ import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV3
+import net.corda.finance.schemas.CashSchemaV1
 import net.corda.testing.core.*
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThatThrownBy
