@@ -1,6 +1,7 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
+import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.argThat
 import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
@@ -600,7 +601,7 @@ class NodeVaultServiceTest {
         assertEquals(services.identityService.partyFromKey(identity.owningKey), identity.party)
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
         val thirdPartyServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
-            doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MEGA_CORP.name })
+            doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MEGA_CORP.name }, any())
         })
         val thirdPartyIdentity = thirdPartyServices.keyManagementService.freshKeyAndCert(thirdPartyServices.myInfo.singleIdentityAndCert(), false)
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
