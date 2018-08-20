@@ -72,11 +72,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
                 @Suppress("UNCHECKED_CAST")
                 method.invoke(instance, input) as? TOutput?
             } catch (ex: InvocationTargetException) {
-                when (ex.targetException) {
-                    is StackOverflowError -> throw StackOverflowError("Stack overflow")
-                    is OutOfMemoryError -> throw OutOfMemoryError("Out of memory")
-                    else -> throw ex.targetException
-                }
+                throw ex.targetException
             }
         }
         logger.trace("Execution of {} with input {} resulted in {}", runnableClass, input, result)

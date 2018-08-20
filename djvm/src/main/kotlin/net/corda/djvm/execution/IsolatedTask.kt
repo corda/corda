@@ -9,6 +9,7 @@ import net.corda.djvm.rewiring.SandboxClassLoadingException
 import net.corda.djvm.utilities.loggerFor
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.concurrent.thread
 
 /**
  * Container for running a task in an isolated environment.
@@ -29,7 +30,7 @@ class IsolatedTask(
         var output: T? = null
         var costs = CostSummary.empty
         var exception: Throwable? = null
-        Thread {
+        thread(name = threadName, isDaemon = true) {
             logger.trace("Entering isolated runtime environment...")
             SandboxRuntimeContext(configuration, context.inputClasses).use {
                 output = try {
@@ -48,10 +49,6 @@ class IsolatedTask(
             }
             logger.trace("Exiting isolated runtime environment...")
             completionLatch.countDown()
-        }.apply {
-            name = threadName
-            isDaemon = true
-            start()
         }
         completionLatch.await()
         val messages = exception.let {
@@ -63,8 +60,7 @@ class IsolatedTask(
                         else -> null
                     }
                 }
-                is StackOverflowError -> throw StackOverflowError("Stack overflow")
-                is OutOfMemoryError -> throw OutOfMemoryError("Out of memory")
+                is StackOverflowError, is OutOfMemoryError -> throw it
                 else -> null
             }
         } ?: MessageCollection()

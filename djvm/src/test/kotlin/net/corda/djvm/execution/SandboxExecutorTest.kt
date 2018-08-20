@@ -103,7 +103,6 @@ class SandboxExecutorTest : TestBase() {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         assertThatExceptionOfType(StackOverflowError::class.java)
                 .isThrownBy { contractExecutor.run<TestStackOverflow>(0) }
-                .withMessageContaining("Stack overflow")
     }
 
     class TestStackOverflow : SandboxedRunnable<Int, Int> {

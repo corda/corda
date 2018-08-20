@@ -123,11 +123,24 @@ abstract class CommandBase : Callable<Boolean> {
                 }
             }
         }
+        is StackOverflowError -> {
+            printError("Error: Stack overflow")
+            printError()
+        }
+        is OutOfMemoryError -> {
+            printError("Error: Out of memory")
+            printError()
+        }
         else -> {
             if (debug) {
                 exception.printStackTrace(System.err)
             } else {
-                printError("Error: ${exception.message}")
+                if (exception.message == null) {
+                    printError("Error: ${exception.javaClass.simpleName}")
+                } else {
+                    printError("Error: ${exception.message}")
+                }
+                printError()
             }
         }
     }
