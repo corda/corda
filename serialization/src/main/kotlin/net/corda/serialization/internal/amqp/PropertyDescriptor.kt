@@ -125,35 +125,34 @@ private fun Sequence<PropertyNamedMethod>.withValidSignature() = filter { it.has
 
 // Group methods by name and classifier, picking the method with the least generic signature if there is more than one
 // of a given name and type.
-private fun Sequence<PropertyNamedMethod>.byNameAndClassifier(fieldNames: Set<String>) =
-        groupingBy { element -> getPropertyName(element, fieldNames) }
-        .fold(
-                // Put the first method into a map of methods by classifier
-                { _, (_, classifier, method) -> mutableMapOf(classifier to method) },
-                // Merge subsequent methods into the map
-                { _, collected, (_, classifier, method) ->
-                    mergeClassifiedMethodInto(collected, classifier, method)
-                })
+private fun Sequence<PropertyNamedMethod>.byNameAndClassifier(fieldNames: Set<String>): Map<String, Map<MethodClassifier, Method>> {
+    val result = mutableMapOf<String, MutableMap<MethodClassifier, Method>>()
 
-private fun mergeClassifiedMethodInto(collected: MutableMap<MethodClassifier, Method>,
-                                      classifier: MethodClassifier, method: Method) =
-        collected.apply {
-            compute(classifier) { _, existingMethod -> pickMethod(existingMethod, method, classifier) }
+    forEach { (fieldName, classifier, method) ->
+        result.compute(getPropertyName(fieldName, fieldNames)) { _, byClassifier ->
+            (byClassifier ?: mutableMapOf()).merge(classifier, method)
         }
+    }
 
-private fun pickMethod(existingMethod: Method?, method: Method, classifier: MethodClassifier): Method? {
-    return if (existingMethod == null) method
-    else when (classifier) {
-        IS -> existingMethod
-        GET -> leastGenericBy({ genericReturnType }, existingMethod, method)
-        SET -> leastGenericBy({ genericParameterTypes[0] }, existingMethod, method)
+    return result
+}
+
+// Merge the given method into a map of methods by method classifier, picking the least generic method for each classifier.
+private fun MutableMap<MethodClassifier, Method>.merge(classifier: MethodClassifier, method: Method) = apply {
+    compute(classifier) { classifier, existingMethod ->
+        if (existingMethod == null) method
+        else when (classifier) {
+            IS -> existingMethod
+            GET -> leastGenericBy({ genericReturnType }, existingMethod, method)
+            SET -> leastGenericBy({ genericParameterTypes[0] }, existingMethod, method)
+        }
     }
 }
 
 // Make the property name conform to the underlying field name, if there is one.
-private fun getPropertyName(element: PropertyNamedMethod, fieldNames: Set<String>) =
-        if (element.fieldName.decapitalize() in fieldNames) element.fieldName.decapitalize()
-        else element.fieldName
+private fun getPropertyName(propertyName: String, fieldNames: Set<String>) =
+        if (propertyName.decapitalize() in fieldNames) propertyName.decapitalize()
+        else propertyName
 
 
 // Which of the three types of property method the method is.
@@ -173,20 +172,26 @@ private data class PropertyNamedMethod(val fieldName: String, val classifier: Me
 }
 
 // Construct a map of PropertyDescriptors by name, by merging the raw field map with the map of classified property methods
-private fun Map<String, Map<MethodClassifier, Method>>.toClassProperties(fieldMap: Map<String, Field>) =
-        fieldMap.getFieldsWithoutAccessors(keys) +
-                mapValues { (name, methods) ->
-                    PropertyDescriptor(
-                            fieldMap[name],
-                            methods[SET],
-                            methods[GET] ?: methods[IS]
-                    )
-                }
+private fun Map<String, Map<MethodClassifier, Method>>.toClassProperties(fieldMap: Map<String, Field>): Map<String, PropertyDescriptor> {
+    val result = mutableMapOf<String, PropertyDescriptor>()
 
-// Get only those fields in the field map for which we do not have accessor methods
-private fun Map<String, Field>.getFieldsWithoutAccessors(accessorNames: Set<String>) =
-        filterKeys { it !in accessorNames }
-                .mapValues { (_, value) -> PropertyDescriptor(value, null, null) }
+    // Fields for which we have no property methods
+    for ((name, field) in fieldMap) {
+        if (name !in keys) {
+            result[name] = PropertyDescriptor(field, null, null)
+        }
+    }
+
+    for ((name, methodMap) in this) {
+        result[name] = PropertyDescriptor(
+                fieldMap[name],
+                methodMap[SET],
+                methodMap[GET] ?: methodMap[IS]
+        )
+    }
+
+    return result
+}
 
 // Select the least generic of two methods by a type associated with each.
 private fun leastGenericBy(feature: Method.() -> Type, first: Method, second: Method) =
