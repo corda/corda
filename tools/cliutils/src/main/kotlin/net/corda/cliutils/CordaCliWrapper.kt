@@ -78,7 +78,6 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Run
     var verbose: Boolean = false
 
     @Option(names = ["--logging-level"],
-            // TODO For some reason I couldn't make picocli COMPLETION-CANDIDATES work
             completionCandidates = LoggingLevelConverter.LoggingLevels::class,
             description = ["Enable logging at this level and higher. Possible values: \${COMPLETION-CANDIDATES}"],
             converter = [LoggingLevelConverter::class]
