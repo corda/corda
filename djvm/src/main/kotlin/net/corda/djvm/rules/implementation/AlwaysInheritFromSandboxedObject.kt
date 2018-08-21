@@ -35,8 +35,7 @@ class AlwaysInheritFromSandboxedObject : ClassDefinitionProvider, Emitter {
                 instruction.memberName == CONSTRUCTOR_NAME &&
                 context.clazz.name != SANDBOX_OBJECT_NAME) {
             // Rewrite object initialisation call so that the sandboxed constructor gets used instead.
-            loadConstant(0xfed_c0de)
-            invokeSpecial(SANDBOX_OBJECT_NAME, CONSTRUCTOR_NAME, "(I)V", instruction.ownerIsInterface)
+            invokeSpecial(SANDBOX_OBJECT_NAME, CONSTRUCTOR_NAME, "()V", instruction.ownerIsInterface)
             preventDefault()
         }
     }

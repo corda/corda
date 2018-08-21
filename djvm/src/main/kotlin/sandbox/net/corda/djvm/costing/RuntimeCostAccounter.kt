@@ -61,6 +61,9 @@ object RuntimeCostAccounter {
     @JvmStatic
     fun recordAllocation(typeName: String) {
         // TODO Derive better size estimates for complex types.
+        // Resources worth taking a look at:
+        // - https://github.com/DimitrisAndreou/memory-measurer
+        // - https://stackoverflow.com/questions/9368764/calculate-size-of-object-in-java
         val size = allocationCosts.getOrDefault(typeName, 16)
         context.runtimeCosts.allocationCost.increment(size)
     }

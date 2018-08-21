@@ -42,26 +42,29 @@ class SandboxExecutorTest : TestBase() {
                 .withMessageContaining("Contract constraint violated")
     }
 
-    class Contract : SandboxedRunnable<Transaction, Unit> {
-        override fun run(input: Transaction) {
+    class Contract : SandboxedRunnable<Transaction?, Unit> {
+        override fun run(input: Transaction?) {
             throw IllegalArgumentException("Contract constraint violated")
         }
     }
 
-    data class Transaction(val id: Int)
+    data class Transaction(val id: Int?)
 
     @Test
     fun `can load and execute code that overrides object hash code`() = sandbox(DEFAULT) {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         val summary = contractExecutor.run<TestObjectHashCode>(0)
         val result = summary.result
-        assertThat(result).isEqualTo(0xfed_c0de)
+        assertThat(result).isEqualTo(0xfed_c0de + 2)
     }
 
     class TestObjectHashCode : SandboxedRunnable<Int, Int> {
         override fun run(input: Int): Int? {
             val obj = Object()
-            return obj.hashCode()
+            val hash1 = obj.hashCode()
+            val hash2 = obj.hashCode()
+            assert(hash1 == hash2)
+            return Object().hashCode()
         }
     }
 
@@ -70,7 +73,7 @@ class SandboxExecutorTest : TestBase() {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         val summary = contractExecutor.run<TestObjectHashCodeWithHierarchy>(0)
         val result = summary.result
-        assertThat(result).isEqualTo(0xfed_c0de)
+        assertThat(result).isEqualTo(0xfed_c0de + 1)
     }
 
     class TestObjectHashCodeWithHierarchy : SandboxedRunnable<Int, Int> {

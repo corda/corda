@@ -176,11 +176,11 @@ class ClassAndMemberVisitorTest : TestBase() {
                     assertThat(it.typeName).isEqualTo("sandbox/java/lang/Object")
                 }
                 .hasInstruction<MemberAccessInstruction>(
-                        "foo", "sandbox/java/lang/Object:<init>:(I)V"
+                        "foo", "sandbox/java/lang/Object:<init>:()V"
                 ) {
                     assertThat(it.owner).isEqualTo("sandbox/java/lang/Object")
                     assertThat(it.memberName).isEqualTo("<init>")
-                    assertThat(it.signature).isEqualTo("(I)V")
+                    assertThat(it.signature).isEqualTo("()V")
                 }
                 .hasInstruction<MemberAccessInstruction>(
                         "foo", "sandbox/java/lang/Object:hashCode()I"
@@ -196,7 +196,7 @@ class ClassAndMemberVisitorTest : TestBase() {
     private class TestClassWithCode {
 
         fun foo(): Int {
-            val obj = sandbox.java.lang.Object(0)
+            val obj = sandbox.java.lang.Object()
             return obj.hashCode()
         }
 
