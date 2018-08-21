@@ -11,6 +11,7 @@
 package com.r3.corda.enterprise.perftestcordapp.contracts.asset
 
 
+import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.argThat
 import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
@@ -149,7 +150,7 @@ class CashTests {
         LogHelper.setLevel(NodeVaultService::class)
         megaCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), MEGA_CORP.name, rigorousMock(), MEGA_CORP_KEY)
         miniCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), MINI_CORP.name, rigorousMock<IdentityServiceInternal>().also {
-            doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MINI_CORP.name })
+            doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MINI_CORP.name }, any())
         }, MINI_CORP_KEY)
         val notaryServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY)
         val databaseAndServices = makeTestDatabaseAndMockServices(

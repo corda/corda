@@ -32,7 +32,6 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -47,6 +46,7 @@ import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.*
+import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.messaging.Message
@@ -396,7 +396,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             (network as MockNodeMessagingService).spy = spy
         }
 
-        override fun makeKeyManagementService(identityService: IdentityService): KeyManagementServiceInternal {
+        override fun makeKeyManagementService(identityService: PersistentIdentityService): KeyManagementServiceInternal {
             return E2ETestKeyManagementService(identityService)
         }
 
