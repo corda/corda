@@ -64,7 +64,7 @@ dependencies {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"
     }
-    compile("com.fasterxml.jackson.module:jackson-module-kotlin:2.8.9")
+    compile "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
     compile project(":client:rpc")
     compile project(":client:jackson")
     compile project(":test-utils")

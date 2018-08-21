@@ -14,8 +14,9 @@ buildscript {
 // causing the problems in runtime. Those can be changed by manipulating above properties
 // See https://github.com/spring-gradle-plugins/dependency-management-plugin/blob/master/README.md#changing-the-value-of-a-version-property
 // This has to be repeated here as otherwise the order of files does matter
-ext['artemis.version'] = "$artemis_version"
-ext['hibernate.version'] = "$hibernate_version"
+ext['artemis.version'] = artemis_version
+ext['hibernate.version'] = hibernate_version
+ext['jackson.version'] = jackson_version
 
 
 apply plugin: 'java'
@@ -36,8 +37,8 @@ dependencies {
     testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
-    compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    runtime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':finance')
     compile project(':node-driver')

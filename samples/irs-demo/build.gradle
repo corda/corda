@@ -13,9 +13,10 @@ buildscript {
 // Spring Boot plugin adds a numerous hardcoded dependencies in the version much lower then Corda expects
 // causing the problems in runtime. Those can be changed by manipulating above properties
 // See https://github.com/spring-gradle-plugins/dependency-management-plugin/blob/master/README.md#changing-the-value-of-a-version-property
-ext['artemis.version'] = "$artemis_version"
-ext['hibernate.version'] = "$hibernate_version"
-ext['selenium.version'] = "$selenium_version"
+ext['artemis.version'] = artemis_version
+ext['hibernate.version'] = hibernate_version
+ext['selenium.version'] = selenium_version
+ext['jackson.version'] = jackson_version
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
