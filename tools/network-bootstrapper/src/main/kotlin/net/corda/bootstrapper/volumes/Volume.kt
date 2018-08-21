@@ -46,7 +46,7 @@ interface Volume {
                     minimumPlatformVersion = 1,
                     notaries = it,
                     maxMessageSize = 10485760,
-                    maxTransactionSize = Int.MAX_VALUE,
+                    maxTransactionSize = 10485760,
                     modifiedTime = Instant.now(),
                     epoch = 10,
                     whitelistedContractImplementations = emptyMap())
