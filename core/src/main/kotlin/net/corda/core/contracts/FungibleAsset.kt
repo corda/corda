@@ -5,6 +5,11 @@ import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
 import java.security.PublicKey
 
+/**
+ * Thrown if a request is made to spend an amount of a [FungibleAsset] but there aren't enough tokens in the vault.
+ *
+ * @property amountMissing An [Amount] that specifies how many tokens were missing.
+ */
 class InsufficientBalanceException(val amountMissing: Amount<*>) : FlowException("Insufficient balance, missing $amountMissing")
 
 /**
