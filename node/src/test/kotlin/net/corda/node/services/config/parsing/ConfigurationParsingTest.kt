@@ -28,9 +28,7 @@ class ConfigurationParsingTest {
     @Test
     fun version_header_extraction_present() {
 
-        val body = configOf("metadata" to configOf("version" to 2), "node" to configOf("p2pAddress" to "localhost:8080"))
-
-        val rawConfiguration = configOf("configuration" to body)
+        val rawConfiguration = configOf("configuration" to configOf("metadata" to configOf("version" to 2), "node" to configOf("p2pAddress" to "localhost:8080")))
 
         val version = readVersionHeader(rawConfiguration)
         assertThat(version).isEqualTo(2)
@@ -39,9 +37,7 @@ class ConfigurationParsingTest {
     @Test
     fun version_header_extraction_no_metadata() {
 
-        val body = configOf("node" to configOf("p2pAddress" to "localhost:8080"))
-
-        val rawConfiguration = configOf("configuration" to body)
+        val rawConfiguration = configOf("configuration" to configOf("node" to configOf("p2pAddress" to "localhost:8080")))
 
         val version = readVersionHeader(rawConfiguration)
         assertThat(version).isNull()
@@ -50,9 +46,7 @@ class ConfigurationParsingTest {
     @Test
     fun version_header_extraction_no_key() {
 
-        val body = configOf("metadata" to configOf(), "node" to configOf("p2pAddress" to "localhost:8080"))
-
-        val rawConfiguration = configOf("configuration" to body)
+        val rawConfiguration = configOf("configuration" to configOf("metadata" to configOf(), "node" to configOf("p2pAddress" to "localhost:8080")))
 
         val version = readVersionHeader(rawConfiguration)
 
@@ -62,9 +56,7 @@ class ConfigurationParsingTest {
     @Test
     fun version_header_extraction_no_value() {
 
-        val body = configOf("metadata" to configOf("version" to null), "node" to configOf("p2pAddress" to "localhost:8080"))
-
-        val rawConfiguration = configOf("configuration" to body)
+        val rawConfiguration = configOf("configuration" to configOf("metadata" to configOf("version" to null), "node" to configOf("p2pAddress" to "localhost:8080")))
 
         val version = readVersionHeader(rawConfiguration)
 
