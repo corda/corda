@@ -39,12 +39,12 @@ interface Validated {
     }
 }
 
-
 fun CordaCliWrapper.start(vararg args: String) {
     val cmd = CommandLine(this)
     cmd.commandSpec.name(alias)
     cmd.commandSpec.usageMessage().description(description)
     try {
+        CommandLine.run(this, *args)
         cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(Help.Ansi.AUTO),
                 DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(Help.Ansi.AUTO),
                 *args)
@@ -98,12 +98,12 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Run
     }
 
     // Override this function with the actual method to be run once all the arguments have been parsed
-    abstract fun invoke()
+    abstract fun runProgram()
 
     override fun run() {
         installShellExtensionsParser.installOrUpdateShellExtensions(alias, this.javaClass.name)
         initLogging()
-        invoke()
+        runProgram()
     }
 }
 
