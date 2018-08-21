@@ -145,9 +145,11 @@ open class SerializerFactory(
                 }
             }
             Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
-                logger.info("class=[${actualClass?.simpleName} | $declaredClass] is an enumeration "
-                        + "declaredType=${declaredType.typeName} "
-                        + "isEnum=${declaredType::class.java.isEnum}")
+                logger.trace {
+                    "class=[${actualClass?.simpleName} | $declaredClass] is an enumeration " +
+                    "declaredType=${declaredType.typeName} " +
+                    "isEnum=${declaredType::class.java.isEnum}"
+                }
 
                 serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
                     whitelist.requireWhitelisted(actualType)
@@ -255,7 +257,7 @@ open class SerializerFactory(
      * that expects to find getters and a constructor with a parameter for each property.
      */
     open fun register(customSerializer: CustomSerializer<out Any>) {
-        logger.info ("action=\"Registering custom serializer\", class=\"${customSerializer.type}\"")
+        logger.trace("action=\"Registering custom serializer\", class=\"${customSerializer.type}\"")
         if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
             customSerializers += customSerializer
             serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
@@ -266,7 +268,7 @@ open class SerializerFactory(
     }
 
     fun registerExternal(customSerializer: CorDappCustomSerializer) {
-        logger.info ("action=\"Registering external serializer\", class=\"${customSerializer.type}\"")
+        logger.trace("action=\"Registering external serializer\", class=\"${customSerializer.type}\"")
         if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
             customSerializers += customSerializer
             serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
@@ -280,14 +282,14 @@ open class SerializerFactory(
     private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor, sentinel: Boolean = false) {
         val metaSchema = CarpenterMetaSchema.newInstance()
         for (typeNotation in schemaAndDescriptor.schemas.schema.types) {
-            logger.debug { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=${typeNotation.name}" }
+            logger.trace { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=${typeNotation.name}" }
             try {
                 val serialiser = processSchemaEntry(typeNotation)
                 // if we just successfully built a serializer for the type but the type fingerprint
                 // doesn't match that of the serialised object then we are dealing with  different
                 // instance of the class, as such we need to build an EvolutionSerializer
                 if (serialiser.typeDescriptor != typeNotation.descriptor.name) {
-                    logger.info("typeNotation=${typeNotation.name} action=\"requires Evolution\"")
+                    logger.trace { "typeNotation=${typeNotation.name} action=\"requires Evolution\"" }
                     getEvolutionSerializer(typeNotation, serialiser, schemaAndDescriptor.schemas)
                 }
             } catch (e: ClassNotFoundException) {
@@ -296,7 +298,7 @@ open class SerializerFactory(
                     throw e
                 }
                 else {
-                    logger.info("typeNotation=\"${typeNotation.name}\" action=\"carpentry required\"")
+                    logger.trace { "typeNotation=\"${typeNotation.name}\" action=\"carpentry required\"" }
                 }
                 metaSchema.buildFor(typeNotation, classloader)
             }
