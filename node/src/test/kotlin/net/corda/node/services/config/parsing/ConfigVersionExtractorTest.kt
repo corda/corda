@@ -1,12 +1,12 @@
 package net.corda.node.services.config.parsing
 
-import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigObject
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
-class ConfigurationVersionExtractionTest {
+class ConfigVersionExtractorTest {
+
+    private val extractVersion: ConfigVersionExtractor = KeyedConfigVersionExtractor("configuration.metadata.version")
 
     @Test
     fun serialize_deserialize_configuration() {
@@ -30,7 +30,7 @@ class ConfigurationVersionExtractionTest {
 
         val rawConfiguration = configOf("configuration" to configOf("metadata" to configOf("version" to 2), "node" to configOf("p2pAddress" to "localhost:8080")))
 
-        val version = readVersionHeader(rawConfiguration)
+        val version = extractVersion.invoke(rawConfiguration)
         assertThat(version).isEqualTo(2)
     }
 
@@ -39,7 +39,7 @@ class ConfigurationVersionExtractionTest {
 
         val rawConfiguration = configOf("configuration" to configOf("node" to configOf("p2pAddress" to "localhost:8080")))
 
-        val version = readVersionHeader(rawConfiguration)
+        val version = extractVersion.invoke(rawConfiguration)
         assertThat(version).isNull()
     }
 
@@ -48,7 +48,7 @@ class ConfigurationVersionExtractionTest {
 
         val rawConfiguration = configOf("configuration" to configOf("metadata" to configOf(), "node" to configOf("p2pAddress" to "localhost:8080")))
 
-        val version = readVersionHeader(rawConfiguration)
+        val version = extractVersion.invoke(rawConfiguration)
 
         assertThat(version).isNull()
     }
@@ -58,7 +58,7 @@ class ConfigurationVersionExtractionTest {
 
         val rawConfiguration = configOf("configuration" to configOf("metadata" to configOf("version" to null), "node" to configOf("p2pAddress" to "localhost:8080")))
 
-        val version = readVersionHeader(rawConfiguration)
+        val version = extractVersion.invoke(rawConfiguration)
 
         assertThat(version).isNull()
     }
@@ -68,18 +68,8 @@ class ConfigurationVersionExtractionTest {
 
         val rawConfiguration = configOf()
 
-        val version = readVersionHeader(rawConfiguration)
+        val version = extractVersion.invoke(rawConfiguration)
 
         assertThat(version).isNull()
     }
-
-    private fun readVersionHeader(configuration: Config): Int? {
-
-        return when {
-            configuration.hasPath("configuration.metadata.version") -> configuration.getInt("configuration.metadata.version")
-            else -> null
-        }
-    }
-
-    private fun readVersionHeader(configuration: ConfigObject): Int? = readVersionHeader(configuration.toConfig())
 }
