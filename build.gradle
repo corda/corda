@@ -194,6 +194,7 @@ allprojects {
 
         if (System.getProperty("test.maxParallelForks") != null) {
             maxParallelForks = Integer.valueOf(System.getProperty("test.maxParallelForks"))
+            logger.debug("System property test.maxParallelForks found - setting max parallel forks to $maxParallelForks for $project")
         }
 
         if (project.path.startsWith(':experimental') && System.getProperty("experimental.test.enable") == null) {
