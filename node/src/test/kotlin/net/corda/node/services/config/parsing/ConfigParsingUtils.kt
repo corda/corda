@@ -2,11 +2,13 @@ package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 
 @Suppress("UNCHECKED_CAST")
-internal fun configOf(vararg entries: Pair<String, Any>): Config {
+internal fun configOf(vararg entries: Pair<String, Any?>): ConfigObject {
 
     var configuration = ConfigFactory.empty()
     entries.forEach { entry ->
@@ -17,7 +19,7 @@ internal fun configOf(vararg entries: Pair<String, Any>): Config {
             entry
         }
     }
-    return configuration
+    return configuration.root()
 }
 
 internal operator fun Config.plus(entry: Pair<String, Any?>): Config {
@@ -34,4 +36,4 @@ internal operator fun Config.minus(key: String): Config {
     return withoutPath(key)
 }
 
-internal fun Config.serialized(): String = root().render(ConfigRenderOptions.concise())
+internal fun Config.serialize(options: ConfigRenderOptions = ConfigRenderOptions.concise().setFormatted(true).setJson(true)): String = root().render(options)
