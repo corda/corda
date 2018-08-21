@@ -6,7 +6,7 @@ import com.typesafe.config.ConfigObject
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
-class ConfigurationParsingTest {
+class ConfigurationVersionExtractionTest {
 
     @Test
     fun serialize_deserialize_configuration() {
