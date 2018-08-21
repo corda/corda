@@ -33,7 +33,7 @@
 
         <!-- Required for printBasicInfo -->
         <Console name="Console-Appender-Println" target="SYSTEM_OUT">
-            <PatternLayout pattern="%msg%n %throwable{0}" />
+            <PatternLayout pattern="%msg%n%throwable{0}" />
         </Console>
 
         <!-- Will generate up to 100 log files for a given day. During every rollover it will delete
