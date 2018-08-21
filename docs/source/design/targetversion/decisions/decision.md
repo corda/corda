@@ -6,7 +6,7 @@ Design Decision: How should the node react when the check for minimum or target 
 
 ## Background / Context
 
-What should happen when the node loads a CorDapp and detects that the CorDapp's minimum platform version is greater than the node's platform versoin, or the CorDapps target platform version is less than the network's minimum target version? 
+What should happen when the node loads a CorDapp and detects that the CorDapp's minimum platform version is greater than the node's platform version, or the CorDapps target platform version is less than the network's minimum target version? 
 
 ## Options Analysis
 
