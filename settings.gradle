@@ -42,6 +42,7 @@ include 'tools:blobinspector'
 include 'tools:shell'
 include 'tools:shell-cli'
 include 'tools:network-bootstrapper'
+include 'tools:cliutils'
 include 'example-code'
 project(':example-code').projectDir = file("$settingsDir/docs/source/example-code")
 include 'samples:attachment-demo'
