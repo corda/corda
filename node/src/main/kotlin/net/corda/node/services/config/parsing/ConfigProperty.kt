@@ -58,9 +58,9 @@ private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<
     @Throws(ConfigException.WrongType::class)
     override fun valueIn(configuration: Config): TYPE? {
 
-        return try {
+        return if (delegate.isSpecifiedBy(configuration)) {
             delegate.valueIn(configuration)
-        } catch (e: ConfigException.Missing) {
+        } else {
             null
         }
     }
