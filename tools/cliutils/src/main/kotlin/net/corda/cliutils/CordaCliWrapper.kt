@@ -79,8 +79,10 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Run
 
     @Option(names = ["--logging-level"],
             // TODO For some reason I couldn't make picocli COMPLETION-CANDIDATES work
-            description = ["Enable logging at this level and higher. Defaults to INFO. Possible values: OFF, INFO, WARN, TRACE, DEBUG, ERROR, FATAL, ALL"],
-            converter = [LoggingLevelConverter::class])
+            completionCandidates = LoggingLevelConverter.LoggingLevels::class,
+            description = ["Enable logging at this level and higher. Possible values: \${COMPLETION-CANDIDATES}"],
+            converter = [LoggingLevelConverter::class]
+    )
     var loggingLevel: Level = Level.INFO
 
     @Mixin
@@ -114,4 +116,6 @@ class LoggingLevelConverter : ITypeConverter<Level> {
         return value?.let { Level.getLevel(it) }
                 ?: throw TypeConversionException("Unknown option for --logging-level: $value")
     }
+
+    class LoggingLevels : ArrayList<String>(Level.values().map { it.toString() })
 }
