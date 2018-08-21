@@ -3,6 +3,7 @@ package net.corda.core.contracts
 import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.isUploaderTrusted
@@ -66,4 +67,18 @@ object AutomaticHashConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         throw UnsupportedOperationException("Contracts cannot be satisfied by an AutomaticHashConstraint placeholder")
     }
+}
+
+/**
+ * An [AttachmentConstraint] that verifies that the attachment has signers that satisfy the provided [CompositeKey].
+ * See: corda/docs/source/design/data-model-upgrades/signature-constraints.md
+ *
+ * @param key A [CompositeKey] that must be satisfied by the owning keys of the attachment's signing parties.
+ */
+@KeepForDJVM
+data class SignatureAttachmentConstraint(
+        val key: CompositeKey
+) : AttachmentConstraint {
+    override fun isSatisfiedBy(attachment: Attachment): Boolean =
+        key.isFulfilledBy(attachment.signers.map { it.owningKey })
 }

@@ -82,4 +82,15 @@ class TransactionBuilderTest {
         val wtx = builder.toWireTransaction(services)
         assertThat(wtx.references).containsOnly(referenceStateRef)
     }
+
+    @Test
+    fun `automatic signature constraint`() {
+        val outputState = TransactionState(data = DummyState(), contract = DummyContract.PROGRAM_ID, notary = notary)
+        val builder = TransactionBuilder()
+                .addOutputState(outputState)
+                .addCommand(DummyCommandData, notary.owningKey)
+        val wtx = builder.toWireTransaction(services)
+        assertThat(wtx.outputs).containsOnly(
+                outputState.copy(constraint = HashAttachmentConstraint(contractAttachmentId)))
+    }
 }
