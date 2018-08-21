@@ -15,7 +15,7 @@ class ConfigPropertyTest {
         val configuration = configOf(key to value).toConfig()
 
         val property = ConfigProperty.int(key)
-        println(property.description)
+        println(property)
 
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
@@ -30,7 +30,7 @@ class ConfigPropertyTest {
         val configuration = configOf(key to value).toConfig()
 
         val property = ConfigProperty.boolean(key)
-        println(property.description)
+        println(property)
 
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
@@ -44,7 +44,7 @@ class ConfigPropertyTest {
         val configuration = configOf(key to null).toConfig()
 
         val property = ConfigProperty.int(key)
-        println(property.description)
+        println(property)
 
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
@@ -59,7 +59,7 @@ class ConfigPropertyTest {
         val configuration = configOf(key to value).toConfig()
 
         val property = ConfigProperty.int(key).map(Boolean::class.java.simpleName) { integer -> integer == value }
-        println(property.description)
+        println(property)
         val expectedValue = true
 
         assertThat(property.key).isEqualTo(key)
@@ -75,7 +75,7 @@ class ConfigPropertyTest {
         val configuration = configOf(key to value).toConfig()
 
         val property = ConfigProperty.boolean(key).map { boolean -> boolean.hashCode() }
-        println(property.description)
+        println(property)
 
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
@@ -90,7 +90,7 @@ class ConfigPropertyTest {
         val configuration = configOf(key to null).toConfig()
 
         val property = ConfigProperty.int(key).map { integer -> integer == value }
-        println(property.description)
+        println(property)
 
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
@@ -105,7 +105,7 @@ class ConfigPropertyTest {
         val configuration = configOf(key to value).toConfig()
 
         val property = ConfigProperty.int(key).optional()
-        println(property.description)
+        println(property)
 
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
@@ -120,7 +120,7 @@ class ConfigPropertyTest {
         val configuration = configOf(key to value).toConfig()
 
         val property = ConfigProperty.boolean(key).optional()
-        println(property.description)
+        println(property)
 
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
@@ -134,7 +134,7 @@ class ConfigPropertyTest {
         val configuration = configOf(key to null).toConfig()
 
         val property = ConfigProperty.int(key).optional()
-        println(property.description)
+        println(property)
 
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
@@ -149,7 +149,7 @@ class ConfigPropertyTest {
         val configuration = configOf(key to value).toConfig()
 
         val property = ConfigProperty.int(key).optional().map(Boolean::class.java.simpleName) { integer -> integer == value }
-        println(property.description)
+        println(property)
         val expectedValue = true
 
         assertThat(property.key).isEqualTo(key)
@@ -165,7 +165,7 @@ class ConfigPropertyTest {
         val configuration = configOf(key to value).toConfig()
 
         val property = ConfigProperty.boolean(key).optional().map { boolean -> boolean?.hashCode() }
-        println(property.description)
+        println(property)
 
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
@@ -180,7 +180,7 @@ class ConfigPropertyTest {
         val configuration = configOf(key to null).toConfig()
 
         val property = ConfigProperty.int(key).optional().map { integer -> integer == value }
-        println(property.description)
+        println(property)
 
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isSpecifiedBy(configuration)).isFalse()

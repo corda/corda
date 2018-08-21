@@ -11,8 +11,6 @@ interface ConfigProperty<TYPE> {
     val key: String
     val typeName: String
 
-    val description: String get() = "\"$key\": $typeName"
-
     @Throws(ConfigException.Missing::class, ConfigException.WrongType::class)
     fun valueIn(configuration: Config): TYPE
 
@@ -55,6 +53,11 @@ private open class FunctionalConfigProperty<TYPE>(override val key: String, over
 
         return FunctionalConfigProperty(key, mappedTypeName?.let { "$it($typeName)" } ?: typeName) { config, keyArg -> function.invoke(extractValue.invoke(config, keyArg)) }
     }
+
+    override fun toString(): String {
+
+        return "\"$key\": $typeName"
+    }
 }
 
 private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<TYPE>) : ConfigProperty<TYPE?> {
@@ -76,6 +79,11 @@ private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<
 
         val mappedName = mappedTypeName?.let { "$it(${delegate.typeName})" } ?: delegate.typeName
         return FunctionalConfigProperty(key, "optional[$mappedName]") { configuration, _ -> function.invoke(valueIn(configuration)) }
+    }
+
+    override fun toString(): String {
+
+        return "\"$key\": $typeName"
     }
 }
 
