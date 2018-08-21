@@ -64,6 +64,7 @@ class CordappSmokeTest {
         // The `nodeReadyFuture` in the persistent network map cache will not complete unless there is at least one other
         // node in the network. We work around this limitation by putting another node info file in the additional-node-info
         // folder.
+        // TODO clean this up after we refactor the persistent network map cache / network map updater
         val additionalNodeInfoDir = (baseDir / "additional-node-infos").createDirectories()
         createDummyNodeInfo(additionalNodeInfoDir)
 
