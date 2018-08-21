@@ -45,13 +45,15 @@ interface ConfigProperty<TYPE> {
 }
 
 // TODO sollecitom (perhaps) add a proper `ConvertValue` interface, with support for validation and error reporting.
-private open class FunctionalConfigProperty<TYPE>(override val key: String, override val typeName: String, private val extractValue: (Config, String) -> TYPE) : ConfigProperty<TYPE> {
+private open class FunctionalConfigProperty<TYPE>(override val key: String, typeName: String, private val extractValue: (Config, String) -> TYPE) : ConfigProperty<TYPE> {
+
+    override val typeName = typeName.capitalize()
 
     override fun valueIn(configuration: Config) = extractValue.invoke(configuration, key)
 
     override fun <MAPPED> map(mappedTypeName: String?, function: (TYPE) -> MAPPED): ConfigProperty<MAPPED> {
 
-        return FunctionalConfigProperty(key, mappedTypeName?.let { "$it($typeName)" } ?: typeName) { config, keyArg -> function.invoke(extractValue.invoke(config, keyArg)) }
+        return FunctionalConfigProperty(key, compositeMappedName(mappedTypeName, typeName)) { config, keyArg -> function.invoke(extractValue.invoke(config, keyArg)) }
     }
 
     override fun toString(): String {
@@ -63,7 +65,7 @@ private open class FunctionalConfigProperty<TYPE>(override val key: String, over
 private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<TYPE>) : ConfigProperty<TYPE?> {
 
     override val key = delegate.key
-    override val typeName = "optional[${delegate.typeName}]"
+    override val typeName = "${delegate.typeName}?"
 
     @Throws(ConfigException.WrongType::class)
     override fun valueIn(configuration: Config): TYPE? {
@@ -77,8 +79,7 @@ private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<
 
     override fun <MAPPED> map(mappedTypeName: String?, function: (TYPE?) -> MAPPED): ConfigProperty<MAPPED> {
 
-        val mappedName = mappedTypeName?.let { "$it(${delegate.typeName})" } ?: delegate.typeName
-        return FunctionalConfigProperty(key, "optional[$mappedName]") { configuration, _ -> function.invoke(valueIn(configuration)) }
+        return FunctionalConfigProperty(key, "${compositeMappedName(mappedTypeName, delegate.typeName)}?") { configuration, _ -> function.invoke(valueIn(configuration)) }
     }
 
     override fun toString(): String {
@@ -86,6 +87,8 @@ private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<
         return "\"$key\": $typeName"
     }
 }
+
+private fun compositeMappedName(mappedTypeName: String?, originalTypeName: String) = mappedTypeName?.let { "[$originalTypeName => ${it.capitalize()}]" } ?: originalTypeName
 
 private class IntConfigProperty(key: String) : FunctionalConfigProperty<Int>(key, Int::class.java.simpleName, Config::getInt)
 private class IntListConfigProperty(key: String) : FunctionalConfigProperty<List<Int>>(key, "List<${Int::class.java.simpleName}>", Config::getIntList)
