@@ -362,6 +362,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         val obj = Holder(ByteArray(20000))
         val uncompressedSize = obj.serialize(factory, context.withEncoding(null)).size
         val compressedSize = obj.serialize(factory, context.withEncoding(CordaSerializationEncoding.SNAPPY)).size
+        // If these need fixing, sounds like Kryo wire format changed and checkpoints might not surive an upgrade.
         assertEquals(20222, uncompressedSize)
         assertEquals(1111, compressedSize)
     }
