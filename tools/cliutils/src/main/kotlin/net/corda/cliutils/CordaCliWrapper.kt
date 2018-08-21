@@ -100,7 +100,7 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Run
     abstract fun invoke()
 
     override fun run() {
-        installShellExtensionsParser.installOrUpdateShellExtensions(alias)
+        installShellExtensionsParser.installOrUpdateShellExtensions(alias, this.javaClass.name)
         initLogging()
         invoke()
     }

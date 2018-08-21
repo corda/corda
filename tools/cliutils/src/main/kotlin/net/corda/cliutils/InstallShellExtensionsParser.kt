@@ -8,11 +8,7 @@ import java.nio.file.StandardCopyOption
 import java.util.*
 import kotlin.system.exitProcess
 
-@CommandLine.Command(description = [""])
-class InstallShellExtensionsParser {
-    @CommandLine.Option(names = ["--install-shell-extensions"], description = ["Install alias and autocompletion for bash and zsh"])
-    var installShellExtensions: Boolean = false
-
+private class ShellExtensionsGenerator(val alias: String, val className: String) {
     private class SettingsFile(val filePath: Path) {
         private val lines: MutableList<String> by lazy { getFileLines() }
         var fileModified: Boolean = false
@@ -65,20 +61,20 @@ class InstallShellExtensionsParser {
     private fun jarVersion(alias: String) = "# $alias - Version: ${CordaVersionProvider.releaseVersion}, Revision: ${CordaVersionProvider.revision}"
     private fun getAutoCompleteFileLocation(alias: String) = userHome / ".completion" / alias
 
-    private fun generateAutoCompleteFile(alias: String) {
+    private fun generateAutoCompleteFile(alias: String, className: String) {
         println("Generating $alias auto completion file")
         val autoCompleteFile = getAutoCompleteFileLocation(alias)
         autoCompleteFile.parent.createDirectories()
-        picocli.AutoComplete.main("-f", "-n", alias, this.javaClass.name, "-o", autoCompleteFile.toStringWithDeWindowsfication())
+        picocli.AutoComplete.main("-f", "-n", alias, className, "-o", autoCompleteFile.toStringWithDeWindowsfication())
 
         // Append hash of file to autocomplete file
         autoCompleteFile.toFile().appendText(jarVersion(alias))
     }
 
-    private fun installShellExtensions(alias: String) {
+    fun installShellExtensions() {
         // Get jar location and generate alias command
         val command = "alias $alias='java -jar \"${jarLocation.toStringWithDeWindowsfication()}\"'"
-        generateAutoCompleteFile(alias)
+        generateAutoCompleteFile(alias, className)
 
         // Get bash settings file
         val bashSettingsFile = SettingsFile(userHome / ".bashrc")
@@ -101,7 +97,7 @@ class InstallShellExtensionsParser {
         println("Restart bash for this to take effect, or run `. ~/.bashrc` in bash or `. ~/.zshrc` in zsh to re-initialise your shell now")
     }
 
-    private fun checkForAutoCompleteUpdate(alias: String) {
+    fun checkForAutoCompleteUpdate() {
         val autoCompleteFile = getAutoCompleteFileLocation(alias)
 
         // If no autocomplete file, it hasn't been installed, so don't do anything
@@ -112,17 +108,24 @@ class InstallShellExtensionsParser {
 
         if (lastLine != jarVersion(alias)) {
             println("Old auto completion file detected... regenerating")
-            generateAutoCompleteFile(alias)
+            generateAutoCompleteFile(alias, className)
             println("Restart bash for this to take effect, or run `. ~/.bashrc` to re-initialise bash now")
         }
     }
+}
 
-    fun installOrUpdateShellExtensions(alias: String) {
+@CommandLine.Command(description = [""])
+class InstallShellExtensionsParser {
+    @CommandLine.Option(names = ["--install-shell-extensions"], description = ["Install alias and autocompletion for bash and zsh"])
+    var installShellExtensions: Boolean = false
+
+    fun installOrUpdateShellExtensions(alias: String, className: String) {
+        val generator = ShellExtensionsGenerator(alias, className)
         if (installShellExtensions) {
-            installShellExtensions(alias)
+            generator.installShellExtensions()
             exitProcess(0)
         } else {
-            checkForAutoCompleteUpdate(alias)
+            generator.checkForAutoCompleteUpdate()
         }
     }
 }
