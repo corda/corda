@@ -60,8 +60,10 @@ enum class CordaSerializationEncoding : SerializationEncoding, OrdinalWriter {
 
 const val encodingNotPermittedFormat = "Encoding not permitted: %s"
 
-// Has an empty flush implementation.  This is because Kryo keeps calling flush all the time, which stops the Snappy
-// stream from building up big chunks to compress and instead keeps compressing small chunks giving terrible compression ratio.
+/**
+ * Has an empty flush implementation.  This is because Kryo keeps calling flush all the time, which stops the Snappy
+ * stream from building up big chunks to compress and instead keeps compressing small chunks giving terrible compression ratio.
+ */
 class FlushAverseOutputStream(private val delegate: OutputStream) : OutputStream() {
     @Throws(IOException::class)
     override fun write(b: Int) = delegate.write(b)
