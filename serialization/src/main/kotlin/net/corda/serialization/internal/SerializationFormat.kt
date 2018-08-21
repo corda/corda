@@ -7,6 +7,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.serialization.internal.OrdinalBits.OrdinalWriter
 import org.iq80.snappy.SnappyFramedInputStream
 import org.iq80.snappy.SnappyFramedOutputStream
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteBuffer
@@ -44,7 +45,7 @@ enum class CordaSerializationEncoding : SerializationEncoding, OrdinalWriter {
         override fun wrap(stream: InputStream) = InflaterInputStream(stream)
     },
     SNAPPY {
-        override fun wrap(stream: OutputStream) = SnappyFramedOutputStream(stream)
+        override fun wrap(stream: OutputStream) = FlushAverseOutputStream(SnappyFramedOutputStream(stream))
         override fun wrap(stream: InputStream) = SnappyFramedInputStream(stream, false)
     };
 
@@ -58,3 +59,18 @@ enum class CordaSerializationEncoding : SerializationEncoding, OrdinalWriter {
 }
 
 const val encodingNotPermittedFormat = "Encoding not permitted: %s"
+
+// Has an empty flush implementation.
+class FlushAverseOutputStream(private val delegate: OutputStream) : OutputStream() {
+    @Throws(IOException::class)
+    override fun write(b: Int) = delegate.write(b)
+
+    @Throws(IOException::class)
+    override fun write(b: ByteArray?, off: Int, len: Int) = delegate.write(b, off, len)
+
+    @Throws(IOException::class)
+    override fun close() {
+        delegate.flush()
+        delegate.close()
+    }
+}

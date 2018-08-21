@@ -67,6 +67,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
 
     override fun withPreferredSerializationVersion(magic: SerializationMagic) = copy(preferredSerializationVersion = magic)
     override fun withEncoding(encoding: SerializationEncoding?) = copy(encoding = encoding)
+    override fun withEncodingWhitelist(encodingWhitelist: EncodingWhitelist) = copy(encodingWhitelist = encodingWhitelist)
 }
 
 /*
