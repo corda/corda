@@ -24,8 +24,9 @@ and its workflow. See the [Corda Technical White
 Paper](https://docs.corda.net/_static/corda-technical-whitepaper.pdf) for a
 detailed description of Corda's design and functionality.
 
-R3 will provide and maintain a number of essential services underpinning the
-ledger network, including:
+R3 provide and maintain a number of essential services underpinning the ledger
+network. In the future these services are intended to be operated by a
+separate Corda Foundation. The network services currently include:
 
   * Network map service: Service for distributing and providing updates for a network map document enabling nodes to identify other nodes on the network, their network address and advertised services. 
   * Network permissioning service ('Doorman'): Issues signed digital certificates credentialising the identity of parties on the network to conduct peer-to-peer communication.
@@ -180,9 +181,9 @@ private key can sign the NodeInfo.
 
 Corda employs a Public Key Infrastructure (PKI) to validate the identity of
 nodes. An imposter would need to acquire an organisation's private keys in
-order to meaningfully impersonate that organisation. R3 provides guidance to
-all ledger network participants to ensure adequate security is maintained
-around cryptographic keys.
+order to meaningfully impersonate that organisation. Corda will soon support a
+range of HSMs (Hardware Security Modules) for storing a node's private keys,
+which mitigates this risk.
 
 </td></tr>  
 <tr>  
@@ -209,9 +210,10 @@ Connections to the Network Map service are secured using the HTTPS protocol.
 The connecting node authenticates the NetworkMap servers using their public
 certificates, to ensure the identity of these servers is correct.
 
-All data received from the NetworkMap is digitally signed - an attacker
-attempting to spoof either service would need access to the corresponding
-private keys.
+All data received from the NetworkMap is digitally signed (in addition to
+being protected by TLS) - an attacker attempting to spoof the Network Map
+would need to acquire both private TLS keys, and the private NetworkMap
+signing keys.
 
 The Doorman and NetworkMap signing keys are stored inside a (Hardware Security
 Module (HSM) with strict security controls (network separation and physical
@@ -341,11 +343,15 @@ deletion of data to malicious tampering of financial detail.
 </td>  
 <td>
 
-There are not currently any direct controls to mitigate this kind of attack.
-The node's vault is assumed to be within the same trust boundary of the node.
+There are not currently any direct controls to mitigate this kind of attack. A
+node's vault is assumed to be within the same trust boundary of the node JVM.
 Access to the vault must be restricted such that only the node can access it.
 Both network-level controls (fire-walling) and database permissions must be
 employed.
+
+Note that the tampering of a node's vault only affects that specific node's
+transaction history. No other node in the network is affected and any
+tampering attempts are easily detected.
 
   
 
@@ -422,7 +428,7 @@ RPC Client
 </td>  
 <td>
 
-Attacker attempts to initiate a transcation they are not entitled to perform
+Attacker attempts to initiate a transaction they are not entitled to perform
 
 </td>  
 <td>
@@ -438,8 +444,7 @@ Node
 </td>  
 <td>
 
-A malicious CordApp attempts to spend a transaction that does not belong to
-them
+A malicious CorDapp attempts to spend a state that does not belong to them
 
 </td>  
 <td>
@@ -580,7 +585,7 @@ process, which other users and processes on the system do not have permission
 to access.
 
 The node's Java Key Store is encrypted using PKCS#12 encryption. In the future
-Corda will eventually store it's keys in a HSM (Hardware Security Module).
+Corda will eventually store its keys in a HSM (Hardware Security Module).
 
 </td></tr>  
 <tr>  
@@ -607,7 +612,8 @@ connected business systems and any transacting party.
 RPC communications are protected by the TLS protocol.
 
 Permission to query a node's vault must be explicitly granted on a per-user
-basis.
+basis. It is recommended that RPC credentials and permissions are managed in
+an Apache Shiro database.
 
 </td></tr></table>
 
@@ -661,7 +667,7 @@ An attacker control sends high volume of malformed transactions to a node.
 
  **Impact**
 
-Nodes targeted by this attack could exhaust theor processing & memory
+Nodes targeted by this attack could exhaust their processing & memory
 resources, or potentially cease responding to transactions.
 
 </td>  
@@ -708,13 +714,13 @@ another party.
 </td>  
 <td>
 
-The network agreement will stipulate a default maximum allowable period of 30
-days within which a party is required to provide a valid response to any
-message sent to it in the course of a Flow. If that period is exceeded, the
-Flow will be considered to be cancelled and may be discontinued without
-prejudice by all parties. The 30 day limit may be superseded by agreements
-between parties specifying other timeout periods, which may be encoded into
-Flows under the Corda Flow Framework.
+The network agreement will stipulate a default maximum allowable period time -
+the 'event horizon' - within which a party is required to provide a valid
+response to any message sent to it in the course of a Flow. If that period is
+exceeded, the Flow will be considered to be cancelled and may be discontinued
+without prejudice by all parties. The event horizon may be superseded by
+agreements between parties specifying other timeout periods, which may be
+encoded into Flows under the Corda Flow Framework.
 
 Additional measures may be taken under the agreement against parties who
 repeatedly fail to meet their response obligations under the network
@@ -824,7 +830,7 @@ against de-serialisation vulnerabilities.
 
 Corda does not currently provide specific security controls to mitigate all
 classes of privilege escalation vulnerabilities. The design of Corda requires
-that CordApps are inherently trusted by the node administrator. Likewise,
+that CorDapps are inherently trusted by the node administrator. Likewise,
 node-on-node attacks are not part of the formal threat model, and P2P traffic
 is assumed to originate from trusted network participants.
 
