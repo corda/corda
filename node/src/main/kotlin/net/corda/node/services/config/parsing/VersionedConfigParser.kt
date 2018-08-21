@@ -8,7 +8,9 @@ typealias ExtractConfigVersion = (Config) -> Int?
 
 class VersionedConfigParser<TYPED>(private val extractVersion: ExtractConfigVersion, private val versionToParseFunction: Map<Int, ParseConfig<out TYPED>>, private val defaultVersion: Int? = 0) : ParseConfig<TYPED> {
 
-    constructor(extractVersion: ExtractConfigVersion, vararg parseFunctions: Pair<Int, ParseConfig<out TYPED>>, defaultVersion: Int? = 0) : this(extractVersion, mapOf(*parseFunctions), defaultVersion)
+    companion object {
+        fun <T> mapping(extractVersion: ExtractConfigVersion, vararg parseFunctions: Pair<Int, ParseConfig<out T>>, defaultVersion: Int? = 0) = VersionedConfigParser(extractVersion, mapOf(*parseFunctions), defaultVersion)
+    }
 
     override fun invoke(configuration: Config): TYPED {
 
