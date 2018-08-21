@@ -6,15 +6,17 @@ import com.typesafe.config.ConfigObject
 import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import java.time.Duration
 
-// TODO sollecitom introduce a `description` field to specify the nature of the property e.g., "\"address\": NetworkHostAndPort(String)" or "\"port\": Int" or "\"emailAddress\": optional[String]"
 interface ConfigProperty<TYPE> {
 
     val key: String
+    val typeName: String
+
+    val description: String get() = "\"$key\": $typeName"
 
     @Throws(ConfigException.Missing::class, ConfigException.WrongType::class)
     fun valueIn(configuration: Config): TYPE
 
-    fun <MAPPED> map(function: (TYPE) -> MAPPED): ConfigProperty<MAPPED>
+    fun <MAPPED> map(mappedTypeName: String? = null, function: (TYPE) -> MAPPED): ConfigProperty<MAPPED>
 
     fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
@@ -23,37 +25,42 @@ interface ConfigProperty<TYPE> {
     companion object {
 
         fun int(key: String): ConfigProperty<Int> = IntConfigProperty(key)
+        fun intList(key: String): ConfigProperty<List<Int>> = IntListConfigProperty(key)
 
         fun boolean(key: String): ConfigProperty<Boolean> = BooleanConfigProperty(key)
+        fun booleanList(key: String): ConfigProperty<List<Boolean>> = BooleanListConfigProperty(key)
 
         fun double(key: String): ConfigProperty<Double> = DoubleConfigProperty(key)
+        fun doubleList(key: String): ConfigProperty<List<Double>> = DoubleListConfigProperty(key)
 
         fun string(key: String): ConfigProperty<String> = StringConfigProperty(key)
+        fun stringList(key: String): ConfigProperty<List<String>> = StringListConfigProperty(key)
 
         fun duration(key: String): ConfigProperty<Duration> = DurationConfigProperty(key)
+        fun durationList(key: String): ConfigProperty<List<Duration>> = DurationListConfigProperty(key)
 
         fun value(key: String): ConfigProperty<ConfigObject> = ObjectConfigProperty(key)
-
         fun valueList(key: String): ConfigProperty<List<ConfigObject>> = ObjectListConfigProperty(key)
 
-        fun <TYPE> functional(key: String, extractValue: (Config, String) -> TYPE): ConfigProperty<TYPE> = FunctionalConfigProperty(key, extractValue)
+        fun <TYPE> functional(key: String, typeName: String, extractValue: (Config, String) -> TYPE): ConfigProperty<TYPE> = FunctionalConfigProperty(key, typeName, extractValue)
     }
 }
 
 // TODO sollecitom (perhaps) add a proper `ConvertValue` interface, with support for validation and error reporting.
-private open class FunctionalConfigProperty<TYPE>(override val key: String, private val extractValue: (Config, String) -> TYPE) : ConfigProperty<TYPE> {
+private open class FunctionalConfigProperty<TYPE>(override val key: String, override val typeName: String, private val extractValue: (Config, String) -> TYPE) : ConfigProperty<TYPE> {
 
     override fun valueIn(configuration: Config) = extractValue.invoke(configuration, key)
 
-    override fun <MAPPED> map(function: (TYPE) -> MAPPED): ConfigProperty<MAPPED> {
+    override fun <MAPPED> map(mappedTypeName: String?, function: (TYPE) -> MAPPED): ConfigProperty<MAPPED> {
 
-        return FunctionalConfigProperty(key) { config, keyArg -> function.invoke(extractValue.invoke(config, keyArg)) }
+        return FunctionalConfigProperty(key, mappedTypeName?.let { "$it($typeName)" } ?: typeName) { config, keyArg -> function.invoke(extractValue.invoke(config, keyArg)) }
     }
 }
 
 private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<TYPE>) : ConfigProperty<TYPE?> {
 
     override val key = delegate.key
+    override val typeName = "optional[${delegate.typeName}]"
 
     @Throws(ConfigException.WrongType::class)
     override fun valueIn(configuration: Config): TYPE? {
@@ -65,19 +72,23 @@ private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<
         }
     }
 
-    override fun <MAPPED> map(function: (TYPE?) -> MAPPED): ConfigProperty<MAPPED> {
+    override fun <MAPPED> map(mappedTypeName: String?, function: (TYPE?) -> MAPPED): ConfigProperty<MAPPED> {
 
-        return FunctionalConfigProperty(key) { configuration, _ -> function.invoke(valueIn(configuration)) }
+        val mappedName = mappedTypeName?.let { "$it(${delegate.typeName})" } ?: delegate.typeName
+        return FunctionalConfigProperty(key, "optional[$mappedName]") { configuration, _ -> function.invoke(valueIn(configuration)) }
     }
 }
 
-private class IntConfigProperty(key: String) : FunctionalConfigProperty<Int>(key, Config::getInt)
+private class IntConfigProperty(key: String) : FunctionalConfigProperty<Int>(key, Int::class.java.simpleName, Config::getInt)
+private class IntListConfigProperty(key: String) : FunctionalConfigProperty<List<Int>>(key, "List<${Int::class.java.simpleName}>", Config::getIntList)
 
-private class DoubleConfigProperty(key: String) : FunctionalConfigProperty<Double>(key, Config::getDouble)
+private class DoubleConfigProperty(key: String) : FunctionalConfigProperty<Double>(key, Double::class.java.simpleName, Config::getDouble)
+private class DoubleListConfigProperty(key: String) : FunctionalConfigProperty<List<Double>>(key, "List<${Double::class.java.simpleName}>", Config::getDoubleList)
 
-private class StringConfigProperty(key: String) : FunctionalConfigProperty<String>(key, Config::getString)
+private class StringConfigProperty(key: String) : FunctionalConfigProperty<String>(key, String::class.java.simpleName, Config::getString)
+private class StringListConfigProperty(key: String) : FunctionalConfigProperty<List<String>>(key, "List<${String::class.java.simpleName}>", Config::getStringList)
 
-private class BooleanConfigProperty(key: String, caseSensitive: Boolean = true) : FunctionalConfigProperty<Boolean>(key, extract(caseSensitive)) {
+private class BooleanConfigProperty(key: String, caseSensitive: Boolean = true) : FunctionalConfigProperty<Boolean>(key, Boolean::class.java.simpleName, extract(caseSensitive)) {
 
     private companion object {
 
@@ -93,8 +104,11 @@ private class BooleanConfigProperty(key: String, caseSensitive: Boolean = true) 
     }
 }
 
-private class DurationConfigProperty(key: String) : FunctionalConfigProperty<Duration>(key, Config::getDuration)
+private class BooleanListConfigProperty(key: String) : FunctionalConfigProperty<List<Boolean>>(key, "List<${Boolean::class.java.simpleName}>", Config::getBooleanList)
 
-private class ObjectConfigProperty(key: String) : FunctionalConfigProperty<ConfigObject>(key, Config::getObject)
+private class DurationConfigProperty(key: String) : FunctionalConfigProperty<Duration>(key, Duration::class.java.simpleName, Config::getDuration)
+private class DurationListConfigProperty(key: String) : FunctionalConfigProperty<List<Duration>>(key, "List<${Duration::class.java.simpleName}>", Config::getDurationList)
 
-private class ObjectListConfigProperty(key: String) : FunctionalConfigProperty<List<ConfigObject>>(key, Config::getObjectList)
+private class ObjectConfigProperty(key: String) : FunctionalConfigProperty<ConfigObject>(key, "Object", Config::getObject)
+
+private class ObjectListConfigProperty(key: String) : FunctionalConfigProperty<List<ConfigObject>>(key, "List<Object>", Config::getObjectList)
