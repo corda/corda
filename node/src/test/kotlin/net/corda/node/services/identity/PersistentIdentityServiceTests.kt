@@ -64,6 +64,7 @@ class PersistentIdentityServiceTests {
                 identityService::wellKnownPartyFromAnonymous
         )
         identityService.database = database
+        identityService.ourNames = setOf(ALICE_NAME)
         identityService.start(DEV_ROOT_CA.certificate)
     }
 
@@ -101,6 +102,25 @@ class PersistentIdentityServiceTests {
     @Test
     fun `get identity by name with no registered identities`() {
         assertNull(identityService.wellKnownPartyFromX500Name(ALICE.name))
+    }
+
+    @Test
+    fun `stripping others when none registered does not strip`() {
+        assertEquals(identityService.stripCachedPeerKeys(listOf(BOB_PUBKEY)).first(), BOB_PUBKEY)
+    }
+
+    @Test
+    fun `stripping others when only us registered does not strip`() {
+        identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
+        assertEquals(identityService.stripCachedPeerKeys(listOf(BOB_PUBKEY)).first(), BOB_PUBKEY)
+    }
+
+    @Test
+    fun `stripping others when us and others registered does not strip us`() {
+        identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
+        identityService.verifyAndRegisterIdentity(BOB_IDENTITY)
+        val stripped = identityService.stripCachedPeerKeys(listOf(ALICE_PUBKEY, BOB_PUBKEY))
+        assertEquals(stripped.single(), ALICE_PUBKEY)
     }
 
     @Test
