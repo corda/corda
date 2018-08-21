@@ -100,7 +100,7 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Run
     // Override this function with the actual method to be run once all the arguments have been parsed
     abstract fun runProgram()
 
-    override fun run() {
+    final override fun run() {
         installShellExtensionsParser.installOrUpdateShellExtensions(alias, this.javaClass.name)
         initLogging()
         runProgram()
