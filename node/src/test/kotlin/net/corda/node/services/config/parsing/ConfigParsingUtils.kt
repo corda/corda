@@ -8,7 +8,7 @@ import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 
 @Suppress("UNCHECKED_CAST")
-internal fun configOf(vararg entries: Pair<String, Any?>): ConfigObject {
+internal fun configObject(vararg entries: Pair<String, Any?>): ConfigObject {
 
     var configuration = ConfigFactory.empty()
     entries.forEach { entry ->

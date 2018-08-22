@@ -21,9 +21,9 @@ class ConfigSchemaTest {
         val prop4Value = true
         val prop5 = "prop5"
         val prop5Value = -17.3
-        val prop3Value = configOf(prop4 to prop4Value, prop5 to prop5Value)
+        val prop3Value = configObject(prop4 to prop4Value, prop5 to prop5Value)
 
-        val configuration = configOf(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
+        val configuration = configObject(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
         println(configuration.serialize())
 
         val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
@@ -53,9 +53,9 @@ class ConfigSchemaTest {
         val prop4Value = true
         val prop5 = "prop5"
         val prop5Value = -17.3
-        val prop3Value = configOf(prop4 to prop4Value, prop5 to prop5Value)
+        val prop3Value = configObject(prop4 to prop4Value, prop5 to prop5Value)
 
-        val configuration = configOf(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
+        val configuration = configObject(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
         println(configuration.serialize())
 
         val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
@@ -84,9 +84,9 @@ class ConfigSchemaTest {
         val prop4Value = 44444
         val prop5 = "prop5"
         val prop5Value = -17.3
-        val prop3Value = configOf(prop4 to prop4Value, prop5 to prop5Value)
+        val prop3Value = configObject(prop4 to prop4Value, prop5 to prop5Value)
 
-        val configuration = configOf(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
+        val configuration = configObject(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
         println(configuration.serialize())
 
         val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }

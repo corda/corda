@@ -12,7 +12,7 @@ class ConfigPropertyTest {
 
         val key = "a.b.c"
         val value = 1
-        val configuration = configOf(key to value).toConfig()
+        val configuration = configObject(key to value).toConfig()
 
         val property = ConfigProperty.int(key)
         println(property)
@@ -28,7 +28,7 @@ class ConfigPropertyTest {
 
         val key = "a.b.c"
         val value = 1
-        val configuration = configOf(key to value).toConfig()
+        val configuration = configObject(key to value).toConfig()
 
         val property = ConfigProperty.boolean(key)
         println(property)
@@ -43,7 +43,7 @@ class ConfigPropertyTest {
     fun absent_value() {
 
         val key = "a.b.c"
-        val configuration = configOf(key to null).toConfig()
+        val configuration = configObject(key to null).toConfig()
 
         val property = ConfigProperty.int(key)
         println(property)
@@ -59,7 +59,7 @@ class ConfigPropertyTest {
 
         val key = "a.b.c"
         val value = 1
-        val configuration = configOf(key to value).toConfig()
+        val configuration = configObject(key to value).toConfig()
 
         val property = ConfigProperty.int(key).map(Boolean::class.java.simpleName) { integer -> integer == value }
         println(property)
@@ -76,7 +76,7 @@ class ConfigPropertyTest {
 
         val key = "a.b.c"
         val value = 1
-        val configuration = configOf(key to value).toConfig()
+        val configuration = configObject(key to value).toConfig()
 
         val property = ConfigProperty.boolean(key).map { boolean -> boolean.hashCode() }
         println(property)
@@ -92,7 +92,7 @@ class ConfigPropertyTest {
 
         val key = "a.b.c"
         val value = 1
-        val configuration = configOf(key to null).toConfig()
+        val configuration = configObject(key to null).toConfig()
 
         val property = ConfigProperty.int(key).map { integer -> integer == value }
         println(property)
@@ -108,7 +108,7 @@ class ConfigPropertyTest {
 
         val key = "a.b.c"
         val value = 1
-        val configuration = configOf(key to value).toConfig()
+        val configuration = configObject(key to value).toConfig()
 
         val property = ConfigProperty.int(key).optional()
         println(property)
@@ -124,7 +124,7 @@ class ConfigPropertyTest {
 
         val key = "a.b.c"
         val value = 1
-        val configuration = configOf(key to value).toConfig()
+        val configuration = configObject(key to value).toConfig()
 
         val property = ConfigProperty.boolean(key).optional()
         println(property)
@@ -139,7 +139,7 @@ class ConfigPropertyTest {
     fun optional_absent_value() {
 
         val key = "a.b.c"
-        val configuration = configOf(key to null).toConfig()
+        val configuration = configObject(key to null).toConfig()
 
         val property = ConfigProperty.int(key).optional()
         println(property)
@@ -155,7 +155,7 @@ class ConfigPropertyTest {
 
         val key = "a.b.c"
         val value = 1
-        val configuration = configOf(key to value).toConfig()
+        val configuration = configObject(key to value).toConfig()
 
         val property = ConfigProperty.int(key).optional().map(Boolean::class.java.simpleName) { integer -> integer == value }
         println(property)
@@ -172,7 +172,7 @@ class ConfigPropertyTest {
 
         val key = "a.b.c"
         val value = 1
-        val configuration = configOf(key to value).toConfig()
+        val configuration = configObject(key to value).toConfig()
 
         val property = ConfigProperty.boolean(key).optional().map { boolean -> boolean?.hashCode() }
         println(property)
@@ -188,7 +188,7 @@ class ConfigPropertyTest {
 
         val key = "a.b.c"
         val value: Int? = null
-        val configuration = configOf(key to null).toConfig()
+        val configuration = configObject(key to null).toConfig()
 
         val property = ConfigProperty.int(key).optional().map { integer -> integer == value }
         println(property)
