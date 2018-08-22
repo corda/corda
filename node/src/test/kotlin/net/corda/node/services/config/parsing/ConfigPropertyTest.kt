@@ -18,6 +18,7 @@ class ConfigPropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThat(property.valueIn(configuration)).isEqualTo(value)
     }
@@ -33,6 +34,7 @@ class ConfigPropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.WrongType::class.java)
     }
@@ -47,6 +49,7 @@ class ConfigPropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
         assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.Missing::class.java)
     }
@@ -63,6 +66,7 @@ class ConfigPropertyTest {
         val expectedValue = true
 
         assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThat(property.valueIn(configuration)).isEqualTo(expectedValue)
     }
@@ -78,6 +82,7 @@ class ConfigPropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.WrongType::class.java)
     }
@@ -93,6 +98,7 @@ class ConfigPropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
         assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.Missing::class.java)
     }
@@ -108,6 +114,7 @@ class ConfigPropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThat(property.valueIn(configuration)).isEqualTo(value)
     }
@@ -123,6 +130,7 @@ class ConfigPropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.WrongType::class.java)
     }
@@ -137,6 +145,7 @@ class ConfigPropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
         assertThat(property.valueIn(configuration)).isNull()
     }
@@ -153,6 +162,7 @@ class ConfigPropertyTest {
         val expectedValue = true
 
         assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThat(property.valueIn(configuration)).isEqualTo(expectedValue)
     }
@@ -168,6 +178,7 @@ class ConfigPropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.WrongType::class.java)
     }
@@ -183,6 +194,7 @@ class ConfigPropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
         assertThat(property.valueIn(configuration)).isTrue()
     }

@@ -10,6 +10,7 @@ interface ConfigProperty<TYPE> {
 
     val key: String
     val typeName: String
+    val mandatory: Boolean
 
     @Throws(ConfigException.Missing::class, ConfigException.WrongType::class)
     fun valueIn(configuration: Config): TYPE
@@ -40,12 +41,12 @@ interface ConfigProperty<TYPE> {
         fun value(key: String): ConfigProperty<ConfigObject> = ObjectConfigProperty(key)
         fun valueList(key: String): ConfigProperty<List<ConfigObject>> = ObjectListConfigProperty(key)
 
-        fun <TYPE> functional(key: String, typeName: String, extractValue: (Config, String) -> TYPE): ConfigProperty<TYPE> = FunctionalConfigProperty(key, typeName, extractValue)
+        fun <TYPE> functional(key: String, typeName: String, extractValue: (Config, String) -> TYPE): ConfigProperty<TYPE> = FunctionalConfigProperty(key, typeName, extractValue, true)
     }
 }
 
 // TODO sollecitom (perhaps) add a proper `ConvertValue` interface, with support for validation and error reporting.
-private open class FunctionalConfigProperty<TYPE>(override val key: String, typeName: String, private val extractValue: (Config, String) -> TYPE) : ConfigProperty<TYPE> {
+private open class FunctionalConfigProperty<TYPE>(override val key: String, typeName: String, private val extractValue: (Config, String) -> TYPE, override val mandatory: Boolean = true) : ConfigProperty<TYPE> {
 
     override val typeName = typeName.capitalize()
 
@@ -53,7 +54,7 @@ private open class FunctionalConfigProperty<TYPE>(override val key: String, type
 
     override fun <MAPPED> map(mappedTypeName: String?, function: (TYPE) -> MAPPED): ConfigProperty<MAPPED> {
 
-        return FunctionalConfigProperty(key, compositeMappedName(mappedTypeName, typeName)) { config, keyArg -> function.invoke(extractValue.invoke(config, keyArg)) }
+        return FunctionalConfigProperty(key, compositeMappedName(mappedTypeName, typeName), { config, keyArg -> function.invoke(extractValue.invoke(config, keyArg)) }, mandatory)
     }
 
     override fun toString(): String {
@@ -66,6 +67,7 @@ private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<
 
     override val key = delegate.key
     override val typeName = "${delegate.typeName}?"
+    override val mandatory = false
 
     @Throws(ConfigException.WrongType::class)
     override fun valueIn(configuration: Config): TYPE? {
@@ -79,7 +81,7 @@ private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<
 
     override fun <MAPPED> map(mappedTypeName: String?, function: (TYPE?) -> MAPPED): ConfigProperty<MAPPED> {
 
-        return FunctionalConfigProperty(key, "${compositeMappedName(mappedTypeName, delegate.typeName)}?") { configuration, _ -> function.invoke(valueIn(configuration)) }
+        return FunctionalConfigProperty(key, "${compositeMappedName(mappedTypeName, delegate.typeName)}?", { configuration, _ -> function.invoke(valueIn(configuration)) }, mandatory)
     }
 
     override fun toString(): String {
