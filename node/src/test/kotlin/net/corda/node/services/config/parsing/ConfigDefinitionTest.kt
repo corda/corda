@@ -26,6 +26,9 @@ class ConfigDefinitionTest {
         assertThat(config.prop1).isEqualTo(prop1Value)
         assertThat(config.prop2).isEqualTo(prop2Value)
     }
+
+    // TODO sollecitom add a more complex test, involving nested objects using ObjectConfigProperty.
+    // TODO sollecitom add an even more complex test, involving nested objects using nested ConfigSchema.
 }
 
 private interface BlahConfig {
@@ -33,6 +36,8 @@ private interface BlahConfig {
     val prop1: String
     val prop2: Int
 }
+
+// TODO sollecitom introduce a ConfigSchema type able to output the structure of an expected config, to validate against a `Config` type, and to proxy it. Try to make this composite an ObjectConfigProperty.
 
 // TODO sollecitom add validation and eager loading.
 private class PropertiesInvocationHandler(private val configuration: Config, properties: Set<ConfigProperty<*>>) : InvocationHandler {
