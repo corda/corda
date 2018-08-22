@@ -46,7 +46,7 @@ private class ConfigPropertySchema(unorderedProperties: Iterable<ConfigProperty<
     @Suppress("UNCHECKED_CAST")
     private fun <TYPE> createProxy(configuration: Config, type: Class<TYPE>, properties: Set<ConfigProperty<*>>): TYPE {
 
-        // TODO sollecitom fix the classloader here.
+        // TODO sollecitom wrap with with a caching proxy (see how to do this with regards to dynamic values).
         return Proxy.newProxyInstance(Thread.currentThread().contextClassLoader, arrayOf(type), PropertiesInvocationHandler(configuration, properties)) as TYPE
     }
 }
