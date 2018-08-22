@@ -44,6 +44,7 @@ class CashSelectionOracleImpl : AbstractCashSelection(maxRetries = 16, retrySlee
             FROM contract_cash_states ccs, vault_states vs
             WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
                 AND vs.state_status = 0
+                AND vs.is_modifiable = 0
                 AND ccs.ccy_code = ?
                 AND (vs.lock_id = ? OR vs.lock_id is null)
                 """+

@@ -74,7 +74,7 @@ class CashSelectionSQLServerImpl : AbstractCashSelection(maxRetries = 16, retryS
                 ON vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
             WHERE
               vs.state_status = 0
-              vs.is_modifiable = 0
+              AND vs.is_modifiable = 0
               AND ccs.ccy_code = ?
               AND (vs.lock_id = ? OR vs.lock_id IS NULL)
             """
