@@ -26,6 +26,7 @@ class ConfigDefinitionTest {
         val prop3Value = configOf(prop4 to prop4Value, prop5 to prop5Value)
 
         val configuration = configOf(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
+        println(configuration.serialize())
 
         val fooConfigSchema = setOf(ConfigProperty.boolean("prop4"), ConfigProperty.double("prop5"))
         val blahConfigSchema = setOf(ConfigProperty.string(prop1), ConfigProperty.int(prop2), ConfigProperty.value("prop3").map("FooConfig") { value -> proxyConfig<FooConfig>(value.toConfig(), fooConfigSchema) })
@@ -56,9 +57,10 @@ private interface FooConfig {
 
 //interface Validatable {
 //
-//    fun validate():
+//    fun isValid(): Boolean = validate().isEmpty()
+//
+//    fun validate(): Set<Validation.Error>
 //}
-
 
 // TODO sollecitom introduce a ConfigSchema type able to output the structure of an expected config, to validate against a `Config` type, and to proxy it. Try to make this composite an ObjectConfigProperty. Also, it'd be great to have it as a DelegatedProperty as well.
 
