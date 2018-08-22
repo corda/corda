@@ -1,9 +1,7 @@
 package net.corda.node.services.config.parsing
 
-import com.typesafe.config.Config
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import java.lang.reflect.Proxy
 
 class ConfigDefinitionTest {
 
@@ -39,7 +37,7 @@ class ConfigDefinitionTest {
         assertThat(fooConfig.prop5).isEqualTo(prop5Value)
     }
 
-    // TODO sollecitom write a test with nested properties
+    // TODO sollecitom write tests for validation and representation
 }
 
 private interface BlahConfig {
@@ -53,12 +51,4 @@ private interface FooConfig {
 
     val prop4: Boolean
     val prop5: Double
-}
-
-// TODO sollecitom introduce a ConfigSchema type able to output the structure of an expected config, to validate against a `Config` type, and to proxy it. Try to make this composite an ObjectConfigProperty. Also, it'd be great to have it as a DelegatedProperty as well.
-
-private inline fun <reified TYPE> proxyConfig(configuration: Config, properties: Set<ConfigProperty<*>>): TYPE {
-
-    // TODO sollecitom fix the classloader here.
-    return Proxy.newProxyInstance(Thread.currentThread().contextClassLoader, arrayOf(TYPE::class.java), PropertiesInvocationHandler(configuration, properties)) as TYPE
 }
