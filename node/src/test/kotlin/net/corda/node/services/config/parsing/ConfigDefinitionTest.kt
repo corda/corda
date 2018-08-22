@@ -37,7 +37,7 @@ private interface BlahConfig {
     val prop2: Int
 }
 
-// TODO sollecitom introduce a ConfigSchema type able to output the structure of an expected config, to validate against a `Config` type, and to proxy it. Try to make this composite an ObjectConfigProperty.
+// TODO sollecitom introduce a ConfigSchema type able to output the structure of an expected config, to validate against a `Config` type, and to proxy it. Try to make this composite an ObjectConfigProperty. Also, it'd be great to have it as a DelegatedProperty as well.
 
 // TODO sollecitom add validation and eager loading.
 private class PropertiesInvocationHandler(private val configuration: Config, properties: Set<ConfigProperty<*>>) : InvocationHandler {
