@@ -37,6 +37,7 @@ import org.slf4j.bridge.SLF4JBridgeHandler
 import sun.misc.VMSupport
 import java.io.Console
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
@@ -426,23 +427,31 @@ open class NodeStartup(val args: Array<String>) {
         // exists, we try to take the file lock first before replacing it and if that fails it means we're being started
         // twice with the same directory: that's a user error and we should bail out.
         val pidFile = (baseDirectory / "process-id").toFile()
-        pidFile.createNewFile()
-        val pidFileRw = RandomAccessFile(pidFile, "rw")
-        val pidFileLock = pidFileRw.channel.tryLock()
-        if (pidFileLock == null) {
-            println("It appears there is already a node running with the specified data directory $baseDirectory")
-            println("Shut that other node down and try again. It may have process ID ${pidFile.readText()}")
+        try {
+            pidFile.createNewFile()
+            val pidFileRw = RandomAccessFile(pidFile, "rw")
+            val pidFileLock = pidFileRw.channel.tryLock()
+
+            if (pidFileLock == null) {
+                println("It appears there is already a node running with the specified data directory $baseDirectory")
+                println("Shut that other node down and try again. It may have process ID ${pidFile.readText()}")
+                System.exit(1)
+            }
+            pidFile.deleteOnExit()
+            // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
+            // when our process shuts down, but we try in stop() anyway just to be nice.
+            addShutdownHook {
+                pidFileLock.release()
+            }
+            val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
+            pidFileRw.setLength(0)
+            pidFileRw.write(ourProcessID.toByteArray())
+        } catch (ex: IOException) {
+            val appUser = System.getProperty("user.name")
+            println("Application user '$appUser' does not have necessary permissions for Node base directory '$baseDirectory'.")
+            println("Corda Node process in now exiting. Please check directory permissions and try starting the Node again.")
             System.exit(1)
         }
-        pidFile.deleteOnExit()
-        // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
-        // when our process shuts down, but we try in stop() anyway just to be nice.
-        addShutdownHook {
-            pidFileLock.release()
-        }
-        val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
-        pidFileRw.setLength(0)
-        pidFileRw.write(ourProcessID.toByteArray())
     }
 
     protected open fun initLogging(cmdlineOptions: CmdLineOptions) {
