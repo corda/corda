@@ -44,7 +44,6 @@ fun CordaCliWrapper.start(vararg args: String) {
     cmd.commandSpec.name(alias)
     cmd.commandSpec.usageMessage().description(description)
     try {
-        CommandLine.run(this, *args)
         cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(Help.Ansi.AUTO),
                 DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(Help.Ansi.AUTO),
                 *args)
