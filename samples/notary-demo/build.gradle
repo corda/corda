@@ -49,19 +49,234 @@ publishing {
 task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNodesBFT', 'deployNodesCustom'])
 
 task deployNodesSingle(type: Cordform, dependsOn: 'jar') {
-    definitionClass = 'net.corda.notarydemo.SingleNotaryCordform'
+    directory "build/nodes/nodesSingle"
+    node {
+        name "O=Alice Corp,L=Madrid,C=ES"
+        p2pPort 10002
+        rpcSettings {
+            address "localhost:10003"
+            adminAddress "localhost:10103"
+        }
+        rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
+    node {
+        name "O=Bob Plc,L=Rome,C=IT"
+        p2pPort 10005
+        rpcSettings {
+            address "localhost:10006"
+            adminAddress "localhost:10106"
+        }
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
+    node {
+        name "O=Notary Service,L=Zurich,C=CH"
+        p2pPort 10009
+        rpcSettings {
+            address "localhost:10010"
+            adminAddress "localhost:10110"
+        }
+        notary = [validating: true]
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
 }
 
 task deployNodesCustom(type: Cordform, dependsOn: 'jar') {
-    definitionClass = 'net.corda.notarydemo.CustomNotaryCordform'
+    directory "build/nodes/nodesCustom"
+    node {
+        name "O=Alice Corp,L=Madrid,C=ES"
+        p2pPort 10002
+        rpcSettings {
+            address "localhost:10003"
+            adminAddress "localhost:10103"
+        }
+        rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
+    node {
+        name "O=Bob Plc,L=Rome,C=IT"
+        p2pPort 10005
+        rpcSettings {
+            address "localhost:10006"
+            adminAddress "localhost:10106"
+        }
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
+    node {
+        name "O=Notary Service,L=Zurich,C=CH"
+        p2pPort 10009
+        rpcSettings {
+            address "localhost:10010"
+            adminAddress "localhost:10110"
+        }
+        notary = [validating: true, "custom": true]
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
 }
 
 task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
-    definitionClass = 'net.corda.notarydemo.RaftNotaryCordform'
+    directory "build/nodes/nodesRaft"
+    node {
+        name "O=Alice Corp,L=Madrid,C=ES"
+        p2pPort 10002
+        rpcSettings {
+            address "localhost:10003"
+            adminAddress "localhost:10103"
+        }
+        rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
+    node {
+        name "O=Bob Plc,L=Rome,C=IT"
+        p2pPort 10005
+        rpcSettings {
+            address "localhost:10006"
+            adminAddress "localhost:10106"
+        }
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
+    node {
+        name "O=Notary Service 0,L=Zurich,C=CH"
+        p2pPort 10009
+        rpcSettings {
+            address "localhost:10010"
+            adminAddress "localhost:10110"
+        }
+        notary = [
+                validating: true,
+                serviceLegalName: "O=Raft,L=Zurich,C=CH",
+                raft: [
+                        nodeAddress: "localhost:10008"
+                ]
+        ]
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
+    node {
+        name "O=Notary Service 1,L=Zurich,C=CH"
+        p2pPort 10013
+        rpcSettings {
+            address "localhost:10014"
+            adminAddress "localhost:10114"
+        }
+        notary = [
+                validating: true,
+                serviceLegalName: "O=Raft,L=Zurich,C=CH",
+                raft: [
+                        nodeAddress: "localhost:10012",
+                        clusterAddresses: ["localhost:10008"]
+                ]
+        ]
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
+    node {
+        name "O=Notary Service 2,L=Zurich,C=CH"
+        p2pPort 10017
+        rpcSettings {
+            address "localhost:10018"
+            adminAddress "localhost:10118"
+        }
+        notary = [
+                validating: true,
+                serviceLegalName: "O=Raft,L=Zurich,C=CH",
+                raft: [
+                        nodeAddress: "localhost:10016",
+                        clusterAddresses: ["localhost:10008"]
+                ]
+        ]
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
 }
 
 task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
-    definitionClass = 'net.corda.notarydemo.BFTNotaryCordform'
+    def clusterAddresses = ["localhost:11000", "localhost:11010", "localhost:11020", "localhost:11030"]
+    directory "build/nodes/nodesBFT"
+    node {
+        name "O=Alice Corp,L=Madrid,C=ES"
+        p2pPort 10002
+        rpcSettings {
+            address "localhost:10003"
+            adminAddress "localhost:10103"
+        }
+        rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
+    node {
+        name "O=Bob Plc,L=Rome,C=IT"
+        p2pPort 10005
+        rpcSettings {
+            address "localhost:10006"
+            adminAddress "localhost:10106"
+        }
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
+    node {
+        name "O=Notary Service 0,L=Zurich,C=CH"
+        p2pPort 10009
+        rpcSettings {
+            address "localhost:10010"
+            adminAddress "localhost:10110"
+        }
+        notary = [
+                validating: false,
+                serviceLegalName: "O=BFT,L=Zurich,C=CH",
+                bftSMaRt: [
+                        replicaId: 0,
+                        clusterAddresses: clusterAddresses
+                ]
+        ]
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
+    node {
+        name "O=Notary Service 1,L=Zurich,C=CH"
+        p2pPort 10013
+        rpcSettings {
+            address "localhost:10014"
+            adminAddress "localhost:10114"
+        }
+        notary = [
+                validating: false,
+                serviceLegalName: "O=BFT,L=Zurich,C=CH",
+                bftSMaRt: [
+                        replicaId: 0,
+                        clusterAddresses: clusterAddresses
+                ]
+        ]
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
+    node {
+        name "O=Notary Service 2,L=Zurich,C=CH"
+        p2pPort 10017
+        rpcSettings {
+            address "localhost:10018"
+            adminAddress "localhost:10118"
+        }
+        notary = [
+                validating: false,
+                serviceLegalName: "O=BFT,L=Zurich,C=CH",
+                bftSMaRt: [
+                        replicaId: 0,
+                        clusterAddresses: clusterAddresses
+                ]
+        ]
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
+    node {
+        name "O=Notary Service 3,L=Zurich,C=CH"
+        p2pPort 10021
+        rpcSettings {
+            address "localhost:10022"
+            adminAddress "localhost:10122"
+        }
+        notary = [
+                validating: false,
+                serviceLegalName: "O=BFT,L=Zurich,C=CH",
+                bftSMaRt: [
+                        replicaId: 0,
+                        clusterAddresses: clusterAddresses
+                ]
+        ]
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
 }
 
 task notarise(type: JavaExec) {
