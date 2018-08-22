@@ -1,5 +1,4 @@
 package net.corda.nodeapi.internal
 
-// TODO: Find a better place for this
-
+// TODO: Add to Corda node.conf to allow customisation
 val NODE_INFO_DIRECTORY = "additional-node-infos"
