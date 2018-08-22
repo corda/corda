@@ -2,13 +2,9 @@
 
 ## Overview
 
-We want to give CorDapps the ability to specify which versions of the platform they support.
+We want to give CorDapps the ability to specify which versions of the platform they support. This will make it easier for CorDapp developers to support multiple platform versions, and enable CorDapp developers to ["tweak behaviour and [...] opt in to changes that might be breaking (e.g. sandboxing)"](https://cordaledger.slack.com/archives/C3J04VC3V/p1534170356000500). Corda developers gain the ability to introduce changes to the implementation of the API that would otherwise break existing CorDapps.
 
-This will make it easier for CorDapp developers to support multiple platform versions, and enable CorDapp developers to ["tweak behaviour and [...] opt in to changes that might be breaking (e.g. sandboxing)"](https://cordaledger.slack.com/archives/C3J04VC3V/p1534170356000500).
-
-This document proposes that CorDapps will have metadata associated with them specifying a minimum mlatform version and a target platform Version. The minimum platform version of a CorDapp would indicate that a Corda Node would have to be running at least this version of the Corda platform in order to be able to run this CorDapp. The target platform version of a CorDapp would indicate that it was tested for this version of the Corda Platform.
-
-
+This document proposes that CorDapps will have metadata associated with them specifying a minimum mlatform version and a target platform Version. The minimum platform version of a CorDapp would indicate that a Corda Node would have to be running at least this version of the Corda platform in order to be able to run this CorDapp. The target platform version of a CorDapp would indicate that it was tested for this version of the Corda Platform. In addition to this, a minimum target version will be introduced on the level of the network. 
 
 ## Background
 
@@ -33,7 +29,7 @@ We should also implement checking at CorDapp load time that min platform version
 * *Minimum platform version (Network)* The minimum platform version that the nodes must run in order to be able to join the network. Set by the network zone operator. The minimum platform version is distributed with the network parameters as `minimumPlatformVersion`.
  ([see docs:](https://docs.corda.net/network-map.html#network-parameters))
  
-* *Minimum target version (Network)* Does not exist yet. We are planning to introduce the minimum target Version as part of the network parameters. This document assumes that it indicates to nodes in the network that they should not run CorDapps with a target version lower than this.
+* *Minimum target version (Network)* Introduced in this document. The minimum target version would be part of the network parameters, similar to the minimum platform version. Nodes in the network will not run CorDapps with a target version lower than the network's minimum target version.
 
 * *Target platform version (CorDapp)* Introduced in this document. Indicates that a CorDapp was tested with this version of the Corda Platform and should be run at this API level if possible.
 
@@ -42,13 +38,11 @@ We should also implement checking at CorDapp load time that min platform version
 
 ## Goals
 
-Define the semantics of target platform version and minimum platform version attributes for CorDapps. Describe how target and platform versions would be specified by CorDapp developers. Define how these values can be accessed by the node and the CorDapp itself.
+Define the semantics of target platform version and minimum platform version attributes for CorDapps, and the minimum platform version for the Corda network. Describe how target and platform versions would be specified by CorDapp developers. Define how these values can be accessed by the node and the CorDapp itself.
 
 ## Non-goals
 
 In the future it might make sense to integrate the minimum and target versions into a Corda gradle plugin. Such a plugin is out of scope of this document.
-
-This document does not concern itself with how the _minimum target version_ should work.
 
 ## Timeline
 
@@ -81,7 +75,7 @@ When a new platform version is released, CorDapp developers can test their CorDa
     
 ### Implications for platform developers
 
-When new features or changes are introduced that require all nodes on the network to understand them (e.g. changes in the wire transaction format), they must be version-gated on the network level. The minimum platform version in the network parameters would have to be changed the version these features or changes are introduced in.
+When new features or changes are introduced that require all nodes on the network to understand them (e.g. changes in the wire transaction format), they must be version-gated on the network level. This means that the new behaviour should only take effect if the minimum target verison of the network is equal to or greater than the version in which these changes were introduced. Failing that, the old behaviour must be used instead.
 
 Changes that risk breaking apps must be gated on targetVersion>=X where X is the version where the change was made, and the old behaviour must be preserved if that condition isn't met.
 
