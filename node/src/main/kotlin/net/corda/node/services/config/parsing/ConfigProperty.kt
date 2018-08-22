@@ -41,9 +41,22 @@ interface ConfigProperty<TYPE> {
         fun value(key: String): ConfigProperty<ConfigObject> = ObjectConfigProperty(key)
         fun valueList(key: String): ConfigProperty<List<ConfigObject>> = ObjectListConfigProperty(key)
 
+        inline fun <reified TYPE> nested(key: String, schema: ConfigSchema): ConfigProperty<TYPE> = nested(key, TYPE::class.java, schema)
+        fun <TYPE> nested(key: String, type: Class<TYPE>, schema: ConfigSchema): ConfigProperty<TYPE> = ProxiedNestedConfigProperty(key, type, schema)
+        // TODO sollecitom create a list version
+
         fun <TYPE> functional(key: String, typeName: String, extractValue: (Config, String) -> TYPE): ConfigProperty<TYPE> = FunctionalConfigProperty(key, typeName, extractValue, true)
     }
 }
+
+private class ProxiedNestedConfigProperty<TYPE>(key: String, type: Class<TYPE>, schema: ConfigSchema, mandatory: Boolean = true) : NestedConfigProperty<TYPE>(key, type.simpleName, schema, { configObj -> schema.proxy(configObj.toConfig(), type) }, mandatory)
+
+private open class NestedConfigProperty<TYPE>(key: String, typeName: String, val schema: ConfigSchema, extractValue: (ConfigObject) -> TYPE, mandatory: Boolean = true) : FunctionalConfigProperty<TYPE>(key, typeName, { configArg, keyArg -> extractValue.invoke(configArg.getObject(keyArg)) }, mandatory) {
+
+    // TODO sollecitom add further validation here
+}
+
+// TODO sollecitom (perhaps) add an ObjectProperty that accepts a ConfigSchema (that would help with `serialize()` and `validate()`
 
 // TODO sollecitom (perhaps) add a proper `ConvertValue` interface, with support for validation and error reporting.
 private open class FunctionalConfigProperty<TYPE>(override val key: String, typeName: String, private val extractValue: (Config, String) -> TYPE, override val mandatory: Boolean = true) : ConfigProperty<TYPE> {
@@ -57,10 +70,7 @@ private open class FunctionalConfigProperty<TYPE>(override val key: String, type
         return FunctionalConfigProperty(key, compositeMappedName(mappedTypeName, typeName), { config, keyArg -> function.invoke(extractValue.invoke(config, keyArg)) }, mandatory)
     }
 
-    override fun toString(): String {
-
-        return "\"$key\": $typeName"
-    }
+    override fun toString() = "\"$key\": $typeName"
 }
 
 private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<TYPE>) : ConfigProperty<TYPE?> {
