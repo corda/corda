@@ -5,14 +5,15 @@ import java.security.Provider
 import java.security.SecureRandom
 import java.security.SecureRandomSpi
 import java.security.Security
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Temporarily restore Sun's [SecureRandom] provider.
  * This is ONLY for allowing us to generate test data, e.g. signatures.
  */
-class CheatingSecurityProvider : Provider(NAME, 1.8, "$NAME security provider"), AutoCloseable {
+class CheatingSecurityProvider : Provider("Cheat-${counter.getAndIncrement()}", 1.8, "Cheat security provider"), AutoCloseable {
     private companion object {
-        private const val NAME = "Cheat!"
+        private val counter = AtomicInteger()
     }
 
     init {
@@ -21,7 +22,7 @@ class CheatingSecurityProvider : Provider(NAME, 1.8, "$NAME security provider"),
     }
 
     override fun close() {
-        Security.removeProvider(NAME)
+        Security.removeProvider(name)
     }
 
     private class SunSecureRandom : SecureRandom(sun.security.provider.SecureRandom(), null)
