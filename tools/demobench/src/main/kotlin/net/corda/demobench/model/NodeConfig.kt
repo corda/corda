@@ -20,8 +20,7 @@ import java.util.Properties
 data class NodeConfig(
         val myLegalName: CordaX500Name,
         val p2pAddress: NetworkHostAndPort,
-        val rpcAddress: NetworkHostAndPort,
-        val rpcAdminAddress: NetworkHostAndPort,
+        val rpcSettings: NodeRpcSettings,
         /** This is not used by the node but by the webserver which looks at node.conf. */
         val webAddress: NetworkHostAndPort,
         val notary: NotaryService?,
@@ -44,8 +43,8 @@ data class NodeConfig(
 
     fun nodeConf(): Config {
         val rpcSettings: ConfigObject = empty()
-            .withValue("address", valueFor(rpcAddress.toString()))
-            .withValue("adminAddress", valueFor(rpcAdminAddress.toString()))
+            .withValue("address", valueFor(rpcSettings.address.toString()))
+            .withValue("adminAddress", valueFor(rpcSettings.adminAddress.toString()))
             .root()
         val customMap: Map<String, Any> = HashMap<String, Any>().also {
             if (issuableCurrencies.isNotEmpty()) {
@@ -53,7 +52,7 @@ data class NodeConfig(
             }
         }
         val custom: ConfigObject = ConfigFactory.parseMap(customMap).root()
-        return NodeConfigurationData(myLegalName, p2pAddress, rpcAddress, notary, h2port, rpcUsers, useTestClock, detectPublicIp, devMode)
+        return NodeConfigurationData(myLegalName, p2pAddress, this.rpcSettings.address, notary, h2port, rpcUsers, useTestClock, detectPublicIp, devMode)
             .toConfig()
             .withoutPath("rpcAddress")
             .withoutPath("rpcAdminAddress")
@@ -61,7 +60,7 @@ data class NodeConfig(
             .withOptionalValue("custom", custom)
     }
 
-    fun webServerConf() = WebServerConfigurationData(myLegalName, rpcAddress, webAddress, rpcUsers).asConfig()
+    fun webServerConf() = WebServerConfigurationData(myLegalName, rpcSettings.address, webAddress, rpcUsers).asConfig()
 
     fun toNodeConfText() = nodeConf().render()
 

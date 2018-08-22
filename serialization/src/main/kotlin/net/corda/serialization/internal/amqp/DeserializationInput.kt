@@ -29,9 +29,8 @@ data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
  * instances and threads.
  */
 @KeepForDJVM
-class DeserializationInput @JvmOverloads constructor(
-        private val serializerFactory: SerializerFactory,
-        private val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist
+class DeserializationInput constructor(
+        private val serializerFactory: SerializerFactory
 ) {
     private val objectHistory: MutableList<Any> = mutableListOf()
     private val logger = loggerFor<DeserializationInput>()
@@ -80,9 +79,9 @@ class DeserializationInput @JvmOverloads constructor(
         }
     }
 
-
+    @VisibleForTesting
     @Throws(AMQPNoTypeNotSerializableException::class)
-    fun getEnvelope(byteSequence: ByteSequence) = getEnvelope(byteSequence, encodingWhitelist)
+    fun getEnvelope(byteSequence: ByteSequence, context: SerializationContext) = getEnvelope(byteSequence, context.encodingWhitelist)
 
     @Throws(
             AMQPNotSerializableException::class,
@@ -116,7 +115,7 @@ class DeserializationInput @JvmOverloads constructor(
     @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: SerializationContext): T =
             des {
-                val envelope = getEnvelope(bytes, encodingWhitelist)
+                val envelope = getEnvelope(bytes, context.encodingWhitelist)
 
                 logger.trace("deserialize blob scheme=\"${envelope.schema.toString()}\"")
 
@@ -130,7 +129,7 @@ class DeserializationInput @JvmOverloads constructor(
             clazz: Class<T>,
             context: SerializationContext
     ): ObjectAndEnvelope<T> = des {
-        val envelope = getEnvelope(bytes, encodingWhitelist)
+        val envelope = getEnvelope(bytes, context.encodingWhitelist)
         // Now pick out the obj and schema from the envelope.
         ObjectAndEnvelope(
                 clazz.cast(readObjectOrNull(
