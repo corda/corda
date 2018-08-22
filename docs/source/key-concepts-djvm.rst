@@ -142,13 +142,9 @@ Only Allow Explicitly Whitelisted Runtime API
 .............................................
 
 Ensures that constant pool references are mapped against a verified subset of the Java runtime libraries. Said subset
-excludes functionality that contract code should not have access to, such as file I/O or external entropy. In future
-versions, this whitelist will be trimmed down to the bare minimum needed so that also the Java runtime libraries
-themselves will be subjected to the same amount of scrutiny that the rest of the code is at the moment.
-
-.. warning::
-    Currently, the surface of the whitelist is quite broad and is also incorporating the standard libraries for Kotlin.
-    This will be stripped down in the future.
+excludes functionality that contract code should not have access to, such as native code. This whitelist has been
+trimmed down to the bare minimum needed, a few classes in ``java.lang``, so that also the Java runtime libraries
+themselves are subjected to the same amount of scrutiny that the rest of the code is.
 
 
 Disallow Dynamic Invocation

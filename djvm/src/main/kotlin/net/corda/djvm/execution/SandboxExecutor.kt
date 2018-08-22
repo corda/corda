@@ -4,6 +4,7 @@ import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.analysis.AnalysisContext
 import net.corda.djvm.messages.Message
 import net.corda.djvm.references.ClassReference
+import net.corda.djvm.references.MemberReference
 import net.corda.djvm.rewiring.LoadedClass
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.rewiring.SandboxClassLoadingException
@@ -56,11 +57,18 @@ open class SandboxExecutor<in TInput, out TOutput>(
         // 3. Since this is hitting the class loader, we are also remapping and rewriting the classes using the provided
         //    emitters and definition providers.
         // 4. While traversing and validating, we build up another queue of references inside the reference validator.
-        // 5. We drain this queue by validating references, this time including member references.
+        // 5. We drain this queue by validating class references and member references; this means validating the
+        //    existence of these referenced classes and members, and making sure that rule validation has been run on
+        //    all reachable code.
         // 6. For execution, we then load the top-level class, implementing the SandboxedRunnable interface, again and
         //    and consequently hit the cache. Once loaded, we can execute the code on the spawned thread, i.e., in an
         //    isolated environment.
         logger.trace("Executing {} with input {}...", runnableClass, input)
+        // TODO Class sources can be analyzed in parallel, although this require making the analysis context thread-safe
+        // To do so, one could start by batching the first X classes from the class sources and analyse each one in
+        // parallel, caching any intermediate state and subsequently process enqueued sources in parallel batches as well.
+        // Note that this would require some rework of the [IsolatedTask] and the class loader to bypass the limitation
+        // of caching and state preserved in thread-local contexts.
         val classSources = listOf(runnableClass)
         val context = AnalysisContext.fromConfiguration(configuration.analysisConfiguration, classSources)
         val result = IsolatedTask(runnableClass.qualifiedClassName, configuration, context).run {
@@ -143,29 +151,32 @@ open class SandboxExecutor<in TInput, out TOutput>(
             context: AnalysisContext, classLoader: SandboxClassLoader, classSources: List<ClassSource>
     ): ReferenceValidationSummary {
         processClassQueue(*classSources.toTypedArray()) { classSource, className ->
-            try {
+            val didLoad = try {
                 classLoader.loadClassAndBytes(classSource, context)
+                true
             } catch (exception: SandboxClassLoadingException) {
                 // Continue; all warnings and errors are captured in [context.messages]
+                false
             }
-            context.classes[className]?.apply {
-                context.references.referencesFromLocation(className)
-                        .map { it.reference }
-                        .filterIsInstance<ClassReference>()
-                        .distinct()
-                        .map { ClassSource.fromClassName(it.className, className) }
-                        .forEach { enqueue(it) }
+            if (didLoad) {
+                context.classes[className]?.apply {
+                    context.references.referencesFromLocation(className)
+                            .map { it.reference }
+                            .filterIsInstance<ClassReference>()
+                            .filter { it.className != className }
+                            .distinct()
+                            .map { ClassSource.fromClassName(it.className, className) }
+                            .forEach(::enqueue)
+                }
             }
         }
+        failOnReportedErrorsInContext(context)
 
         // Validate all references in class hierarchy before proceeding.
         referenceValidator.validate(context, classLoader.analyzer)
+        failOnReportedErrorsInContext(context)
 
-        if (context.messages.errorCount > 0) {
-            throw SandboxClassLoadingException(context.messages, context.classes)
-        }
-
-        return ReferenceValidationSummary(context.classes, context.messages)
+        return ReferenceValidationSummary(context.classes, context.messages, context.classOrigins)
     }
 
     /**
@@ -179,6 +190,24 @@ open class SandboxExecutor<in TInput, out TOutput>(
             if (!whitelist.matches(className)) {
                 action(classSource, className)
             }
+        }
+    }
+
+    /**
+     * Fail if there are reported errors in the current analysis context.
+     */
+    private fun failOnReportedErrorsInContext(context: AnalysisContext) {
+        if (context.messages.errorCount > 0) {
+            for (reference in context.references) {
+                for (location in context.references.locationsFromReference(reference)) {
+                    val originReference = when {
+                        location.memberName.isBlank() -> ClassReference(location.className)
+                        else -> MemberReference(location.className, location.memberName, location.signature)
+                    }
+                    context.recordClassOrigin(reference.className, originReference)
+                }
+            }
+            throw SandboxClassLoadingException(context)
         }
     }
 

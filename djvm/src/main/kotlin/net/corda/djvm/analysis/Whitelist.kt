@@ -1,6 +1,5 @@
 package net.corda.djvm.analysis
 
-import sandbox.net.corda.djvm.costing.RuntimeCostAccounter
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.PushbackInputStream
@@ -95,8 +94,31 @@ open class Whitelist private constructor(
     companion object {
         private val everythingRegex = setOf(".*".toRegex())
 
-        // TODO Refine to contain only the bare minimum of classes needed from java/lang
-        private val minimumSet = setOf("^java/lang/.*$".toRegex())
+        private val minimumSet = setOf(
+                "^java/lang/Boolean(\\..*)?$".toRegex(),
+                "^java/lang/Byte(\\..*)?$".toRegex(),
+                "^java/lang/Character(\\..*)?$".toRegex(),
+                "^java/lang/Class(\\..*)?$".toRegex(),
+                "^java/lang/ClassLoader(\\..*)?$".toRegex(),
+                "^java/lang/Cloneable(\\..*)?$".toRegex(),
+                "^java/lang/Comparable(\\..*)?$".toRegex(),
+                "^java/lang/Double(\\..*)?$".toRegex(),
+                "^java/lang/Enum(\\..*)?$".toRegex(),
+                "^java/lang/Float(\\..*)?$".toRegex(),
+                "^java/lang/Integer(\\..*)?$".toRegex(),
+                "^java/lang/Iterable(\\..*)?$".toRegex(),
+                "^java/lang/Long(\\..*)?$".toRegex(),
+                "^java/lang/Number(\\..*)?$".toRegex(),
+                "^java/lang/Object(\\..*)?$".toRegex(),
+                "^java/lang/Override(\\..*)?$".toRegex(),
+                "^java/lang/Short(\\..*)?$".toRegex(),
+                "^java/lang/String(\\..*)?$".toRegex(),
+                "^java/lang/ThreadDeath(\\..*)?$".toRegex(),
+                "^java/lang/Throwable(\\..*)?$".toRegex(),
+                "^java/lang/Void(\\..*)?$".toRegex(),
+                "^java/lang/.*Error(\\..*)?$".toRegex(),
+                "^java/lang/.*Exception(\\..*)?$".toRegex()
+        )
 
         /**
          * Empty whitelist.
@@ -116,17 +138,6 @@ open class Whitelist private constructor(
                 everythingRegex,
                 emptySet()
         )
-
-        /**
-         * Default whitelist.
-         */
-        val DETERMINISTIC_RUNTIME: Whitelist
-            get() {
-                // TODO This is a snapshot of what's currently in our deterministic rt.jar build
-                // The plan is to strip down this to [Whitelist.MINIMAL] and fully rely on sandbox rule verification and
-                // runtime instrumentation.
-                return Whitelist.fromResource("jdk8-deterministic.dat.gz")
-            }
 
         /**
          * Load a whitelist from a resource stream.

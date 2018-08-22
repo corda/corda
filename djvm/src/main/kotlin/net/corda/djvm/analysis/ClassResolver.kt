@@ -1,7 +1,5 @@
 package net.corda.djvm.analysis
 
-import java.security.Security
-
 /**
  * Functionality for resolving the class name of a sandboxable class.
  *
@@ -19,22 +17,15 @@ import java.security.Security
  *
  * @property pinnedClasses Classes that have already been declared in the sandbox namespace and that should be made
  * available inside the sandboxed environment.
+ * @property whitelist The set of classes in the Java runtime libraries that have been whitelisted and that should be
+ * left alone.
  * @property sandboxPrefix The package name prefix to use for classes loaded into a sandbox.
  */
 class ClassResolver(
         private val pinnedClasses: Set<String>,
+        private val whitelist: Whitelist,
         private val sandboxPrefix: String
 ) {
-
-    private val nativeClasses = "^java/lang/.*".toRegex()
-
-    private val pinnedPackagePrefixes = PrefixTree()
-
-    init {
-        for (prefix in Security.getProperty("package.definition").split(",")) {
-            pinnedPackagePrefixes.add(prefix)
-        }
-    }
 
     /**
      * Resolve the class name from a fully qualified name.
@@ -112,7 +103,7 @@ class ClassResolver(
      * Resolve class name from a fully qualified name.
      */
     private fun resolveName(name: String): String {
-        return if (isPinnedOrNativeClass(name)) {
+        return if (isPinnedOrWhitelistedClass(name)) {
             name
         } else {
             "$sandboxPrefix$name"
@@ -120,10 +111,10 @@ class ClassResolver(
     }
 
     /**
-     * Check if class is native or pinned.
+     * Check if class is whitelisted or pinned.
      */
-    private fun isPinnedOrNativeClass(name: String): Boolean {
-        return nativeClasses.matches(name) ||
+    private fun isPinnedOrWhitelistedClass(name: String): Boolean {
+        return whitelist.matches(name) ||
                 name in pinnedClasses ||
                 sandboxRegex.matches(name)
     }

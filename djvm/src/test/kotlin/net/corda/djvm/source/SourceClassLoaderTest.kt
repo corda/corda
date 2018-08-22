@@ -3,13 +3,14 @@ package net.corda.djvm.source
 import net.corda.djvm.analysis.ClassResolver
 import net.corda.djvm.analysis.Whitelist
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
 import org.junit.Test
 import java.nio.file.Files
 import java.nio.file.Path
 
 class SourceClassLoaderTest {
 
-    private val classResolver = ClassResolver(emptySet(), "")
+    private val classResolver = ClassResolver(emptySet(), Whitelist.MINIMAL, "")
 
     @Test
     fun `can load class from Java's lang package when no files are provided to the class loader`() {
@@ -74,21 +75,31 @@ class SourceClassLoaderTest {
         }
     }
 
-    companion object {
+    @After
+    fun cleanup() {
+        openedFiles.forEach {
+            try {
+                Files.deleteIfExists(it)
+            } catch (exception: Exception) {
+                // Ignore
+            }
+        }
+    }
 
-        private fun useTemporaryFile(vararg resourceNames: String, action: List<Path>.() -> Unit) {
-            val paths = resourceNames.map { resourceName ->
-                val stream = SourceClassLoaderTest::class.java.getResourceAsStream("/$resourceName")
-                        ?: throw Exception("Cannot find resource \"$resourceName\"")
-                Files.createTempFile("source-class-loader", ".jar").apply {
-                    Files.newOutputStream(this).use {
-                        stream.copyTo(it)
-                    }
+    private val openedFiles = mutableListOf<Path>()
+
+    private fun useTemporaryFile(vararg resourceNames: String, action: List<Path>.() -> Unit) {
+        val paths = resourceNames.map { resourceName ->
+            val stream = SourceClassLoaderTest::class.java.getResourceAsStream("/$resourceName")
+                    ?: throw Exception("Cannot find resource \"$resourceName\"")
+            Files.createTempFile("source-class-loader", ".jar").apply {
+                Files.newOutputStream(this).use {
+                    stream.copyTo(it)
                 }
             }
-            action(paths)
         }
-
+        openedFiles.addAll(paths)
+        action(paths)
     }
 
 }

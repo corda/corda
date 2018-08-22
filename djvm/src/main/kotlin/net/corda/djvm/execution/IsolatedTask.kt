@@ -60,7 +60,6 @@ class IsolatedTask(
                         else -> null
                     }
                 }
-                is StackOverflowError, is OutOfMemoryError -> throw it
                 else -> null
             }
         } ?: MessageCollection()
@@ -89,6 +88,8 @@ class IsolatedTask(
      */
     val classLoader: SandboxClassLoader
         get() = SandboxRuntimeContext.instance.classLoader
+
+    // TODO Caching can transcend thread-local contexts by taking the sandbox configuration into account in the key derivation
 
     private companion object {
 

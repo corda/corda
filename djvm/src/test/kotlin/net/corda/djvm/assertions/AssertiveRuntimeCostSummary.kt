@@ -27,10 +27,24 @@ class AssertiveRuntimeCostSummary(private val costs: RuntimeCostSummary) {
         return this
     }
 
+    fun hasInvocationCostGreaterThanOrEqualTo(cost: Long): AssertiveRuntimeCostSummary {
+        Assertions.assertThat(costs.invocationCost.value)
+                .`as`("Invocation cost")
+                .isGreaterThanOrEqualTo(cost)
+        return this
+    }
+
     fun hasJumpCost(cost: Long): AssertiveRuntimeCostSummary {
         Assertions.assertThat(costs.jumpCost.value)
                 .`as`("Jump cost")
                 .isEqualTo(cost)
+        return this
+    }
+
+    fun hasJumpCostGreaterThanOrEqualTo(cost: Long): AssertiveRuntimeCostSummary {
+        Assertions.assertThat(costs.jumpCost.value)
+                .`as`("Jump cost")
+                .isGreaterThanOrEqualTo(cost)
         return this
     }
 

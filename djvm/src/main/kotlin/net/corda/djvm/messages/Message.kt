@@ -43,8 +43,8 @@ data class Message(
                 SandboxException::class.java.simpleName -> null
                 else -> exception::class.java.simpleName.removeSuffix("Exception")
             }
-            return exception.message?.let {
-                (exceptionType?.let { "$it: " } ?: "") + it
+            return exception.message?.let { message ->
+                (exceptionType?.let { "$it: " } ?: "") + message
             } ?: exceptionType ?: "Unknown error"
         }
 

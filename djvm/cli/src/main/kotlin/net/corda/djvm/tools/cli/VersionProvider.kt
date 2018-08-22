@@ -9,7 +9,6 @@ import picocli.CommandLine.IVersionProvider
 @Suppress("KDocMissingDocumentation")
 class VersionProvider : IVersionProvider {
     override fun getVersion(): Array<String> = arrayOf(
-            Manifests.read("Corda-Release-Version"),
-            Manifests.read("Build-Date")
+            Manifests.read("Corda-Release-Version")
     )
 }

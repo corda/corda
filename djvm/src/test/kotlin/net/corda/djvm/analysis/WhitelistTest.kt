@@ -8,7 +8,7 @@ class WhitelistTest : TestBase() {
 
     @Test
     fun `can determine when a class is whitelisted when namespace is covered`() {
-        val whitelist = Whitelist.DETERMINISTIC_RUNTIME
+        val whitelist = Whitelist.MINIMAL
         assertThat(whitelist.matches("java/lang/Object")).isTrue()
         assertThat(whitelist.matches("java/lang/Object.<init>:()V")).isTrue()
         assertThat(whitelist.matches("java/lang/Integer")).isTrue()
@@ -17,7 +17,7 @@ class WhitelistTest : TestBase() {
 
     @Test
     fun `can determine when a class is not whitelisted when namespace is covered`() {
-        val whitelist = Whitelist.DETERMINISTIC_RUNTIME
+        val whitelist = Whitelist.MINIMAL
         assertThat(whitelist.matches("java/util/Random")).isFalse()
         assertThat(whitelist.matches("java/util/Random.<init>:()V")).isFalse()
         assertThat(whitelist.matches("java/util/Random.nextInt:()I")).isFalse()
@@ -25,7 +25,7 @@ class WhitelistTest : TestBase() {
 
     @Test
     fun `can determine when a class is whitelisted when namespace is not covered`() {
-        val whitelist = Whitelist.DETERMINISTIC_RUNTIME + setOf(
+        val whitelist = Whitelist.MINIMAL + setOf(
                 "^org/assertj/.*$".toRegex(),
                 "^org/junit/.*$".toRegex()
         )
@@ -36,7 +36,7 @@ class WhitelistTest : TestBase() {
 
     @Test
     fun `can determine when a namespace is not covered`() {
-        val whitelist = Whitelist.DETERMINISTIC_RUNTIME
+        val whitelist = Whitelist.MINIMAL
         assertThat(whitelist.matches("java/lang/Object")).isTrue()
         assertThat(whitelist.matches("org/junit/Test")).isFalse()
     }

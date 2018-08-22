@@ -4,6 +4,9 @@ import net.corda.djvm.analysis.Whitelist
 import net.corda.djvm.execution.SandboxException
 import net.corda.djvm.messages.MessageCollection
 import net.corda.djvm.messages.Severity
+import net.corda.djvm.references.ClassReference
+import net.corda.djvm.references.EntityReference
+import net.corda.djvm.references.MemberReference
 import net.corda.djvm.rewiring.SandboxClassLoadingException
 import picocli.CommandLine
 import picocli.CommandLine.Help.Ansi
@@ -57,6 +60,12 @@ abstract class CommandBase : Callable<Boolean> {
     )
     private var compact: Boolean = false
 
+    @Option(
+            names = ["--print-origins"],
+            description = ["Print origins for errors and warnings."]
+    )
+    private var printOrigins: Boolean = false
+
     private val ansi: Ansi
         get() = when {
             useNoColors -> Ansi.OFF
@@ -103,49 +112,52 @@ abstract class CommandBase : Callable<Boolean> {
 
     protected fun printException(exception: Throwable) = when (exception) {
         is SandboxClassLoadingException -> {
-            printMessages(exception.messages)
+            printMessages(exception.messages, exception.classOrigins)
             printError()
         }
         is SandboxException -> {
             val cause = exception.cause
             when (cause) {
                 is SandboxClassLoadingException -> {
-                    printMessages(cause.messages)
+                    printMessages(cause.messages, cause.classOrigins)
                     printError()
                 }
                 else -> {
                     if (debug) {
                         exception.exception.printStackTrace(System.err)
                     } else {
-                        printError("Error: ${exception.exception.message}")
+                        printError("Error: ${errorMessage(exception.exception)}")
                     }
                     printError()
                 }
             }
         }
-        is StackOverflowError -> {
-            printError("Error: Stack overflow")
-            printError()
-        }
-        is OutOfMemoryError -> {
-            printError("Error: Out of memory")
-            printError()
-        }
         else -> {
             if (debug) {
                 exception.printStackTrace(System.err)
             } else {
-                if (exception.message == null) {
-                    printError("Error: ${exception.javaClass.simpleName}")
-                } else {
-                    printError("Error: ${exception.message}")
-                }
+                printError("Error: ${errorMessage(exception)}")
                 printError()
             }
         }
     }
 
-    protected fun printMessages(messages: MessageCollection) {
+    private fun errorMessage(exception: Throwable): String {
+        return when (exception) {
+            is StackOverflowError -> "Stack overflow"
+            is OutOfMemoryError -> "Out of memory"
+            is ThreadDeath -> "Thread death"
+            else -> {
+                val message = exception.message
+                when {
+                    message.isNullOrBlank() -> exception.javaClass.simpleName
+                    else -> message!!
+                }
+            }
+        }
+    }
+
+    protected fun printMessages(messages: MessageCollection, origins: Map<String, Set<EntityReference>> = emptyMap()) {
         val sortedMessages = messages.sorted()
         val errorCount = messages.errorCount.countOf("error")
         val warningCount = messages.warningCount.countOf("warning")
@@ -170,6 +182,23 @@ abstract class CommandBase : Callable<Boolean> {
                     printError()
                 }
                 printError(" - @|$severityColor ${message.severity}|@ $location\n   ${message.message}.")
+            }
+            if (printOrigins) {
+                val classOrigins = origins[message.location.className.replace("/", ".")] ?: emptySet()
+                for (classOrigin in classOrigins.groupBy({ it.className }, { it })) {
+                    val count = classOrigin.value.count()
+                    val reference = when (count) {
+                        1 -> classOrigin.value.first()
+                        else -> ClassReference(classOrigin.value.first().className)
+                    }
+                    when (reference) {
+                        is ClassReference ->
+                            printError("   - Reference from ${reference.className}")
+                        is MemberReference ->
+                            printError("   - Reference from ${reference.className}.${reference.memberName}()")
+                    }
+                }
+                printError()
             }
             first = false
         }
@@ -220,7 +249,7 @@ abstract class CommandBase : Callable<Boolean> {
                     throw Exception("Failed to load whitelist '$it'", exception)
                 }
             }
-        } ?: Whitelist.DETERMINISTIC_RUNTIME
+        } ?: Whitelist.MINIMAL
     }
 
     private fun Int.countOf(suffix: String): String {

@@ -2,6 +2,7 @@ package net.corda.djvm.analysis
 
 import net.corda.djvm.messages.MessageCollection
 import net.corda.djvm.references.ClassHierarchy
+import net.corda.djvm.references.EntityReference
 import net.corda.djvm.references.ReferenceMap
 import net.corda.djvm.source.ClassSource
 
@@ -21,6 +22,21 @@ class AnalysisContext private constructor(
         val inputClasses: List<ClassSource>
 ) {
 
+    private val origins = mutableMapOf<String, MutableSet<EntityReference>>()
+
+    /**
+     * Record a class origin in the current analysis context.
+     */
+    fun recordClassOrigin(name: String, origin: EntityReference) {
+        origins.getOrPut(name.normalize()) { mutableSetOf() }.add(origin)
+    }
+
+    /**
+     * Map of class origins. The resulting set represents the types referencing the class in question.
+     */
+    val classOrigins: Map<String, Set<EntityReference>>
+        get() = origins
+
     companion object {
 
         /**
@@ -34,6 +50,11 @@ class AnalysisContext private constructor(
                     classes
             )
         }
+
+        /**
+         * Local extension method for normalizing a class name.
+         */
+        private fun String.normalize() = this.replace("/", ".")
 
     }
 

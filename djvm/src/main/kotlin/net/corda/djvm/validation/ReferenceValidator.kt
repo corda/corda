@@ -47,7 +47,7 @@ class ReferenceValidator(
                 context.references.process { validateReference(state, it) }
                 logger.trace("Reference validation completed; {} class(es) and {} message(s)",
                         context.references.size, context.classes.size)
-                ReferenceValidationSummary(state.context.classes, state.context.messages)
+                ReferenceValidationSummary(state.context.classes, state.context.messages, state.context.classOrigins)
             }
 
     /**
@@ -79,13 +79,17 @@ class ReferenceValidator(
      * Validate a reference made from a class or class member.
      */
     private fun validateReference(state: State, reference: EntityReference) {
+        if (configuration.whitelist.matches(reference.className)) {
+            // The referenced class has been whitelisted - no need to go any further.
+            return
+        }
         when (reference) {
             is ClassReference -> {
                 logger.trace("Validating class reference {}", reference)
                 val clazz = getClass(state, reference.className)
                 val reason = when (clazz) {
                     null -> Reason(Reason.Code.NON_EXISTENT_CLASS)
-                    else -> clazz.let { getReasonFromEntity(it) }
+                    else -> getReasonFromEntity(clazz)
                 }
                 if (reason != null) {
                     logger.trace("Recorded invalid class reference to {}; reason = {}", reference, reason)
@@ -119,7 +123,7 @@ class ReferenceValidator(
     /**
      * Get a class from the class hierarchy by its binary name.
      */
-    private fun getClass(state: State, className: String): ClassRepresentation? {
+    private fun getClass(state: State, className: String, originClass: String? = null): ClassRepresentation? {
         val name = if (configuration.classModule.isArray(className)) {
             val arrayType = arrayTypeExtractor.find(className)?.groupValues?.get(1)
             when (arrayType) {
@@ -132,8 +136,11 @@ class ReferenceValidator(
         var clazz = state.context.classes[name]
         if (clazz == null) {
             logger.trace("Loading and analyzing referenced class {}...", name)
-            val origin = state.context.references.locationsFromReference(ClassReference(name)).firstOrNull()
-            state.analyzer.analyze(name, state.context, origin?.className)
+            val origin = state.context.references
+                    .locationsFromReference(ClassReference(name))
+                    .map { it.className }
+                    .firstOrNull() ?: originClass
+            state.analyzer.analyze(name, state.context, origin)
             clazz = state.context.classes[name]
         }
         if (clazz == null) {
@@ -143,7 +150,7 @@ class ReferenceValidator(
         clazz?.apply {
             val ancestors = listOf(superClass) + interfaces
             for (ancestor in ancestors.filter(String::isNotBlank)) {
-                getClass(state, ancestor)
+                getClass(state, ancestor, clazz.name)
             }
         }
         return clazz

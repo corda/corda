@@ -6,5 +6,5 @@ package net.corda.djvm.references
  * @property className The class name.
  */
 data class ClassReference(
-        val className: String
+        override val className: String
 ) : EntityReference

@@ -3,6 +3,7 @@ package net.corda.djvm.rewiring
 import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.analysis.AnalysisContext
 import net.corda.djvm.analysis.ClassAndMemberVisitor
+import net.corda.djvm.references.ClassReference
 import net.corda.djvm.source.ClassSource
 import net.corda.djvm.source.SourceClassLoader
 import net.corda.djvm.utilities.loggerFor
@@ -34,9 +35,14 @@ class SandboxClassLoader(
         get() = ruleValidator
 
     /**
-     * Set of classes that should be left untouched.
+     * Set of classes that should be left untouched due to pinning.
      */
     private val pinnedClasses = configuration.analysisConfiguration.pinnedClasses
+
+    /**
+     * Set of classes that should be left untouched due to whitelisting.
+     */
+    private val whitelistedClasses = configuration.analysisConfiguration.whitelist
 
     /**
      * Cache of loaded classes.
@@ -108,13 +114,16 @@ class SandboxClassLoader(
                     ByteCode(ByteArray(0), false)
             )
             loadedClasses[name] = pinnedClasses
+            if (source.origin != null) {
+                context.recordClassOrigin(name, ClassReference(source.origin))
+            }
             return pinnedClasses
         }
 
         // Check if any errors were found during analysis.
         if (context.messages.errorCount > 0) {
             logger.trace("Errors detected after analyzing class {}", source.qualifiedClassName)
-            throw SandboxClassLoadingException(context.messages, context.classes)
+            throw SandboxClassLoadingException(context)
         }
 
         // Transform the class definition and byte code in accordance with provided rules.
@@ -122,14 +131,20 @@ class SandboxClassLoader(
 
         // Try to define the transformed class.
         val clazz = try {
-            defineClass(resolvedName, byteCode.bytes, 0, byteCode.bytes.size)
+            when {
+                whitelistedClasses.matches(qualifiedName) -> supportingClassLoader.loadClass(name)
+                else -> defineClass(resolvedName, byteCode.bytes, 0, byteCode.bytes.size)
+            }
         } catch (exception: SecurityException) {
-            supportingClassLoader.loadClass(name)
+            throw SecurityException("Cannot redefine class '$resolvedName'", exception)
         }
 
         // Cache transformed class.
         val classWithByteCode = LoadedClass(clazz, byteCode)
         loadedClasses[name] = classWithByteCode
+        if (source.origin != null) {
+            context.recordClassOrigin(name, ClassReference(source.origin))
+        }
 
         logger.trace("Loaded class {}, bytes={}, isModified={}",
                 source.qualifiedClassName, byteCode.bytes.size, byteCode.isModified)

@@ -15,6 +15,9 @@ import org.objectweb.asm.Opcodes.*
 class AlwaysUseExactMath : Emitter {
 
     override fun emit(context: EmitterContext, instruction: Instruction) = context.emit {
+        if (context.clazz.name == "java/lang/Math") {
+            return
+        }
         when (instruction.operation) {
             IADD -> {
                 invokeStatic("java/lang/Math", "addExact", "(II)I")

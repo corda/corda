@@ -104,8 +104,9 @@ class SandboxExecutorTest : TestBase() {
     @Test
     fun `can detect stack overflow`() = sandbox(DEFAULT) {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
-        assertThatExceptionOfType(StackOverflowError::class.java)
+        assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestStackOverflow>(0) }
+                .withCauseInstanceOf(StackOverflowError::class.java)
     }
 
     class TestStackOverflow : SandboxedRunnable<Int, Int> {
@@ -123,10 +124,7 @@ class SandboxExecutorTest : TestBase() {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestKotlinMetaClasses>(0) }
-                .withMessageContaining("foo/bar/sandbox/KotlinClassKt.testRandom()")
-                .withMessageContaining("Invalid reference to class java.util.Random, entity is not whitelisted")
-                .withMessageContaining("Invalid reference to constructor java.util.Random(), entity is not whitelisted")
-                .withMessageContaining("Invalid reference to method java.util.Random.nextInt(), entity is not whitelisted")
+                .withMessageContaining("java/util/Random.<clinit>(): Disallowed reference to reflection API; sun.misc.Unsafe.getUnsafe()")
     }
 
     class TestKotlinMetaClasses : SandboxedRunnable<Int, Int> {
@@ -142,10 +140,7 @@ class SandboxExecutorTest : TestBase() {
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestNonDeterministicCode>(0) }
                 .withCauseInstanceOf(SandboxClassLoadingException::class.java)
-                .withMessageContaining(TestNonDeterministicCode::class.java.simpleName)
-                .withProblem("Invalid reference to class java.util.Random, entity is not whitelisted")
-                .withProblem("Invalid reference to constructor java.util.Random(), entity is not whitelisted")
-                .withProblem("Invalid reference to method java.util.Random.nextInt(), entity is not whitelisted")
+                .withProblem("java/util/Random.<clinit>(): Disallowed reference to reflection API; sun.misc.Unsafe.getUnsafe()")
     }
 
     class TestNonDeterministicCode : SandboxedRunnable<Int, Int> {
@@ -215,8 +210,7 @@ class SandboxExecutorTest : TestBase() {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestCatchThrowableErrorAndThreadDeath>(3) }
-                .withCauseInstanceOf(SandboxClassLoadingException::class.java)
-                .withMessageContaining("Invalid reference to class java.lang.ThreadDeath, entity is not whitelisted")
+                .withCauseInstanceOf(ThreadDeath::class.java)
     }
 
     class TestCatchThrowableAndError : SandboxedRunnable<Int, Int> {
@@ -280,10 +274,7 @@ class SandboxExecutorTest : TestBase() {
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestIO>(0) }
                 .withCauseInstanceOf(SandboxClassLoadingException::class.java)
-                .withMessageContaining("Invalid reference")
-                .withMessageContaining("Files.createTempFile")
-                .withMessageContaining("Files.newBufferedWriter")
-                .withMessageContaining("entity is not whitelisted")
+                .withMessageContaining("Files.walk(Path, Integer, FileVisitOption[]): Disallowed dynamic invocation in method")
     }
 
     class TestIO : SandboxedRunnable<Int, Int> {

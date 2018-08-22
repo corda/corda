@@ -68,7 +68,7 @@ abstract class ClassCommand : CommandBase() {
 
     protected var executor = SandboxExecutor<Any, Any>()
 
-    private var derivedWhitelist: Whitelist = Whitelist.DETERMINISTIC_RUNTIME
+    private var derivedWhitelist: Whitelist = Whitelist.MINIMAL
 
     abstract fun processClasses(classes: List<Class<*>>)
 

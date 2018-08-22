@@ -28,7 +28,7 @@ class CheckCommand : ClassCommand() {
     override fun processClasses(classes: List<Class<*>>) {
         val sources = classes.map { ClassSource.fromClassName(it.name) }
         val summary = executor.validate(*sources.toTypedArray())
-        printMessages(summary.messages)
+        printMessages(summary.messages, summary.classOrigins)
     }
 
 }

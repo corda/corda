@@ -49,7 +49,7 @@ open class SourceClassLoader(
                     location = SourceLocation(origin ?: "")
             ))
             logger.error("Failed to open ClassReader for class", exception)
-            throw SandboxClassLoadingException(context.messages, context.classes)
+            throw SandboxClassLoadingException(context)
         }
     }
 

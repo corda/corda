@@ -49,6 +49,8 @@ repositories {
 }
 
 task generateWhitelist(type: JavaExec) {
+    // This is an example of how a whitelist can be generated from a JAR. In most applications though, it is recommended
+    // thet the minimal set whitelist is used.
     def jars = configurations.runtime.collect {
         it.toString()
     }.findAll {
@@ -62,8 +64,7 @@ task generateWhitelist(type: JavaExec) {
 jar {
     manifest {
         attributes(
-                'Automatic-Module-Name': 'net.corda.djvm',
-                'Build-Date': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+                'Automatic-Module-Name': 'net.corda.djvm'
         )
     }
 }

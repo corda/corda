@@ -46,7 +46,7 @@ open class TestBase {
     /**
      * Default analysis configuration.
      */
-    val configuration = AnalysisConfiguration(Whitelist.DETERMINISTIC_RUNTIME)
+    val configuration = AnalysisConfiguration(Whitelist.MINIMAL)
 
     /**
      * Default analysis context
@@ -96,7 +96,7 @@ open class TestBase {
         val definitionProviders = mutableListOf<DefinitionProvider>()
         val classSources = mutableListOf<ClassSource>()
         var executionProfile = ExecutionProfile.UNLIMITED
-        var whitelist = Whitelist.DETERMINISTIC_RUNTIME
+        var whitelist = Whitelist.MINIMAL
         for (option in options) {
             when (option) {
                 is Rule -> rules.add(option)
