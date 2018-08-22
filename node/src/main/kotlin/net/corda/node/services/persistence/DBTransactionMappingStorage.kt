@@ -32,7 +32,6 @@ class DBTransactionMappingStorage(private val database: CordaPersistence) : Stat
 
     override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> = database.transaction {
         val session = currentDBSession()
-        session.flush()
         val cb = session.criteriaBuilder
         val cq = cb.createTupleQuery()
         val from = cq.from(DBTransactionStorage.DBTransaction::class.java)

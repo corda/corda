@@ -61,7 +61,7 @@ class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPers
                     toPersistentEntity = { key: SecureHash, value: TxCacheValue ->
                         DBTransaction().apply {
                             txId = key.toString()
-                            stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id?.toString()
+                            stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id?.uuid?.toString()
                             transaction = value.toSignedTx().serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
                         }
                     },
