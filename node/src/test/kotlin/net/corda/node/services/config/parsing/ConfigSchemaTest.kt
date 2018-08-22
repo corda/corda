@@ -100,17 +100,17 @@ class ConfigSchemaTest {
     }
 
     // TODO sollecitom write tests for `description()`
-}
 
-private interface BlahConfig {
+    private interface BlahConfig {
 
-    val prop1: String
-    val prop2: Int
-    val prop3: FooConfig
-}
+        val prop1: String
+        val prop2: Int
+        val prop3: FooConfig
+    }
 
-private interface FooConfig {
+    private interface FooConfig {
 
-    val prop4: Boolean
-    val prop5: Double
+        val prop4: Boolean
+        val prop5: Double
+    }
 }
