@@ -21,29 +21,30 @@ object JarSignatureCollector {
 
     /**
      * Returns an ordered list of every [Party] which has signed every signable item in the given [JarInputStream].
-     * Any party which has signed some but not all signable items is eliminated.
      *
      * @param jar The open [JarInputStream] to collect signing parties from.
+     * @throws InvalidJarSignersException If the signer sets for any two signable items are different from each other.
      */
     fun collectSigningParties(jar: JarInputStream): List<Party> {
-        // Can't start with empty set if we're doing intersections. Logically the null means "all possible signers":
-        var attachmentSigners: MutableSet<CodeSigner>? = null
+        val signerSets = jar.fileSignerSets
+        if (signerSets.isEmpty()) return emptyList()
 
-        for (signers in jar.getSignerSets()) {
-            attachmentSigners = attachmentSigners?.intersect(signers) ?: signers.toMutableSet()
-
-            if (attachmentSigners.isEmpty()) break // Performance short-circuit.
+        val (firstFile, firstSignerSet) = signerSets.first()
+        for ((otherFile, otherSignerSet) in signerSets.subList(1, signerSets.size)) {
+            if (otherSignerSet != firstSignerSet) throw InvalidJarSignersException(
+                """
+                Mismatch between signers ${firstSignerSet.toPartiesOrderedByName()} for file $firstFile
+                and signers ${otherSignerSet.toPartiesOrderedByName()} for file $otherFile
+                """.trimIndent().replace('\n', ' '))
         }
 
-        return attachmentSigners?.toPartiesOrderedByName() ?: emptyList()
+        return firstSignerSet.toPartiesOrderedByName()
     }
 
-    private fun <T> MutableSet<T>.intersect(others: Iterable<T>) = apply { retainAll(others) }
+    private val JarInputStream.fileSignerSets get() =
+            entries.thatAreSignable.shreddedFrom(this).toFileSignerSet().toList()
 
-    private fun JarInputStream.getSignerSets() =
-            entries().thatAreSignable().shreddedFrom(this).toSignerSets()
-
-    private fun Sequence<JarEntry>.thatAreSignable() =
+    private val Sequence<JarEntry>.thatAreSignable get() =
             filterNot { entry -> entry.isDirectory || unsignableEntryName.matches(entry.name) }
 
     private fun Sequence<JarEntry>.shreddedFrom(jar: JarInputStream) = map { entry ->
@@ -54,11 +55,13 @@ object JarSignatureCollector {
         }
     }
 
-    private fun Sequence<JarEntry>.toSignerSets() = map { entry -> entry.codeSigners?.toList() ?: emptyList() }
+    private fun Sequence<JarEntry>.toFileSignerSet() = map { entry -> entry.name to (entry.codeSigners?.toSet() ?: emptySet()) }
 
     private fun Set<CodeSigner>.toPartiesOrderedByName() = map {
         Party(it.signerCertPath.certificates[0] as X509Certificate)
     }.sortedBy { it.name.toString() } // Sorted for determinism.
 
-    private fun JarInputStream.entries() = generateSequence(nextJarEntry) { nextJarEntry }
+    private val JarInputStream.entries get() = generateSequence(nextJarEntry) { nextJarEntry }
 }
+
+class InvalidJarSignersException(msg: String) : Exception(msg)

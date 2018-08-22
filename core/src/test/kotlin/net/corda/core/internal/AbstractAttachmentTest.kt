@@ -12,6 +12,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class AbstractAttachmentTest {
     companion object {
@@ -93,15 +94,18 @@ class AbstractAttachmentTest {
     }
 
     @Test
-    fun `a party must sign all the files in the attachment to be a signer`() {
+    fun `all files must be signed by the same set of signers`() {
         execute("jar", "cvf", "attachment.jar", "_signable1")
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "alicepass", "attachment.jar", "alice")
         assertEquals(listOf(ALICE_NAME), load("attachment.jar").signers.map { it.name })
         execute("jar", "uvf", "attachment.jar", "_signable2")
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "bobpass", "attachment.jar", "bob")
-        assertEquals(listOf(BOB_NAME), load("attachment.jar").signers.map { it.name }) // ALICE hasn't signed the new file.
-        execute("jar", "uvf", "attachment.jar", "_signable3")
-        assertEquals(emptyList(), load("attachment.jar").signers) // Neither party has signed the new file.
+        assertFailsWith<InvalidJarSignersException>(
+            """
+            Mismatch between signers [O=Alice Corp, L=Madrid, C=ES, O=Bob Plc, L=Rome, C=IT] for file _signable1
+            and signers [O=Bob Plc, L=Rome, C=IT] for file _signable2
+            """.trimIndent().replace('\n', ' ')
+        ) { load("attachment.jar").signers }
     }
 
     @Test
