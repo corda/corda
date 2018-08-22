@@ -17,28 +17,28 @@ measures needed.
 
 Built on the [Corda](http://www.corda.net/) distributed ledger platform
 designed by R3, the ledger network enables the origination and management of
-(primarily financial) agreements between business partners. Participants to
-the network create and maintain Corda _nodes,_ each hosting one or more
-pluggable applications ( _CorDapps_ ) which define the data to be exchanged
-and its workflow. See the [Corda Technical White
-Paper](https://docs.corda.net/_static/corda-technical-whitepaper.pdf) for a
-detailed description of Corda's design and functionality.
+agreements between business partners. Participants to the network create and
+maintain Corda _nodes,_ each hosting one or more pluggable applications (
+_CorDapps_ ) which define the data to be exchanged and its workflow. See the
+[Corda Technical White Paper](https://docs.corda.net/_static/corda-technical-
+whitepaper.pdf) for a detailed description of Corda's design and
+functionality.
 
 R3 provide and maintain a number of essential services underpinning the ledger
 network. In the future these services are intended to be operated by a
 separate Corda Foundation. The network services currently include:
 
-  * Network map service: Service for distributing and providing updates for a network map document enabling nodes to identify other nodes on the network, their network address and advertised services. 
-  * Network permissioning service ('Doorman'): Issues signed digital certificates credentialising the identity of parties on the network to conduct peer-to-peer communication.
+  * Network Identity service ('Doorman'): Issues signed digital certificates that uniquely identity parties on the network.
+  * Network Map service: Provides a way for nodes to advertise their identity, and identify other nodes on the network, their network address and advertised services. 
 
-Participants to the ledger network include major financial institutions,
-regulated by national and supra-national authorities in various global
-jurisdictions. In a majority of cases, there are stringent requirements in
-place for participants to demonstrate that their handling of all data is
-performed in an appropriately secure manner, including the exchange of data
-over the ledger network. This document identifies measures within the Corda
-platform and supporting infrastructure to mitigate key security risks in
-support of these requirements.
+Participants to the ledger network include major institutions, financial
+organisations and regulated bodies, across various global jurisdictions. In a
+majority of cases, there are stringent requirements in place for participants
+to demonstrate that their handling of all data is performed in an
+appropriately secure manner, including the exchange of data over the ledger
+network. This document identifies measures within the Corda platform and
+supporting infrastructure to mitigate key security risks in support of these
+requirements.
 
 ## The Corda Network
 
@@ -50,8 +50,8 @@ developed based upon this architecture.
 
 # The Threat Model
 
-Threat Modelling is an iterative process that works to identity, describe and
-mitigate threats to a system. One of the most common models for identify
+Threat Modelling is an iterative process that works to identify, describe and
+mitigate threats to a system. One of the most common models for identifying
 threats is the [STRIDE](https://en.wikipedia.org/wiki/STRIDE_\(security\))
 framework. It provides a set of security threats in six categories:
 
@@ -153,7 +153,7 @@ An attacker attempts to impersonate a node and issue a transaction using their
 identity.
 
 An attacker attempts to impersonate another node on the network by submitting
-NodeInfo updates with - falsified address and/or identity information.
+NodeInfo updates with falsified address and/or identity information.
 
  **Impacts**
 
@@ -228,14 +228,15 @@ Doorman
 </td>  
 <td>
 
-An attacker attempts to join the Corda Network by impersonating an existing
-organisation and issues a fraudulent registration request
+An malicious zone operator attempts to join the Corda Network by impersonating
+an existing organisation and issues a fraudulent registration request.
 
  **Impact**
 
 The attacker would be able to join and impersonate an organisation.
 
-Impersonation of the Doorman would trick nodes into joining the wrong network.
+The operator could issue an identity cert for any organisation, publish a
+valid NodeInfo and redirect all traffic to themselves in the clear.
 
 </td>  
 <td>
@@ -321,7 +322,7 @@ An attacker would be able to modify transactions between participating nodes.
 
 Mutually authenticated TLS connections between nodes ensures that Man-In-The-
 Middle (MITM) attacks cannot take place. Corda Nodes restrict their
-connections TLS v1.2 and also restrict which cipher suites are accepted.
+connections to TLS v1.2 and also restrict which cipher suites are accepted.
 
 </td></tr>  
 <tr>  
@@ -379,15 +380,16 @@ or removed from the map.
 <td>
 
 Individual Node entries in the NetworkMap must be signed by the associated
-Node. The signatures are validated by the NetworkMap service, and all other
-Nodes in the network, to ensure they have not been tampered with. An attacker
-would need to acquire a node's private identity signing key to be able to make
-modifications to a NodeInfo. It is not possible for the NetworkMap service (or
-R3) to modify the NodeInfo entries, therefore an attacker would also be
-limited in this regard.
+Node's private key. The signatures are validated by the NetworkMap service,
+and all other Nodes in the network, to ensure they have not been tampered
+with. An attacker would need to acquire a node's private identity signing key
+to be able to make modifications to a NodeInfo. This is only possible if the
+attacker has control of the node in question.
 
-The only impact the attacker could have would be to remove individual entries
-in the map, or insert their own NodeInfo.
+It is not possible for the NetworkMap service (or R3) to modify entries in the
+network map (because the node's private keys are not accessible). If the
+NetworkMap service were compromised, the only impact the attacker could have
+would be to add or remove individual entries in the map.
 
 </td></tr></table>
 
@@ -428,12 +430,21 @@ RPC Client
 </td>  
 <td>
 
-Attacker attempts to initiate a transaction they are not entitled to perform
+Attacker attempts to initiate a flow that they are not entitled to perform
+
+ **Impact**
+
+Flows could be initiated without knowing the identity of the client.
 
 </td>  
 <td>
 
-All interactions with an RPC user are logged by the node.
+RPC clients must authenticate to the Node using credentials passed over TLS.
+It is therefore not possible for an RPC client to perform actions without
+first proving their identity.
+
+All interactions with an RPC user are also logged by the node. An attacker's
+identity and actions will be recorded and cannot be repudiated.
 
 </td></tr>  
 <tr>  
@@ -444,12 +455,66 @@ Node
 </td>  
 <td>
 
-A malicious CorDapp attempts to spend a state that does not belong to them
+A malicious CorDapp attempts to spend a state that does not belong to them.
+The node operator then claims that it was not their node that initiated the
+transaction.
+
+ **Impact**
+
+Financial transactions could be initiated by anonymous parties, leading to
+financial loss, and loss of confidence in the network.
 
 </td>  
 <td>
 
-All P2P transactions are logged by the node.
+Corda transactions must be signed with a node's private identity key in order
+to be accepted by the rest of the network. The signature directly identities
+the signing party and cannot be made by any other node - therefore the act of
+signing a transaction
+
+Corda transactions between nodes utilize the P2P protocol, which requires a
+mutually authenticated TLS connection. It is not possible for a node to issue
+transactions without having it's identity authenticated by other nodes in the
+network. Node identity and TLS certificates are issued via Corda Network
+services, and use the Corda PKI (Public Key Infrastructure) for
+authentication.
+
+All P2P transactions are logged by the node, meaning that any interactions are
+recorded
+
+</td></tr>  
+<tr>  
+<td>
+
+Node
+
+</td>  
+<td>
+
+A node attempts to perform a denial-of-state attack.
+
+</td>  
+<td>
+
+Non-validating Notaries require a signature over every request, therefore
+nobody can deny performing denial-of-state attack because every transaction
+clearly identities the node that initiated it.
+
+</td></tr>  
+<tr>  
+<td>
+
+Node
+
+</td>  
+<td>
+
+  
+
+</td>  
+<td>
+
+  
 
 </td></tr></table>
 
@@ -515,16 +580,14 @@ competitive advantage.
 </td>  
 <td>
 
-Corda will not divulge transaction history to a peer node unless that node is
-an explicit party to the transaction.
-
 By design, Corda nodes do not globally broadcast transaction information to
-all participants in the network. Hash functions used by Corda (primarily
-SHA256) are effectively immune to brute-force attacks, and integration of
-blinding nonces into the transaction data will be used to prevent an attacker
-from successfully obtaining a transaction hash even if the transaction content
-is known/guessed. Risk from a guessing-based approach as described above is
-therefore believed to be negligible.
+all participants in the network.
+
+A node will not divulge arbitrary transactions to a peer unless that peer has
+been included in the transaction flow. A node only divulges transaction
+history if the transaction being requested is a descendant of a transaction
+that the node itself has previously shared as part of the current flow
+session.
 
 The SGX integration feature currently envisaged for Corda will implement CPU
 peer-to-peer encryption under which transaction graphs are transmitted in an
@@ -632,11 +695,12 @@ availability of targeted ledger network node(s)/service(s), both during the
 attack and thereafter until normal service can be resumed.
 
 Communication over the ledger network is primarily peer-to-peer. Therefore the
-network as a whole is relatively resilient to DoS attacks. The primary threat
-is anticipated as being to the Corda network services which are depended on by
-network participants. These services will be protected by automated
-enterprise-grade DDoS detection and mitigation services, which will conduct
-intelligent traffic profiling in order to detect and block malicious traffic.  
+network as a whole is relatively resilient to DoS attacks. Notaries and
+Oracles will only communicate with peers in the network, so are protected from
+non-member-on-member application-level attack.
+
+Corda Network Services are protected by enterprise-grade DDoS detection and
+mitigation services.  
   
 <table>  
 <tr>  
@@ -700,9 +764,8 @@ CorDapp
 
 Unintended termination or other logical sequence (e.g. due to a coding bug in
 either Corda or a CorDapp) by which a party is rendered unable to resolve a
-[Flow](https://docs.corda.net/key-concepts-flow-framework.html). The most
-likely results from another party failing to respond when required to do so
-under the terms of the agreed transaction protocol.
+flow. The most likely results from another party failing to respond when
+required to do so under the terms of the agreed transaction protocol.
 
  **Impact**
 
@@ -716,11 +779,11 @@ another party.
 
 The network agreement will stipulate a default maximum allowable period time -
 the 'event horizon' - within which a party is required to provide a valid
-response to any message sent to it in the course of a Flow. If that period is
-exceeded, the Flow will be considered to be cancelled and may be discontinued
+response to any message sent to it in the course of a flow. If that period is
+exceeded, the flow will be considered to be cancelled and may be discontinued
 without prejudice by all parties. The event horizon may be superseded by
 agreements between parties specifying other timeout periods, which may be
-encoded into Flows under the Corda Flow Framework.
+encoded into flows under the Corda flow framework.
 
 Additional measures may be taken under the agreement against parties who
 repeatedly fail to meet their response obligations under the network
@@ -730,7 +793,7 @@ agreement.
 <tr>  
 <td>
 
-Doormap
+Doorman
 
 </td>  
 <td>
@@ -763,9 +826,11 @@ Updates to the network map must be signed by participant nodes and are
 authenticated before being processed.
 
 The network map is designed to be distributed by a CDN (Content Delivery
-Network).
+Network). It is secured large-scale anti-DDoS networks.
 
-Network map is also cached locally by nodes on the network.
+The Network Map is also cached locally by nodes on the network. If the network
+map online service were temporarily unavailable, the Corda network would not
+be affected.
 
 There is no requirement for the network map services to be highly available in
 order for the ledger network to be operational. Temporary non-availability of
@@ -830,17 +895,12 @@ against de-serialisation vulnerabilities.
 
 Corda does not currently provide specific security controls to mitigate all
 classes of privilege escalation vulnerabilities. The design of Corda requires
-that CorDapps are inherently trusted by the node administrator. Likewise,
-node-on-node attacks are not part of the formal threat model, and P2P traffic
-is assumed to originate from trusted network participants.
+that CorDapps are inherently trusted by the node administrator.
 
 Future security research will introduce stronger controls that can mitigate
 this class of threat. The Deterministic JVM will provide a sandbox that
 prevents execution of code & classes outside of the security boundary that
 contract code is restricted to.
-
-In addition, the SGX integration will provide an additional layer of security
-around Corda contracts.
 
   
 
