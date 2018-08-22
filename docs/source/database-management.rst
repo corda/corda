@@ -229,16 +229,15 @@ If a CorDapp does not include the required migration scripts for each ``MappedSc
 being applied as follows:
 
 1. Deploy the CorDapp on your node (copy the JAR into the ``cordapps`` folder)
-2. Find out the name of the ``MappedSchema`` containing the new contract state entities.
-3. Call the database management tool: ``java -jar tools-database-manager-${corda_version}.jar --base-directory /path/to/node --create-migration-sql-for-cordapp com.example.MyMappedSchema``
+2. Find out the name of the ``MappedSchema`` containing the new contract state entities
+3. Call the database management tool: ``java -jar tools-database-manager-${corda_version}.jar --base-directory /path/to/node --create-migration-sql-for-cordapp com.example.MyMappedSchema``.
    This will generate a file called ``my-mapped-schema.changelog-master.sql`` in a folder called ``migration`` in the ``base-directory``.
    In case you don't specify the actual ``MappedSchema`` name, the tool will generate one SQL file for each schema defined in the CorDapp
-4. Inspect the file(s) to make sure it is correct. This is a standard SQL file with some Liquibase metadata as comments.
+4. Inspect the file(s) to make sure it is correct. This is a standard SQL file with some Liquibase metadata as comments
 5. Create a JAR with the ``migration`` folder (by convention it could be named: ``originalCorDappName-migration.jar``),
-   and deploy this JAR together with the CorDapp, e.g. run the following command in the node base directory
-   ``jar cvf /path/to/node/cordapps/MyCordapp-migration.jar migration``.
-6. To make sure that the new migration will be used, do a dry run with the database management tool and inspect the output file.
-
+   and deploy this JAR in the node's ``cordapps`` folder together with the CorDapp (e.g. run the following command in the node base directory
+   ``jar cvf /path/to/node/cordapps/MyCordapp-migration.jar migration``)
+6. To make sure that the new migration will be used, do a dry run with the database management tool and inspect the output file
 
 Node administrator deploying a new version of a CorDapp developed by the OS community
 -------------------------------------------------------------------------------------
