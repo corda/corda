@@ -24,8 +24,8 @@ class ConfigDefinitionTest {
         val configuration = configOf(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
         println(configuration.serialize())
 
-        val fooConfigSchema = ConfigSchema.withProperties(ConfigProperty.boolean("prop4"), ConfigProperty.double("prop5"))
-        val blahConfigSchema = ConfigSchema.withProperties(ConfigProperty.string(prop1), ConfigProperty.int(prop2), ConfigProperty.nested<FooConfig>("prop3", fooConfigSchema))
+        val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
+        val blahConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), int(prop2), nested<FooConfig>("prop3", fooConfigSchema)) }
 
         val blahConfig: BlahConfig = blahConfigSchema.proxy(configuration)
 

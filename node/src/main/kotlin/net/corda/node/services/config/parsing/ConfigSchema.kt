@@ -13,6 +13,8 @@ interface ConfigSchema : Validator<Config, ConfigValidationError>, ConfigDefinit
         fun withProperties(properties: Iterable<ConfigProperty<*>>): ConfigSchema = ConfigPropertySchema(properties)
 
         fun withProperties(vararg properties: ConfigProperty<*>): ConfigSchema = withProperties(properties.toSet())
+
+        fun withProperties(builder: ConfigProperty.Companion.() -> Iterable<ConfigProperty<*>>): ConfigSchema = withProperties(builder.invoke(ConfigProperty.Companion))
     }
 }
 
