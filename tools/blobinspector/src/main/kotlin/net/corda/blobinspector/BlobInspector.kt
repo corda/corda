@@ -83,7 +83,7 @@ class BlobInspector : Runnable {
                 ?: throw IllegalArgumentException("Error: this input does not appear to be encoded in Corda's AMQP extended format, sorry.")
 
         if (schema) {
-            val envelope = DeserializationInput.getEnvelope(bytes.sequence())
+            val envelope = DeserializationInput.getEnvelope(bytes.sequence(), SerializationDefaults.STORAGE_CONTEXT.encodingWhitelist)
             out.println(envelope.schema)
             out.println()
             out.println(envelope.transformsSchema)
