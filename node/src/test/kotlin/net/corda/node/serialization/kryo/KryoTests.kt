@@ -54,7 +54,6 @@ class TestScheme : AbstractKryoSerializationScheme() {
     override fun rpcClientKryoPool(context: SerializationContext): KryoPool = throw UnsupportedOperationException()
 
     override fun rpcServerKryoPool(context: SerializationContext): KryoPool = throw UnsupportedOperationException()
-
 }
 
 @RunWith(Parameterized::class)
@@ -98,7 +97,6 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         val bits = bob.serialize(factory, context)
         assertThat(bits.deserialize(factory, context)).isEqualTo(Person("bob", null))
     }
-
 
     @Test
     fun `serialised form is stable when the same object instance is added to the deserialised object graph`() {
@@ -365,5 +363,17 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
             assertSame<Any>(KryoException::class.java, javaClass)
             assertEquals(encodingNotPermittedFormat.format(compression), message)
         }
+    }
+
+    @Test
+    fun `compression reduces number of bytes significantly`() {
+        class Holder(val holder: ByteArray)
+
+        val obj = Holder(ByteArray(20000))
+        val uncompressedSize = obj.serialize(factory, context.withEncoding(null)).size
+        val compressedSize = obj.serialize(factory, context.withEncoding(CordaSerializationEncoding.SNAPPY)).size
+        // If these need fixing, sounds like Kryo wire format changed and checkpoints might not surive an upgrade.
+        assertEquals(20222, uncompressedSize)
+        assertEquals(1111, compressedSize)
     }
 }

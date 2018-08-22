@@ -80,8 +80,10 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                         country = location.countryCode
                 ),
                 p2pAddress = nodeData.p2pPort.toLocalAddress(),
-                rpcAddress = nodeData.rpcPort.toLocalAddress(),
-                rpcAdminAddress = nodeData.rpcAdminPort.toLocalAddress(),
+                rpcSettings = NodeRpcSettings(
+                        address = nodeData.rpcPort.toLocalAddress(),
+                        adminAddress = nodeData.rpcAdminPort.toLocalAddress()
+                ),
                 webAddress = nodeData.webPort.toLocalAddress(),
                 notary = notary,
                 h2port = nodeData.h2Port.value,
@@ -212,7 +214,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
     }
 
     private fun updatePort(config: NodeConfig) {
-        val nextPort = 1 + arrayOf(config.p2pAddress.port, config.rpcAddress.port, config.webAddress.port, config.h2port).max() as Int
+        val nextPort = 1 + arrayOf(config.p2pAddress.port, config.rpcSettings.address.port, config.webAddress.port, config.h2port).max() as Int
         port.getAndUpdate { Math.max(nextPort, it) }
     }
 

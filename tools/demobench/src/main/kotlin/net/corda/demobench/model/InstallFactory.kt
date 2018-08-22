@@ -32,7 +32,7 @@ class InstallFactory : Controller() {
 
         val nodeConfig = config.parseAs<NodeConfig>(UnknownConfigKeysPolicy.IGNORE::handle)
         nodeConfig.p2pAddress.checkPort()
-        nodeConfig.rpcAddress.checkPort()
+        nodeConfig.rpcSettings.address.checkPort()
         nodeConfig.webAddress.checkPort()
 
         val tempDir = Files.createTempDirectory(baseDir, ".node")

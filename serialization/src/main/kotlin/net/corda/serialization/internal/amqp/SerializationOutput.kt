@@ -12,7 +12,6 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.CordaSerializationEncoding
@@ -38,9 +37,8 @@ data class BytesAndSchemas<T : Any>(
  * instances and threads.
  */
 @KeepForDJVM
-open class SerializationOutput @JvmOverloads constructor(
-        internal val serializerFactory: SerializerFactory,
-        private val encoding: SerializationEncoding? = null
+open class SerializationOutput constructor(
+        internal val serializerFactory: SerializerFactory
 ) {
     companion object {
         private val logger = contextLogger()
@@ -100,6 +98,7 @@ open class SerializationOutput @JvmOverloads constructor(
             var stream: OutputStream = it
             try {
                 amqpMagic.writeTo(stream)
+                val encoding = context.encoding
                 if (encoding != null) {
                     SectionId.ENCODING.writeTo(stream)
                     (encoding as CordaSerializationEncoding).writeTo(stream)
