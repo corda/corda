@@ -27,10 +27,10 @@ class ConfigDefinitionTest {
 
         val configuration = configOf(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
 
-        val fooProperties = setOf(ConfigProperty.boolean("prop4"), ConfigProperty.double("prop5"))
-        val blahProperties = setOf(ConfigProperty.string(prop1), ConfigProperty.int(prop2), ConfigProperty.value("prop3").map("FooConfig") { value -> proxyConfig<FooConfig>(value.toConfig(), fooProperties) })
+        val fooConfigSchema = setOf(ConfigProperty.boolean("prop4"), ConfigProperty.double("prop5"))
+        val blahConfigSchema = setOf(ConfigProperty.string(prop1), ConfigProperty.int(prop2), ConfigProperty.value("prop3").map("FooConfig") { value -> proxyConfig<FooConfig>(value.toConfig(), fooConfigSchema) })
 
-        val blahConfig: BlahConfig = proxyConfig(configuration, blahProperties)
+        val blahConfig: BlahConfig = proxyConfig(configuration, blahConfigSchema)
 
         assertThat(blahConfig.prop1).isEqualTo(prop1Value)
         assertThat(blahConfig.prop2).isEqualTo(prop2Value)
@@ -39,8 +39,6 @@ class ConfigDefinitionTest {
         assertThat(fooConfig.prop4).isEqualTo(prop4Value)
         assertThat(fooConfig.prop5).isEqualTo(prop5Value)
     }
-
-    // TODO sollecitom add an even more complex test, involving nested objects using nested ConfigSchema.
 }
 
 private interface BlahConfig {
