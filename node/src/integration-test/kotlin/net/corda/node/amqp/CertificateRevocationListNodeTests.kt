@@ -3,7 +3,6 @@ package net.corda.node.amqp
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.toFuture
@@ -53,6 +52,7 @@ import java.net.InetSocketAddress
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PrivateKey
+import java.security.Security
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
 import java.util.*
@@ -82,8 +82,7 @@ class CertificateRevocationListNodeTests {
 
     @Before
     fun setUp() {
-        // Pulls in our security providers.
-        generateKeyPair()
+        Security.addProvider(BouncyCastleProvider())
         revokedNodeCerts.clear()
         server = CrlServer(NetworkHostAndPort("localhost", 0))
         server.start()
