@@ -18,5 +18,5 @@
     <include file="migration/vault-schema.changelog-v3.xml"/>
     <include file="migration/vault-schema.changelog-v4.xml"/>
     <include file="migration/vault-schema.changelog-pkey.xml"/>
-
+    <include file="migration/vault-schema.changelog-v5.xml"/>
 </databaseChangeLog>
