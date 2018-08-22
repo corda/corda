@@ -5,9 +5,7 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignableData
-import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.ensureMinimumPlatformVersion
@@ -120,8 +118,8 @@ open class TransactionBuilder @JvmOverloads constructor(
                 state.constraint !== AutomaticHashConstraint -> state
                 useWhitelistedByZoneAttachmentConstraint(state.contract, services.networkParameters) -> state.copy(constraint = WhitelistedByZoneAttachmentConstraint)
                 else -> {
-                    services.cordappProvider.getContractAttachmentID(state.contract)?.let {
-                        state.copy(constraint = HashAttachmentConstraint(it))
+                    services.cordappProvider.getContractAttachmentID(state.contract)?.let { attachmentId ->
+                        makeAttachmentConstraint(services, attachmentId, state)
                     } ?: throw MissingContractAttachments(listOf(state))
                 }
             }
@@ -143,9 +141,21 @@ open class TransactionBuilder @JvmOverloads constructor(
         }
     }
 
-    private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters): Boolean {
-        return contractClassName in networkParameters.whitelistedContractImplementations.keys
+    private fun makeAttachmentConstraint(services: ServicesForResolution, attachmentId: AttachmentId, state: TransactionState<ContractState>): TransactionState<ContractState> {
+        val attachmentSigners = services.attachments.openAttachment(attachmentId)?.signers
+            ?: throw MissingContractAttachments(listOf(state))
+
+        return when {
+            attachmentSigners.isEmpty() -> state.copy(constraint = HashAttachmentConstraint(attachmentId))
+            else -> state.copy(constraint = makeSignatureAttachmentConstraint(attachmentSigners))
+        }
     }
+
+    private fun makeSignatureAttachmentConstraint(attachmentSigners: List<Party>) =
+            SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners.map { it.owningKey }).build())
+
+    private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) =
+        contractClassName in networkParameters.whitelistedContractImplementations.keys
 
     /**
      * The attachments added to the current transaction contain only the hashes of the current cordapps.

@@ -5,9 +5,11 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.serialization.CordaSerializable
+import java.security.PublicKey
 
 /** Constrain which contract-code-containing attachment can be used with a [ContractState]. */
 @CordaSerializable
@@ -70,14 +72,14 @@ object AutomaticHashConstraint : AttachmentConstraint {
 }
 
 /**
- * An [AttachmentConstraint] that verifies that the attachment has signers that satisfy the provided [CompositeKey].
+ * An [AttachmentConstraint] that verifies that the attachment has signers that fulfil the provided [PublicKey].
  * See: corda/docs/source/design/data-model-upgrades/signature-constraints.md
  *
- * @param key A [CompositeKey] that must be satisfied by the owning keys of the attachment's signing parties.
+ * @param key A [PublicKey] that must be fulfilled by the owning keys of the attachment's signing parties.
  */
 @KeepForDJVM
 data class SignatureAttachmentConstraint(
-        val key: CompositeKey
+        val key: PublicKey
 ) : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean =
         key.isFulfilledBy(attachment.signers.map { it.owningKey })
