@@ -41,9 +41,7 @@ object System {
 
     fun setSecurityManager(manager: java.lang.SecurityManager) {}
 
-    fun getSecurityManager(): java.lang.SecurityManager? {
-        throw NotImplementedError()
-    }
+    fun getSecurityManager(): java.lang.SecurityManager? = null
 
     fun currentTimeMillis(): Long = 0L
 
@@ -84,9 +82,7 @@ object System {
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     fun getenv(): java.util.Map<String, String>? = null
 
-    fun exit(exitCode: Int) {
-        throw NotImplementedError("Oh, nice try you!")
-    }
+    fun exit(exitCode: Int) {}
 
     fun gc() {}
 
@@ -94,15 +90,10 @@ object System {
 
     fun runFinalizersOnExit(flag: Boolean) {}
 
-    fun load(path: String) {
-        throw NotImplementedError("Eh eh, no can do!")
-    }
+    fun load(path: String) {}
 
-    fun loadLibrary(path: String) {
-        throw NotImplementedError("Eh eh, no can do!")
-    }
+    fun loadLibrary(path: String) {}
 
-    fun mapLibraryName(path: String): String {
-        throw NotImplementedError("Eh eh, no can do!")
-    }
+    fun mapLibraryName(path: String): String? = null
+
 }
