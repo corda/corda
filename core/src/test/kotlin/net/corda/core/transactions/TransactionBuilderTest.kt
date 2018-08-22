@@ -18,6 +18,8 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -95,8 +97,13 @@ class TransactionBuilderTest {
         val aliceParty = TestIdentity(ALICE_NAME).party
         val bobParty = TestIdentity(BOB_NAME).party
         val compositeKey = CompositeKey.Builder().addKeys(aliceParty.owningKey, bobParty.owningKey).build()
+        val expectedConstraint = SignatureAttachmentConstraint(compositeKey)
+        val signedAttachment = signedAttachment(aliceParty, bobParty)
 
-        doReturn(signedAttachment(aliceParty, bobParty)).whenever(attachments).openAttachment(contractAttachmentId)
+        assertTrue(expectedConstraint.isSatisfiedBy(signedAttachment))
+        assertFalse(expectedConstraint.isSatisfiedBy(unsignedAttachment))
+
+        doReturn(signedAttachment).whenever(attachments).openAttachment(contractAttachmentId)
 
         val outputState = TransactionState(data = DummyState(), contract = DummyContract.PROGRAM_ID, notary = notary)
         val builder = TransactionBuilder()
@@ -104,8 +111,8 @@ class TransactionBuilderTest {
                 .addCommand(DummyCommandData, notary.owningKey)
         val wtx = builder.toWireTransaction(services)
 
-        assertThat(wtx.outputs).containsOnly(
-                outputState.copy(constraint = SignatureAttachmentConstraint(compositeKey)))
+        assertThat(wtx.outputs).containsOnly(outputState.copy(constraint = expectedConstraint))
+
     }
 
 
@@ -117,7 +124,7 @@ class TransactionBuilderTest {
 
     private fun signedAttachment(vararg parties: Party) = object : AbstractAttachment({ byteArrayOf() }) {
         override val id: SecureHash get() = throw UnsupportedOperationException()
-           
+
         override val signers: List<Party> get() = parties.toList()
     }
 }
