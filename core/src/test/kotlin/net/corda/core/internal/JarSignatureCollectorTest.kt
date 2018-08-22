@@ -1,22 +1,24 @@
 package net.corda.core.internal
 
+import net.corda.core.identity.Party
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
+import java.io.FileInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.jar.JarInputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class AbstractAttachmentTest {
+class JarSignatureCollectorTest {
     companion object {
-        private val dir = Files.createTempDirectory(AbstractAttachmentTest::class.simpleName)
+        private val dir = Files.createTempDirectory(JarSignatureCollectorTest::class.simpleName)
         private val bin = Paths.get(System.getProperty("java.home")).let { if (it.endsWith("jre")) it.parent else it } / "bin"
         private val shredder = (dir / "_shredder").toFile() // No need to delete after each test.
         fun execute(vararg command: String) {
@@ -39,9 +41,8 @@ class AbstractAttachmentTest {
             (dir / "_signable3").writeLines(listOf("signable3"))
         }
 
-        private fun load(name: String) = object : AbstractAttachment((dir / name)::readAll) {
-            override val id get() = throw UnsupportedOperationException()
-        }
+        private fun getSigners(name: String) =
+            JarInputStream(FileInputStream((dir / name).toFile())).use(JarSignatureCollector::collectSigningParties)
 
         @AfterClass
         @JvmStatic
@@ -49,6 +50,8 @@ class AbstractAttachmentTest {
             dir.deleteRecursively()
         }
     }
+
+    private val List<Party>.names get() = map { it.name }
 
     @After
     fun tearDown() {
@@ -62,27 +65,27 @@ class AbstractAttachmentTest {
     fun `empty jar has no signers`() {
         (dir / "META-INF").createDirectory() // At least one arg is required, and jar cvf conveniently ignores this.
         execute("jar", "cvf", "attachment.jar", "META-INF")
-        assertEquals(emptyList(), load("attachment.jar").signers)
+        assertEquals(emptyList(), getSigners("attachment.jar"))
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "alicepass", "attachment.jar", "alice")
-        assertEquals(emptyList(), load("attachment.jar").signers) // There needs to have been a file for ALICE to sign.
+        assertEquals(emptyList(), getSigners("attachment.jar")) // There needs to have been a file for ALICE to sign.
     }
 
     @Test
     fun `unsigned jar has no signers`() {
         execute("jar", "cvf", "attachment.jar", "_signable1")
-        assertEquals(emptyList(), load("attachment.jar").signers)
+        assertEquals(emptyList(), getSigners("attachment.jar"))
         execute("jar", "uvf", "attachment.jar", "_signable2")
-        assertEquals(emptyList(), load("attachment.jar").signers)
+        assertEquals(emptyList(), getSigners("attachment.jar"))
     }
 
     @Test
     fun `one signer`() {
         execute("jar", "cvf", "attachment.jar", "_signable1", "_signable2")
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "alicepass", "attachment.jar", "alice")
-        assertEquals(listOf(ALICE_NAME), load("attachment.jar").signers.map { it.name }) // We only reused ALICE's distinguished name, so the keys will be different.
+        assertEquals(listOf(ALICE_NAME), getSigners("attachment.jar").names) // We only reused ALICE's distinguished name, so the keys will be different.
         (dir / "my-dir").createDirectory()
         execute("jar", "uvf", "attachment.jar", "my-dir")
-        assertEquals(listOf(ALICE_NAME), load("attachment.jar").signers.map { it.name }) // Unsigned directory is irrelevant.
+        assertEquals(listOf(ALICE_NAME), getSigners("attachment.jar").names) // Unsigned directory is irrelevant.
     }
 
     @Test
@@ -90,14 +93,14 @@ class AbstractAttachmentTest {
         execute("jar", "cvf", "attachment.jar", "_signable1", "_signable2")
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "alicepass", "attachment.jar", "alice")
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "bobpass", "attachment.jar", "bob")
-        assertEquals(listOf(ALICE_NAME, BOB_NAME), load("attachment.jar").signers.map { it.name })
+        assertEquals(listOf(ALICE_NAME, BOB_NAME), getSigners("attachment.jar").names)
     }
 
     @Test
     fun `all files must be signed by the same set of signers`() {
         execute("jar", "cvf", "attachment.jar", "_signable1")
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "alicepass", "attachment.jar", "alice")
-        assertEquals(listOf(ALICE_NAME), load("attachment.jar").signers.map { it.name })
+        assertEquals(listOf(ALICE_NAME), getSigners("attachment.jar").names)
         execute("jar", "uvf", "attachment.jar", "_signable2")
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "bobpass", "attachment.jar", "bob")
         assertFailsWith<InvalidJarSignersException>(
@@ -105,7 +108,7 @@ class AbstractAttachmentTest {
             Mismatch between signers [O=Alice Corp, L=Madrid, C=ES, O=Bob Plc, L=Rome, C=IT] for file _signable1
             and signers [O=Bob Plc, L=Rome, C=IT] for file _signable2
             """.trimIndent().replace('\n', ' ')
-        ) { load("attachment.jar").signers }
+        ) { getSigners("attachment.jar") }
     }
 
     @Test
@@ -113,12 +116,11 @@ class AbstractAttachmentTest {
         (dir / "volatile").writeLines(listOf("volatile"))
         execute("jar", "cvf", "attachment.jar", "volatile")
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "alicepass", "attachment.jar", "alice")
-        assertEquals(listOf(ALICE_NAME), load("attachment.jar").signers.map { it.name })
+        assertEquals(listOf(ALICE_NAME), getSigners("attachment.jar").names)
         (dir / "volatile").writeLines(listOf("garbage"))
         execute("jar", "uvf", "attachment.jar", "volatile", "_signable1") // ALICE's signature on volatile is now bad.
         execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", "bobpass", "attachment.jar", "bob")
-        val a = load("attachment.jar")
         // The JDK doesn't care that BOB has correctly signed the whole thing, it won't let us process the entry with ALICE's bad signature:
-        assertThatThrownBy { a.signers }.isInstanceOf(SecurityException::class.java)
+        assertFailsWith<SecurityException> { getSigners("attachment.jar") }
     }
 }
