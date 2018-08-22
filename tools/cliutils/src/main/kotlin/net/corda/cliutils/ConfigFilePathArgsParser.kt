@@ -6,12 +6,10 @@ import picocli.CommandLine
 import java.nio.file.Path
 
 /**
- * Something heavily used in network services, I am not sure it's of much use in corda, but who knows. Definitely it was the key to making DevOps happy.
- * Add it as
+ * When a config file is required as part of setup, use this class to check that it exists and is formatted correctly. Add it as
  * `@CommandLine.Mixin
  * lateinit var configParser: ConfigFilePathArgsParser`
- *
- * in your command class and then validate()
+ * in your command class and then call `validate()`
  */
 @CommandLine.Command(description = ["Parse configuration file. Checks if given configuration file exists"])
 class ConfigFilePathArgsParser : Validated {

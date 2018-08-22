@@ -15,7 +15,7 @@ class CordaVersionProvider : CommandLine.IVersionProvider {
 
     override fun getVersion(): Array<String> {
         return if (Manifests.exists("Corda-Release-Version") && Manifests.exists("Corda-Revision")) {
-            arrayOf("Version: ${Manifests.read("Corda-Release-Version")}", "Revision: ${Manifests.read("Corda-Revision")}")
+            arrayOf("Version: $releaseVersion", "Revision: $revision")
         } else {
             arrayOf("No version data is available in the MANIFEST file.")
         }
