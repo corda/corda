@@ -34,10 +34,8 @@ class ConfigSchemaTest {
         assertThat(blahConfig.prop1).isEqualTo(prop1Value)
         assertThat(blahConfig.prop2).isEqualTo(prop2Value)
 
-        val fooConfig = blahConfig.prop3
-
-        assertThat(fooConfig.prop4).isEqualTo(prop4Value)
-        assertThat(fooConfig.prop5).isEqualTo(prop5Value)
+        assertThat(blahConfig.prop3.prop4).isEqualTo(prop4Value)
+        assertThat(blahConfig.prop3.prop5).isEqualTo(prop5Value)
     }
 
     @Test
