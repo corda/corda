@@ -1,10 +1,9 @@
 package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigRenderOptions
 import java.lang.reflect.Proxy
 
-interface ConfigSchema : Validator<Config, ConfigValidationError>, ConfigDefinition {
+interface ConfigSchema : Validator<Config, ConfigValidationError>, Described {
 
     fun <TYPE> proxy(configuration: Config, type: Class<TYPE>): TYPE
 
@@ -35,10 +34,11 @@ private class ConfigPropertySchema(unorderedProperties: Iterable<ConfigProperty<
 
     override fun validate(target: Config): Set<ConfigValidationError> {
 
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        // TODO sollecitom fix this!
+        return properties.flatMap { property -> property.validate(target).map { error -> error.withContainingPath(property.contextualize(error.containingPath)) } }.toSet()
     }
 
-    override fun serialize(options: ConfigRenderOptions): String {
+    override fun description(): String {
 
         val representation = TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }

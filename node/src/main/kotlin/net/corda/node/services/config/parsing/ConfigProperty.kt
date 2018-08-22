@@ -5,14 +5,15 @@ import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigObject
 import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import java.time.Duration
+import kotlin.reflect.KClass
 
-interface ConfigProperty<TYPE> {
+interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError>, Described {
 
     val key: String
     val typeName: String
     val mandatory: Boolean
 
-    @Throws(ConfigException.Missing::class, ConfigException.WrongType::class)
+    @Throws(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
     fun valueIn(configuration: Config): TYPE
 
     fun <MAPPED> map(mappedTypeName: String? = null, function: (TYPE) -> MAPPED): ConfigProperty<MAPPED>
@@ -21,7 +22,26 @@ interface ConfigProperty<TYPE> {
 
     fun optional(): ConfigProperty<TYPE?> = OptionalConfigProperty(this)
 
+    override fun description(): String = "\"$key\": \"$typeName\""
+
+    override fun validate(target: Config): Set<ConfigValidationError> {
+
+        try {
+            valueIn(target)
+            return emptySet()
+        } catch (exception: ConfigException) {
+            if (expectedExceptionTypes.any { expected -> expected.isInstance(exception) }) {
+                return setOf(exception.toValidationError(key, typeName))
+            }
+            throw exception
+        }
+    }
+
+    fun contextualize(currentContext: String?): String? = currentContext
+
     companion object {
+
+        internal val expectedExceptionTypes: Set<KClass<*>> = setOf(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
 
         fun int(key: String): ConfigProperty<Int> = IntConfigProperty(key)
         fun intList(key: String): ConfigProperty<List<Int>> = IntListConfigProperty(key)
@@ -53,10 +73,23 @@ private class ProxiedNestedConfigProperty<TYPE>(key: String, type: Class<TYPE>, 
 
 private open class NestedConfigProperty<TYPE>(key: String, typeName: String, val schema: ConfigSchema, extractValue: (ConfigObject) -> TYPE, mandatory: Boolean = true) : FunctionalConfigProperty<TYPE>(key, typeName, { configArg, keyArg -> extractValue.invoke(configArg.getObject(keyArg)) }, mandatory) {
 
-    // TODO sollecitom add further validation here
-}
+    final override fun validate(target: Config): Set<ConfigValidationError> {
 
-// TODO sollecitom (perhaps) add an ObjectProperty that accepts a ConfigSchema (that would help with `serialize()` and `validate()`
+        val standardErrors = super.validate(target)
+        try {
+            return standardErrors + schema.validate(target.getObject(key).toConfig())
+        } catch (exception: ConfigException) {
+            if (ConfigProperty.expectedExceptionTypes.any { expected -> expected.isInstance(exception) }) {
+                return setOf(exception.toValidationError(key, typeName))
+            }
+            throw exception
+        }
+    }
+
+    final override fun description(): String = "\"$key\": ${schema.description()}"
+
+    final override fun contextualize(currentContext: String?) = currentContext?.let { "$it.$key" } ?: key
+}
 
 // TODO sollecitom (perhaps) add a proper `ConvertValue` interface, with support for validation and error reporting.
 private open class FunctionalConfigProperty<TYPE>(override val key: String, typeName: String, private val extractValue: (Config, String) -> TYPE, override val mandatory: Boolean = true) : ConfigProperty<TYPE> {
@@ -70,7 +103,7 @@ private open class FunctionalConfigProperty<TYPE>(override val key: String, type
         return FunctionalConfigProperty(key, compositeMappedName(mappedTypeName, typeName), { config, keyArg -> function.invoke(extractValue.invoke(config, keyArg)) }, mandatory)
     }
 
-    override fun toString() = "\"$key\": $typeName"
+    override fun toString() = "\"$key\": \"$typeName\""
 }
 
 private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<TYPE>) : ConfigProperty<TYPE?> {
@@ -94,10 +127,7 @@ private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<
         return FunctionalConfigProperty(key, "${compositeMappedName(mappedTypeName, delegate.typeName)}?", { configuration, _ -> function.invoke(valueIn(configuration)) }, mandatory)
     }
 
-    override fun toString(): String {
-
-        return "\"$key\": $typeName"
-    }
+    override fun toString() = "\"$key\": \"$typeName\""
 }
 
 private fun compositeMappedName(mappedTypeName: String?, originalTypeName: String) = mappedTypeName?.let { "[$originalTypeName => ${it.capitalize()}]" } ?: originalTypeName
@@ -118,6 +148,7 @@ private class BooleanConfigProperty(key: String, caseSensitive: Boolean = true) 
         fun extract(caseSensitive: Boolean): (Config, String) -> Boolean {
 
             return { configuration: Config, key: String ->
+
                 when {
                     caseSensitive -> configuration.getBoolean(key)
                     else -> configuration.getBooleanCaseInsensitive(key)
@@ -135,3 +166,5 @@ private class DurationListConfigProperty(key: String) : FunctionalConfigProperty
 private class ObjectConfigProperty(key: String) : FunctionalConfigProperty<ConfigObject>(key, "Object", Config::getObject)
 
 private class ObjectListConfigProperty(key: String) : FunctionalConfigProperty<List<ConfigObject>>(key, "List<Object>", Config::getObjectList)
+
+private fun ConfigException.toValidationError(keyName: String, typeName: String) = ConfigValidationError(keyName, typeName, message!!)

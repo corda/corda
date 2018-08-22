@@ -1,9 +1,11 @@
 package net.corda.node.services.config.parsing
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatCode
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 
-class ConfigDefinitionTest {
+class ConfigSchemaTest {
 
     @Test
     fun proxy_with_nested_properties() {
@@ -37,7 +39,68 @@ class ConfigDefinitionTest {
         assertThat(fooConfig.prop5).isEqualTo(prop5Value)
     }
 
-    // TODO sollecitom write tests for validation and representation
+    @Test
+    fun validation_with_nested_properties() {
+
+        val prop1 = "prop1"
+        val prop1Value = "value1"
+
+        val prop2 = "prop2"
+        val prop2Value = 3
+
+        val prop3 = "prop3"
+        val prop4 = "prop4"
+        val prop4Value = true
+        val prop5 = "prop5"
+        val prop5Value = -17.3
+        val prop3Value = configOf(prop4 to prop4Value, prop5 to prop5Value)
+
+        val configuration = configOf(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
+        println(configuration.serialize())
+
+        val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
+        val blahConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), int(prop2), nested<FooConfig>("prop3", fooConfigSchema)) }
+
+        val errors = blahConfigSchema.validate(configuration)
+
+        assertThat(errors).isEmpty()
+        assertThat(blahConfigSchema.isValid(configuration)).isTrue()
+        assertThatCode { blahConfigSchema.rejectIfInvalid(configuration) { _ -> IllegalArgumentException() } }.doesNotThrowAnyException()
+    }
+
+    @Test
+    fun validation_with_wrong_nested_properties() {
+
+        val prop1 = "prop1"
+        val prop1Value = "value1"
+
+        val prop2 = "prop2"
+        // This value is wrong, should be an Int.
+        val prop2Value = false
+
+        val prop3 = "prop3"
+        val prop4 = "prop4"
+        // This value is wrong, should be a Boolean.
+        val prop4Value = 44444
+        val prop5 = "prop5"
+        val prop5Value = -17.3
+        val prop3Value = configOf(prop4 to prop4Value, prop5 to prop5Value)
+
+        val configuration = configOf(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
+        println(configuration.serialize())
+
+        val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
+        val blahConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), int(prop2), nested<FooConfig>("prop3", fooConfigSchema)) }
+
+        val errors = blahConfigSchema.validate(configuration)
+        errors.forEach(::println)
+
+        assertThat(errors).hasSize(2)
+        assertThat(blahConfigSchema.isValid(configuration)).isFalse()
+        assertThatThrownBy { blahConfigSchema.rejectIfInvalid(configuration) { _ -> IllegalArgumentException() } }.isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    // TODO sollecitom write tests for `description()`
 }
 
 private interface BlahConfig {
