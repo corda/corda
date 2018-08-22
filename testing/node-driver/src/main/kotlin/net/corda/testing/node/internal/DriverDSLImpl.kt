@@ -1,14 +1,11 @@
 package net.corda.testing.node.internal
 
-import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.internal.createCordaRPCClientWithInternalSslAndClassLoader
-import net.corda.cordform.CordformContext
-import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.identity.CordaX500Name
@@ -33,7 +30,6 @@ import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -52,8 +48,6 @@ import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
-import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
 import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -902,7 +896,7 @@ private class NetworkVisibilityController {
     }
 }
 
-interface InternalDriverDSL : DriverDSL, CordformContext {
+interface InternalDriverDSL : DriverDSL {
     private companion object {
         private val DEFAULT_POLL_INTERVAL = 500.millis
         private const val DEFAULT_WARN_COUNT = 120
@@ -910,7 +904,7 @@ interface InternalDriverDSL : DriverDSL, CordformContext {
 
     val shutdownManager: ShutdownManager
 
-    override fun baseDirectory(nodeName: String): Path = baseDirectory(CordaX500Name.parse(nodeName))
+    fun baseDirectory(nodeName: String): Path = baseDirectory(CordaX500Name.parse(nodeName))
 
     /**
      * Polls a function until it returns a non-null value. Note that there is no timeout on the polling.
@@ -1114,4 +1108,5 @@ private fun Config.toNodeOnly(): Config {
     return if (hasPath("webAddress")) withoutPath("webAddress").withoutPath("useHTTPS") else this
 }
 
-internal fun DriverParameters.cordappsForAllNodes(): Set<TestCorDapp> = cordappsForAllNodes ?: cordappsInCurrentAndAdditionalPackages(extraCordappPackagesToScan)
+internal fun DriverParameters.cordappsForAllNodes(): Set<TestCorDapp> = cordappsForAllNodes
+        ?: cordappsInCurrentAndAdditionalPackages(extraCordappPackagesToScan)
