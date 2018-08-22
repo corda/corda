@@ -57,7 +57,7 @@ buildscript {
     ext.shiro_version = '1.4.0'
     ext.shadow_version = '2.0.4'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
-    ext.liquibase_version = '3.5.3'
+    ext.liquibase_version = '3.6.2'
     ext.artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
     ext.docker_compose_rule_version = '0.33.0'

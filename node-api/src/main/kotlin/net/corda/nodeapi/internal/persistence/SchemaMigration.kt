@@ -33,7 +33,7 @@ class SchemaMigration(
     fun nodeStartup(existingCheckpoints: Boolean) {
         when {
             databaseConfig.initialiseSchema -> {
-                migrateOlderDatabaseToUseLiquibase()
+                migrateOlderDatabaseToUseLiquibase(existingCheckpoints)
                 runMigration(existingCheckpoints)
             }
             else -> checkState()
@@ -43,12 +43,12 @@ class SchemaMigration(
     /**
      * Will run the Liquibase migration on the actual database.
      */
-    private fun runMigration(existingCheckpoints: Boolean) = doRunMigration(run = true, outputWriter = null, check = false, existingCheckpoints = existingCheckpoints)
+    private fun runMigration(existingCheckpoints: Boolean) = doRunMigration(run = true, check = false, existingCheckpoints = existingCheckpoints)
 
     /**
      * Ensures that the database is up to date with the latest migration changes.
      */
-    private fun checkState() = doRunMigration(run = false, outputWriter = null, check = true)
+    private fun checkState() = doRunMigration(run = false, check = true)
 
     /**  Create a resourse accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
     private class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) : ClassLoaderResourceAccessor(classLoader) {
@@ -67,7 +67,7 @@ class SchemaMigration(
         }
     }
 
-    private fun doRunMigration(run: Boolean, outputWriter: Writer?, check: Boolean, existingCheckpoints: Boolean? = null) {
+    private fun doRunMigration(run: Boolean, check: Boolean, existingCheckpoints: Boolean? = null) {
 
         // Virtual file name of the changelog that includes all schemas.
         val dynamicInclude = "master.changelog.json"
@@ -95,7 +95,6 @@ class SchemaMigration(
                 run && !check -> liquibase.update(Contexts())
                 check && !run && unRunChanges.isNotEmpty() -> throw OutstandingDatabaseChangesException(unRunChanges.size)
                 check && !run -> {} // Do nothing will be interpreted as "check succeeded"
-                (outputWriter != null) && !check && !run -> liquibase.update(Contexts(), outputWriter)
                 else -> throw IllegalStateException("Invalid usage.")
             }
         }
@@ -106,45 +105,48 @@ class SchemaMigration(
     }
 
     /** For existing database created before verions 4.0 add Liquibase support - creates DATABASECHANGELOG and DATABASECHANGELOGLOCK tables and mark changesets are executed. */
-    private fun migrateOlderDatabaseToUseLiquibase(): Boolean {
+    private fun migrateOlderDatabaseToUseLiquibase(existingCheckpoints: Boolean): Boolean {
         val isExistingDBWithoutLiquibase = dataSource.connection.use {
             it.metaData.getTables(null, null, "NODE%", null).next() &&
                     !it.metaData.getTables(null, null, "DATABASECHANGELOG", null).next() &&
                     !it.metaData.getTables(null, null, "DATABASECHANGELOGLOCK", null).next()
         }
-        if (isExistingDBWithoutLiquibase) {
-            // Virtual file name of the changelog that includes all schemas.
-            val dynamicInclude = "master.changelog.json"
+        when {
+            isExistingDBWithoutLiquibase && existingCheckpoints -> throw CheckpointsException()
+            isExistingDBWithoutLiquibase -> {
+                // Virtual file name of the changelog that includes all schemas.
+                val dynamicInclude = "master.changelog.json"
 
-            dataSource.connection.use { connection ->
-                // Schema migrations pre release 4.0
-                val preV4Baseline =
-                        listOf("migration/common.changelog-init.xml",
-                                "migration/node-info.changelog-init.xml",
-                                "migration/node-info.changelog-v1.xml",
-                                "migration/node-info.changelog-v2.xml",
-                                "migration/node-core.changelog-init.xml",
-                                "migration/node-core.changelog-v3.xml",
-                                "migration/node-core.changelog-v4.xml",
-                                "migration/node-core.changelog-v5.xml",
-                                "migration/node-core.changelog-pkey.xml",
-                                "migration/vault-schema.changelog-init.xml",
-                                "migration/vault-schema.changelog-v3.xml",
-                                "migration/vault-schema.changelog-v4.xml",
-                                "migration/vault-schema.changelog-pkey.xml",
-                                "migration/cash.changelog-init.xml",
-                                "migration/cash.changelog-v1.xml",
-                                "migration/commercial-paper.changelog-init.xml",
-                                "migration/commercial-paper.changelog-v1.xml") +
-                                if (schemas.any { schema -> schema.migrationResource == "node-notary.changelog-master" })
-                                    listOf("migration/node-notary.changelog-init.xml",
-                                            "migration/node-notary.changelog-v1.xml",
-                                            "migration/vault-schema.changelog-pkey.xml")
-                                else emptyList()
+                dataSource.connection.use { connection ->
+                    // Schema migrations pre release 4.0
+                    val preV4Baseline =
+                            listOf("migration/common.changelog-init.xml",
+                                    "migration/node-info.changelog-init.xml",
+                                    "migration/node-info.changelog-v1.xml",
+                                    "migration/node-info.changelog-v2.xml",
+                                    "migration/node-core.changelog-init.xml",
+                                    "migration/node-core.changelog-v3.xml",
+                                    "migration/node-core.changelog-v4.xml",
+                                    "migration/node-core.changelog-v5.xml",
+                                    "migration/node-core.changelog-pkey.xml",
+                                    "migration/vault-schema.changelog-init.xml",
+                                    "migration/vault-schema.changelog-v3.xml",
+                                    "migration/vault-schema.changelog-v4.xml",
+                                    "migration/vault-schema.changelog-pkey.xml",
+                                    "migration/cash.changelog-init.xml",
+                                    "migration/cash.changelog-v1.xml",
+                                    "migration/commercial-paper.changelog-init.xml",
+                                    "migration/commercial-paper.changelog-v1.xml") +
+                                    if (schemas.any { schema -> schema.migrationResource == "node-notary.changelog-master" })
+                                        listOf("migration/node-notary.changelog-init.xml",
+                                                "migration/node-notary.changelog-v1.xml",
+                                                "migration/vault-schema.changelog-pkey.xml")
+                                    else emptyList()
 
-                val customResourceAccessor = CustomResourceAccessor(dynamicInclude, preV4Baseline, classLoader)
-                val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
-                liquibase.changeLogSync(Contexts(), LabelExpression())
+                    val customResourceAccessor = CustomResourceAccessor(dynamicInclude, preV4Baseline, classLoader)
+                    val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
+                    liquibase.changeLogSync(Contexts(), LabelExpression())
+                }
             }
         }
         return isExistingDBWithoutLiquibase
