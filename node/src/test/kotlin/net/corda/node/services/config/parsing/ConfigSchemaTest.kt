@@ -27,15 +27,15 @@ class ConfigSchemaTest {
         println(configuration.serialize())
 
         val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
-        val blahConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), int(prop2), nested<FooConfig>("prop3", fooConfigSchema)) }
+        val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), int(prop2), nested<FooConfig>("prop3", fooConfigSchema)) }
 
-        val blahConfig: BlahConfig = blahConfigSchema.proxy(configuration)
+        val barConfig: BarConfig = barConfigSchema.proxy(configuration)
 
-        assertThat(blahConfig.prop1).isEqualTo(prop1Value)
-        assertThat(blahConfig.prop2).isEqualTo(prop2Value)
+        assertThat(barConfig.prop1).isEqualTo(prop1Value)
+        assertThat(barConfig.prop2).isEqualTo(prop2Value)
 
-        assertThat(blahConfig.prop3.prop4).isEqualTo(prop4Value)
-        assertThat(blahConfig.prop3.prop5).isEqualTo(prop5Value)
+        assertThat(barConfig.prop3.prop4).isEqualTo(prop4Value)
+        assertThat(barConfig.prop3.prop5).isEqualTo(prop5Value)
     }
 
     @Test
@@ -58,13 +58,13 @@ class ConfigSchemaTest {
         println(configuration.serialize())
 
         val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
-        val blahConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), int(prop2), nested<FooConfig>("prop3", fooConfigSchema)) }
+        val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), int(prop2), nested<FooConfig>("prop3", fooConfigSchema)) }
 
-        val errors = blahConfigSchema.validate(configuration)
+        val errors = barConfigSchema.validate(configuration)
 
         assertThat(errors).isEmpty()
-        assertThat(blahConfigSchema.isValid(configuration)).isTrue()
-        assertThatCode { blahConfigSchema.rejectIfInvalid(configuration) { _ -> IllegalArgumentException() } }.doesNotThrowAnyException()
+        assertThat(barConfigSchema.isValid(configuration)).isTrue()
+        assertThatCode { barConfigSchema.rejectIfInvalid(configuration) { _ -> IllegalArgumentException() } }.doesNotThrowAnyException()
     }
 
     @Test
@@ -89,19 +89,19 @@ class ConfigSchemaTest {
         println(configuration.serialize())
 
         val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
-        val blahConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), int(prop2), nested<FooConfig>("prop3", fooConfigSchema)) }
+        val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), int(prop2), nested<FooConfig>("prop3", fooConfigSchema)) }
 
-        val errors = blahConfigSchema.validate(configuration)
+        val errors = barConfigSchema.validate(configuration)
         errors.forEach(::println)
 
         assertThat(errors).hasSize(2)
-        assertThat(blahConfigSchema.isValid(configuration)).isFalse()
-        assertThatThrownBy { blahConfigSchema.rejectIfInvalid(configuration) { _ -> IllegalArgumentException() } }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(barConfigSchema.isValid(configuration)).isFalse()
+        assertThatThrownBy { barConfigSchema.rejectIfInvalid(configuration) { _ -> IllegalArgumentException() } }.isInstanceOf(IllegalArgumentException::class.java)
     }
 
     // TODO sollecitom write tests for `description()`
 
-    private interface BlahConfig {
+    private interface BarConfig {
 
         val prop1: String
         val prop2: Int
