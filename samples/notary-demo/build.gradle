@@ -49,7 +49,10 @@ publishing {
 task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNodesBFT', 'deployNodesCustom'])
 
 task deployNodesSingle(type: Cordform, dependsOn: 'jar') {
-    directory "build/nodes/nodesSingle"
+    directory file("build/nodes/nodesSingle")
+    nodeDefaults {
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
     node {
         name "O=Alice Corp,L=Madrid,C=ES"
         p2pPort 10002
@@ -58,7 +61,6 @@ task deployNodesSingle(type: Cordform, dependsOn: 'jar') {
             adminAddress "localhost:10103"
         }
         rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
     node {
         name "O=Bob Plc,L=Rome,C=IT"
@@ -67,7 +69,6 @@ task deployNodesSingle(type: Cordform, dependsOn: 'jar') {
             address "localhost:10006"
             adminAddress "localhost:10106"
         }
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
@@ -77,12 +78,14 @@ task deployNodesSingle(type: Cordform, dependsOn: 'jar') {
             adminAddress "localhost:10110"
         }
         notary = [validating: true]
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
 }
 
 task deployNodesCustom(type: Cordform, dependsOn: 'jar') {
-    directory "build/nodes/nodesCustom"
+    directory file("build/nodes/nodesCustom")
+    nodeDefaults {
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
     node {
         name "O=Alice Corp,L=Madrid,C=ES"
         p2pPort 10002
@@ -91,7 +94,6 @@ task deployNodesCustom(type: Cordform, dependsOn: 'jar') {
             adminAddress "localhost:10103"
         }
         rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
     node {
         name "O=Bob Plc,L=Rome,C=IT"
@@ -100,7 +102,6 @@ task deployNodesCustom(type: Cordform, dependsOn: 'jar') {
             address "localhost:10006"
             adminAddress "localhost:10106"
         }
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
@@ -110,12 +111,14 @@ task deployNodesCustom(type: Cordform, dependsOn: 'jar') {
             adminAddress "localhost:10110"
         }
         notary = [validating: true, "custom": true]
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
 }
 
 task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
-    directory "build/nodes/nodesRaft"
+    directory file("build/nodes/nodesRaft")
+    nodeDefaults {
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
     node {
         name "O=Alice Corp,L=Madrid,C=ES"
         p2pPort 10002
@@ -124,7 +127,6 @@ task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
             adminAddress "localhost:10103"
         }
         rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
     node {
         name "O=Bob Plc,L=Rome,C=IT"
@@ -133,7 +135,6 @@ task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
             address "localhost:10006"
             adminAddress "localhost:10106"
         }
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
     node {
         name "O=Notary Service 0,L=Zurich,C=CH"
@@ -149,7 +150,6 @@ task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
                         nodeAddress: "localhost:10008"
                 ]
         ]
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
     node {
         name "O=Notary Service 1,L=Zurich,C=CH"
@@ -166,7 +166,6 @@ task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
                         clusterAddresses: ["localhost:10008"]
                 ]
         ]
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
     node {
         name "O=Notary Service 2,L=Zurich,C=CH"
@@ -183,13 +182,15 @@ task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
                         clusterAddresses: ["localhost:10008"]
                 ]
         ]
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
 }
 
 task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
     def clusterAddresses = ["localhost:11000", "localhost:11010", "localhost:11020", "localhost:11030"]
-    directory "build/nodes/nodesBFT"
+    directory file("build/nodes/nodesBFT")
+    nodeDefaults {
+        extraConfig = [h2Settings: [address: "localhost:0"]]
+    }
     node {
         name "O=Alice Corp,L=Madrid,C=ES"
         p2pPort 10002
@@ -198,7 +199,6 @@ task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
             adminAddress "localhost:10103"
         }
         rpcUsers = [[user: "demou", password: "demop", permissions: ["ALL"]]]
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
     node {
         name "O=Bob Plc,L=Rome,C=IT"
@@ -207,7 +207,6 @@ task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
             address "localhost:10006"
             adminAddress "localhost:10106"
         }
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
     node {
         name "O=Notary Service 0,L=Zurich,C=CH"
@@ -224,7 +223,6 @@ task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
                         clusterAddresses: clusterAddresses
                 ]
         ]
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
     node {
         name "O=Notary Service 1,L=Zurich,C=CH"
@@ -241,7 +239,6 @@ task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
                         clusterAddresses: clusterAddresses
                 ]
         ]
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
     node {
         name "O=Notary Service 2,L=Zurich,C=CH"
@@ -258,7 +255,6 @@ task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
                         clusterAddresses: clusterAddresses
                 ]
         ]
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
     node {
         name "O=Notary Service 3,L=Zurich,C=CH"
@@ -275,7 +271,6 @@ task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
                         clusterAddresses: clusterAddresses
                 ]
         ]
-        extraConfig = [h2Settings: [address: "localhost:0"]]
     }
 }
 

@@ -7,21 +7,6 @@ apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
 
-sourceSets {
-    integrationTest {
-        kotlin {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/kotlin')
-        }
-    }
-}
-
-configurations {
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
-}
-
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
@@ -48,6 +33,9 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+    nodeDefaults {
+        cordapp project(':finance')
+    }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating: true]
@@ -56,7 +44,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address "localhost:10003"
             adminAddress "localhost:10004"
         }
-        cordapp project(':finance')
         extraConfig = [h2Settings: [address: "localhost:10016"]]
     }
     node {
@@ -68,7 +55,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         }
         webPort 10007
         rpcUsers = [[user: "bankUser", password: "test", permissions: ["ALL"]]]
-        cordapp project(':finance')
         extraConfig = [
                 custom    : [issuableCurrencies: ["USD"]],
                 h2Settings: [address: "localhost:10017"]
@@ -83,16 +69,10 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         }
         webPort 10010
         rpcUsers = [[user: "bigCorpUser", password: "test", permissions: ["ALL"]]]
-        cordapp project(':finance')
         extraConfig = [
                 h2Settings: [address: "localhost:10018"]
         ]
     }
-}
-
-task integrationTest(type: Test, dependsOn: []) {
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
 idea {
