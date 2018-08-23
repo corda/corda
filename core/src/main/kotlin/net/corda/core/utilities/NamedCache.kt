@@ -9,15 +9,15 @@ class NamedCache<K, V>(private val cache: Cache<K, V>, val name: String) : Cache
 
 class NamedLoadingCache<K, V>(private val cache: LoadingCache<K, V>, val name: String) : LoadingCache<K, V> by cache
 
-fun <K, V> Caffeine<K, V>.buildNamed(name: String): NamedCache<K, V> {
+fun <K, V> Caffeine<Any, Any>.buildNamed(name: String): NamedCache<K, V> {
     return NamedCache(this.build<K, V>(), name)
 }
 
-fun <K, V> Caffeine<K, V>.buildNamed(name: String, loadFunc: (K) -> V): NamedLoadingCache<K, V> {
+fun <K, V> Caffeine<Any, Any>.buildNamed(name: String, loadFunc: (K) -> V): NamedLoadingCache<K, V> {
     return NamedLoadingCache(this.build<K, V>(loadFunc), name)
 }
 
 
-fun <K, V> Caffeine<K, V>.buildNamed(name: String, loader: CacheLoader<K, V>): NamedLoadingCache<K, V> {
+fun <K, V> Caffeine<in K, in V>.buildNamed(name: String, loader: CacheLoader<K, V>): NamedLoadingCache<K, V> {
     return NamedLoadingCache(this.build<K, V>(loader), name)
 }

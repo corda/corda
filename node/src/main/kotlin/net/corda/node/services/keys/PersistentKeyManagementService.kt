@@ -49,6 +49,7 @@ class PersistentKeyManagementService(val identityService: PersistentIdentityServ
     private companion object {
         fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
             return AppendOnlyPersistentMap(
+                    "PersistentKeyManagementService_keys",
                     toPersistentEntityKey = { it.toStringShort() },
                     fromPersistentEntity = { Pair(Crypto.decodePublicKey(it.publicKey), Crypto.decodePrivateKey(
                             it.privateKey)) },

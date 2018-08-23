@@ -226,7 +226,9 @@ class NodeAttachmentService(
         }
     }
 
-    private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(attachmentCacheBound) { key ->
+    private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
+            "NodeAttachmentService_attachemnt",
+            attachmentCacheBound) { key ->
         Optional.ofNullable(createAttachment(key))
     }
 

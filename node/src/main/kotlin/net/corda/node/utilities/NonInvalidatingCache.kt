@@ -4,18 +4,20 @@ import com.github.benmanes.caffeine.cache.CacheLoader
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
 import com.github.benmanes.caffeine.cache.Weigher
+import net.corda.core.utilities.NamedLoadingCache
+import net.corda.core.utilities.buildNamed
 
 class NonInvalidatingCache<K, V> private constructor(
-        val cache: LoadingCache<K, V>
+        val cache: NamedLoadingCache<K, V>
 ) : LoadingCache<K, V> by cache {
 
-    constructor(bound: Long, loadFunction: (K) -> V) :
-            this(buildCache(bound, loadFunction))
+    constructor(name: String, bound: Long, loadFunction: (K) -> V) :
+            this(buildCache(name, bound, loadFunction))
 
     private companion object {
-        private fun <K, V> buildCache(bound: Long, loadFunction: (K) -> V): LoadingCache<K, V> {
+        private fun <K, V> buildCache(name: String, bound: Long, loadFunction: (K) -> V): NamedLoadingCache<K, V> {
             val builder = Caffeine.newBuilder().maximumSize(bound)
-            return builder.build(NonInvalidatingCacheLoader(loadFunction))
+            return builder.buildNamed(name, NonInvalidatingCacheLoader(loadFunction))
         }
     }
 
