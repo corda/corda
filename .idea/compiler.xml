@@ -24,8 +24,6 @@
       <module name="buildSrc_test" target="1.8" />
       <module name="canonicalizer_main" target="1.8" />
       <module name="canonicalizer_test" target="1.8" />
-      <module name="cli_main" target="1.8" />
-      <module name="cli_test" target="1.8" />
       <module name="client_main" target="1.8" />
       <module name="client_test" target="1.8" />
       <module name="cliutils_main" target="1.8" />
