@@ -12,9 +12,9 @@
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
-
-    <include file="migration/commercial-paper.changelog-init.xml"/>
-    <include file="migration/commercial-paper.changelog-v1.xml"/>
-    <include file="migration/commercial-paper.changelog-pkey.xml"/>
-
+    <changeSet id="non-clustered_pk-commercial-paper-swap" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="cp_states" constraintName="cp_states_pkey"/>
+        <addPrimaryKey tableName="cp_states" columnNames="transaction_id, output_index" constraintName="cp_states_pkey"
+                       clustered="false"/>
+    </changeSet>
 </databaseChangeLog>

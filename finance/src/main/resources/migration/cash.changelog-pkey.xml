@@ -1,0 +1,12 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
+                   logicalFilePath="migration/node-services.changelog-init.xml">
+
+    <changeSet id="non-clustered_pk-cash-swap" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="contract_cash_states" constraintName="contract_cash_states_pkey"/>
+        <addPrimaryKey tableName="contract_cash_states" columnNames="transaction_id, output_index"
+                       constraintName="contract_cash_states_pkey" clustered="false"/>
+    </changeSet>
+</databaseChangeLog>

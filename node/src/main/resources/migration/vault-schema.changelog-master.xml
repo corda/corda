@@ -10,13 +10,14 @@
   -->
 
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
 
     <include file="migration/vault-schema.changelog-init.xml"/>
     <include file="migration/vault-schema.changelog-v3.xml"/>
     <include file="migration/vault-schema.changelog-v4.xml"/>
     <include file="migration/vault-schema.changelog-pkey.xml"/>
     <include file="migration/vault-schema.changelog-v5.xml"/>
+    <include file="migration/vault-schema.changelog-pkey-swap.xml"/>
+
 </databaseChangeLog>
