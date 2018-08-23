@@ -7,15 +7,19 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.OpaqueBytes
+import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 
 // TODO: Rename this to DigitalSignature.WithCert once we're happy for it to be public API. The methods will need documentation
 // and the correct exceptions will be need to be annotated
 /** A digital signature with attached certificate of the public key. */
-class DigitalSignatureWithCert(val by: X509Certificate, bytes: ByteArray) : DigitalSignature(bytes) {
+open class DigitalSignatureWithCert(val by: X509Certificate, bytes: ByteArray) : DigitalSignature(bytes) {
     fun verify(content: ByteArray): Boolean = by.publicKey.verify(content, this)
     fun verify(content: OpaqueBytes): Boolean = verify(content.bytes)
 }
+
+/** A digital signature with attached certificate path. The first certificate in the path corresponds to the data signer key. */
+class DigitalSignatureWithCertPath(val path: List<X509Certificate>, bytes: ByteArray): DigitalSignatureWithCert(path.first(), bytes)
 
 /** Similar to [SignedData] but instead of just attaching the public key, the certificate for the key is attached instead. */
 @CordaSerializable
