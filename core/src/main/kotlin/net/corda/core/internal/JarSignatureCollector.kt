@@ -41,13 +41,13 @@ object JarSignatureCollector {
         return firstSignerSet.toPartiesOrderedByName()
     }
 
-    private val JarInputStream.fileSignerSets get() =
+    private val JarInputStream.fileSignerSets: List<Pair<String, Set<CodeSigner>>> get() =
             entries.thatAreSignable.shreddedFrom(this).toFileSignerSet().toList()
 
-    private val Sequence<JarEntry>.thatAreSignable get() =
+    private val Sequence<JarEntry>.thatAreSignable: Sequence<JarEntry> get() =
             filterNot { entry -> entry.isDirectory || unsignableEntryName.matches(entry.name) }
 
-    private fun Sequence<JarEntry>.shreddedFrom(jar: JarInputStream) = map { entry ->
+    private fun Sequence<JarEntry>.shreddedFrom(jar: JarInputStream): Sequence<JarEntry> = map { entry ->
         entry.apply {
             while (jar.read(shredder) != -1) { // Must read entry fully for codeSigners to be valid.
                 // Do nothing.
@@ -55,13 +55,14 @@ object JarSignatureCollector {
         }
     }
 
-    private fun Sequence<JarEntry>.toFileSignerSet() = map { entry -> entry.name to (entry.codeSigners?.toSet() ?: emptySet()) }
+    private fun Sequence<JarEntry>.toFileSignerSet(): Sequence<Pair<String, Set<CodeSigner>>> =
+            map { entry -> entry.name to (entry.codeSigners?.toSet() ?: emptySet()) }
 
-    private fun Set<CodeSigner>.toPartiesOrderedByName() = map {
+    private fun Set<CodeSigner>.toPartiesOrderedByName(): List<Party> = map {
         Party(it.signerCertPath.certificates[0] as X509Certificate)
     }.sortedBy { it.name.toString() } // Sorted for determinism.
 
-    private val JarInputStream.entries get() = generateSequence(nextJarEntry) { nextJarEntry }
+    private val JarInputStream.entries get(): Sequence<JarEntry> = generateSequence(nextJarEntry) { nextJarEntry }
 }
 
 class InvalidJarSignersException(msg: String) : Exception(msg)
