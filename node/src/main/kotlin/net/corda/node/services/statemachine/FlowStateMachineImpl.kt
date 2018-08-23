@@ -87,6 +87,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     internal var transientValues: TransientReference<TransientValues>? = null
     internal var transientState: TransientReference<StateMachineState>? = null
 
+    // Utilise the behaviour of `ourSenderUUID` to indicate whether we have restarted ever.  Can be used to make certain code paths optimistic.
+    internal val isNotRestarted: Boolean get() = (ourSenderUUID != null)
+
     /**
      * What sender identifier to put on messages sent by this flow.  This will either be the identifier for the current
      * state machine manager / messaging client, or null to indicate this flow is restored from a checkpoint and

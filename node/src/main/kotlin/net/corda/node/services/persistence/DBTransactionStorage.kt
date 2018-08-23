@@ -101,8 +101,16 @@ class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPers
 
     override fun addTransaction(transaction: SignedTransaction): Boolean = database.transaction {
         txStorage.concurrent {
-            addWithDuplicatesAllowed(transaction.id, transaction.toTxCacheValue()).apply {
-                updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
+            // Be optimistic if we are a flow and never restarted (i.e. cannot have been to the flow hospital due to primary key collision).
+            val optimistic = FlowStateMachineImpl.currentStateMachine()?.isNotRestarted ?: false
+            if (optimistic) {
+                set(transaction.id, transaction.toTxCacheValue()).apply {
+                    updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
+                }
+            } else {
+                addWithDuplicatesAllowed(transaction.id, transaction.toTxCacheValue()).apply {
+                    updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
+                }
             }
         }
     }
