@@ -4,7 +4,6 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigRenderOptions
-import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 
 @Suppress("UNCHECKED_CAST")

@@ -28,6 +28,7 @@ class ConfigSchemaTest {
 
         val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
         val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), int(prop2), nested<FooConfig>("prop3", fooConfigSchema)) }
+        println(barConfigSchema.description())
 
         val barConfig: BarConfig = barConfigSchema.proxy(configuration)
 
@@ -98,8 +99,6 @@ class ConfigSchemaTest {
         assertThat(barConfigSchema.isValid(configuration)).isFalse()
         assertThatThrownBy { barConfigSchema.rejectIfInvalid(configuration) { _ -> IllegalArgumentException() } }.isInstanceOf(IllegalArgumentException::class.java)
     }
-
-    // TODO sollecitom write tests for `description()`
 
     private interface BarConfig {
 

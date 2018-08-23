@@ -1,6 +1,5 @@
 package net.corda.node.services.config.parsing
 
-// TODO sollecitom move
 interface Validator<TARGET, ERROR> {
 
     fun validate(target: TARGET): Set<ERROR>

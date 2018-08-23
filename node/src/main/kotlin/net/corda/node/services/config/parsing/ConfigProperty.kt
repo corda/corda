@@ -7,7 +7,7 @@ import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import java.time.Duration
 import kotlin.reflect.KClass
 
-interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError>, Described {
+interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError> {
 
     val key: String
     val typeName: String
@@ -21,8 +21,6 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError>, Descr
     fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
     fun optional(): ConfigProperty<TYPE?> = OptionalConfigProperty(this)
-
-    override fun description(): String = "\"$key\": \"$typeName\""
 
     override fun validate(target: Config): Set<ConfigValidationError> {
 
@@ -71,7 +69,7 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError>, Descr
 
 private class ProxiedNestedConfigProperty<TYPE>(key: String, type: Class<TYPE>, schema: ConfigSchema, mandatory: Boolean = true) : NestedConfigProperty<TYPE>(key, type.simpleName, schema, { configObj -> schema.proxy(configObj.toConfig(), type) }, mandatory)
 
-private open class NestedConfigProperty<TYPE>(key: String, typeName: String, val schema: ConfigSchema, extractValue: (ConfigObject) -> TYPE, mandatory: Boolean = true) : FunctionalConfigProperty<TYPE>(key, typeName, { configArg, keyArg -> extractValue.invoke(configArg.getObject(keyArg)) }, mandatory) {
+internal open class NestedConfigProperty<TYPE>(key: String, typeName: String, val schema: ConfigSchema, extractValue: (ConfigObject) -> TYPE, mandatory: Boolean = true) : FunctionalConfigProperty<TYPE>(key, typeName, { configArg, keyArg -> extractValue.invoke(configArg.getObject(keyArg)) }, mandatory) {
 
     final override fun validate(target: Config): Set<ConfigValidationError> {
 
@@ -86,13 +84,10 @@ private open class NestedConfigProperty<TYPE>(key: String, typeName: String, val
         }
     }
 
-    final override fun description(): String = "\"$key\": ${schema.description()}"
-
     final override fun contextualize(currentContext: String?) = currentContext?.let { "$it.$key" } ?: key
 }
 
-// TODO sollecitom (perhaps) add a proper `ConvertValue` interface, with support for validation and error reporting.
-private open class FunctionalConfigProperty<TYPE>(override val key: String, typeName: String, private val extractValue: (Config, String) -> TYPE, override val mandatory: Boolean = true) : ConfigProperty<TYPE> {
+internal open class FunctionalConfigProperty<TYPE>(override val key: String, typeName: String, private val extractValue: (Config, String) -> TYPE, override val mandatory: Boolean = true) : ConfigProperty<TYPE> {
 
     override val typeName = typeName.capitalize()
 
