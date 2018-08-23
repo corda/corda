@@ -11,5 +11,6 @@
     <include file="migration/node-core.changelog-pkey.xml"/>
     <include file="migration/node-core.changelog-postgres-blob.xml"/>
     <include file="migration/node-core.changelog-v8.xml"/>
+    <include file="migration/node-core.changelog-tx-mapping.xml"/>
 
 </databaseChangeLog>
