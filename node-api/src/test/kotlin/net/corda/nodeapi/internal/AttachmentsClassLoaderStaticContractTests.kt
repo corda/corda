@@ -67,7 +67,7 @@ class AttachmentsClassLoaderStaticContractTests {
     }
 
     private val serviceHub = rigorousMock<ServicesForResolution>().also {
-        val cordappProviderImpl = CordappProviderImpl(cordappLoaderForPackages(listOf("net.corda.nodeapi.internal")), MockCordappConfigProvider(), MockAttachmentStorage())
+        val cordappProviderImpl = CordappProviderImpl(cordappLoaderForPackages(listOf("net.corda.nodeapi.internal"), 4), MockCordappConfigProvider(), MockAttachmentStorage())
         cordappProviderImpl.start(testNetworkParameters().whitelistedContractImplementations)
         doReturn(cordappProviderImpl).whenever(it).cordappProvider
         doReturn(testNetworkParameters()).whenever(it).networkParameters
@@ -92,12 +92,12 @@ class AttachmentsClassLoaderStaticContractTests {
         assertNotNull(contract)
     }
 
-    private fun cordappLoaderForPackages(packages: Iterable<String>): CordappLoader {
+    private fun cordappLoaderForPackages(packages: Iterable<String>, platformVersion: Int): CordappLoader {
 
         val cordapps = cordappsForPackages(packages)
         return testDirectory().let { directory ->
             cordapps.packageInDirectory(directory)
-            JarScanningCordappLoader.fromDirectories(listOf(directory))
+            JarScanningCordappLoader.fromDirectories(listOf(directory), platformVersion)
         }
     }
 
