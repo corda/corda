@@ -14,6 +14,7 @@ class SslOptionsParsingExampleTest {
         val expectedTrustStore = SslOptions.CertificateStore(Password("hehehe"), Paths.get("./certs/truststore"))
 
         val config = configObject("keystore" to configObject("password" to expectedKeyStore.password.value, "path" to expectedKeyStore.path.toString()), "trustStore" to configObject("password" to expectedTrustStore.password.value, "path" to expectedTrustStore.path.toString())).toConfig()
+        println(config.serialize())
 
         val keyStoreProperty = certificateStore("keystore")
         val trustStoreProperty = certificateStore("trustStore")
@@ -22,6 +23,23 @@ class SslOptionsParsingExampleTest {
         val trustStore = trustStoreProperty.valueIn(config)
 
         val sslOptions = SslOptionsImpl(keyStore, trustStore)
+
+        assertThat(sslOptions.keyStore).isEqualTo(expectedKeyStore)
+        assertThat(sslOptions.trustStore).isEqualTo(expectedTrustStore)
+    }
+
+    @Test
+    fun proxied_parsing() {
+
+        val expectedKeyStore = SslOptions.CertificateStore(Password("dadada"), Paths.get("./certs/keystore"))
+        val expectedTrustStore = SslOptions.CertificateStore(Password("hehehe"), Paths.get("./certs/truststore"))
+
+        val config = configObject("keyStore" to configObject("password" to expectedKeyStore.password.value, "path" to expectedKeyStore.path.toString()), "trustStore" to configObject("password" to expectedTrustStore.password.value, "path" to expectedTrustStore.path.toString())).toConfig()
+        println(config.serialize())
+
+        val schema = sslOptionsSchema(true)
+
+        val sslOptions = schema.proxy<SslOptions>(config)
 
         assertThat(sslOptions.keyStore).isEqualTo(expectedKeyStore)
         assertThat(sslOptions.trustStore).isEqualTo(expectedTrustStore)
