@@ -34,7 +34,9 @@ object JarSignatureCollector {
             if (otherSignerSet != firstSignerSet) throw InvalidJarSignersException(
                 """
                 Mismatch between signers ${firstSignerSet.toPartiesOrderedByName()} for file $firstFile
-                and signers ${otherSignerSet.toPartiesOrderedByName()} for file $otherFile
+                and signers ${otherSignerSet.toPartiesOrderedByName()} for file ${otherFile}.
+                See https://docs.corda.net/design/data-model-upgrades/signature-constraints.html for details of the
+                constraints applied to attachment signatures.
                 """.trimIndent().replace('\n', ' '))
         }
 

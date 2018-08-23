@@ -73,7 +73,7 @@ object AutomaticHashConstraint : AttachmentConstraint {
 
 /**
  * An [AttachmentConstraint] that verifies that the attachment has signers that fulfil the provided [PublicKey].
- * See: corda/docs/source/design/data-model-upgrades/signature-constraints.md
+ * See: [Signature Constraints](https://docs.corda.net/design/data-model-upgrades/signature-constraints.html)
  *
  * @param key A [PublicKey] that must be fulfilled by the owning keys of the attachment's signing parties.
  */

@@ -120,7 +120,9 @@ class JarSignatureCollectorTest {
         assertFailsWith<InvalidJarSignersException>(
             """
             Mismatch between signers [O=Alice Corp, L=Madrid, C=ES, O=Bob Plc, L=Rome, C=IT] for file _signable1
-            and signers [O=Bob Plc, L=Rome, C=IT] for file _signable2
+            and signers [O=Bob Plc, L=Rome, C=IT] for file _signable2.
+            See https://docs.corda.net/design/data-model-upgrades/signature-constraints.html for details of the
+            constraints applied to attachment signatures.
             """.trimIndent().replace('\n', ' ')
         ) { getJarSigners() }
     }
@@ -155,5 +157,5 @@ class JarSignatureCollectorTest {
     private fun getJarSigners() =
             JarInputStream(FileInputStream((dir / FILENAME).toFile())).use(JarSignatureCollector::collectSigningParties)
     //endregion
-    
+
 }
