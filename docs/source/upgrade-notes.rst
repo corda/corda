@@ -51,6 +51,18 @@ For H2:
 
     ALTER TABLE node_checkpoints ALTER COLUMN checkpoint_value set data type VARBINARY(33554432);
 
+* Database upgrade - a column ``HOST`` in table ``NODE_INFO_HOSTS`` has been renamed to ``HOST_NAME`` table name.
+
+  For H2 database the column name will be automatically changed upon the first startup.
+
+  For any other database run the following command before starting the node:
+
+  .. sourcecode:: sql
+
+     ALTER TABLE [schema].NODE_INFO_HOSTS ALTER COLUMN HOST RENAME TO HOST_NAME;
+
+  .. note::
+    Schema name is optional, run SQL when the node is not running.
 
 * API change: ``net.corda.core.schemas.PersistentStateRef`` fields (``index`` and ``txId``) incorrectly marked as nullable are now non-nullable,
   :doc:`changelog` contains the explanation.

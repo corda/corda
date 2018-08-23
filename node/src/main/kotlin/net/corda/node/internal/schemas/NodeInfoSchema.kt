@@ -70,6 +70,7 @@ object NodeInfoSchemaV1 : MappedSchema(
             @GeneratedValue
             @Column(name = "hosts_id", nullable = false)
             var id: Int,
+            @Column(name = "host_name")
             val host: String? = null,
             val port: Int? = null
     ) {
