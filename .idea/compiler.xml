@@ -26,6 +26,8 @@
       <module name="canonicalizer_test" target="1.8" />
       <module name="client_main" target="1.8" />
       <module name="client_test" target="1.8" />
+      <module name="cliutils_main" target="1.8" />
+      <module name="cliutils_test" target="1.8" />
       <module name="common_main" target="1.8" />
       <module name="common_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
@@ -71,6 +73,8 @@
       <module name="data_test" target="1.8" />
       <module name="demobench_main" target="1.8" />
       <module name="demobench_test" target="1.8" />
+      <module name="djvm_main" target="1.8" />
+      <module name="djvm_test" target="1.8" />
       <module name="docs_main" target="1.8" />
       <module name="docs_source_example-code_integrationTest" target="1.8" />
       <module name="docs_source_example-code_main" target="1.8" />

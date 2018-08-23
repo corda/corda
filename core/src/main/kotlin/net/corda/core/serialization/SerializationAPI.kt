@@ -199,6 +199,11 @@ interface SerializationContext {
     fun withEncoding(encoding: SerializationEncoding?): SerializationContext
 
     /**
+     * A shallow copy of this context but with the given encoding whitelist.
+     */
+    fun withEncodingWhitelist(encodingWhitelist: EncodingWhitelist): SerializationContext
+
+    /**
      * The use case that we are serializing for, since it influences the implementations chosen.
      */
     @KeepForDJVM

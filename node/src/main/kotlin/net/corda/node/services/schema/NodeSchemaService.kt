@@ -3,10 +3,6 @@ package net.corda.node.services.schema
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.LinearState
-import net.corda.core.schemas.CommonSchemaV1
-import net.corda.core.schemas.MappedSchema
-import net.corda.core.schemas.PersistentState
-import net.corda.core.schemas.QueryableState
 import net.corda.core.schemas.*
 import net.corda.core.schemas.MappedSchemaValidator.crossReferencesToOtherMappedSchema
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -18,7 +14,6 @@ import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.P2PMessageDeduplicator
 import net.corda.node.services.persistence.DBCheckpointStorage
-import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
@@ -41,7 +36,6 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
     object NodeCoreV1 : MappedSchema(schemaFamily = NodeCore.javaClass, version = 1,
             mappedTypes = listOf(DBCheckpointStorage.DBCheckpoint::class.java,
                     DBTransactionStorage.DBTransaction::class.java,
-                    DBTransactionMappingStorage.DBTransactionMapping::class.java,
                     PersistentKeyManagementService.PersistentKey::class.java,
                     NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java,

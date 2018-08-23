@@ -48,7 +48,8 @@ sourceSets {
 jib.container {
   mainClass = "net.corda.node.Corda"
   args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
-  jvmFlags = ['-Xmx1g', '-javaagent:/app/libs/quasar-core-' + "${quasar_version}" + '-jdk8.jar']
+  // The Groovy string needs to be converted to a `java.lang.String` below.
+  jvmFlags = ['-Xmx1g', "-javaagent:/app/libs/quasar-core-${quasar_version}-jdk8.jar".toString()]
 }
 
 // Use manual resource copying of log4j2.xml rather than source sets.

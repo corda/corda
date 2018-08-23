@@ -312,6 +312,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
+        identityService.ourNames = nodeInfo.legalIdentities.map { it.name }.toSet()
         services.start(nodeInfo, netParams)
         networkMapUpdater.start(trustRoot, signedNetParams.raw.hash, signedNodeInfo.raw.hash)
         startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
@@ -746,7 +747,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    protected open fun makeKeyManagementService(identityService: IdentityService): KeyManagementServiceInternal {
+    protected open fun makeKeyManagementService(identityService: PersistentIdentityService): KeyManagementServiceInternal {
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.

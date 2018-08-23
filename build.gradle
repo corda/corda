@@ -71,7 +71,7 @@ buildscript {
     ext.snappy_version = '0.4'
     ext.fast_classpath_scanner_version = '2.12.3'
     ext.jcabi_manifests_version = '1.1'
-    ext.picocli_version = '3.3.0'
+    ext.picocli_version = '3.5.2'
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
     // ext.deterministic_idea_sdk = '1.8 (Deterministic)'
@@ -172,7 +172,7 @@ allprojects {
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
             freeCompilerArgs = ['-Xjvm-default=compatibility']
-            allWarningsAsErrors = project.hasProperty('compilation.allWarningsAsErrors') ? project.property('compilation.allWarningsAsErrors').toBoolean() : true
+            allWarningsAsErrors = project.hasProperty('compilation.allWarningsAsErrors') ? project.property('compilation.allWarningsAsErrors').toBoolean() : false
         }
     }
 
@@ -188,7 +188,7 @@ allprojects {
     }
 
     tasks.withType(Test) {
-        failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : true
+        failFast = project.hasProperty('tests.failFast') ? project.property('tests.failFast').toBoolean() : false
 
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperty 'java.io.tmpdir', buildDir.absolutePath
