@@ -29,7 +29,7 @@ import net.corda.node.services.vault.VaultSchemaV1
  * TODO: support plugins for schema version upgrading or custom mapping not supported by original [QueryableState].
  * TODO: create whitelisted tables when a CorDapp is first installed
  */
-class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNotarySchemas: Boolean = false) : SchemaService, SingletonSerializeAsToken() {
+class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet(), includeNotarySchemas: Boolean = false) : SchemaService, SingletonSerializeAsToken() {
     // Core Entities used by a Node
     object NodeCore
 
@@ -43,7 +43,9 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
                     PersistentIdentityService.PersistentIdentity::class.java,
                     PersistentIdentityService.PersistentIdentityNames::class.java,
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java
-            ))
+            )) {
+        override val migrationResource = "node-core.changelog-master"
+    }
 
     // Entities used by a Notary
     object NodeNotary
@@ -54,17 +56,22 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
                     PersistentUniquenessProvider.CommittedState::class.java,
                     RaftUniquenessProvider.CommittedState::class.java,
                     BFTNonValidatingNotaryService.CommittedState::class.java
-            ))
+            )) {
+        override val migrationResource = "node-notary.changelog-master"
+    }
 
     // Required schemas are those used by internal Corda services
     private val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
             mapOf(Pair(CommonSchemaV1, SchemaOptions()),
                   Pair(VaultSchemaV1, SchemaOptions()),
                   Pair(NodeInfoSchemaV1, SchemaOptions()),
-                  Pair(NodeCoreV1, SchemaOptions()))
-    private val notarySchemas = if (includeNotarySchemas) mapOf(Pair(NodeNotaryV1, SchemaOptions())) else emptyMap<MappedSchema, SchemaService.SchemaOptions>()
+                  Pair(NodeCoreV1, SchemaOptions())) +
+     if (includeNotarySchemas) mapOf(Pair(NodeNotaryV1, SchemaOptions())) else emptyMap()
 
-    override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas + notarySchemas + extraSchemas.associateBy({ it }, { SchemaOptions() })
+    fun internalSchemas() = requiredSchemas.keys + extraSchemas.filter { schema -> // when mapped schemas from the finance module are present, they are considered as internal ones
+        schema::class.simpleName == "net.corda.finance.schemas.CashSchemaV1" || schema::class.simpleName == "net.corda.finance.schemas.CommercialPaperSchemaV1" }
+
+    override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas + extraSchemas.associateBy({ it }, { SchemaOptions() })
 
     // Currently returns all schemas supported by the state, with no filtering or enrichment.
     override fun selectSchemas(state: ContractState): Iterable<MappedSchema> {

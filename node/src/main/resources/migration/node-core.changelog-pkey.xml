@@ -1,0 +1,41 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+    <changeSet id="non-clustered_pk-1" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="node_checkpoints" constraintName="node_checkpoints_pkey"/>
+        <addPrimaryKey tableName="node_checkpoints" columnNames="checkpoint_id" constraintName="node_checkpoints_pkey"
+                       clustered="false"/>
+    </changeSet>
+    <changeSet id="non-clustered_pk-2" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="node_identities" constraintName="node_identities_pkey"/>
+        <addPrimaryKey tableName="node_identities" columnNames="pk_hash" constraintName="node_identities_pkey"
+                       clustered="false"/>
+    </changeSet>
+    <changeSet id="non-clustered_pk-3" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="node_message_ids" constraintName="node_message_ids_pkey"/>
+        <addPrimaryKey tableName="node_message_ids" columnNames="message_id" constraintName="node_message_ids_pkey"
+                       clustered="false"/>
+    </changeSet>
+    <changeSet id="non-clustered_pk-4" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="node_named_identities" constraintName="node_named_identities_pkey"/>
+        <addPrimaryKey tableName="node_named_identities" columnNames="name" constraintName="node_named_identities_pkey"
+                       clustered="false"/>
+    </changeSet>
+    <changeSet id="non-clustered_pk-5" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="node_our_key_pairs" constraintName="node_our_key_pairs_pkey"/>
+        <addPrimaryKey tableName="node_our_key_pairs" columnNames="public_key_hash"
+                       constraintName="node_our_key_pairs_pkey" clustered="false"/>
+    </changeSet>
+    <changeSet id="non-clustered_pk-6" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="node_transaction_mappings" constraintName="node_transaction_mappings_pkey"/>
+        <addPrimaryKey tableName="node_transaction_mappings" columnNames="tx_id"
+                       constraintName="node_transaction_mappings_pkey" clustered="false"/>
+    </changeSet>
+    <changeSet id="non-clustered_pk-7" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="node_transactions" constraintName="node_transactions_pkey"/>
+        <addPrimaryKey tableName="node_transactions" columnNames="tx_id" constraintName="node_transactions_pkey"
+                       clustered="false"/>
+    </changeSet>
+</databaseChangeLog>

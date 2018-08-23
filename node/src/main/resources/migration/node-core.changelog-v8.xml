@@ -1,0 +1,17 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="R3.Corda" id="conditional_attchments_rename">
+        <preConditions onFail="MARK_RAN"><tableExists tableName="NODE_ATTCHMENTS_CONTRACTS"/></preConditions>
+        <renameTable oldTableName="NODE_ATTCHMENTS_CONTRACTS" newTableName="NODE_ATTACHMENTS_CONTRACTS" />
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="conditional_attchments_contracts">
+        <preConditions onFail="MARK_RAN"><tableExists tableName="NODE_ATTACHMENTS_CONTRACT_CLASS_NAME"/></preConditions>
+        <renameTable oldTableName="NODE_ATTACHMENTS_CONTRACT_CLASS_NAME" newTableName="NODE_ATTACHMENTS_CONTRACTS" />
+    </changeSet>
+
+</databaseChangeLog>
