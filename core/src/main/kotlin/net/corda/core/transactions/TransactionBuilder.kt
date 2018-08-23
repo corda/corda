@@ -109,20 +109,21 @@ open class TransactionBuilder @JvmOverloads constructor(
             services.ensureMinimumPlatformVersion(4, "Reference states")
         }
 
-        // Resolves the AutomaticHashConstraints to HashAttachmentConstraints or WhitelistedByZoneAttachmentConstraint based on a global parameter.
-        // The AutomaticHashConstraint allows for less boiler plate when constructing transactions since for the typical case the named contract
-        // will be available when building the transaction. In exceptional cases the TransactionStates must be created
-        // with an explicit [AttachmentConstraint]
+        /**
+         * Resolves the [AutomaticHashConstraint]s to [HashAttachmentConstraint]s,
+         * [WhitelistedByZoneAttachmentConstraint]s or [SignatureAttachmentConstraint]s based on a global parameter.
+         *
+         * The [AutomaticHashConstraint] allows for less boiler plate when constructing transactions since for the
+         * typical case the named contract will be available when building the transaction. In exceptional cases the
+         * [TransactionStates] must be created with an explicit [AttachmentConstraint]
+         */
         val resolvedOutputs = outputs.map { state ->
-            when {
-                state.constraint !== AutomaticHashConstraint -> state
-                useWhitelistedByZoneAttachmentConstraint(state.contract, services.networkParameters) -> state.copy(constraint = WhitelistedByZoneAttachmentConstraint)
-                else -> {
-                    services.cordappProvider.getContractAttachmentID(state.contract)?.let { attachmentId ->
-                        makeAttachmentConstraint(services, attachmentId, state)
-                    } ?: throw MissingContractAttachments(listOf(state))
-                }
-            }
+            state.withConstraint(when {
+                state.constraint !== AutomaticHashConstraint -> state.constraint
+                useWhitelistedByZoneAttachmentConstraint(state.contract, services.networkParameters) ->
+                    WhitelistedByZoneAttachmentConstraint
+                else -> makeAttachmentConstraint(services, state)
+            })
         }
 
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
@@ -141,13 +142,19 @@ open class TransactionBuilder @JvmOverloads constructor(
         }
     }
 
-    private fun makeAttachmentConstraint(services: ServicesForResolution, attachmentId: AttachmentId, state: TransactionState<ContractState>): TransactionState<ContractState> {
+    private fun TransactionState<ContractState>.withConstraint(newConstraint: AttachmentConstraint) =
+            if (newConstraint == constraint) this else copy(constraint = newConstraint)
+
+    private fun makeAttachmentConstraint(services: ServicesForResolution, state: TransactionState<ContractState>): AttachmentConstraint {
+        val attachmentId = services.cordappProvider.getContractAttachmentID(state.contract)
+            ?: throw MissingContractAttachments(listOf(state))
+        
         val attachmentSigners = services.attachments.openAttachment(attachmentId)?.signers
             ?: throw MissingContractAttachments(listOf(state))
 
         return when {
-            attachmentSigners.isEmpty() -> state.copy(constraint = HashAttachmentConstraint(attachmentId))
-            else -> state.copy(constraint = makeSignatureAttachmentConstraint(attachmentSigners))
+            attachmentSigners.isEmpty() -> HashAttachmentConstraint(attachmentId)
+            else -> makeSignatureAttachmentConstraint(attachmentSigners)
         }
     }
 
@@ -155,7 +162,7 @@ open class TransactionBuilder @JvmOverloads constructor(
             SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners.map { it.owningKey }).build())
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) =
-        contractClassName in networkParameters.whitelistedContractImplementations.keys
+            contractClassName in networkParameters.whitelistedContractImplementations.keys
 
     /**
      * The attachments added to the current transaction contain only the hashes of the current cordapps.
@@ -286,6 +293,7 @@ open class TransactionBuilder @JvmOverloads constructor(
      * signing [PublicKey]s.
      */
     fun addCommand(data: CommandData, vararg keys: PublicKey) = addCommand(Command(data, listOf(*keys)))
+
     fun addCommand(data: CommandData, keys: List<PublicKey>) = addCommand(Command(data, keys))
 
     /**
