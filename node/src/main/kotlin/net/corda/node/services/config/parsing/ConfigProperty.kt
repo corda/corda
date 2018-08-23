@@ -59,9 +59,12 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError> {
         fun value(key: String): ConfigProperty<ConfigObject> = ObjectConfigProperty(key)
         fun valueList(key: String): ConfigProperty<List<ConfigObject>> = ObjectListConfigProperty(key)
 
+        fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>): ConfigProperty<ENUM> = EnumConfigProperty(key, enumClass)
+        fun <ENUM : Enum<ENUM>> enumList(key: String, enumClass: KClass<ENUM>): ConfigProperty<List<ENUM>> = EnumListConfigProperty(key, enumClass)
+
         inline fun <reified TYPE> nested(key: String, schema: ConfigSchema): ConfigProperty<TYPE> = nested(key, TYPE::class.java, schema)
         fun <TYPE> nested(key: String, type: Class<TYPE>, schema: ConfigSchema): ConfigProperty<TYPE> = ProxiedNestedConfigProperty(key, type, schema)
-        // TODO sollecitom create a list version
+        fun <TYPE> nestedList(key: String, type: Class<TYPE>, schema: ConfigSchema): ConfigProperty<List<TYPE>> = ProxiedNestedListConfigProperty(key, type, schema)
 
         fun <TYPE> functional(key: String, typeName: String, extractValue: (Config, String) -> TYPE): ConfigProperty<TYPE> = FunctionalConfigProperty(key, typeName, extractValue, true)
     }
@@ -70,6 +73,26 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError> {
 private class ProxiedNestedConfigProperty<TYPE>(key: String, type: Class<TYPE>, schema: ConfigSchema, mandatory: Boolean = true) : NestedConfigProperty<TYPE>(key, type.simpleName, schema, { configObj -> schema.proxy(configObj.toConfig(), type) }, mandatory)
 
 internal open class NestedConfigProperty<TYPE>(key: String, typeName: String, val schema: ConfigSchema, extractValue: (ConfigObject) -> TYPE, mandatory: Boolean = true) : FunctionalConfigProperty<TYPE>(key, typeName, { configArg, keyArg -> extractValue.invoke(configArg.getObject(keyArg)) }, mandatory) {
+
+    final override fun validate(target: Config): Set<ConfigValidationError> {
+
+        val standardErrors = super.validate(target)
+        try {
+            return standardErrors + schema.validate(target.getObject(key).toConfig())
+        } catch (exception: ConfigException) {
+            if (ConfigProperty.expectedExceptionTypes.any { expected -> expected.isInstance(exception) }) {
+                return setOf(exception.toValidationError(key, typeName))
+            }
+            throw exception
+        }
+    }
+
+    final override fun contextualize(currentContext: String?) = currentContext?.let { "$it.$key" } ?: key
+}
+
+private class ProxiedNestedListConfigProperty<TYPE>(key: String, type: Class<TYPE>, schema: ConfigSchema, mandatory: Boolean = true) : NestedListConfigProperty<List<TYPE>>(key, type.simpleName, schema, { configObjList -> configObjList.map { configObj -> schema.proxy(configObj.toConfig(), type) } }, mandatory)
+
+internal open class NestedListConfigProperty<TYPE>(key: String, typeName: String, val schema: ConfigSchema, extractValue: (List<ConfigObject>) -> TYPE, mandatory: Boolean = true) : FunctionalConfigProperty<TYPE>(key, typeName, { configArg, keyArg -> extractValue.invoke(configArg.getObjectList(keyArg)) }, mandatory) {
 
     final override fun validate(target: Config): Set<ConfigValidationError> {
 
@@ -132,6 +155,9 @@ private class IntListConfigProperty(key: String) : FunctionalConfigProperty<List
 
 private class DoubleConfigProperty(key: String) : FunctionalConfigProperty<Double>(key, Double::class.java.simpleName, Config::getDouble)
 private class DoubleListConfigProperty(key: String) : FunctionalConfigProperty<List<Double>>(key, "List<${Double::class.java.simpleName}>", Config::getDoubleList)
+
+private class EnumConfigProperty<ENUM : Enum<ENUM>>(key: String, enumClass: KClass<ENUM>) : FunctionalConfigProperty<ENUM>(key, String::class.java.simpleName, { configArg, keyArg -> configArg.getEnum<ENUM>(enumClass.java, keyArg) })
+private class EnumListConfigProperty<ENUM : Enum<ENUM>>(key: String, enumClass: KClass<ENUM>) : FunctionalConfigProperty<List<ENUM>>(key, String::class.java.simpleName, { configArg, keyArg -> configArg.getEnumList<ENUM>(enumClass.java, keyArg) })
 
 private class StringConfigProperty(key: String) : FunctionalConfigProperty<String>(key, String::class.java.simpleName, Config::getString)
 private class StringListConfigProperty(key: String) : FunctionalConfigProperty<List<String>>(key, "List<${String::class.java.simpleName}>", Config::getStringList)

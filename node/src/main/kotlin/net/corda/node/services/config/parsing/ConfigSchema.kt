@@ -12,17 +12,17 @@ interface ConfigSchema : Validator<Config, ConfigValidationError> {
 
     companion object {
 
-        fun withProperties(properties: Iterable<ConfigProperty<*>>): ConfigSchema = ConfigPropertySchema(properties)
+        fun withProperties(strict: Boolean = false, properties: Iterable<ConfigProperty<*>>): ConfigSchema = ConfigPropertySchema(strict, properties)
 
-        fun withProperties(vararg properties: ConfigProperty<*>): ConfigSchema = withProperties(properties.toSet())
+        fun withProperties(strict: Boolean = false, vararg properties: ConfigProperty<*>): ConfigSchema = withProperties(strict, properties.toSet())
 
-        fun withProperties(builder: ConfigProperty.Companion.() -> Iterable<ConfigProperty<*>>): ConfigSchema = withProperties(builder.invoke(ConfigProperty.Companion))
+        fun withProperties(strict: Boolean = false, builder: ConfigProperty.Companion.() -> Iterable<ConfigProperty<*>>): ConfigSchema = withProperties(strict, builder.invoke(ConfigProperty.Companion))
     }
 }
 
 inline fun <reified TYPE> ConfigSchema.proxy(configuration: Config): TYPE = proxy(configuration, TYPE::class.java)
 
-private class ConfigPropertySchema(unorderedProperties: Iterable<ConfigProperty<*>>) : ConfigSchema {
+private class ConfigPropertySchema(private val strict: Boolean, unorderedProperties: Iterable<ConfigProperty<*>>) : ConfigSchema {
 
     private val properties = unorderedProperties.sortedBy(ConfigProperty<*>::key).toSet()
 
@@ -37,8 +37,15 @@ private class ConfigPropertySchema(unorderedProperties: Iterable<ConfigProperty<
 
     override fun validate(target: Config): Set<ConfigValidationError> {
 
-        return properties.flatMap { property -> property.validate(target).map { error -> error.withContainingPath(property.contextualize(error.containingPath)) } }.toSet()
+        val propertyErrors = properties.flatMap { property -> property.validate(target).map { error -> error.withContainingPath(property.contextualize(error.containingPath)) } }.toSet()
+        if (strict) {
+            val unknownKeys = target.root().keys - properties.map(ConfigProperty<*>::key)
+            return propertyErrors + unknownKeys.map(::unknownPropertyError)
+        }
+        return propertyErrors
     }
+
+    private fun unknownPropertyError(key: String) = ConfigValidationError(key, message = "Unknown configuration key: \"$key\".")
 
     override fun description(): String {
 
