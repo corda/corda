@@ -1,0 +1,45 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.3'
+    }
+}
+
+plugins {
+    id 'com.github.johnrengelman.shadow'
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
+
+    compile "info.picocli:picocli:$picocli_version"
+    compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
+    compile project(path: ":djvm", configuration: "shadow")
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'net.corda.djvm.tools.cli.Program',
+                'Automatic-Module-Name': 'net.corda.djvm',
+                'Build-Date': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        )
+    }
+}
+
+shadowJar {
+    baseName = "corda-djvm"
+}

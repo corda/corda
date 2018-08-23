@@ -75,6 +75,8 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
     }
 }
 
+build.dependsOn buildCordaJAR
+
 artifacts {
     runtimeArtifacts buildCordaJAR
     publish buildCordaJAR {
