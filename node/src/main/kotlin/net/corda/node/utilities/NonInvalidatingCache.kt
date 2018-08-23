@@ -32,15 +32,15 @@ class NonInvalidatingCache<K, V> private constructor(
 }
 
 class NonInvalidatingWeightBasedCache<K, V> private constructor(
-        val cache: LoadingCache<K, V>
+        val cache: NamedLoadingCache<K, V>
 ) : LoadingCache<K, V> by cache {
-    constructor (maxWeight: Long, weigher: Weigher<K, V>, loadFunction: (K) -> V) :
-            this(buildCache(maxWeight, weigher, loadFunction))
+    constructor (name: String, maxWeight: Long, weigher: Weigher<K, V>, loadFunction: (K) -> V) :
+            this(buildCache(name, maxWeight, weigher, loadFunction))
 
     private companion object {
-        private fun <K, V> buildCache(maxWeight: Long, weigher: Weigher<K, V>, loadFunction: (K) -> V): LoadingCache<K, V> {
+        private fun <K, V> buildCache(name: String, maxWeight: Long, weigher: Weigher<K, V>, loadFunction: (K) -> V): NamedLoadingCache<K, V> {
             val builder = Caffeine.newBuilder().maximumWeight(maxWeight).weigher(weigher)
-            return builder.build(NonInvalidatingCache.NonInvalidatingCacheLoader(loadFunction))
+            return builder.buildNamed(name, NonInvalidatingCache.NonInvalidatingCacheLoader(loadFunction))
         }
     }
 }

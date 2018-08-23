@@ -355,6 +355,7 @@ open class AppendOnlyPersistentMap<K, V, E, out EK>(
 
 // Same as above, but with weighted values (e.g. memory footprint sensitive).
 class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
+        name: String,
         toPersistentEntityKey: (K) -> EK,
         fromPersistentEntity: (E) -> Pair<K, V>,
         toPersistentEntity: (key: K, value: V) -> E,
@@ -367,6 +368,7 @@ class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
         toPersistentEntity,
         persistentEntityClass) {
     override val cache = NonInvalidatingWeightBasedCache(
+            name,
             maxWeight = maxWeight,
             weigher = Weigher { key, value -> weighingFunc(key, value) },
             loadFunction = { key: K ->
