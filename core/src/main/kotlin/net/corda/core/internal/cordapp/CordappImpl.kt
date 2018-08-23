@@ -24,8 +24,9 @@ data class CordappImpl(
         override val customSchemas: Set<MappedSchema>,
         override val allFlows: List<Class<out FlowLogic<*>>>,
         override val jarPath: URL,
-        override val jarHash: SecureHash.SHA256) : Cordapp {
-    override val name: String = jarPath.toPath().fileName.toString().removeSuffix(".jar")
+        override val info: Cordapp.Info = CordappImpl.Info.UNKNOWN,
+        override val jarHash: SecureHash.SHA256,
+        override val name: String = jarPath.toPath().fileName.toString().removeSuffix(".jar") ) : Cordapp {
 
     /**
      * An exhaustive list of all classes relevant to the node within this CorDapp
@@ -34,11 +35,17 @@ data class CordappImpl(
      */
     override val cordappClasses = ((rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass }).map { it.name } + contractClassNames)
 
-    data class Info(override val shortName: String, override val vendor: String, override val version: String): Cordapp.Info {
+    data class Info(
+            override val shortName: String,
+            override val vendor: String,
+            override val version: String,
+            override val minPlatformVersion: Int,
+            override val targetPlatformVersion: Int
+    ): Cordapp.Info {
         companion object {
             private const val UNKNOWN_VALUE = "Unknown"
 
-            val UNKNOWN = Info(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE)
+            val UNKNOWN = Info(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE, 1, 1)
         }
 
         override fun hasUnknownFields(): Boolean {

@@ -69,10 +69,10 @@ open class MockServices private constructor(
 
     companion object {
 
-        private fun cordappLoaderForPackages(packages: Iterable<String>): CordappLoader {
+        private fun cordappLoaderForPackages(packages: Iterable<String>, platformVersion: Int = 4): CordappLoader {
 
             val cordappPaths = TestCordappDirectories.forPackages(packages)
-            return JarScanningCordappLoader.fromDirectories(cordappPaths)
+            return JarScanningCordappLoader.fromDirectories(cordappPaths, platformVersion)
         }
 
         /**
@@ -108,7 +108,7 @@ open class MockServices private constructor(
                                             networkParameters: NetworkParameters = testNetworkParameters(),
                                             vararg moreKeys: KeyPair): Pair<CordaPersistence, MockServices> {
 
-            val cordappLoader = cordappLoaderForPackages(cordappPackages)
+            val cordappLoader = cordappLoaderForPackages(cordappPackages, 4 /* TODO get current platform version */)
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())

@@ -24,6 +24,7 @@ import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.util.*
+import java.util.jar.JarInputStream
 import kotlin.reflect.KClass
 import kotlin.streams.toList
 
@@ -32,7 +33,7 @@ import kotlin.streams.toList
  *
  * @property cordappJarPaths The classpath of cordapp JARs
  */
-class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>) : CordappLoaderTemplate() {
+class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>, private val platformVerison: Int) : CordappLoaderTemplate() {
 
     override val cordapps: List<Cordapp> by lazy { loadCordapps() + coreCordapp }
 
@@ -54,10 +55,10 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
          *
          * @param corDappDirectories Directories used to scan for CorDapp JARs.
          */
-        fun fromDirectories(corDappDirectories: Iterable<Path>): CordappLoader {
+        fun fromDirectories(corDappDirectories: Iterable<Path>, platformVerison: Int): CordappLoader {
 
             logger.info("Looking for CorDapps in ${corDappDirectories.distinct().joinToString(", ", "[", "]")}")
-            return JarScanningCordappLoader(corDappDirectories.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() })
+            return JarScanningCordappLoader(corDappDirectories.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() }, platformVerison)
         }
 
         /**
@@ -65,7 +66,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
          *
          * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection.
          */
-        fun fromJarUrls(scanJars: List<URL>) = JarScanningCordappLoader(scanJars.map { it.restricted() })
+        fun fromJarUrls(scanJars: List<URL>, platformVerison: Int) = JarScanningCordappLoader(scanJars.map { it.restricted() }, platformVerison)
 
         private fun URL.restricted(rootPackageName: String? = null) =  RestrictedURL(this, rootPackageName)
 
@@ -106,11 +107,21 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     }
 
     private fun loadCordapps(): List<Cordapp> {
-        return cordappJarPaths.map { scanCordapp(it).toCordapp(it) }
+        val unfilteredCordapps = cordappJarPaths.map { scanCordapp(it).toCordapp(it) }
+        var cordapps: MutableList<Cordapp> = mutableListOf()
+        for (cordapp in unfilteredCordapps) {
+            if (cordapp.info.minPlatformVersion > platformVerison) {
+                logger.warn("Not loading CorDapp ${cordapp.info.shortName} (${cordapp.info.vendor}) as it requires minimum platform version ${cordapp.info.minPlatformVersion} (This node is running version $platformVerison).")
+            } else {
+                cordapps.add(cordapp)
+            }
+        }
+        return cordapps
     }
 
     private fun RestrictedScanResult.toCordapp(url: RestrictedURL): Cordapp {
-
+        val name = url.url.toPath().fileName.toString().removeSuffix(".jar")
+        val info = url.url.openStream().let(::JarInputStream).use { it.manifest }.toCordappInfo(name)
         return CordappImpl(
                 findContractClassNames(this),
                 findInitiatedFlows(this),
@@ -123,7 +134,9 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 findCustomSchemas(this),
                 findAllFlows(this),
                 url.url,
-                getJarHash(url.url)
+                info,
+                getJarHash(url.url),
+                name
         )
     }
 
