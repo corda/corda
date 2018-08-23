@@ -48,6 +48,7 @@ class FlowsDrainingModeOperationsImpl(readPhysicalNodeId: () -> String, private 
     }
 
     internal val map = PersistentMap(
+            "FlowDrainingMode_NodeProperties",
             { key -> key },
             { entity -> entity.key to entity.value!! },
             NodePropertiesPersistentStore::DBNodeProperty,
