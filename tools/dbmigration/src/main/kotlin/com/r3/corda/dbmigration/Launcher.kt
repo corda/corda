@@ -169,12 +169,12 @@ private fun handleCommand(options: OptionSet, baseDirectory: Path, configFile: P
     val config = parsedConfig.parseAs(Configuration::class, UnknownConfigKeysPolicy.IGNORE::handle)
 
     fun runMigrationCommand(withMigration: (SchemaMigration, DataSource) -> Unit): Unit = runWithDataSource(config, baseDirectory, classLoader) { dataSource ->
-        withMigration(SchemaMigration(schemas, dataSource, true, config.database, classLoader), dataSource)
+        withMigration(SchemaMigration(schemas, dataSource, config.database, classLoader), dataSource)
     }
 
     when {
         options.has(RELEASE_LOCK) -> runWithDataSource(ConfigFactory.parseFile(configFile.toFile()).resolve().parseAs(Configuration::class), baseDirectory, classLoader) {
-            SchemaMigration(emptySet(), it, true, config.database, Thread.currentThread().contextClassLoader).forceReleaseMigrationLock()
+            SchemaMigration(emptySet(), it, config.database, Thread.currentThread().contextClassLoader).forceReleaseMigrationLock()
         }
         options.has(DRY_RUN) -> {
             val writer = getMigrationOutput(baseDirectory, options)

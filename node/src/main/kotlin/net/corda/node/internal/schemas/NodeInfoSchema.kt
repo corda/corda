@@ -29,7 +29,6 @@ object NodeInfoSchemaV1 : MappedSchema(
         version = 1,
         mappedTypes = listOf(PersistentNodeInfo::class.java, DBPartyAndCertificate::class.java, DBHostAndPort::class.java, NodePropertiesPersistentStore.DBNodeProperty::class.java)
 ) {
-
     override val migrationResource = "node-info.changelog-master"
 
     @Entity
@@ -83,6 +82,7 @@ object NodeInfoSchemaV1 : MappedSchema(
             @GeneratedValue
             @Column(name = "hosts_id", nullable = false)
             var id: Int,
+            @Column(name = "host_name")
             val host: String? = null,
             val port: Int? = null
     ) {

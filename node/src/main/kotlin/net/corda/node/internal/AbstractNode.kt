@@ -36,6 +36,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
 import net.corda.core.node.*
 import net.corda.core.node.services.*
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -774,7 +775,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        database.startHikariPool(props, configuration.database, schemaService)
+        val isH2Database = isH2Database(props.getProperty("dataSource.url", ""))
+        val schemas = if (isH2Database) schemaService.internalSchemas() else schemaService.schemaOptions.keys
+        database.startHikariPool(props, configuration.database, schemas)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -1045,9 +1048,13 @@ fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
-                      schemaService: SchemaService = NodeSchemaService()): CordaPersistence =
-    createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService)
-            .apply { startHikariPool(hikariProperties, databaseConfig, schemaService) }
+                      schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
+    val isH2Database = isH2Database(hikariProperties.getProperty("dataSource.url", ""))
+    val schemas = if (isH2Database) NodeSchemaService().internalSchemas() else schemaService.schemaOptions.keys
+    return createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService)
+            .apply { startHikariPool(hikariProperties, databaseConfig, schemas) }
+
+}
 
 fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
@@ -1062,22 +1069,18 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
 }
 
-fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemaService: SchemaService) {
+fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>) {
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties)
         val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
-        val schemaMigration = SchemaMigration(
-                schemaService.schemaOptions.keys,
-                dataSource,
-                !isH2Database(jdbcUrl),
-                databaseConfig
-        )
-        schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig)
+        schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L }, isH2Database(jdbcUrl))
         start(dataSource, jdbcUrl)
     } catch (ex: Exception) {
         when {
             ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)
             ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html")
+            ex is OutstandingDatabaseChangesException -> throw (DatabaseIncompatibleException(ex.message))
             ex is DatabaseIncompatibleException -> throw ex
             else -> throw CouldNotCreateDataSourceException("Could not create the DataSource: ${ex.message}", ex)
         }

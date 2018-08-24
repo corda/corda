@@ -18,16 +18,16 @@ import net.corda.node.services.statemachine.Checkpoint
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
-import org.hibernate.annotations.Type
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.sql.Connection
-import java.sql.SQLException
 import java.util.*
 import java.util.stream.Stream
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
+import org.hibernate.annotations.Type
+import java.sql.Connection
+import java.sql.SQLException
 
 /**
  * Simple checkpoint key value storage in DB.

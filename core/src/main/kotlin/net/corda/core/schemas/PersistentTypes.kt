@@ -59,9 +59,7 @@ open class MappedSchema(schemaFamily: Class<*>,
     /**
      * Points to a classpath resource containing the database changes for the [mappedTypes]
      */
-    protected open val migrationResource: String? = null
-
-    internal fun internalGetMigrationResource(): String? = migrationResource
+    open val migrationResource: String? = null
 
     override fun toString(): String = "${this.javaClass.simpleName}(name=$name, version=$version)"
 
