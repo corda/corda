@@ -16,7 +16,8 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
-import net.corda.node.internal.configureDatabase
+import net.corda.node.internal.createCordaPersistence
+import net.corda.node.internal.startHikariPool
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -32,8 +33,15 @@ import javax.persistence.*
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.*
 
 class SchemaMigrationTest {
+
+    private fun configureDatabase(hikariProperties: Properties,
+                          databaseConfig: DatabaseConfig,
+                          schemaService: NodeSchemaService = NodeSchemaService()): CordaPersistence =
+            createCordaPersistence(databaseConfig, { null }, { null }, schemaService)
+                .apply { startHikariPool(hikariProperties, databaseConfig, schemaService.schemaOptions.keys) }
 
     @Test
     fun `Ensure that runMigration is disabled by default`() {
@@ -43,14 +51,14 @@ class SchemaMigrationTest {
     @Test
     fun `Migration is run when runMigration is disabled, and database is H2`() {
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
-        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = false), { null }, { null })
+        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = false))
         checkMigrationRun(db)
     }
 
     @Test
     fun `Migration is run when runMigration is enabled`() {
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
-        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = true), { null }, { null })
+        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = true))
         checkMigrationRun(db)
     }
 
@@ -64,7 +72,7 @@ class SchemaMigrationTest {
         migration.runMigration(false)
 
         //start the node with "runMigration = false" and check that it started correctly
-        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = false), { null }, { null }, schemaService)
+        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = false), schemaService)
         checkMigrationRun(db)
     }
 
@@ -78,7 +86,7 @@ class SchemaMigrationTest {
         addToClassPath(tmpFolder)
 
         // run the migrations for DummyTestSchemaV1, which should pick up the migration file
-        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(extraSchemas = setOf(DummyTestSchemaV1)))
+        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = true), NodeSchemaService(extraSchemas = setOf(DummyTestSchemaV1)))
 
         // check that the file was picked up
         val nrOfChangesOnDiscoveredFile = db.dataSource.connection.use {

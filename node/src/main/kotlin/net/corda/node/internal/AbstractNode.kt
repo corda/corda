@@ -1050,7 +1050,7 @@ fun configureDatabase(hikariProperties: Properties,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                       schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
     val isH2Database = isH2Database(hikariProperties.getProperty("dataSource.url", ""))
-    val schemas = if (isH2Database) NodeSchemaService().internalSchemas() else NodeSchemaService().schemaOptions.keys
+    val schemas = if (isH2Database) NodeSchemaService().internalSchemas() else schemaService.schemaOptions.keys
     return createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService)
             .apply { startHikariPool(hikariProperties, databaseConfig, schemas) }
 
