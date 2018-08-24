@@ -5,11 +5,10 @@ import com.github.benmanes.caffeine.cache.CacheLoader
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
 import com.github.benmanes.caffeine.cache.RemovalListener
-import net.corda.core.internal.NamedLoadingCache
 import net.corda.core.internal.buildNamed
 
 class NonInvalidatingUnboundCache<K, V> private constructor(
-        val cache: NamedLoadingCache<K, V>
+        val cache: LoadingCache<K, V>
 ) : LoadingCache<K, V> by cache {
 
     constructor(name: String, loadFunction: (K) -> V, removalListener: RemovalListener<K, V> = RemovalListener { _, _, _ -> },
@@ -18,7 +17,7 @@ class NonInvalidatingUnboundCache<K, V> private constructor(
 
     private companion object {
         private fun <K, V> buildCache(name: String, loadFunction: (K) -> V, removalListener: RemovalListener<K, V>,
-                                      keysToPreload: () -> Iterable<K>): NamedLoadingCache<K, V> {
+                                      keysToPreload: () -> Iterable<K>): LoadingCache<K, V> {
             val builder = Caffeine.newBuilder().removalListener(removalListener).executor(SameThreadExecutor.getExecutor())
             return builder.buildNamed(name, NonInvalidatingCacheLoader(loadFunction)).apply {
                 getAll(keysToPreload())
