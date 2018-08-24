@@ -15,11 +15,6 @@ object JarSignatureCollector {
     private val unsignableEntryName = "META-INF/(?:.*[.](?:SF|DSA|RSA)|SIG-.*)".toRegex()
 
     /**
-     * An array which essentially serves as /dev/null for reading through a jar and obtaining its code signers.
-     */
-    private val shredder = ByteArray(1024)
-
-    /**
      * Returns an ordered list of every [Party] which has signed every signable item in the given [JarInputStream].
      *
      * @param jar The open [JarInputStream] to collect signing parties from.
@@ -50,6 +45,7 @@ object JarSignatureCollector {
             filterNot { entry -> entry.isDirectory || unsignableEntryName.matches(entry.name) }
 
     private fun Sequence<JarEntry>.shreddedFrom(jar: JarInputStream): Sequence<JarEntry> = map { entry ->
+        val shredder = ByteArray(1024) // can't share or re-use this, as it's used to compute CRCs during shredding
         entry.apply {
             while (jar.read(shredder) != -1) { // Must read entry fully for codeSigners to be valid.
                 // Do nothing.
