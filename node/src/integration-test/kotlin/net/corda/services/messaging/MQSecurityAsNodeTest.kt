@@ -11,7 +11,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_U
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.DEV_ROOT_CA
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
@@ -24,6 +24,7 @@ import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
 import org.junit.Test
 import java.nio.file.Files
+import java.nio.file.Paths
 
 /**
  * Runs the security tests with the attacker pretending to be a node on the network.
@@ -84,7 +85,8 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
 
     @Test
     fun `login with invalid certificate chain`() {
-        val sslConfig = object : SSLConfiguration {
+        val sslConfig = object : NodeSSLConfiguration {
+            override val baseDirectory = Paths.get(".")
             override val certificatesDirectory = Files.createTempDirectory("certs")
             override val keyStorePassword: String get() = "cordacadevpass"
             override val trustStorePassword: String get() = "trustpass"

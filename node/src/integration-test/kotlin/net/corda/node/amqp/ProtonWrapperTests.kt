@@ -15,6 +15,7 @@ import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.CIPHER_SUITES
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
 import net.corda.nodeapi.internal.crypto.*
@@ -35,6 +36,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.nio.file.Paths
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 import javax.net.ssl.*
@@ -111,7 +113,8 @@ class ProtonWrapperTests {
 
     @Test
     fun `Test AMQP Client with invalid root certificate`() {
-        val sslConfig = object : SSLConfiguration {
+        val sslConfig = object : NodeSSLConfiguration {
+            override val baseDirectory = Paths.get(".")
             override val certificatesDirectory = temporaryFolder.root.toPath()
             override val keyStorePassword = "serverstorepass"
             override val trustStorePassword = "trustpass"

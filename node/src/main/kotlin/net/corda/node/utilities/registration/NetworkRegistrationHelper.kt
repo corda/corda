@@ -6,7 +6,7 @@ import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -33,7 +33,7 @@ import javax.security.auth.x500.X500Principal
  * needed.
  */
 // TODO: Use content signer instead of keypairs.
-open class NetworkRegistrationHelper(private val config: SSLConfiguration,
+open class NetworkRegistrationHelper(private val config: NodeSSLConfiguration,
                                      private val myLegalName: CordaX500Name,
                                      private val emailAddress: String,
                                      private val certService: NetworkRegistrationService,

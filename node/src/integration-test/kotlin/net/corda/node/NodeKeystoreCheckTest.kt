@@ -4,7 +4,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.internal.div
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
@@ -13,6 +13,7 @@ import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.nio.file.Path
+import java.nio.file.Paths
 import javax.security.auth.x500.X500Principal
 
 class NodeKeystoreCheckTest {
@@ -30,7 +31,8 @@ class NodeKeystoreCheckTest {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             // Create keystores
             val keystorePassword = "password"
-            val config = object : SSLConfiguration {
+            val config = object : NodeSSLConfiguration {
+                override val baseDirectory = Paths.get(".")
                 override val keyStorePassword: String = keystorePassword
                 override val trustStorePassword: String = keystorePassword
                 override val certificatesDirectory: Path = baseDirectory(ALICE_NAME) / "certificates"

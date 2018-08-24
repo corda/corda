@@ -10,6 +10,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
 import net.corda.serialization.internal.AllWhitelist
@@ -31,7 +32,7 @@ import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.file.Path
-import java.security.SecureRandom
+import java.nio.file.Paths
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 import java.util.*
@@ -180,7 +181,8 @@ class X509UtilitiesTest {
 
     @Test
     fun `create server certificate in keystore for SSL`() {
-        val sslConfig = object : SSLConfiguration {
+        val sslConfig = object : NodeSSLConfiguration {
+            override val baseDirectory = Paths.get("")
             override val certificatesDirectory = tempFolder.root.toPath()
             override val keyStorePassword = "serverstorepass"
             override val trustStorePassword = "trustpass"
@@ -216,7 +218,8 @@ class X509UtilitiesTest {
 
     @Test
     fun `create server cert and use in SSL socket`() {
-        val sslConfig = object : SSLConfiguration {
+        val sslConfig = object : NodeSSLConfiguration {
+            override val baseDirectory = Paths.get("")
             override val certificatesDirectory = tempFolder.root.toPath()
             override val keyStorePassword = "serverstorepass"
             override val trustStorePassword = "trustpass"

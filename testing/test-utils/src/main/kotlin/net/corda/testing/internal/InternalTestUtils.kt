@@ -13,6 +13,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
 import net.corda.nodeapi.internal.createDevNodeCa
@@ -20,6 +21,7 @@ import net.corda.nodeapi.internal.crypto.*
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.security.KeyPair
 import javax.security.auth.x500.X500Principal
 
@@ -37,8 +39,9 @@ inline fun <reified T : Any> T.amqpSpecific(reason: String, function: () -> Unit
     loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason")
 }
 
-fun configureTestSSL(legalName: CordaX500Name): SSLConfiguration {
-    return object : SSLConfiguration {
+fun configureTestSSL(legalName: CordaX500Name): NodeSSLConfiguration {
+    return object : NodeSSLConfiguration {
+        override val baseDirectory = Paths.get(".")
         override val certificatesDirectory = Files.createTempDirectory("certs")
         override val keyStorePassword: String get() = "cordacadevpass"
         override val trustStorePassword: String get() = "trustpass"
@@ -127,8 +130,9 @@ fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
  */
 fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
 
-fun createNodeSslConfig(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "London", "GB")): SSLConfiguration {
-    val sslConfig = object : SSLConfiguration {
+fun createNodeSslConfig(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "London", "GB")): NodeSSLConfiguration {
+    val sslConfig = object : NodeSSLConfiguration {
+        override val baseDirectory = Paths.get(".")
         override val crlCheckSoftFail = true
         override val certificatesDirectory = path
         override val keyStorePassword = "serverstorepass"
