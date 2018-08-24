@@ -1,14 +1,3 @@
-buildscript {
-    repositories {
-        mavenCentral()
-        jcenter()
-    }
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.3'
-    }
-}
-
 plugins {
     id 'com.github.johnrengelman.shadow'
 }
@@ -23,11 +12,6 @@ dependencies {
     compile "info.picocli:picocli:$picocli_version"
     compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
     compile project(path: ":djvm", configuration: "shadow")
-}
-
-repositories {
-    mavenLocal()
-    mavenCentral()
 }
 
 jar {

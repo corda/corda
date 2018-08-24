@@ -1,20 +1,20 @@
-buildscript {
-    // Shaded version of ASM to avoid conflict with root project.
-    ext.asm_version = '6.1.1'
-    ext.deterministic_rt_version = '1.0-20180625.120901-7'
+plugins {
+    id 'com.github.johnrengelman.shadow' version '2.0.4'
+}
 
-    repositories {
-        mavenCentral()
-        jcenter()
-    }
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.3'
+ext {
+    // Shaded version of ASM to avoid conflict with root project.
+    asm_version = '6.1.1'
+}
+
+repositories {
+    maven {
+        url "$artifactory_contextUrl/corda-dev"
     }
 }
 
-plugins {
-    id 'com.github.johnrengelman.shadow' version '2.0.3'
+configurations {
+    deterministicRt
 }
 
 dependencies {
@@ -33,32 +33,19 @@ dependencies {
     compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
 
     // Deterministic runtime - used in whitelist generation
-    runtime "net.corda:deterministic-rt:$deterministic_rt_version:api"
+    deterministicRt project(path: ':jdk8u-deterministic', configuration: 'jdk')
 
     // Test utilities
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
 }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url "$artifactory_contextUrl/corda-dev"
-    }
-}
-
-task generateWhitelist(type: JavaExec) {
+def djvmCli = tasks.getByPath(':djvm:cli:shadowJar')
+task generateWhitelist(type: JavaExec, dependsOn: djvmCli) {
     // This is an example of how a whitelist can be generated from a JAR. In most applications though, it is recommended
-    // thet the minimal set whitelist is used.
-    def jars = configurations.runtime.collect {
-        it.toString()
-    }.findAll {
-        it.toString().contains("deterministic-rt")
-    }
-    classpath = sourceSets.main.runtimeClasspath
-    main = 'net.corda.djvm.tools.cli.Program'
-    args = ['whitelist', 'generate', '-o', 'src/main/resources/jdk8-deterministic.dat.gz'] + jars
+    // that the minimal set whitelist is used.
+    main = '-jar'
+    args = [djvmCli.outputs.files.singleFile, 'whitelist', 'generate', '-o', 'src/main/resources/jdk8-deterministic.dat.gz', configurations.deterministicRt.files[0] ]
 }
 
 jar {
@@ -72,7 +59,6 @@ jar {
 shadowJar {
     baseName = "djvm"
     classifier = ""
-    exclude 'deterministic-rt*.jar'
     dependencies {
         exclude(dependency('com.jcabi:.*:.*'))
         exclude(dependency('org.apache.*:.*:.*'))
