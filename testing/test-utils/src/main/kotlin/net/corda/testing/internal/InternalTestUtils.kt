@@ -45,7 +45,6 @@ fun configureTestSSL(legalName: CordaX500Name): NodeSSLConfiguration {
         override val certificatesDirectory = Files.createTempDirectory("certs")
         override val keyStorePassword: String get() = "cordacadevpass"
         override val trustStorePassword: String get() = "trustpass"
-        override val crlCheckSoftFail: Boolean = true
 
         init {
             configureDevKeyAndTrustStores(legalName)
@@ -133,7 +132,6 @@ fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
 fun createNodeSslConfig(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "London", "GB")): NodeSSLConfiguration {
     val sslConfig = object : NodeSSLConfiguration {
         override val baseDirectory = Paths.get(".")
-        override val crlCheckSoftFail = true
         override val certificatesDirectory = path
         override val keyStorePassword = "serverstorepass"
         override val trustStorePassword = "trustpass"

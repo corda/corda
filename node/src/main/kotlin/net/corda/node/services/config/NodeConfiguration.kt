@@ -70,6 +70,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
     val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
     val cordappDirectories: List<Path> get() = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
+    val crlCheckSoftFail: Boolean
     val jmxReporterType : JmxReporterType? get() = defaultJmxReporterType
 
     fun validate(): List<String>

@@ -79,10 +79,9 @@ class KeyStores(val keyStore: UnsafeKeyStore, val trustStore: UnsafeKeyStore) {
 
     data class TestSslOptions(override val certificatesDirectory: Path,
                               override val keyStorePassword: String,
-                              override val trustStorePassword: String,
-                              override val crlCheckSoftFail: Boolean) : SSLConfiguration
+                              override val trustStorePassword: String) : SSLConfiguration
 
-    private fun sslConfiguration(directory: Path) = TestSslOptions(directory, keyStore.password, trustStore.password, true)
+    private fun sslConfiguration(directory: Path) = TestSslOptions(directory, keyStore.password, trustStore.password)
 }
 
 interface AutoClosableSSLConfiguration : AutoCloseable {

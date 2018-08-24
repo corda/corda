@@ -35,7 +35,6 @@ object DevIdentityGenerator {
             override val baseDirectory = nodeDir
             override val keyStorePassword: String = "cordacadevpass"
             override val trustStorePassword get() = throw NotImplementedError("Not expected to be called")
-            override val crlCheckSoftFail: Boolean = true
         }
 
         nodeSslConfig.certificatesDirectory.createDirectories()
