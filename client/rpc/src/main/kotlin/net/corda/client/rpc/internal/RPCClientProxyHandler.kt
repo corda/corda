@@ -14,10 +14,7 @@ import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSer
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
-import net.corda.core.internal.LazyStickyPool
-import net.corda.core.internal.LifeCycle
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.times
+import net.corda.core.internal.*
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.serialize
@@ -162,9 +159,7 @@ class RPCClientProxyHandler(
             observablesToReap.locked { observables.add(observableId) }
         }
         return Caffeine.newBuilder().
-                weakValues().
-                removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).
-                build()
+                weakValues().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).buildNamed("RpcClientProxyHandler_rpcObservable")
     }
 
     private var sessionFactory: ClientSessionFactory? = null

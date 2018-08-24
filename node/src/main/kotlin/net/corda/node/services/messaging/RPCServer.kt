@@ -13,6 +13,7 @@ import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LifeCycle
+import net.corda.core.internal.buildNamed
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
@@ -153,7 +154,7 @@ class RPCServer(
             log.debug { "Unsubscribing from Observable with id $key because of $cause" }
             value!!.subscription.unsubscribe()
         }
-        return Caffeine.newBuilder().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).build()
+        return Caffeine.newBuilder().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).buildNamed("RPCServer_observableSubscription")
     }
 
     fun start(activeMqServerControl: ActiveMQServerControl) {
