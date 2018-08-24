@@ -49,7 +49,7 @@ publishing {
 task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNodesBFT', 'deployNodesCustom'])
 
 task deployNodesSingle(type: Cordform, dependsOn: 'jar') {
-    directory file("build/nodes/nodesSingle")
+    directory file("$buildDir/nodes/nodesSingle")
     nodeDefaults {
         extraConfig = [h2Settings: [address: "localhost:0"]]
     }
@@ -82,7 +82,7 @@ task deployNodesSingle(type: Cordform, dependsOn: 'jar') {
 }
 
 task deployNodesCustom(type: Cordform, dependsOn: 'jar') {
-    directory file("build/nodes/nodesCustom")
+    directory file("$buildDir/nodes/nodesCustom")
     nodeDefaults {
         extraConfig = [h2Settings: [address: "localhost:0"]]
     }
@@ -115,7 +115,7 @@ task deployNodesCustom(type: Cordform, dependsOn: 'jar') {
 }
 
 task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
-    directory file("build/nodes/nodesRaft")
+    directory file("$buildDir/nodes/nodesRaft")
     nodeDefaults {
         extraConfig = [h2Settings: [address: "localhost:0"]]
     }
@@ -187,7 +187,7 @@ task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
 
 task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
     def clusterAddresses = ["localhost:11000", "localhost:11010", "localhost:11020", "localhost:11030"]
-    directory file("build/nodes/nodesBFT")
+    directory file("$buildDir/nodes/nodesBFT")
     nodeDefaults {
         extraConfig = [h2Settings: [address: "localhost:0"]]
     }
