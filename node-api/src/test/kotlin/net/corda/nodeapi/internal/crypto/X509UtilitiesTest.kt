@@ -181,6 +181,7 @@ class X509UtilitiesTest {
 
     @Test
     fun `create server certificate in keystore for SSL`() {
+        // TODO sollecitom get rid of NodeSSLConfiguration here
         val sslConfig = object : NodeSSLConfiguration {
             override val baseDirectory = Paths.get("")
             override val certificatesDirectory = tempFolder.root.toPath()
@@ -217,6 +218,7 @@ class X509UtilitiesTest {
 
     @Test
     fun `create server cert and use in SSL socket`() {
+        // TODO sollecitom get rid of NodeSSLConfiguration here
         val sslConfig = object : NodeSSLConfiguration {
             override val baseDirectory = Paths.get("")
             override val certificatesDirectory = tempFolder.root.toPath()

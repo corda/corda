@@ -23,7 +23,7 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.internal.createNodeSslConfig
+import net.corda.testing.internal.p2pSslConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.assertj.core.api.Assertions.assertThat
@@ -58,12 +58,12 @@ class ArtemisRpcTests {
         val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
         val trustStorePath = saveToTrustStore(tempFile("rpcTruststore.jks"), selfSignCert)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
-        testSslCommunication(createNodeSslConfig(tempFolder.root.toPath()), brokerSslOptions, true, clientSslOptions)
+        testSslCommunication(p2pSslConfiguration(tempFolder.root.toPath()), brokerSslOptions, true, clientSslOptions)
     }
 
     @Test
     fun rpc_with_ssl_disabled() {
-        testSslCommunication(createNodeSslConfig(tempFolder.root.toPath()), null, false, null)
+        testSslCommunication(p2pSslConfiguration(tempFolder.root.toPath()), null, false, null)
     }
 
     @Test
@@ -73,7 +73,7 @@ class ArtemisRpcTests {
         val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
         // here client sslOptions are passed null (as in, do not use SSL)
         assertThatThrownBy {
-            testSslCommunication(createNodeSslConfig(tempFolder.root.toPath()), brokerSslOptions, true, null)
+            testSslCommunication(p2pSslConfiguration(tempFolder.root.toPath()), brokerSslOptions, true, null)
         }.isInstanceOf(ActiveMQConnectionTimedOutException::class.java)
     }
 
@@ -91,7 +91,7 @@ class ArtemisRpcTests {
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
         assertThatThrownBy {
-            testSslCommunication(createNodeSslConfig(tempFolder.root.toPath()), brokerSslOptions, true, clientSslOptions)
+            testSslCommunication(p2pSslConfiguration(tempFolder.root.toPath()), brokerSslOptions, true, clientSslOptions)
         }.isInstanceOf(RPCException::class.java)
     }
 

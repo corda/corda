@@ -15,7 +15,6 @@ import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.CIPHER_SUITES
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
 import net.corda.nodeapi.internal.crypto.*
@@ -113,12 +112,10 @@ class ProtonWrapperTests {
 
     @Test
     fun `Test AMQP Client with invalid root certificate`() {
-        val sslConfig = object : NodeSSLConfiguration {
-            override val baseDirectory = Paths.get(".")
+        val sslConfig = object : SSLConfiguration {
             override val certificatesDirectory = temporaryFolder.root.toPath()
             override val keyStorePassword = "serverstorepass"
             override val trustStorePassword = "trustpass"
-            override val crlCheckSoftFail: Boolean = true
         }
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()

@@ -85,12 +85,12 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
 
     @Test
     fun `login with invalid certificate chain`() {
+        // TODO sollecitom get rid of NodeSSLConfiguration here. Replace with both P2P and nodeKeyStore bits
         val sslConfig = object : NodeSSLConfiguration {
             override val baseDirectory = Paths.get(".")
             override val certificatesDirectory = Files.createTempDirectory("certs")
             override val keyStorePassword: String get() = "cordacadevpass"
             override val trustStorePassword: String get() = "trustpass"
-            override val crlCheckSoftFail: Boolean = true
 
             init {
                 val legalName = CordaX500Name("MegaCorp", "London", "GB")

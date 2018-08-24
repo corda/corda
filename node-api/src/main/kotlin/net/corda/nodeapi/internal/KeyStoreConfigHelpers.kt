@@ -6,6 +6,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.toX500Name
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
@@ -20,6 +21,7 @@ import javax.security.auth.x500.X500Principal
  * Create the node and SSL key stores needed by a node. The node key store will be populated with a node CA cert (using
  * the given legal name), and the SSL key store will store the TLS cert which is a sub-cert of the node CA.
  */
+// TODO sollecitom get rid of NodeSSLConfiguration here
 fun NodeSSLConfiguration.createDevKeyStores(legalName: CordaX500Name,
                                         rootCert: X509Certificate = DEV_ROOT_CA.certificate,
                                         intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA): Pair<X509KeyStore, X509KeyStore> {
@@ -44,6 +46,25 @@ fun NodeSSLConfiguration.createDevKeyStores(legalName: CordaX500Name,
     }
 
     return Pair(nodeKeyStore, sslKeyStore)
+}
+
+// TODO sollecitom re-use in the function above if not removed
+fun SSLConfiguration.createDevKeyStores(legalName: CordaX500Name,
+                                        rootCert: X509Certificate = DEV_ROOT_CA.certificate,
+                                        intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA): X509KeyStore {
+    val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediateCa, legalName)
+
+    val sslKeyStore = loadSslKeyStore(createNew = true)
+    sslKeyStore.update {
+        val tlsKeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, nodeCaCert, nodeCaKeyPair, legalName.x500Principal, tlsKeyPair.public)
+        setPrivateKey(
+                X509Utilities.CORDA_CLIENT_TLS,
+                tlsKeyPair.private,
+                listOf(tlsCert, nodeCaCert, intermediateCa.certificate, rootCert))
+    }
+
+    return sslKeyStore
 }
 
 fun X509KeyStore.storeLegalIdentity(alias: String, keyPair: KeyPair = Crypto.generateKeyPair()): PartyAndCertificate {

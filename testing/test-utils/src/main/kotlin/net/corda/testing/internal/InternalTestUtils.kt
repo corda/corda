@@ -39,9 +39,8 @@ inline fun <reified T : Any> T.amqpSpecific(reason: String, function: () -> Unit
     loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason")
 }
 
-fun configureTestSSL(legalName: CordaX500Name): NodeSSLConfiguration {
-    return object : NodeSSLConfiguration {
-        override val baseDirectory = Paths.get(".")
+fun configureTestSSL(legalName: CordaX500Name): SSLConfiguration {
+    return object : SSLConfiguration {
         override val certificatesDirectory = Files.createTempDirectory("certs")
         override val keyStorePassword: String get() = "cordacadevpass"
         override val trustStorePassword: String get() = "trustpass"
@@ -129,9 +128,8 @@ fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
  */
 fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
 
-fun createNodeSslConfig(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "London", "GB")): NodeSSLConfiguration {
-    val sslConfig = object : NodeSSLConfiguration {
-        override val baseDirectory = Paths.get(".")
+fun p2pSslConfiguration(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "London", "GB")): SSLConfiguration {
+    val sslConfig = object : SSLConfiguration {
         override val certificatesDirectory = path
         override val keyStorePassword = "serverstorepass"
         override val trustStorePassword = "trustpass"

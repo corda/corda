@@ -30,6 +30,7 @@ private val DEFAULT_FLOW_MONITOR_PERIOD_MILLIS: Duration = Duration.ofMinutes(1)
 private val DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS: Duration = Duration.ofMinutes(1)
 private const val CORDAPPS_DIR_NAME_DEFAULT = "cordapps"
 
+// TODO sollecitom remove NodeSSLConfiguration here
 interface NodeConfiguration : NodeSSLConfiguration {
     val myLegalName: CordaX500Name
     val emailAddress: String
@@ -69,9 +70,16 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val effectiveH2Settings: NodeH2Settings?
     val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
     val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
-    val cordappDirectories: List<Path> get() = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
     val crlCheckSoftFail: Boolean
     val jmxReporterType : JmxReporterType? get() = defaultJmxReporterType
+
+    // TODO sollecitom change to SSLConfiguration and rename to p2pSslConfiguration
+    // TODO sollecitom change to SSLConfiguration and rename to p2pSslConfiguration
+//    val nodeSslConfiguration: NodeSSLConfiguration
+
+    // TODO sollecitom remove override
+    override val baseDirectory: Path
+    val cordappDirectories: List<Path> get() = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 
     fun validate(): List<String>
 

@@ -11,14 +11,14 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOT
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisSessionProvider
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import java.util.*
 
-class BridgeControlListener(val config: NodeSSLConfiguration,
+class BridgeControlListener(val config: SSLConfiguration,
                             maxMessageSize: Int,
                             val artemisMessageClientFactory: () -> ArtemisSessionProvider) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
@@ -27,7 +27,7 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
 
-    constructor(config: NodeSSLConfiguration,
+    constructor(config: SSLConfiguration,
                 p2pAddress: NetworkHostAndPort,
                 maxMessageSize: Int) : this(config, maxMessageSize, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 

@@ -31,6 +31,7 @@ object DevIdentityGenerator {
 
     /** Install a node key store for the given node directory using the given legal name. */
     fun installKeyStoreWithNodeIdentity(nodeDir: Path, legalName: CordaX500Name): Party {
+        // TODO sollecitom replace NodeSSLConfiguration here
         val nodeSslConfig = object : NodeSSLConfiguration {
             override val baseDirectory = nodeDir
             override val keyStorePassword: String = "cordacadevpass"

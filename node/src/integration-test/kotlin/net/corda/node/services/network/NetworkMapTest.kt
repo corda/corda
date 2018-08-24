@@ -247,11 +247,11 @@ private fun DriverDSLImpl.startNode(providedName: CordaX500Name, devMode: Boolea
     var customOverrides = emptyMap<String, String>()
     if (!devMode) {
         val nodeDir = baseDirectory(providedName)
+        // TODO sollecitom get rid of NodeSSLConfiguration here. Do both P2P and nodeKeyStore
         val nodeSslConfig = object : NodeSSLConfiguration {
             override val baseDirectory = nodeDir
             override val keyStorePassword = "cordacadevpass"
             override val trustStorePassword = "trustpass"
-            override val crlCheckSoftFail = true
         }
         nodeSslConfig.configureDevKeyAndTrustStores(providedName)
         customOverrides = mapOf("devMode" to "false")

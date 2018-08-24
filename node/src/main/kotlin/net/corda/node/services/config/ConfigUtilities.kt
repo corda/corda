@@ -72,6 +72,7 @@ object ConfigHelper {
 fun NodeConfiguration.configureWithDevSSLCertificate() = configureDevKeyAndTrustStores(myLegalName)
 
 // TODO Move this to KeyStoreConfigHelpers
+// TODO sollecitom get rid of NodeSSLConfiguration here
 fun NodeSSLConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name) {
     certificatesDirectory.createDirectories()
     if (!trustStoreFile.exists()) {
@@ -94,6 +95,17 @@ fun NodeSSLConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Nam
                 }
             }
         }
+    }
+}
+
+// TODO sollecitom merge with above if not removed
+fun SSLConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name) {
+    certificatesDirectory.createDirectories()
+    if (!trustStoreFile.exists()) {
+        loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/$DEV_CA_TRUST_STORE_FILE"), DEV_CA_TRUST_STORE_PASS).save(trustStoreFile, trustStorePassword)
+    }
+    if (!sslKeystore.exists()) {
+        createDevKeyStores(myLegalName)
     }
 }
 

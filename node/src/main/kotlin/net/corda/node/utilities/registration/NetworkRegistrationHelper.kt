@@ -32,6 +32,7 @@ import javax.security.auth.x500.X500Principal
  * Helper for managing the node registration process, which checks for any existing certificates and requests them if
  * needed.
  */
+// TODO sollecitom remove NodeSSLConfiguration from here
 // TODO: Use content signer instead of keypairs.
 open class NetworkRegistrationHelper(private val config: NodeSSLConfiguration,
                                      private val myLegalName: CordaX500Name,

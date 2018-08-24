@@ -1,8 +1,10 @@
 package net.corda.webserver
 
 import com.typesafe.config.Config
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.getValue
 import net.corda.nodeapi.internal.config.parseAs
@@ -11,7 +13,9 @@ import java.nio.file.Path
 /**
  * [baseDirectory] is not retrieved from the config file but rather from a command line argument.
  */
-class WebServerConfig(override val baseDirectory: Path, val config: Config) : NodeSSLConfiguration {
+class WebServerConfig(val baseDirectory: Path, val config: Config) : SSLConfiguration {
+
+    override val certificatesDirectory: Path get() = baseDirectory / "certificates"
     override val keyStorePassword: String by config
     override val trustStorePassword: String by config
     val useHTTPS: Boolean by config
