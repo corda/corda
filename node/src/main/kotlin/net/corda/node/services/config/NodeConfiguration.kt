@@ -77,9 +77,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     // TODO sollecitom change to SSLConfiguration and rename to p2pSslConfiguration
 //    val nodeSslConfiguration: NodeSSLConfiguration
 
-    // TODO sollecitom remove override
-    override val baseDirectory: Path
-    val cordappDirectories: List<Path> get() = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
+    val cordappDirectories: List<Path>
 
     fun validate(): List<String>
 
