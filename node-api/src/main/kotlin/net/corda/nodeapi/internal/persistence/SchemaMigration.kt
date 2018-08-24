@@ -31,7 +31,6 @@ import javax.sql.DataSource
 class SchemaMigration(
         val schemas: Set<MappedSchema>,
         val dataSource: DataSource,
-        val failOnMigrationMissing: Boolean,
         private val databaseConfig: DatabaseConfig,
         private val classLoader: ClassLoader = Thread.currentThread().contextClassLoader) {
 
@@ -45,8 +44,12 @@ class SchemaMigration(
      */
     fun nodeStartup(existingCheckpoints: Boolean) {
         when {
-            databaseConfig.runMigration -> runMigration(existingCheckpoints)
-            failOnMigrationMissing -> checkState()
+            databaseConfig.initialiseSchema -> {
+                //TODO if it's h2 only
+                migrateOlderDatabaseToUseLiquibase(existingCheckpoints)
+                runMigration(existingCheckpoints)
+            }
+            else -> checkState()
         }
     }
 
@@ -63,7 +66,7 @@ class SchemaMigration(
     /**
      * Ensures that the database is up to date with the latest migration changes.
      */
-    fun checkState() = doRunMigration(run = false, outputWriter = null, check = true)
+    private fun checkState() = doRunMigration(run = false, outputWriter = null, check = true)
 
     /**
      * Can be used from an external tool to release the lock in case something went terribly wrong.
@@ -71,6 +74,23 @@ class SchemaMigration(
     fun forceReleaseMigrationLock() {
         dataSource.connection.use { connection ->
             LockServiceFactory.getInstance().getLockService(getLiquibaseDatabase(JdbcConnection(connection))).forceReleaseLock()
+        }
+    }
+
+    /**  Create a resourse accessor that aggregates the changelogs included in the schemas into one dynamic stream. */
+    private class CustomResourceAccessor(val dynamicInclude: String, val changelogList: List<String?>, classLoader: ClassLoader) : ClassLoaderResourceAccessor(classLoader) {
+        override fun getResourcesAsStream(path: String): Set<InputStream> {
+            if (path == dynamicInclude) {
+                // Create a map in Liquibase format including all migration files.
+                val includeAllFiles = mapOf("databaseChangeLog" to changelogList.filter { it != null }.map { file -> mapOf("include" to mapOf("file" to file)) })
+
+                // Transform it to json.
+                val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
+
+                // Return the json as a stream.
+                return setOf(ByteArrayInputStream(includeAllFilesJson))
+            }
+            return super.getResourcesAsStream(path)?.take(1)?.toSet() ?: emptySet()
         }
     }
 
@@ -87,31 +107,11 @@ class SchemaMigration(
                 val resource = getMigrationResource(mappedSchema, classLoader)
                 when {
                     resource != null -> resource
-                    failOnMigrationMissing -> throw MissingMigrationException(mappedSchema)
-                    else -> {
-                        logger.warn(MissingMigrationException.errorMessageFor(mappedSchema))
-                        null
-                    }
+                    else -> throw MissingMigrationException(mappedSchema)
                 }
             }
 
-            // Create a resourse accessor that aggregates the changelogs included in the schemas into one dynamic stream.
-            val customResourceAccessor = object : ClassLoaderResourceAccessor(classLoader) {
-                override fun getResourcesAsStream(path: String): Set<InputStream> {
-
-                    if (path == dynamicInclude) {
-                        // Create a map in Liquibase format including all migration files.
-                        val includeAllFiles = mapOf("databaseChangeLog" to changelogList.filter { it != null }.map { file -> mapOf("include" to mapOf("file" to file)) })
-
-                        // Transform it to json.
-                        val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
-
-                        // Return the json as a stream.
-                        return setOf(ByteArrayInputStream(includeAllFilesJson))
-                    }
-                    return super.getResourcesAsStream(path)?.take(1)?.toSet() ?: emptySet()
-                }
-            }
+            val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
 
             val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
 
@@ -138,6 +138,7 @@ class SchemaMigration(
                 check && !run && unRunChanges.isNotEmpty() -> throw OutstandingDatabaseChangesException(unRunChanges.size)
                 check && !run -> {} // Do nothing will be interpreted as "check succeeded"
                 (outputWriter != null) && !check && !run -> liquibase.update(Contexts(), outputWriter)
+                (outputWriter != null) && !check && !run -> liquibase.update(Contexts(), outputWriter)
                 else -> throw IllegalStateException("Invalid usage.")
             }
         }
@@ -161,6 +162,54 @@ class SchemaMigration(
 
         return if (liquibaseDbImplementation is MSSQLDatabase) AzureDatabase(conn) else liquibaseDbImplementation
     }
+
+    /** For existing database created before verions 4.0 add Liquibase support - creates DATABASECHANGELOG and DATABASECHANGELOGLOCK tables and mark changesets are executed. */
+    private fun migrateOlderDatabaseToUseLiquibase(existingCheckpoints: Boolean): Boolean {
+        val isExistingDBWithoutLiquibase = dataSource.connection.use {
+            it.metaData.getTables(null, null, "NODE%", null).next() &&
+                    !it.metaData.getTables(null, null, "DATABASECHANGELOG", null).next() &&
+                    !it.metaData.getTables(null, null, "DATABASECHANGELOGLOCK", null).next()
+        }
+        when {
+            isExistingDBWithoutLiquibase && existingCheckpoints -> throw CheckpointsException()
+            isExistingDBWithoutLiquibase -> {
+                // Virtual file name of the changelog that includes all schemas.
+                val dynamicInclude = "master.changelog.json"
+
+                dataSource.connection.use { connection ->
+                    // Schema migrations pre release 4.0
+                    val preV4Baseline =
+                            listOf("migration/common.changelog-init.xml",
+                                    "migration/node-info.changelog-init.xml",
+                                    "migration/node-info.changelog-v1.xml",
+                                    "migration/node-info.changelog-v2.xml",
+                                    "migration/node-core.changelog-init.xml",
+                                    "migration/node-core.changelog-v3.xml",
+                                    "migration/node-core.changelog-v4.xml",
+                                    "migration/node-core.changelog-v5.xml",
+                                    "migration/node-core.changelog-pkey.xml",
+                                    "migration/vault-schema.changelog-init.xml",
+                                    "migration/vault-schema.changelog-v3.xml",
+                                    "migration/vault-schema.changelog-v4.xml",
+                                    "migration/vault-schema.changelog-pkey.xml",
+                                    "migration/cash.changelog-init.xml",
+                                    "migration/cash.changelog-v1.xml",
+                                    "migration/commercial-paper.changelog-init.xml",
+                                    "migration/commercial-paper.changelog-v1.xml") +
+                                    if (schemas.any { schema -> schema.migrationResource == "node-notary.changelog-master" })
+                                        listOf("migration/node-notary.changelog-init.xml",
+                                                "migration/node-notary.changelog-v1.xml",
+                                                "migration/vault-schema.changelog-pkey.xml")
+                                    else emptyList()
+
+                    val customResourceAccessor = CustomResourceAccessor(dynamicInclude, preV4Baseline, classLoader)
+                    val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
+                    liquibase.changeLogSync(Contexts(), LabelExpression())
+                }
+            }
+        }
+        return isExistingDBWithoutLiquibase
+    }
 }
 
 open class DatabaseMigrationException(message: String) : IllegalArgumentException(message) {
@@ -183,3 +232,9 @@ class CheckpointsException : DatabaseMigrationException("Attempting to update th
         "This is dangerous because the node might not be able to restore the flows correctly and could consequently fail. " +
         "Updating the database would make reverting to the previous version more difficult. " +
         "Please drain your node first. See: https://docs.corda.net/upgrading-cordapps.html#flow-drains")
+
+class DatabaseIncompatibleException(@Suppress("MemberVisibilityCanBePrivate") private val reason: String) : DatabaseMigrationException(errorMessageFor(reason)) {
+    internal companion object {
+        fun errorMessageFor(reason: String): String = "Incompatible database schema version detected, please run the node with configuration option database.initialiseSchema=true. Reason: $reason"
+    }
+}

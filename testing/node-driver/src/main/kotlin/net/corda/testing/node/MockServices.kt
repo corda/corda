@@ -110,9 +110,11 @@ open class MockServices private constructor(
                                             initialIdentity: TestIdentity,
                                             networkParameters: NetworkParameters = testNetworkParameters(),
                                             vararg moreKeys: KeyPair): Pair<CordaPersistence, MockServices> {
+
             val cordappLoader = cordappLoaderForPackages(cordappPackages)
             val dataSourceProps = makeInternalTestDataSourceProperties(initialIdentity.name.organisation, SecureHash.randomSHA256().toString())
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
+            //TODO different schemas based on h2 or not
             val database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(initialIdentity.name.organisation), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {

@@ -17,5 +17,6 @@
     <include file="migration/node-info.changelog-init.xml"/>
     <include file="migration/node-info.changelog-v1.xml"/>
     <include file="migration/node-info.changelog-v2.xml"/>
+    <include file="migration/node-info.changelog-v3.xml"/>
 
 </databaseChangeLog>

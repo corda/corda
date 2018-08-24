@@ -30,7 +30,6 @@ interface CheckpointStorage {
      */
     fun updateCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>)
 
-
     /**
      * Remove existing checkpoint from the store.
      * @return whether the id matched a checkpoint that was removed.
