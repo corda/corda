@@ -12,6 +12,8 @@ import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.bridging.AMQPBridgeManager
 import net.corda.nodeapi.internal.bridging.BridgeManager
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import net.corda.testing.core.ALICE_NAME
@@ -168,21 +170,28 @@ class AMQPBridgeTest {
     }
 
     private fun createArtemis(sourceQueueName: String?): Triple<ArtemisMessagingServer, ArtemisMessagingClient, BridgeManager> {
+        // TODO sollecitom replace this rigorousMock crap with a test stub...
+        val p2pSslConfiguration = rigorousMock<SSLConfiguration>()
+        doReturn("trustpass").whenever(p2pSslConfiguration).trustStorePassword
+        doReturn("cordacadevpass").whenever(p2pSslConfiguration).keyStorePassword
+        val signingCertificateStore = rigorousMock<NodeSSLConfiguration>()
+        doReturn("trustpass").whenever(signingCertificateStore).trustStorePassword
+        doReturn("cordacadevpass").whenever(signingCertificateStore).keyStorePassword
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "artemis").whenever(it).baseDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName
-            doReturn("trustpass").whenever(it).trustStorePassword
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+            doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(true).whenever(it).crlCheckSoftFail
-            doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn(artemisAddress).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
         }
         artemisConfig.configureWithDevSSLCertificate()
         val artemisServer = ArtemisMessagingServer(artemisConfig, artemisAddress.copy(host = "0.0.0.0"), MAX_MESSAGE_SIZE)
-        val artemisClient = ArtemisMessagingClient(artemisConfig, artemisAddress, MAX_MESSAGE_SIZE)
+        val artemisClient = ArtemisMessagingClient(artemisConfig.p2pSslConfiguration, artemisAddress, MAX_MESSAGE_SIZE)
         artemisServer.start()
         artemisClient.start()
-        val bridgeManager = AMQPBridgeManager(artemisConfig, artemisAddress, MAX_MESSAGE_SIZE)
+        val bridgeManager = AMQPBridgeManager(artemisConfig.p2pSslConfiguration, artemisAddress, MAX_MESSAGE_SIZE)
         bridgeManager.start()
         val artemis = artemisClient.started!!
         if (sourceQueueName != null) {
@@ -194,18 +203,24 @@ class AMQPBridgeTest {
     }
 
     private fun createAMQPServer(maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPServer {
+        val p2pSslConfiguration = rigorousMock<SSLConfiguration>()
+        doReturn("trustpass").whenever(p2pSslConfiguration).trustStorePassword
+        doReturn("cordacadevpass").whenever(p2pSslConfiguration).keyStorePassword
+        val signingCertificateStore = rigorousMock<NodeSSLConfiguration>()
+        doReturn("trustpass").whenever(signingCertificateStore).trustStorePassword
+        doReturn("cordacadevpass").whenever(signingCertificateStore).keyStorePassword
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "server").whenever(it).baseDirectory
             doReturn(BOB_NAME).whenever(it).myLegalName
-            doReturn("trustpass").whenever(it).trustStorePassword
-            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+            doReturn(signingCertificateStore).whenever(it).signingCertificateStore
         }
         serverConfig.configureWithDevSSLCertificate()
 
         val amqpConfig = object : AMQPConfiguration {
-            override val keyStore: KeyStore = serverConfig.loadSslKeyStore().internal
-            override val keyStorePrivateKeyPassword: CharArray = serverConfig.keyStorePassword.toCharArray()
-            override val trustStore: KeyStore = serverConfig.loadTrustStore().internal
+            override val keyStore: KeyStore = serverConfig.p2pSslConfiguration.loadSslKeyStore().internal
+            override val keyStorePrivateKeyPassword: CharArray = serverConfig.p2pSslConfiguration.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = serverConfig.p2pSslConfiguration.loadTrustStore().internal
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
         }

@@ -13,6 +13,7 @@ import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
@@ -69,11 +70,13 @@ class ArtemisMessagingTest {
     @Before
     fun setUp() {
         abstract class AbstractNodeConfiguration : NodeConfiguration
+        val p2pSslConfiguration = rigorousMock<SSLConfiguration>()
+        doReturn("trustpass").whenever(p2pSslConfiguration).trustStorePassword
+        doReturn("cordacadevpass").whenever(p2pSslConfiguration).keyStorePassword
         config = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath()).whenever(it).baseDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName
-            doReturn("trustpass").whenever(it).trustStorePassword
-            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
             doReturn(NetworkHostAndPort("0.0.0.0", serverPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(FlowTimeoutConfiguration(5.seconds, 3, backoffBase = 1.0)).whenever(it).flowTimeout

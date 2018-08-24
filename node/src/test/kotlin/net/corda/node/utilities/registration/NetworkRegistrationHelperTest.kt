@@ -17,6 +17,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.DevIdentityGenerator
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
@@ -52,10 +53,12 @@ class NetworkRegistrationHelperTest {
         val baseDirectory = fs.getPath("/baseDir").createDirectories()
 
         abstract class AbstractNodeConfiguration : NodeConfiguration
+        val p2pSslConfiguration = rigorousMock<SSLConfiguration>()
+        doReturn("trustpass").whenever(p2pSslConfiguration).trustStorePassword
+        doReturn("cordacadevpass").whenever(p2pSslConfiguration).keyStorePassword
         config = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
-            doReturn("trustpass").whenever(it).trustStorePassword
-            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
             doReturn(nodeLegalName).whenever(it).myLegalName
             doReturn("").whenever(it).emailAddress
             doReturn(null).whenever(it).tlsCertCrlDistPoint
@@ -71,17 +74,17 @@ class NetworkRegistrationHelperTest {
 
     @Test
     fun `successful registration`() {
-        assertThat(config.nodeKeystore).doesNotExist()
-        assertThat(config.sslKeystore).doesNotExist()
-        assertThat(config.trustStoreFile).doesNotExist()
+        assertThat(config.signingCertificateStore.nodeKeystore).doesNotExist()
+        assertThat(config.p2pSslConfiguration.sslKeystore).doesNotExist()
+        assertThat(config.p2pSslConfiguration.trustStoreFile).doesNotExist()
 
         val rootAndIntermediateCA = createDevIntermediateCaCertPath().also { saveNetworkTrustStore(it.first.certificate) }
 
         createRegistrationHelper(rootAndIntermediateCA = rootAndIntermediateCA).buildKeystore()
 
-        val nodeKeystore = config.loadNodeKeyStore()
-        val sslKeystore = config.loadSslKeyStore()
-        val trustStore = config.loadTrustStore()
+        val nodeKeystore = config.signingCertificateStore.loadNodeKeyStore()
+        val sslKeystore = config.p2pSslConfiguration.loadSslKeyStore()
+        val trustStore = config.p2pSslConfiguration.loadTrustStore()
 
         nodeKeystore.run {
             assertFalse(contains(X509Utilities.CORDA_INTERMEDIATE_CA))
@@ -152,18 +155,18 @@ class NetworkRegistrationHelperTest {
 
     @Test
     fun `create service identity cert`() {
-        assertThat(config.nodeKeystore).doesNotExist()
-        assertThat(config.sslKeystore).doesNotExist()
-        assertThat(config.trustStoreFile).doesNotExist()
+        assertThat(config.signingCertificateStore.nodeKeystore).doesNotExist()
+        assertThat(config.p2pSslConfiguration.sslKeystore).doesNotExist()
+        assertThat(config.p2pSslConfiguration.trustStoreFile).doesNotExist()
 
         val rootAndIntermediateCA = createDevIntermediateCaCertPath().also { saveNetworkTrustStore(it.first.certificate) }
 
         createRegistrationHelper(CertRole.SERVICE_IDENTITY, rootAndIntermediateCA).buildKeystore()
 
-        val nodeKeystore = config.loadNodeKeyStore()
+        val nodeKeystore = config.signingCertificateStore.loadNodeKeyStore()
 
-        assertThat(config.sslKeystore).doesNotExist()
-        assertThat(config.trustStoreFile).doesNotExist()
+        assertThat(config.p2pSslConfiguration.sslKeystore).doesNotExist()
+        assertThat(config.p2pSslConfiguration.trustStoreFile).doesNotExist()
 
         val serviceIdentityAlias = "${DevIdentityGenerator.DISTRIBUTED_NOTARY_ALIAS_PREFIX}-private-key"
 
@@ -223,7 +226,7 @@ class NetworkRegistrationHelperTest {
         return when (certRole) {
             CertRole.NODE_CA -> NodeRegistrationHelper(config, certService, NodeRegistrationOption(config.certificatesDirectory / networkRootTrustStoreFileName, networkRootTrustStorePassword))
             CertRole.SERVICE_IDENTITY -> NetworkRegistrationHelper(
-                    config,
+                    config.signingCertificateStore,
                     config.myLegalName,
                     config.emailAddress,
                     certService,
