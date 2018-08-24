@@ -6,6 +6,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.buildNamed
 import net.corda.core.internal.copyBytes
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
@@ -76,7 +77,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
  */
 @DeleteForDJVM
 internal class AttachmentsClassLoaderBuilder(private val properties: Map<Any, Any>, private val deserializationClassLoader: ClassLoader) {
-    private val cache: Cache<List<SecureHash>, AttachmentsClassLoader> = Caffeine.newBuilder().weakValues().maximumSize(1024).build()
+    private val cache: Cache<List<SecureHash>, AttachmentsClassLoader> = Caffeine.newBuilder().weakValues().maximumSize(1024).buildNamed("SerializationScheme_attachmentClassloader")
 
     fun build(attachmentHashes: List<SecureHash>): AttachmentsClassLoader? {
         val serializationContext = properties[serializationContextKey] as? SerializeAsTokenContext ?: return null // Some tests don't set one.

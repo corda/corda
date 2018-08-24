@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal
 
 import com.github.benmanes.caffeine.cache.CacheLoader
 import com.github.benmanes.caffeine.cache.Caffeine
+import net.corda.core.internal.buildNamed
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
@@ -13,7 +14,7 @@ class DeduplicationChecker(cacheExpiry: Duration) {
     // dedupe identity -> watermark cache
     private val watermarkCache = Caffeine.newBuilder()
             .expireAfterAccess(cacheExpiry.toNanos(), TimeUnit.NANOSECONDS)
-            .build(WatermarkCacheLoader)
+            .buildNamed("DeduplicationChecker_watermark", WatermarkCacheLoader)
 
     private object WatermarkCacheLoader : CacheLoader<Any, AtomicLong> {
         override fun load(key: Any) = AtomicLong(-1)
