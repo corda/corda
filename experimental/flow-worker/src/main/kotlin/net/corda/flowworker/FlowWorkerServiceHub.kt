@@ -54,6 +54,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.isH2Database
 import net.corda.serialization.internal.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import rx.schedulers.Schedulers
@@ -242,7 +243,10 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
         servicesForResolution.start(networkParameters)
         persistentNetworkMapCache.start(networkParameters.notaries)
 
-        database.startHikariPool(configuration.dataSourceProperties, configuration.database, schemaService)
+        val isH2Database = isH2Database(configuration.dataSourceProperties.getProperty("dataSource.url", ""))
+        val schemas = if (isH2Database) schemaService.internalSchemas() else schemaService.schemaOptions.keys
+
+        database.startHikariPool(configuration.dataSourceProperties, configuration.database, schemas)
         identityService.start(trustRoot, listOf(myInfo.legalIdentitiesAndCerts.first().certificate, nodeCa))
 
         database.transaction {

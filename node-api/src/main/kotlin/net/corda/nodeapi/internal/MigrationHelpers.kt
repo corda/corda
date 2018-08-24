@@ -34,7 +34,7 @@ object MigrationHelpers {
     }
 
     // SchemaName will be transformed from camel case to lower_hyphen then add ".changelog-master"
-    private fun migrationResourceNameForSchema(schema: MappedSchema): String {
+    fun migrationResourceNameForSchema(schema: MappedSchema): String {
         val name: String = schema::class.simpleName!!
         val fileName = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_HYPHEN, name)
         return "$MIGRATION_PREFIX/$fileName.$CHANGELOG_NAME"

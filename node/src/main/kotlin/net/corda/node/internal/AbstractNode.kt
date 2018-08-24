@@ -149,8 +149,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             configuration.database,
             identityService::wellKnownPartyFromX500Name,
             identityService::wellKnownPartyFromAnonymous,
-            schemaService,
-            configuration.dataSourceProperties
+            schemaService
     )
     init {
         // TODO Break cyclic dependency
@@ -1049,11 +1048,10 @@ fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
-                      schemaService: NodeSchemaService = NodeSchemaService()): CordaPersistence {
-
+                      schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
     val isH2Database = isH2Database(hikariProperties.getProperty("dataSource.url", ""))
-    val schemas = if (isH2Database) schemaService.internalSchemas() else schemaService.schemaOptions.keys
-    createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService)
+    val schemas = if (isH2Database) NodeSchemaService().internalSchemas() else NodeSchemaService().schemaOptions.keys
+    return createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService)
             .apply { startHikariPool(hikariProperties, databaseConfig, schemas) }
 
 }
@@ -1061,16 +1059,14 @@ fun configureDatabase(hikariProperties: Properties,
 fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                            wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
-                           schemaService: SchemaService,
-                           hikariProperties: Properties): CordaPersistence {
+                           schemaService: SchemaService): CordaPersistence {
     // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
     // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
     // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
     JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
     val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
-    val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
-    return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters)
+    return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
 }
 
 fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>) {
@@ -1078,7 +1074,7 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
         val dataSource = DataSourceFactory.createDataSource(hikariProperties)
         val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
         val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig)
-        schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
+        schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L }, isH2Database(jdbcUrl))
         start(dataSource, jdbcUrl)
     } catch (ex: Exception) {
         when {

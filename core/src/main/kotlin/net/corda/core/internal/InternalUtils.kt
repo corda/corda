@@ -515,8 +515,3 @@ fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): Untrustworthy
     return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) }
             ?: throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a ${payloadData.javaClass.name} ($payloadData)")
 }
-
-/**
- * Extension method to make this method visible to nodeapi module.
- */
-fun MappedSchema.getMigrationResource(): String? = this.internalGetMigrationResource()

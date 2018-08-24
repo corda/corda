@@ -60,7 +60,7 @@ class SchemaMigrationTest {
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
 
         //run the migration on the database
-        val migration = SchemaMigration(schemaService.schemaOptions.keys, HikariDataSource(HikariConfig(dataSourceProps)), true, DatabaseConfig())
+        val migration = SchemaMigration(schemaService.schemaOptions.keys, HikariDataSource(HikariConfig(dataSourceProps)), DatabaseConfig())
         migration.runMigration(false)
 
         //start the node with "runMigration = false" and check that it started correctly

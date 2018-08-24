@@ -42,13 +42,13 @@ class SchemaMigration(
      * Main entry point to the schema migration.
      * Called during node startup.
      */
-    fun nodeStartup(existingCheckpoints: Boolean) {
+    fun nodeStartup(existingCheckpoints: Boolean, isH2Database: Boolean) {
         when {
-            databaseConfig.initialiseSchema -> {
-                //TODO if it's h2 only
+            databaseConfig.initialiseSchema && isH2Database -> {
                 migrateOlderDatabaseToUseLiquibase(existingCheckpoints)
                 runMigration(existingCheckpoints)
             }
+            databaseConfig.initialiseSchema -> runMigration(existingCheckpoints)
             else -> checkState()
         }
     }
@@ -66,7 +66,7 @@ class SchemaMigration(
     /**
      * Ensures that the database is up to date with the latest migration changes.
      */
-    private fun checkState() = doRunMigration(run = false, outputWriter = null, check = true)
+    fun checkState() = doRunMigration(run = false, outputWriter = null, check = true)
 
     /**
      * Can be used from an external tool to release the lock in case something went terribly wrong.
@@ -137,7 +137,6 @@ class SchemaMigration(
                 run && !check -> liquibase.update(Contexts())
                 check && !run && unRunChanges.isNotEmpty() -> throw OutstandingDatabaseChangesException(unRunChanges.size)
                 check && !run -> {} // Do nothing will be interpreted as "check succeeded"
-                (outputWriter != null) && !check && !run -> liquibase.update(Contexts(), outputWriter)
                 (outputWriter != null) && !check && !run -> liquibase.update(Contexts(), outputWriter)
                 else -> throw IllegalStateException("Invalid usage.")
             }
