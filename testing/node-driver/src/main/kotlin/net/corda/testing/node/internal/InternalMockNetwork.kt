@@ -47,6 +47,7 @@ import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.DevIdentityGenerator
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -573,9 +574,13 @@ abstract class MessagingServiceSpy {
 private fun mockNodeConfiguration(): NodeConfiguration {
     @DoNotImplement
     abstract class AbstractNodeConfiguration : NodeConfiguration
+
+    val p2pSslConfiguration = rigorousMock<SSLConfiguration>()
+    doReturn("cordacadevpass").whenever(p2pSslConfiguration).keyStorePassword
+    doReturn("trustpass").whenever(p2pSslConfiguration).trustStorePassword
+
     return rigorousMock<AbstractNodeConfiguration>().also {
-        doReturn("cordacadevpass").whenever(it).keyStorePassword
-        doReturn("trustpass").whenever(it).trustStorePassword
+        doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
         doReturn(emptyList<User>()).whenever(it).rpcUsers
         doReturn(null).whenever(it).notary
         doReturn(DatabaseConfig()).whenever(it).database

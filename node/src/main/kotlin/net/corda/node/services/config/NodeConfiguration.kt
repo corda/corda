@@ -12,6 +12,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
@@ -31,7 +32,7 @@ private val DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS: Duration =
 private const val CORDAPPS_DIR_NAME_DEFAULT = "cordapps"
 
 // TODO sollecitom remove NodeSSLConfiguration here
-interface NodeConfiguration : NodeSSLConfiguration {
+interface NodeConfiguration {
     val myLegalName: CordaX500Name
     val emailAddress: String
     val jmxMonitoringHttpPort: Int?
@@ -73,9 +74,12 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val crlCheckSoftFail: Boolean
     val jmxReporterType : JmxReporterType? get() = defaultJmxReporterType
 
-    // TODO sollecitom change to SSLConfiguration and rename to p2pSslConfiguration
-    // TODO sollecitom change to SSLConfiguration and rename to p2pSslConfiguration
-//    val nodeSslConfiguration: NodeSSLConfiguration
+    val baseDirectory: Path
+    val certificatesDirectory: Path
+    // TODO sollecitom turn into signingCertificateStore options
+    val signingCertificateStore: NodeSSLConfiguration
+
+    val p2pSslConfiguration: SSLConfiguration
 
     val cordappDirectories: List<Path>
 
@@ -227,7 +231,7 @@ data class NodeConfigurationImpl(
         override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS,
         override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT),
         override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA
-) : NodeConfiguration {
+) : NodeConfiguration, NodeSSLConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
 
@@ -249,6 +253,12 @@ data class NodeConfigurationImpl(
             }
         }
     }
+
+    override val signingCertificateStore: NodeSSLConfiguration = this
+    // TODO sollecitom change this
+    override val p2pSslConfiguration: SSLConfiguration = this
+    // TODO sollecitom check this
+    override val certificatesDirectory: Path = p2pSslConfiguration.certificatesDirectory
 
     override val rpcOptions: NodeRpcOptions
         get() {

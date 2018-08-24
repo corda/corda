@@ -69,7 +69,8 @@ object ConfigHelper {
  * the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.
  */
 // TODO Move this to KeyStoreConfigHelpers
-fun NodeConfiguration.configureWithDevSSLCertificate() = configureDevKeyAndTrustStores(myLegalName)
+// TODO sollecitom change here after renaming NodeSSLConfiguration to SigningCertificateStore and separating it from SSLConfiguration. Should invoke the creation on both.
+fun NodeConfiguration.configureWithDevSSLCertificate() = signingCertificateStore.configureDevKeyAndTrustStores(myLegalName)
 
 // TODO Move this to KeyStoreConfigHelpers
 // TODO sollecitom get rid of NodeSSLConfiguration here

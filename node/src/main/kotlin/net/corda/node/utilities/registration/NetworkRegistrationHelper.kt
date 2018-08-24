@@ -32,7 +32,7 @@ import javax.security.auth.x500.X500Principal
  * Helper for managing the node registration process, which checks for any existing certificates and requests them if
  * needed.
  */
-// TODO sollecitom remove NodeSSLConfiguration from here
+// TODO sollecitom use only the NodeCertificateStore here
 // TODO: Use content signer instead of keypairs.
 open class NetworkRegistrationHelper(private val config: NodeSSLConfiguration,
                                      private val myLegalName: CordaX500Name,
@@ -244,7 +244,7 @@ open class NetworkRegistrationHelper(private val config: NodeSSLConfiguration,
 class NodeRegistrationException(cause: Throwable?) : IOException("Unable to contact node registration service", cause)
 
 class NodeRegistrationHelper(private val config: NodeConfiguration, certService: NetworkRegistrationService, regConfig: NodeRegistrationOption, computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) :
-        NetworkRegistrationHelper(config,
+        NetworkRegistrationHelper(config.signingCertificateStore,
                 config.myLegalName,
                 config.emailAddress,
                 certService,
@@ -264,7 +264,7 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
     }
 
     private fun createSSLKeystore(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>, tlsCertCrlIssuer: X500Name?) {
-        config.loadSslKeyStore(createNew = true).update {
+        config.p2pSslConfiguration.loadSslKeyStore(createNew = true).update {
             println("Generating SSL certificate for node messaging service.")
             val sslKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
             val sslCert = X509Utilities.createCertificate(
@@ -278,17 +278,17 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
             logger.info("Generated TLS certificate: $sslCert")
             setPrivateKey(CORDA_CLIENT_TLS, sslKeyPair.private, listOf(sslCert) + certificates)
         }
-        println("SSL private key and certificate stored in ${config.sslKeystore}.")
+        println("SSL private key and certificate stored in ${config.p2pSslConfiguration.sslKeystore}.")
     }
 
     private fun createTruststore(rootCertificate: X509Certificate) {
         // Save root certificates to trust store.
-        config.loadTrustStore(createNew = true).update {
+        config.p2pSslConfiguration.loadTrustStore(createNew = true).update {
             println("Generating trust store for corda node.")
             // Assumes certificate chain always starts with client certificate and end with root certificate.
             setCertificate(CORDA_ROOT_CA, rootCertificate)
         }
-        println("Node trust store stored in ${config.trustStoreFile}.")
+        println("Node trust store stored in ${config.p2pSslConfiguration.trustStoreFile}.")
     }
 
     override fun validateAndGetTlsCrlIssuerCert(): X509Certificate? {
@@ -297,8 +297,8 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
         if (principalMatchesCertificatePrincipal(tlsCertCrlIssuer, rootCert)) {
             return rootCert
         }
-        return if (config.trustStoreFile.exists()) {
-            findMatchingCertificate(tlsCertCrlIssuer, config.loadTrustStore())
+        return if (config.p2pSslConfiguration.trustStoreFile.exists()) {
+            findMatchingCertificate(tlsCertCrlIssuer, config.p2pSslConfiguration.loadTrustStore())
         } else {
             null
         }

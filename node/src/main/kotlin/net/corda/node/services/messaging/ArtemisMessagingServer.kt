@@ -1,6 +1,5 @@
 package net.corda.node.services.messaging
 
-import io.netty.channel.unix.Errors
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.div
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -120,7 +119,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         bindingsDirectory = (artemisDir / "bindings").toString()
         journalDirectory = (artemisDir / "journal").toString()
         largeMessagesDirectory = (artemisDir / "large-messages").toString()
-        acceptorConfigurations = mutableSetOf(p2pAcceptorTcpTransport(NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port), config))
+        acceptorConfigurations = mutableSetOf(p2pAcceptorTcpTransport(NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port), config.p2pSslConfiguration))
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits
         // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
         idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
@@ -162,8 +161,8 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
 
     @Throws(IOException::class, KeyStoreException::class)
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
-        val keyStore = config.loadSslKeyStore().internal
-        val trustStore = config.loadTrustStore().internal
+        val keyStore = config.p2pSslConfiguration.loadSslKeyStore().internal
+        val trustStore = config.p2pSslConfiguration.loadTrustStore().internal
 
         val securityConfig = object : SecurityConfiguration() {
             // Override to make it work with our login module

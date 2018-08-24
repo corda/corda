@@ -166,7 +166,7 @@ class DriverDSLImpl(
 
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.corda.rpcOptions.address
-        val client = createCordaRPCClientWithInternalSslAndClassLoader(config.corda.rpcOptions.adminAddress, sslConfiguration = config.corda)
+        val client = createCordaRPCClientWithInternalSslAndClassLoader(config.corda.rpcOptions.adminAddress, sslConfiguration = config.corda.p2pSslConfiguration)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 config.corda.rpcUsers[0].run { client.start(username, password) }
@@ -895,8 +895,8 @@ class DriverDSLImpl(
             config += "rpcUsers" to configuration.toConfig().getValue("rpcUsers")
             config += "useHTTPS" to useHTTPS
             config += "baseDirectory" to configuration.baseDirectory.toAbsolutePath().toString()
-            config += "keyStorePassword" to configuration.keyStorePassword
-            config += "trustStorePassword" to configuration.trustStorePassword
+            config += "keyStorePassword" to configuration.p2pSslConfiguration.keyStorePassword
+            config += "trustStorePassword" to configuration.p2pSslConfiguration.trustStorePassword
             return config
         }
 
