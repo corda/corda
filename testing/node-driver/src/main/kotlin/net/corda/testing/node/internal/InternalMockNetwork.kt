@@ -553,7 +553,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
 
     /** Block until all scheduled activity, active flows and network activity has ceased. */
     fun waitQuiescent() {
-        busyLatch.await()
+        busyLatch.await(30000) // don't hang forever if for some reason things don't complete
     }
 
     override fun close() = stopNodes()
