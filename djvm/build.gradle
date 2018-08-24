@@ -7,16 +7,6 @@ ext {
     asm_version = '6.1.1'
 }
 
-repositories {
-    maven {
-        url "$artifactory_contextUrl/corda-dev"
-    }
-}
-
-configurations {
-    deterministicRt
-}
-
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
@@ -32,20 +22,9 @@ dependencies {
     // Classpath scanner
     compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
 
-    // Deterministic runtime - used in whitelist generation
-    deterministicRt project(path: ':jdk8u-deterministic', configuration: 'jdk')
-
     // Test utilities
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
-}
-
-def djvmCli = tasks.getByPath(':djvm:cli:shadowJar')
-task generateWhitelist(type: JavaExec, dependsOn: djvmCli) {
-    // This is an example of how a whitelist can be generated from a JAR. In most applications though, it is recommended
-    // that the minimal set whitelist is used.
-    main = '-jar'
-    args = [djvmCli.outputs.files.singleFile, 'whitelist', 'generate', '-o', 'src/main/resources/jdk8-deterministic.dat.gz', configurations.deterministicRt.files[0] ]
 }
 
 jar {

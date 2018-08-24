@@ -2,6 +2,16 @@ plugins {
     id 'com.github.johnrengelman.shadow'
 }
 
+repositories {
+    maven {
+        url "$artifactory_contextUrl/corda-dev"
+    }
+}
+
+configurations {
+    deterministicRt
+}
+
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
@@ -12,6 +22,9 @@ dependencies {
     compile "info.picocli:picocli:$picocli_version"
     compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
     compile project(path: ":djvm", configuration: "shadow")
+
+    // Deterministic runtime - used in whitelist generation
+    deterministicRt project(path: ':jdk8u-deterministic', configuration: 'jdk')
 }
 
 jar {
@@ -26,4 +39,12 @@ jar {
 
 shadowJar {
     baseName = "corda-djvm"
+    classifier = 'cli'
+}
+
+task generateWhitelist(type: JavaExec, dependsOn: shadowJar) {
+    // This is an example of how a whitelist can be generated from a JAR. In most applications though, it is recommended
+    // that the minimal set whitelist is used.
+    main = '-jar'
+    args = [shadowJar.outputs.files.singleFile, 'whitelist', 'generate', '-o', "$buildDir/jdk8-deterministic.dat.gz", configurations.deterministicRt.files[0] ]
 }
