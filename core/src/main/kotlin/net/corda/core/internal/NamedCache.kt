@@ -5,7 +5,6 @@ import com.github.benmanes.caffeine.cache.CacheLoader
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
 
-
 /**
  * Restrict the allowed characters of a cache name - this ensures that each cache has a name, and that
  * the name can be used to create a file name or a metric name.
@@ -16,7 +15,6 @@ fun checkCacheName(name: String) {
 }
 
 val allowedChars = Regex("^[0-9A-Za-z_.]*\$")
-
 
 /* buildNamed is the central helper method to build caffeine caches in Corda.
  * This allows to easily add tweaks to all caches build in Corda, and also forces
