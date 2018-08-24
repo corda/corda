@@ -10,11 +10,11 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * A class allowing the deduplication of a strictly incrementing sequence number.
  */
-class DeduplicationChecker(cacheExpiry: Duration) {
+class DeduplicationChecker(cacheExpiry: Duration, name: String = "DeduplicationChecker") {
     // dedupe identity -> watermark cache
     private val watermarkCache = Caffeine.newBuilder()
             .expireAfterAccess(cacheExpiry.toNanos(), TimeUnit.NANOSECONDS)
-            .buildNamed("DeduplicationChecker_watermark", WatermarkCacheLoader)
+            .buildNamed("${name}_watermark", WatermarkCacheLoader)
 
     private object WatermarkCacheLoader : CacheLoader<Any, AtomicLong> {
         override fun load(key: Any) = AtomicLong(-1)

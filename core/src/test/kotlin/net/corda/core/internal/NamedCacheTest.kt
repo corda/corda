@@ -4,7 +4,6 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class NamedCacheTest {
-
     fun checkNameHelper(name: String, throws: Boolean) {
         var exceptionThrown = false
         try {

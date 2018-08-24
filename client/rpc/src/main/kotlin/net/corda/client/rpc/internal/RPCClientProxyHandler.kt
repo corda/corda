@@ -170,8 +170,7 @@ class RPCClientProxyHandler(
             observablesToReap.locked { observables.add(observableId) }
         }
         return Caffeine.newBuilder().
-                weakValues().
-                removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).buildNamed("RpcClientProxyHandler_RpcObservable")
+                weakValues().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).buildNamed("RpcClientProxyHandler_rpcObservable")
     }
 
     private var sessionFactory: ClientSessionFactory? = null
