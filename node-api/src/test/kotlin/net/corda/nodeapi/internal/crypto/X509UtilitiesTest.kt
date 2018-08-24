@@ -218,9 +218,7 @@ class X509UtilitiesTest {
 
     @Test
     fun `create server cert and use in SSL socket`() {
-        // TODO sollecitom get rid of NodeSSLConfiguration here
-        val sslConfig = object : NodeSSLConfiguration {
-            override val baseDirectory = Paths.get("")
+        val sslConfig = object : SSLConfiguration {
             override val certificatesDirectory = tempFolder.root.toPath()
             override val keyStorePassword = "serverstorepass"
             override val trustStorePassword = "trustpass"

@@ -28,7 +28,6 @@ import net.corda.core.utilities.debug
 import net.corda.node.services.config.RaftConfig
 import net.corda.node.services.transactions.RaftTransactionCommitLog.Commands.CommitTransaction
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -52,7 +51,8 @@ import javax.persistence.Table
 // TODO sollecitom remove NodeSSLConfiguration from here
 @ThreadSafe
 class RaftUniquenessProvider(
-        private val transportConfiguration: NodeSSLConfiguration,
+        private val storagePath: Path,
+        private val transportConfiguration: SSLConfiguration,
         private val db: CordaPersistence,
         private val clock: Clock,
         private val metrics: MetricRegistry,
@@ -96,8 +96,6 @@ class RaftUniquenessProvider(
             var index: Long = 0
     )
 
-    /** Directory storing the Raft log and state machine snapshots */
-    private val storagePath: Path = transportConfiguration.baseDirectory
     private lateinit var _clientFuture: CompletableFuture<CopycatClient>
     private lateinit var server: CopycatServer
 

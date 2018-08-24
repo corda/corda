@@ -760,7 +760,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return notaryConfig.run {
             when {
                 raft != null -> {
-                    val uniquenessProvider = RaftUniquenessProvider(configuration, database, platformClock, monitoringService.metrics, raft)
+                    // TODO sollecitom fix this by passing the SSLConfiguration only
+                    val uniquenessProvider = RaftUniquenessProvider(configuration.baseDirectory, configuration, database, platformClock, monitoringService.metrics, raft)
                     (if (validating) ::RaftValidatingNotaryService else ::RaftNonValidatingNotaryService)(services, notaryKey, uniquenessProvider)
                 }
                 bftSMaRt != null -> {

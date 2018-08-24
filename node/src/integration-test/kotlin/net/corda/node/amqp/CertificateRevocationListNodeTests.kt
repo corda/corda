@@ -384,6 +384,7 @@ class CertificateRevocationListNodeTests {
                 amqpConfig), nodeCert)
     }
 
+    // TODO sollecitom remove this
     private fun NodeSSLConfiguration.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {
         val nodeKeyStore = loadNodeKeyStore()
         val (nodeCert, nodeKeys) = nodeKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)

@@ -31,7 +31,7 @@ class NodeKeystoreCheckTest {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             // Create keystores
             val keystorePassword = "password"
-            // TODO sollecitom get rid of NodeSSLConfiguration here. Only nodeKeyStore is used, not the P2P part.
+            // TODO sollecitom get rid of NodeSSLConfiguration here. Both needed..
             val config = object : NodeSSLConfiguration {
                 override val baseDirectory = Paths.get(".")
                 override val keyStorePassword: String = keystorePassword
