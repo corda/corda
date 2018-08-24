@@ -5,8 +5,8 @@ import com.github.benmanes.caffeine.cache.CacheLoader
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
 import com.github.benmanes.caffeine.cache.RemovalListener
-import net.corda.core.utilities.NamedLoadingCache
-import net.corda.core.utilities.buildNamed
+import net.corda.core.internal.NamedLoadingCache
+import net.corda.core.internal.buildNamed
 
 class NonInvalidatingUnboundCache<K, V> private constructor(
         val cache: NamedLoadingCache<K, V>

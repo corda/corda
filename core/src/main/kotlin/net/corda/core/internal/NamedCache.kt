@@ -1,4 +1,4 @@
-package net.corda.core.utilities
+package net.corda.core.internal
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.CacheLoader
