@@ -6,6 +6,8 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* Removed experimental feature `CordformDefinition`
+
 * Vault query fix: support query by parent classes of Contract State classes (see https://github.com/corda/corda/issues/3714)
 
 * Added ``registerResponderFlow`` method to ``StartedMockNode``, to support isolated testing of responder flow behaviour.
