@@ -27,20 +27,20 @@ dependencies {
     deterministicRt project(path: ':jdk8u-deterministic', configuration: 'jdk')
 }
 
-jar {
-    manifest {
-        attributes(
-                'Main-Class': 'net.corda.djvm.tools.cli.Program',
-                'Automatic-Module-Name': 'net.corda.djvm',
-                'Build-Date': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
-        )
-    }
-}
+jar.enabled = false
 
 shadowJar {
     baseName = "corda-djvm"
     classifier = 'cli'
+    manifest {
+        attributes(
+            'Automatic-Module-Name': 'net.corda.djvm',
+            'Main-Class': 'net.corda.djvm.tools.cli.Program',
+            'Build-Date': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        )
+    }
 }
+assemble.dependsOn shadowJar
 
 task generateWhitelist(type: JavaExec, dependsOn: shadowJar) {
     // This is an example of how a whitelist can be generated from a JAR. In most applications though, it is recommended

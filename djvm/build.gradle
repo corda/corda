@@ -27,13 +27,7 @@ dependencies {
     testCompile "org.assertj:assertj-core:$assertj_version"
 }
 
-jar {
-    manifest {
-        attributes(
-                'Automatic-Module-Name': 'net.corda.djvm'
-        )
-    }
-}
+jar.enabled = false
 
 shadowJar {
     baseName = "djvm"
@@ -52,3 +46,4 @@ shadowJar {
         }
     }
 }
+assemble.dependsOn shadowJar
