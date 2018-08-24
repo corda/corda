@@ -210,7 +210,6 @@ allprojects {
         mavenCentral()
         jcenter()
         maven { url 'https://jitpack.io' }
-        maven { url "$artifactory_contextUrl/corda-releases" } // cordform-common
     }
 
     configurations {
