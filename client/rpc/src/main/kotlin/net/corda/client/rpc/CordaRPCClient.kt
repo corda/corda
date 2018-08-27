@@ -43,7 +43,7 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
          * returned Observable stream the stack trace of the originating RPC will be shown as well. Note that
          * constructing call stacks is a moderately expensive operation.
          */
-        open val trackRpcCallSites: Boolean = false,
+        open val trackRpcCallSites: Boolean = java.lang.Boolean.getBoolean("net.corda.client.rpc.trackRpcCallSites"),
 
         /**
          * The interval of unused observable reaping. Leaked Observables (unused ones) are detected using weak references
