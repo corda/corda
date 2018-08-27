@@ -34,9 +34,18 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         open val connectionMaxRetryInterval: Duration = 3.minutes,
 
         /**
-         * The minimum protocol version required from the server.
+         * The minimum protocol version required from the server. This is equivalent to the node's platform version
+         * number. If this minimum version is not met, an exception will be thrown at startup. If you use features
+         * introduced in a later version, you can bump this to match the platform version you need and get an early
+         * check that runs before you do anything.
+         *
+         * If you leave it at the default then things will work but attempting to use an RPC added in a version later
+         * than the server supports will throw [UnsupportedOperationException].
+         *
+         * The default value is whatever version of Corda this RPC library was shipped as a part of. Therefore if you
+         * use the RPC library from Corda 4, it will by default only connect to a node of version 4 or above.
          */
-        open val minimumServerProtocolVersion: Int = 0,
+        open val minimumServerProtocolVersion: Int = 4,
 
         /**
          * If set to true the client will track RPC call sites. If an error occurs subsequently during the RPC or in a

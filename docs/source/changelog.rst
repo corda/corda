@@ -6,7 +6,11 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
-* Removed experimental feature `CordformDefinition`
+* The RPC client library now checks at startup whether the server is of the client libraries major version or higher.
+  Therefore to connect to a Corda 4 node you must use version 4 or lower of the library. This behaviour can be overridden
+  by specifying a lower number in the ``CordaRPCClientConfiguration`` class.
+
+* Removed experimental feature ``CordformDefinition``
 
 * Vault query fix: support query by parent classes of Contract State classes (see https://github.com/corda/corda/issues/3714)
 

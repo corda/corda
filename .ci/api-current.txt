@@ -2529,7 +2529,6 @@ public interface net.corda.core.messaging.CordaRPCOps extends net.corda.core.mes
   public abstract void clearNetworkMapCache()
   @NotNull
   public abstract java.time.Instant currentNodeTime()
-  public abstract int getProtocolVersion()
   @NotNull
   public abstract Iterable<String> getVaultTransactionNotes(net.corda.core.crypto.SecureHash)
   @RPCReturnsObservables

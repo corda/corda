@@ -10,9 +10,8 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
-import net.corda.node.internal.NodeWithInfo
 import net.corda.node.internal.Node
-
+import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -85,7 +84,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @JvmOverloads
     fun startNode(legalName: CordaX500Name,
-                  platformVersion: Int = 1,
+                  platformVersion: Int = 4,
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap()): NodeWithInfo {
         val baseDirectory = baseDirectory(legalName).createDirectories()
