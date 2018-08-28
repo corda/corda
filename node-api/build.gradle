@@ -34,9 +34,8 @@ dependencies {
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
     // For db migration
-    compile ("org.liquibase:liquibase-core:$liquibase_version") {
-        exclude group: 'ch.qos.logback', module: 'logback-classic'
-    }
+    compile "org.liquibase:liquibase-core:$liquibase_version"
+
     compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     runtime 'com.mattbertolini:liquibase-slf4j:2.0.0'
 
