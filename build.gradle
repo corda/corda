@@ -57,7 +57,7 @@ buildscript {
     ext.shiro_version = '1.4.0'
     ext.shadow_version = '2.0.4'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
-    ext.liquibase_version = '3.6.2'
+    ext.liquibase_version = '3.5.5'
     ext.artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
     ext.docker_compose_rule_version = '0.33.0'
@@ -235,6 +235,8 @@ allprojects {
             // We want to use SLF4J's version of these bindings: jcl-over-slf4j
             // Remove any transitive dependency on Apache's version.
             exclude group: 'commons-logging', module: 'commons-logging'
+            // Remove any transitive dependency on Logback (e.g. Liquibase 3.6 introduces this dependency)
+            exclude group: 'ch.qos.logback'
 
             // Netty-All is an uber-jar which contains every Netty module.
             // Exclude it to force us to use the individual Netty modules instead.
