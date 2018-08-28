@@ -4,27 +4,32 @@ import net.corda.core.internal.div
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import java.nio.file.Path
 
-//interface SslConfiguration {
-//
-//    val keyStore: CertificateStore
-//    val trustStore: CertificateStore
-//}
-//
-//// TODO sollecitom see if you can make the password private here
-//interface CertificateStore {
-//
-//    val value: X509KeyStore
-//    // TODO sollecitom maybe use a password type here
-//    val password: String
-//}
-//
-//class FileBasedCertificateStoreLoader(private val path: Path, private val password: String) {
-//
-//    fun load(createNew: Boolean = false): CertificateStore = DelegatingCertificateStore(X509KeyStore.fromFile(path, password, createNew), password)
-//}
-//
-//// TODO sollecitom see if you can make the password private here
-//class DelegatingCertificateStore(override val value: X509KeyStore, override val password: String) : CertificateStore
+interface SslConfiguration {
+
+    val keyStore: CertificateStore
+    val trustStore: CertificateStore
+}
+
+// TODO sollecitom see if you can make the password private here
+interface CertificateStore {
+
+    val value: X509KeyStore
+    // TODO sollecitom maybe use a password type here
+    // TODO sollecitom see if this can stay private (by adding delegate functions over X509Store)
+    val password: String
+}
+
+interface CertificateStoreLoader {
+
+    fun load(createNew: Boolean = false): CertificateStore
+}
+
+class FileBasedCertificateStoreLoader(private val path: Path, private val password: String): CertificateStoreLoader {
+
+    override fun load(createNew: Boolean): CertificateStore = DelegatingCertificateStore(X509KeyStore.fromFile(path, password, createNew), password)
+}
+
+private class DelegatingCertificateStore(override val value: X509KeyStore, override val password: String): CertificateStore
 
 // TODO sollecitom - refactor this to have no defaults
 // TODO sollecitom introduce CertificateStore type and use it
