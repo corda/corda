@@ -232,7 +232,7 @@ data class NodeConfigurationImpl(
         override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS,
         override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT),
         override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA
-) : NodeConfiguration, NodeSSLConfiguration {
+) : NodeConfiguration, SSLConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
 
@@ -257,9 +257,8 @@ data class NodeConfigurationImpl(
 
     override val certificatesDirectory = baseDirectory / "certificates"
 
-    // TODO sollecitom check this
-    override val nodeKeystore = certificatesDirectory / "nodekeystore.jks"
-    override val signingCertificateStore: CertificateStoreSupplier = FileBasedCertificateStoreLoader(nodeKeystore, keyStorePassword)
+    private val signingCertificateStorePath = certificatesDirectory / "nodekeystore.jks"
+    override val signingCertificateStore: CertificateStoreSupplier = FileBasedCertificateStoreLoader(signingCertificateStorePath, keyStorePassword)
 
     // TODO sollecitom change this
     override val p2pSslConfiguration: SSLConfiguration = this
@@ -375,17 +374,6 @@ data class NodeConfigurationImpl(
         }
         require(h2port == null || h2Settings == null) { "Cannot specify both 'h2port' and 'h2Settings' in configuration" }
     }
-}
-
-private interface NodeSSLConfiguration : SSLConfiguration {
-
-    // TODO sollecitom get rid of this (nodeInfos directory should be explicit)
-    // TODO sollecitom move this to NodeConfiguration initially
-    val baseDirectory: Path
-
-    override val certificatesDirectory: Path get() = baseDirectory / "certificates"
-
-    val nodeKeystore: Path get() = certificatesDirectory / "nodekeystore.jks"
 }
 
 data class NodeRpcSettings(
