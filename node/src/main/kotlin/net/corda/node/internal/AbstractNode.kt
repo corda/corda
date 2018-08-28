@@ -248,7 +248,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val trustRoot = initKeyStore()
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         startDatabase()
-        val nodeCa = configuration.signingCertificateStore.loadNodeKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_CA)
+        val nodeCa = configuration.signingCertificateStore.get().getCertificate(X509Utilities.CORDA_CLIENT_CA)
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
         return database.use {
             it.transaction {
@@ -278,7 +278,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         log.info("Node starting up ...")
 
         val trustRoot = initKeyStore()
-        val nodeCa = configuration.signingCertificateStore.loadNodeKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_CA)
+        val nodeCa = configuration.signingCertificateStore.get().getCertificate(X509Utilities.CORDA_CLIENT_CA)
         initialiseJVMAgents()
 
         schemaService.mappedSchemasWarnings().forEach {
@@ -697,7 +697,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val containCorrectKeys = try {
             // This will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
             val sslKeystore = configuration.p2pSslConfiguration.loadSslKeyStore()
-            val identitiesKeystore = configuration.signingCertificateStore.loadNodeKeyStore()
+            val identitiesKeystore = configuration.signingCertificateStore.get()
             X509Utilities.CORDA_CLIENT_TLS in sslKeystore && X509Utilities.CORDA_CLIENT_CA in identitiesKeystore
         } catch (e: KeyStoreException) {
             log.warn("Certificate key store found but key store password does not match configuration.")
@@ -715,7 +715,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         // Check all cert path chain to the trusted root
         val sslCertChainRoot = configuration.p2pSslConfiguration.loadSslKeyStore().getCertificateChain(X509Utilities.CORDA_CLIENT_TLS).last()
-        val nodeCaCertChainRoot = configuration.signingCertificateStore.loadNodeKeyStore().getCertificateChain(X509Utilities.CORDA_CLIENT_CA).last()
+        val nodeCaCertChainRoot = configuration.signingCertificateStore.get().getCertificateChain(X509Utilities.CORDA_CLIENT_CA).last()
         val trustRoot = configuration.p2pSslConfiguration.loadTrustStore().getCertificate(X509Utilities.CORDA_ROOT_CA)
 
         require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
@@ -804,7 +804,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                                  networkParameters: NetworkParameters)
 
     private fun obtainIdentity(notaryConfig: NotaryConfig?): Pair<PartyAndCertificate, KeyPair> {
-        val keyStore = configuration.signingCertificateStore.loadNodeKeyStore()
+        val keyStore = configuration.signingCertificateStore.get()
 
         val (id, singleName) = if (notaryConfig == null || !notaryConfig.isClusterConfig) {
             // Node's main identity or if it's a single node notary
@@ -819,7 +819,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         if (privateKeyAlias !in keyStore) {
             singleName ?: throw IllegalArgumentException(
                     "Unable to find in the key store the identity of the distributed notary the node is part of")
-            log.info("$privateKeyAlias not found in key store ${configuration.signingCertificateStore.nodeKeystore}, generating fresh key!")
+            log.info("$privateKeyAlias not found in key store, generating fresh key!")
             // TODO This check shouldn't be needed
             check(singleName == configuration.myLegalName)
             keyStore.storeLegalIdentity(privateKeyAlias, generateKeyPair())

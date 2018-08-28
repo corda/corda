@@ -1,14 +1,20 @@
 package net.corda.nodeapi.internal.config
 
 import net.corda.core.internal.div
+import net.corda.core.internal.outputStream
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509KeyStore
+import net.corda.nodeapi.internal.crypto.getX509Certificate
+import java.io.IOException
 import java.io.OutputStream
+import java.nio.file.OpenOption
 import java.nio.file.Path
+import java.security.cert.X509Certificate
 
 interface SslConfiguration {
 
-    val keyStore: CertificateStore
-    val trustStore: CertificateStore
+    val keyStore: CertificateStoreSupplier
+    val trustStore: CertificateStoreSupplier
 }
 
 // TODO sollecitom see if you can make the password private here
@@ -20,16 +26,50 @@ interface CertificateStore {
     val password: String
 
     fun writeTo(stream: OutputStream) = value.internal.store(stream, password.toCharArray())
+
+    fun writeTo(path: Path, vararg options: OpenOption) = path.outputStream(*options)
+
+    fun update(action: X509KeyStore.() -> Unit) = action.invoke(value)
+
+    fun getCertificate(alias: String): X509Certificate = value.getCertificate(alias)
+
+    operator fun contains(alias: String): Boolean = value.contains(alias)
+
+    fun getCertificateChain(alias: String): List<X509Certificate> = value.getCertificateChain(alias)
+
+    fun getCertificateAndKeyPair(alias: String, keyPassword: String = password): CertificateAndKeyPair = value.getCertificateAndKeyPair(alias, keyPassword)
 }
 
-interface CertificateStoreLoader {
+interface CertificateStoreSupplier {
 
-    fun load(createNew: Boolean = false): CertificateStore
+    fun get(createNew: Boolean = false): CertificateStore
+
+    fun getOptional(): CertificateStore? {
+
+        return try {
+            get()
+        } catch (e: IOException) {
+            null
+        }
+    }
 }
 
-class FileBasedCertificateStoreLoader(private val path: Path, private val password: String): CertificateStoreLoader {
+class FileBasedCertificateStoreLoader(private val path: Path, private val password: String) : CertificateStoreSupplier {
 
-    override fun load(createNew: Boolean): CertificateStore = DelegatingCertificateStore(X509KeyStore.fromFile(path, password, createNew), password)
+    // TODO sollecitom check
+//    private var cached: CertificateStore? = null
+//
+//    override fun get(createNew: Boolean): CertificateStore {
+//
+//        synchronized(this) {
+//            if (cached == null) {
+//                cached = DelegatingCertificateStore(X509KeyStore.fromFile(path, password, createNew), password)
+//            }
+//            return cached!!
+//        }
+//    }
+
+    override fun get(createNew: Boolean): CertificateStore = DelegatingCertificateStore(X509KeyStore.fromFile(path, password, createNew), password)
 }
 
 private class DelegatingCertificateStore(override val value: X509KeyStore, override val password: String): CertificateStore

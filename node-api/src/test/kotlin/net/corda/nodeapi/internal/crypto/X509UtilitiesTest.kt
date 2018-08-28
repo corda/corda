@@ -10,7 +10,6 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
 import net.corda.serialization.internal.AllWhitelist
@@ -20,6 +19,7 @@ import net.corda.serialization.internal.amqp.amqpMagic
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
+import net.corda.testing.driver.stubs.CertificateStoreStubs
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*
@@ -32,7 +32,6 @@ import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 import java.util.*
@@ -182,29 +181,24 @@ class X509UtilitiesTest {
     @Test
     fun `create server certificate in keystore for SSL`() {
         // TODO sollecitom refactor
-        val sslConfig = object : NodeSSLConfiguration {
-            override val baseDirectory = Paths.get("")
-            override val certificatesDirectory = tempFolder.root.toPath()
-            override val keyStorePassword = "serverstorepass"
-            override val trustStorePassword = "trustpass"
-        }
+        val certificatesDirectory = tempFolder.root.toPath()
+        val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "serverstorepass")
         val p2pSslConfig = object : SSLConfiguration {
-            override val certificatesDirectory = tempFolder.root.toPath()
+            override val certificatesDirectory = certificatesDirectory
             override val keyStorePassword = "serverstorepass"
             override val trustStorePassword = "trustpass"
         }
 
-        val signingAndP2pSsl = sslConfig to p2pSslConfig
+        val signingAndP2pSsl = signingCertStore to p2pSslConfig
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
         // Generate server cert and private key and populate another keystore suitable for SSL
         signingAndP2pSsl.createDevKeyStores(MEGA_CORP.name, rootCa.certificate, intermediateCa)
 
-        // TODO sollecitom try loadStore in NodeSSLConfig here
         // Load back server certificate
-        val serverKeyStore = loadKeyStore(signingAndP2pSsl.first.nodeKeystore, signingAndP2pSsl.first.keyStorePassword)
-        val (serverCert, serverKeyPair) = serverKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, sslConfig.keyStorePassword)
+        val serverKeyStore = signingCertStore.get().value
+        val (serverCert, serverKeyPair) = serverKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
 
         serverCert.checkValidity()
         serverCert.verify(intermediateCa.certificate.publicKey)

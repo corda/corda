@@ -11,6 +11,8 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.nodeapi.internal.config.CertificateStoreSupplier
+import net.corda.nodeapi.internal.config.FileBasedCertificateStoreLoader
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
@@ -75,9 +77,7 @@ interface NodeConfiguration {
 
     val baseDirectory: Path
     val certificatesDirectory: Path
-    // TODO sollecitom turn into signingCertificateStore options
-    val signingCertificateStore: NodeSSLConfiguration
-
+    val signingCertificateStore: CertificateStoreSupplier
     val p2pSslConfiguration: SSLConfiguration
 
     val cordappDirectories: List<Path>
@@ -256,7 +256,7 @@ data class NodeConfigurationImpl(
         }
     }
 
-    override val signingCertificateStore: NodeSSLConfiguration = this
+    override val signingCertificateStore: CertificateStoreSupplier = FileBasedCertificateStoreLoader(nodeKeystore, keyStorePassword)
     // TODO sollecitom change this
     override val p2pSslConfiguration: SSLConfiguration = this
     // TODO sollecitom check this
