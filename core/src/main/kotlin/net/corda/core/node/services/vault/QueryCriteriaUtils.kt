@@ -262,9 +262,10 @@ object Builder {
     fun <R : Comparable<R>> FieldInfo.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
 
     @JvmOverloads
-    fun <O, R> KProperty1<O, R?>.equal(value: R, exactMatch: Boolean = true) = predicate(EqualityComparison(if (exactMatch) EQUAL else EQUAL_IGNORE_CASE, value))
+    fun <O, R> KProperty1<O, R?>.equal(value: R, exactMatch: Boolean = true) = predicate(Builder.equal(value, exactMatch))
+
     @JvmOverloads
-    fun <O, R> KProperty1<O, R?>.notEqual(value: R, exactMatch: Boolean = true) = predicate(EqualityComparison(if (exactMatch) NOT_EQUAL else NOT_EQUAL_IGNORE_CASE, value))
+    fun <O, R> KProperty1<O, R?>.notEqual(value: R, exactMatch: Boolean = true) = predicate(Builder.notEqual(value, exactMatch))
 
     fun <O, R : Comparable<R>> KProperty1<O, R?>.lessThan(value: R) = comparePredicate(BinaryComparisonOperator.LESS_THAN, value)
 
@@ -277,10 +278,10 @@ object Builder {
     fun <O, R : Comparable<R>> KProperty1<O, R?>.between(from: R, to: R) = predicate(ColumnPredicate.Between(from, to))
 
     @JvmOverloads
-    fun <O, R : Comparable<R>> KProperty1<O, R?>.`in`(collection: Collection<R>, exactMatch: Boolean = true) = predicate(CollectionExpression(if (exactMatch) IN else IN_IGNORE_CASE, collection))
+    fun <O, R : Comparable<R>> KProperty1<O, R?>.`in`(collection: Collection<R>, exactMatch: Boolean = true) = predicate(Builder.`in`(collection, exactMatch))
 
     @JvmOverloads
-    fun <O, R : Comparable<R>> KProperty1<O, R?>.notIn(collection: Collection<R>, exactMatch: Boolean = true) = predicate(CollectionExpression(if (exactMatch) NOT_IN else NOT_IN_IGNORE_CASE, collection))
+    fun <O, R : Comparable<R>> KProperty1<O, R?>.notIn(collection: Collection<R>, exactMatch: Boolean = true) = predicate(Builder.notIn(collection, exactMatch))
 
     @JvmStatic
     @JvmOverloads
@@ -289,7 +290,7 @@ object Builder {
 
     @JvmStatic
     @JvmOverloads
-    fun <R> FieldInfo.equal(value: R, exactMatch: Boolean = true) = predicate(EqualityComparison(if (exactMatch) EQUAL else EQUAL_IGNORE_CASE, value))
+    fun <R> FieldInfo.equal(value: R, exactMatch: Boolean = true) = predicate(Builder.equal(value, exactMatch))
 
     @JvmStatic
     @JvmOverloads
@@ -298,7 +299,7 @@ object Builder {
 
     @JvmStatic
     @JvmOverloads
-    fun <R> FieldInfo.notEqual(value: R, exactMatch: Boolean = true) = predicate(EqualityComparison(if (exactMatch) NOT_EQUAL else NOT_EQUAL_IGNORE_CASE, value))
+    fun <R> FieldInfo.notEqual(value: R, exactMatch: Boolean = true) = predicate(Builder.equal(value, exactMatch))
 
     @JvmStatic
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
@@ -337,7 +338,7 @@ object Builder {
 
     @JvmStatic
     @JvmOverloads
-    fun <R : Comparable<R>> FieldInfo.`in`(collection: Collection<R>, exactMatch: Boolean = true) = predicate(CollectionExpression(if (exactMatch) IN else IN_IGNORE_CASE, collection))
+    fun <R : Comparable<R>> FieldInfo.`in`(collection: Collection<R>, exactMatch: Boolean = true) = predicate(Builder.`in`(collection, exactMatch))
 
     @JvmStatic
     @JvmOverloads
@@ -346,7 +347,7 @@ object Builder {
 
     @JvmStatic
     @JvmOverloads
-    fun <R : Comparable<R>> FieldInfo.notIn(collection: Collection<R>, exactMatch: Boolean = true) = predicate(CollectionExpression(if (exactMatch) NOT_IN else NOT_IN_IGNORE_CASE, collection))
+    fun <R : Comparable<R>> FieldInfo.notIn(collection: Collection<R>, exactMatch: Boolean = true) = predicate(Builder.notIn(collection, exactMatch))
 
     @JvmOverloads
     fun <R> equal(value: R, exactMatch: Boolean = true) = EqualityComparison(if (exactMatch) EQUAL else EQUAL_IGNORE_CASE, value)
@@ -380,7 +381,7 @@ object Builder {
     fun <R> isNotNull() = ColumnPredicate.NullExpression<R>(NullOperator.NOT_NULL)
 
     @JvmOverloads
-    fun <O> KProperty1<O, String?>.like(string: String, exactMatch: Boolean = true) = predicate(Likeness(if (exactMatch) LIKE else LIKE_IGNORE_CASE, string))
+    fun <O> KProperty1<O, String?>.like(string: String, exactMatch: Boolean = true) = predicate(Builder.like(string, exactMatch))
 
     @JvmStatic
     @JvmOverloads
@@ -389,10 +390,10 @@ object Builder {
 
     @JvmStatic
     @JvmOverloads
-    fun FieldInfo.like(string: String, exactMatch: Boolean = true) = predicate(Likeness(if (exactMatch) LIKE else LIKE_IGNORE_CASE, string))
+    fun FieldInfo.like(string: String, exactMatch: Boolean = true) = predicate(Builder.like(string, exactMatch))
 
     @JvmOverloads
-    fun <O> KProperty1<O, String?>.notLike(string: String, exactMatch: Boolean = true) = predicate(Likeness(if (exactMatch) NOT_LIKE else NOT_LIKE_IGNORE_CASE, string))
+    fun <O> KProperty1<O, String?>.notLike(string: String, exactMatch: Boolean = true) = predicate(Builder.notLike(string, exactMatch))
 
     @JvmStatic
     @JvmOverloads
@@ -401,7 +402,7 @@ object Builder {
 
     @JvmStatic
     @JvmOverloads
-    fun FieldInfo.notLike(string: String, exactMatch: Boolean = true) = predicate(Likeness(if (exactMatch) NOT_LIKE else NOT_LIKE_IGNORE_CASE, string))
+    fun FieldInfo.notLike(string: String, exactMatch: Boolean = true) = predicate(Builder.notLike(string, exactMatch))
 
     fun <O, R> KProperty1<O, R?>.isNull() = predicate(ColumnPredicate.NullExpression(NullOperator.IS_NULL))
     @JvmStatic
