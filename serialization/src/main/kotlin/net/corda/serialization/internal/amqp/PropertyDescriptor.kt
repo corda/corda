@@ -7,6 +7,7 @@ import net.corda.serialization.internal.amqp.MethodClassifier.*
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Type
+import java.util.*
 
 /**
  * Encapsulates the property of a class and its potential getter and setter methods.
@@ -126,11 +127,11 @@ private fun Sequence<PropertyNamedMethod>.withValidSignature() = filter { it.has
 // Group methods by name and classifier, picking the method with the least generic signature if there is more than one
 // of a given name and type.
 private fun Sequence<PropertyNamedMethod>.byNameAndClassifier(fieldNames: Set<String>): Map<String, Map<MethodClassifier, Method>> {
-    val result = mutableMapOf<String, MutableMap<MethodClassifier, Method>>()
+    val result = mutableMapOf<String, EnumMap<MethodClassifier, Method>>()
 
     forEach { (fieldName, classifier, method) ->
         result.compute(getPropertyName(fieldName, fieldNames)) { _, byClassifier ->
-            (byClassifier ?: mutableMapOf()).merge(classifier, method)
+            (byClassifier ?: EnumMap(MethodClassifier::class.java)).merge(classifier, method)
         }
     }
 
@@ -138,7 +139,7 @@ private fun Sequence<PropertyNamedMethod>.byNameAndClassifier(fieldNames: Set<St
 }
 
 // Merge the given method into a map of methods by method classifier, picking the least generic method for each classifier.
-private fun MutableMap<MethodClassifier, Method>.merge(classifier: MethodClassifier, method: Method): MutableMap<MethodClassifier, Method> {
+private fun EnumMap<MethodClassifier, Method>.merge(classifier: MethodClassifier, method: Method): EnumMap<MethodClassifier, Method> {
     compute(classifier) { _, existingMethod ->
         if (existingMethod == null) method
         else when (classifier) {
