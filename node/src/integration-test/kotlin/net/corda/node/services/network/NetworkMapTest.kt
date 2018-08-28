@@ -13,6 +13,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
@@ -23,6 +24,7 @@ import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.node.internal.*
 import net.corda.testing.node.internal.network.NetworkMapServer
+import org.apache.logging.log4j.core.net.ssl.SslConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -247,13 +249,18 @@ private fun DriverDSLImpl.startNode(providedName: CordaX500Name, devMode: Boolea
     var customOverrides = emptyMap<String, String>()
     if (!devMode) {
         val nodeDir = baseDirectory(providedName)
-        // TODO sollecitom get rid of NodeSSLConfiguration here. Do both P2P and nodeKeyStore
+        // TODO sollecitom refactor
         val nodeSslConfig = object : NodeSSLConfiguration {
             override val baseDirectory = nodeDir
             override val keyStorePassword = "cordacadevpass"
             override val trustStorePassword = "trustpass"
         }
-        nodeSslConfig.configureDevKeyAndTrustStores(providedName)
+        val p2pSslConfig = object : SSLConfiguration {
+            override val certificatesDirectory = nodeDir / "certificates"
+            override val keyStorePassword = "cordacadevpass"
+            override val trustStorePassword = "trustpass"
+        }
+        (nodeSslConfig to p2pSslConfig).configureDevKeyAndTrustStores(providedName)
         customOverrides = mapOf("devMode" to "false")
     }
     return startNode(providedName = providedName, customOverrides = customOverrides)

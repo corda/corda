@@ -5,6 +5,7 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
@@ -31,14 +32,20 @@ class NodeKeystoreCheckTest {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             // Create keystores
             val keystorePassword = "password"
-            // TODO sollecitom get rid of NodeSSLConfiguration here. Both needed..
+            // TODO sollecitom refactor
             val config = object : NodeSSLConfiguration {
                 override val baseDirectory = Paths.get(".")
                 override val keyStorePassword: String = keystorePassword
                 override val trustStorePassword: String = keystorePassword
                 override val certificatesDirectory: Path = baseDirectory(ALICE_NAME) / "certificates"
             }
-            config.configureDevKeyAndTrustStores(ALICE_NAME)
+            val p2pSslConfig = object : SSLConfiguration {
+                override val keyStorePassword: String = keystorePassword
+                override val trustStorePassword: String = keystorePassword
+                override val certificatesDirectory: Path = baseDirectory(ALICE_NAME) / "certificates"
+            }
+            val signingAndP2pSsl = config to p2pSslConfig
+            signingAndP2pSsl.configureDevKeyAndTrustStores(ALICE_NAME)
 
             // This should pass with correct keystore.
             val node = startNode(
@@ -50,7 +57,7 @@ class NodeKeystoreCheckTest {
             node.stop()
 
             // Fiddle with node keystore.
-            config.loadNodeKeyStore().update {
+            signingAndP2pSsl.first.loadNodeKeyStore().update {
                 // Self signed root
                 val badRootKeyPair = Crypto.generateKeyPair()
                 val badRoot = X509Utilities.createSelfSignedCACertificate(X500Principal("O=Bad Root,L=Lodnon,C=GB"), badRootKeyPair)

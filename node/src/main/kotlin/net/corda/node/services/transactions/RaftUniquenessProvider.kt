@@ -48,7 +48,6 @@ import javax.persistence.Table
  * requests to the cluster. In Copycat, a client request is first sent to the server it's connected to and then redirected
  * to the cluster leader to be actioned.
  */
-// TODO sollecitom remove NodeSSLConfiguration from here
 @ThreadSafe
 class RaftUniquenessProvider(
         private val storagePath: Path,

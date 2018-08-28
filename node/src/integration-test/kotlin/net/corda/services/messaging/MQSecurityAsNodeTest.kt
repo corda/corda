@@ -12,6 +12,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
@@ -24,6 +25,7 @@ import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
 import org.junit.Test
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
@@ -85,54 +87,42 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
 
     @Test
     fun `login with invalid certificate chain`() {
-        // TODO sollecitom get rid of NodeSSLConfiguration here. Replace with both P2P and nodeKeyStore bits
+        // TODO sollecitom refactor
+        val baseDir = Paths.get(".")
+        val certsDir = Files.createTempDirectory("certs")
         val sslConfig = object : NodeSSLConfiguration {
-            override val baseDirectory = Paths.get(".")
-            override val certificatesDirectory = Files.createTempDirectory("certs")
+            override val baseDirectory = baseDir
+            override val certificatesDirectory = certsDir
             override val keyStorePassword: String get() = "cordacadevpass"
             override val trustStorePassword: String get() = "trustpass"
+        }
+        val p2pSslConfig = object : SSLConfiguration {
+            override val certificatesDirectory = certsDir
+            override val keyStorePassword: String get() = "cordacadevpass"
+            override val trustStorePassword: String get() = "trustpass"
+        }
 
-            init {
-                val legalName = CordaX500Name("MegaCorp", "London", "GB")
-                certificatesDirectory.createDirectories()
-                if (!trustStoreFile.exists()) {
-                    javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks").use { it.copyTo(trustStoreFile) }
-                }
+        val legalName = CordaX500Name("MegaCorp", "London", "GB")
+        p2pSslConfig.certificatesDirectory.createDirectories()
+        if (!p2pSslConfig.trustStoreFile.exists()) {
+            javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks").use { it.copyTo(p2pSslConfig.trustStoreFile) }
+        }
 
-                val clientKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-                // Set name constrain to the legal name.
-                val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.toX500Name()))), arrayOf())
-                val clientCACert = X509Utilities.createCertificate(
-                        CertificateType.INTERMEDIATE_CA,
-                        DEV_INTERMEDIATE_CA.certificate,
-                        DEV_INTERMEDIATE_CA.keyPair,
-                        legalName.x500Principal,
-                        clientKeyPair.public,
-                        nameConstraints = nameConstraints)
+        val clientKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        // Set name constrain to the legal name.
+        val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.toX500Name()))), arrayOf())
+        val clientCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, DEV_INTERMEDIATE_CA.certificate, DEV_INTERMEDIATE_CA.keyPair, legalName.x500Principal, clientKeyPair.public, nameConstraints = nameConstraints)
 
-                val tlsKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-                // Using different x500 name in the TLS cert which is not allowed in the name constraints.
-                val clientTLSCert = X509Utilities.createCertificate(
-                        CertificateType.TLS,
-                        clientCACert,
-                        clientKeyPair,
-                        CordaX500Name("MiniCorp", "London", "GB").x500Principal,
-                        tlsKeyPair.public)
+        val tlsKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        // Using different x500 name in the TLS cert which is not allowed in the name constraints.
+        val clientTLSCert = X509Utilities.createCertificate(CertificateType.TLS, clientCACert, clientKeyPair, CordaX500Name("MiniCorp", "London", "GB").x500Principal, tlsKeyPair.public)
 
-                loadNodeKeyStore(createNew = true).update {
-                    setPrivateKey(
-                            X509Utilities.CORDA_CLIENT_CA,
-                            clientKeyPair.private,
-                            listOf(clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
-                }
+        sslConfig.loadNodeKeyStore(createNew = true).update {
+            setPrivateKey(X509Utilities.CORDA_CLIENT_CA, clientKeyPair.private, listOf(clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
+        }
 
-                loadSslKeyStore(createNew = true).update {
-                    setPrivateKey(
-                            X509Utilities.CORDA_CLIENT_TLS,
-                            tlsKeyPair.private,
-                            listOf(clientTLSCert, clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
-                }
-            }
+        p2pSslConfig.loadSslKeyStore(createNew = true).update {
+            setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKeyPair.private, listOf(clientTLSCert, clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
         }
 
         val attacker = clientTo(alice.node.configuration.p2pAddress, sslConfig)

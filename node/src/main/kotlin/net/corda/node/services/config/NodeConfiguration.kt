@@ -31,7 +31,6 @@ private val DEFAULT_FLOW_MONITOR_PERIOD_MILLIS: Duration = Duration.ofMinutes(1)
 private val DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS: Duration = Duration.ofMinutes(1)
 private const val CORDAPPS_DIR_NAME_DEFAULT = "cordapps"
 
-// TODO sollecitom remove NodeSSLConfiguration here
 interface NodeConfiguration {
     val myLegalName: CordaX500Name
     val emailAddress: String
@@ -102,6 +101,9 @@ interface NodeConfiguration {
         val defaultJmxReporterType = JmxReporterType.JOLOKIA
     }
 }
+
+// TODO sollecitom try and remove this
+fun NodeConfiguration.signingAndP2pConfiguration() = signingCertificateStore to p2pSslConfiguration
 
 /**
  * Currently registered JMX Reporters

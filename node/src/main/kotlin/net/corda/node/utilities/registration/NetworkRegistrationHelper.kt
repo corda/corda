@@ -34,7 +34,8 @@ import javax.security.auth.x500.X500Principal
  */
 // TODO sollecitom use only the NodeCertificateStore here
 // TODO: Use content signer instead of keypairs.
-open class NetworkRegistrationHelper(private val config: NodeSSLConfiguration,
+open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
+                                     private val config: NodeSSLConfiguration,
                                      private val myLegalName: CordaX500Name,
                                      private val emailAddress: String,
                                      private val certService: NetworkRegistrationService,
@@ -49,7 +50,7 @@ open class NetworkRegistrationHelper(private val config: NodeSSLConfiguration,
         val logger = contextLogger()
     }
 
-    private val requestIdStore = config.certificatesDirectory / "certificate-request-id.txt"
+    private val requestIdStore = certificatesDirectory / "certificate-request-id.txt"
     // TODO: Use different password for private key.
     private val privateKeyPassword = config.keyStorePassword
     private val rootTrustStore: X509KeyStore
@@ -76,7 +77,7 @@ open class NetworkRegistrationHelper(private val config: NodeSSLConfiguration,
      * @throws CertificateRequestException if the certificate retrieved by doorman is invalid.
      */
     fun buildKeystore() {
-        config.certificatesDirectory.createDirectories()
+        certificatesDirectory.createDirectories()
         val nodeKeyStore = config.loadNodeKeyStore(createNew = true)
         if (keyAlias in nodeKeyStore) {
             println("Certificate already exists, Corda node will now terminate...")
@@ -244,7 +245,9 @@ open class NetworkRegistrationHelper(private val config: NodeSSLConfiguration,
 class NodeRegistrationException(cause: Throwable?) : IOException("Unable to contact node registration service", cause)
 
 class NodeRegistrationHelper(private val config: NodeConfiguration, certService: NetworkRegistrationService, regConfig: NodeRegistrationOption, computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) :
-        NetworkRegistrationHelper(config.signingCertificateStore,
+        NetworkRegistrationHelper(
+                config.certificatesDirectory,
+                config.signingCertificateStore,
                 config.myLegalName,
                 config.emailAddress,
                 certService,

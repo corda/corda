@@ -29,6 +29,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.nio.file.Path
 import java.security.KeyStore
 import java.util.*
 import kotlin.test.assertEquals
@@ -170,15 +171,22 @@ class AMQPBridgeTest {
     }
 
     private fun createArtemis(sourceQueueName: String?): Triple<ArtemisMessagingServer, ArtemisMessagingClient, BridgeManager> {
-        // TODO sollecitom replace this rigorousMock crap with a test stub...
-        val p2pSslConfiguration = rigorousMock<SSLConfiguration>()
-        doReturn("trustpass").whenever(p2pSslConfiguration).trustStorePassword
-        doReturn("cordacadevpass").whenever(p2pSslConfiguration).keyStorePassword
-        val signingCertificateStore = rigorousMock<NodeSSLConfiguration>()
-        doReturn("trustpass").whenever(signingCertificateStore).trustStorePassword
-        doReturn("cordacadevpass").whenever(signingCertificateStore).keyStorePassword
+        val baseDir = temporaryFolder.root.toPath() / "artemis"
+        val certificatesDir = baseDir / "certificates"
+        // TODO sollecitom revisit this
+        val p2pSslConfiguration = object : SSLConfiguration {
+            override val certificatesDirectory = certificatesDir
+            override val keyStorePassword = "cordacadevpass"
+            override val trustStorePassword= "trustpass"
+        }
+        val signingCertificateStore = object : NodeSSLConfiguration {
+            override val baseDirectory = baseDir
+            override val certificatesDirectory = certificatesDir
+            override val keyStorePassword = "cordacadevpass"
+            override val trustStorePassword= "trustpass"
+        }
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
-            doReturn(temporaryFolder.root.toPath() / "artemis").whenever(it).baseDirectory
+            doReturn(baseDir).whenever(it).baseDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName
             doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
@@ -203,12 +211,20 @@ class AMQPBridgeTest {
     }
 
     private fun createAMQPServer(maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPServer {
-        val p2pSslConfiguration = rigorousMock<SSLConfiguration>()
-        doReturn("trustpass").whenever(p2pSslConfiguration).trustStorePassword
-        doReturn("cordacadevpass").whenever(p2pSslConfiguration).keyStorePassword
-        val signingCertificateStore = rigorousMock<NodeSSLConfiguration>()
-        doReturn("trustpass").whenever(signingCertificateStore).trustStorePassword
-        doReturn("cordacadevpass").whenever(signingCertificateStore).keyStorePassword
+        // TODO sollecitom revisit this
+        val baseDir = temporaryFolder.root.toPath() / "server"
+        val certificatesDir = baseDir / "certificates"
+        val p2pSslConfiguration = object : SSLConfiguration {
+            override val certificatesDirectory = certificatesDir
+            override val keyStorePassword = "cordacadevpass"
+            override val trustStorePassword= "trustpass"
+        }
+        val signingCertificateStore = object : NodeSSLConfiguration {
+            override val baseDirectory = baseDir
+            override val certificatesDirectory = certificatesDir
+            override val keyStorePassword = "cordacadevpass"
+            override val trustStorePassword= "trustpass"
+        }
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "server").whenever(it).baseDirectory
             doReturn(BOB_NAME).whenever(it).myLegalName

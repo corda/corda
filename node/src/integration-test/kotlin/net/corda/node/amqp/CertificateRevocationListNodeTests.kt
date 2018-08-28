@@ -12,6 +12,7 @@ import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.config.signingAndP2pConfiguration
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
@@ -345,7 +346,7 @@ class CertificateRevocationListNodeTests {
             doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
-        val nodeCert = clientConfig.signingCertificateStore.recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
+        val nodeCert = clientConfig.signingAndP2pConfiguration().recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
         val clientTruststore = clientConfig.p2pSslConfiguration.loadTrustStore().internal
         val clientKeystore = clientConfig.p2pSslConfiguration.loadSslKeyStore().internal
 
@@ -382,7 +383,7 @@ class CertificateRevocationListNodeTests {
             doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
-        val nodeCert = serverConfig.signingCertificateStore.recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
+        val nodeCert = serverConfig.signingAndP2pConfiguration().recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
         val serverTruststore = serverConfig.p2pSslConfiguration.loadTrustStore().internal
         val serverKeystore = serverConfig.p2pSslConfiguration.loadSslKeyStore().internal
         val amqpConfig = object : AMQPConfiguration {
@@ -398,9 +399,11 @@ class CertificateRevocationListNodeTests {
                 amqpConfig), nodeCert)
     }
 
-    // TODO sollecitom remove this
-    private fun NodeSSLConfiguration.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {
-        val nodeKeyStore = loadNodeKeyStore()
+    private fun Pair<NodeSSLConfiguration, SSLConfiguration>.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {
+
+        val signingCertificateStore = first
+        val p2pSslConfiguration = second
+        val nodeKeyStore = first.loadNodeKeyStore()
         val (nodeCert, nodeKeys) = nodeKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
         val newNodeCert = replaceCrlDistPointCaCertificate(nodeCert, CertificateType.NODE_CA, INTERMEDIATE_CA.keyPair, nodeCaCrlDistPoint)
         val nodeCertChain = listOf(newNodeCert, INTERMEDIATE_CA.certificate, *nodeKeyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA).drop(2).toTypedArray())
@@ -409,7 +412,7 @@ class CertificateRevocationListNodeTests {
         nodeKeyStore.update {
             setPrivateKey(X509Utilities.CORDA_CLIENT_CA, nodeKeys.private, nodeCertChain)
         }
-        val sslKeyStore = loadSslKeyStore()
+        val sslKeyStore = p2pSslConfiguration.loadSslKeyStore()
         val (tlsCert, tlsKeys) = sslKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS)
         val newTlsCert = replaceCrlDistPointCaCertificate(tlsCert, CertificateType.TLS, nodeKeys, tlsCrlDistPoint, X500Name.getInstance(ROOT_CA.certificate.subjectX500Principal.encoded))
         val sslCertChain = listOf(newTlsCert, newNodeCert, INTERMEDIATE_CA.certificate, *sslKeyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_TLS).drop(3).toTypedArray())

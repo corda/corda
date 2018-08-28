@@ -181,21 +181,29 @@ class X509UtilitiesTest {
 
     @Test
     fun `create server certificate in keystore for SSL`() {
-        // TODO sollecitom get rid of NodeSSLConfiguration here
+        // TODO sollecitom refactor
         val sslConfig = object : NodeSSLConfiguration {
             override val baseDirectory = Paths.get("")
             override val certificatesDirectory = tempFolder.root.toPath()
             override val keyStorePassword = "serverstorepass"
             override val trustStorePassword = "trustpass"
         }
+        val p2pSslConfig = object : SSLConfiguration {
+            override val certificatesDirectory = tempFolder.root.toPath()
+            override val keyStorePassword = "serverstorepass"
+            override val trustStorePassword = "trustpass"
+        }
+
+        val signingAndP2pSsl = sslConfig to p2pSslConfig
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        sslConfig.createDevKeyStores(MEGA_CORP.name, rootCa.certificate, intermediateCa)
+        signingAndP2pSsl.createDevKeyStores(MEGA_CORP.name, rootCa.certificate, intermediateCa)
 
+        // TODO sollecitom try loadStore in NodeSSLConfig here
         // Load back server certificate
-        val serverKeyStore = loadKeyStore(sslConfig.nodeKeystore, sslConfig.keyStorePassword)
+        val serverKeyStore = loadKeyStore(signingAndP2pSsl.first.nodeKeystore, signingAndP2pSsl.first.keyStorePassword)
         val (serverCert, serverKeyPair) = serverKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, sslConfig.keyStorePassword)
 
         serverCert.checkValidity()
@@ -203,8 +211,8 @@ class X509UtilitiesTest {
         assertThat(CordaX500Name.build(serverCert.subjectX500Principal)).isEqualTo(MEGA_CORP.name)
 
         // Load back SSL certificate
-        val sslKeyStore = loadKeyStore(sslConfig.sslKeystore, sslConfig.keyStorePassword)
-        val (sslCert) = sslKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, sslConfig.keyStorePassword)
+        val sslKeyStore = loadKeyStore(signingAndP2pSsl.second.sslKeystore, signingAndP2pSsl.second.keyStorePassword)
+        val (sslCert) = sslKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, signingAndP2pSsl.second.keyStorePassword)
 
         sslCert.checkValidity()
         sslCert.verify(serverCert.publicKey)
