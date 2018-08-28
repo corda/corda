@@ -343,7 +343,7 @@ object Builder {
     @JvmStatic
     @JvmOverloads
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
-    fun <R : Comparable<R>> Field.notIn(collection: Collection<R>, exactMatch: Boolean = true) = info().notIn(collection)
+    fun <R : Comparable<R>> Field.notIn(collection: Collection<R>, exactMatch: Boolean = true) = info().notIn(collection, exactMatch)
 
     @JvmStatic
     @JvmOverloads
