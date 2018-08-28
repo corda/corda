@@ -84,6 +84,9 @@ dependencies {
     // Guava: Google utilities library.
     testCompile "com.google.guava:guava:$guava_version"
 
+    // For caches rather than guava
+    compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
+
     // Smoke tests do NOT have any Node code on the classpath!
     smokeTestCompile project(':smoke-test-utils')
     smokeTestCompile "org.assertj:assertj-core:${assertj_version}"

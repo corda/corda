@@ -533,16 +533,16 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         }
 
         // state relevance.
-        if (criteria.isModifiable != Vault.StateModificationStatus.ALL) {
-            val predicateID = Pair(VaultSchemaV1.VaultStates::isModifiable.name, EQUAL)
+        if (criteria.isRelevant != Vault.RelevancyStatus.ALL) {
+            val predicateID = Pair(VaultSchemaV1.VaultStates::isRelevant.name, EQUAL)
             if (commonPredicates.containsKey(predicateID)) {
                 val existingStatus = ((commonPredicates[predicateID] as ComparisonPredicate).rightHandOperand as LiteralExpression).literal
-                if (existingStatus != criteria.isModifiable) {
-                    log.warn("Overriding previous attribute [${VaultSchemaV1.VaultStates::isModifiable.name}] value $existingStatus with ${criteria.status}")
-                    commonPredicates.replace(predicateID, criteriaBuilder.equal(vaultStates.get<Vault.StateModificationStatus>(VaultSchemaV1.VaultStates::isModifiable.name), criteria.isModifiable))
+                if (existingStatus != criteria.isRelevant) {
+                    log.warn("Overriding previous attribute [${VaultSchemaV1.VaultStates::isRelevant.name}] value $existingStatus with ${criteria.status}")
+                    commonPredicates.replace(predicateID, criteriaBuilder.equal(vaultStates.get<Vault.RelevancyStatus>(VaultSchemaV1.VaultStates::isRelevant.name), criteria.isRelevant))
                 }
             } else {
-                commonPredicates[predicateID] = criteriaBuilder.equal(vaultStates.get<Vault.StateModificationStatus>(VaultSchemaV1.VaultStates::isModifiable.name), criteria.isModifiable)
+                commonPredicates[predicateID] = criteriaBuilder.equal(vaultStates.get<Vault.RelevancyStatus>(VaultSchemaV1.VaultStates::isRelevant.name), criteria.isRelevant)
             }
         }
 
