@@ -256,7 +256,6 @@ data class NodeConfigurationImpl(
         }
     }
 
-
     override val certificatesDirectory = baseDirectory / "certificates"
 
     // TODO sollecitom check this
