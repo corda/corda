@@ -7,6 +7,12 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.BinaryComparisonOperator.*
+import net.corda.core.node.services.vault.CollectionOperator.*
+import net.corda.core.node.services.vault.EqualityComparisonOperator.*
+import net.corda.core.node.services.vault.LikenessOperator.*
+import net.corda.core.node.services.vault.NullOperator.IS_NULL
+import net.corda.core.node.services.vault.NullOperator.NOT_NULL
 import net.corda.core.node.services.vault.QueryCriteria.CommonQueryCriteria
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.PersistentStateRef
@@ -56,9 +62,20 @@ abstract class AbstractQueryCriteriaParser<Q : GenericQueryCriteria<Q,P>, in P: 
         return when (columnPredicate) {
             is ColumnPredicate.EqualityComparison -> {
                 val literal = columnPredicate.rightLiteral
-                when (columnPredicate.operator) {
-                    EqualityComparisonOperator.EQUAL -> criteriaBuilder.equal(column, literal)
-                    EqualityComparisonOperator.NOT_EQUAL -> criteriaBuilder.notEqual(column, literal)
+                if (literal is String) {
+                    @Suppress("UNCHECKED_CAST")
+                    column as Path<String?>
+                    when (columnPredicate.operator) {
+                        EQUAL -> criteriaBuilder.equal(column, literal)
+                        EQUAL_IGNORE_CASE -> criteriaBuilder.equal(criteriaBuilder.upper(column), literal.toUpperCase())
+                        NOT_EQUAL -> criteriaBuilder.notEqual(column, literal)
+                        NOT_EQUAL_IGNORE_CASE -> criteriaBuilder.notEqual(criteriaBuilder.upper(column), literal.toUpperCase())
+                    }
+                } else {
+                    when (columnPredicate.operator) {
+                        EQUAL, EQUAL_IGNORE_CASE -> criteriaBuilder.equal(column, literal)
+                        NOT_EQUAL, NOT_EQUAL_IGNORE_CASE -> criteriaBuilder.notEqual(column, literal)
+                    }
                 }
             }
             is ColumnPredicate.BinaryComparison -> {
@@ -66,24 +83,40 @@ abstract class AbstractQueryCriteriaParser<Q : GenericQueryCriteria<Q,P>, in P: 
                 @Suppress("UNCHECKED_CAST")
                 column as Path<Comparable<Any?>?>
                 when (columnPredicate.operator) {
-                    BinaryComparisonOperator.GREATER_THAN -> criteriaBuilder.greaterThan(column, literal)
-                    BinaryComparisonOperator.GREATER_THAN_OR_EQUAL -> criteriaBuilder.greaterThanOrEqualTo(column, literal)
-                    BinaryComparisonOperator.LESS_THAN -> criteriaBuilder.lessThan(column, literal)
-                    BinaryComparisonOperator.LESS_THAN_OR_EQUAL -> criteriaBuilder.lessThanOrEqualTo(column, literal)
+                    GREATER_THAN -> criteriaBuilder.greaterThan(column, literal)
+                    GREATER_THAN_OR_EQUAL -> criteriaBuilder.greaterThanOrEqualTo(column, literal)
+                    LESS_THAN -> criteriaBuilder.lessThan(column, literal)
+                    LESS_THAN_OR_EQUAL -> criteriaBuilder.lessThanOrEqualTo(column, literal)
                 }
             }
             is ColumnPredicate.Likeness -> {
                 @Suppress("UNCHECKED_CAST")
                 column as Path<String?>
                 when (columnPredicate.operator) {
-                    LikenessOperator.LIKE -> criteriaBuilder.like(column, columnPredicate.rightLiteral)
-                    LikenessOperator.NOT_LIKE -> criteriaBuilder.notLike(column, columnPredicate.rightLiteral)
+                    LIKE -> criteriaBuilder.like(column, columnPredicate.rightLiteral)
+                    LIKE_IGNORE_CASE -> criteriaBuilder.like(criteriaBuilder.upper(column), columnPredicate.rightLiteral.toUpperCase())
+                    NOT_LIKE -> criteriaBuilder.notLike(column, columnPredicate.rightLiteral)
+                    NOT_LIKE_IGNORE_CASE -> criteriaBuilder.notLike(criteriaBuilder.upper(column), columnPredicate.rightLiteral.toUpperCase())
                 }
             }
             is ColumnPredicate.CollectionExpression -> {
-                when (columnPredicate.operator) {
-                    CollectionOperator.IN -> column.`in`(columnPredicate.rightLiteral)
-                    CollectionOperator.NOT_IN -> criteriaBuilder.not(column.`in`(columnPredicate.rightLiteral))
+                val literal = columnPredicate.rightLiteral
+                if (literal.any { it is String }) {
+                    @Suppress("UNCHECKED_CAST")
+                    column as Path<String?>
+                    @Suppress("UNCHECKED_CAST")
+                    literal as Collection<String>
+                    when (columnPredicate.operator) {
+                        IN -> column.`in`(literal)
+                        IN_IGNORE_CASE -> criteriaBuilder.upper(column).`in`(literal.map { it.toUpperCase() })
+                        NOT_IN -> criteriaBuilder.not(column.`in`(literal))
+                        NOT_IN_IGNORE_CASE -> criteriaBuilder.not(criteriaBuilder.upper(column).`in`(literal.map { it.toUpperCase() }))
+                    }
+                } else {
+                    when (columnPredicate.operator) {
+                        IN, IN_IGNORE_CASE -> column.`in`(literal)
+                        NOT_IN, NOT_IN_IGNORE_CASE -> criteriaBuilder.not(column.`in`(literal))
+                    }
                 }
             }
             is ColumnPredicate.Between -> {
@@ -95,8 +128,8 @@ abstract class AbstractQueryCriteriaParser<Q : GenericQueryCriteria<Q,P>, in P: 
             }
             is ColumnPredicate.NullExpression -> {
                 when (columnPredicate.operator) {
-                    NullOperator.IS_NULL -> criteriaBuilder.isNull(column)
-                    NullOperator.NOT_NULL -> criteriaBuilder.isNotNull(column)
+                    IS_NULL -> criteriaBuilder.isNull(column)
+                    NOT_NULL -> criteriaBuilder.isNotNull(column)
                 }
             }
             else -> throw VaultQueryException("Not expecting $columnPredicate")
@@ -474,7 +507,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         // state status
         stateTypes = criteria.status
         if (criteria.status != Vault.StateStatus.ALL) {
-            val predicateID = Pair(VaultSchemaV1.VaultStates::stateStatus.name, EqualityComparisonOperator.EQUAL)
+            val predicateID = Pair(VaultSchemaV1.VaultStates::stateStatus.name, EQUAL)
             if (commonPredicates.containsKey(predicateID)) {
                 val existingStatus = ((commonPredicates[predicateID] as ComparisonPredicate).rightHandOperand as LiteralExpression).literal
                 if (existingStatus != criteria.status) {
@@ -488,7 +521,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
 
         // state relevance.
         if (criteria.isModifiable != Vault.StateModificationStatus.ALL) {
-            val predicateID = Pair(VaultSchemaV1.VaultStates::isModifiable.name, EqualityComparisonOperator.EQUAL)
+            val predicateID = Pair(VaultSchemaV1.VaultStates::isModifiable.name, EQUAL)
             if (commonPredicates.containsKey(predicateID)) {
                 val existingStatus = ((commonPredicates[predicateID] as ComparisonPredicate).rightHandOperand as LiteralExpression).literal
                 if (existingStatus != criteria.isModifiable) {
@@ -503,7 +536,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         // contract state types
         val contractStateTypes = deriveContractStateTypes(criteria.contractStateTypes)
         if (contractStateTypes.isNotEmpty()) {
-            val predicateID = Pair(VaultSchemaV1.VaultStates::contractStateClassName.name, CollectionOperator.IN)
+            val predicateID = Pair(VaultSchemaV1.VaultStates::contractStateClassName.name, IN)
             if (commonPredicates.containsKey(predicateID)) {
                 val existingTypes = (commonPredicates[predicateID]!!.expressions[0] as InPredicate<*>).values.map { (it as LiteralExpression).literal }.toSet()
                 if (existingTypes != contractStateTypes) {
