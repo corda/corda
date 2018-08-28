@@ -2,7 +2,7 @@
 
 ## Overview
 
-We want to give CorDapps the ability to specify which versions of the platform they support. This will make it easier for CorDapp developers to support multiple platform versions, and enable CorDapp developers to ["tweak behaviour and [...] opt in to changes that might be breaking (e.g. sandboxing)"](https://cordaledger.slack.com/archives/C3J04VC3V/p1534170356000500). Corda developers gain the ability to introduce changes to the implementation of the API that would otherwise break existing CorDapps.
+We want to give CorDapps the ability to specify which versions of the platform they support. This will make it easier for CorDapp developers to support multiple platform versions, and enable CorDapp developers to tweak behaviour and opt in to changes that might be breaking (e.g. sandboxing). Corda developers gain the ability to introduce changes to the implementation of the API that would otherwise break existing CorDapps.
 
 This document proposes that CorDapps will have metadata associated with them specifying a minimum mlatform version and a target platform Version. The minimum platform version of a CorDapp would indicate that a Corda Node would have to be running at least this version of the Corda platform in order to be able to run this CorDapp. The target platform version of a CorDapp would indicate that it was tested for this version of the Corda Platform. In addition to this, a minimum target version will be introduced on the level of the network. 
 
@@ -11,8 +11,8 @@ This document proposes that CorDapps will have metadata associated with them spe
 > Introduce target version and min platform version as app attributes
 >
 > This is probably as simple as a couple of keys in a MANIFEST.MF file.
-We should document what it means, make sure API implementations can always access the target version of the calling CorDapp (i.e. by examining the flow, doing a stack walk or using Reflection.getCallerClass()) and do a simple test of an API that acts differently depending on the target version of the app.
-We should also implement checking at CorDapp load time that min platform version <= current platform version.
+> We should document what it means, make sure API implementations can always access the target version of the calling CorDapp (i.e. by examining the flow, doing a stack walk or using Reflection.getCallerClass()) and do a simple test of an API that acts differently depending on the target version of the app.
+> We should also implement checking at CorDapp load time that min platform version <= current platform version.
 
 ([from CORDA-470](https://r3-cev.atlassian.net/browse/CORDA-470))
 
@@ -82,4 +82,4 @@ Changes that risk breaking apps must be gated on targetVersion>=X where X is the
 ## Technical Design
 
 The minimum- and target platform version will be written to the Manifest of the CorDapp's JAR, in fields called `Min-Platform-Version` and `Target-Platform-Version`.
-The node's CorDapp loader reads these values from the Manifest when loading the CorDapp and adds them to `net.corda.core.cordapp.Cordapp`, which can be obtained via the `CorDappContext` from the service hub. For cases where the service hub is not available, it is possible to do a stack walk to find the class and thus classloader of the last app on the stack. This way it is also possible to make caller-sensitive APIs.
+The node's CorDapp loader reads these values from the Manifest when loading the CorDapp and adds them to `net.corda.core.cordapp.Cordapp`, which can be obtained via the `CorDappContext` from the service hub. For cases where the service hub is not available, it is possible to do a stack walk to find the class and thus classloader of the last app on the stack. This way it is also possible to make caller-sensitive APIs. As an example, let's say we want to make `FlowStateMachineImpl.checkFlowPermission` more "strict" (whatever that could mean), but doing so would potentially break existing CorDapps. Now, `checkFlowPermission` is called from some flow, which is part of some CorDapp. But inside `checkFlowPermission` we don't have any information available what the version of that CorDapp might be, since the service hub is not available there. This is where a stack-walk can help.
