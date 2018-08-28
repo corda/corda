@@ -3,6 +3,7 @@ package net.corda.node.services.messaging
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.configureDatabase
@@ -20,6 +21,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.stubs.CertificateStoreStubs
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -70,12 +72,21 @@ class ArtemisMessagingTest {
     @Before
     fun setUp() {
         abstract class AbstractNodeConfiguration : NodeConfiguration
-        val p2pSslConfiguration = rigorousMock<SSLConfiguration>()
-        doReturn("trustpass").whenever(p2pSslConfiguration).trustStorePassword
-        doReturn("cordacadevpass").whenever(p2pSslConfiguration).keyStorePassword
+
+        val baseDirectory = temporaryFolder.root.toPath()
+        val certificatesDirectory = baseDirectory / "certificates"
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "cordacadevpass")
+
+        // TODO sollecitom refactor this
+        val p2pSslConfiguration = object : SSLConfiguration {
+            override val certificatesDirectory = certificatesDirectory
+            override val keyStorePassword = "cordacadevpass"
+            override val trustStorePassword = "trustpass"
+        }
         config = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath()).whenever(it).baseDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName
+            doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
             doReturn(NetworkHostAndPort("0.0.0.0", serverPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
