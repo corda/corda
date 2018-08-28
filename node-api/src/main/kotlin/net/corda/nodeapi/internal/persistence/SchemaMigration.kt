@@ -106,12 +106,12 @@ class SchemaMigration(
 
     /** For existing database created before verions 4.0 add Liquibase support - creates DATABASECHANGELOG and DATABASECHANGELOGLOCK tables and mark changesets are executed. */
     private fun migrateOlderDatabaseToUseLiquibase(existingCheckpoints: Boolean): Boolean {
-        //workaround to detect that if Corda finance module is in use then the most recent version is required, which contains Liquibase migration scripts
+        //workaround to detect that if Corda finance module is in use then the most recent version with Liquibase migration scripts was deployed
         if (schemas.any { schema ->
                     (schema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" || schema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1")
                             && schema.migrationResource == null
                 })
-            throw DatabaseMigrationException("Could not migrate database, detected incompatible corda-finance cordapp, ensure to replace the existing corda-finance-XX.jar with the latest one matching Corda version.")
+            throw DatabaseMigrationException("Detected incompatible corda-finance cordapp without database migration scripts, replace the existing corda-finance-VERSION.jar with the latest one.")
 
         val isExistingDBWithoutLiquibase = dataSource.connection.use {
             (it.metaData.getTables(null, null, "NODE%", null).next() &&
