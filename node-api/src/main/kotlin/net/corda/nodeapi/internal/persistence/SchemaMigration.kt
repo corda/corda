@@ -119,30 +119,32 @@ class SchemaMigration(
 
                 dataSource.connection.use { connection ->
                     // Schema migrations pre release 4.0
-                    val preV4Baseline =
-                            listOf("migration/common.changelog-init.xml",
-                                    "migration/node-info.changelog-init.xml",
-                                    "migration/node-info.changelog-v1.xml",
-                                    "migration/node-info.changelog-v2.xml",
-                                    "migration/node-core.changelog-init.xml",
-                                    "migration/node-core.changelog-v3.xml",
-                                    "migration/node-core.changelog-v4.xml",
-                                    "migration/node-core.changelog-v5.xml",
-                                    "migration/node-core.changelog-pkey.xml",
-                                    "migration/vault-schema.changelog-init.xml",
-                                    "migration/vault-schema.changelog-v3.xml",
-                                    "migration/vault-schema.changelog-v4.xml",
-                                    "migration/vault-schema.changelog-pkey.xml",
-                                    "migration/cash.changelog-init.xml",
-                                    "migration/cash.changelog-v1.xml",
-                                    "migration/commercial-paper.changelog-init.xml",
-                                    "migration/commercial-paper.changelog-v1.xml") +
-                                    if (schemas.any { schema -> schema.migrationResource == "node-notary.changelog-master" })
-                                        listOf("migration/node-notary.changelog-init.xml",
-                                                "migration/node-notary.changelog-v1.xml",
-                                                "migration/vault-schema.changelog-pkey.xml")
-                                    else emptyList()
+                    val node = listOf("migration/common.changelog-init.xml",
+                            "migration/node-info.changelog-init.xml",
+                            "migration/node-info.changelog-v1.xml",
+                            "migration/node-info.changelog-v2.xml",
+                            "migration/node-core.changelog-init.xml",
+                            "migration/node-core.changelog-v3.xml",
+                            "migration/node-core.changelog-v4.xml",
+                            "migration/node-core.changelog-v5.xml",
+                            "migration/node-core.changelog-pkey.xml",
+                            "migration/vault-schema.changelog-init.xml",
+                            "migration/vault-schema.changelog-v3.xml",
+                            "migration/vault-schema.changelog-v4.xml",
+                            "migration/vault-schema.changelog-pkey.xml")
+                    val finance = if (schemas.any { schema -> schema.migrationResource == "cash.changelog-master" })
+                        listOf("migration/cash.changelog-init.xml",
+                                "migration/cash.changelog-v1.xml",
+                                "migration/commercial-paper.changelog-init.xml",
+                                "migration/commercial-paper.changelog-v1.xml")
+                    else emptyList()
+                    val notary = if (schemas.any { schema -> schema.migrationResource == "node-notary.changelog-master" })
+                        listOf("migration/node-notary.changelog-init.xml",
+                                "migration/node-notary.changelog-v1.xml",
+                                "migration/vault-schema.changelog-pkey.xml")
+                    else emptyList()
 
+                    val preV4Baseline = node + finance + notary
                     val customResourceAccessor = CustomResourceAccessor(dynamicInclude, preV4Baseline, classLoader)
                     val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
                     liquibase.changeLogSync(Contexts(), LabelExpression())
