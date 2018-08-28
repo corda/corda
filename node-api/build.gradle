@@ -35,7 +35,6 @@ dependencies {
 
     // For db migration
     compile "org.liquibase:liquibase-core:$liquibase_version"
-
     compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     runtime 'com.mattbertolini:liquibase-slf4j:2.0.0'
 
