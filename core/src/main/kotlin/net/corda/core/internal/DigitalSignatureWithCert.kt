@@ -18,7 +18,11 @@ open class DigitalSignatureWithCert(val by: X509Certificate, bytes: ByteArray) :
     fun verify(content: OpaqueBytes): Boolean = verify(content.bytes)
 }
 
-/** A digital signature with attached certificate path. The first certificate in the path corresponds to the data signer key. */
+/**
+ * A digital signature with attached certificate path. The first certificate in the path corresponds to the data signer key.
+ * @param path certificate path associated with this signature
+ * @param bytes signature bytes
+ */
 class DigitalSignatureWithCertPath(val path: List<X509Certificate>, bytes: ByteArray): DigitalSignatureWithCert(path.first(), bytes)
 
 /** Similar to [SignedData] but instead of just attaching the public key, the certificate for the key is attached instead. */
