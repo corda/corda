@@ -21,7 +21,7 @@ public class CordaCaplet extends Capsule {
 
     private Config parseConfigFile(List<String> args) {
         String baseDirOption = getOption(args, "--base-directory");
-        // Ensure consistent behaviour with NodeArgsParser.kt, see CORDA-1598.
+        // Ensure consistent behaviour with NodeCmdLineOptions.kt, see CORDA-1598.
         if (null == baseDirOption || baseDirOption.isEmpty()) {
             baseDirOption = getOption(args, "-base-directory");
         }

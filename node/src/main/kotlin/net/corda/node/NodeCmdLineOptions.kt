@@ -19,12 +19,24 @@ import java.nio.file.Paths
 class NodeCmdLineOptions {
     @Option(
             names = ["-b", "--base-directory"],
-            description = ["The node working directory where all the files are kept"]
+            description = ["The node working directory where all the files are kept."]
     )
     var baseDirectory: Path = Paths.get(".")
 
-    @Mixin
-    var configFile: ConfigFilePathArgsParser = ConfigFilePathArgsParser()
+    @Option(
+            names = ["-f", "--config-file"],
+            description = ["The path to the config file."]
+    )
+    var configFileArgument: Path? = null
+
+    val configFile : Path
+        get() {
+            return if (configFileArgument == null) {
+                baseDirectory / "node.conf"
+            } else {
+                configFileArgument!!
+            }
+        }
 
     @Option(
             names = ["-c", "--log-to-console"],
@@ -118,7 +130,7 @@ class NodeCmdLineOptions {
     fun loadConfig(): Pair<Config, Try<NodeConfiguration>> {
         val rawConfig = ConfigHelper.loadConfig(
                 baseDirectory,
-                configFile.configFile,
+                configFile,
                 configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell) +
                         if (sshdServer) mapOf("sshd" to mapOf("port" to sshdServerPort.toString())) else emptyMap<String, Any>() +
                         if (devMode) mapOf("devMode" to this.devMode) else emptyMap())
