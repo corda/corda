@@ -107,13 +107,6 @@ class JarScanningCordappLoaderTest {
         loader.appClassLoader.loadClass(isolatedFlowName)
     }
 
-
-    @Test
-    fun `cordapp classloader does not load cordapps whose minPlatformVersion is greater than the node's platformVersion`() {
-        // load jar with large minVersion
-        // make sure the platform version is set to a smaller number
-    }
-
     @Test
     fun `cordapp classloader sets target and min version to 1 if not specified`() {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/no-min-or-target-version.jar")!!
@@ -149,8 +142,6 @@ class JarScanningCordappLoaderTest {
 
     @Test
     fun `cordapp classloader does not load apps when their min platform version is greater than the platform version`() {
-        // load jar with min and target version in manifest
-        // make sure classloader extracts correct values
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), 1)
         // exclude the core cordapp
@@ -159,8 +150,6 @@ class JarScanningCordappLoaderTest {
 
     @Test
     fun `cordapp classloader does load apps when their min platform version is less than the platform version`() {
-        // load jar with min and target version in manifest
-        // make sure classloader extracts correct values
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), 56)
         // exclude the core cordapp
@@ -169,8 +158,6 @@ class JarScanningCordappLoaderTest {
 
     @Test
     fun `cordapp classloader does load apps when their min platform version is equal to the platform version`() {
-        // load jar with min and target version in manifest
-        // make sure classloader extracts correct values
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), 2)
         // exclude the core cordapp
