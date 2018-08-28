@@ -36,8 +36,6 @@ dependencies {
     // TODO: Remove this dependency and the code that requires it
     compile "commons-fileupload:commons-fileupload:$fileupload_version"
 
-    compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
-
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
 

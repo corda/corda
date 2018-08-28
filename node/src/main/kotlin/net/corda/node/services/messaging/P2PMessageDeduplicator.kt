@@ -42,6 +42,7 @@ class P2PMessageDeduplicator(private val database: CordaPersistence) {
 
     private fun createProcessedMessages(): AppendOnlyPersistentMap<DeduplicationId, MessageMeta, ProcessedMessage, String> {
         return AppendOnlyPersistentMap(
+                "P2PMessageDeduplicator_processedMessages",
                 toPersistentEntityKey = { it.toString },
                 fromPersistentEntity = { Pair(DeduplicationId(it.id), MessageMeta(it.insertionTime, it.hash, it.seqNo)) },
                 toPersistentEntity = { key: DeduplicationId, value: MessageMeta ->

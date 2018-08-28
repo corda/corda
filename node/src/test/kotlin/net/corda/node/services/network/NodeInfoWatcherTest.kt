@@ -12,11 +12,11 @@ package net.corda.node.services.network
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
-import net.corda.cordform.CordformNode
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.size
 import net.corda.core.node.services.KeyManagementService
+import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.testing.core.ALICE_NAME
@@ -61,7 +61,7 @@ class NodeInfoWatcherTest {
         val identityService = makeTestIdentityService()
         keyManagementService = MockKeyManagementService(identityService)
         nodeInfoWatcher = NodeInfoWatcher(tempFolder.root.toPath(), scheduler)
-        nodeInfoPath = tempFolder.root.toPath() / CordformNode.NODE_INFO_DIRECTORY
+        nodeInfoPath = tempFolder.root.toPath() / NODE_INFO_DIRECTORY
     }
 
     @Test

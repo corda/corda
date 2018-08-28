@@ -87,6 +87,7 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
         private val log = contextLogger()
         fun createMap(): AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef> =
                 AppendOnlyPersistentMap(
+                        "PersistentUniquenessProvider_transactions",
                         toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
                         fromPersistentEntity = {
                             //TODO null check will become obsolete after making DB/JPA columns not nullable

@@ -10,11 +10,11 @@
 
 package net.corda.nodeapi.internal.network
 
-import net.corda.cordform.CordformNode
 import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.write
 import net.corda.nodeapi.eventually
+import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
@@ -44,12 +44,12 @@ class NodeInfoFilesCopierTest {
     private val rootPath get() = folder.root.toPath()
     private val scheduler = TestScheduler()
 
-    private fun nodeDir(nodeBaseDir : String) = rootPath.resolve(nodeBaseDir).resolve(ORGANIZATION.toLowerCase())
+    private fun nodeDir(nodeBaseDir: String) = rootPath.resolve(nodeBaseDir).resolve(ORGANIZATION.toLowerCase())
 
     private val node1RootPath by lazy { nodeDir(NODE_1_PATH) }
     private val node2RootPath by lazy { nodeDir(NODE_2_PATH) }
-    private val node1AdditionalNodeInfoPath by lazy { node1RootPath.resolve(CordformNode.NODE_INFO_DIRECTORY) }
-    private val node2AdditionalNodeInfoPath by lazy { node2RootPath.resolve(CordformNode.NODE_INFO_DIRECTORY) }
+    private val node1AdditionalNodeInfoPath by lazy { node1RootPath.resolve(NODE_INFO_DIRECTORY) }
+    private val node2AdditionalNodeInfoPath by lazy { node2RootPath.resolve(NODE_INFO_DIRECTORY) }
 
     private lateinit var nodeInfoFilesCopier: NodeInfoFilesCopier
 
