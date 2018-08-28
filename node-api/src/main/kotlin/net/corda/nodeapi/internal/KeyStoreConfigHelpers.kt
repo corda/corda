@@ -35,7 +35,6 @@ fun Pair<CertificateStoreSupplier, SSLConfiguration>.createDevKeyStores(legalNam
                 X509Utilities.CORDA_CLIENT_CA,
                 nodeCaKeyPair.private,
                 listOf(nodeCaCert, intermediateCa.certificate, rootCert))
-        save()
     }
 
     val sslKeyStore = second.loadSslKeyStore(createNew = true)

@@ -22,6 +22,7 @@ import net.corda.testing.core.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.NodeHandleInternal
+import net.corda.testing.driver.stubs.CertificateStoreStubs
 import net.corda.testing.node.internal.*
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.apache.logging.log4j.core.net.ssl.SslConfiguration
@@ -250,17 +251,13 @@ private fun DriverDSLImpl.startNode(providedName: CordaX500Name, devMode: Boolea
     if (!devMode) {
         val nodeDir = baseDirectory(providedName)
         // TODO sollecitom refactor
-        val nodeSslConfig = object : NodeSSLConfiguration {
-            override val baseDirectory = nodeDir
-            override val keyStorePassword = "cordacadevpass"
-            override val trustStorePassword = "trustpass"
-        }
+        val signingCertStore = CertificateStoreStubs.Signing.withBaseDirectory(nodeDir, "cordacadevpass")
         val p2pSslConfig = object : SSLConfiguration {
             override val certificatesDirectory = nodeDir / "certificates"
             override val keyStorePassword = "cordacadevpass"
             override val trustStorePassword = "trustpass"
         }
-        (nodeSslConfig to p2pSslConfig).configureDevKeyAndTrustStores(providedName)
+        (signingCertStore to p2pSslConfig).configureDevKeyAndTrustStores(providedName)
         customOverrides = mapOf("devMode" to "false")
     }
     return startNode(providedName = providedName, customOverrides = customOverrides)

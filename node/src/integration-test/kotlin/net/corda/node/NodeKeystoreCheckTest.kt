@@ -11,6 +11,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.stubs.CertificateStoreStubs
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.nio.file.Path
@@ -33,18 +34,13 @@ class NodeKeystoreCheckTest {
             // Create keystores
             val keystorePassword = "password"
             // TODO sollecitom refactor
-            val config = object : NodeSSLConfiguration {
-                override val baseDirectory = Paths.get(".")
-                override val keyStorePassword: String = keystorePassword
-                override val trustStorePassword: String = keystorePassword
-                override val certificatesDirectory: Path = baseDirectory(ALICE_NAME) / "certificates"
-            }
+            val signingCertStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDirectory(ALICE_NAME), keystorePassword)
             val p2pSslConfig = object : SSLConfiguration {
                 override val keyStorePassword: String = keystorePassword
                 override val trustStorePassword: String = keystorePassword
                 override val certificatesDirectory: Path = baseDirectory(ALICE_NAME) / "certificates"
             }
-            val signingAndP2pSsl = config to p2pSslConfig
+            val signingAndP2pSsl = signingCertStore to p2pSslConfig
             signingAndP2pSsl.configureDevKeyAndTrustStores(ALICE_NAME)
 
             // This should pass with correct keystore.
@@ -57,7 +53,7 @@ class NodeKeystoreCheckTest {
             node.stop()
 
             // Fiddle with node keystore.
-            signingAndP2pSsl.first.loadNodeKeyStore().update {
+            signingCertStore.get().update {
                 // Self signed root
                 val badRootKeyPair = Crypto.generateKeyPair()
                 val badRoot = X509Utilities.createSelfSignedCACertificate(X500Principal("O=Bad Root,L=Lodnon,C=GB"), badRootKeyPair)

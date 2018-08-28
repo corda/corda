@@ -23,6 +23,7 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.driver.stubs.CertificateStoreStubs
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions.*
@@ -34,6 +35,7 @@ import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.nio.file.Path
 import java.security.PublicKey
 import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
@@ -53,17 +55,21 @@ class NetworkRegistrationHelperTest {
         val baseDirectory = fs.getPath("/baseDir").createDirectories()
 
         abstract class AbstractNodeConfiguration : NodeConfiguration
-        val p2pSslConfiguration = rigorousMock<SSLConfiguration>()
-        doReturn("trustpass").whenever(p2pSslConfiguration).trustStorePassword
-        doReturn("cordacadevpass").whenever(p2pSslConfiguration).keyStorePassword
+        val p2pSslConfiguration = object : SSLConfiguration {
+            override val certificatesDirectory = baseDirectory / "certificates"
+            override val keyStorePassword = "cordacadevpass"
+            override val trustStorePassword = "trustpass"
+        }
         config = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+            doReturn(CertificateStoreStubs.Signing.withBaseDirectory(baseDirectory, "cordacadevpass")).whenever(it).signingCertificateStore
             doReturn(nodeLegalName).whenever(it).myLegalName
             doReturn("").whenever(it).emailAddress
             doReturn(null).whenever(it).tlsCertCrlDistPoint
             doReturn(null).whenever(it).tlsCertCrlIssuer
             doReturn(true).whenever(it).crlCheckSoftFail
+            doReturn(baseDirectory / "certificates").whenever(it).certificatesDirectory
         }
     }
 
@@ -74,7 +80,7 @@ class NetworkRegistrationHelperTest {
 
     @Test
     fun `successful registration`() {
-        assertThat(config.signingCertificateStore.nodeKeystore).doesNotExist()
+        assertThat(config.signingCertificateStore.getOptional()).isNull()
         assertThat(config.p2pSslConfiguration.sslKeystore).doesNotExist()
         assertThat(config.p2pSslConfiguration.trustStoreFile).doesNotExist()
 
@@ -82,7 +88,7 @@ class NetworkRegistrationHelperTest {
 
         createRegistrationHelper(rootAndIntermediateCA = rootAndIntermediateCA).buildKeystore()
 
-        val nodeKeystore = config.signingCertificateStore.loadNodeKeyStore()
+        val nodeKeystore = config.signingCertificateStore.get()
         val sslKeystore = config.p2pSslConfiguration.loadSslKeyStore()
         val trustStore = config.p2pSslConfiguration.loadTrustStore()
 
@@ -155,7 +161,7 @@ class NetworkRegistrationHelperTest {
 
     @Test
     fun `create service identity cert`() {
-        assertThat(config.signingCertificateStore.nodeKeystore).doesNotExist()
+        assertThat(config.signingCertificateStore.getOptional()).isNull()
         assertThat(config.p2pSslConfiguration.sslKeystore).doesNotExist()
         assertThat(config.p2pSslConfiguration.trustStoreFile).doesNotExist()
 
@@ -163,7 +169,7 @@ class NetworkRegistrationHelperTest {
 
         createRegistrationHelper(CertRole.SERVICE_IDENTITY, rootAndIntermediateCA).buildKeystore()
 
-        val nodeKeystore = config.signingCertificateStore.loadNodeKeyStore()
+        val nodeKeystore = config.signingCertificateStore.get()
 
         assertThat(config.p2pSslConfiguration.sslKeystore).doesNotExist()
         assertThat(config.p2pSslConfiguration.trustStoreFile).doesNotExist()

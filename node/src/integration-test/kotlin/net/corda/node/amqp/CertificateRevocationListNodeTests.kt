@@ -14,6 +14,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.signingAndP2pConfiguration
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
+import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
@@ -399,16 +400,17 @@ class CertificateRevocationListNodeTests {
                 amqpConfig), nodeCert)
     }
 
-    private fun Pair<NodeSSLConfiguration, SSLConfiguration>.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {
+    private fun Pair<CertificateStoreSupplier, SSLConfiguration>.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {
 
         val signingCertificateStore = first
         val p2pSslConfiguration = second
-        val nodeKeyStore = first.loadNodeKeyStore()
+        val nodeKeyStore = signingCertificateStore.get()
         val (nodeCert, nodeKeys) = nodeKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
         val newNodeCert = replaceCrlDistPointCaCertificate(nodeCert, CertificateType.NODE_CA, INTERMEDIATE_CA.keyPair, nodeCaCrlDistPoint)
         val nodeCertChain = listOf(newNodeCert, INTERMEDIATE_CA.certificate, *nodeKeyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA).drop(2).toTypedArray())
-        nodeKeyStore.internal.deleteEntry(X509Utilities.CORDA_CLIENT_CA)
-        nodeKeyStore.save()
+        nodeKeyStore.update {
+            internal.deleteEntry(X509Utilities.CORDA_CLIENT_CA)
+        }
         nodeKeyStore.update {
             setPrivateKey(X509Utilities.CORDA_CLIENT_CA, nodeKeys.private, nodeCertChain)
         }

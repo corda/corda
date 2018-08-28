@@ -29,7 +29,10 @@ interface CertificateStore {
 
     fun writeTo(path: Path, vararg options: OpenOption) = path.outputStream(*options)
 
-    fun update(action: X509KeyStore.() -> Unit) = action.invoke(value)
+    fun update(action: X509KeyStore.() -> Unit) {
+        action.invoke(value)
+        value.save()
+    }
 
     fun getCertificate(alias: String): X509Certificate = value.getCertificate(alias)
 
