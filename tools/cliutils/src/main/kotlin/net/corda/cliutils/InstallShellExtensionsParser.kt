@@ -114,7 +114,6 @@ private class ShellExtensionsGenerator(val alias: String, val className: String)
     }
 }
 
-@CommandLine.Command(description = [""])
 class InstallShellExtensionsParser {
     @CommandLine.Option(names = ["--install-shell-extensions"], description = ["Install alias and autocompletion for bash and zsh"])
     var installShellExtensions: Boolean = false

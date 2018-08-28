@@ -2,129 +2,116 @@ package net.corda.node
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import joptsimple.OptionSet
-import joptsimple.util.EnumConverter
-import joptsimple.util.PathConverter
+import net.corda.cliutils.ConfigFilePathArgsParser
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.utilities.Try
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
-import net.corda.node.utilities.AbstractArgsParser
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
-import org.slf4j.event.Level
+import picocli.CommandLine.Mixin
+import picocli.CommandLine.Option
 import java.nio.file.Path
 import java.nio.file.Paths
 
-// NOTE: Do not use any logger in this class as args parsing is done before the logger is setup.
-class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
-    // The intent of allowing a command line configurable directory and config path is to allow deployment flexibility.
-    // Other general configuration should live inside the config file unless we regularly need temporary overrides on the command line
-    private val baseDirectoryArg = optionParser
-            .accepts("base-directory", "The node working directory where all the files are kept")
-            .withRequiredArg()
-            .withValuesConvertedBy(PathConverter())
-            .defaultsTo(Paths.get("."))
-    private val configFileArg = optionParser
-            .accepts("config-file", "The path to the config file")
-            .withRequiredArg()
-            .defaultsTo("node.conf")
-    private val loggerLevel = optionParser
-            .accepts("logging-level", "Enable logging at this level and higher")
-            .withRequiredArg()
-            .withValuesConvertedBy(object : EnumConverter<Level>(Level::class.java) {})
-            .defaultsTo(Level.INFO)
-    private val logToConsoleArg = optionParser.accepts("log-to-console", "If set, prints logging to the console as well as to a file.")
-    private val sshdServerArg = optionParser.accepts("sshd", "Enables SSHD server for node administration.")
-    private val noLocalShellArg = optionParser.accepts("no-local-shell", "Do not start the embedded shell locally.")
-    private val isRegistrationArg = optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
-    private val networkRootTrustStorePathArg = optionParser.accepts("network-root-truststore", "Network root trust store obtained from network operator.")
-            .withRequiredArg()
-            .withValuesConvertedBy(PathConverter())
-            .defaultsTo((Paths.get("certificates") / "network-root-truststore.jks"))
-    private val networkRootTrustStorePasswordArg = optionParser.accepts("network-root-truststore-password", "Network root trust store password obtained from network operator.")
-            .withRequiredArg()
-    private val unknownConfigKeysPolicy = optionParser.accepts("on-unknown-config-keys", "How to behave on unknown node configuration.")
-            .withRequiredArg()
-            .withValuesConvertedBy(object : EnumConverter<UnknownConfigKeysPolicy>(UnknownConfigKeysPolicy::class.java) {})
-            .defaultsTo(UnknownConfigKeysPolicy.FAIL)
-    private val devModeArg = optionParser.accepts("dev-mode", "Run the node in developer mode. Unsafe for production.")
+class NodeCmdLineOptions {
+    @Option(
+            names = ["-b", "--base-directory"],
+            description = ["The node working directory where all the files are kept"]
+    )
+    var baseDirectory: Path = Paths.get(".")
 
-    private val isVersionArg = optionParser.accepts("version", "Print the version and exit")
-    private val justGenerateNodeInfoArg = optionParser.accepts("just-generate-node-info",
-            "Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then quit")
-    private val justGenerateRpcSslCertsArg = optionParser.accepts("just-generate-rpc-ssl-settings",
-            "Generate the ssl keystore and truststore for a secure RPC connection.")
-    private val bootstrapRaftClusterArg = optionParser.accepts("bootstrap-raft-cluster", "Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer addresses), acting as a seed for other nodes to join the cluster.")
-    private val clearNetworkMapCache = optionParser.accepts("clear-network-map-cache", "Clears local copy of network map, on node startup it will be restored from server or file system.")
+    @Mixin
+    var configFile: ConfigFilePathArgsParser = ConfigFilePathArgsParser()
 
-    override fun doParse(optionSet: OptionSet): CmdLineOptions {
-        require(optionSet.nonOptionArguments().isEmpty()) { "Unrecognized argument(s): ${optionSet.nonOptionArguments().joinToString(separator = ", ")}"}
+    @Option(
+            names = ["-c", "--log-to-console"],
+            description = ["If set, prints logging to the console as well as to a file."]
+    )
+    var logToConsole: Boolean = false
 
-        val baseDirectory = optionSet.valueOf(baseDirectoryArg).normalize().toAbsolutePath()
-        val configFilePath = Paths.get(optionSet.valueOf(configFileArg))
-        val configFile = if (configFilePath.isAbsolute) configFilePath else baseDirectory / configFilePath.toString()
-        val loggingLevel = optionSet.valueOf(loggerLevel)
-        val logToConsole = optionSet.has(logToConsoleArg)
-        val isRegistration = optionSet.has(isRegistrationArg)
-        val isVersion = optionSet.has(isVersionArg)
-        val noLocalShell = optionSet.has(noLocalShellArg)
-        val sshdServer = optionSet.has(sshdServerArg)
-        val justGenerateNodeInfo = optionSet.has(justGenerateNodeInfoArg)
-        val justGenerateRpcSslCerts = optionSet.has(justGenerateRpcSslCertsArg)
-        val bootstrapRaftCluster = optionSet.has(bootstrapRaftClusterArg)
-        val networkRootTrustStorePath = optionSet.valueOf(networkRootTrustStorePathArg)
-        val networkRootTrustStorePassword = optionSet.valueOf(networkRootTrustStorePasswordArg)
-        val unknownConfigKeysPolicy = optionSet.valueOf(unknownConfigKeysPolicy)
-        val devMode = optionSet.has(devModeArg)
-        val clearNetworkMapCache = optionSet.has(clearNetworkMapCache)
+    @Option(
+            names = ["-s", "--sshd"],
+            description = ["If set, enables SSHD server for node administration."]
+    )
+    var sshdServer: Boolean = false
 
-        val registrationConfig = if (isRegistration) {
+    @Option(
+            names = ["-n", "--no-local-shell"],
+            description = ["Do not start the embedded shell locally."]
+    )
+    var noLocalShell: Boolean = false
+
+    @Option(
+            names = ["--initial-registration"],
+            description = ["Start initial node registration with Corda network to obtain certificate from the permissioning server."]
+    )
+    var isRegistration: Boolean = false
+
+
+    @Option(
+            names = ["-t", "--network-root-truststore"],
+            description = ["Network root trust store obtained from network operator."]
+    )
+    var networkRootTrustStorePath = Paths.get("certificates") / "network-root-truststore.jks"
+
+    @Option(
+            names = ["-p", "--network-root-truststore-password"],
+            description = ["Network root trust store password obtained from network operator."]
+    )
+    var networkRootTrustStorePassword: String? = null
+
+    @Option(
+            names = ["--on-unknown-config-keys"],
+            description = ["Network root trust store password obtained from network operator. \${COMPLETION-CANDIDATES}"]
+    )
+    var unknownConfigKeysPolicy: UnknownConfigKeysPolicy = UnknownConfigKeysPolicy.FAIL
+
+    @Option(
+            names = ["-d", "--dev-mode"],
+            description = ["Run the node in developer mode. Unsafe for production."]
+    )
+    var devMode: Boolean = true
+
+    @Option(
+            names = ["--just-generate-node-info"],
+            description = ["Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then quit"]
+    )
+    var justGenerateNodeInfo: Boolean = false
+
+    @Option(
+            names = ["--just-generate-rpc-ssl-settings"],
+            description = ["Generate the ssl keystore and truststore for a secure RPC connection."]
+    )
+    var justGenerateRpcSslCerts: Boolean = false
+
+    @Option(
+            names = ["--bootstrap-raft-cluster"],
+            description = ["Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer addresses), acting as a seed for other nodes to join the cluster."]
+    )
+    var bootstrapRaftCluster: Boolean = false
+
+    @Option(
+            names = ["--clear-network-map-cache"],
+            description = ["Clears local copy of network map, on node startup it will be restored from server or file system."]
+    )
+    var clearNetworkMapCache: Boolean = false
+
+    val nodeRegistrationOption : NodeRegistrationOption? by lazy {
+        if (isRegistration) {
             requireNotNull(networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
             require(networkRootTrustStorePath.exists()) { "Network root trust store path: '$networkRootTrustStorePath' doesn't exist" }
-            NodeRegistrationOption(networkRootTrustStorePath, networkRootTrustStorePassword)
+            NodeRegistrationOption(networkRootTrustStorePath, networkRootTrustStorePassword!!)
         } else {
             null
         }
-
-        return CmdLineOptions(baseDirectory,
-                configFile,
-                loggingLevel,
-                logToConsole,
-                registrationConfig,
-                isVersion,
-                noLocalShell,
-                sshdServer,
-                justGenerateNodeInfo,
-                justGenerateRpcSslCerts,
-                bootstrapRaftCluster,
-                unknownConfigKeysPolicy,
-                devMode,
-                clearNetworkMapCache)
     }
-}
 
-data class NodeRegistrationOption(val networkRootTrustStorePath: Path, val networkRootTrustStorePassword: String)
-
-data class CmdLineOptions(val baseDirectory: Path,
-                          val configFile: Path,
-                          val loggingLevel: Level,
-                          val logToConsole: Boolean,
-                          val nodeRegistrationOption: NodeRegistrationOption?,
-                          val isVersion: Boolean,
-                          val noLocalShell: Boolean,
-                          val sshdServer: Boolean,
-                          val justGenerateNodeInfo: Boolean,
-                          val justGenerateRpcSslCerts: Boolean,
-                          val bootstrapRaftCluster: Boolean,
-                          val unknownConfigKeysPolicy: UnknownConfigKeysPolicy,
-                          val devMode: Boolean,
-                          val clearNetworkMapCache: Boolean) {
     fun loadConfig(): Pair<Config, Try<NodeConfiguration>> {
         val rawConfig = ConfigHelper.loadConfig(
                 baseDirectory,
-                configFile,
+                configFile.configFile,
                 configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell) +
                         if (devMode) mapOf("devMode" to this.devMode) else emptyMap<String, Any>())
         )
@@ -140,3 +127,5 @@ data class CmdLineOptions(val baseDirectory: Path,
         }
     }
 }
+
+data class NodeRegistrationOption(val networkRootTrustStorePath: Path, val networkRootTrustStorePassword: String)

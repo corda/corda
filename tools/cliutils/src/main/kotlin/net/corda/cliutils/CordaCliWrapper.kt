@@ -4,10 +4,12 @@ import net.corda.core.internal.rootMessage
 import net.corda.core.utilities.contextLogger
 
 import org.apache.logging.log4j.Level
+import org.fusesource.jansi.AnsiConsole
 import picocli.CommandLine
 import picocli.CommandLine.*
 import kotlin.system.exitProcess
 import java.util.*
+import java.util.concurrent.Callable
 
 /**
  * When we have errors in command line flags that are not handled by picocli (e.g. non existing files), an error is thrown
@@ -40,13 +42,24 @@ interface Validated {
 }
 
 fun CordaCliWrapper.start(vararg args: String) {
+    // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
+    AnsiConsole.systemInstall()
+
     val cmd = CommandLine(this)
     cmd.commandSpec.name(alias)
     cmd.commandSpec.usageMessage().description(description)
     try {
-        cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(Help.Ansi.AUTO),
-                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(Help.Ansi.AUTO),
+        val results = cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(Help.Ansi.ON),
+                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(Help.Ansi.ON),
                 *args)
+        // If an error code has been returned, use this and exit
+        results?.firstOrNull()?.let {
+            if (it is Int) {
+                exitProcess(it)
+            }
+        }
+        // If no results returned, picocli ran something without invoking the main program, e.g. --help or --version, so exit successfully
+        exitProcess(0)
     } catch (e: ExecutionException) {
         val throwable = e.cause ?: e
         if (this.verbose) {
@@ -72,7 +85,7 @@ fun CordaCliWrapper.start(vararg args: String) {
         parameterListHeading = "%n@|bold,underline Parameters|@:%n%n",
         optionListHeading = "%n@|bold,underline Options|@:%n%n",
         commandListHeading = "%n@|bold,underline Commands|@:%n%n")
-abstract class CordaCliWrapper(val alias: String, val description: String) : Runnable {
+abstract class CordaCliWrapper(val alias: String, val description: String) : Callable<Int> {
     @Option(names = ["-v", "--verbose"], description = ["If set, prints logging to the console as well as to a file."])
     var verbose: Boolean = false
 
@@ -96,13 +109,14 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Run
         }
     }
 
-    // Override this function with the actual method to be run once all the arguments have been parsed
-    abstract fun runProgram()
+    // Override this function with the actual method to be run once all the arguments have been parsed. The return number
+    // is the exit code to be returned
+    abstract fun runProgram(): Int
 
-    final override fun run() {
+    override fun call(): Int {
         installShellExtensionsParser.installOrUpdateShellExtensions(alias, this.javaClass.name)
         initLogging()
-        runProgram()
+        return runProgram()
     }
 }
 
