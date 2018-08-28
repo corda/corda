@@ -1,11 +1,9 @@
 package net.corda.nodeapi
 
-import net.corda.core.internal.div
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.config.CertificateStoreSupplier
+import net.corda.nodeapi.config.CertificateStore
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.requireOnDefaultFileSystem
 import org.apache.activemq.artemis.api.core.TransportConfiguration
@@ -71,6 +69,7 @@ class ArtemisTcpTransport {
                 TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME to trustStorePassword,
                 TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true)
 
+        // TODO sollecitom use or remove
         private fun CertificateStore.toKeyStoreTransportOptions(path: Path) = mapOf(
                 TransportConstants.SSL_ENABLED_PROP_NAME to true,
                 TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to "JKS",
@@ -79,6 +78,7 @@ class ArtemisTcpTransport {
                 // TODO sollecitom should SSL_ENABLED_PROP_NAME only be set of truststore?
                 TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true)
 
+        // TODO sollecitom use or remove
         private fun CertificateStore.toTrustStoreTransportOptions(path: Path) = mapOf(
                 // TODO sollecitom should SSL_ENABLED_PROP_NAME only be set of keystore?
                 TransportConstants.SSL_ENABLED_PROP_NAME to true,

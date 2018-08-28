@@ -5,8 +5,8 @@ import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.toX500Name
-import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.config.CertificateStoreSupplier
+import net.corda.nodeapi.config.CertificateStore
+import net.corda.nodeapi.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import org.bouncycastle.asn1.x509.GeneralName
@@ -24,8 +24,8 @@ import javax.security.auth.x500.X500Principal
  */
 // TODO sollecitom refactor
 fun Pair<CertificateStoreSupplier, SSLConfiguration>.createDevKeyStores(legalName: CordaX500Name,
-                                        rootCert: X509Certificate = DEV_ROOT_CA.certificate,
-                                        intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA): Pair<CertificateStore, X509KeyStore> {
+                                                                                                 rootCert: X509Certificate = DEV_ROOT_CA.certificate,
+                                                                                                 intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA): Pair<CertificateStore, X509KeyStore> {
     val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediateCa, legalName)
 
     val nodeKeyStore = first.get(createNew = true)

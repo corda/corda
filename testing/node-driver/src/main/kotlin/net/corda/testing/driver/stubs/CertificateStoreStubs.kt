@@ -1,7 +1,7 @@
 package net.corda.testing.driver.stubs
 
 import net.corda.core.internal.div
-import net.corda.nodeapi.internal.config.CertificateStoreSupplier
+import net.corda.nodeapi.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreLoader
 import java.nio.file.Path
 

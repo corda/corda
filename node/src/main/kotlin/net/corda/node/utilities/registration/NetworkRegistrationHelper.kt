@@ -6,8 +6,8 @@ import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.config.CertificateStoreSupplier
+import net.corda.nodeapi.config.CertificateStore
+import net.corda.nodeapi.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
