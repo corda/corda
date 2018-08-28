@@ -8,7 +8,6 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreLoader
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore

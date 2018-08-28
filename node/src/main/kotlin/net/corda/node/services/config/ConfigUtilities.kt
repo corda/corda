@@ -8,9 +8,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.*
-import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.CertificateStoreSupplier
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.toProperties
 import net.corda.nodeapi.internal.crypto.X509KeyStore

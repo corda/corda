@@ -97,20 +97,3 @@ interface SSLConfiguration {
         return X509KeyStore.fromFile(sslKeystore, keyStorePassword, createNew)
     }
 }
-
-// TODO sollecitom - refactor this to have no defaults
-interface NodeSSLConfiguration : SSLConfiguration {
-
-    // TODO sollecitom get rid of this (nodeInfos directory should be explicit)
-    // TODO sollecitom this should at best be part of the config impl, not the API
-    // TODO sollecitom move this to NodeConfiguration initially
-    val baseDirectory: Path
-
-    override val certificatesDirectory: Path get() = baseDirectory / "certificates"
-
-    val nodeKeystore: Path get() = certificatesDirectory / "nodekeystore.jks"
-
-    fun loadNodeKeyStore(createNew: Boolean = false): X509KeyStore {
-        return X509KeyStore.fromFile(nodeKeystore, keyStorePassword, createNew)
-    }
-}

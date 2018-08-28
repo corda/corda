@@ -12,7 +12,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
@@ -25,7 +24,6 @@ import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.stubs.CertificateStoreStubs
 import net.corda.testing.node.internal.*
 import net.corda.testing.node.internal.network.NetworkMapServer
-import org.apache.logging.log4j.core.net.ssl.SslConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After

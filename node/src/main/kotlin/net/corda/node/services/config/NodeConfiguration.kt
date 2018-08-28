@@ -13,7 +13,6 @@ import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreLoader
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.User
@@ -378,7 +377,16 @@ data class NodeConfigurationImpl(
     }
 }
 
+private interface NodeSSLConfiguration : SSLConfiguration {
 
+    // TODO sollecitom get rid of this (nodeInfos directory should be explicit)
+    // TODO sollecitom move this to NodeConfiguration initially
+    val baseDirectory: Path
+
+    override val certificatesDirectory: Path get() = baseDirectory / "certificates"
+
+    val nodeKeystore: Path get() = certificatesDirectory / "nodekeystore.jks"
+}
 
 data class NodeRpcSettings(
         val address: NetworkHostAndPort?,

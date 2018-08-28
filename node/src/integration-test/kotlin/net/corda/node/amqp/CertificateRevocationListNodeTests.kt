@@ -15,7 +15,6 @@ import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.signingAndP2pConfiguration
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.config.CertificateStoreSupplier
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
@@ -27,6 +26,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.stubs.CertificateStoreStubs
 import net.corda.testing.internal.DEV_INTERMEDIATE_CA
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.rigorousMock
@@ -333,14 +333,14 @@ class CertificateRevocationListNodeTests {
                              nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
                              tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
                              maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPClient, X509Certificate> {
+        // TODO sollecitom refactor
+        val baseDirectory = temporaryFolder.root.toPath() / "client"
         val p2pSslConfiguration = rigorousMock<SSLConfiguration>()
         doReturn("trustpass").whenever(p2pSslConfiguration).trustStorePassword
         doReturn("cordacadevpass").whenever(p2pSslConfiguration).keyStorePassword
-        val signingCertificateStore = rigorousMock<NodeSSLConfiguration>()
-        doReturn("trustpass").whenever(signingCertificateStore).trustStorePassword
-        doReturn("cordacadevpass").whenever(signingCertificateStore).keyStorePassword
+        val signingCertificateStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDirectory, "cordacadevpass")
         val clientConfig = rigorousMock<AbstractNodeConfiguration>().also {
-            doReturn(temporaryFolder.root.toPath() / "client").whenever(it).baseDirectory
+            doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(BOB_NAME).whenever(it).myLegalName
             doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
@@ -369,15 +369,14 @@ class CertificateRevocationListNodeTests {
                              nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
                              tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
                              maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPServer, X509Certificate> {
-
+        // TODO sollecitom refactor
+        val baseDirectory = temporaryFolder.root.toPath() / "server"
         val p2pSslConfiguration = rigorousMock<SSLConfiguration>()
         doReturn("trustpass").whenever(p2pSslConfiguration).trustStorePassword
         doReturn("cordacadevpass").whenever(p2pSslConfiguration).keyStorePassword
-        val signingCertificateStore = rigorousMock<NodeSSLConfiguration>()
-        doReturn("trustpass").whenever(signingCertificateStore).trustStorePassword
-        doReturn("cordacadevpass").whenever(signingCertificateStore).keyStorePassword
+        val signingCertificateStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDirectory, "cordacadevpass")
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
-            doReturn(temporaryFolder.root.toPath() / "server").whenever(it).baseDirectory
+            doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(name).whenever(it).myLegalName
             doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore

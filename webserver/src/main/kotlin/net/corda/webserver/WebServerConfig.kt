@@ -3,7 +3,6 @@ package net.corda.webserver
 import com.typesafe.config.Config
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.getValue

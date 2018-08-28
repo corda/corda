@@ -7,7 +7,6 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.toX500Name
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.CertificateStoreSupplier
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import org.bouncycastle.asn1.x509.GeneralName
