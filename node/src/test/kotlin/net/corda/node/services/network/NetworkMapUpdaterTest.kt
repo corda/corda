@@ -13,6 +13,7 @@ import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
+import net.corda.node.VersionInfo
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.NodeInfoAndSigned
@@ -63,7 +64,8 @@ class NetworkMapUpdaterTest {
     fun setUp() {
         server = NetworkMapServer(cacheExpiryMs.millis)
         val address = server.start()
-        networkMapClient = NetworkMapClient(URL("http://$address")).apply { start(DEV_ROOT_CA.certificate) }
+        networkMapClient = NetworkMapClient(URL("http://$address"),
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
     }
 
     @After
