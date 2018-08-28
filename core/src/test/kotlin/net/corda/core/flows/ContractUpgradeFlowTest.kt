@@ -156,6 +156,7 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
 
         class Move : TypeOnlyCommandData()
 
+        @BelongsToContract(CashV2::class)
         data class State(override val amount: Amount<Issued<Currency>>, val owners: List<AbstractParty>) : FungibleAsset<Currency> {
             override val owner: AbstractParty = owners.first()
             override val exitKeys = (owners + amount.token.issuer.party).map { it.owningKey }.toSet()

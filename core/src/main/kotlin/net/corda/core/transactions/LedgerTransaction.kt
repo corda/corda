@@ -19,7 +19,7 @@ import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.Try
+import net.corda.core.utilities.loggerFor
 import java.util.*
 import java.util.function.Predicate
 
@@ -64,22 +64,8 @@ data class LedgerTransaction @JvmOverloads constructor(
     }
 
     private companion object {
-        private fun contractClassFor(className: ContractClassName, classLoader: ClassLoader?): Try<Class<out Contract>> {
-            return Try.on {
-                (classLoader ?: this::class.java.classLoader)
-                        .loadClass(className)
-                        .asSubclass(Contract::class.java)
-            }
-        }
-
-        private fun stateToContractClass(state: TransactionState<ContractState>): Try<Class<out Contract>> {
-            return contractClassFor(state.contract, state.data::class.java.classLoader)
-        }
+        val logger = loggerFor<LedgerTransaction>()
     }
-
-    // Input reference state contracts are not required for verification.
-    private val contracts: Map<ContractClassName, Try<Class<out Contract>>> = (inputs.map { it.state } + outputs)
-            .map { it.contract to stateToContractClass(it) }.toMap()
 
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
     val referenceStates: List<ContractState> get() = references.map { it.state.data }
@@ -98,8 +84,29 @@ data class LedgerTransaction @JvmOverloads constructor(
      */
     @Throws(TransactionVerificationException::class)
     fun verify() {
+        validateStatesAgainstContract()
         verifyConstraints()
         verifyContracts()
+    }
+
+    private fun allStates() = inputs.asSequence().map { it.state } + outputs.asSequence()
+
+    /**
+     * For all input and output [TransactionState]s, validates that the wrapped [ContractState] matches up with the
+     * wrapped [Contract], as declared by the [BelongsToContract] annotation on the [ContractState]'s class.
+     *
+     * A warning will be written to the log if any mismatch is detected.
+     */
+    private fun validateStatesAgainstContract() = allStates().forEach(::validateStateAgainstContract)
+
+    private fun validateStateAgainstContract(state: TransactionState<ContractState>) {
+        state.data.requiredContractClassName?.let { requiredContractClassName ->
+            if (state.contract != requiredContractClassName)
+                logger.warn("""
+                State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
+                is bundled in TransactionState with ${state.contract}.
+                """.trimIndent().replace('\n', ' '))
+        }
     }
 
     /**
@@ -112,53 +119,76 @@ data class LedgerTransaction @JvmOverloads constructor(
      * @throws TransactionVerificationException if the constraints fail to verify
      */
     private fun verifyConstraints() {
-        val contractAttachments = attachments.filterIsInstance<ContractAttachment>()
-        (inputs.map { it.state } + outputs).forEach { state ->
-            val stateAttachments = contractAttachments.filter { state.contract in it.allContracts }
-            if (stateAttachments.isEmpty()) throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
+        val contractAttachmentsByContract = getUniqueContractAttachmentsByContract()
 
-            val uniqueAttachmentsForStateContract = stateAttachments.distinctBy { it.id }
+        for (state in allStates()) {
+            val contractAttachment = contractAttachmentsByContract[state.contract] ?:
+                throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
 
-            // In case multiple attachments have been added for the same contract, fail because this transaction will not be able to be verified
-            // because it will break the no-overlap rule that we have implemented in our Classloaders
-            if (uniqueAttachmentsForStateContract.size > 1) {
-                throw TransactionVerificationException.ConflictingAttachmentsRejection(id, state.contract)
-            }
+            val constraintAttachment = AttachmentWithContext(contractAttachment, state.contract,
+                    networkParameters?.whitelistedContractImplementations)
 
-            val contractAttachment = uniqueAttachmentsForStateContract.first()
-            val constraintAttachment = AttachmentWithContext(contractAttachment, state.contract, networkParameters?.whitelistedContractImplementations)
             if (!state.constraint.isSatisfiedBy(constraintAttachment)) {
                 throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
             }
         }
     }
 
+    private fun getUniqueContractAttachmentsByContract(): Map<ContractClassName, ContractAttachment> {
+        val result = mutableMapOf<ContractClassName, ContractAttachment>()
+
+        for (attachment in attachments) {
+            if (attachment !is ContractAttachment) continue
+
+            for (contract in attachment.allContracts) {
+               result.compute(contract) { _, previousAttachment ->
+                   when {
+                       previousAttachment == null -> attachment
+                       attachment.id == previousAttachment.id -> previousAttachment
+                       // In case multiple attachments have been added for the same contract, fail because this
+                       // transaction will not be able to be verified because it will break the no-overlap rule
+                       // that we have implemented in our Classloaders
+                       else -> throw TransactionVerificationException.ConflictingAttachmentsRejection(id, contract)
+                   }
+               }
+            }
+        }
+
+        return result
+    }
+
     /**
      * Check the transaction is contract-valid by running the verify() for each input and output state contract.
      * If any contract fails to verify, the whole transaction is considered to be invalid.
      */
-    private fun verifyContracts() {
-        val contractInstances = ArrayList<Contract>(contracts.size)
-        for ((key, result) in contracts) {
-            when (result) {
-                is Try.Failure -> throw TransactionVerificationException.ContractCreationError(id, key, result.exception)
-                is Try.Success -> {
-                    try {
-                        contractInstances.add(result.value.newInstance())
-                    } catch (e: Throwable) {
-                        throw TransactionVerificationException.ContractCreationError(id, result.value.name, e)
-                    }
-                }
-            }
-        }
-        contractInstances.forEach { contract ->
-            try {
-                contract.verify(this)
-            } catch (e: Throwable) {
-                throw TransactionVerificationException.ContractRejection(id, contract, e)
-            }
+    private fun verifyContracts() = allStates().forEach { ts ->
+        val contractClass = getContractClass(ts)
+        val contract = createContractInstance(contractClass)
+
+        try {
+            contract.verify(this)
+        } catch (e: Exception) {
+            throw TransactionVerificationException.ContractRejection(id, contract, e)
         }
     }
+
+    // Obtain the contract class from the class name, wrapping any exception as a [ContractCreationError]
+    private fun getContractClass(ts: TransactionState<ContractState>): Class<out Contract> =
+            try {
+                (ts.data::class.java.classLoader ?: this::class.java.classLoader)
+                        .loadClass(ts.contract)
+                        .asSubclass(Contract::class.java)
+            } catch (e: Exception) {
+                throw TransactionVerificationException.ContractCreationError(id, ts.contract, e)
+            }
+
+    // Obtain an instance of the contract class, wrapping any exception as a [ContractCreationError]
+    private fun createContractInstance(contractClass: Class<out Contract>): Contract =
+        try {
+            contractClass.newInstance()
+        } catch (e: Exception) {
+            throw TransactionVerificationException.ContractCreationError(id, contractClass.name, e)
+        }
 
     /**
      * Make sure the notary has stayed the same. As we can't tell how inputs and outputs connect, if there

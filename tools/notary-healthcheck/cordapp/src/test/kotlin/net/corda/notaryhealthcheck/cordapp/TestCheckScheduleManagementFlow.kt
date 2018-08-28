@@ -86,7 +86,6 @@ class TestCheckScheduleManagementFlow {
         assertEquals(1, pendingChecksAfterCleanUp.states.size, "Expected 1 pending check to be removed, got ${pendingChecksAfterCleanUp.states.size}")
     }
 
-
     @Test
     fun testStoppingTwoForOneTarget() {
         val target = Monitorable(notary1, notary1)

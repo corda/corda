@@ -29,6 +29,8 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.loggerFor
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -59,6 +61,11 @@ open class TransactionBuilder @JvmOverloads constructor(
         protected var privacySalt: PrivacySalt = PrivacySalt(),
         protected val references: MutableList<StateRef> = arrayListOf()
 ) {
+
+    private companion object {
+        val logger = loggerFor<TransactionBuilder>()
+    }
+
     private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
 
@@ -83,7 +90,7 @@ open class TransactionBuilder @JvmOverloads constructor(
 
     // DOCSTART 1
     /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
-    fun withItems(vararg items: Any): TransactionBuilder {
+    fun withItems(vararg items: Any) = apply {
         for (t in items) {
             when (t) {
                 is StateAndRef<*> -> addInputState(t)
@@ -99,7 +106,6 @@ open class TransactionBuilder @JvmOverloads constructor(
                 else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
             }
         }
-        return this
     }
     // DOCEND 1
 
@@ -205,7 +211,7 @@ open class TransactionBuilder @JvmOverloads constructor(
      * Note: Reference states are only supported on Corda networks running a minimum platform version of 4.
      * [toWireTransaction] will throw an [IllegalStateException] if called in such an environment.
      */
-    open fun addReferenceState(referencedStateAndRef: ReferencedStateAndRef<*>): TransactionBuilder {
+    open fun addReferenceState(referencedStateAndRef: ReferencedStateAndRef<*>) = apply {
         val stateAndRef = referencedStateAndRef.stateAndRef
         referencesWithTransactionState.add(stateAndRef.state)
 
@@ -228,57 +234,64 @@ open class TransactionBuilder @JvmOverloads constructor(
         checkNotary(stateAndRef)
         references.add(stateAndRef.ref)
         checkForInputsAndReferencesOverlap()
-        return this
     }
 
     /** Adds an input [StateRef] to the transaction. */
-    open fun addInputState(stateAndRef: StateAndRef<*>): TransactionBuilder {
+    open fun addInputState(stateAndRef: StateAndRef<*>) = apply {
         checkNotary(stateAndRef)
         inputs.add(stateAndRef.ref)
         inputsWithTransactionState.add(stateAndRef.state)
-        return this
     }
 
     /** Adds an attachment with the specified hash to the TransactionBuilder. */
-    fun addAttachment(attachmentId: SecureHash): TransactionBuilder {
+    fun addAttachment(attachmentId: SecureHash) = apply {
         attachments.add(attachmentId)
-        return this
     }
 
     /** Adds an output state to the transaction. */
-    fun addOutputState(state: TransactionState<*>): TransactionBuilder {
+    fun addOutputState(state: TransactionState<*>) = apply {
         outputs.add(state)
-        return this
     }
 
     /** Adds an output state, with associated contract code (and constraints), and notary, to the transaction. */
     @JvmOverloads
     fun addOutputState(
             state: ContractState,
-            contract: ContractClassName,
+            contract: ContractClassName = requireNotNull(state.requiredContractClassName) {
+            //TODO: add link to docsite page, when there is one.
+"""
+Unable to infer Contract class name because state class ${state::class.java.name} is not annotated with
+@BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${state::class.java.name}
+with @BelongsToContract, or supply an explicit contract parameter to addOutputState().
+""".trimIndent().replace('\n', ' ')
+            },
             notary: Party, encumbrance: Int? = null,
             constraint: AttachmentConstraint = AutomaticHashConstraint
-    ): TransactionBuilder {
-        return addOutputState(TransactionState(state, contract, notary, encumbrance, constraint))
-    }
+    ) = addOutputState(TransactionState(state, contract, notary, encumbrance, constraint))
 
     /** A default notary must be specified during builder construction to use this method */
     @JvmOverloads
     fun addOutputState(
-            state: ContractState, contract: ContractClassName,
+            state: ContractState,
+            contract: ContractClassName = requireNotNull(state.requiredContractClassName) {
+            //TODO: add link to docsite page, when there is one.
+"""
+Unable to infer Contract class name because state class ${state::class.java.name} is not annotated with
+@BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${state::class.java.name}
+with @BelongsToContract, or supply an explicit contract parameter to addOutputState().
+""".trimIndent().replace('\n', ' ')
+            },
             constraint: AttachmentConstraint = AutomaticHashConstraint
-    ): TransactionBuilder {
+    ) = apply {
         checkNotNull(notary) {
             "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation"
         }
         addOutputState(state, contract, notary!!, constraint = constraint)
-        return this
     }
 
     /** Adds a [Command] to the transaction. */
-    fun addCommand(arg: Command<*>): TransactionBuilder {
+    fun addCommand(arg: Command<*>) = apply {
         commands.add(arg)
-        return this
     }
 
     /**
@@ -293,10 +306,9 @@ open class TransactionBuilder @JvmOverloads constructor(
      * transaction must then be signed by the notary service within this window of time. In this way, the notary acts as
      * the Timestamp Authority.
      */
-    fun setTimeWindow(timeWindow: TimeWindow): TransactionBuilder {
+    fun setTimeWindow(timeWindow: TimeWindow) = apply {
         check(notary != null) { "Only notarised transactions can have a time-window" }
         window = timeWindow
-        return this
     }
 
     /**
@@ -308,9 +320,8 @@ open class TransactionBuilder @JvmOverloads constructor(
      */
     fun setTimeWindow(time: Instant, timeTolerance: Duration) = setTimeWindow(TimeWindow.withTolerance(time, timeTolerance))
 
-    fun setPrivacySalt(privacySalt: PrivacySalt): TransactionBuilder {
+    fun setPrivacySalt(privacySalt: PrivacySalt) = apply {
         this.privacySalt = privacySalt
-        return this
     }
 
     /** Returns an immutable list of input [StateRef]s. */
