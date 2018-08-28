@@ -4,7 +4,6 @@ import net.corda.core.internal.div
 import net.corda.core.internal.outputStream
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509KeyStore
-import net.corda.nodeapi.internal.crypto.getX509Certificate
 import java.io.IOException
 import java.io.OutputStream
 import java.nio.file.OpenOption
@@ -29,9 +28,10 @@ interface CertificateStore {
 
     fun writeTo(path: Path, vararg options: OpenOption) = path.outputStream(*options)
 
-    fun update(action: X509KeyStore.() -> Unit) {
-        action.invoke(value)
+    fun <RESULT> update(action: X509KeyStore.() -> RESULT): RESULT {
+        val result = action.invoke(value)
         value.save()
+        return result
     }
 
     fun getCertificate(alias: String): X509Certificate = value.getCertificate(alias)

@@ -70,8 +70,7 @@ fun SSLConfiguration.createDevKeyStores(legalName: CordaX500Name,
 }
 
 fun CertificateStore.storeLegalIdentity(alias: String, keyPair: KeyPair = Crypto.generateKeyPair()): PartyAndCertificate {
-    // TODO sollecitom see if you can delegate functions instead
-    return with(value) {
+    return update {
         val nodeCaCertPath = getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
         // Assume key password = store password.
         val nodeCaCertAndKeyPair = getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
@@ -81,7 +80,6 @@ fun CertificateStore.storeLegalIdentity(alias: String, keyPair: KeyPair = Crypto
         // Assume key password = store password.
         val identityCertPath = listOf(identityCert) + nodeCaCertPath
         setPrivateKey(alias, keyPair.private, identityCertPath)
-        save()
         PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
     }
 }

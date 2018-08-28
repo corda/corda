@@ -12,7 +12,6 @@ import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.bridging.AMQPBridgeManager
 import net.corda.nodeapi.internal.bridging.BridgeManager
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
@@ -21,6 +20,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.stubs.CertificateStoreStubs
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -29,7 +29,6 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.nio.file.Path
 import java.security.KeyStore
 import java.util.*
 import kotlin.test.assertEquals
@@ -172,19 +171,14 @@ class AMQPBridgeTest {
 
     private fun createArtemis(sourceQueueName: String?): Triple<ArtemisMessagingServer, ArtemisMessagingClient, BridgeManager> {
         val baseDir = temporaryFolder.root.toPath() / "artemis"
+        // TODO sollecitom refactor
         val certificatesDir = baseDir / "certificates"
-        // TODO sollecitom revisit this
         val p2pSslConfiguration = object : SSLConfiguration {
             override val certificatesDirectory = certificatesDir
             override val keyStorePassword = "cordacadevpass"
             override val trustStorePassword= "trustpass"
         }
-        val signingCertificateStore = object : NodeSSLConfiguration {
-            override val baseDirectory = baseDir
-            override val certificatesDirectory = certificatesDir
-            override val keyStorePassword = "cordacadevpass"
-            override val trustStorePassword= "trustpass"
-        }
+        val signingCertificateStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDir, "cordacadevpass")
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDir).whenever(it).baseDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName
@@ -211,20 +205,15 @@ class AMQPBridgeTest {
     }
 
     private fun createAMQPServer(maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPServer {
-        // TODO sollecitom revisit this
         val baseDir = temporaryFolder.root.toPath() / "server"
+        // TODO sollecitom refactor
         val certificatesDir = baseDir / "certificates"
         val p2pSslConfiguration = object : SSLConfiguration {
             override val certificatesDirectory = certificatesDir
             override val keyStorePassword = "cordacadevpass"
             override val trustStorePassword= "trustpass"
         }
-        val signingCertificateStore = object : NodeSSLConfiguration {
-            override val baseDirectory = baseDir
-            override val certificatesDirectory = certificatesDir
-            override val keyStorePassword = "cordacadevpass"
-            override val trustStorePassword= "trustpass"
-        }
+        val signingCertificateStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDir, "cordacadevpass")
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "server").whenever(it).baseDirectory
             doReturn(BOB_NAME).whenever(it).myLegalName

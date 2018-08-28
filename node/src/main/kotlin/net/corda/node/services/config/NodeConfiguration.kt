@@ -256,11 +256,15 @@ data class NodeConfigurationImpl(
         }
     }
 
+
+    override val certificatesDirectory = baseDirectory / "certificates"
+
+    // TODO sollecitom check this
+    override val nodeKeystore = certificatesDirectory / "nodekeystore.jks"
     override val signingCertificateStore: CertificateStoreSupplier = FileBasedCertificateStoreLoader(nodeKeystore, keyStorePassword)
+
     // TODO sollecitom change this
     override val p2pSslConfiguration: SSLConfiguration = this
-    // TODO sollecitom check this
-    override val certificatesDirectory: Path = p2pSslConfiguration.certificatesDirectory
 
     override val rpcOptions: NodeRpcOptions
         get() {

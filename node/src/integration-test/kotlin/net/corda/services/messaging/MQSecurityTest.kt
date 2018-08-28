@@ -21,9 +21,9 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATI
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.node.User
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.configureTestSSL
+import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.startFlow
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException

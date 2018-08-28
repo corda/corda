@@ -11,10 +11,10 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_U
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.DEV_ROOT_CA
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.testing.driver.stubs.CertificateStoreStubs
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQClusterSecurityException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -25,8 +25,6 @@ import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
 import org.junit.Test
 import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
 
 /**
  * Runs the security tests with the attacker pretending to be a node on the network.
@@ -88,14 +86,9 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
     @Test
     fun `login with invalid certificate chain`() {
         // TODO sollecitom refactor
-        val baseDir = Paths.get(".")
         val certsDir = Files.createTempDirectory("certs")
-        val sslConfig = object : NodeSSLConfiguration {
-            override val baseDirectory = baseDir
-            override val certificatesDirectory = certsDir
-            override val keyStorePassword: String get() = "cordacadevpass"
-            override val trustStorePassword: String get() = "trustpass"
-        }
+        certsDir.createDirectories()
+        val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certsDir, "cordacadevpass")
         val p2pSslConfig = object : SSLConfiguration {
             override val certificatesDirectory = certsDir
             override val keyStorePassword: String get() = "cordacadevpass"
@@ -103,7 +96,6 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
         }
 
         val legalName = CordaX500Name("MegaCorp", "London", "GB")
-        p2pSslConfig.certificatesDirectory.createDirectories()
         if (!p2pSslConfig.trustStoreFile.exists()) {
             javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks").use { it.copyTo(p2pSslConfig.trustStoreFile) }
         }
@@ -117,7 +109,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
         // Using different x500 name in the TLS cert which is not allowed in the name constraints.
         val clientTLSCert = X509Utilities.createCertificate(CertificateType.TLS, clientCACert, clientKeyPair, CordaX500Name("MiniCorp", "London", "GB").x500Principal, tlsKeyPair.public)
 
-        sslConfig.loadNodeKeyStore(createNew = true).update {
+        signingCertStore.get(createNew = true).update {
             setPrivateKey(X509Utilities.CORDA_CLIENT_CA, clientKeyPair.private, listOf(clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
         }
 
@@ -125,8 +117,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
             setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKeyPair.private, listOf(clientTLSCert, clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
         }
 
-        val attacker = clientTo(alice.node.configuration.p2pAddress, sslConfig)
-
+        val attacker = clientTo(alice.node.configuration.p2pAddress, p2pSslConfig)
         assertThatExceptionOfType(ActiveMQNotConnectedException::class.java).isThrownBy {
             attacker.start(PEER_USER, PEER_USER)
         }
