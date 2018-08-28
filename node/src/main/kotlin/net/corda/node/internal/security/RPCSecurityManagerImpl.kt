@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.primitives.Ints
 import net.corda.core.context.AuthServiceId
+import net.corda.core.internal.buildNamed
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.DataSourceFactory
@@ -308,7 +309,7 @@ private class CaffeineCacheManager(val maxSize: Long,
         return Caffeine.newBuilder()
                 .expireAfterWrite(timeToLiveSeconds, TimeUnit.SECONDS)
                 .maximumSize(maxSize)
-                .build<K, V>()
+                .buildNamed<K, V>("RPCSecurityManagerShiroCache_$name")
                 .toShiroCache()
     }
 

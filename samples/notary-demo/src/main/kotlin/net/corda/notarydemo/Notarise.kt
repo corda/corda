@@ -17,7 +17,7 @@ import java.util.concurrent.Future
 fun main(args: Array<String>) {
     val address = NetworkHostAndPort("localhost", 10003)
     println("Connecting to the recipient node ($address)")
-    CordaRPCClient(address).start(notaryDemoUser.username, notaryDemoUser.password).use {
+    CordaRPCClient(address).start("demou", "demop").use {
         NotaryDemoClientApi(it.proxy).notarise(10)
     }
 }

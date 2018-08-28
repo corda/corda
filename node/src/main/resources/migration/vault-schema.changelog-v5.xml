@@ -3,13 +3,13 @@
                    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
-    <changeSet author="R3.Corda" id="add_is_modifiable_column">
+    <changeSet author="R3.Corda" id="add_is_relevant_column">
 	<addColumn tableName="vault_states">
-            <column name="is_modifiable" type="INT"/>
+            <column name="is_relevant" type="INT"/>
 	</addColumn>
 	<update tableName="vault_states">
-	    <column name="is_modifiable" valueNumeric="0"/>
+	    <column name="is_relevant" valueNumeric="0"/>
 	</update>
-	<addNotNullConstraint tableName="vault_states" columnName="is_modifiable" columnDataType="INT" />
+	<addNotNullConstraint tableName="vault_states" columnName="is_relevant" columnDataType="INT" />
     </changeSet>
 </databaseChangeLog>
