@@ -10,6 +10,7 @@ import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
+import net.corda.tools.shell.SSHDConfiguration
 import picocli.CommandLine.Mixin
 import picocli.CommandLine.Option
 import java.nio.file.Path
@@ -32,10 +33,16 @@ class NodeCmdLineOptions {
     var logToConsole: Boolean = false
 
     @Option(
-            names = ["-s", "--sshd"],
-            description = ["If set, enables SSHD server for node administration."]
+            names = ["--sshd"],
+            description = ["If set, enables sshd server for node administration."]
     )
     var sshdServer: Boolean = false
+
+    @Option(
+            names = ["--sshd-port"],
+            description = ["The port to start the sshd server on, if enabled."]
+    )
+    var sshdServerPort: Int = 2222
 
     @Option(
             names = ["-n", "--no-local-shell"],
@@ -113,7 +120,8 @@ class NodeCmdLineOptions {
                 baseDirectory,
                 configFile.configFile,
                 configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell) +
-                        if (devMode) mapOf("devMode" to this.devMode) else emptyMap<String, Any>())
+                        if (sshdServer) mapOf("sshd" to mapOf("port" to sshdServerPort.toString())) else emptyMap<String, Any>() +
+                        if (devMode) mapOf("devMode" to this.devMode) else emptyMap())
         )
         return rawConfig to Try.on {
             rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
