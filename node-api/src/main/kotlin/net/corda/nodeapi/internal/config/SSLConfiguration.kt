@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.config
 
 import net.corda.core.internal.div
 import net.corda.nodeapi.internal.crypto.X509KeyStore
+import java.io.OutputStream
 import java.nio.file.Path
 
 interface SslConfiguration {
@@ -13,10 +14,12 @@ interface SslConfiguration {
 // TODO sollecitom see if you can make the password private here
 interface CertificateStore {
 
+    // TODO sollecitom ideally make this private
     val value: X509KeyStore
-    // TODO sollecitom maybe use a password type here
     // TODO sollecitom see if this can stay private (by adding delegate functions over X509Store)
     val password: String
+
+    fun writeTo(stream: OutputStream) = value.internal.store(stream, password.toCharArray())
 }
 
 interface CertificateStoreLoader {
