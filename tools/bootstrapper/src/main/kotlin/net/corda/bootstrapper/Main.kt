@@ -24,7 +24,8 @@ class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a l
     @Option(names = ["--no-copy"], description = ["""Don't copy the CorDapp JARs into the nodes' "cordapps" directories."""])
     private var noCopy: Boolean = false
 
-    override fun runProgram() {
+    override fun runProgram(): Int {
         NetworkBootstrapper().bootstrap(dir.toAbsolutePath().normalize(), copyCordapps = !noCopy)
+        return 0 //exit code
     }
 }
