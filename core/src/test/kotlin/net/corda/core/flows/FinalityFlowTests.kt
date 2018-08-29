@@ -66,4 +66,14 @@ class FinalityFlowTests : WithFinality {
         return services.signInitialTransaction(builder)
     }
 
+    @Test
+    fun `setting forceNotarySignature to true adds the notaries signature to the transaction`() {
+        val stx = aliceNode.signCashTransactionWith(bob)
+        assert.that(
+                aliceNode.startFlowAndRunNetwork(FinalityFlow(stx, true)),
+                willReturn(
+                        requiredSignatures(2)
+                                and visibleTo(bobNode)))
+    }
+
 }
