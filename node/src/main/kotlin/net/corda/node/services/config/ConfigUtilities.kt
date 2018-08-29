@@ -12,10 +12,10 @@ import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.config.toProperties
 import net.corda.nodeapi.internal.crypto.X509KeyStore
+import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.crypto.save
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
-import java.nio.file.Paths
 
 fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(mapOf(*pairs))
 operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.parseMap(overrides).withFallback(this)
@@ -83,9 +83,7 @@ fun TwoWaySslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
     certificatesDirectory.createDirectories()
 
     if (specifiedTrustStore == null) {
-        val devCaTrustStore = X509KeyStore.fromFile(Paths.get(javaClass.classLoader.getResource("certificates/$DEV_CA_TRUST_STORE_FILE").toURI()), DEV_CA_TRUST_STORE_PASS)
-        // TODO sollecitom refactor this
-        devCaTrustStore.internal.save(trustStore.path, trustStore.password)
+        loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/$DEV_CA_TRUST_STORE_FILE"), DEV_CA_TRUST_STORE_PASS).save(trustStore.path, trustStore.password)
     }
 
     if (keyStore.getOptional() == null || signingCertificateStore.getOptional() == null) {
@@ -117,9 +115,8 @@ fun TwoWaySslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
     certificatesDirectory.createDirectories()
     val specifiedTrustStore = trustStore.getOptional()
     if (specifiedTrustStore == null) {
-        val devCaTrustStore = X509KeyStore.fromFile(Paths.get(TwoWaySslConfiguration::class.java.classLoader.getResource("certificates/$DEV_CA_TRUST_STORE_FILE").toURI()), DEV_CA_TRUST_STORE_PASS)
         // TODO sollecitom refactor this (try to use `update` with the cert in the devCaTrustStore
-        devCaTrustStore.internal.save(trustStore.path, trustStore.password)
+        loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/$DEV_CA_TRUST_STORE_FILE"), DEV_CA_TRUST_STORE_PASS).save(trustStore.path, trustStore.password)
     }
     if (keyStore.getOptional() == null) {
         createDevP2PKeyStore(myLegalName)
