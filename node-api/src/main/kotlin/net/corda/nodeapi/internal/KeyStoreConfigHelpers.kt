@@ -5,8 +5,8 @@ import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.toX500Name
-import net.corda.nodeapi.config.CertificateStore
-import net.corda.nodeapi.config.CertificateStoreSupplier
+import net.corda.nodeapi.internal.config.CertificateStore
+import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import org.bouncycastle.asn1.x509.GeneralName
@@ -24,9 +24,9 @@ import javax.security.auth.x500.X500Principal
  */
 
 fun CertificateStoreSupplier.createDevSigningKeyStore(legalName: CordaX500Name,
-                                                      rootCert: X509Certificate = DEV_ROOT_CA.certificate,
-                                                      intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA,
-                                                      devNodeCa: CertificateAndKeyPair = createDevNodeCa(intermediateCa, legalName)): CertificateStore {
+                                                                                        rootCert: X509Certificate = DEV_ROOT_CA.certificate,
+                                                                                        intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA,
+                                                                                        devNodeCa: CertificateAndKeyPair = createDevNodeCa(intermediateCa, legalName)): CertificateStore {
 
     val store = get(createNew = true)
     store.update {
@@ -36,9 +36,9 @@ fun CertificateStoreSupplier.createDevSigningKeyStore(legalName: CordaX500Name,
 }
 
 fun CertificateStoreSupplier.createDevP2PKeyStore(legalName: CordaX500Name,
-                                                      rootCert: X509Certificate = DEV_ROOT_CA.certificate,
-                                                      intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA,
-                                                      devNodeCa: CertificateAndKeyPair = createDevNodeCa(intermediateCa, legalName)): CertificateStore {
+                                                                                    rootCert: X509Certificate = DEV_ROOT_CA.certificate,
+                                                                                    intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA,
+                                                                                    devNodeCa: CertificateAndKeyPair = createDevNodeCa(intermediateCa, legalName)): CertificateStore {
 
     val store = get(createNew = true)
     store.update {
@@ -66,7 +66,7 @@ fun TwoWaySslConfiguration.createDevP2PKeyStore(legalName: CordaX500Name,
 }
 
 fun CertificateStore.storeLegalIdentity(alias: String, keyPair: KeyPair = Crypto.generateKeyPair()): PartyAndCertificate {
-    return update {
+    val identityCertPath = query {
         val nodeCaCertPath = getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
         // Assume key password = store password.
         val nodeCaCertAndKeyPair = getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
@@ -74,10 +74,12 @@ fun CertificateStore.storeLegalIdentity(alias: String, keyPair: KeyPair = Crypto
         val identityCert = X509Utilities.createCertificate(CertificateType.LEGAL_IDENTITY, nodeCaCertAndKeyPair.certificate, nodeCaCertAndKeyPair.keyPair, nodeCaCertAndKeyPair.certificate.subjectX500Principal, keyPair.public)
         // TODO: X509Utilities.validateCertificateChain()
         // Assume key password = store password.
-        val identityCertPath = listOf(identityCert) + nodeCaCertPath
-        setPrivateKey(alias, keyPair.private, identityCertPath)
-        PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
+        listOf(identityCert) + nodeCaCertPath
     }
+    update {
+        setPrivateKey(alias, keyPair.private, identityCertPath)
+    }
+    return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
 }
 
 fun createDevNetworkMapCa(rootCa: CertificateAndKeyPair = DEV_ROOT_CA): CertificateAndKeyPair {

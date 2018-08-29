@@ -1,10 +1,9 @@
-package net.corda.nodeapi.config
+package net.corda.nodeapi.internal.config
 
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import java.io.IOException
 import java.nio.file.Path
 
-// TODO sollecitom see if you can make this private API wise
 interface CertificateStoreSupplier {
 
     fun get(createNew: Boolean = false): CertificateStore

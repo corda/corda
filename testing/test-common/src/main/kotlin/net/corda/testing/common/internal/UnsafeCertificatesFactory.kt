@@ -4,7 +4,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createFile
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
-import net.corda.nodeapi.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.config.TwoWaySslOptions
 import net.corda.nodeapi.internal.crypto.*

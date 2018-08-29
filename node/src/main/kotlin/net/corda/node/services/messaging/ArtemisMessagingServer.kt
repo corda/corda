@@ -11,13 +11,13 @@ import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_P2P_
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.PEER_ROLE
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.p2pAcceptorTcpTransport
 import net.corda.nodeapi.internal.AmqpMessageSizeChecksInterceptor
 import net.corda.nodeapi.internal.ArtemisMessageSizeChecksInterceptor
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.p2pAcceptorTcpTransport
 import net.corda.nodeapi.internal.requireOnDefaultFileSystem
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl

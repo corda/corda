@@ -7,9 +7,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
-import net.corda.core.internal.toPath
 import net.corda.nodeapi.internal.*
-import net.corda.nodeapi.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.config.toProperties
 import net.corda.nodeapi.internal.crypto.X509KeyStore

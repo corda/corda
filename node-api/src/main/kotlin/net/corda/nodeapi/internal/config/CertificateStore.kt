@@ -1,4 +1,4 @@
-package net.corda.nodeapi.config
+package net.corda.nodeapi.internal.config
 
 import net.corda.core.internal.outputStream
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -8,8 +8,6 @@ import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.security.cert.X509Certificate
 
-// TODO sollecitom see if you can make this private API wise
-// TODO sollecitom see if you can make the password private here
 interface CertificateStore {
 
     val value: X509KeyStore
@@ -19,13 +17,15 @@ interface CertificateStore {
 
     fun writeTo(path: Path, vararg options: OpenOption) = path.outputStream(*options)
 
-    fun <RESULT> update(action: X509KeyStore.() -> RESULT): RESULT {
+    fun update(action: X509KeyStore.() -> Unit) {
         val result = action.invoke(value)
         value.save()
         return result
     }
 
-    // TODO sollecitom introduce a `query` equivalent of `update` that doesn't save - remove query functions apart from `contains`
+    fun <RESULT> query(action: X509KeyStore.() -> RESULT): RESULT {
+        return action.invoke(value)
+    }
 
     fun getCertificate(alias: String): X509Certificate = value.getCertificate(alias)
 

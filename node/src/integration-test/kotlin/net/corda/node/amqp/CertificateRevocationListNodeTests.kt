@@ -14,7 +14,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.signingAndP2pConfiguration
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
-import net.corda.nodeapi.config.CertificateStoreSupplier
+import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
@@ -399,6 +399,7 @@ class CertificateRevocationListNodeTests {
                 amqpConfig), nodeCert)
     }
 
+    // TODO sollecitom try and get rid of this
     private fun Pair<CertificateStoreSupplier, TwoWaySslConfiguration>.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {
 
         val signingCertificateStore = first

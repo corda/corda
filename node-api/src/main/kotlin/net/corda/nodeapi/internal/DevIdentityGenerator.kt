@@ -7,7 +7,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.trace
-import net.corda.nodeapi.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.TwoWaySslOptions
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore

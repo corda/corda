@@ -11,7 +11,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.TwoWaySslOptions
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
