@@ -139,7 +139,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
             hierarchy += cursor
             cursor = cursor.superclass
         }
-         
+
         hierarchy.reversed().forEach {
             when (it) {
                 is InterfaceSchema -> generateInterface(it)
@@ -240,7 +240,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
             visitMethodInsn(INVOKESTATIC, moreObjects, "toStringHelper",
                     "(L$jlString;)L$toStringHelper;", false)
             // Call the add() methods.
-            schema.fieldsIncludingSuperclasses().forEach { name, field ->
+            for ((name, field) in schema.fieldsIncludingSuperclasses().entries) {
                 visitLdcInsn(name)
                 visitVarInsn(ALOAD, 0)  // this
                 visitFieldInsn(GETFIELD, schema.jvmName, name, schema.descriptorsIncludingSuperclasses()[name])
