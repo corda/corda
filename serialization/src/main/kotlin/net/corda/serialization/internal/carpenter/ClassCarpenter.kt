@@ -130,8 +130,8 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
      */
     override fun build(schema: Schema): Class<*> {
         validateSchema(schema)
-        // Walk up the inheritance hierarchy and then start walking back down once we either hit the top, or
-        // find a class we haven't generated yet.
+        // Walk up the inheritance hierarchy until we hit either the top or a class we've already generated,
+        // then walk back down it generating classes.
         val hierarchy = ArrayList<Schema>()
         hierarchy += schema
         var cursor = schema.superclass
@@ -139,7 +139,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
             hierarchy += cursor
             cursor = cursor.superclass
         }
-
+         
         hierarchy.reversed().forEach {
             when (it) {
                 is InterfaceSchema -> generateInterface(it)
@@ -240,7 +240,7 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
             visitMethodInsn(INVOKESTATIC, moreObjects, "toStringHelper",
                     "(L$jlString;)L$toStringHelper;", false)
             // Call the add() methods.
-            for ((name, field) in schema.fieldsIncludingSuperclasses().entries) {
+            schema.fieldsIncludingSuperclasses().forEach { name, field ->
                 visitLdcInsn(name)
                 visitVarInsn(ALOAD, 0)  // this
                 visitFieldInsn(GETFIELD, schema.jvmName, name, schema.descriptorsIncludingSuperclasses()[name])
@@ -306,16 +306,16 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
             visitInsn(DUP)
 
             var idx = 0
-            schema.fields.forEach {
+            schema.fields.keys.forEach { key ->
                 visitInsn(DUP)
                 visitIntInsn(BIPUSH, idx)
                 visitTypeInsn(NEW, schema.jvmName)
                 visitInsn(DUP)
-                visitLdcInsn(it.key)
+                visitLdcInsn(key)
                 visitIntInsn(BIPUSH, idx++)
                 visitMethodInsn(INVOKESPECIAL, schema.jvmName, "<init>", "(L$jlString;I)V", false)
                 visitInsn(DUP)
-                visitFieldInsn(PUTSTATIC, schema.jvmName, it.key, "L${schema.jvmName};")
+                visitFieldInsn(PUTSTATIC, schema.jvmName, key, "L${schema.jvmName};")
                 visitInsn(AASTORE)
             }
 
@@ -381,20 +381,18 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
             visitCode()
 
             // Calculate the super call.
-            val superclassFields = schema.superclass?.fieldsIncludingSuperclasses() ?: emptyMap()
             visitVarInsn(ALOAD, 0)
             val sc = schema.superclass
+            var slot = 1
             if (sc == null) {
                 visitMethodInsn(INVOKESPECIAL, jlObject, "<init>", "()V", false)
             } else {
-                var slot = 1
-                superclassFields.values.forEach { slot += load(slot, it) }
+                slot = sc.fieldsIncludingSuperclasses().values.fold(slot) { acc, field -> acc + load(acc, field) }
                 val superDesc = sc.descriptorsIncludingSuperclasses().values.joinToString("")
                 visitMethodInsn(INVOKESPECIAL, sc.jvmName, "<init>", "($superDesc)V", false)
             }
 
             // Assign the fields from parameters.
-            var slot = 1 + superclassFields.size
             for ((name, field) in schema.fields) {
                 (field as ClassField).nullTest(this, slot)
 
