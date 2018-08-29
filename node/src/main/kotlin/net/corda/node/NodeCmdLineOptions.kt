@@ -91,7 +91,7 @@ class NodeCmdLineOptions {
             names = ["-d", "--dev-mode"],
             description = ["Run the node in developer mode. Unsafe for production."]
     )
-    var devMode: Boolean = true
+    var devMode: Boolean? = null
 
     @Option(
             names = ["--just-generate-node-info"],
@@ -133,7 +133,7 @@ class NodeCmdLineOptions {
                 configFile,
                 configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell) +
                         if (sshdServer) mapOf("sshd" to mapOf("port" to sshdServerPort.toString())) else emptyMap<String, Any>() +
-                        if (devMode) mapOf("devMode" to this.devMode) else emptyMap())
+                        if (devMode != null) mapOf("devMode" to this.devMode) else emptyMap())
         )
         return rawConfig to Try.on {
             rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->

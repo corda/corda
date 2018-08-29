@@ -3,10 +3,10 @@ package net.corda.node
 import net.corda.core.internal.div
 import net.corda.node.internal.NodeStartup
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
+import org.apache.logging.log4j.Level
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.BeforeClass
 import org.junit.Test
-import org.slf4j.event.Level
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -28,7 +28,7 @@ class NodeCmdLineOptionsTest {
     @Test
     fun `no command line arguments`() {
         assertThat(parser.cmdLineOptions.baseDirectory.normalize().toAbsolutePath()).isEqualTo(workingDirectory)
-        assertThat(parser.cmdLineOptions.configFile).isEqualTo(workingDirectory / "node.conf")
+        assertThat(parser.cmdLineOptions.configFile.normalize().toAbsolutePath()).isEqualTo(workingDirectory / "node.conf")
         assertThat(parser.cmdLineOptions.logToConsole).isEqualTo(false)
         assertThat(parser.loggingLevel).isEqualTo(Level.INFO)
         assertThat(parser.cmdLineOptions.nodeRegistrationOption).isEqualTo(null)
@@ -38,7 +38,7 @@ class NodeCmdLineOptionsTest {
         assertThat(parser.cmdLineOptions.justGenerateRpcSslCerts).isEqualTo(false)
         assertThat(parser.cmdLineOptions.bootstrapRaftCluster).isEqualTo(false)
         assertThat(parser.cmdLineOptions.unknownConfigKeysPolicy).isEqualTo(UnknownConfigKeysPolicy.FAIL)
-        assertThat(parser.cmdLineOptions.devMode).isEqualTo(false)
+        assertThat(parser.cmdLineOptions.devMode).isEqualTo(null)
         assertThat(parser.cmdLineOptions.clearNetworkMapCache).isEqualTo(false)
     }
 }
