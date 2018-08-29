@@ -4,7 +4,9 @@ import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.config.CertificateStore
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.SslConfiguration
+import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.requireOnDefaultFileSystem
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
@@ -59,15 +61,19 @@ class ArtemisTcpTransport {
                 TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
                 TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to TLS_VERSIONS.joinToString(","))
 
-        private fun SSLConfiguration.toTransportOptions() = mapOf(
-                TransportConstants.SSL_ENABLED_PROP_NAME to true,
-                TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to "JKS",
-                TransportConstants.KEYSTORE_PATH_PROP_NAME to sslKeystore,
-                TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to keyStorePassword,
-                TransportConstants.TRUSTSTORE_PROVIDER_PROP_NAME to "JKS",
-                TransportConstants.TRUSTSTORE_PATH_PROP_NAME to trustStoreFile,
-                TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME to trustStorePassword,
-                TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true)
+        private fun SslConfiguration.toTransportOptions(): Map<String, Any> {
+
+            val options = mutableMapOf<String, Any>()
+            keyStore?.let {
+                it.path.requireOnDefaultFileSystem()
+                options.putAll(it.get().toKeyStoreTransportOptions(it.path))
+            }
+            trustStore?.let {
+                it.path.requireOnDefaultFileSystem()
+                options.putAll(it.get().toTrustStoreTransportOptions(it.path))
+            }
+            return options
+        }
 
         // TODO sollecitom use or remove
         private fun CertificateStore.toKeyStoreTransportOptions(path: Path) = mapOf(
@@ -103,51 +109,51 @@ class ArtemisTcpTransport {
         private val acceptorFactoryClassName = "org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory"
         private val connectorFactoryClassName = NettyConnectorFactory::class.java.name
 
-        fun p2pAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: SSLConfiguration?, enableSSL: Boolean = true): TransportConfiguration {
-            val options = defaultArtemisOptions(hostAndPort).toMutableMap()
+        fun p2pAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: TwoWaySslConfiguration?, enableSSL: Boolean = true): TransportConfiguration {
 
-            if (config != null && enableSSL) {
-                config.sslKeystore.requireOnDefaultFileSystem()
-                config.trustStoreFile.requireOnDefaultFileSystem()
+            return p2pAcceptorTcpTransport(hostAndPort, config?.keyStore, config?.trustStore, enableSSL = enableSSL)
+        }
+
+        fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, config: TwoWaySslConfiguration?, enableSSL: Boolean = true): TransportConfiguration {
+
+            return p2pConnectorTcpTransport(hostAndPort, config?.keyStore, config?.trustStore, enableSSL = enableSSL)
+        }
+
+        // TODO sollecitom check this, try to remove it
+        fun p2pAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, keyStore: FileBasedCertificateStoreSupplier?, trustStore: FileBasedCertificateStoreSupplier?, enableSSL: Boolean = true): TransportConfiguration {
+
+            val options = defaultArtemisOptions(hostAndPort).toMutableMap()
+            if (enableSSL) {
                 options.putAll(defaultSSLOptions)
-                options.putAll(config.toTransportOptions())
+                keyStore?.let {
+                    it.path.requireOnDefaultFileSystem()
+                    options.putAll(it.get().toKeyStoreTransportOptions(it.path))
+                }
+                trustStore?.let {
+                    it.path.requireOnDefaultFileSystem()
+                    options.putAll(it.get().toTrustStoreTransportOptions(it.path))
+                }
             }
             return TransportConfiguration(acceptorFactoryClassName, options)
         }
 
-        fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, config: SSLConfiguration?, enableSSL: Boolean = true): TransportConfiguration {
-            val options = defaultArtemisOptions(hostAndPort).toMutableMap()
+        // TODO sollecitom check this
+        fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, keyStore: FileBasedCertificateStoreSupplier?, trustStore: FileBasedCertificateStoreSupplier?, enableSSL: Boolean = true): TransportConfiguration {
 
-            if (config != null && enableSSL) {
-                config.sslKeystore.requireOnDefaultFileSystem()
-                config.trustStoreFile.requireOnDefaultFileSystem()
+            val options = defaultArtemisOptions(hostAndPort).toMutableMap()
+            if (enableSSL) {
                 options.putAll(defaultSSLOptions)
-                options.putAll(config.toTransportOptions())
+                keyStore?.let {
+                    it.path.requireOnDefaultFileSystem()
+                    options.putAll(it.get().toKeyStoreTransportOptions(it.path))
+                }
+                trustStore?.let {
+                    it.path.requireOnDefaultFileSystem()
+                    options.putAll(it.get().toTrustStoreTransportOptions(it.path))
+                }
             }
             return TransportConfiguration(connectorFactoryClassName, options)
         }
-
-        // TODO sollecitom check this
-//        fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, keyStore: CertificateStoreSupplier?, trustStore: CertificateStoreSupplier?, certificatesDirectory: Path, enableSSL: Boolean = true, keyStoreFileName: String = "keystore.jks", trustStoreFileName: String = "truststore.jks"): TransportConfiguration {
-//            val options = defaultArtemisOptions(hostAndPort).toMutableMap()
-//
-//            if (enableSSL) {
-//                options.putAll(defaultSSLOptions)
-//                keyStore?.get()?.let {
-//                    val path = certificatesDirectory / keyStoreFileName
-//                    it.writeTo(path)
-//                    path.requireOnDefaultFileSystem()
-//                    options.putAll(it.toKeyStoreTransportOptions(path))
-//                }
-//                trustStore?.get()?.let {
-//                    val path = certificatesDirectory / trustStoreFileName
-//                    it.writeTo(path)
-//                    path.requireOnDefaultFileSystem()
-//                    options.putAll(it.toTrustStoreTransportOptions(path))
-//                }
-//            }
-//            return TransportConfiguration(connectorFactoryClassName, options)
-//        }
 
         /** [TransportConfiguration] for RPC TCP communication - server side. */
         fun rpcAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: BrokerRpcSslOptions?, enableSSL: Boolean = true): TransportConfiguration {
@@ -179,11 +185,11 @@ class ArtemisTcpTransport {
             rpcConnectorTcpTransport(it, config, enableSSL)
         }
 
-        fun rpcInternalClientTcpTransport(hostAndPort: NetworkHostAndPort, config: SSLConfiguration): TransportConfiguration {
+        fun rpcInternalClientTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration): TransportConfiguration {
             return TransportConfiguration(connectorFactoryClassName, defaultArtemisOptions(hostAndPort) + defaultSSLOptions + config.toTransportOptions())
         }
 
-        fun rpcInternalAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: SSLConfiguration): TransportConfiguration {
+        fun rpcInternalAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration): TransportConfiguration {
             return TransportConfiguration(acceptorFactoryClassName, defaultArtemisOptions(hostAndPort) + defaultSSLOptions + config.toTransportOptions())
         }
     }

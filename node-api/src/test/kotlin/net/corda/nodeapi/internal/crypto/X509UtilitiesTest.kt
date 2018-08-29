@@ -10,8 +10,9 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
+import net.corda.nodeapi.internal.createDevP2PKeyStore
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.SerializationFactoryImpl
@@ -19,7 +20,7 @@ import net.corda.serialization.internal.amqp.amqpMagic
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.driver.stubs.CertificateStoreStubs
+import net.corda.testing.stubs.CertificateStoreStubs
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*
@@ -180,14 +181,9 @@ class X509UtilitiesTest {
 
     @Test
     fun `create server certificate in keystore for SSL`() {
-        // TODO sollecitom refactor
         val certificatesDirectory = tempFolder.root.toPath()
         val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "serverstorepass")
-        val p2pSslConfig = object : SSLConfiguration {
-            override val certificatesDirectory = certificatesDirectory
-            override val keyStorePassword = "serverstorepass"
-            override val trustStorePassword = "trustpass"
-        }
+        val p2pSslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, keyStorePassword = "serverstorepass")
 
         val signingAndP2pSsl = signingCertStore to p2pSslConfig
 
@@ -205,8 +201,9 @@ class X509UtilitiesTest {
         assertThat(CordaX500Name.build(serverCert.subjectX500Principal)).isEqualTo(MEGA_CORP.name)
 
         // Load back SSL certificate
-        val sslKeyStore = loadKeyStore(signingAndP2pSsl.second.sslKeystore, signingAndP2pSsl.second.keyStorePassword)
-        val (sslCert) = sslKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, signingAndP2pSsl.second.keyStorePassword)
+        // TODO sollecitom try and replace with `get()`
+        val sslKeyStore = loadKeyStore(p2pSslConfig.keyStore.path, p2pSslConfig.keyStore.password)
+        val (sslCert) = sslKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, p2pSslConfig.keyStore.password)
 
         sslCert.checkValidity()
         sslCert.verify(serverCert.publicKey)
@@ -220,24 +217,22 @@ class X509UtilitiesTest {
 
     @Test
     fun `create server cert and use in SSL socket`() {
-        val sslConfig = object : SSLConfiguration {
-            override val certificatesDirectory = tempFolder.root.toPath()
-            override val keyStorePassword = "serverstorepass"
-            override val trustStorePassword = "trustpass"
-        }
+        val sslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(tempFolder.root.toPath(), keyStorePassword = "serverstorepass")
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        sslConfig.createDevKeyStores(MEGA_CORP.name, rootCa.certificate, intermediateCa)
+        sslConfig.createDevP2PKeyStore(MEGA_CORP.name, rootCa.certificate, intermediateCa)
         sslConfig.createTrustStore(rootCa.certificate)
 
-        val keyStore = loadKeyStore(sslConfig.sslKeystore, sslConfig.keyStorePassword)
-        val trustStore = loadKeyStore(sslConfig.trustStoreFile, sslConfig.trustStorePassword)
+        // TODO sollecitom try and replace with `get()`
+        val keyStore = loadKeyStore(sslConfig.keyStore.path, sslConfig.keyStore.password)
+        // TODO sollecitom try and replace with `get()`
+        val trustStore = loadKeyStore(sslConfig.trustStore.path, sslConfig.trustStore.password)
 
         val context = SSLContext.getInstance("TLS")
         val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        keyManagerFactory.init(keyStore, sslConfig.keyStorePassword.toCharArray())
+        keyManagerFactory.init(keyStore, sslConfig.keyStore.password.toCharArray())
         val keyManagers = keyManagerFactory.keyManagers
         val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
         trustMgrFactory.init(trustStore)
@@ -316,10 +311,12 @@ class X509UtilitiesTest {
 
     private fun tempFile(name: String): Path = tempFolder.root.toPath() / name
 
-    private fun SSLConfiguration.createTrustStore(rootCert: X509Certificate) {
-        val trustStore = loadOrCreateKeyStore(trustStoreFile, trustStorePassword)
+    private fun TwoWaySslConfiguration.createTrustStore(rootCert: X509Certificate) {
+        // TODO sollecitom try and replace with `get(true)`
+        val trustStore = loadOrCreateKeyStore(this.trustStore.path, this.trustStore.password)
         trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
-        trustStore.save(trustStoreFile, trustStorePassword)
+        // TODO sollecitom try and replace with `update()`
+        trustStore.save(this.trustStore.path, this.trustStore.password)
     }
 
     @Test

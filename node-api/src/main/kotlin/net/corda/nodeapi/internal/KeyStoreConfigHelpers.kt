@@ -7,7 +7,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.toX500Name
 import net.corda.nodeapi.config.CertificateStore
 import net.corda.nodeapi.config.CertificateStoreSupplier
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
@@ -22,50 +22,47 @@ import javax.security.auth.x500.X500Principal
  * Create the node and SSL key stores needed by a node. The node key store will be populated with a node CA cert (using
  * the given legal name), and the SSL key store will store the TLS cert which is a sub-cert of the node CA.
  */
-// TODO sollecitom refactor
-fun Pair<CertificateStoreSupplier, SSLConfiguration>.createDevKeyStores(legalName: CordaX500Name,
-                                                                                                 rootCert: X509Certificate = DEV_ROOT_CA.certificate,
-                                                                                                 intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA): Pair<CertificateStore, X509KeyStore> {
-    val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediateCa, legalName)
 
-    val nodeKeyStore = first.get(createNew = true)
-    nodeKeyStore.update {
-        setPrivateKey(
-                X509Utilities.CORDA_CLIENT_CA,
-                nodeCaKeyPair.private,
-                listOf(nodeCaCert, intermediateCa.certificate, rootCert))
+fun CertificateStoreSupplier.createDevSigningKeyStore(legalName: CordaX500Name,
+                                                      rootCert: X509Certificate = DEV_ROOT_CA.certificate,
+                                                      intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA,
+                                                      devNodeCa: CertificateAndKeyPair = createDevNodeCa(intermediateCa, legalName)): CertificateStore {
+
+    val store = get(createNew = true)
+    store.update {
+        setPrivateKey(X509Utilities.CORDA_CLIENT_CA, devNodeCa.keyPair.private, listOf(devNodeCa.certificate, intermediateCa.certificate, rootCert))
     }
-
-    val sslKeyStore = second.loadSslKeyStore(createNew = true)
-    sslKeyStore.update {
-        val tlsKeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, nodeCaCert, nodeCaKeyPair, legalName.x500Principal, tlsKeyPair.public)
-        setPrivateKey(
-                X509Utilities.CORDA_CLIENT_TLS,
-                tlsKeyPair.private,
-                listOf(tlsCert, nodeCaCert, intermediateCa.certificate, rootCert))
-    }
-
-    return Pair(nodeKeyStore, sslKeyStore)
+    return store
 }
 
-// TODO sollecitom re-use in the function above if not removed
-fun SSLConfiguration.createDevKeyStores(legalName: CordaX500Name,
-                                        rootCert: X509Certificate = DEV_ROOT_CA.certificate,
-                                        intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA): X509KeyStore {
-    val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediateCa, legalName)
+fun CertificateStoreSupplier.createDevP2PKeyStore(legalName: CordaX500Name,
+                                                      rootCert: X509Certificate = DEV_ROOT_CA.certificate,
+                                                      intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA,
+                                                      devNodeCa: CertificateAndKeyPair = createDevNodeCa(intermediateCa, legalName)): CertificateStore {
 
-    val sslKeyStore = loadSslKeyStore(createNew = true)
-    sslKeyStore.update {
+    val store = get(createNew = true)
+    store.update {
         val tlsKeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, nodeCaCert, nodeCaKeyPair, legalName.x500Principal, tlsKeyPair.public)
-        setPrivateKey(
-                X509Utilities.CORDA_CLIENT_TLS,
-                tlsKeyPair.private,
-                listOf(tlsCert, nodeCaCert, intermediateCa.certificate, rootCert))
+        val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, devNodeCa.certificate, devNodeCa.keyPair, legalName.x500Principal, tlsKeyPair.public)
+        setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKeyPair.private, listOf(tlsCert, devNodeCa.certificate, intermediateCa.certificate, rootCert))
     }
+    return store
+}
 
-    return sslKeyStore
+// TODO sollecitom remove this
+fun Pair<CertificateStoreSupplier, TwoWaySslConfiguration>.createDevKeyStores(legalName: CordaX500Name,
+                                                                              rootCert: X509Certificate = DEV_ROOT_CA.certificate,
+                                                                              intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA): Pair<CertificateStore, CertificateStore> {
+    val devNodeCa = createDevNodeCa(intermediateCa, legalName)
+    return first.createDevSigningKeyStore(legalName, rootCert, intermediateCa, devNodeCa) to second.keyStore.createDevP2PKeyStore(legalName, rootCert, intermediateCa, devNodeCa)
+}
+
+// TODO sollecitom remove this
+fun TwoWaySslConfiguration.createDevP2PKeyStore(legalName: CordaX500Name,
+                                                rootCert: X509Certificate = DEV_ROOT_CA.certificate,
+                                                intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA): CertificateStore {
+
+    return keyStore.createDevP2PKeyStore(legalName, rootCert, intermediateCa)
 }
 
 fun CertificateStore.storeLegalIdentity(alias: String, keyPair: KeyPair = Crypto.generateKeyPair()): PartyAndCertificate {

@@ -9,7 +9,6 @@ import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.PermissionException
-import net.corda.client.rpc.internal.createCordaRPCClientWithInternalSslAndClassLoader
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
@@ -100,11 +99,11 @@ object InteractiveShell {
      */
     fun startShellInternal(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
         rpcOps = { username: String, credentials: String ->
-            val client = createCordaRPCClientWithInternalSslAndClassLoader(hostAndPort = configuration.hostAndPort,
+            val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
                     configuration = CordaRPCClientConfiguration.DEFAULT.copy(
                             maxReconnectAttempts = 1
                     ),
-                    sslConfiguration = configuration.nodeSslConfig,
+                    sslConfiguration = configuration.ssl,
                     classLoader = classLoader)
             this.connection = client.start(username, credentials)
             connection.proxy

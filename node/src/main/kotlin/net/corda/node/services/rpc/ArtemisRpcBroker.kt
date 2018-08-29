@@ -8,7 +8,7 @@ import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_SECU
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.RPC_SECURITY_CONFIG
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
 import org.apache.activemq.artemis.core.server.ActiveMQServer
@@ -28,17 +28,17 @@ class ArtemisRpcBroker internal constructor(
         private val maxMessageSize: Int,
         private val jmxEnabled: Boolean = false,
         private val baseDirectory: Path,
-        private val nodeConfiguration: SSLConfiguration,
+        private val nodeConfiguration: TwoWaySslConfiguration,
         private val shouldStartLocalShell: Boolean) : ArtemisBroker {
 
     companion object {
         private val logger = loggerFor<ArtemisRpcBroker>()
 
-        fun withSsl(configuration: SSLConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
+        fun withSsl(configuration: TwoWaySslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
             return ArtemisRpcBroker(address, adminAddress, sslOptions, true, securityManager, maxMessageSize, jmxEnabled, baseDirectory, configuration, shouldStartLocalShell)
         }
 
-        fun withoutSsl(configuration: SSLConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
+        fun withoutSsl(configuration: TwoWaySslConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
             return ArtemisRpcBroker(address, adminAddress, null, false, securityManager, maxMessageSize, jmxEnabled, baseDirectory, configuration, shouldStartLocalShell)
         }
     }
@@ -83,14 +83,14 @@ class ArtemisRpcBroker internal constructor(
 
     @Throws(IOException::class, KeyStoreException::class)
     private fun createArtemisSecurityManager(loginListener: LoginListener): ActiveMQJAASSecurityManager {
-        val keyStore = nodeConfiguration.loadSslKeyStore().internal
-        val trustStore = nodeConfiguration.loadTrustStore().internal
+        val keyStore = nodeConfiguration.keyStore.get()
+        val trustStore = nodeConfiguration.trustStore.get()
 
         val securityConfig = object : SecurityConfiguration() {
             override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
                 val options = mapOf(
                         RPC_SECURITY_CONFIG to RPCJaasConfig(securityManager, loginListener, useSsl),
-                        NODE_SECURITY_CONFIG to NodeJaasConfig(keyStore, trustStore)
+                        NODE_SECURITY_CONFIG to NodeJaasConfig(keyStore.value.internal, trustStore.value.internal)
                 )
                 return arrayOf(AppConfigurationEntry(name, AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, options))
             }

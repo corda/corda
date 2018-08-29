@@ -7,17 +7,22 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.toPath
 import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.nodeapi.internal.createDevKeyStores
+import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_FILE
+import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_PASS
+import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
+import net.corda.nodeapi.internal.createDevP2PKeyStore
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
+import net.corda.testing.stubs.CertificateStoreStubs
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
@@ -37,16 +42,12 @@ inline fun <reified T : Any> T.amqpSpecific(reason: String, function: () -> Unit
     loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason")
 }
 
-fun configureTestSSL(legalName: CordaX500Name): SSLConfiguration {
-    return object : SSLConfiguration {
-        override val certificatesDirectory = Files.createTempDirectory("certs")
-        override val keyStorePassword: String get() = "cordacadevpass"
-        override val trustStorePassword: String get() = "trustpass"
+fun configureTestSSL(legalName: CordaX500Name): TwoWaySslConfiguration {
 
-        init {
-            configureDevKeyAndTrustStores(legalName)
-        }
-    }
+    val certificatesDirectory = Files.createTempDirectory("certs")
+    val config = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+    config.configureDevKeyAndTrustStores(legalName, certificatesDirectory)
+    return config
 }
 
 private val defaultRootCaName = X500Principal("CN=Corda Root CA,O=R3 Ltd,L=London,C=GB")
@@ -102,17 +103,6 @@ fun BrokerRpcSslOptions.useSslRpcOverrides(): Map<String, String> {
     )
 }
 
-fun SSLConfiguration.noSslRpcOverrides(rpcAdminAddress: NetworkHostAndPort): Map<String, Any> {
-    return mapOf(
-            "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
-            "rpcSettings.useSsl" to "false",
-            "rpcSettings.ssl.certificatesDirectory" to certificatesDirectory.toString(),
-            "rpcSettings.ssl.keyStorePassword" to keyStorePassword,
-            "rpcSettings.ssl.trustStorePassword" to trustStorePassword,
-            "rpcSettings.ssl.crlCheckSoftFail" to true
-    )
-}
-
 /**
  * Until we have proper handling of multiple identities per node, for tests we use the first identity as special one.
  * TODO: Should be removed after multiple identities are introduced.
@@ -126,17 +116,15 @@ fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
  */
 fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
 
-fun p2pSslConfiguration(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "London", "GB")): SSLConfiguration {
-    val sslConfig = object : SSLConfiguration {
-        override val certificatesDirectory = path
-        override val keyStorePassword = "serverstorepass"
-        override val trustStorePassword = "trustpass"
-    }
+fun p2pSslConfiguration(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "London", "GB")): TwoWaySslConfiguration {
+    val sslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(path, keyStorePassword = "serverstorepass")
     val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
-    sslConfig.createDevKeyStores(name, rootCa.certificate, intermediateCa)
-    val trustStore = loadOrCreateKeyStore(sslConfig.trustStoreFile, sslConfig.trustStorePassword)
-    trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCa.certificate)
-    trustStore.save(sslConfig.trustStoreFile, sslConfig.trustStorePassword)
+    sslConfig.createDevP2PKeyStore(name, rootCa.certificate, intermediateCa)
+    val trustStore = sslConfig.trustStore.get(true)
+    trustStore.update {
+        // TODO sollecitom use `addOrReplaceCertificate` to avoid saving files in dev certs generation
+        internal.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCa.certificate)
+    }
 
     return sslConfig
 }

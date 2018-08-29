@@ -161,8 +161,8 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
 
     @Throws(IOException::class, KeyStoreException::class)
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
-        val keyStore = config.p2pSslConfiguration.loadSslKeyStore().internal
-        val trustStore = config.p2pSslConfiguration.loadTrustStore().internal
+        val keyStore = config.p2pSslConfiguration.keyStore.get().value.internal
+        val trustStore = config.p2pSslConfiguration.trustStore.get().value.internal
 
         val securityConfig = object : SecurityConfiguration() {
             // Override to make it work with our login module

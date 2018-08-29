@@ -44,6 +44,7 @@ import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
 import net.corda.node.services.config.*
+import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.shell.toShellConfig
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
@@ -696,7 +697,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private fun validateKeyStore(): X509Certificate {
         val containCorrectKeys = try {
             // This will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            val sslKeystore = configuration.p2pSslConfiguration.loadSslKeyStore()
+            val sslKeystore = configuration.p2pSslConfiguration.keyStore.get()
             val identitiesKeystore = configuration.signingCertificateStore.get()
             X509Utilities.CORDA_CLIENT_TLS in sslKeystore && X509Utilities.CORDA_CLIENT_CA in identitiesKeystore
         } catch (e: KeyStoreException) {
@@ -714,9 +715,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         // Check all cert path chain to the trusted root
-        val sslCertChainRoot = configuration.p2pSslConfiguration.loadSslKeyStore().getCertificateChain(X509Utilities.CORDA_CLIENT_TLS).last()
+        val sslCertChainRoot = configuration.p2pSslConfiguration.keyStore.get().getCertificateChain(X509Utilities.CORDA_CLIENT_TLS).last()
         val nodeCaCertChainRoot = configuration.signingCertificateStore.get().getCertificateChain(X509Utilities.CORDA_CLIENT_CA).last()
-        val trustRoot = configuration.p2pSslConfiguration.loadTrustStore().getCertificate(X509Utilities.CORDA_ROOT_CA)
+        val trustRoot = configuration.p2pSslConfiguration.trustStore.get().getCertificate(X509Utilities.CORDA_ROOT_CA)
 
         require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
         require(nodeCaCertChainRoot == trustRoot) { "Client CA certificate must chain to the trusted root." }
@@ -1027,4 +1028,14 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
             else -> throw CouldNotCreateDataSourceException("Could not create the DataSource: ${ex.message}", ex)
         }
     }
+}
+
+fun extractRpcClientSslOptions(nodeRpcOptions: NodeRpcOptions): ClientRpcSslOptions? {
+
+    if (!nodeRpcOptions.useSsl || nodeRpcOptions.sslConfig == null) {
+        return null
+    }
+    // TODO sollecitom check that this works
+    // Here we're using the node's RPC key store as the RPC client's trust store.
+    return ClientRpcSslOptions(nodeRpcOptions.sslConfig!!.keyStorePath, nodeRpcOptions.sslConfig!!.keyStorePassword)
 }

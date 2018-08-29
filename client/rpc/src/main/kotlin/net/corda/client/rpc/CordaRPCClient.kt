@@ -12,7 +12,7 @@ import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.utilities.days
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import java.time.Duration
 
@@ -226,7 +226,7 @@ class CordaRPCClient private constructor(
         private val hostAndPort: NetworkHostAndPort,
         private val configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         private val sslConfiguration: ClientRpcSslOptions? = null,
-        private val nodeSslConfiguration: SSLConfiguration? = null,
+        private val nodeSslConfiguration: SslConfiguration? = null,
         private val classLoader: ClassLoader? = null,
         private val haAddressPool: List<NetworkHostAndPort> = emptyList(),
         private val internalConnection: Boolean = false
@@ -270,15 +270,6 @@ class CordaRPCClient private constructor(
         ): CordaRPCClient {
             return CordaRPCClient(hostAndPort, configuration, sslConfiguration, null, classLoader)
         }
-
-        internal fun createWithInternalSslAndClassLoader(
-                hostAndPort: NetworkHostAndPort,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-                sslConfiguration: SSLConfiguration?,
-                classLoader: ClassLoader? = null
-        ): CordaRPCClient {
-            return CordaRPCClient(hostAndPort, configuration, null, sslConfiguration, classLoader, internalConnection = true)
-        }
     }
 
     init {
@@ -296,7 +287,9 @@ class CordaRPCClient private constructor(
     private fun getRpcClient(): RPCClient<CordaRPCOps> {
         return when {
         // Node->RPC broker, mutually authenticated SSL. This is used when connecting the integrated shell
-            internalConnection == true -> RPCClient(hostAndPort, nodeSslConfiguration!!)
+            internalConnection && nodeSslConfiguration != null -> RPCClient(hostAndPort, nodeSslConfiguration)
+
+            internalConnection && nodeSslConfiguration == null -> RPCClient(hostAndPort)
 
         // Client->RPC broker
             haAddressPool.isEmpty() -> RPCClient(

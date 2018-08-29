@@ -11,7 +11,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
@@ -21,7 +20,7 @@ import net.corda.testing.core.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.NodeHandleInternal
-import net.corda.testing.driver.stubs.CertificateStoreStubs
+import net.corda.testing.stubs.CertificateStoreStubs
 import net.corda.testing.node.internal.*
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
@@ -248,14 +247,10 @@ private fun DriverDSLImpl.startNode(providedName: CordaX500Name, devMode: Boolea
     var customOverrides = emptyMap<String, String>()
     if (!devMode) {
         val nodeDir = baseDirectory(providedName)
-        // TODO sollecitom refactor
-        val signingCertStore = CertificateStoreStubs.Signing.withBaseDirectory(nodeDir, "cordacadevpass")
-        val p2pSslConfig = object : SSLConfiguration {
-            override val certificatesDirectory = nodeDir / "certificates"
-            override val keyStorePassword = "cordacadevpass"
-            override val trustStorePassword = "trustpass"
-        }
-        (signingCertStore to p2pSslConfig).configureDevKeyAndTrustStores(providedName)
+        val certificatesDirectory = nodeDir / "certificates"
+        val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        configureDevKeyAndTrustStores(providedName, signingCertStore, p2pSslConfig, certificatesDirectory)
         customOverrides = mapOf("devMode" to "false")
     }
     return startNode(providedName = providedName, customOverrides = customOverrides)

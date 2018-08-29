@@ -12,7 +12,6 @@ import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.bridging.AMQPBridgeManager
 import net.corda.nodeapi.internal.bridging.BridgeManager
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import net.corda.testing.core.ALICE_NAME
@@ -20,7 +19,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.stubs.CertificateStoreStubs
+import net.corda.testing.stubs.CertificateStoreStubs
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -171,14 +170,8 @@ class AMQPBridgeTest {
 
     private fun createArtemis(sourceQueueName: String?): Triple<ArtemisMessagingServer, ArtemisMessagingClient, BridgeManager> {
         val baseDir = temporaryFolder.root.toPath() / "artemis"
-        // TODO sollecitom refactor
-        val certificatesDir = baseDir / "certificates"
-        val p2pSslConfiguration = object : SSLConfiguration {
-            override val certificatesDirectory = certificatesDir
-            override val keyStorePassword = "cordacadevpass"
-            override val trustStorePassword= "trustpass"
-        }
-        val signingCertificateStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDir, "cordacadevpass")
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withBaseDirectory(baseDir)
+        val signingCertificateStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDir)
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDir).whenever(it).baseDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName
@@ -206,14 +199,8 @@ class AMQPBridgeTest {
 
     private fun createAMQPServer(maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPServer {
         val baseDir = temporaryFolder.root.toPath() / "server"
-        // TODO sollecitom refactor
-        val certificatesDir = baseDir / "certificates"
-        val p2pSslConfiguration = object : SSLConfiguration {
-            override val certificatesDirectory = certificatesDir
-            override val keyStorePassword = "cordacadevpass"
-            override val trustStorePassword= "trustpass"
-        }
-        val signingCertificateStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDir, "cordacadevpass")
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withBaseDirectory(baseDir)
+        val signingCertificateStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDir)
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "server").whenever(it).baseDirectory
             doReturn(BOB_NAME).whenever(it).myLegalName
@@ -222,10 +209,11 @@ class AMQPBridgeTest {
         }
         serverConfig.configureWithDevSSLCertificate()
 
+        val keyStore = serverConfig.p2pSslConfiguration.keyStore.get()
         val amqpConfig = object : AMQPConfiguration {
-            override val keyStore: KeyStore = serverConfig.p2pSslConfiguration.loadSslKeyStore().internal
-            override val keyStorePrivateKeyPassword: CharArray = serverConfig.p2pSslConfiguration.keyStorePassword.toCharArray()
-            override val trustStore: KeyStore = serverConfig.p2pSslConfiguration.loadTrustStore().internal
+            override val keyStore: KeyStore = keyStore.value.internal
+            override val keyStorePrivateKeyPassword: CharArray = keyStore.password.toCharArray()
+            override val trustStore: KeyStore = serverConfig.p2pSslConfiguration.trustStore.get().value.internal
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
         }

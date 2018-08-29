@@ -12,9 +12,7 @@ import java.security.cert.X509Certificate
 // TODO sollecitom see if you can make the password private here
 interface CertificateStore {
 
-    // TODO sollecitom ideally make this private
     val value: X509KeyStore
-    // TODO sollecitom see if this can stay private (by adding delegate functions over X509Store)
     val password: String
 
     fun writeTo(stream: OutputStream) = value.internal.store(stream, password.toCharArray())
@@ -26,6 +24,8 @@ interface CertificateStore {
         value.save()
         return result
     }
+
+    // TODO sollecitom introduce a `query` equivalent of `update` that doesn't save - remove query functions apart from `contains`
 
     fun getCertificate(alias: String): X509Certificate = value.getCertificate(alias)
 

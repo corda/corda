@@ -3,7 +3,6 @@ package net.corda.node.services.messaging
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.configureDatabase
@@ -14,14 +13,13 @@ import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.stubs.CertificateStoreStubs
+import net.corda.testing.stubs.CertificateStoreStubs
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -74,15 +72,9 @@ class ArtemisMessagingTest {
         abstract class AbstractNodeConfiguration : NodeConfiguration
 
         val baseDirectory = temporaryFolder.root.toPath()
-        val certificatesDirectory = baseDirectory / "certificates"
-        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "cordacadevpass")
+        val signingCertificateStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDirectory)
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withBaseDirectory(baseDirectory)
 
-        // TODO sollecitom refactor this
-        val p2pSslConfiguration = object : SSLConfiguration {
-            override val certificatesDirectory = certificatesDirectory
-            override val keyStorePassword = "cordacadevpass"
-            override val trustStorePassword = "trustpass"
-        }
         config = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath()).whenever(it).baseDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName

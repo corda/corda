@@ -15,7 +15,7 @@ import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.signingAndP2pConfiguration
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.config.CertificateStoreSupplier
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
@@ -26,7 +26,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.stubs.CertificateStoreStubs
+import net.corda.testing.stubs.CertificateStoreStubs
 import net.corda.testing.internal.DEV_INTERMEDIATE_CA
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.rigorousMock
@@ -333,14 +333,13 @@ class CertificateRevocationListNodeTests {
                              nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
                              tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
                              maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPClient, X509Certificate> {
-        // TODO sollecitom refactor
         val baseDirectory = temporaryFolder.root.toPath() / "client"
-        val p2pSslConfiguration = rigorousMock<SSLConfiguration>()
-        doReturn("trustpass").whenever(p2pSslConfiguration).trustStorePassword
-        doReturn("cordacadevpass").whenever(p2pSslConfiguration).keyStorePassword
-        val signingCertificateStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDirectory, "cordacadevpass")
+        val certificatesDirectory = baseDirectory / "certificates"
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
         val clientConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
+            doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(BOB_NAME).whenever(it).myLegalName
             doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
@@ -348,12 +347,13 @@ class CertificateRevocationListNodeTests {
         }
         clientConfig.configureWithDevSSLCertificate()
         val nodeCert = clientConfig.signingAndP2pConfiguration().recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
-        val clientTruststore = clientConfig.p2pSslConfiguration.loadTrustStore().internal
-        val clientKeystore = clientConfig.p2pSslConfiguration.loadSslKeyStore().internal
+        val keyStore = clientConfig.p2pSslConfiguration.keyStore.get()
+        val clientTruststore = clientConfig.p2pSslConfiguration.trustStore.get().value.internal
+        val clientKeystore = keyStore.value.internal
 
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore: KeyStore = clientKeystore
-            override val keyStorePrivateKeyPassword: CharArray = clientConfig.p2pSslConfiguration.keyStorePassword.toCharArray()
+            override val keyStorePrivateKeyPassword: CharArray = keyStore.password.toCharArray()
             override val trustStore: KeyStore = clientTruststore
             override val crlCheckSoftFail: Boolean = crlCheckSoftFail
             override val maxMessageSize: Int = maxMessageSize
@@ -369,14 +369,13 @@ class CertificateRevocationListNodeTests {
                              nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
                              tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
                              maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPServer, X509Certificate> {
-        // TODO sollecitom refactor
         val baseDirectory = temporaryFolder.root.toPath() / "server"
-        val p2pSslConfiguration = rigorousMock<SSLConfiguration>()
-        doReturn("trustpass").whenever(p2pSslConfiguration).trustStorePassword
-        doReturn("cordacadevpass").whenever(p2pSslConfiguration).keyStorePassword
-        val signingCertificateStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDirectory, "cordacadevpass")
+        val certificatesDirectory = baseDirectory / "certificates"
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
+            doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(name).whenever(it).myLegalName
             doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
@@ -384,11 +383,12 @@ class CertificateRevocationListNodeTests {
         }
         serverConfig.configureWithDevSSLCertificate()
         val nodeCert = serverConfig.signingAndP2pConfiguration().recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
-        val serverTruststore = serverConfig.p2pSslConfiguration.loadTrustStore().internal
-        val serverKeystore = serverConfig.p2pSslConfiguration.loadSslKeyStore().internal
+        val keyStore = serverConfig.p2pSslConfiguration.keyStore.get()
+        val serverTruststore = serverConfig.p2pSslConfiguration.trustStore.get().value.internal
+        val serverKeystore = keyStore.value.internal
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore: KeyStore = serverKeystore
-            override val keyStorePrivateKeyPassword: CharArray = serverConfig.p2pSslConfiguration.keyStorePassword.toCharArray()
+            override val keyStorePrivateKeyPassword: CharArray = keyStore.password.toCharArray()
             override val trustStore: KeyStore = serverTruststore
             override val crlCheckSoftFail: Boolean = crlCheckSoftFail
             override val maxMessageSize: Int = maxMessageSize
@@ -399,7 +399,7 @@ class CertificateRevocationListNodeTests {
                 amqpConfig), nodeCert)
     }
 
-    private fun Pair<CertificateStoreSupplier, SSLConfiguration>.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {
+    private fun Pair<CertificateStoreSupplier, TwoWaySslConfiguration>.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {
 
         val signingCertificateStore = first
         val p2pSslConfiguration = second
@@ -413,12 +413,14 @@ class CertificateRevocationListNodeTests {
         nodeKeyStore.update {
             setPrivateKey(X509Utilities.CORDA_CLIENT_CA, nodeKeys.private, nodeCertChain)
         }
-        val sslKeyStore = p2pSslConfiguration.loadSslKeyStore()
+        val sslKeyStore = p2pSslConfiguration.keyStore.get()
         val (tlsCert, tlsKeys) = sslKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS)
         val newTlsCert = replaceCrlDistPointCaCertificate(tlsCert, CertificateType.TLS, nodeKeys, tlsCrlDistPoint, X500Name.getInstance(ROOT_CA.certificate.subjectX500Principal.encoded))
         val sslCertChain = listOf(newTlsCert, newNodeCert, INTERMEDIATE_CA.certificate, *sslKeyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_TLS).drop(3).toTypedArray())
-        sslKeyStore.internal.deleteEntry(X509Utilities.CORDA_CLIENT_TLS)
-        sslKeyStore.save()
+
+        sslKeyStore.update {
+            internal.deleteEntry(X509Utilities.CORDA_CLIENT_TLS)
+        }
         sslKeyStore.update {
             setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKeys.private, sslCertChain)
         }

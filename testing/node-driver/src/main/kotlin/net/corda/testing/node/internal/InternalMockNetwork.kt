@@ -47,14 +47,13 @@ import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.DevIdentityGenerator
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.TestCorDapp
-import net.corda.testing.driver.stubs.CertificateStoreStubs
+import net.corda.testing.stubs.CertificateStoreStubs
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.testThreadFactory
@@ -469,8 +468,9 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         val id = parameters.forcedID ?: nextNodeId++
         val baseDirectory = baseDirectory(id)
         val certificatesDirectory = baseDirectory / "certificates"
+        certificatesDirectory.createDirectories()
         val config = mockNodeConfiguration(certificatesDirectory).also {
-            doReturn(baseDirectory.createDirectories()).whenever(it).baseDirectory
+            doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
@@ -578,14 +578,8 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
     @DoNotImplement
     abstract class AbstractNodeConfiguration : NodeConfiguration
 
-    val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "cordacadevpass")
-
-    // TODO sollecitom refactor this
-    val p2pSslConfiguration = object : SSLConfiguration {
-        override val certificatesDirectory = certificatesDirectory
-        override val keyStorePassword = "cordacadevpass"
-        override val trustStorePassword = "trustpass"
-    }
+    val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
+    val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
 
     return rigorousMock<AbstractNodeConfiguration>().also {
         doReturn(certificatesDirectory.createDirectories()).whenever(it).certificatesDirectory

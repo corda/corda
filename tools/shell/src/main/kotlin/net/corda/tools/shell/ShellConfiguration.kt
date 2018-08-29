@@ -2,7 +2,9 @@ package net.corda.tools.shell
 
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.messaging.ClientRpcSslOptions
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.nodeapi.internal.config.SslConfiguration
+import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import java.nio.file.Path
 
 data class ShellConfiguration(
@@ -12,7 +14,6 @@ data class ShellConfiguration(
         var password: String = "",
         val hostAndPort: NetworkHostAndPort,
         val ssl: ClientRpcSslOptions? = null,
-        val nodeSslConfig: SSLConfiguration? = null,
         val sshdPort: Int? = null,
         val sshHostKeyDirectory: Path? = null,
         val noLocalShell: Boolean = false) {

@@ -232,7 +232,7 @@ open class Node(configuration: NodeConfiguration,
         printBasicNodeInfo("Advertised P2P messaging addresses", nodeInfo.addresses.joinToString())
         val rpcServerConfiguration = RPCServerConfiguration.DEFAULT
         rpcServerAddresses?.let {
-            internalRpcMessagingClient = InternalRPCMessagingClient(configuration.p2pSslConfiguration, it.admin, MAX_RPC_MESSAGE_SIZE, CordaX500Name.build(configuration.p2pSslConfiguration.loadSslKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal), rpcServerConfiguration)
+            internalRpcMessagingClient = InternalRPCMessagingClient(configuration.p2pSslConfiguration, it.admin, MAX_RPC_MESSAGE_SIZE, CordaX500Name.build(configuration.p2pSslConfiguration.keyStore.get().getCertificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal), rpcServerConfiguration)
             printBasicNodeInfo("RPC connection address", it.primary.toString())
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
         }

@@ -11,9 +11,9 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.config.CertificateStoreSupplier
-import net.corda.nodeapi.internal.config.FileBasedCertificateStoreLoader
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.TwoWaySslOptions
+import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
@@ -76,8 +76,8 @@ interface NodeConfiguration {
 
     val baseDirectory: Path
     val certificatesDirectory: Path
-    val signingCertificateStore: CertificateStoreSupplier
-    val p2pSslConfiguration: SSLConfiguration
+    val signingCertificateStore: FileBasedCertificateStoreSupplier
+    val p2pSslConfiguration: TwoWaySslConfiguration
 
     val cordappDirectories: List<Path>
 
@@ -188,8 +188,8 @@ data class NodeConfigurationImpl(
         override val myLegalName: CordaX500Name,
         override val jmxMonitoringHttpPort: Int? = null,
         override val emailAddress: String,
-        override val keyStorePassword: String,
-        override val trustStorePassword: String,
+        private val keyStorePassword: String,
+        private val trustStorePassword: String,
         override val crlCheckSoftFail: Boolean,
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = null,
@@ -232,7 +232,7 @@ data class NodeConfigurationImpl(
         override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS,
         override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT),
         override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA
-) : NodeConfiguration, SSLConfiguration {
+) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
 
@@ -258,10 +258,13 @@ data class NodeConfigurationImpl(
     override val certificatesDirectory = baseDirectory / "certificates"
 
     private val signingCertificateStorePath = certificatesDirectory / "nodekeystore.jks"
-    override val signingCertificateStore: CertificateStoreSupplier = FileBasedCertificateStoreLoader(signingCertificateStorePath, keyStorePassword)
+    override val signingCertificateStore = FileBasedCertificateStoreSupplier(signingCertificateStorePath, keyStorePassword)
 
-    // TODO sollecitom change this
-    override val p2pSslConfiguration: SSLConfiguration = this
+    private val p2pKeystorePath: Path get() = certificatesDirectory / "sslkeystore.jks"
+    private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword)
+    private val p2pTrustStoreFilePath: Path get() = certificatesDirectory / "truststore.jks"
+    private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword)
+    override val p2pSslConfiguration: TwoWaySslConfiguration = TwoWaySslOptions(p2pKeyStore, p2pTrustStore)
 
     override val rpcOptions: NodeRpcOptions
         get() {

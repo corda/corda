@@ -4,7 +4,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.testing.internal.configureTestSSL
 import org.apache.activemq.artemis.api.core.client.*
 
@@ -12,7 +12,7 @@ import org.apache.activemq.artemis.api.core.client.*
  * As the name suggests this is a simple client for connecting to MQ brokers.
  */
 class SimpleMQClient(val target: NetworkHostAndPort,
-                     private val config: SSLConfiguration? = configureTestSSL(DEFAULT_MQ_LEGAL_NAME)) {
+                     private val config: TwoWaySslConfiguration? = configureTestSSL(DEFAULT_MQ_LEGAL_NAME)) {
     companion object {
         val DEFAULT_MQ_LEGAL_NAME = CordaX500Name(organisation = "SimpleMQClient", locality = "London", country = "GB")
     }

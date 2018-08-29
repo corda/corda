@@ -11,10 +11,9 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_U
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.DEV_ROOT_CA
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.testing.driver.stubs.CertificateStoreStubs
+import net.corda.testing.stubs.CertificateStoreStubs
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQClusterSecurityException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -85,19 +84,15 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
 
     @Test
     fun `login with invalid certificate chain`() {
-        // TODO sollecitom refactor
         val certsDir = Files.createTempDirectory("certs")
         certsDir.createDirectories()
-        val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certsDir, "cordacadevpass")
-        val p2pSslConfig = object : SSLConfiguration {
-            override val certificatesDirectory = certsDir
-            override val keyStorePassword: String get() = "cordacadevpass"
-            override val trustStorePassword: String get() = "trustpass"
-        }
+        val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certsDir)
+        val p2pSslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certsDir)
 
         val legalName = CordaX500Name("MegaCorp", "London", "GB")
-        if (!p2pSslConfig.trustStoreFile.exists()) {
-            javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks").use { it.copyTo(p2pSslConfig.trustStoreFile) }
+        // TODO sollecitom try and add it to the store using `update()`
+        if (!p2pSslConfig.trustStore.path.exists()) {
+            javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks").use { it.copyTo(p2pSslConfig.trustStore.path) }
         }
 
         val clientKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
@@ -113,7 +108,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
             setPrivateKey(X509Utilities.CORDA_CLIENT_CA, clientKeyPair.private, listOf(clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
         }
 
-        p2pSslConfig.loadSslKeyStore(createNew = true).update {
+        p2pSslConfig.keyStore.get(createNew = true).update {
             setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKeyPair.private, listOf(clientTLSCert, clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
         }
 
