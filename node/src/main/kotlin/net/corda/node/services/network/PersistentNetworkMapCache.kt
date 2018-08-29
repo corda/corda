@@ -132,7 +132,9 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
 
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> = nodesByKeyCache[identityKey]!!
 
-    private val nodesByKeyCache = NonInvalidatingCache<PublicKey, List<NodeInfo>>(1024) { key ->
+    private val nodesByKeyCache = NonInvalidatingCache<PublicKey, List<NodeInfo>>(
+            "PersistentNetworkMap_nodesByKey",
+            1024) { key ->
         database.transaction { queryByIdentityKey(session, key) }
     }
 
@@ -150,7 +152,9 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
         return identityByLegalNameCache.get(name)!!.orElse(null)
     }
 
-    private val identityByLegalNameCache = NonInvalidatingCache<CordaX500Name, Optional<PartyAndCertificate>>(1024) { name ->
+    private val identityByLegalNameCache = NonInvalidatingCache<CordaX500Name, Optional<PartyAndCertificate>>(
+            "PersistentNetworkMap_idByLegalName",
+            1024) { name ->
         Optional.ofNullable(database.transaction { queryIdentityByLegalName(session, name) })
     }
 

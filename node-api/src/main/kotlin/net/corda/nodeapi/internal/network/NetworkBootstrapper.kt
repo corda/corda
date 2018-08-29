@@ -12,7 +12,6 @@ package net.corda.nodeapi.internal.network
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import net.corda.cordform.CordformNode
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -56,11 +55,11 @@ import kotlin.streams.toList
  */
 // TODO Move this to tools:bootstrapper
 class NetworkBootstrapper
-    @VisibleForTesting
-    internal constructor(private val initSerEnv: Boolean,
-                         private val embeddedCordaJar: () -> InputStream,
-                         private val nodeInfosGenerator: (List<Path>) -> List<Path>,
-                         private val contractsJarConverter: (Path) -> ContractsJar) {
+@VisibleForTesting
+internal constructor(private val initSerEnv: Boolean,
+                     private val embeddedCordaJar: () -> InputStream,
+                     private val nodeInfosGenerator: (List<Path>) -> List<Path>,
+                     private val contractsJarConverter: (Path) -> ContractsJar) {
 
     constructor() : this(
             initSerEnv = true,
@@ -112,7 +111,7 @@ class NetworkBootstrapper
                 process.destroyForcibly()
                 throw IllegalStateException("Error while generating node info file. Please check the logs in $logsDir.")
             }
-            check(process.exitValue() == 0) {  "Error while generating node info file. Please check the logs in $logsDir." }
+            check(process.exitValue() == 0) { "Error while generating node info file. Please check the logs in $logsDir." }
             return nodeDir.list { paths ->
                 paths.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
             }
@@ -279,7 +278,7 @@ class NetworkBootstrapper
 
     private fun distributeNodeInfos(nodeDirs: List<Path>, nodeInfoFiles: List<Path>) {
         for (nodeDir in nodeDirs) {
-            val additionalNodeInfosDir = (nodeDir / CordformNode.NODE_INFO_DIRECTORY).createDirectories()
+            val additionalNodeInfosDir = (nodeDir / NODE_INFO_DIRECTORY).createDirectories()
             for (nodeInfoFile in nodeInfoFiles) {
                 nodeInfoFile.copyToDirectory(additionalNodeInfosDir, REPLACE_EXISTING)
             }
@@ -374,10 +373,10 @@ class NetworkBootstrapper
 
     private fun NodeInfo.notaryIdentity(): Party {
         return when (legalIdentities.size) {
-            // Single node notaries have just one identity like all other nodes. This identity is the notary identity
+        // Single node notaries have just one identity like all other nodes. This identity is the notary identity
             1 -> legalIdentities[0]
-            // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
-            // cluster and is shared by all the other members. This is the notary identity.
+        // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
+        // cluster and is shared by all the other members. This is the notary identity.
             2 -> legalIdentities[1]
             else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
         }

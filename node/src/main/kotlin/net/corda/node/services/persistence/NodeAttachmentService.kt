@@ -216,6 +216,7 @@ class NodeAttachmentService(
     // a problem somewhere else or this needs to be revisited.
 
     private val attachmentContentCache = NonInvalidatingWeightBasedCache(
+            name = "NodeAttachmentService_attachmentContent",
             maxWeight = attachmentContentCacheSize,
             weigher = Weigher<SecureHash, Optional<Pair<Attachment, ByteArray>>> { key, value -> key.size + if (value.isPresent) value.get().second.size else 0 },
             loadFunction = { Optional.ofNullable(loadAttachmentContent(it)) }
@@ -236,7 +237,9 @@ class NodeAttachmentService(
         }
     }
 
-    private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(attachmentCacheBound) { key ->
+    private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
+            "NodeAttachmentService_attachemnt",
+            attachmentCacheBound) { key ->
         Optional.ofNullable(createAttachment(key))
     }
 

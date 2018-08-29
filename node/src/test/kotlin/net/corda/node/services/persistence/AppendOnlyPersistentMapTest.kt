@@ -271,6 +271,7 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
     )
 
     class TestMap : AppendOnlyPersistentMap<Long, String, PersistentMapEntry, Long>(
+            "ApoendOnlyPersistentMap_test",
             toPersistentEntityKey = { it },
             fromPersistentEntity = { Pair(it.key, it.value) },
             toPersistentEntity = { key: Long, value: String ->

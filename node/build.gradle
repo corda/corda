@@ -82,6 +82,7 @@ dependencies {
     compile project(':client:rpc')
     compile project(':tools:shell')
 
+
     compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
 
     // Log4J: logging framework (with SLF4J bindings)

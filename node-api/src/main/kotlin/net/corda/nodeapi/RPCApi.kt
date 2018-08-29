@@ -24,7 +24,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.Try
 import org.apache.activemq.artemis.api.core.ActiveMQBuffer
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.client.*
+import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
 import org.apache.activemq.artemis.reader.MessageUtil
@@ -222,6 +222,11 @@ object RPCApi {
             }
         }
 
+        /**
+         * Thrown if the RPC reply body couldn't be deserialized.
+         */
+        class FailedToDeserializeReply(val id: InvocationId, cause: Throwable) : RuntimeException("Failed to deserialize RPC reply: ${cause.message}", cause)
+
         companion object {
             private fun Any.safeSerialize(context: SerializationContext, wrap: (Throwable) -> Any) = try {
                 serialize(context = context)
@@ -236,10 +241,18 @@ object RPCApi {
                     RPCApi.ServerToClient.Tag.RPC_REPLY -> {
                         val id = message.invocationId(RPC_ID_FIELD_NAME, RPC_ID_TIMESTAMP_FIELD_NAME) ?: throw IllegalStateException("Cannot parse invocation id from client message.")
                         val poolWithIdContext = context.withProperty(RpcRequestOrObservableIdKey, id)
+                        // The result here is a Try<> that represents the attempt to try the operation on the server side.
+                        // If anything goes wrong with deserialisation of the response, we propagate it differently because
+                        // we also need to pass through the invocation and dedupe IDs.
+                        val result: Try<Any?> = try {
+                            message.getBodyAsByteArray().deserialize(context = poolWithIdContext)
+                        } catch (e: Exception) {
+                            throw FailedToDeserializeReply(id, e)
+                        }
                         RpcReply(
                                 id = id,
                                 deduplicationIdentity = deduplicationIdentity,
-                                result = message.getBodyAsByteArray().deserialize(context = poolWithIdContext)
+                                result = result
                         )
                     }
                     RPCApi.ServerToClient.Tag.OBSERVATION -> {

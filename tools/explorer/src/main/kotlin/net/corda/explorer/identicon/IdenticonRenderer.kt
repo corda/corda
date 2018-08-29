@@ -24,6 +24,7 @@ import javafx.scene.image.WritableImage
 import javafx.scene.paint.Color
 import javafx.scene.text.TextAlignment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.buildNamed
 
 /**
  *  (The MIT License)
@@ -85,7 +86,7 @@ object IdenticonRenderer {
 
     private const val renderingSize = 30.0
 
-    private val cache = Caffeine.newBuilder().build(CacheLoader<SecureHash, Image> { key ->
+    private val cache = Caffeine.newBuilder().buildNamed("IdentIconRenderer_image", CacheLoader<SecureHash, Image> { key ->
         key.let { render(key.hashCode(), renderingSize) }
     })
 

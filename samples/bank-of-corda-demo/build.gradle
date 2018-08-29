@@ -17,21 +17,6 @@ apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
 
-sourceSets {
-    integrationTest {
-        kotlin {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/kotlin')
-        }
-    }
-}
-
-configurations {
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
-}
-
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
@@ -58,13 +43,46 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
-    // CordformationDefinition is an experimental feature
-    definitionClass = 'net.corda.bank.BankOfCordaCordform'
-}
-
-task integrationTest(type: Test, dependsOn: []) {
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
+    nodeDefaults {
+        cordapp project(':finance')
+    }
+    node {
+        name "O=Notary Service,L=Zurich,C=CH"
+        notary = [validating: true]
+        p2pPort 10002
+        rpcSettings {
+            address "localhost:10003"
+            adminAddress "localhost:10004"
+        }
+        extraConfig = [h2Settings: [address: "localhost:10016"]]
+    }
+    node {
+        name "O=BankOfCorda,L=London,C=GB"
+        p2pPort 10005
+        rpcSettings {
+            address "localhost:10006"
+            adminAddress "localhost:10015"
+        }
+        webPort 10007
+        rpcUsers = [[user: "bankUser", password: "test", permissions: ["ALL"]]]
+        extraConfig = [
+                custom    : [issuableCurrencies: ["USD"]],
+                h2Settings: [address: "localhost:10017"]
+        ]
+    }
+    node {
+        name "O=BigCorporation,L=New York,C=US"
+        p2pPort 10008
+        rpcSettings {
+            address "localhost:10009"
+            adminAddress "localhost:10011"
+        }
+        webPort 10010
+        rpcUsers = [[user: "bigCorpUser", password: "test", permissions: ["ALL"]]]
+        extraConfig = [
+                h2Settings: [address: "localhost:10018"]
+        ]
+    }
 }
 
 idea {

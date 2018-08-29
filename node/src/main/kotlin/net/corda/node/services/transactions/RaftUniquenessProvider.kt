@@ -71,6 +71,7 @@ class RaftUniquenessProvider(
         private val log = contextLogger()
         fun createMap(): AppendOnlyPersistentMap<StateRef, Pair<Long, SecureHash>, CommittedState, PersistentStateRef> =
                 AppendOnlyPersistentMap(
+                        "RaftUniquenessProvider_transactions",
                         toPersistentEntityKey = { PersistentStateRef(it) },
                         fromPersistentEntity = {
                             val txId = it.id.txId

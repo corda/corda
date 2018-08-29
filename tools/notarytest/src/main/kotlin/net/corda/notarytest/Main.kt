@@ -15,7 +15,9 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.node.services.Permissions
 import net.corda.notarytest.service.JDBCLoadTestFlow
+import net.corda.testing.node.User
 import java.util.concurrent.TimeUnit
 
 /** The number of test flows to run on each notary node */
@@ -62,3 +64,5 @@ private fun run(rpc: CordaRPCOps, inputStateCount: Int? = null): List<Long> {
         flowDuration
     }
 }
+
+internal val notaryDemoUser = User("demou", "demop", setOf(Permissions.all()))

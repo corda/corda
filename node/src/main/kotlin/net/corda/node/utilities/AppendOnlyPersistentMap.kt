@@ -319,6 +319,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
 
 // Open for tests to override
 open class AppendOnlyPersistentMap<K, V, E, out EK>(
+        name: String,
         toPersistentEntityKey: (K) -> EK,
         fromPersistentEntity: (E) -> Pair<K, V>,
         toPersistentEntity: (key: K, value: V) -> E,
@@ -331,6 +332,7 @@ open class AppendOnlyPersistentMap<K, V, E, out EK>(
         persistentEntityClass) {
     //TODO determine cacheBound based on entity class later or with node config allowing tuning, or using some heuristic based on heap size
     override val cache = NonInvalidatingCache(
+            name = name,
             bound = cacheBound,
             loadFunction = { key: K ->
                 // This gets called if a value is read and the cache has no Transactional for this key yet.
@@ -363,6 +365,7 @@ open class AppendOnlyPersistentMap<K, V, E, out EK>(
 
 // Same as above, but with weighted values (e.g. memory footprint sensitive).
 class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
+        name: String,
         toPersistentEntityKey: (K) -> EK,
         fromPersistentEntity: (E) -> Pair<K, V>,
         toPersistentEntity: (key: K, value: V) -> E,
@@ -375,6 +378,7 @@ class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
         toPersistentEntity,
         persistentEntityClass) {
     override val cache = NonInvalidatingWeightBasedCache(
+            name,
             maxWeight = maxWeight,
             weigher = Weigher { key, value -> weighingFunc(key, value) },
             loadFunction = { key: K ->

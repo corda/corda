@@ -10,15 +10,12 @@
 
 package net.corda.testing.node.internal
 
-import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.internal.createCordaRPCClientWithInternalSslAndClassLoader
-import net.corda.cordform.CordformContext
-import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.identity.CordaX500Name
@@ -40,6 +37,7 @@ import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
+
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
@@ -60,8 +58,6 @@ import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_RAFT
-import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
 import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -342,97 +338,6 @@ class DriverDSLImpl(
         VALIDATING_RAFT(true, CordaX500Name("Raft", "Zurich", "CH")),
         NON_VALIDATING_RAFT(false, CordaX500Name("Raft", "Zurich", "CH")),
         NON_VALIDATING_BFT(false, CordaX500Name("BFT", "Zurich", "CH"))
-    }
-
-    // TODO remove this
-    internal fun startCordformNodes(cordforms: List<CordformNode>): CordaFuture<*> {
-        check(notarySpecs.isEmpty()) { "Specify notaries in the CordformDefinition" }
-        check(compatibilityZone == null) { "Cordform nodes cannot be run with compatibilityZoneURL" }
-
-        val clusterNodes = HashMultimap.create<ClusterType, CordaX500Name>()
-        val notaryInfos = ArrayList<NotaryInfo>()
-
-        // Go though the node definitions and pick out the notaries so that we can generate their identities to be used
-        // in the network parameters
-        for (cordform in cordforms) {
-            if (cordform.notary == null) continue
-            val name = CordaX500Name.parse(cordform.name)
-            val notaryConfig = ConfigFactory.parseMap(cordform.notary).parseAs<NotaryConfig>()
-            // We need to first group the nodes that form part of a cluster. We assume for simplicity that nodes of the
-            // same cluster type and validating flag are part of the same cluster.
-            when {
-                notaryConfig.raft != null -> {
-                    val key = if (notaryConfig.validating) VALIDATING_RAFT else NON_VALIDATING_RAFT
-                    clusterNodes.put(key, name)
-                }
-                notaryConfig.bftSMaRt != null -> clusterNodes.put(ClusterType.NON_VALIDATING_BFT, name)
-                else -> {
-                    // We have all we need here to generate the identity for single node notaries
-                    val identity = DevIdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(name), legalName = name)
-                    notaryInfos += NotaryInfo(identity, notaryConfig.validating)
-                }
-            }
-        }
-
-        clusterNodes.asMap().forEach { type, nodeNames ->
-            val identity = if (type == ClusterType.NON_VALIDATING_RAFT || type == ClusterType.VALIDATING_RAFT) {
-                DevIdentityGenerator.generateDistributedNotarySingularIdentity(
-                        dirs = nodeNames.map { baseDirectory(it) },
-                        notaryName = type.clusterName
-                )
-            } else {
-                DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
-                        dirs = nodeNames.map { baseDirectory(it) },
-                        notaryName = type.clusterName
-                )
-            }
-            notaryInfos += NotaryInfo(identity, type.validating)
-        }
-
-        val localNetworkMap = LocalNetworkMap(notaryInfos)
-
-        return cordforms.map {
-            val startedNode = startCordformNode(it, localNetworkMap)
-            if (it.webAddress != null) {
-                // Start a webserver if an address for it was specified
-                startedNode.flatMap { startWebserver(it) }
-            } else {
-                startedNode
-            }
-        }.transpose()
-    }
-
-    // TODO remove this
-    private fun startCordformNode(cordform: CordformNode, localNetworkMap: LocalNetworkMap): CordaFuture<NodeHandle> {
-        val name = CordaX500Name.parse(cordform.name)
-        // TODO We shouldn't have to allocate an RPC or web address if they're not specified. We're having to do this because of startNodeInternal
-        val rpcAddress = if (cordform.rpcAddress == null) {
-            val overrides = mutableMapOf<String, Any>("rpcSettings.address" to portAllocation.nextHostAndPort().toString())
-            cordform.config.apply {
-                overrides += "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString()
-            }
-            overrides
-        } else {
-            val overrides = mutableMapOf<String, Any>()
-            cordform.config.apply {
-                overrides += "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString()
-            }
-            overrides
-        }
-        val webAddress = cordform.webAddress?.let { NetworkHostAndPort.parse(it) } ?: portAllocation.nextHostAndPort()
-        val notary = if (cordform.notary != null) mapOf("notary" to cordform.notary) else emptyMap()
-        val rpcUsers = cordform.rpcUsers
-
-        val rawConfig = cordform.config + rpcAddress + notary + mapOf(
-                "rpcUsers" to if (rpcUsers.isEmpty()) defaultRpcUserList else rpcUsers
-        )
-        val typesafe = ConfigHelper.loadConfig(
-                baseDirectory = baseDirectory(name),
-                allowMissingConfig = true,
-                configOverrides = rawConfig.toNodeOnly()
-        )
-        val config = NodeConfig(typesafe).checkAndOverrideForInMemoryDB()
-        return startNodeInternal(config, webAddress, null, "512m", localNetworkMap, emptySet())
     }
 
     @Suppress("DEPRECATION")
@@ -1045,7 +950,7 @@ private class NetworkVisibilityController {
     }
 }
 
-interface InternalDriverDSL : DriverDSL, CordformContext {
+interface InternalDriverDSL : DriverDSL {
     private companion object {
         private val DEFAULT_POLL_INTERVAL = 500.millis
         private const val DEFAULT_WARN_COUNT = 120
@@ -1053,7 +958,7 @@ interface InternalDriverDSL : DriverDSL, CordformContext {
 
     val shutdownManager: ShutdownManager
 
-    override fun baseDirectory(nodeName: String): Path = baseDirectory(CordaX500Name.parse(nodeName))
+    fun baseDirectory(nodeName: String): Path = baseDirectory(CordaX500Name.parse(nodeName))
 
     /**
      * Polls a function until it returns a non-null value. Note that there is no timeout on the polling.
@@ -1287,4 +1192,3 @@ fun DriverDSL.startNode(providedName: CordaX500Name, devMode: Boolean, parameter
     }
     return startNode(parameters, providedName = providedName, customOverrides = customOverrides)
 }
-

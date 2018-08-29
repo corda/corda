@@ -63,6 +63,7 @@ class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPers
         fun createTransactionsMap(maxSizeInBytes: Long)
                 : AppendOnlyPersistentMapBase<SecureHash, TxCacheValue, DBTransaction, String> {
             return WeightBasedAppendOnlyPersistentMap<SecureHash, TxCacheValue, DBTransaction, String>(
+                    name = "DBTransactionStorage_transactions",
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = {
                         Pair(SecureHash.parse(it.txId),
