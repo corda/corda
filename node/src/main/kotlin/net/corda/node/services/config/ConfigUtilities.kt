@@ -16,6 +16,7 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.save
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
+import java.nio.file.Paths
 
 fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(mapOf(*pairs))
 operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.parseMap(overrides).withFallback(this)
@@ -83,7 +84,7 @@ fun configureDevKeyAndTrustStores(myLegalName: CordaX500Name, signingCertificate
     certificatesDirectory.createDirectories()
 
     if (specifiedTrustStore == null) {
-        val devCaTrustStore = X509KeyStore.fromFile(signingCertificateStore::class.java.classLoader.getResource("certificates/$DEV_CA_TRUST_STORE_FILE").toPath(), DEV_CA_TRUST_STORE_PASS)
+        val devCaTrustStore = X509KeyStore.fromFile(Paths.get(signingCertificateStore::class.java.classLoader.getResource("certificates/$DEV_CA_TRUST_STORE_FILE").toURI()), DEV_CA_TRUST_STORE_PASS)
         // TODO sollecitom refactor this
         devCaTrustStore.internal.save(p2pSslConfig.trustStore.path, p2pSslConfig.trustStore.password)
     }
@@ -117,7 +118,7 @@ fun TwoWaySslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
     certificatesDirectory.createDirectories()
     val specifiedTrustStore = trustStore.getOptional()
     if (specifiedTrustStore == null) {
-        val devCaTrustStore = X509KeyStore.fromFile(trustStore::class.java.classLoader.getResource("certificates/$DEV_CA_TRUST_STORE_FILE").toPath(), DEV_CA_TRUST_STORE_PASS)
+        val devCaTrustStore = X509KeyStore.fromFile(Paths.get(trustStore::class.java.classLoader.getResource("certificates/$DEV_CA_TRUST_STORE_FILE").toURI()), DEV_CA_TRUST_STORE_PASS)
         // TODO sollecitom refactor this (try to use `update` with the cert in the devCaTrustStore
         devCaTrustStore.internal.save(trustStore.path, trustStore.password)
     }
