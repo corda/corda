@@ -53,7 +53,15 @@ private class ShellExtensionsGenerator(val alias: String, val className: String)
     }
 
     private val userHome: Path by lazy { Paths.get(System.getProperty("user.home")) }
-    private val jarLocation: Path by lazy { this.javaClass.location.toPath() }
+    private val jarLocation: Path by lazy {
+        val capsuleJarProperty = System.getProperty("capsule.jar")
+        if (capsuleJarProperty != null) {
+            //Use capsule jar property
+            Paths.get(capsuleJarProperty)
+        } else {
+            this.javaClass.location.toPath()
+        }
+    }
 
     // If on Windows, Path.toString() returns a path with \ instead of /, but for bash Windows users we want to convert those back to /'s
     private fun Path.toStringWithDeWindowsfication(): String = this.toAbsolutePath().toString().replace("\\", "/")
