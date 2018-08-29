@@ -1,50 +1,39 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.rpcWorker
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
-import net.corda.core.concurrent.CordaFuture
-import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.concurrent.fork
-import net.corda.core.internal.concurrent.map
-import net.corda.core.internal.isAbstractClass
-import net.corda.core.messaging.RPCOps
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
-import net.corda.core.serialization.internal.nodeSerializationEnv
-import net.corda.core.utilities.*
-import net.corda.node.internal.Startable
-import net.corda.node.internal.Stoppable
+import net.corda.core.internal.div
+import net.corda.core.node.NodeInfo
+import net.corda.node.internal.NetworkParametersReader
+import net.corda.node.internal.Node
+import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.security.RPCSecurityManagerImpl
-import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
-import net.corda.node.services.messaging.RPCServer
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.SecurityConfiguration
+import net.corda.node.services.messaging.InternalRPCMessagingClient
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.RPCApi
+import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.nodeapi.internal.config.User
-import net.corda.serialization.internal.AMQP_P2P_CONTEXT
-import net.corda.serialization.internal.SerializationFactoryImpl
-import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.TransportConfiguration
-import org.apache.activemq.artemis.api.core.client.ActiveMQClient
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
-import org.apache.activemq.artemis.core.config.Configuration
-import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
-import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
-import org.apache.activemq.artemis.core.security.CheckType
-import org.apache.activemq.artemis.core.security.Role
-import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
-import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
-import org.apache.activemq.artemis.core.settings.impl.AddressSettings
-import org.apache.activemq.artemis.spi.core.protocol.RemotingConnection
-import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager3
 import picocli.CommandLine
 import java.io.File
-import java.lang.IllegalArgumentException
 import java.nio.file.FileSystems
 import java.nio.file.Path
-import java.util.concurrent.Executors
+import java.security.KeyPair
+import java.security.cert.X509Certificate
+import java.util.*
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
@@ -56,7 +45,8 @@ fun main(args: Array<String>) {
         if (main.verbose) {
             throwable.printStackTrace()
         } else {
-            System.err.println("ERROR: ${throwable.message ?: ""}. Please use '--verbose' option to obtain more details.")
+            System.err.println("ERROR: ${throwable.message
+                    ?: ""}. Please use '--verbose' option to obtain more details.")
         }
         exitProcess(1)
     }
@@ -66,7 +56,7 @@ fun main(args: Array<String>) {
         name = "RPC Worker",
         mixinStandardHelpOptions = true,
         showDefaultValues = true,
-        description = [ "Standalone RPC server endpoint with pluggable set of operations." ]
+        description = ["Standalone RPC server endpoint with pluggable set of operations."]
 )
 class Main : Runnable {
     @CommandLine.Option(
@@ -91,199 +81,77 @@ class Main : Runnable {
 
         val port = config.getInt("port")
         val user = User(config.getString("userName"), config.getString("password"), emptySet())
-        val rpcOps = instantiateAndValidate(config.getString("rpcOpsImplClass"))
         val artemisDir = FileSystems.getDefault().getPath(config.getString("artemisDir"))
 
-        initialiseSerialization()
-        RpcWorker(NetworkHostAndPort("localhost", port), user, rpcOps, artemisDir).start()
+        val rpcWorkerConfig = getRpcWorkerConfig(port, user, artemisDir)
+        val ourKeyPair = getIdentity()
+        val myInfo = getNodeInfo()
+
+        val trustRoot = rpcWorkerConfig.loadTrustStore().getCertificate(X509Utilities.CORDA_ROOT_CA)
+        val nodeCa = rpcWorkerConfig.loadNodeKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_CA)
+
+        val signedNetworkParameters = NetworkParametersReader(trustRoot, null, rpcWorkerConfig.baseDirectory).read()
+        val rpcWorkerBroker = createRpcWorkerBroker(rpcWorkerConfig, signedNetworkParameters.networkParameters.maxMessageSize)
+        createRpcWorker(rpcWorkerConfig, myInfo, signedNetworkParameters, ourKeyPair, trustRoot, nodeCa, rpcWorkerBroker.serverControl)
     }
 
-    private fun instantiateAndValidate(rpcOpsImplClassName: String): RPCOps {
-        try {
-            val klass = Class.forName(rpcOpsImplClassName)
-            if (klass.isAbstractClass) {
-                throw IllegalArgumentException("$rpcOpsImplClassName must not be abstract")
-            }
-            val instance = klass.newInstance()
-            return instance as? RPCOps ?: throw IllegalArgumentException("class '$rpcOpsImplClassName' is not extending RPCOps")
-        } catch (ex: ClassNotFoundException) {
-            throw IllegalArgumentException("class '$rpcOpsImplClassName' not found in the classpath")
-        }
+    private fun getRpcWorkerConfig(port: Int, user: User, artemisDir: Path): NodeConfiguration {
+        TODO("" + port + user + artemisDir)
     }
 
-    private fun initialiseSerialization() {
-        synchronized(this) {
-            if (nodeSerializationEnv == null) {
-                val classloader = this::class.java.classLoader
-                nodeSerializationEnv = SerializationEnvironmentImpl(
-                        SerializationFactoryImpl().apply {
-                            registerScheme(AMQPServerSerializationScheme(emptyList()))
-                        },
-                        p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
-                        rpcServerContext = AMQP_P2P_CONTEXT.withClassLoader(classloader)
-                )
-            }
+    private fun getIdentity(): KeyPair {
+        TODO()
+    }
+
+    private fun getNodeInfo(): NodeInfo {
+        TODO()
+    }
+
+    private fun createRpcWorkerBroker(config: NodeConfiguration, maxMessageSize: Int): ArtemisBroker {
+        val rpcOptions = config.rpcOptions
+        val securityManager = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(config.rpcUsers))
+        val broker = if (rpcOptions.useSsl) {
+            ArtemisRpcBroker.withSsl(config, rpcOptions.address, rpcOptions.adminAddress, rpcOptions.sslConfig!!, securityManager, maxMessageSize, false, config.baseDirectory / "artemis", false)
+        } else {
+            ArtemisRpcBroker.withoutSsl(config, rpcOptions.address, rpcOptions.adminAddress, securityManager, maxMessageSize, false, config.baseDirectory / "artemis", false)
         }
+        broker.start()
+        return broker
+    }
+
+    private fun createRpcWorker(config: NodeConfiguration, myInfo: NodeInfo, signedNetworkParameters: NetworkParametersReader.NetworkParametersAndSigned, ourKeyPair: KeyPair, trustRoot: X509Certificate, nodeCa: X509Certificate, serverControl: ActiveMQServerControl): Pair<RpcWorker, RpcWorkerServiceHub> {
+        val rpcWorkerServiceHub = RpcWorkerServiceHub(config, myInfo, signedNetworkParameters, ourKeyPair, trustRoot, nodeCa)
+        val rpcWorker = RpcWorker(rpcWorkerServiceHub, serverControl)
+        rpcWorker.start()
+        return Pair(rpcWorker, rpcWorkerServiceHub)
     }
 }
 
-/**
- * Note once `stop()` been called, there is no longer an option to call `start()` and the instance should be discarded
- */
-class RpcWorker(private val hostAndPort: NetworkHostAndPort, private val user: User, private val ops: RPCOps, private val artemisPath: Path) : Startable, Stoppable {
+class RpcWorker(private val rpcWorkerServiceHub: RpcWorkerServiceHub, private val serverControl: ActiveMQServerControl) {
 
-    private companion object {
-        const val MAX_MESSAGE_SIZE: Int = 10485760
-        const val notificationAddress = "notifications"
-        private val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality = "Nowhere", country = "GB")
-        private val DEFAULT_TIMEOUT = 60.seconds
+    private val runOnStop = ArrayList<() -> Any?>()
 
-        private val logger = contextLogger()
-    }
-
-    private val executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("RpcWorker-pool-thread-%d").build())
-    private val registeredShutdowns = mutableListOf(doneFuture({executorService.shutdown()}))
-
-    override var started = false
-
-    override fun start() {
-        started = true
-
-        startRpcServer().getOrThrow(DEFAULT_TIMEOUT)
-    }
-
-    override fun stop() {
-        val shutdownOutcomes = registeredShutdowns.map { Try.on { it.getOrThrow(DEFAULT_TIMEOUT) } }
-        shutdownOutcomes.reversed().forEach {
-            when (it) {
-                is Try.Success ->
-                    try {
-                        it.value()
-                    } catch (t: Throwable) {
-                        logger.warn("Exception while calling a shutdown action, this might create resource leaks", t)
-                    }
-                is Try.Failure -> logger.warn("Exception while getting shutdown method, disregarding", it.exception)
-            }
-        }
-
-        started = false
-    }
-
-    private fun startRpcServer(): CordaFuture<RPCServer> {
-        return startRpcBroker().map { serverControl ->
-            startRpcServerWithBrokerRunning(serverControl = serverControl)
-        }
-    }
-
-    private fun startRpcBroker(
-            maxFileSize: Int = MAX_MESSAGE_SIZE,
-            maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE
-    ): CordaFuture<ActiveMQServerControl> {
-        return executorService.fork {
-            logger.info("Artemis files will be stored in: $artemisPath")
-            val artemisConfig = createRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient, artemisPath, hostAndPort)
-            val server = ActiveMQServerImpl(artemisConfig, SingleUserSecurityManager(user))
-            server.start()
-            registeredShutdowns.add(doneFuture({
-                server.stop()
-            }))
-            server.activeMQServerControl
-        }
-    }
-
-    private fun createNettyClientTransportConfiguration(): TransportConfiguration {
-        return ArtemisTcpTransport.rpcConnectorTcpTransport(hostAndPort, null)
-    }
-
-    private fun startRpcServerWithBrokerRunning(
-            nodeLegalName: CordaX500Name = fakeNodeLegalName,
-            configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,
-            serverControl: ActiveMQServerControl
-    ): RPCServer {
-        val locator = ActiveMQClient.createServerLocatorWithoutHA(createNettyClientTransportConfiguration()).apply {
-            minLargeMessageSize = MAX_MESSAGE_SIZE
-            isUseGlobalPools = false
-        }
-        val rpcSecurityManager = RPCSecurityManagerImpl.fromUserList(users = listOf(User(user.username, user.password, user.permissions)),
-                id = AuthServiceId("RPC_WORKER_SECURITY_MANAGER"))
-        val rpcServer = RPCServer(
-                ops,
-                user.username,
-                user.password,
-                locator,
-                rpcSecurityManager,
-                nodeLegalName,
-                configuration
+    fun start() {
+        val rpcServerConfiguration = RPCServerConfiguration.DEFAULT.copy(
+                rpcThreadPoolSize = rpcWorkerServiceHub.configuration.enterpriseConfiguration.tuning.rpcThreadPoolSize
         )
-        registeredShutdowns.add(doneFuture({
-            rpcServer.close()
-            locator.close()
-        }))
-        rpcServer.start(serverControl)
-        return rpcServer
+        val securityManager = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(rpcWorkerServiceHub.configuration.rpcUsers))
+        val nodeName = CordaX500Name.build(rpcWorkerServiceHub.configuration.loadSslKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal)
+
+        val internalRpcMessagingClient = InternalRPCMessagingClient(rpcWorkerServiceHub.configuration, rpcWorkerServiceHub.configuration.rpcOptions.adminAddress, Node.MAX_RPC_MESSAGE_SIZE, nodeName, rpcServerConfiguration)
+        internalRpcMessagingClient.init(rpcWorkerServiceHub.rpcOps, securityManager)
+        internalRpcMessagingClient.start(serverControl)
+
+        runOnStop += { rpcWorkerServiceHub.stop() }
+        rpcWorkerServiceHub.start()
+
+        runOnStop += { internalRpcMessagingClient.stop() }
     }
 
-    private fun createRpcServerArtemisConfig(maxFileSize: Int, maxBufferedBytesPerClient: Long, baseDirectory: Path, hostAndPort: NetworkHostAndPort): Configuration {
-        return ConfigurationImpl().apply {
-            val artemisDir = "$baseDirectory/artemis"
-            bindingsDirectory = "$artemisDir/bindings"
-            journalDirectory = "$artemisDir/journal"
-            largeMessagesDirectory = "$artemisDir/large-messages"
-            acceptorConfigurations = setOf(ArtemisTcpTransport.rpcAcceptorTcpTransport(hostAndPort, null))
-            configureCommonSettings(maxFileSize, maxBufferedBytesPerClient)
+    fun stop() {
+        for (toRun in runOnStop.reversed()) {
+            toRun()
         }
-    }
-
-    private fun ConfigurationImpl.configureCommonSettings(maxFileSize: Int, maxBufferedBytesPerClient: Long) {
-        managementNotificationAddress = SimpleString(notificationAddress)
-        isPopulateValidatedUser = true
-        journalBufferSize_NIO = maxFileSize
-        journalBufferSize_AIO = maxFileSize
-        journalFileSize = maxFileSize
-        queueConfigurations = listOf(
-                CoreQueueConfiguration().apply {
-                    name = RPCApi.RPC_SERVER_QUEUE_NAME
-                    address = RPCApi.RPC_SERVER_QUEUE_NAME
-                    isDurable = false
-                },
-                CoreQueueConfiguration().apply {
-                    name = RPCApi.RPC_CLIENT_BINDING_REMOVALS
-                    address = notificationAddress
-                    filterString = RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION
-                    isDurable = false
-                },
-                CoreQueueConfiguration().apply {
-                    name = RPCApi.RPC_CLIENT_BINDING_ADDITIONS
-                    address = notificationAddress
-                    filterString = RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION
-                    isDurable = false
-                }
-        )
-        addressesSettings = mapOf(
-                "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
-                    maxSizeBytes = maxBufferedBytesPerClient
-                    addressFullMessagePolicy = AddressFullMessagePolicy.FAIL
-                }
-        )
-    }
-}
-
-private class SingleUserSecurityManager(val rpcUser: User) : ActiveMQSecurityManager3 {
-    override fun validateUser(user: String?, password: String?) = isValid(user, password)
-    override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?) = isValid(user, password)
-    override fun validateUser(user: String?, password: String?, connection: RemotingConnection?): String? {
-        return validate(user, password)
-    }
-
-    override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?, address: String?, connection: RemotingConnection?): String? {
-        return validate(user, password)
-    }
-
-    private fun isValid(user: String?, password: String?): Boolean {
-        return rpcUser.username == user && rpcUser.password == password
-    }
-
-    private fun validate(user: String?, password: String?): String? {
-        return if (isValid(user, password)) user else null
+        runOnStop.clear()
     }
 }

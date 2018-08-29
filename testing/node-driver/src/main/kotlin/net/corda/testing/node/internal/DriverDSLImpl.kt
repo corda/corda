@@ -106,13 +106,13 @@ class DriverDSLImpl(
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
-    private val networkVisibilityController = NetworkVisibilityController()
+    val networkVisibilityController = NetworkVisibilityController()
     /**
      * Future which completes when the network map infrastructure is available, whether a local one or one from the CZ.
      * This future acts as a gate to prevent nodes from starting too early. The value of the future is a [LocalNetworkMap]
      * object, which is null if the network map is being provided by the CZ.
      */
-    private lateinit var networkMapAvailability: CordaFuture<LocalNetworkMap?>
+    lateinit var networkMapAvailability: CordaFuture<LocalNetworkMap?>
     private lateinit var _notaries: CordaFuture<List<NotaryHandle>>
     override val notaryHandles: List<NotaryHandle> get() = _notaries.getOrThrow()
 
@@ -889,7 +889,7 @@ class DriverDSLImpl(
  * Keeps track of how many nodes each node sees and gates nodes from completing their startNode [CordaFuture] until all
  * current nodes see everyone.
  */
-private class NetworkVisibilityController {
+class NetworkVisibilityController {
     private val nodeVisibilityHandles = ThreadBox(HashMap<String, VisibilityHandle>())
 
     fun register(name: CordaX500Name): VisibilityHandle {

@@ -530,7 +530,6 @@ class NodeVaultService(
 
             val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
             val queryRootVaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
-
             // TODO: revisit (use single instance of parser for all queries)
             val criteriaParser = HibernateQueryCriteriaParser(contractStateType, contractStateTypeMappings, criteriaBuilder, criteriaQuery, queryRootVaultStates)
 
@@ -617,7 +616,7 @@ class NodeVaultService(
     /**
      * Derive list from existing vault states and then incrementally update using vault observables
      */
-    private fun bootstrapContractStateTypes() {
+    fun bootstrapContractStateTypes() {
         val criteria = criteriaBuilder.createQuery(String::class.java)
         val vaultStates = criteria.from(VaultSchemaV1.VaultStates::class.java)
         criteria.select(vaultStates.get("contractStateClassName")).distinct(true)

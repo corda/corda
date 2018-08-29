@@ -9,8 +9,8 @@
  */
 
 apply plugin: 'kotlin'
-apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.quasar-utils'
 
 description 'Experiment to make out-of-node RPC processing'
 
@@ -48,6 +48,8 @@ dependencies {
     compile "info.picocli:picocli:$picocli_version"
 
     integrationTestCompile project(":test-utils")
+    integrationTestCompile project(":node-driver")
+    compile project(":experimental:flow-worker")
 }
 
 jar {
