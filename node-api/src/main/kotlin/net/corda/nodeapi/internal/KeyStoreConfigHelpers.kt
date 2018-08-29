@@ -24,9 +24,9 @@ import javax.security.auth.x500.X500Principal
  */
 
 fun CertificateStoreSupplier.createDevSigningKeyStore(legalName: CordaX500Name,
-                                                                                        rootCert: X509Certificate = DEV_ROOT_CA.certificate,
-                                                                                        intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA,
-                                                                                        devNodeCa: CertificateAndKeyPair = createDevNodeCa(intermediateCa, legalName)): CertificateStore {
+                                                      rootCert: X509Certificate = DEV_ROOT_CA.certificate,
+                                                      intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA,
+                                                      devNodeCa: CertificateAndKeyPair = createDevNodeCa(intermediateCa, legalName)): CertificateStore {
 
     val store = get(createNew = true)
     store.update {
@@ -36,9 +36,9 @@ fun CertificateStoreSupplier.createDevSigningKeyStore(legalName: CordaX500Name,
 }
 
 fun CertificateStoreSupplier.createDevP2PKeyStore(legalName: CordaX500Name,
-                                                                                    rootCert: X509Certificate = DEV_ROOT_CA.certificate,
-                                                                                    intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA,
-                                                                                    devNodeCa: CertificateAndKeyPair = createDevNodeCa(intermediateCa, legalName)): CertificateStore {
+                                                  rootCert: X509Certificate = DEV_ROOT_CA.certificate,
+                                                  intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA,
+                                                  devNodeCa: CertificateAndKeyPair = createDevNodeCa(intermediateCa, legalName)): CertificateStore {
 
     val store = get(createNew = true)
     store.update {

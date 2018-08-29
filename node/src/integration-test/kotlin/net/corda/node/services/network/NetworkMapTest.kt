@@ -250,7 +250,7 @@ private fun DriverDSLImpl.startNode(providedName: CordaX500Name, devMode: Boolea
         val certificatesDirectory = nodeDir / "certificates"
         val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
         val p2pSslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
-        configureDevKeyAndTrustStores(providedName, signingCertStore, p2pSslConfig, certificatesDirectory)
+        p2pSslConfig.configureDevKeyAndTrustStores(providedName, signingCertStore, certificatesDirectory)
         customOverrides = mapOf("devMode" to "false")
     }
     return startNode(providedName = providedName, customOverrides = customOverrides)

@@ -33,7 +33,7 @@ class NodeKeystoreCheckTest {
             val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, keystorePassword)
             val p2pSslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, keyStorePassword = keystorePassword, trustStorePassword = keystorePassword)
 
-            configureDevKeyAndTrustStores(ALICE_NAME, signingCertStore, p2pSslConfig, certificatesDirectory)
+            p2pSslConfig.configureDevKeyAndTrustStores(ALICE_NAME, signingCertStore, certificatesDirectory)
 
             // This should pass with correct keystore.
             val node = startNode(
