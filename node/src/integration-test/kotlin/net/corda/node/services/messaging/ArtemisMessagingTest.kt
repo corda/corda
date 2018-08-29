@@ -19,7 +19,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.stubs.CertificateStoreStubs
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties

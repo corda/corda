@@ -20,7 +20,7 @@ import net.corda.serialization.internal.amqp.amqpMagic
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.stubs.CertificateStoreStubs
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*

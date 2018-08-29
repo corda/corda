@@ -1,4 +1,4 @@
-package net.corda.testing.stubs
+package net.corda.testing.internal.stubs
 
 import net.corda.core.internal.div
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier

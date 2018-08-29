@@ -19,7 +19,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.stubs.CertificateStoreStubs
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.RoutingType

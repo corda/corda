@@ -22,7 +22,7 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.stubs.CertificateStoreStubs
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions.*

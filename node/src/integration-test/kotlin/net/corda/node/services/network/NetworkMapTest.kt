@@ -20,7 +20,7 @@ import net.corda.testing.core.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.NodeHandleInternal
-import net.corda.testing.stubs.CertificateStoreStubs
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.internal.*
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat

@@ -9,7 +9,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.stubs.CertificateStoreStubs
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import javax.security.auth.x500.X500Principal
