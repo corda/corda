@@ -6,7 +6,72 @@ Release notes
 Release 3.3
 -----------
 
-<<<Fill this in>>>
+Special Thanks
+~~~~~~~~~~~~~~
+
+The Corda community is a vibrant and exciting ecosystem that spreads far outside the virtual walls of the
+R3 organisation. Without that community, and the most welcome contributions of its members, the Corda project
+would be a much poorer place.
+
+We're therefore happy to extend thanks to the following members of that community for their contributions
+
+  * `Dan Newton <https://github.com/lankydan>`_ for a fix to cleanup node registration in the test framework. The changes can be found `here <https://github.com/corda/corda/commit/599aa709dd025a56e2c295cc9225ba2ee5b0fc9c>`_.
+  * `Tushar Singh Bora <https://github.com/kid101>`_ for a number of `documentation tweaks <https://github.com/corda/corda/commit/279b8deaa6e1045fa4890ef179ee9a41c8a6406b>`_. In addition, some updates to the tutorial documentation `here <https://github.com/corda/corda/commit/37656a58f5fd6cad7a2fa1c08e887777b375cedd>`_.
+  * `Jiachuan Li <https://github.com/lijiachuan1982>`_ for a number of corrections to our documentation. Those contributions can be found `here <https://github.com/corda/corda/commit/83a09885172f22ad4e03909d942b473bccb4e228>`_ and `here <https://github.com/corda/corda/commit/f23f2ee6966cf46a3f8b598e868393f9f2e610e7>`_.
+  * `Yogesh <https://github.com/acetheultimate>`_ for a documentation tweak that can be see `here <https://github.com/corda/corda/commit/07e3ff502f620d5201a29cf12f686b50cd1cb17c>`_.
+  * `Roman Plášil <https://github.com/Quiark>`_ for speeding up node shutdown when connecting to an http network map. This fix can be found `here <https://github.com/corda/corda/commit/ec1e40109d85d495b84cf4307fb8a7e34536f1d9>`_.
+  * `renlulu <https://github.com/renlulu>`_ for a small `PR <https://github.com/corda/corda/commit/cda7c292437e228bd8df5c800f711d45a3d743e1>`_ to optimize some of the imports.
+  * `cxyzhang0 <https://github.com/cxyzhang0>`_ for making the IdentitySyncFlow more useful. See `here <https://github.com/corda/corda/commit/a86c79e40ca15a8b95380608be81fe338d82b141>`_.
+  * `Venelin Stoykov <https://github.com/vstoykov>`_ with updates to the `documentation <https://github.com/corda/corda/commit/4def8395b3bd100b2b0a3d2eecef5e20f0ec7f47>`_ around the progress tracker.
+  * `Mohamed Amine Legheraba <https://github.com/MohamedLEGH>`_ for updates to the Azure documentation that can be seen `here <https://github.com/corda/corda/commit/14e9bf100d0b0236f65ee4ffd778f32307b9e519>`_.
+  * `Stanly Johnson <https://github.com/stanly-johnson>`_ with a `fix <https://github.com/corda/corda/commit/f9a9bb19a7cc6d202446890e4e11bebd4a118cf3>`_ in the network bootstrapper.
+  * `Tittu Varghese <https://github.com/tittuvarghese>`_ for adding a favicon to the docsite. This commit can be found `here <https://github.com/corda/corda/commit/cd8988865599261db45505060735880c3066792e>`_
+
+Issues Fixed
+~~~~~~~~~~~~
+
+* Allow Corda's shell to deserialise using generic type information [`CORDA-1907 <https://r3-cev.atlassian.net/browse/CORDA-1907>`_]
+* Add Servlet 3.1 implementation into the WebServer [`CORDA-1906 <https://r3-cev.atlassian.net/browse/CORDA-1906>`_]
+* Extend JSON deserialisation to handle Amount<T> for any T [`CORDA-1905 <https://r3-cev.atlassian.net/browse/CORDA-1905>`_]
+* It is not possible to run stateMachinesSnapshot from the shell [`CORDA-1681 <https://r3-cev.atlassian.net/browse/CORDA-1681>`_]
+* Reject nodes that have the same organisation name in driver tests [`CORDA-1837 <https://r3-cev.atlassian.net/browse/CORDA-1837>`_]
+* Remove duplicated doc section [`CORDA-1201 <https://r3-cev.atlassian.net/browse/CORDA-1201>`_]
+* Backport hibernate observer fix [`CORDA-1847 <https://r3-cev.atlassian.net/browse/CORDA-1847>`_]
+* Tidy up participate docs [`CORDA-1585 <https://r3-cev.atlassian.net/browse/CORDA-1585>`_]
+* Split Doorman / NM config - fix for CORDA-1510 [`CORDA-1789 <https://r3-cev.atlassian.net/browse/CORDA-1510>`_]
+* Make "rpc-client-sender" daemon [`CORDA-1686 <https://r3-cev.atlassian.net/browse/CORDA-1686>`_]
+* Corda node stops when detecting not migrated node_attachments_contracts table name [`CORDA-1804 <https://r3-cev.atlassian.net/browse/CORDA-1804>`_]
+* Refactor serialization test infrastructure backport [`CORDA-1808 <https://r3-cev.atlassian.net/browse/CORDA-1808>`_]
+* Corda Serialization Evolution breaksdown with Java classes [`CORDA-1662 <https://r3-cev.atlassian.net/browse/CORDA-1662 >`_]
+* Destroy child processes when parent exits. [`CORDA-1634 <https://r3-cev.atlassian.net/browse/CORDA-1634>`_]
+* Add an extra check in the attachment resolution flow to prevent duplicate attachment import if multiple transactions with the same attachment are being resolved at the same time. [`CORDA-1588 <https://r3-cev.atlassian.net/browse/CORDA-1588>`_]
+* Increase max restart count for notary client flows. [`CORDA-1628 <https://r3-cev.atlassian.net/browse/CORDA-162>`_]
+* Document more clearly the supported version of IntelliJ and the IntelliJ Kotlin Plugins. [`CORDA-1727 <https://r3-cev.atlassian.net/browse/CORDA-1727>`_]
+* Reverting DEV certificates keys [`CORDA-1661 <https://r3-cev.atlassian.net/browse/CORDA-1661>`_]
+* serialization multiple transform bug [`CORDA-1498 <https://r3-cev.atlassian.net/browse/CORDA-1498>`_]
+* Buggy CommodityContract issuance logic [`CORDA-1459 <https://r3-cev.atlassian.net/browse/CORDA-1459>`_]
+* Out of process nodes started by the driver do not log to file [`CORDA-1575 <https://r3-cev.atlassian.net/browse/CORDA-1575>`_]
+* Fix logfiles for out of process nodes,  Ensure API can be called concurrently wrt transactions. [`CORDA-1341 <https://r3-cev.atlassian.net/browse/CORDA-1341>`_]
+* When a cash output is identical only the fist output is saved. [`CORDA-1266 <https://r3-cev.atlassian.net/browse/CORDA-1266>`_]
+* OOM when using Demobench + Explorer (fix). [`CORDA-1356 <https://r3-cev.atlassian.net/browse/CORDA-1356>`_]
+* Columns in the Corda database schema should have correct NULL/NOT NULL constraints [`CORDA-1297 <https://r3-cev.atlassian.net/browse/CORDA-1297>`_]
+* Arrays of primitive byte arrays don't deserialize [`CORDA-1545 <https://r3-cev.atlassian.net/browse/CORDA-1545>`_]
+* Integration test for network parameter updates and improved logging [`CORDA-1405 <https://r3-cev.atlassian.net/browse/CORDA-1405>`_]
+* Error in process-id deletion process allows multiple instances of same node to be run (fix). [`CORDA-1455 <https://r3-cev.atlassian.net/browse/CORDA-1455>`_]
+* The shell doesn't print the return value of a started flow - fixed. [`CORDA-1342 <https://r3-cev.atlassian.net/browse/CORDA-1342>`_]
+* small doc correction [`CORDA-1315 <https://r3-cev.atlassian.net/browse/CORDA-1315>`_]
+* Updates withoutIssuer to not strip display token size. [`CORDA-1386 <https://r3-cev.atlassian.net/browse/CORDA-1386>`_]
+* Fixed incorrect exception handling in `NodeVaultService._query()` [`CORDA-1397 <https://r3-cev.atlassian.net/browse/CORDA-1397>`_]
+* Update the api-scanner to the most recent version + regenerate api [`CORDA-1280 <https://r3-cev.atlassian.net/browse/CORDA-1280>`_]
+* Fix query paging in scheduled flow tests [`CORDA-1344 <https://r3-cev.atlassian.net/browse/CORDA-1344>`_]
+* Add cert role to CSR and doorman issue cert according to the cert roleD (#2620) [`CORDA-1317 <https://r3-cev.atlassian.net/browse/CORDA-1317>`_]
+* node should continue with parameters from file when network map not available [`CORDA-1414 <https://r3-cev.atlassian.net/browse/CORDA-1414>`_]
+* split the simm valuation demo to reduce the size of the contract jar [`CORDA-1346 <https://r3-cev.atlassian.net/browse/CORDA-134>`_]
+* Ignore duplicate packages and sub-packages in driver extraCordappPackagesToScan [`CORDA-1385 <https://r3-cev.atlassian.net/browse/CORDA-1385>`_]
+* Generics serialization issue [`CORDA-1403 <https://r3-cev.atlassian.net/browse/CORDA-1403>`_]
+* Fix issue with setter-based serialisation [`CORDA-1229 <https://r3-cev.atlassian.net/browse/CORDA-1229>`_]
+* Delete the root nodes directory before initialising the nodes [`CORDA-1389 <https://r3-cev.atlassian.net/browse/CORDA-1389>`_]
+* Remove superfluous registerInitiatedFlow calls from tutorial and example tests [`CORDA-1304 <https://r3-cev.atlassian.net/browse/CORDA-1304>`_]
 
 .. _release_notes_v3_2:
 
