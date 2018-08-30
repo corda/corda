@@ -3,9 +3,13 @@ package net.corda.nodeapi.internal.config
 import net.corda.core.internal.outputStream
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509KeyStore
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.addOrReplaceCertificate
+import net.corda.nodeapi.internal.crypto.getX509CertificateOptional
 import java.io.OutputStream
 import java.nio.file.OpenOption
 import java.nio.file.Path
+import java.security.cert.Certificate
 import java.security.cert.X509Certificate
 
 interface CertificateStore {
@@ -27,6 +31,21 @@ interface CertificateStore {
         return action.invoke(value)
     }
 
+    operator fun set(alias: String, certificate: X509Certificate) {
+
+        update {
+            internal.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, certificate)
+        }
+    }
+
+    operator fun get(alias: String): X509Certificate? {
+
+        return query {
+            internal.getX509CertificateOptional(alias)
+        }
+    }
+
+    // TODO sollecitom remove
     fun getCertificate(alias: String): X509Certificate = value.getCertificate(alias)
 
     operator fun contains(alias: String): Boolean = value.contains(alias)
