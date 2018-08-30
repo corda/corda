@@ -86,7 +86,7 @@ fun CordaCliWrapper.start(vararg args: String) {
         optionListHeading = "%n@|bold,underline Options|@:%n%n",
         commandListHeading = "%n@|bold,underline Commands|@:%n%n")
 abstract class CordaCliWrapper(val alias: String, val description: String) : Callable<Int> {
-    @Option(names = ["-v", "--verbose"], description = ["If set, prints logging to the console as well as to a file."])
+    @Option(names = ["-v", "--verbose", "--log-to-console"], description = ["If set, prints logging to the console as well as to a file."])
     var verbose: Boolean = false
 
     @Option(names = ["--logging-level"],
@@ -101,7 +101,7 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Cal
 
     // This needs to be called before loggers (See: NodeStartup.kt:51 logger called by lazy, initLogging happens before).
     // Node's logging is more rich. In corda configurations two properties, defaultLoggingLevel and consoleLogLevel, are usually used.
-    private fun initLogging() {
+    open fun initLogging() {
         val loggingLevel = loggingLevel.name().toLowerCase(Locale.ENGLISH)
         System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
         if (verbose) {
@@ -114,8 +114,8 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Cal
     abstract fun runProgram(): Int
 
     override fun call(): Int {
-        installShellExtensionsParser.installOrUpdateShellExtensions(alias, this.javaClass.name)
         initLogging()
+        installShellExtensionsParser.installOrUpdateShellExtensions(alias, this.javaClass.name)
         return runProgram()
     }
 }

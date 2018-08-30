@@ -39,12 +39,6 @@ class NodeCmdLineOptions {
         }
 
     @Option(
-            names = ["-c", "--log-to-console"],
-            description = ["If set, prints logging to the console as well as to a file."]
-    )
-    var logToConsole: Boolean = false
-
-    @Option(
             names = ["--sshd"],
             description = ["If set, enables sshd server for node administration."]
     )

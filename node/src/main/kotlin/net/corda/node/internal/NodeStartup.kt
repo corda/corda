@@ -437,10 +437,10 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda node") {
         }
     }
 
-    protected open fun initLogging() {
+    override fun initLogging() {
         val loggingLevel = loggingLevel.name().toLowerCase(Locale.ENGLISH)
         System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
-        if (cmdLineOptions.logToConsole) {
+        if (verbose) {
             System.setProperty("consoleLogLevel", loggingLevel)
             Node.renderBasicInfoToConsole = false
         }
