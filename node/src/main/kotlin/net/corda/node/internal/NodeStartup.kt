@@ -48,7 +48,7 @@ import java.util.*
 import kotlin.system.exitProcess
 
 /** This class is responsible for starting a Node from command line arguments. */
-open class NodeStartup: CordaCliWrapper("corda", "Run Corda and stuff") {
+open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda node") {
     companion object {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         const val LOGS_DIRECTORY_NAME = "logs"
