@@ -173,6 +173,8 @@ class NodeVaultService(
                         notary = stateAndRef.value.state.notary,
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
+                        lockId = uuid,
+                        lockUpdateTime = if (uuid == null) null else now,
                         recordedTime = clock.instant(),
                         isRelevant = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT
                 )
