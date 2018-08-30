@@ -11,6 +11,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
+import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.protonwrapper.netty.init
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.nodeapi.internal.registerDevSigningCertificates
@@ -189,9 +190,9 @@ class X509UtilitiesTest {
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        signingCertStore.get(true).also { it.registerDevSigningCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa) }
-        p2pSslConfig.keyStore.get(true).also { it.registerDevP2pCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa) }
-
+        val nodeCa = createDevNodeCa(intermediateCa, MEGA_CORP.name)
+        signingCertStore.get(createNew = true).also { it.registerDevSigningCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa, nodeCa) }
+        p2pSslConfig.keyStore.get(createNew = true).also { it.registerDevP2pCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa, nodeCa) }
         // Load back server certificate
         val serverKeyStore = signingCertStore.get().value
         val (serverCert, serverKeyPair) = serverKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
@@ -201,8 +202,8 @@ class X509UtilitiesTest {
         assertThat(CordaX500Name.build(serverCert.subjectX500Principal)).isEqualTo(MEGA_CORP.name)
 
         // Load back SSL certificate
-        val sslKeyStore = p2pSslConfig.keyStore.get()
-        val (sslCert) = sslKeyStore.query { getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, p2pSslConfig.keyStore.password) }
+        val sslKeyStoreReloaded = p2pSslConfig.keyStore.get()
+        val (sslCert) = sslKeyStoreReloaded.query { getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, p2pSslConfig.keyStore.password) }
 
         sslCert.checkValidity()
         sslCert.verify(serverCert.publicKey)
