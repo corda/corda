@@ -15,15 +15,12 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
-import net.corda.core.identity.Party
 import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializeAsTokenContext
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
-import java.security.CodeSigner
-import java.security.cert.X509Certificate
 import java.util.jar.JarInputStream
 
 const val DEPLOYED_CORDAPP_UPLOADER = "app"
@@ -45,9 +42,6 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
                 (a as? AbstractAttachment)?.attachmentData ?: a.open().readFully()
             }
         }
-
-        /** @see <https://docs.oracle.com/javase/8/docs/technotes/guides/jar/jar.html#Signed_JAR_File> */
-        private val unsignableEntryName = "META-INF/(?:.*[.](?:SF|DSA|RSA)|SIG-.*)".toRegex()
     }
 
     protected val attachmentData: ByteArray by lazy(dataLoader)
@@ -57,24 +51,7 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
 
     override fun open(): InputStream = attachmentData.inputStream()
     override val signers by lazy {
-        // Can't start with empty set if we're doing intersections. Logically the null means "all possible signers":
-        var attachmentSigners: MutableSet<CodeSigner>? = null
-        openAsJAR().use { jar ->
-            val shredder = ByteArray(1024)
-            while (true) {
-                val entry = jar.nextJarEntry ?: break
-                if (entry.isDirectory || unsignableEntryName.matches(entry.name)) continue
-                while (jar.read(shredder) != -1) { // Must read entry fully for codeSigners to be valid.
-                    // Do nothing.
-                }
-                val entrySigners = entry.codeSigners ?: emptyArray()
-                attachmentSigners?.retainAll(entrySigners) ?: run { attachmentSigners = entrySigners.toMutableSet() }
-                if (attachmentSigners!!.isEmpty()) break // Performance short-circuit.
-            }
-        }
-        (attachmentSigners ?: emptySet<CodeSigner>()).map {
-            Party(it.signerCertPath.certificates[0] as X509Certificate)
-        }.sortedBy { it.name.toString() } // Determinism.
+        openAsJAR().use(JarSignatureCollector::collectSigningParties)
     }
 
     override fun equals(other: Any?) = other === this || other is Attachment && other.id == this.id
@@ -96,3 +73,4 @@ fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
     }
     throw FileNotFoundException(path)
 }
+

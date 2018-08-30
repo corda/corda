@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.convertValue
+import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.jackson.internal.childrenAs
@@ -28,9 +29,11 @@ import net.corda.core.crypto.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.PartialMerkleTree.PartialTree
 import net.corda.core.identity.*
+import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
@@ -90,10 +93,18 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Before
     fun setup() {
+        val unsignedAttachment = object : AbstractAttachment({ byteArrayOf() }) {
+            override val id: SecureHash get() = throw UnsupportedOperationException()
+        }
+
+        val attachments = rigorousMock<AttachmentStorage>().also {
+            doReturn(unsignedAttachment).whenever(it).openAttachment(any())
+        }
         services = rigorousMock()
         cordappProvider = rigorousMock()
         doReturn(cordappProvider).whenever(services).cordappProvider
         doReturn(testNetworkParameters()).whenever(services).networkParameters
+        doReturn(attachments).whenever(services).attachments
     }
 
     @Test
