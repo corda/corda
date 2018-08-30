@@ -12,7 +12,6 @@ import net.corda.core.utilities.days
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.rpcConnectorTcpTransport
-import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import java.time.Duration
 
@@ -226,7 +225,6 @@ class CordaRPCClient private constructor(
         private val hostAndPort: NetworkHostAndPort,
         private val configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         private val sslConfiguration: ClientRpcSslOptions? = null,
-        private val nodeSslConfiguration: SslConfiguration? = null,
         private val classLoader: ClassLoader? = null,
         private val haAddressPool: List<NetworkHostAndPort> = emptyList()
 ) {
@@ -242,7 +240,7 @@ class CordaRPCClient private constructor(
      * @param configuration An optional configuration used to tweak client behaviour.
      */
     @JvmOverloads
-    constructor(haAddressPool: List<NetworkHostAndPort>, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT) : this(haAddressPool.first(), configuration, null, null, null, haAddressPool)
+    constructor(haAddressPool: List<NetworkHostAndPort>, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT) : this(haAddressPool.first(), configuration, null, null, haAddressPool)
 
     companion object {
         fun createWithSsl(
@@ -267,7 +265,7 @@ class CordaRPCClient private constructor(
                 sslConfiguration: ClientRpcSslOptions? = null,
                 classLoader: ClassLoader? = null
         ): CordaRPCClient {
-            return CordaRPCClient(hostAndPort, configuration, sslConfiguration, null, classLoader)
+            return CordaRPCClient(hostAndPort, configuration, sslConfiguration, classLoader)
         }
     }
 
