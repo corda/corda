@@ -6,8 +6,8 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.security.RPCSecurityManager
-import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ServerLocator
@@ -22,7 +22,7 @@ class InternalRPCMessagingClient(val sslConfig: TwoWaySslConfiguration, val serv
 
     fun init(rpcOps: RPCOps, securityManager: RPCSecurityManager) = synchronized(this) {
 
-        val tcpTransport = ArtemisTcpTransport.rpcInternalClientTcpTransport(serverAddress, sslConfig)
+        val tcpTransport = InternalArtemisTcpTransport.rpcInternalClientTcpTransport(serverAddress, sslConfig)
         locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
             // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
             // would be the default and the two lines below can be deleted.

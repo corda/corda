@@ -17,8 +17,8 @@ import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.SerializationEnvironmentRule

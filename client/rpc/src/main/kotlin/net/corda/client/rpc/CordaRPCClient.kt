@@ -7,11 +7,11 @@ import net.corda.core.context.Trace
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.utilities.days
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import java.time.Duration

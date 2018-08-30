@@ -15,10 +15,10 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransportsFromList
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcInternalClientTcpTransport
 import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.rpcConnectorTcpTransport
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.rpcConnectorTcpTransportsFromList
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.rpcInternalClientTcpTransport
 import net.corda.nodeapi.internal.config.SslConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration

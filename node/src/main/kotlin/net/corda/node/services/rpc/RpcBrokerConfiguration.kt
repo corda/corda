@@ -4,11 +4,11 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.artemis.BrokerJaasLoginModule
 import net.corda.node.internal.artemis.SecureArtemisConfiguration
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcAcceptorTcpTransport
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcInternalAcceptorTcpTransport
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.rpcAcceptorTcpTransport
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.rpcInternalAcceptorTcpTransport
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration

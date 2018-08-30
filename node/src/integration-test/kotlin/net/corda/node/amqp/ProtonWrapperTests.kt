@@ -12,9 +12,9 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.CIPHER_SUITES
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.createDevP2PKeyStore
 import net.corda.nodeapi.internal.crypto.*
@@ -139,7 +139,7 @@ class ProtonWrapperTests {
         val serverSocketFactory = context.serverSocketFactory
 
         val serverSocket = serverSocketFactory.createServerSocket(serverPort) as SSLServerSocket
-        val serverParams = SSLParameters(CIPHER_SUITES.toTypedArray(),
+        val serverParams = SSLParameters(InternalArtemisTcpTransport.CIPHER_SUITES.toTypedArray(),
                 arrayOf("TLSv1.2"))
         serverParams.wantClientAuth = true
         serverParams.needClientAuth = true

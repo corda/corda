@@ -5,14 +5,13 @@ import net.corda.core.crypto.newSecureRandom
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHex
-import net.corda.nodeapi.ArtemisTcpTransport
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport
 import net.corda.nodeapi.internal.crypto.toBc
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
 import java.net.Socket
 import java.security.KeyStore
-import java.security.SecureRandom
 import java.security.cert.*
 import java.util.*
 import javax.net.ssl.*
@@ -111,8 +110,8 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
     sslContext.init(keyManagers, trustManagers, newSecureRandom())
     val sslEngine = sslContext.createSSLEngine(target.host, target.port)
     sslEngine.useClientMode = true
-    sslEngine.enabledProtocols = ArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
-    sslEngine.enabledCipherSuites = ArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
+    sslEngine.enabledProtocols = InternalArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
+    sslEngine.enabledCipherSuites = InternalArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
     sslEngine.enableSessionCreation = true
     return SslHandler(sslEngine)
 }
@@ -126,8 +125,8 @@ internal fun createServerSslHelper(keyManagerFactory: KeyManagerFactory,
     val sslEngine = sslContext.createSSLEngine()
     sslEngine.useClientMode = false
     sslEngine.needClientAuth = true
-    sslEngine.enabledProtocols = ArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
-    sslEngine.enabledCipherSuites = ArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
+    sslEngine.enabledProtocols = InternalArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
+    sslEngine.enabledCipherSuites = InternalArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
     sslEngine.enableSessionCreation = true
     return SslHandler(sslEngine)
 }
