@@ -29,7 +29,7 @@ class NodeCmdLineOptionsTest {
     fun `no command line arguments`() {
         assertThat(parser.cmdLineOptions.baseDirectory.normalize().toAbsolutePath()).isEqualTo(workingDirectory)
         assertThat(parser.cmdLineOptions.configFile.normalize().toAbsolutePath()).isEqualTo(workingDirectory / "node.conf")
-        assertThat(parser.cmdLineOptions.logToConsole).isEqualTo(false)
+        assertThat(parser.verbose).isEqualTo(false)
         assertThat(parser.loggingLevel).isEqualTo(Level.INFO)
         assertThat(parser.cmdLineOptions.nodeRegistrationOption).isEqualTo(null)
         assertThat(parser.cmdLineOptions.noLocalShell).isEqualTo(false)
