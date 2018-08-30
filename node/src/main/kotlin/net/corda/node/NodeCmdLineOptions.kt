@@ -62,7 +62,6 @@ class NodeCmdLineOptions {
     )
     var isRegistration: Boolean = false
 
-
     @Option(
             names = ["-t", "--network-root-truststore"],
             description = ["Network root trust store obtained from network operator."]
