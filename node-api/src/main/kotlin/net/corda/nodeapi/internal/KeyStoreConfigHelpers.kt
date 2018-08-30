@@ -100,7 +100,10 @@ const val DEV_CA_TRUST_STORE_PASS: String = "trustpass"
 // We need a class so that we can get hold of the class loader
 internal object DevCaHelper {
     fun loadDevCa(alias: String): CertificateAndKeyPair {
-        val caKeyStore = CertificateStore.fromResource("certificates/$DEV_CA_KEY_STORE_FILE", DEV_CA_KEY_STORE_PASS)
-        return caKeyStore.query { getCertificateAndKeyPair(alias, DEV_CA_PRIVATE_KEY_PASS) }
+        return loadDevCaKeyStore().query { getCertificateAndKeyPair(alias, DEV_CA_PRIVATE_KEY_PASS) }
     }
 }
+
+fun loadDevCaKeyStore(): CertificateStore = CertificateStore.fromResource("certificates/$DEV_CA_KEY_STORE_FILE", DEV_CA_KEY_STORE_PASS)
+
+fun loadDevCaTrustStore(): CertificateStore = CertificateStore.fromResource("certificates/$DEV_CA_TRUST_STORE_FILE", DEV_CA_TRUST_STORE_PASS)

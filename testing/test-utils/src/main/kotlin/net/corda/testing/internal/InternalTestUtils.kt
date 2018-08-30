@@ -18,6 +18,7 @@ import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import java.nio.file.Files
@@ -44,7 +45,7 @@ fun configureTestSSL(legalName: CordaX500Name): TwoWaySslConfiguration {
     val certificatesDirectory = Files.createTempDirectory("certs")
     val config = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
     if (config.trustStore.getOptional() == null) {
-        CertificateStore.fromResource("certificates/$DEV_CA_TRUST_STORE_FILE", DEV_CA_TRUST_STORE_PASS).copyTo(config.trustStore.get(true))
+        loadDevCaTrustStore().copyTo(config.trustStore.get(true))
     }
     if (config.keyStore.getOptional() == null) {
         config.keyStore.get(true).registerDevP2pCertificates(legalName)

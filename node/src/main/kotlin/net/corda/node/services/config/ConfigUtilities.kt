@@ -8,7 +8,6 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.*
-import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.config.toProperties
@@ -82,7 +81,7 @@ fun TwoWaySslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
     certificatesDirectory.createDirectories()
 
     if (specifiedTrustStore == null) {
-        CertificateStore.fromResource("certificates/$DEV_CA_TRUST_STORE_FILE", DEV_CA_TRUST_STORE_PASS).copyTo(trustStore.get(true))
+        loadDevCaTrustStore().copyTo(trustStore.get(true))
     }
 
     if (keyStore.getOptional() == null || signingCertificateStore.getOptional() == null) {

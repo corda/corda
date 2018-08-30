@@ -10,9 +10,9 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_U
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.DEV_ROOT_CA
-import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQClusterSecurityException
@@ -92,7 +92,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
         val legalName = CordaX500Name("MegaCorp", "London", "GB")
         if (!p2pSslConfig.trustStore.path.exists()) {
             val trustStore = p2pSslConfig.trustStore.get(true)
-            CertificateStore.fromResource("certificates/cordatruststore.jks", p2pSslConfig.trustStore.password).copyTo(trustStore)
+            loadDevCaTrustStore().copyTo(trustStore)
         }
 
         val clientKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
