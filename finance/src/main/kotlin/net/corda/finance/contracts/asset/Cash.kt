@@ -50,6 +50,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
 
     // DOCSTART 1
     /** A state representing a cash claim against some party. */
+    @BelongsToContract(Cash::class)
     data class State(
             override val amount: Amount<Issued<Currency>>,
 

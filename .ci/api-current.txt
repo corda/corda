@@ -453,6 +453,9 @@ public final class net.corda.core.contracts.AutomaticHashConstraint extends java
   public boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
   public static final net.corda.core.contracts.AutomaticHashConstraint INSTANCE
 ##
+public @interface net.corda.core.contracts.BelongsToContract
+  public abstract Class<? extends net.corda.core.contracts.Contract> value()
+##
 @CordaSerializable
 public final class net.corda.core.contracts.Command extends java.lang.Object
   public <init>(T, java.security.PublicKey)

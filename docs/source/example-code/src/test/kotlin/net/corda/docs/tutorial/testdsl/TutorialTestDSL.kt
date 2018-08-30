@@ -295,7 +295,7 @@ class CommercialPaperTest {
                 input("alice's $900")
                 output(Cash.PROGRAM_ID, "borrowed $900", 900.DOLLARS.CASH issuedBy issuer ownedBy megaCorp.party)
                 output(CP_PROGRAM_ID, "alice's paper", "paper".output<ICommercialPaperState>().withOwner(alice.party))
-                command(alice.publicKey, Cash.Commands.Move())
+                command(alice.publicKey, Cash.Commands.Move(CommercialPaper::class.java))
                 command(megaCorp.publicKey, CommercialPaper.Commands.Move())
                 verifies()
             }

@@ -46,11 +46,12 @@ class LedgerTransactionQueryTests {
         data class Cmd3(val id: Int) : CommandData, Commands // Unused command, required for command not-present checks.
     }
 
-
+    @BelongsToContract(DummyContract::class)
     private class StringTypeDummyState(val data: String) : ContractState {
         override val participants: List<AbstractParty> = emptyList()
     }
 
+    @BelongsToContract(DummyContract::class)
     private class IntTypeDummyState(val data: Int) : ContractState {
         override val participants: List<AbstractParty> = emptyList()
     }

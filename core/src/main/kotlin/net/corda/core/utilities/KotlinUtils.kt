@@ -135,3 +135,15 @@ fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
     throw e.cause!!
 }
 
+private val warnings = mutableSetOf<String>()
+
+/**
+ * Utility to help log a warning message only once.
+ * It's not thread safe, as in the worst case the warning will be logged twice.
+ */
+fun Logger.warnOnce(warning: String) {
+    if (warning !in warnings) {
+        warnings.add(warning)
+        this.warn(warning)
+    }
+}

@@ -4,6 +4,7 @@ package net.corda.core.contracts
 import net.corda.core.KeepForDJVM
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.loggerFor
 
 // DOCSTART 1
 typealias ContractClassName = String
@@ -26,7 +27,14 @@ data class TransactionState<out T : ContractState> @JvmOverloads constructor(
          * sent across, and run, from the network from within a sandbox environment.
          */
         // TODO: Implement the contract sandbox loading of the contract attachments
-        val contract: ContractClassName,
+        val contract: ContractClassName = requireNotNull(data.requiredContractClassName) {
+            //TODO: add link to docsite page, when there is one.
+            """
+    Unable to infer Contract class name because state class ${data::class.java.name} is not annotated with
+    @BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${data::class.java.name}
+    with @BelongsToContract, or supply an explicit contract parameter to TransactionState().
+    """.trimIndent().replace('\n', ' ')
+        },
         /** Identity of the notary that ensures the state is not used as an input to a transaction more than once */
         val notary: Party,
         /**
@@ -50,5 +58,28 @@ data class TransactionState<out T : ContractState> @JvmOverloads constructor(
         /**
          * A validator for the contract attachments on the transaction.
          */
-        val constraint: AttachmentConstraint = AutomaticHashConstraint)
+        val constraint: AttachmentConstraint = AutomaticHashConstraint) {
+    private companion object {
+        val logger = loggerFor<TransactionState<*>>()
+    }
+
+    init {
+        when {
+            data.requiredContractClassName == null -> logger.warn(
+                    """
+        State class ${data::class.java.name} is not annotated with @BelongsToContract,
+        and does not have an enclosing class which implements Contract. Annotate ${data::class.java.simpleName}
+        with @BelongsToContract(${contract.split("\\.\\$").last()}.class) to remove this warning.
+        """.trimIndent().replace('\n', ' ')
+            )
+            data.requiredContractClassName != contract -> logger.warn(
+                    """
+        State class ${data::class.java.name} belongs to contract ${data.requiredContractClassName},
+        but is bundled with contract $contract in TransactionState. Annotate ${data::class.java.simpleName}
+        with @BelongsToContract(${contract.split("\\.\\$").last()}.class) to remove this warning.
+        """.trimIndent().replace('\n', ' ')
+            )
+        }
+    }
+}
 // DOCEND 1
