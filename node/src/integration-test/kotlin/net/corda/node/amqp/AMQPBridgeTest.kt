@@ -28,7 +28,6 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.security.KeyStore
 import java.util.*
 import kotlin.test.assertEquals
 
@@ -215,9 +214,8 @@ class AMQPBridgeTest {
 
         val keyStore = serverConfig.p2pSslConfiguration.keyStore.get()
         val amqpConfig = object : AMQPConfiguration {
-            override val keyStore: KeyStore = keyStore.value.internal
-            override val keyStorePrivateKeyPassword: CharArray = keyStore.password.toCharArray()
-            override val trustStore: KeyStore = serverConfig.p2pSslConfiguration.trustStore.get().value.internal
+            override val keyStore = keyStore
+            override val trustStore  = serverConfig.p2pSslConfiguration.trustStore.get()
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
         }

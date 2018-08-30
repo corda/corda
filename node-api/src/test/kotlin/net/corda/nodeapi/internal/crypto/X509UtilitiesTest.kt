@@ -11,6 +11,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
+import net.corda.nodeapi.internal.protonwrapper.netty.init
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.nodeapi.internal.registerDevSigningCertificates
 import net.corda.serialization.internal.AllWhitelist
@@ -228,10 +229,10 @@ class X509UtilitiesTest {
 
         val context = SSLContext.getInstance("TLS")
         val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        keyManagerFactory.init(keyStore.value.internal, sslConfig.keyStore.password.toCharArray())
+        keyManagerFactory.init(keyStore)
         val keyManagers = keyManagerFactory.keyManagers
         val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-        trustMgrFactory.init(trustStore.value.internal)
+        trustMgrFactory.init(trustStore)
         val trustManagers = trustMgrFactory.trustManagers
         context.init(keyManagers, trustManagers, newSecureRandom())
 

@@ -347,13 +347,10 @@ class CertificateRevocationListNodeTests {
         clientConfig.configureWithDevSSLCertificate()
         val nodeCert = (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
         val keyStore = clientConfig.p2pSslConfiguration.keyStore.get()
-        val clientTruststore = clientConfig.p2pSslConfiguration.trustStore.get().value.internal
-        val clientKeystore = keyStore.value.internal
 
         val amqpConfig = object : AMQPConfiguration {
-            override val keyStore: KeyStore = clientKeystore
-            override val keyStorePrivateKeyPassword: CharArray = keyStore.password.toCharArray()
-            override val trustStore: KeyStore = clientTruststore
+            override val keyStore = keyStore
+            override val trustStore = clientConfig.p2pSslConfiguration.trustStore.get()
             override val crlCheckSoftFail: Boolean = crlCheckSoftFail
             override val maxMessageSize: Int = maxMessageSize
         }
@@ -383,12 +380,9 @@ class CertificateRevocationListNodeTests {
         serverConfig.configureWithDevSSLCertificate()
         val nodeCert = (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
         val keyStore = serverConfig.p2pSslConfiguration.keyStore.get()
-        val serverTruststore = serverConfig.p2pSslConfiguration.trustStore.get().value.internal
-        val serverKeystore = keyStore.value.internal
         val amqpConfig = object : AMQPConfiguration {
-            override val keyStore: KeyStore = serverKeystore
-            override val keyStorePrivateKeyPassword: CharArray = keyStore.password.toCharArray()
-            override val trustStore: KeyStore = serverTruststore
+            override val keyStore = keyStore
+            override val trustStore = serverConfig.p2pSslConfiguration.trustStore.get()
             override val crlCheckSoftFail: Boolean = crlCheckSoftFail
             override val maxMessageSize: Int = maxMessageSize
         }

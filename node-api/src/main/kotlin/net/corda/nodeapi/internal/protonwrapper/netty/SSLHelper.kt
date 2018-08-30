@@ -149,7 +149,6 @@ internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateSto
     return CertPathTrustManagerParameters(pkixParams)
 }
 
-internal fun KeyManagerFactory.init(keyStore: CertificateStore) {
+fun KeyManagerFactory.init(keyStore: CertificateStore) = init(keyStore.value.internal, keyStore.password.toCharArray())
 
-    init(keyStore.value.internal, keyStore.password.toCharArray())
-}
+fun TrustManagerFactory.init(trustStore: CertificateStore) = init(trustStore.value.internal)

@@ -132,19 +132,6 @@ fun KeyStore.getX509Certificate(alias: String): X509Certificate {
 }
 
 /**
- * Extract public X509 certificate from a KeyStore file assuming storage alias is known.
- * @param alias The name to lookup the Key and Certificate chain from.
- * @return The X509Certificate found in the KeyStore under the specified alias.
- */
-fun KeyStore.getX509CertificateOptional(alias: String): X509Certificate? {
-    val certificate = getCertificate(alias)
-    certificate?.let {
-        if (it !is X509Certificate) throw IllegalStateException("Certificate under alias \"$alias\" is not an X.509 certificate: $certificate")
-    }
-    return certificate as? X509Certificate?
-}
-
-/**
  * Extract a private key from a KeyStore file assuming storage alias is known.
  * By default, a JKS keystore returns PrivateKey implementations supported by the SUN provider.
  * For instance, if one imports a BouncyCastle ECC key, JKS will return a SUN ECC key implementation on getKey.

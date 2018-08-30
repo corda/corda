@@ -22,6 +22,8 @@ import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
+import net.corda.nodeapi.internal.protonwrapper.netty.init
+import net.corda.nodeapi.internal.registerDevSigningCertificates
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
@@ -36,7 +38,6 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.security.KeyStore
 import java.security.cert.X509Certificate
 import javax.net.ssl.*
 import kotlin.concurrent.thread
@@ -110,20 +111,23 @@ class ProtonWrapperTests {
 
     @Test
     fun `Test AMQP Client with invalid root certificate`() {
-        val sslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(temporaryFolder.root.toPath(), keyStorePassword = "serverstorepass")
+        val certificatesDirectory = temporaryFolder.root.toPath()
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "serverstorepass")
+        val sslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, keyStorePassword = "serverstorepass")
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        sslConfig.registerDevP2pCertificates(ALICE_NAME, rootCa.certificate, intermediateCa)
+        signingCertificateStore.get(true).also { it.registerDevSigningCertificates(ALICE_NAME, rootCa.certificate, intermediateCa) }
+        sslConfig.keyStore.get(true).also { it.registerDevP2pCertificates(ALICE_NAME, rootCa.certificate, intermediateCa) }
         sslConfig.createTrustStore(rootCa.certificate)
 
-        val keyStore = sslConfig.keyStore.get().value.internal
-        val trustStore = sslConfig.trustStore.get().value.internal
+        val keyStore = sslConfig.keyStore.get()
+        val trustStore = sslConfig.trustStore.get()
 
         val context = SSLContext.getInstance("TLS")
         val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        keyManagerFactory.init(keyStore, sslConfig.keyStore.password.toCharArray())
+        keyManagerFactory.init(keyStore)
         val keyManagers = keyManagerFactory.keyManagers
         val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
         trustMgrFactory.init(trustStore)
@@ -420,12 +424,11 @@ class ProtonWrapperTests {
         }
         clientConfig.configureWithDevSSLCertificate()
 
-        val clientTruststore = clientConfig.p2pSslConfiguration.trustStore.get().value.internal
-        val clientKeystore = clientConfig.p2pSslConfiguration.keyStore.get().value.internal
+        val clientTruststore = clientConfig.p2pSslConfiguration.trustStore.get()
+        val clientKeystore = clientConfig.p2pSslConfiguration.keyStore.get()
         val amqpConfig = object : AMQPConfiguration {
-            override val keyStore: KeyStore = clientKeystore
-            override val keyStorePrivateKeyPassword: CharArray = clientConfig.p2pSslConfiguration.keyStore.password.toCharArray()
-            override val trustStore: KeyStore = clientTruststore
+            override val keyStore = clientKeystore
+            override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
         }
@@ -452,12 +455,11 @@ class ProtonWrapperTests {
         }
         clientConfig.configureWithDevSSLCertificate()
 
-        val clientTruststore = clientConfig.p2pSslConfiguration.trustStore.get().value.internal
-        val clientKeystore = clientConfig.p2pSslConfiguration.keyStore.get().value.internal
+        val clientTruststore = clientConfig.p2pSslConfiguration.trustStore.get()
+        val clientKeystore = clientConfig.p2pSslConfiguration.keyStore.get()
         val amqpConfig = object : AMQPConfiguration {
-            override val keyStore: KeyStore = clientKeystore
-            override val keyStorePrivateKeyPassword: CharArray = clientConfig.p2pSslConfiguration.keyStore.password.toCharArray()
-            override val trustStore: KeyStore = clientTruststore
+            override val keyStore = clientKeystore
+            override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
         }
@@ -483,12 +485,11 @@ class ProtonWrapperTests {
         }
         serverConfig.configureWithDevSSLCertificate()
 
-        val serverTruststore = serverConfig.p2pSslConfiguration.trustStore.get().value.internal
-        val serverKeystore = serverConfig.p2pSslConfiguration.keyStore.get().value.internal
+        val serverTruststore = serverConfig.p2pSslConfiguration.trustStore.get()
+        val serverKeystore = serverConfig.p2pSslConfiguration.keyStore.get()
         val amqpConfig = object : AMQPConfiguration {
-            override val keyStore: KeyStore = serverKeystore
-            override val keyStorePrivateKeyPassword: CharArray = serverConfig.p2pSslConfiguration.keyStore.password.toCharArray()
-            override val trustStore: KeyStore = serverTruststore
+            override val keyStore = serverKeystore
+            override val trustStore = serverTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
         }
