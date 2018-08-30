@@ -6,8 +6,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.toX500Name
 import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.config.CertificateStoreSupplier
-import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
@@ -43,16 +41,6 @@ fun CertificateStore.registerDevP2pCertificates(legalName: CordaX500Name,
         val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, devNodeCa.certificate, devNodeCa.keyPair, legalName.x500Principal, tlsKeyPair.public)
         setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKeyPair.private, listOf(tlsCert, devNodeCa.certificate, intermediateCa.certificate, rootCert))
     }
-}
-
-// TODO sollecitom remove this
-fun Pair<CertificateStoreSupplier, TwoWaySslConfiguration>.createDevKeyStores(legalName: CordaX500Name,
-                                                                              rootCert: X509Certificate = DEV_ROOT_CA.certificate,
-                                                                              intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA): Pair<CertificateStore, CertificateStore> {
-    val devNodeCa = createDevNodeCa(intermediateCa, legalName)
-    val signingKeyStore = first.get(true).also { it.registerDevSigningCertificates(legalName, rootCert, intermediateCa, devNodeCa) }
-    val p2pKeyStore = second.keyStore.get(true).also { it.registerDevP2pCertificates(legalName, rootCert, intermediateCa, devNodeCa) }
-    return signingKeyStore to p2pKeyStore
 }
 
 fun CertificateStore.storeLegalIdentity(alias: String, keyPair: KeyPair = Crypto.generateKeyPair()): PartyAndCertificate {

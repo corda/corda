@@ -17,6 +17,8 @@ interface CertificateStore : Iterable<Pair<String, X509Certificate>> {
 
         fun of(store: X509KeyStore, password: String): CertificateStore = DelegatingCertificateStore(store, password)
 
+        fun fromFile(storePath: Path, password: String, createNew: Boolean): CertificateStore = DelegatingCertificateStore(X509KeyStore.fromFile(storePath, password, createNew), password)
+
         fun fromInputStream(stream: InputStream, password: String): CertificateStore = DelegatingCertificateStore(X509KeyStore.fromInputStream(stream, password), password)
 
         fun fromResource(storeResourceName: String, password: String, classLoader: ClassLoader = Thread.currentThread().contextClassLoader): CertificateStore = fromInputStream(classLoader.getResourceAsStream(storeResourceName), password)

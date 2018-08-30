@@ -39,7 +39,8 @@ object DevIdentityGenerator {
         val p2pSslConfig = SslConfiguration.twoWay(p2pKeyStore, p2pTrustStore)
 
         certificatesDirectory.createDirectories()
-        val (nodeKeyStore) = (signingCertStore to p2pSslConfig).createDevKeyStores(legalName)
+        val nodeKeyStore = signingCertStore.get(true).also { it.registerDevSigningCertificates(legalName) }
+        p2pSslConfig.keyStore.get(true).also { it.registerDevP2pCertificates(legalName) }
 
         val identity = nodeKeyStore.storeLegalIdentity("$NODE_IDENTITY_ALIAS_PREFIX-private-key")
         return identity.party

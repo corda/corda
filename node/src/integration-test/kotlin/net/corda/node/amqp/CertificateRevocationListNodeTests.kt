@@ -398,7 +398,6 @@ class CertificateRevocationListNodeTests {
                 amqpConfig), nodeCert)
     }
 
-    // TODO sollecitom try and get rid of this
     private fun Pair<CertificateStoreSupplier, TwoWaySslConfiguration>.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {
 
         val signingCertificateStore = first

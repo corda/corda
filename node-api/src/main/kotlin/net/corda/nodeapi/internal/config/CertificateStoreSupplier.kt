@@ -1,6 +1,5 @@
 package net.corda.nodeapi.internal.config
 
-import net.corda.nodeapi.internal.crypto.X509KeyStore
 import java.io.IOException
 import java.nio.file.Path
 
@@ -18,20 +17,18 @@ interface CertificateStoreSupplier {
     }
 }
 
+// TODO replace reference to FileBasedCertificateStoreSupplier with CertificateStoreSupplier, after coming up with a way of passing certificate stores to Artemis.
 class FileBasedCertificateStoreSupplier(val path: Path, val password: String) : CertificateStoreSupplier {
 
-    // TODO sollecitom check if we need caching
-    //    private var cached: CertificateStore? = null
-    //
-    //    override fun get(createNew: Boolean): CertificateStore {
-    //
-    //        synchronized(this) {
-    //            if (cached == null) {
-    //                cached = DelegatingCertificateStore(X509KeyStore.fromFile(path, password, createNew), password)
-    //            }
-    //            return cached!!
-    //        }
-    //    }
+    private var cached: CertificateStore? = null
 
-    override fun get(createNew: Boolean) = CertificateStore.of(X509KeyStore.fromFile(path, password, createNew), password)
+    override fun get(createNew: Boolean): CertificateStore {
+
+        synchronized(this) {
+            if (cached == null) {
+                cached = CertificateStore.fromFile(path, password, createNew)
+            }
+            return cached!!
+        }
+    }
 }

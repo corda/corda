@@ -11,8 +11,8 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
-import net.corda.nodeapi.internal.createDevKeyStores
 import net.corda.nodeapi.internal.registerDevP2pCertificates
+import net.corda.nodeapi.internal.registerDevSigningCertificates
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.SerializationFactoryImpl
@@ -185,12 +185,11 @@ class X509UtilitiesTest {
         val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, "serverstorepass")
         val p2pSslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, keyStorePassword = "serverstorepass")
 
-        val signingAndP2pSsl = signingCertStore to p2pSslConfig
-
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        signingAndP2pSsl.createDevKeyStores(MEGA_CORP.name, rootCa.certificate, intermediateCa)
+        signingCertStore.get(true).also { it.registerDevSigningCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa) }
+        p2pSslConfig.keyStore.get(true).also { it.registerDevP2pCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa) }
 
         // Load back server certificate
         val serverKeyStore = signingCertStore.get().value

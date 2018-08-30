@@ -107,18 +107,6 @@ fun TwoWaySslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
     }
 }
 
-// TODO sollecitom try to remove this or refactor it
-fun TwoWaySslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name, certificatesDirectory: Path) {
-    certificatesDirectory.createDirectories()
-    val specifiedTrustStore = trustStore.getOptional()
-    if (specifiedTrustStore == null) {
-        CertificateStore.fromResource("certificates/$DEV_CA_TRUST_STORE_FILE", DEV_CA_TRUST_STORE_PASS).copyTo(trustStore.get(true))
-    }
-    if (keyStore.getOptional() == null) {
-        keyStore.get(true).registerDevP2pCertificates(myLegalName)
-    }
-}
-
 /** This is generally covered by commons-lang. */
 object CordaSystemUtils {
     const val OS_NAME = "os.name"
