@@ -13,32 +13,15 @@ import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactor
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import java.nio.file.Path
 
-/** Class to set Artemis TCP configuration options. */
+// This avoids internal types from leaking in the public API. The "external" ArtemisTcpTransport delegates to this internal one.
 class InternalArtemisTcpTransport {
     companion object {
-        /**
-         * Corda supported TLS schemes.
-         * <p><ul>
-         * <li>TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
-         * <li>TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
-         * <li>TLS_DHE_RSA_WITH_AES_128_GCM_SHA256
-         * </ul></p>
-         * As shown above, current version restricts enabled TLS cipher suites to:
-         * AES128 using Galois/Counter Mode (GCM) for the block cipher being used to encrypt the message stream.
-         * SHA256 as message authentication algorithm.
-         * Ephemeral Diffie Hellman key exchange for advanced forward secrecy. ECDHE is preferred, but DHE is also
-         * supported in case one wants to completely avoid the use of ECC for TLS.
-         * ECDSA and RSA for digital signatures. Our self-generated certificates all use ECDSA for handshakes,
-         * but we allow classical RSA certificates to work in case one uses external tools or cloud providers or HSMs
-         * that do not support ECC certificates.
-         */
         val CIPHER_SUITES = listOf(
                 "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
                 "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
                 "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
         )
 
-        /** Supported TLS versions, currently TLSv1.2 only. */
         val TLS_VERSIONS = listOf("TLSv1.2")
 
         internal fun defaultArtemisOptions(hostAndPort: NetworkHostAndPort) = mapOf(
@@ -146,7 +129,6 @@ class InternalArtemisTcpTransport {
             return TransportConfiguration(connectorFactoryClassName, options)
         }
 
-        /** [TransportConfiguration] for RPC TCP communication - server side. */
         fun rpcAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: BrokerRpcSslOptions?, enableSSL: Boolean = true): TransportConfiguration {
             val options = defaultArtemisOptions(hostAndPort).toMutableMap()
 
@@ -158,8 +140,6 @@ class InternalArtemisTcpTransport {
             return TransportConfiguration(acceptorFactoryClassName, options)
         }
 
-        /** [TransportConfiguration] for RPC TCP communication
-         * This is the Transport that connects the client JVM to the broker. */
         fun rpcConnectorTcpTransport(hostAndPort: NetworkHostAndPort, config: ClientRpcSslOptions?, enableSSL: Boolean = true): TransportConfiguration {
             val options = defaultArtemisOptions(hostAndPort).toMutableMap()
 
@@ -171,7 +151,6 @@ class InternalArtemisTcpTransport {
             return TransportConfiguration(connectorFactoryClassName, options)
         }
 
-        /** Create as list of [TransportConfiguration]. **/
         fun rpcConnectorTcpTransportsFromList(hostAndPortList: List<NetworkHostAndPort>, config: ClientRpcSslOptions?, enableSSL: Boolean = true): List<TransportConfiguration> = hostAndPortList.map {
             rpcConnectorTcpTransport(it, config, enableSSL)
         }
