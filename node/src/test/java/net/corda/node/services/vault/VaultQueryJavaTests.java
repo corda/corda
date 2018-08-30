@@ -317,7 +317,7 @@ public class VaultQueryJavaTests {
     @Test
     public void trackDealStatesPagedSorted() {
         List<String> dealIds = asList("123", "456", "789");
-        UniqueIdentifier uid = new UniqueIdentifier("999");
+        UniqueIdentifier uid = new UniqueIdentifier("999", UUID.randomUUID());
         database.transaction(tx -> {
             vaultFiller.fillWithSomeTestLinearStates(10, null);
             vaultFiller.fillWithSomeTestLinearStates(1, null, emptyList(), uid);
