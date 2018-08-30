@@ -103,7 +103,7 @@ class VaultQueryTests {
             "net.corda.finance.contracts",
             CashSchemaV1::class.packageName,
             DummyLinearStateSchemaV1::class.packageName,
-            SampleCashSchemaV3::class.packageName)
+            VaultQueryTests.MyContractClass::class.packageName)
     private lateinit var services: MockServices
     private lateinit var vaultFiller: VaultFiller
     private lateinit var vaultFillerCashNotary: VaultFiller
@@ -242,7 +242,7 @@ class VaultQueryTests {
     }
 
     // Beware: do not use `MyContractClass::class.qualifiedName` as this returns a fully qualified name using "dot" notation for enclosed class
-    val MYCONTRACT_ID = "net.corda.node.services.vault.VaultQueryTestsBase\$MyContractClass"
+    val MYCONTRACT_ID = "net.corda.node.services.vault.VaultQueryTests\$MyContractClass"
 
     open class MyContractClass : Contract {
         override fun verify(tx: LedgerTransaction) {}
