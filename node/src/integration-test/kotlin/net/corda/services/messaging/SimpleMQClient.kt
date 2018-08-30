@@ -3,7 +3,7 @@ package net.corda.services.messaging
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.ArtemisTcpTransport
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.testing.internal.configureTestSSL
 import org.apache.activemq.artemis.api.core.client.*
@@ -22,7 +22,7 @@ class SimpleMQClient(val target: NetworkHostAndPort,
     lateinit var producer: ClientProducer
 
     fun start(username: String? = null, password: String? = null, enableSSL: Boolean = true) {
-        val tcpTransport = ArtemisTcpTransport.p2pConnectorTcpTransport(target, config, enableSSL = enableSSL)
+        val tcpTransport = p2pConnectorTcpTransport(target, config, enableSSL = enableSSL)
         val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
             isBlockOnNonDurableSend = true
             threadPoolMaxSize = 1
