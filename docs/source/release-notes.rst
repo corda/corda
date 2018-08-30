@@ -1,6 +1,13 @@
 Release notes
 =============
 
+.. _release_notes_v3_3:
+
+Release 3.3
+-----------
+
+<<<Fill this in>>>
+
 .. _release_notes_v3_2:
 
 Release 3.2
