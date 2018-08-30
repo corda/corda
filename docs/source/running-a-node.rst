@@ -47,23 +47,28 @@ Command-line options
 ~~~~~~~~~~~~~~~~~~~~
 The node can optionally be started with the following command-line options:
 
-* ``--base-directory``: The node working directory where all the files are kept (default: ``.``)
+* ``--base-directory``, ``-b``: The node working directory where all the files are kept (default: ``.``)
 * ``--bootstrap-raft-cluster``: Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer 
   addresses), acting as a seed for other nodes to join the cluster
-* ``--config-file``: The path to the config file (default: ``node.conf``)                          
-* ``--help``
+* ``--clear-network-map-cache``, ``-c``: Clears local copy of network map, on node startup it will be restored from server or file system.
+* ``--config-file``, ``-f``: The path to the config file. Defaults to ``node.conf``.
+* ``--dev-mode``, ``-d``: Runs the node in developer mode. Unsafe in production. Defaults to true on MacOS and desktop versions of Windows. False otherwise.
+* ``--help``, ``-h``: Displays the help message and exits.
 * ``--initial-registration``: Start initial node registration with Corda network to obtain certificate from the permissioning 
-  server      
+  server.
+* ``--install-shell-extensions``: Installs an alias and autocomplete for users of ``bash`` or ``zsh``. See below for more information.
 * ``--just-generate-node-info``: Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then 
-  quit          
-* ``--log-to-console``: If set, prints logging to the console as well as to a file
-* ``--logging-level <[ERROR,WARN,INFO, DEBUG,TRACE]>``: Enable logging at this level and higher (default: INFO)
-* ``--network-root-truststore``: Network root trust store obtained from network operator
-* ``--network-root-truststore-password``: Network root trust store password obtained from network operator
-* ``--no-local-shell``: Do not start the embedded shell locally
-* ``--sshd``: Enables SSHD server for node administration
-* ``--sshd-port``: Sets the port for the SSHD server. If not supplied and SSHD server is enabled, the port defaults to 2222
-* ``--version``: Print the version and exit
+  quit.
+* ``--just-generate-rpc-ssl-settings``: Generate the ssl keystore and truststore for a secure RPC connection.
+* ``--log-to-console``, ``--verbose``, ``-v``: If set, prints logging to the console as well as to a file.
+* ``--logging-level <[ERROR,WARN,INFO, DEBUG,TRACE]>``: Enable logging at this level and higher. Defaults to INFO.
+* ``--network-root-truststore``, ``-t``: Network root trust store obtained from network operator.
+* ``--network-root-truststore-password``, ``-p``: Network root trust store password obtained from network operator.
+* ``--no-local-shell``, ``-n``: Do not start the embedded shell locally.
+* ``--on-unknown-config-keys``: How to behave on unknown node configuration. Valid options are FAIL, WARN or INFO. Defaults to FAIL.
+* ``--sshd``: Enables SSHD server for node administration.
+* ``--sshd-port``: Sets the port for the SSHD server. If not supplied and SSHD server is enabled, the port defaults to 2222.
+* ``--version``, ``-V``: Prints the version and exits.
 
 .. _installing-shell-extensions:
 

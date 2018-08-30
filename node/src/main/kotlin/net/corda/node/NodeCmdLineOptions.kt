@@ -76,7 +76,7 @@ class NodeCmdLineOptions {
 
     @Option(
             names = ["--on-unknown-config-keys"],
-            description = ["Network root trust store password obtained from network operator. \${COMPLETION-CANDIDATES}"]
+            description = ["How to behave on unknown node configuration. \${COMPLETION-CANDIDATES}"]
     )
     var unknownConfigKeysPolicy: UnknownConfigKeysPolicy = UnknownConfigKeysPolicy.FAIL
 
@@ -105,7 +105,7 @@ class NodeCmdLineOptions {
     var bootstrapRaftCluster: Boolean = false
 
     @Option(
-            names = ["--clear-network-map-cache"],
+            names = ["-c", "--clear-network-map-cache"],
             description = ["Clears local copy of network map, on node startup it will be restored from server or file system."]
     )
     var clearNetworkMapCache: Boolean = false
