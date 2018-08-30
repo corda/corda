@@ -14,6 +14,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
 import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.bridging.AMQPBridgeManager.AMQPBridge.Companion.getBridgeName
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
@@ -42,14 +43,10 @@ class AMQPBridgeManager(config: TwoWaySslConfiguration, maxMessageSize: Int, pri
     private val lock = ReentrantLock()
     private val bridgeNameToBridgeMap = mutableMapOf<String, AMQPBridge>()
 
-    private class AMQPConfigurationImpl private constructor(override val keyStore: KeyStore,
-                                                            override val keyStorePrivateKeyPassword: CharArray,
-                                                            override val trustStore: KeyStore,
+    private class AMQPConfigurationImpl private constructor(override val keyStore: CertificateStore,
+                                                            override val trustStore: CertificateStore,
                                                             override val maxMessageSize: Int) : AMQPConfiguration {
-        constructor(config: TwoWaySslConfiguration, maxMessageSize: Int) : this(config.keyStore.get().value.internal,
-                config.keyStore.get().password.toCharArray(),
-                config.trustStore.get().value.internal,
-                maxMessageSize)
+        constructor(config: TwoWaySslConfiguration, maxMessageSize: Int) : this(config.keyStore.get(), config.trustStore.get(), maxMessageSize)
     }
 
     private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(config, maxMessageSize)
