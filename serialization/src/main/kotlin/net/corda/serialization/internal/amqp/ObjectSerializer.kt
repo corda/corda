@@ -10,6 +10,7 @@
 
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.internal.isConcreteClass
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
@@ -28,7 +29,7 @@ import kotlin.reflect.jvm.javaConstructor
  */
 open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type get() = clazz
-    open val kotlinConstructor = constructorForDeserialization(clazz)
+    open val kotlinConstructor = if (clazz.asClass().isConcreteClass) constructorForDeserialization(clazz) else null
     val javaConstructor by lazy { kotlinConstructor?.javaConstructor }
 
     companion object {

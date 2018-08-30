@@ -17,7 +17,7 @@ Unreleased
 
 * Introduced ``TestCorDapp`` and utilities to support asymmetric setups for nodes through ``DriverDSL``, ``MockNetwork`` and ``MockServices``.
 
-* Change type of the `checkpoint_value` column. Please check the upgrade-notes on how to update your database.
+* Change type of the ``checkpoint_value`` column. Please check the upgrade-notes on how to update your database.
 
 * Removed buggy :serverNameTablePrefix: configuration.
 
@@ -153,7 +153,7 @@ Unreleased
     Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
   * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
   * The deprecated web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
-  * Property keys with double quotes (e.g. `"key"`) in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
+  * Property keys with double quotes (e.g. "key") in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
 
 * Added public support for creating ``CordaRPCClient`` using SSL. For this to work the node needs to provide client applications
   a certificate to be added to a truststore. See :doc:`tutorial-clientrpc-api`
@@ -170,7 +170,7 @@ Unreleased
 
   * The whitelist.txt file is no longer needed. The existing network parameters file is used to update the current contracts
     whitelist.
-  * The CorDapp jars are also copied to each nodes' `cordapps` directory.
+  * The CorDapp jars are also copied to each nodes' ``cordapps`` directory.
 
 * Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation of internal data.
 
@@ -179,6 +179,8 @@ Unreleased
   to a constructor). Whilst this was possible in the older Kryo implementation (Kryo passing null as the synthesised
   reference to the outer class) as per the Java documentation `here <https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html>`_
   we are disallowing this as the paradigm in general makes little sense for contract states.
+
+* Node can be shut down abruptly by ``shutdown`` function in ``CordaRPCOps`` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
 
 * API change: ``net.corda.core.schemas.PersistentStateRef`` fields (index and txId) are now non-nullable.
   The fields were always effectively non-nullable - values were set from non-nullable fields of other objects.
@@ -192,8 +194,8 @@ Unreleased
 
 * Table name with a typo changed from ``NODE_ATTCHMENTS_CONTRACTS`` to ``NODE_ATTACHMENTS_CONTRACTS``.
 
-* Node logs a warning for any ``MappedSchema`` containing a JPA entity referencing another JPA entity from a different ``MappedSchema`.
-  The log entry starts with `Cross-reference between MappedSchemas.`.
+* Node logs a warning for any ``MappedSchema`` containing a JPA entity referencing another JPA entity from a different ``MappedSchema``.
+  The log entry starts with "Cross-reference between MappedSchemas".
   API: Persistence documentation no longer suggests mapping between different schemas.
 
 * Upgraded Artemis to v2.6.2.
@@ -475,6 +477,9 @@ Corda Enterprise 3.0 Developer Preview
   ``net.corda.testing.services`` package. Moving existing classes out of the ``net.corda.testing.*`` package
   will help make it clearer which parts of the api are stable. Scripts have been provided to smooth the upgrade
   process for existing projects in the ``tools\scripts`` directory of the Corda repo.
+
+* ``TransactionSignature`` includes a new ``partialMerkleTree`` property, required for future support of signing over
+  multiple transactions at once.
 
 * Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
   To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.

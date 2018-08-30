@@ -35,7 +35,7 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
             // Try and find a constructor
             try {
                 val constructor = constructorForDeserialization(obj.javaClass)
-                propertiesForSerializationFromConstructor(constructor!!, obj.javaClass, factory).forEach { property ->
+                propertiesForSerializationFromConstructor(constructor, obj.javaClass, factory).forEach { property ->
                     extraProperties[property.serializer.name] = property.serializer.propertyReader.read(obj)
                 }
             } catch (e: NotSerializableException) {
@@ -62,7 +62,7 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
             // If it is CordaException or CordaRuntimeException, we can seek any constructor and then set the properties
             // Otherwise we just make a CordaRuntimeException
             if (CordaThrowable::class.java.isAssignableFrom(clazz) && Throwable::class.java.isAssignableFrom(clazz)) {
-                val constructor = constructorForDeserialization(clazz)!!
+                val constructor = constructorForDeserialization(clazz)
                 val throwable = constructor.callBy(constructor.parameters.map { it to proxy.additionalProperties[it.name] }.toMap())
                 (throwable as CordaThrowable).apply {
                     if (this.javaClass.name != proxy.exceptionClass) this.originalExceptionClassName = proxy.exceptionClass

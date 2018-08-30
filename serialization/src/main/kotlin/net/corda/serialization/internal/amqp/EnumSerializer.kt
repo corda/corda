@@ -44,7 +44,7 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: Seria
     ): Any {
         val enumName = (obj as List<*>)[0] as String
         val enumOrd = obj[1] as Int
-        val fromOrd = type.asClass()!!.enumConstants[enumOrd] as Enum<*>?
+        val fromOrd = type.asClass().enumConstants[enumOrd] as Enum<*>?
 
         if (enumName != fromOrd?.name) {
             throw AMQPNotSerializableException(
