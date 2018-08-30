@@ -1,0 +1,96 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+buildscript {
+    ext.kotlin_version = '1.2.51'
+
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.5'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'com.google.protobuf'
+
+repositories {
+    mavenCentral()
+}
+
+def grpcVersion = '1.13.1'
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
+    testCompile "junit:junit:$junit_version"
+    compile group: 'io.dropwizard.metrics', name: 'metrics-graphite', version: '3.2.5'
+    compile group: 'org.rocksdb', name: 'rocksdbjni', version: '5.10.3'
+    compile 'com.github.jtendermint:websocket:e122561cd77a15a17d702e4e51ef36054b4eff33'
+    compile 'com.github.jtendermint:jabci:0.20.0.1'
+
+    compile "com.google.api.grpc:proto-google-common-protos:1.0.0"
+    compile "io.grpc:grpc-netty:${grpcVersion}"
+    compile "io.grpc:grpc-protobuf:${grpcVersion}"
+    compile "io.grpc:grpc-stub:${grpcVersion}"
+
+    compile "info.picocli:picocli:$picocli_version"
+
+    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+
+    testCompile "io.grpc:grpc-testing:${grpcVersion}" // gRCP testing utilities
+}
+
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.5.1-1'
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs 'build/generated/source/proto/main/grpc'
+            srcDirs 'build/generated/source/proto/main/java'
+        }
+    }
+}
+
+jar {
+    from(configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }) {
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+    }
+    archiveName = "consensus-benchmark-${corda_release_version}.jar"
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.tools.benchmark',
+                'Main-Class': 'net.corda.tools.benchmark.MainKt'
+        )
+    }
+}
+

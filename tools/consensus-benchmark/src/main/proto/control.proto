@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "net.corda.tools.benchmark";
+option java_outer_classname = "Control";
+option objc_class_prefix = "N";
+
+package notary;
+
+service LoadGenerator {
+   rpc startTest (Parameters) returns (Status);
+}
+
+message Parameters {
+   int32 rateTps = 1;
+   int32 transactionSizeByes = 2;
+   int32 transactionProcessingTimeMs = 3;
+   int32 randomSeed = 4;
+}
+
+message  Status {
+}
