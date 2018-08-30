@@ -372,7 +372,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             shellConfiguration.sshdPort?.let {
                 log.info("Binding Shell SSHD server on port $it.")
             }
-            InteractiveShell.startShellInternal(shellConfiguration, cordappLoader.appClassLoader)
+            InteractiveShell.startShell(shellConfiguration, cordappLoader.appClassLoader)
         }
     }
 

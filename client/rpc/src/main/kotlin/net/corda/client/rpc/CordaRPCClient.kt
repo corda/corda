@@ -228,8 +228,7 @@ class CordaRPCClient private constructor(
         private val sslConfiguration: ClientRpcSslOptions? = null,
         private val nodeSslConfiguration: SslConfiguration? = null,
         private val classLoader: ClassLoader? = null,
-        private val haAddressPool: List<NetworkHostAndPort> = emptyList(),
-        private val internalConnection: Boolean = false
+        private val haAddressPool: List<NetworkHostAndPort> = emptyList()
 ) {
     @JvmOverloads
     constructor(hostAndPort: NetworkHostAndPort,
@@ -286,11 +285,6 @@ class CordaRPCClient private constructor(
 
     private fun getRpcClient(): RPCClient<CordaRPCOps> {
         return when {
-        // Node->RPC broker, mutually authenticated SSL. This is used when connecting the integrated shell
-            internalConnection && nodeSslConfiguration != null -> RPCClient(hostAndPort, nodeSslConfiguration)
-
-            internalConnection && nodeSslConfiguration == null -> RPCClient(hostAndPort)
-
         // Client->RPC broker
             haAddressPool.isEmpty() -> RPCClient(
                     rpcConnectorTcpTransport(hostAndPort, config = sslConfiguration),

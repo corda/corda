@@ -21,7 +21,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
-import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -132,8 +131,8 @@ class InteractiveShellIntegrationTest {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             startNode().getOrThrow().use { node ->
                 val conf = (node as NodeHandleInternal).configuration.toShellConfig()
-                InteractiveShell.startShellInternal(conf)
-                assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(ActiveMQConnectionTimedOutException::class.java)
+                InteractiveShell.startShell(conf)
+                assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(ActiveMQSecurityException::class.java)
             }
         }
     }

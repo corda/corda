@@ -93,25 +93,6 @@ object InteractiveShell {
         _startShell(configuration, classLoader)
     }
 
-    /**
-     * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
-     * internals.
-     */
-    // TODO sollecitom remove this
-    fun startShellInternal(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
-        rpcOps = { username: String, credentials: String ->
-            val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
-                    configuration = CordaRPCClientConfiguration.DEFAULT.copy(
-                            maxReconnectAttempts = 1
-                    ),
-                    sslConfiguration = configuration.ssl,
-                    classLoader = classLoader)
-            this.connection = client.start(username, credentials)
-            connection.proxy
-        }
-        _startShell(configuration, classLoader)
-    }
-
     private fun _startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
         shellConfiguration = configuration
         InteractiveShell.classLoader = classLoader
