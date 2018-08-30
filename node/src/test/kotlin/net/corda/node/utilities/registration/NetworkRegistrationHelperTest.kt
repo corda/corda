@@ -53,16 +53,17 @@ class NetworkRegistrationHelperTest {
         val baseDirectory = fs.getPath("/baseDir").createDirectories()
 
         abstract class AbstractNodeConfiguration : NodeConfiguration
+        val certificatesDirectory = baseDirectory / "certificates"
         config = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
-            doReturn(CertificateStoreStubs.P2P.withBaseDirectory(baseDirectory)).whenever(it).p2pSslConfiguration
-            doReturn(CertificateStoreStubs.Signing.withBaseDirectory(baseDirectory)).whenever(it).signingCertificateStore
+            doReturn(certificatesDirectory).whenever(it).certificatesDirectory
+            doReturn(CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)).whenever(it).p2pSslOptions
+            doReturn(CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)).whenever(it).signingCertificateStore
             doReturn(nodeLegalName).whenever(it).myLegalName
             doReturn("").whenever(it).emailAddress
             doReturn(null).whenever(it).tlsCertCrlDistPoint
             doReturn(null).whenever(it).tlsCertCrlIssuer
             doReturn(true).whenever(it).crlCheckSoftFail
-            doReturn(baseDirectory / "certificates").whenever(it).certificatesDirectory
         }
     }
 
@@ -74,16 +75,16 @@ class NetworkRegistrationHelperTest {
     @Test
     fun `successful registration`() {
         assertThat(config.signingCertificateStore.getOptional()).isNull()
-        assertThat(config.p2pSslConfiguration.keyStore.getOptional()).isNull()
-        assertThat(config.p2pSslConfiguration.trustStore.getOptional()).isNull()
+        assertThat(config.p2pSslOptions.keyStore.getOptional()).isNull()
+        assertThat(config.p2pSslOptions.trustStore.getOptional()).isNull()
 
         val rootAndIntermediateCA = createDevIntermediateCaCertPath().also { saveNetworkTrustStore(it.first.certificate) }
 
         createRegistrationHelper(rootAndIntermediateCA = rootAndIntermediateCA).buildKeystore()
 
         val nodeKeystore = config.signingCertificateStore.get()
-        val sslKeystore = config.p2pSslConfiguration.keyStore.get()
-        val trustStore = config.p2pSslConfiguration.trustStore.get()
+        val sslKeystore = config.p2pSslOptions.keyStore.get()
+        val trustStore = config.p2pSslOptions.trustStore.get()
 
         nodeKeystore.run {
             assertFalse(contains(X509Utilities.CORDA_INTERMEDIATE_CA))
@@ -155,8 +156,8 @@ class NetworkRegistrationHelperTest {
     @Test
     fun `create service identity cert`() {
         assertThat(config.signingCertificateStore.getOptional()).isNull()
-        assertThat(config.p2pSslConfiguration.keyStore.getOptional()).isNull()
-        assertThat(config.p2pSslConfiguration.trustStore.getOptional()).isNull()
+        assertThat(config.p2pSslOptions.keyStore.getOptional()).isNull()
+        assertThat(config.p2pSslOptions.trustStore.getOptional()).isNull()
 
         val rootAndIntermediateCA = createDevIntermediateCaCertPath().also { saveNetworkTrustStore(it.first.certificate) }
 
@@ -164,8 +165,8 @@ class NetworkRegistrationHelperTest {
 
         val nodeKeystore = config.signingCertificateStore.get()
 
-        assertThat(config.p2pSslConfiguration.keyStore.getOptional()).isNull()
-        assertThat(config.p2pSslConfiguration.trustStore.getOptional()).isNull()
+        assertThat(config.p2pSslOptions.keyStore.getOptional()).isNull()
+        assertThat(config.p2pSslOptions.trustStore.getOptional()).isNull()
 
         val serviceIdentityAlias = "${DevIdentityGenerator.DISTRIBUTED_NOTARY_ALIAS_PREFIX}-private-key"
 

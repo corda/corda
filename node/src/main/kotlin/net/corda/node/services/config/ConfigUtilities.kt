@@ -67,7 +67,7 @@ object ConfigHelper {
  * the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.
  */
 // TODO Move this to KeyStoreConfigHelpers
-fun NodeConfiguration.configureWithDevSSLCertificate() = p2pSslConfiguration.configureDevKeyAndTrustStores(myLegalName, signingCertificateStore, certificatesDirectory)
+fun NodeConfiguration.configureWithDevSSLCertificate() = p2pSslOptions.configureDevKeyAndTrustStores(myLegalName, signingCertificateStore, certificatesDirectory)
 
 // TODO Move this to KeyStoreConfigHelpers
 fun TwoWaySslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier, certificatesDirectory: Path) {

@@ -697,7 +697,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private fun validateKeyStore(): X509Certificate {
         val containCorrectKeys = try {
             // This will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            val sslKeystore = configuration.p2pSslConfiguration.keyStore.get()
+            val sslKeystore = configuration.p2pSslOptions.keyStore.get()
             val identitiesKeystore = configuration.signingCertificateStore.get()
             X509Utilities.CORDA_CLIENT_TLS in sslKeystore && X509Utilities.CORDA_CLIENT_CA in identitiesKeystore
         } catch (e: KeyStoreException) {
@@ -715,9 +715,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         // Check all cert path chain to the trusted root
-        val sslCertChainRoot = configuration.p2pSslConfiguration.keyStore.get().query { getCertificateChain(X509Utilities.CORDA_CLIENT_TLS) }.last()
+        val sslCertChainRoot = configuration.p2pSslOptions.keyStore.get().query { getCertificateChain(X509Utilities.CORDA_CLIENT_TLS) }.last()
         val nodeCaCertChainRoot = configuration.signingCertificateStore.get().query { getCertificateChain(X509Utilities.CORDA_CLIENT_CA) }.last()
-        val trustRoot = configuration.p2pSslConfiguration.trustStore.get()[X509Utilities.CORDA_ROOT_CA]
+        val trustRoot = configuration.p2pSslOptions.trustStore.get()[X509Utilities.CORDA_ROOT_CA]
 
         require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
         require(nodeCaCertChainRoot == trustRoot) { "Client CA certificate must chain to the trusted root." }
@@ -761,7 +761,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return notaryConfig.run {
             when {
                 raft != null -> {
-                    val uniquenessProvider = RaftUniquenessProvider(configuration.baseDirectory, configuration.p2pSslConfiguration, database, platformClock, monitoringService.metrics, raft)
+                    val uniquenessProvider = RaftUniquenessProvider(configuration.baseDirectory, configuration.p2pSslOptions, database, platformClock, monitoringService.metrics, raft)
                     (if (validating) ::RaftValidatingNotaryService else ::RaftNonValidatingNotaryService)(services, notaryKey, uniquenessProvider)
                 }
                 bftSMaRt != null -> {
@@ -1030,7 +1030,7 @@ fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfi
     }
 }
 
-fun extractRpcClientSslOptions(nodeRpcOptions: NodeRpcOptions): ClientRpcSslOptions? {
+fun clientSslOptionsCompatibleWith(nodeRpcOptions: NodeRpcOptions): ClientRpcSslOptions? {
 
     if (!nodeRpcOptions.useSsl || nodeRpcOptions.sslConfig == null) {
         return null

@@ -271,7 +271,7 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
     }
 
     private fun createSSLKeystore(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>, tlsCertCrlIssuer: X500Name?) {
-        config.p2pSslConfiguration.keyStore.get(createNew = true).update {
+        config.p2pSslOptions.keyStore.get(createNew = true).update {
             println("Generating SSL certificate for node messaging service.")
             val sslKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
             val sslCert = X509Utilities.createCertificate(
@@ -285,17 +285,17 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
             logger.info("Generated TLS certificate: $sslCert")
             setPrivateKey(CORDA_CLIENT_TLS, sslKeyPair.private, listOf(sslCert) + certificates)
         }
-        println("SSL private key and certificate stored in ${config.p2pSslConfiguration.keyStore.path}.")
+        println("SSL private key and certificate stored in ${config.p2pSslOptions.keyStore.path}.")
     }
 
     private fun createTruststore(rootCertificate: X509Certificate) {
         // Save root certificates to trust store.
-        config.p2pSslConfiguration.trustStore.get(createNew = true).update {
+        config.p2pSslOptions.trustStore.get(createNew = true).update {
             println("Generating trust store for corda node.")
             // Assumes certificate chain always starts with client certificate and end with root certificate.
             setCertificate(CORDA_ROOT_CA, rootCertificate)
         }
-        println("Node trust store stored in ${config.p2pSslConfiguration.trustStore.path}.")
+        println("Node trust store stored in ${config.p2pSslOptions.trustStore.path}.")
     }
 
     override fun validateAndGetTlsCrlIssuerCert(): X509Certificate? {
@@ -304,7 +304,7 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
         if (principalMatchesCertificatePrincipal(tlsCertCrlIssuer, rootCert)) {
             return rootCert
         }
-        val trustStore = config.p2pSslConfiguration.trustStore.getOptional()
+        val trustStore = config.p2pSslOptions.trustStore.getOptional()
         return if (trustStore != null) {
             findMatchingCertificate(tlsCertCrlIssuer, trustStore.value)
         } else {

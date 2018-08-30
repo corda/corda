@@ -395,7 +395,7 @@ class ProtonWrapperTests {
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(CHARLIE_NAME).whenever(it).myLegalName
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
-            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(NetworkHostAndPort("0.0.0.0", artemisPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(true).whenever(it).crlCheckSoftFail
@@ -403,7 +403,7 @@ class ProtonWrapperTests {
         artemisConfig.configureWithDevSSLCertificate()
 
         val server = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", artemisPort), maxMessageSize)
-        val client = ArtemisMessagingClient(artemisConfig.p2pSslConfiguration, NetworkHostAndPort("localhost", artemisPort), maxMessageSize)
+        val client = ArtemisMessagingClient(artemisConfig.p2pSslOptions, NetworkHostAndPort("localhost", artemisPort), maxMessageSize)
         server.start()
         client.start()
         return Pair(server, client)
@@ -419,13 +419,13 @@ class ProtonWrapperTests {
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(BOB_NAME).whenever(it).myLegalName
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
-            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(true).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
 
-        val clientTruststore = clientConfig.p2pSslConfiguration.trustStore.get()
-        val clientKeystore = clientConfig.p2pSslConfiguration.keyStore.get()
+        val clientTruststore = clientConfig.p2pSslOptions.trustStore.get()
+        val clientKeystore = clientConfig.p2pSslOptions.keyStore.get()
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = clientKeystore
             override val trustStore = clientTruststore
@@ -450,13 +450,13 @@ class ProtonWrapperTests {
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(CordaX500Name(null, "client $id", "Corda", "London", null, "GB")).whenever(it).myLegalName
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
-            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(true).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
 
-        val clientTruststore = clientConfig.p2pSslConfiguration.trustStore.get()
-        val clientKeystore = clientConfig.p2pSslConfiguration.keyStore.get()
+        val clientTruststore = clientConfig.p2pSslOptions.trustStore.get()
+        val clientKeystore = clientConfig.p2pSslOptions.keyStore.get()
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = clientKeystore
             override val trustStore = clientTruststore
@@ -480,13 +480,13 @@ class ProtonWrapperTests {
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(name).whenever(it).myLegalName
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
-            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(true).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
 
-        val serverTruststore = serverConfig.p2pSslConfiguration.trustStore.get()
-        val serverKeystore = serverConfig.p2pSslConfiguration.keyStore.get()
+        val serverTruststore = serverConfig.p2pSslOptions.trustStore.get()
+        val serverKeystore = serverConfig.p2pSslOptions.keyStore.get()
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = serverKeystore
             override val trustStore = serverTruststore

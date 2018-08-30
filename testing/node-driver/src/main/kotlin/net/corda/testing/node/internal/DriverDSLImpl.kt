@@ -23,7 +23,7 @@ import net.corda.node.NodeRegistrationOption
 import net.corda.node.VersionInfo
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeWithInfo
-import net.corda.node.internal.extractRpcClientSslOptions
+import net.corda.node.internal.clientSslOptionsCompatibleWith
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
@@ -161,7 +161,7 @@ class DriverDSLImpl(
 
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.corda.rpcOptions.address
-        val clientRpcSslOptions =  extractRpcClientSslOptions(config.corda.rpcOptions)
+        val clientRpcSslOptions =  clientSslOptionsCompatibleWith(config.corda.rpcOptions)
         val client = createCordaRPCClientWithSslAndClassLoader(rpcAddress, sslConfiguration = clientRpcSslOptions)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
@@ -801,11 +801,11 @@ class DriverDSLImpl(
             config += "useHTTPS" to useHTTPS
             config += "baseDirectory" to configuration.baseDirectory.toAbsolutePath().toString()
 
-            config += "keyStorePath" to configuration.p2pSslConfiguration.keyStore.path.toString()
-            config += "keyStorePassword" to configuration.p2pSslConfiguration.keyStore.password
+            config += "keyStorePath" to configuration.p2pSslOptions.keyStore.path.toString()
+            config += "keyStorePassword" to configuration.p2pSslOptions.keyStore.password
 
-            config += "trustStorePath" to configuration.p2pSslConfiguration.trustStore.path.toString()
-            config += "trustStorePassword" to configuration.p2pSslConfiguration.trustStore.password
+            config += "trustStorePath" to configuration.p2pSslOptions.trustStore.path.toString()
+            config += "trustStorePassword" to configuration.p2pSslOptions.trustStore.password
 
             return config
         }

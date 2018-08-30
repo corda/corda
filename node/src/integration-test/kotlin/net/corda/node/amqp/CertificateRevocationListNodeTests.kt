@@ -52,7 +52,6 @@ import java.io.Closeable
 import java.math.BigInteger
 import java.net.InetSocketAddress
 import java.security.KeyPair
-import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.Security
 import java.security.cert.X509CRL
@@ -340,17 +339,17 @@ class CertificateRevocationListNodeTests {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(BOB_NAME).whenever(it).myLegalName
-            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
         val nodeCert = (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
-        val keyStore = clientConfig.p2pSslConfiguration.keyStore.get()
+        val keyStore = clientConfig.p2pSslOptions.keyStore.get()
 
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
-            override val trustStore = clientConfig.p2pSslConfiguration.trustStore.get()
+            override val trustStore = clientConfig.p2pSslOptions.trustStore.get()
             override val crlCheckSoftFail: Boolean = crlCheckSoftFail
             override val maxMessageSize: Int = maxMessageSize
         }
@@ -373,16 +372,16 @@ class CertificateRevocationListNodeTests {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(name).whenever(it).myLegalName
-            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
         val nodeCert = (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
-        val keyStore = serverConfig.p2pSslConfiguration.keyStore.get()
+        val keyStore = serverConfig.p2pSslOptions.keyStore.get()
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
-            override val trustStore = serverConfig.p2pSslConfiguration.trustStore.get()
+            override val trustStore = serverConfig.p2pSslOptions.trustStore.get()
             override val crlCheckSoftFail: Boolean = crlCheckSoftFail
             override val maxMessageSize: Int = maxMessageSize
         }

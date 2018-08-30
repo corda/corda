@@ -53,9 +53,9 @@ class SSHServerTest {
         val user = User("u", "p", setOf())
         // The driver will automatically pick up the annotated flows below
         driver(DriverParameters(notarySpecs = emptyList())) {
-                        val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
-                                customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
-            node.getOrThrow().rpcAddress
+            val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
+                    customOverrides = mapOf("sshd" to mapOf("port" to 2222)) /*, startInSameProcess = true */)
+            node.getOrThrow()
 
             val session = JSch().getSession("u", "localhost", 2222)
             session.setConfig("StrictHostKeyChecking", "no")

@@ -583,7 +583,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
 
     return rigorousMock<AbstractNodeConfiguration>().also {
         doReturn(certificatesDirectory.createDirectories()).whenever(it).certificatesDirectory
-        doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+        doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
         doReturn(signingCertificateStore).whenever(it).signingCertificateStore
         doReturn(emptyList<User>()).whenever(it).rpcUsers
         doReturn(null).whenever(it).notary

@@ -177,17 +177,17 @@ class AMQPBridgeTest {
             doReturn(ALICE_NAME).whenever(it).myLegalName
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
-            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(true).whenever(it).crlCheckSoftFail
             doReturn(artemisAddress).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
         }
         artemisConfig.configureWithDevSSLCertificate()
         val artemisServer = ArtemisMessagingServer(artemisConfig, artemisAddress.copy(host = "0.0.0.0"), MAX_MESSAGE_SIZE)
-        val artemisClient = ArtemisMessagingClient(artemisConfig.p2pSslConfiguration, artemisAddress, MAX_MESSAGE_SIZE)
+        val artemisClient = ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE)
         artemisServer.start()
         artemisClient.start()
-        val bridgeManager = AMQPBridgeManager(artemisConfig.p2pSslConfiguration, artemisAddress, MAX_MESSAGE_SIZE)
+        val bridgeManager = AMQPBridgeManager(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE)
         bridgeManager.start()
         val artemis = artemisClient.started!!
         if (sourceQueueName != null) {
@@ -208,14 +208,14 @@ class AMQPBridgeTest {
             doReturn(BOB_NAME).whenever(it).myLegalName
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
-            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
         }
         serverConfig.configureWithDevSSLCertificate()
 
-        val keyStore = serverConfig.p2pSslConfiguration.keyStore.get()
+        val keyStore = serverConfig.p2pSslOptions.keyStore.get()
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
-            override val trustStore  = serverConfig.p2pSslConfiguration.trustStore.get()
+            override val trustStore  = serverConfig.p2pSslOptions.trustStore.get()
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
         }

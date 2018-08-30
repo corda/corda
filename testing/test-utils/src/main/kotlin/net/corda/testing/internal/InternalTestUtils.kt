@@ -119,7 +119,7 @@ fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
  */
 fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
 
-fun p2pSslConfiguration(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "London", "GB")): TwoWaySslConfiguration {
+fun p2pSslOptions(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "London", "GB")): TwoWaySslConfiguration {
     val sslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(path, keyStorePassword = "serverstorepass")
     val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
     sslConfig.keyStore.get(true).registerDevP2pCertificates(name, rootCa.certificate, intermediateCa)

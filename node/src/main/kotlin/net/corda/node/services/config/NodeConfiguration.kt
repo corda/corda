@@ -77,7 +77,7 @@ interface NodeConfiguration {
     val baseDirectory: Path
     val certificatesDirectory: Path
     val signingCertificateStore: FileBasedCertificateStoreSupplier
-    val p2pSslConfiguration: TwoWaySslConfiguration
+    val p2pSslOptions: TwoWaySslConfiguration
 
     val cordappDirectories: List<Path>
 
@@ -261,7 +261,7 @@ data class NodeConfigurationImpl(
     private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword)
     private val p2pTrustStoreFilePath: Path get() = certificatesDirectory / "truststore.jks"
     private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword)
-    override val p2pSslConfiguration: TwoWaySslConfiguration = SslConfiguration.twoWay(p2pKeyStore, p2pTrustStore)
+    override val p2pSslOptions: TwoWaySslConfiguration = SslConfiguration.twoWay(p2pKeyStore, p2pTrustStore)
 
     override val rpcOptions: NodeRpcOptions
         get() {

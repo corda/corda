@@ -119,7 +119,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         bindingsDirectory = (artemisDir / "bindings").toString()
         journalDirectory = (artemisDir / "journal").toString()
         largeMessagesDirectory = (artemisDir / "large-messages").toString()
-        acceptorConfigurations = mutableSetOf(p2pAcceptorTcpTransport(NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port), config.p2pSslConfiguration))
+        acceptorConfigurations = mutableSetOf(p2pAcceptorTcpTransport(NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port), config.p2pSslOptions))
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits
         // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
         idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
@@ -161,8 +161,8 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
 
     @Throws(IOException::class, KeyStoreException::class)
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
-        val keyStore = config.p2pSslConfiguration.keyStore.get().value.internal
-        val trustStore = config.p2pSslConfiguration.trustStore.get().value.internal
+        val keyStore = config.p2pSslOptions.keyStore.get().value.internal
+        val trustStore = config.p2pSslOptions.trustStore.get().value.internal
 
         val securityConfig = object : SecurityConfiguration() {
             // Override to make it work with our login module

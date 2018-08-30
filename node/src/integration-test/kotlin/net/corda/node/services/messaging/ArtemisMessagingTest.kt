@@ -82,7 +82,7 @@ class ArtemisMessagingTest {
             doReturn(ALICE_NAME).whenever(it).myLegalName
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
-            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(NetworkHostAndPort("0.0.0.0", serverPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(FlowTimeoutConfiguration(5.seconds, 3, backoffBase = 1.0)).whenever(it).flowTimeout
