@@ -149,8 +149,7 @@ class SchemaMigration(
 
                     if (schemas.any { schema -> schema.migrationResource == "node-notary.changelog-master" })
                         preV4Baseline.addAll(listOf("migration/node-notary.changelog-init.xml",
-                                "migration/node-notary.changelog-v1.xml",
-                                "migration/vault-schema.changelog-pkey.xml"))
+                                "migration/node-notary.changelog-v1.xml"))
 
                     val customResourceAccessor = CustomResourceAccessor(dynamicInclude, preV4Baseline, classLoader)
                     val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
