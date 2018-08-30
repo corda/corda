@@ -170,13 +170,15 @@ class AMQPBridgeTest {
 
     private fun createArtemis(sourceQueueName: String?): Triple<ArtemisMessagingServer, ArtemisMessagingClient, BridgeManager> {
         val baseDir = temporaryFolder.root.toPath() / "artemis"
-        val p2pSslConfiguration = CertificateStoreStubs.P2P.withBaseDirectory(baseDir)
-        val signingCertificateStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDir)
+        val certificatesDirectory = baseDir / "certificates"
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDir).whenever(it).baseDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName
-            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+            doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
             doReturn(true).whenever(it).crlCheckSoftFail
             doReturn(artemisAddress).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
@@ -199,13 +201,15 @@ class AMQPBridgeTest {
 
     private fun createAMQPServer(maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPServer {
         val baseDir = temporaryFolder.root.toPath() / "server"
-        val p2pSslConfiguration = CertificateStoreStubs.P2P.withBaseDirectory(baseDir)
-        val signingCertificateStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDir)
+        val certificatesDirectory = baseDir / "certificates"
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "server").whenever(it).baseDirectory
             doReturn(BOB_NAME).whenever(it).myLegalName
-            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
+            doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
         }
         serverConfig.configureWithDevSSLCertificate()
 
