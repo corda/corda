@@ -9,7 +9,7 @@ import java.io.Serializable
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
-import javax.persistence.Lob
+import org.hibernate.annotations.Type
 
 /**
  * Simple checkpoint key value storage in DB.
@@ -23,8 +23,8 @@ class DBCheckpointStorage : CheckpointStorage {
             @Column(name = "checkpoint_id", length = 64, nullable = false)
             var checkpointId: String = "",
 
-            @Lob
-            @Column(name = "checkpoint_value", nullable = false)
+            @Column(name = "checkpoint_value")
+            @Type(type="org.hibernate.type.ImageType")
             var checkpoint: ByteArray = ByteArray(0)
     ) : Serializable
 
