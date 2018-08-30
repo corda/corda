@@ -13,7 +13,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
-import net.corda.nodeapi.internal.createDevP2PKeyStore
+import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
@@ -114,13 +114,9 @@ fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
 fun p2pSslConfiguration(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "London", "GB")): TwoWaySslConfiguration {
     val sslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(path, keyStorePassword = "serverstorepass")
     val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
-    sslConfig.createDevP2PKeyStore(name, rootCa.certificate, intermediateCa)
+    sslConfig.keyStore.get(true).registerDevP2pCertificates(name, rootCa.certificate, intermediateCa)
     val trustStore = sslConfig.trustStore.get(true)
-    trustStore.update {
-        // TODO sollecitom use `addOrReplaceCertificate` to avoid saving files in dev certs generation
-        internal.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCa.certificate)
-    }
-
+    trustStore[X509Utilities.CORDA_ROOT_CA] = rootCa.certificate
     return sslConfig
 }
 

@@ -12,7 +12,7 @@ import net.corda.core.serialization.serialize
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
-import net.corda.nodeapi.internal.createDevP2PKeyStore
+import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.SerializationFactoryImpl
@@ -221,7 +221,7 @@ class X509UtilitiesTest {
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        sslConfig.createDevP2PKeyStore(MEGA_CORP.name, rootCa.certificate, intermediateCa)
+        sslConfig.keyStore.get(true).registerDevP2pCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa)
         sslConfig.createTrustStore(rootCa.certificate)
 
         val keyStore = sslConfig.keyStore.get()

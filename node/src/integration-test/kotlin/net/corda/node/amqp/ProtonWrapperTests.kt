@@ -16,7 +16,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.InternalArtemisTcpTransport
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
-import net.corda.nodeapi.internal.createDevP2PKeyStore
+import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
@@ -115,7 +115,7 @@ class ProtonWrapperTests {
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        sslConfig.createDevP2PKeyStore(ALICE_NAME, rootCa.certificate, intermediateCa)
+        sslConfig.registerDevP2pCertificates(ALICE_NAME, rootCa.certificate, intermediateCa)
         sslConfig.createTrustStore(rootCa.certificate)
 
         val keyStore = sslConfig.keyStore.get().value.internal
