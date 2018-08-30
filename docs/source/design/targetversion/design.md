@@ -73,4 +73,18 @@ Changes that risk breaking apps must be gated on targetVersion>=X where X is the
 ## Technical Design
 
 The minimum- and target platform version will be written to the manifest of the CorDapp's JAR, in fields called `Min-Platform-Version` and `Target-Platform-Version`.
-The node's CorDapp loader reads these values from the manifest when loading the CorDapp. If the CorDapp's minimum platform version is greater than the node's platform version, the node will not load the CorDapp and log a warning. The CorDapp loader sets the minimum and target version in `net.corda.core.cordapp.Cordapp`, which can be obtained via the `CorDappContext` from the service hub. For cases where the service hub is not available, it is possible to do a stack walk to find the class and thus classloader of the last app on the stack. This way it is also possible to make caller-sensitive APIs. As an example, let's say we want to make `FlowStateMachineImpl.checkFlowPermission` more "strict" (whatever that could mean), but doing so would potentially break existing CorDapps. Now, `checkFlowPermission` is called from some flow, which is part of some CorDapp. But inside `checkFlowPermission` we don't have any information available what the version of that CorDapp might be, since the service hub is not available there. This is where a stack-walk can help.
+The node's CorDapp loader reads these values from the manifest when loading the CorDapp. If the CorDapp's minimum platform version is greater than the node's platform version, the node will not load the CorDapp and log a warning. The CorDapp loader sets the minimum and target version in `net.corda.core.cordapp.Cordapp`, which can be obtained via the `CorDappContext` from the service hub. 
+
+To make APIs caller-sensitive in cases where the service hub is not available a different approach has to be used. It would possible to do a stack walk, and parse the manifest of each class on the stack to determine if it belongs to a CorDapp, and if yes, what its target version is. Alternatively, the mapping of classes to `Cordapp`s obtained by the CorDapp loader could be stored in a global singleton. This singleton would expose a lambda returning the current CorDapp's version information (e.g. `() -> Cordapp.Info`).  
+  
+Let's assume that we want to change `TimeWindow.Between` to make it inclusive, i.e. change `contains(instant: Instant) = instant >= fromTime && instant < untilTime` to `contains(instant: Instant) = instant >= fromTime && instant <= untilTime`. However, doing so will break existing CorDapps. We could then version-guard the change such that the new behaviour is only used if the target version of the CorDapp calling `contains` is equal to or greater than the platform  version that contains this change. It would look similar to this: 
+  
+  ```
+  fun contains(instant: Instant) {
+    if (CorDappVersionResolver.resolve().targetVersion > 42) {
+      return instant >= fromTime && instant <= untilTime
+    } else {
+      return instant >= fromTime && instant < untilTime
+    }
+  ```
+Version-gating API changes when the service hub is available would look similar to the above example, in that case the service hub's CorDapp provider would be used to determine if this code is being called from a CorDapp and to obtain its target version information.
