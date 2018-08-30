@@ -4,21 +4,11 @@ package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
-import net.corda.core.cordapp.Cordapp
-import net.corda.core.cordapp.CordappConfig
-import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.*
-import net.corda.core.flows.FlowLogic
-import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.*
-import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
-import org.slf4j.MDC
 import rx.Observable
 import rx.Observer
 import rx.subjects.PublishSubject
@@ -504,3 +494,16 @@ fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): Untrustworthy
     return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) }
             ?: throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a ${payloadData.javaClass.name} ($payloadData)")
 }
+
+fun <ELEMENT, MAPPED> Iterator<ELEMENT>.map(convert: (ELEMENT) -> MAPPED): Iterator<MAPPED> {
+
+    return MappingIterator(this, convert)
+}
+
+private class MappingIterator<out ELEMENT, out MAPPED>(private val source: Iterator<ELEMENT>, private val convert: (ELEMENT) -> MAPPED) : Iterator<MAPPED> {
+
+    override fun hasNext() = source.hasNext()
+
+    override fun next() = convert.invoke(source.next())
+}
+

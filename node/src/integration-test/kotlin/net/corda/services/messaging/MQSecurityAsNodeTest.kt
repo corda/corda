@@ -2,7 +2,6 @@ package net.corda.services.messaging
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.exists
 import net.corda.core.internal.toX500Name
@@ -11,6 +10,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_U
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.DEV_ROOT_CA
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.internal.stubs.CertificateStoreStubs
@@ -90,9 +90,9 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
         val p2pSslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certsDir)
 
         val legalName = CordaX500Name("MegaCorp", "London", "GB")
-        // TODO sollecitom try and add it to the store using `update()`
         if (!p2pSslConfig.trustStore.path.exists()) {
-            javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks").use { it.copyTo(p2pSslConfig.trustStore.path) }
+            val trustStore = p2pSslConfig.trustStore.get(true)
+            CertificateStore.fromResource("certificates/cordatruststore.jks", p2pSslConfig.trustStore.password).copyTo(trustStore)
         }
 
         val clientKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)

@@ -33,7 +33,5 @@ class FileBasedCertificateStoreSupplier(val path: Path, val password: String) : 
     //        }
     //    }
 
-    override fun get(createNew: Boolean): CertificateStore = DelegatingCertificateStore(X509KeyStore.fromFile(path, password, createNew), password)
+    override fun get(createNew: Boolean) = CertificateStore.of(X509KeyStore.fromFile(path, password, createNew), password)
 }
-
-private class DelegatingCertificateStore(override val value: X509KeyStore, override val password: String) : CertificateStore
