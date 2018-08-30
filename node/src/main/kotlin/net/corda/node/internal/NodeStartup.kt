@@ -31,6 +31,7 @@ import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.tools.shell.InteractiveShell
+import org.apache.commons.lang.SystemUtils
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -63,8 +64,8 @@ open class NodeStartup(val args: Array<String>) {
      */
     open fun run(): Boolean {
         val startTime = System.currentTimeMillis()
-        if (!canNormalizeEmptyPath()) {
-            println("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.")
+        if (!hasMinimumJavaVersion()) {
+            println("You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8.")
             println("Corda will now exit...")
             return false
         }
@@ -276,12 +277,12 @@ open class NodeStartup(val args: Array<String>) {
             val console: Console? = System.console()
 
             when (console) {
-            // In this case, the JVM is not connected to the console so we need to exit
+                // In this case, the JVM is not connected to the console so we need to exit
                 null -> {
                     println("Not connected to console. Exiting")
                     exitProcess(1)
                 }
-            // Otherwise we can proceed normally
+                // Otherwise we can proceed normally
                 else -> {
                     while (true) {
                         val keystorePassword1 = console.readPassword("Enter the keystore password => ")
@@ -491,14 +492,10 @@ open class NodeStartup(val args: Array<String>) {
         return hostName
     }
 
-    private fun canNormalizeEmptyPath(): Boolean {
-        // Check we're not running a version of Java with a known bug: https://github.com/corda/corda/issues/83
-        return try {
-            Paths.get("").normalize()
-            true
-        } catch (e: ArrayIndexOutOfBoundsException) {
-            false
-        }
+    private fun hasMinimumJavaVersion(): Boolean {
+        val major = SystemUtils.JAVA_VERSION_FLOAT
+        val update = SystemUtils.JAVA_VERSION.substringAfter("_").toLong()
+        return major > 1.8 || (major == 1.8F && update >= 171)
     }
 
     open fun drawBanner(versionInfo: VersionInfo) {
