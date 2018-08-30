@@ -73,11 +73,11 @@ The proposed data structure for the new constraint type is as follows:
 
 ```kotlin
 data class SignatureAttachmentConstraint(
-    val key: CompositeKey
+    val key: PublicKey
 ) : AttachmentConstraint
 ```
 
-Therefore if a state advertises this constraint, along with a class name of `com.foo.Bar` then the definition of Bar must reside in an attachment with signatures sufficient to meet the given composite key. Multiple signers of a JAR is useful for decentralised administration of an app that wishes to have a threat model in which one of the app developers may go bad, but not a majority of them. For example there could be a 2-of-3 threshold of {app developer, auditor, R3} in which R3 is legally bound to only sign an upgrade if the auditor is unavailable e.g. has gone bankrupt. However, we anticipate that most constraints will be one-of-one for now.
+Therefore if a state advertises this constraint, along with a class name of `com.foo.Bar` then the definition of Bar must reside in an attachment with signatures sufficient to meet the given public key. Note that the `key` may be a `CompositeKey` which is fulfilled by multiple signers. Multiple signers of a JAR is useful for decentralised administration of an app that wishes to have a threat model in which one of the app developers may go bad, but not a majority of them. For example there could be a 2-of-3 threshold of {app developer, auditor, R3} in which R3 is legally bound to only sign an upgrade if the auditor is unavailable e.g. has gone bankrupt. However, we anticipate that most constraints will be one-of-one for now.
 
 We will add a `signers` field to the `ContractAttachment` class that will be filled out at load time if the JAR is signed. The signers will be computed by checking the certificate chain for every file in the JAR, and any unsigned files will cause an exception to be thrown.
 
@@ -147,9 +147,9 @@ There are some further issues to think through here:
 3. Indirecting through package names increases centralisation somewhat, because now the zone operator has to agree to you taking ownership of a part of the namespace. This is also a privacy leak, it may expose what apps are being used on the network. *However* what it really exposes is application *developers* and not actual apps, and the zone op doesn't get to veto specific apps once they approved an app developer. More problematically unless an additional indirection is added to the network parameters, every change to the package ownership list requires a "hard fork" acceptance of new parameters.
 
 
-### Using X.500 names in the constraint instead of CompositeKey
+### Using X.500 names in the constraint instead of PublicKey
 
-We advertise a `CompositeKey` in the constraint and *not* a set of `CordaX500Name` objects. This means that apps can be developed by entities that aren't in the network map (i.e. not a part of your zone), and it enables threshold keys, *but* the downside is there's no way to rotate or revoke a compromised key beyond adjusting the states themselves. We lose the indirection-through-identity.
+We advertise a `PublicKey` (which may be a `CompositeKey`) in the constraint and *not* a set of `CordaX500Name` objects. This means that apps can be developed by entities that aren't in the network map (i.e. not a part of your zone), and it enables threshold keys, *but* the downside is there's no way to rotate or revoke a compromised key beyond adjusting the states themselves. We lose the indirection-through-identity.
 
 We could introduce such an indirection. This would disconnect the constraint from a particular public key. However then each zone an app is deployed to requires a new JAR signature by the creator, using a certificate issued by the zone operator. Because JARs can be signed by multiple certificates, this is OK, a JAR can be resigned N times if it's to be used in N zones. But it means that effectively zone operators get a power of veto over application developers, increasing centralisation and it increases required logistical efforts. 
 
