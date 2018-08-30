@@ -249,16 +249,16 @@ object InteractiveShell {
         if (matches.isEmpty()) {
             output.println("No matching flow found, run 'flow list' to see your options.", Color.red)
             return
-        } else if (matches.size > 1) {
+        } else if ((matches.size > 1) && (!matches.contains(nameFragment))) {
             output.println("Ambiguous name provided, please be more specific. Your options are:")
             matches.forEachIndexed { i, s -> output.println("${i + 1}. $s", Color.yellow) }
             return
         }
 
         val flowClazz: Class<FlowLogic<*>> = if (classLoader != null) {
-            uncheckedCast(Class.forName(matches.single(), true, classLoader))
+            uncheckedCast(Class.forName(matches.find { it == nameFragment }, true, classLoader))
         } else {
-            uncheckedCast(Class.forName(matches.single()))
+            uncheckedCast(Class.forName(matches.find { it == nameFragment }))
         }
         try {
             // Show the progress tracker on the console until the flow completes or is interrupted with a
