@@ -153,30 +153,30 @@ class NodeVaultService(
                 // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
                 // node. The behaviour is as follows:
                 //
-                // 1) All vault updates marked as MODIFIABLE will, of, course all have isModifiable = true.
-                // 2) For ALL_VISIBLE updates, those which are not modifiable will have isModifiable = false.
+                // 1) All vault updates marked as RELEVANT will, of, course all have isRelevant = true.
+                // 2) For ALL_VISIBLE updates, those which are not relevant according to the relevancy rules will have isRelevant = false.
                 //
-                // This is useful when it comes to querying for fungible states, when we do not want non-modifiable states
+                // This is useful when it comes to querying for fungible states, when we do not want non-relevant states
                 // included in the result.
                 //
                 // The same functionality could be obtained by passing in a list of participants to the vault query,
                 // however this:
                 //
                 // * requires a join on the participants table which results in slow queries
-                // * states may flip from being non-modifiable to modifiable
+                // * states may flip from being non-relevant to relevant
                 // * it's more complicated for CorDapp developers
                 //
                 // Adding a new column in the "VaultStates" table was considered the best approach.
                 val keys = stateOnly.participants.map { it.owningKey }
-                val isModifiable = isModifiable(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
+                val isRelevant = isRelevant(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
                 val stateToAdd = VaultSchemaV1.VaultStates(
                         notary = stateAndRef.value.state.notary,
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
-                        recordedTime = now,
-                        isModifiable = if (isModifiable) Vault.StateModificationStatus.MODIFIABLE else Vault.StateModificationStatus.NOT_MODIFIABLE,
                         lockId = uuid,
-                        lockUpdateTime = if (uuid == null) null else now
+                        lockUpdateTime = if (uuid == null) null else now,
+                        recordedTime = clock.instant(),
+                        isRelevant = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT
                 )
                 stateToAdd.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(stateToAdd)
@@ -234,7 +234,7 @@ class NodeVaultService(
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
                 StatesToRecord.ONLY_RELEVANT -> tx.outputs.withIndex().filter {
-                    isModifiable(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet())
+                    isRelevant(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet())
                 }
                 StatesToRecord.ALL_VISIBLE -> tx.outputs.withIndex()
             }.map {
@@ -267,7 +267,7 @@ class NodeVaultService(
             val myKeys by lazy { keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } }) }
             val (consumedStateAndRefs, producedStates) = ltx.inputs.zip(ltx.outputs).filter { (_, output) ->
                 if (statesToRecord == StatesToRecord.ONLY_RELEVANT) {
-                    isModifiable(output.data, myKeys.toSet())
+                    isRelevant(output.data, myKeys.toSet())
                 } else {
                     true
                 }
@@ -468,13 +468,13 @@ class NodeVaultService(
         }
 
         // Enrich QueryCriteria with additional default attributes (such as soft locks).
-        // We only want to return MODIFIABLE states here.
+        // We only want to return RELEVANT states here.
         val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
         val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
         val enrichedCriteria = QueryCriteria.VaultQueryCriteria(
                 contractStateTypes = setOf(contractStateType),
                 softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)),
-                isModifiable = Vault.StateModificationStatus.MODIFIABLE
+                isRelevant = Vault.RelevancyStatus.RELEVANT
         )
         val results = queryBy(contractStateType, enrichedCriteria.and(eligibleStatesQuery), sorter)
 
@@ -498,7 +498,7 @@ class NodeVaultService(
     }
 
     @VisibleForTesting
-    internal fun isModifiable(state: ContractState, myKeys: Set<PublicKey>): Boolean {
+    internal fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
         val keysToCheck = when (state) {
         // Sometimes developers forget to add the owning key to participants for OwnableStates.
         // TODO: This logic should probably be moved to OwnableState so we can just do a simple intersection here.
@@ -581,7 +581,7 @@ class NodeVaultService(
                                     vaultState.notary,
                                     vaultState.lockId,
                                     vaultState.lockUpdateTime,
-                                    vaultState.isModifiable))
+                                    vaultState.isRelevant))
                         } else {
                             // TODO: improve typing of returned other results
                             log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
