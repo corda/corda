@@ -8,7 +8,6 @@ import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
-import net.corda.nodeapi.internal.requireOnDefaultFileSystem
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
@@ -62,10 +61,17 @@ class InternalArtemisTcpTransport {
                 TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
                 TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to TLS_VERSIONS.joinToString(","))
 
-        // TODO sollecitom try to refactor the keyStore?.let and trustStore?.let, joining with the functions below
         private fun SslConfiguration.toTransportOptions(): Map<String, Any> {
 
             val options = mutableMapOf<String, Any>()
+            (keyStore to trustStore).addToTransportOptions(options)
+            return options
+        }
+
+        private fun Pair<FileBasedCertificateStoreSupplier?, FileBasedCertificateStoreSupplier?>.addToTransportOptions(options: MutableMap<String, Any>) {
+
+            val keyStore = first
+            val trustStore = second
             keyStore?.let {
                 with (it) {
                     path.requireOnDefaultFileSystem()
@@ -78,7 +84,6 @@ class InternalArtemisTcpTransport {
                     options.putAll(get().toTrustStoreTransportOptions(path))
                 }
             }
-            return options
         }
 
         private fun CertificateStore.toKeyStoreTransportOptions(path: Path) = mapOf(
@@ -126,40 +131,17 @@ class InternalArtemisTcpTransport {
             val options = defaultArtemisOptions(hostAndPort).toMutableMap()
             if (enableSSL) {
                 options.putAll(defaultSSLOptions)
-                keyStore?.let {
-                    with (it) {
-                        path.requireOnDefaultFileSystem()
-                        options.putAll(get().toKeyStoreTransportOptions(path))
-                    }
-                }
-                trustStore?.let {
-                    with (it) {
-                        path.requireOnDefaultFileSystem()
-                        options.putAll(get().toTrustStoreTransportOptions(path))
-                    }
-                }
+                (keyStore to trustStore).addToTransportOptions(options)
             }
             return TransportConfiguration(acceptorFactoryClassName, options)
         }
 
-        // TODO sollecitom try to refactor some bits with the previous function
         fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, keyStore: FileBasedCertificateStoreSupplier?, trustStore: FileBasedCertificateStoreSupplier?, enableSSL: Boolean = true): TransportConfiguration {
 
             val options = defaultArtemisOptions(hostAndPort).toMutableMap()
             if (enableSSL) {
                 options.putAll(defaultSSLOptions)
-                keyStore?.let {
-                    with (it) {
-                        path.requireOnDefaultFileSystem()
-                        options.putAll(get().toKeyStoreTransportOptions(path))
-                    }
-                }
-                trustStore?.let {
-                    with (it) {
-                        path.requireOnDefaultFileSystem()
-                        options.putAll(get().toTrustStoreTransportOptions(path))
-                    }
-                }
+                (keyStore to trustStore).addToTransportOptions(options)
             }
             return TransportConfiguration(connectorFactoryClassName, options)
         }

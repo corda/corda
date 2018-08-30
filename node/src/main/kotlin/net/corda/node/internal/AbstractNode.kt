@@ -249,7 +249,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val trustRoot = initKeyStore()
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         startDatabase()
-        val nodeCa = configuration.signingCertificateStore.get().getCertificate(X509Utilities.CORDA_CLIENT_CA)
+        val nodeCa = configuration.signingCertificateStore.get()[X509Utilities.CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
         return database.use {
             it.transaction {
@@ -279,7 +279,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         log.info("Node starting up ...")
 
         val trustRoot = initKeyStore()
-        val nodeCa = configuration.signingCertificateStore.get().getCertificate(X509Utilities.CORDA_CLIENT_CA)
+        val nodeCa = configuration.signingCertificateStore.get()[X509Utilities.CORDA_CLIENT_CA]
         initialiseJVMAgents()
 
         schemaService.mappedSchemasWarnings().forEach {
@@ -715,9 +715,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         // Check all cert path chain to the trusted root
-        val sslCertChainRoot = configuration.p2pSslConfiguration.keyStore.get().getCertificateChain(X509Utilities.CORDA_CLIENT_TLS).last()
-        val nodeCaCertChainRoot = configuration.signingCertificateStore.get().getCertificateChain(X509Utilities.CORDA_CLIENT_CA).last()
-        val trustRoot = configuration.p2pSslConfiguration.trustStore.get().getCertificate(X509Utilities.CORDA_ROOT_CA)
+        val sslCertChainRoot = configuration.p2pSslConfiguration.keyStore.get().query { getCertificateChain(X509Utilities.CORDA_CLIENT_TLS) }.last()
+        val nodeCaCertChainRoot = configuration.signingCertificateStore.get().query { getCertificateChain(X509Utilities.CORDA_CLIENT_CA) }.last()
+        val trustRoot = configuration.p2pSslConfiguration.trustStore.get()[X509Utilities.CORDA_ROOT_CA]
 
         require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
         require(nodeCaCertChainRoot == trustRoot) { "Client CA certificate must chain to the trusted root." }
@@ -826,19 +826,19 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             keyStore.storeLegalIdentity(privateKeyAlias, generateKeyPair())
         }
 
-        val (x509Cert, keyPair) = keyStore.getCertificateAndKeyPair(privateKeyAlias)
+        val (x509Cert, keyPair) = keyStore.query { getCertificateAndKeyPair(privateKeyAlias) }
 
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
         val compositeKeyAlias = "$id-composite-key"
         val certificates = if (compositeKeyAlias in keyStore) {
             // Use composite key instead if it exists
-            val certificate = keyStore.getCertificate(compositeKeyAlias)
+            val certificate = keyStore[compositeKeyAlias]
             // We have to create the certificate chain for the composite key manually, this is because we don't have a keystore
             // provider that understand compositeKey-privateKey combo. The cert chain is created using the composite key certificate +
             // the tail of the private key certificates, as they are both signed by the same certificate chain.
-            listOf(certificate) + keyStore.getCertificateChain(privateKeyAlias).drop(1)
+            listOf(certificate) + keyStore.query { getCertificateChain(privateKeyAlias) }.drop(1)
         } else {
-            keyStore.getCertificateChain(privateKeyAlias).let {
+            keyStore.query { getCertificateChain(privateKeyAlias) }.let {
                 check(it[0] == x509Cert) { "Certificates from key store do not line up!" }
                 it
             }

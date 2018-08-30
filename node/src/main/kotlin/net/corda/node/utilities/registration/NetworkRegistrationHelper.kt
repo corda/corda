@@ -172,7 +172,7 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
                 save()
             }
         }
-        return getCertificateAndKeyPair(alias, privateKeyPassword).keyPair
+        return query { getCertificateAndKeyPair(alias, privateKeyPassword) }.keyPair
     }
 
     /**

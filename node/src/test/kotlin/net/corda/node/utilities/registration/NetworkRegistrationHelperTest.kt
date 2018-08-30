@@ -89,14 +89,14 @@ class NetworkRegistrationHelperTest {
             assertFalse(contains(X509Utilities.CORDA_INTERMEDIATE_CA))
             assertFalse(contains(X509Utilities.CORDA_ROOT_CA))
             assertFalse(contains(X509Utilities.CORDA_CLIENT_TLS))
-            assertThat(CertRole.extract(getCertificate(X509Utilities.CORDA_CLIENT_CA))).isEqualTo(CertRole.NODE_CA)
+            assertThat(CertRole.extract(this[X509Utilities.CORDA_CLIENT_CA])).isEqualTo(CertRole.NODE_CA)
         }
 
         sslKeystore.run {
             assertFalse(contains(X509Utilities.CORDA_CLIENT_CA))
             assertFalse(contains(X509Utilities.CORDA_INTERMEDIATE_CA))
             assertFalse(contains(X509Utilities.CORDA_ROOT_CA))
-            val nodeTlsCertChain = getCertificateChain(X509Utilities.CORDA_CLIENT_TLS)
+            val nodeTlsCertChain = query { getCertificateChain(X509Utilities.CORDA_CLIENT_TLS) }
             assertThat(nodeTlsCertChain).hasSize(4)
             // The TLS cert has the same subject as the node CA cert
             assertThat(CordaX500Name.build(nodeTlsCertChain[0].subjectX500Principal)).isEqualTo(nodeLegalName)
@@ -106,7 +106,7 @@ class NetworkRegistrationHelperTest {
         trustStore.run {
             assertFalse(contains(X509Utilities.CORDA_CLIENT_CA))
             assertFalse(contains(X509Utilities.CORDA_INTERMEDIATE_CA))
-            assertThat(getCertificate(X509Utilities.CORDA_ROOT_CA)).isEqualTo(rootAndIntermediateCA.first.certificate)
+            assertThat(this[X509Utilities.CORDA_ROOT_CA]).isEqualTo(rootAndIntermediateCA.first.certificate)
         }
     }
 
@@ -174,7 +174,7 @@ class NetworkRegistrationHelperTest {
             assertFalse(contains(X509Utilities.CORDA_ROOT_CA))
             assertFalse(contains(X509Utilities.CORDA_CLIENT_TLS))
             assertFalse(contains(X509Utilities.CORDA_CLIENT_CA))
-            assertThat(CertRole.extract(getCertificate(serviceIdentityAlias))).isEqualTo(CertRole.SERVICE_IDENTITY)
+            assertThat(CertRole.extract(this[serviceIdentityAlias])).isEqualTo(CertRole.SERVICE_IDENTITY)
         }
     }
 
