@@ -18,7 +18,6 @@ interface CertificateStoreSupplier {
     }
 }
 
-// TODO sollecitom see if you can make this private API wise
 class FileBasedCertificateStoreSupplier(val path: Path, val password: String) : CertificateStoreSupplier {
 
     // TODO sollecitom check if we need caching

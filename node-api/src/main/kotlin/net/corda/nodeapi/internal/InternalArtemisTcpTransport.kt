@@ -62,16 +62,21 @@ class InternalArtemisTcpTransport {
                 TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
                 TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to TLS_VERSIONS.joinToString(","))
 
+        // TODO sollecitom try to refactor the keyStore?.let and trustStore?.let, joining with the functions below
         private fun SslConfiguration.toTransportOptions(): Map<String, Any> {
 
             val options = mutableMapOf<String, Any>()
             keyStore?.let {
-                it.path.requireOnDefaultFileSystem()
-                options.putAll(it.get().toKeyStoreTransportOptions(it.path))
+                with (it) {
+                    path.requireOnDefaultFileSystem()
+                    options.putAll(get().toKeyStoreTransportOptions(path))
+                }
             }
             trustStore?.let {
-                it.path.requireOnDefaultFileSystem()
-                options.putAll(it.get().toTrustStoreTransportOptions(it.path))
+                with (it) {
+                    path.requireOnDefaultFileSystem()
+                    options.putAll(get().toTrustStoreTransportOptions(path))
+                }
             }
             return options
         }
@@ -81,11 +86,9 @@ class InternalArtemisTcpTransport {
                 TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to "JKS",
                 TransportConstants.KEYSTORE_PATH_PROP_NAME to path,
                 TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to password,
-                // TODO sollecitom should SSL_ENABLED_PROP_NAME only be set of truststore?
                 TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true)
 
         private fun CertificateStore.toTrustStoreTransportOptions(path: Path) = mapOf(
-                // TODO sollecitom should SSL_ENABLED_PROP_NAME only be set of keystore?
                 TransportConstants.SSL_ENABLED_PROP_NAME to true,
                 TransportConstants.TRUSTSTORE_PROVIDER_PROP_NAME to "JKS",
                 TransportConstants.TRUSTSTORE_PATH_PROP_NAME to path,
@@ -118,37 +121,44 @@ class InternalArtemisTcpTransport {
             return p2pConnectorTcpTransport(hostAndPort, config?.keyStore, config?.trustStore, enableSSL = enableSSL)
         }
 
-        // TODO sollecitom check this
         fun p2pAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, keyStore: FileBasedCertificateStoreSupplier?, trustStore: FileBasedCertificateStoreSupplier?, enableSSL: Boolean = true): TransportConfiguration {
 
             val options = defaultArtemisOptions(hostAndPort).toMutableMap()
             if (enableSSL) {
                 options.putAll(defaultSSLOptions)
                 keyStore?.let {
-                    it.path.requireOnDefaultFileSystem()
-                    options.putAll(it.get().toKeyStoreTransportOptions(it.path))
+                    with (it) {
+                        path.requireOnDefaultFileSystem()
+                        options.putAll(get().toKeyStoreTransportOptions(path))
+                    }
                 }
                 trustStore?.let {
-                    it.path.requireOnDefaultFileSystem()
-                    options.putAll(it.get().toTrustStoreTransportOptions(it.path))
+                    with (it) {
+                        path.requireOnDefaultFileSystem()
+                        options.putAll(get().toTrustStoreTransportOptions(path))
+                    }
                 }
             }
             return TransportConfiguration(acceptorFactoryClassName, options)
         }
 
-        // TODO sollecitom check this
+        // TODO sollecitom try to refactor some bits with the previous function
         fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, keyStore: FileBasedCertificateStoreSupplier?, trustStore: FileBasedCertificateStoreSupplier?, enableSSL: Boolean = true): TransportConfiguration {
 
             val options = defaultArtemisOptions(hostAndPort).toMutableMap()
             if (enableSSL) {
                 options.putAll(defaultSSLOptions)
                 keyStore?.let {
-                    it.path.requireOnDefaultFileSystem()
-                    options.putAll(it.get().toKeyStoreTransportOptions(it.path))
+                    with (it) {
+                        path.requireOnDefaultFileSystem()
+                        options.putAll(get().toKeyStoreTransportOptions(path))
+                    }
                 }
                 trustStore?.let {
-                    it.path.requireOnDefaultFileSystem()
-                    options.putAll(it.get().toTrustStoreTransportOptions(it.path))
+                    with (it) {
+                        path.requireOnDefaultFileSystem()
+                        options.putAll(get().toTrustStoreTransportOptions(path))
+                    }
                 }
             }
             return TransportConfiguration(connectorFactoryClassName, options)

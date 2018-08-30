@@ -8,7 +8,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
-import net.corda.nodeapi.internal.config.TwoWaySslOptions
+import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -36,7 +36,7 @@ object DevIdentityGenerator {
         val signingCertStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "nodekeystore.jks", "cordacadevpass")
         val p2pKeyStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "sslkeystore.jks", "cordacadevpass")
         val p2pTrustStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "truststore.jks", "trustpass")
-        val p2pSslConfig = TwoWaySslOptions(p2pKeyStore, p2pTrustStore)
+        val p2pSslConfig = SslConfiguration.twoWay(p2pKeyStore, p2pTrustStore)
 
         certificatesDirectory.createDirectories()
         val (nodeKeyStore) = (signingCertStore to p2pSslConfig).createDevKeyStores(legalName)

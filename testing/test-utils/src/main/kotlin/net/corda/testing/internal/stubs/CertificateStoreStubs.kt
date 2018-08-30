@@ -2,7 +2,7 @@ package net.corda.testing.internal.stubs
 
 import net.corda.core.internal.div
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
-import net.corda.nodeapi.internal.config.TwoWaySslOptions
+import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import java.nio.file.Path
 
@@ -46,7 +46,7 @@ class CertificateStoreStubs {
 
                 val keyStore = FileBasedCertificateStoreSupplier(certificatesDirectory / keyStoreFileName, keyStorePassword)
                 val trustStore = FileBasedCertificateStoreSupplier(certificatesDirectory / trustStoreFileName, trustStorePassword)
-                return TwoWaySslOptions(keyStore, trustStore)
+                return SslConfiguration.twoWay(keyStore, trustStore)
             }
 
             @JvmStatic

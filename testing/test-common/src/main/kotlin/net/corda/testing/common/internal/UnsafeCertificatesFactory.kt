@@ -5,8 +5,8 @@ import net.corda.core.internal.createFile
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
-import net.corda.nodeapi.internal.config.TwoWaySslOptions
 import net.corda.nodeapi.internal.crypto.*
 import org.apache.commons.io.FileUtils
 import sun.security.tools.keytool.CertAndKeyGen
@@ -83,7 +83,7 @@ class KeyStores(val keyStore: UnsafeKeyStore, val trustStore: UnsafeKeyStore) {
 
         val keyStore = FileBasedCertificateStoreSupplier(keyStoreFile.file, keyStore.password)
         val trustStore = FileBasedCertificateStoreSupplier(trustStoreFile.file, trustStore.password)
-        return TwoWaySslOptions(keyStore, trustStore)
+        return SslConfiguration.twoWay(keyStore, trustStore)
     }
 }
 

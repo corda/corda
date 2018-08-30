@@ -12,7 +12,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
-import net.corda.nodeapi.internal.config.TwoWaySslOptions
+import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.User
@@ -264,7 +264,7 @@ data class NodeConfigurationImpl(
     private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword)
     private val p2pTrustStoreFilePath: Path get() = certificatesDirectory / "truststore.jks"
     private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword)
-    override val p2pSslConfiguration: TwoWaySslConfiguration = TwoWaySslOptions(p2pKeyStore, p2pTrustStore)
+    override val p2pSslConfiguration: TwoWaySslConfiguration = SslConfiguration.twoWay(p2pKeyStore, p2pTrustStore)
 
     override val rpcOptions: NodeRpcOptions
         get() {

@@ -8,17 +8,23 @@ interface SslConfiguration {
 
     val keyStore: FileBasedCertificateStoreSupplier?
     val trustStore: FileBasedCertificateStoreSupplier?
+
+    companion object {
+
+        fun twoWay(keyStore: FileBasedCertificateStoreSupplier, trustStore: FileBasedCertificateStoreSupplier): TwoWaySslConfiguration {
+
+            return TwoWaySslOptions(keyStore, trustStore)
+        }
+    }
 }
 
-// TODO sollecitom move this?
 interface TwoWaySslConfiguration : SslConfiguration {
 
     override val keyStore: FileBasedCertificateStoreSupplier
     override val trustStore: FileBasedCertificateStoreSupplier
 }
 
-// TODO sollecitom move this? maybe make it private with a factory method in SSLConfiguration?
-class TwoWaySslOptions(override val keyStore: FileBasedCertificateStoreSupplier, override val trustStore: FileBasedCertificateStoreSupplier) : TwoWaySslConfiguration
+private class TwoWaySslOptions(override val keyStore: FileBasedCertificateStoreSupplier, override val trustStore: FileBasedCertificateStoreSupplier) : TwoWaySslConfiguration
 
 // Don't use this internally. It's still here because it's used by ArtemisTcpTransport, which is in public node-api by mistake.
 interface SSLConfiguration {
@@ -26,7 +32,6 @@ interface SSLConfiguration {
     val trustStorePassword: String
     val certificatesDirectory: Path
     val sslKeystore: Path get() = certificatesDirectory / "sslkeystore.jks"
-    // TODO This looks like it should be in NodeSSLConfiguration
     val nodeKeystore: Path get() = certificatesDirectory / "nodekeystore.jks"
     val trustStoreFile: Path get() = certificatesDirectory / "truststore.jks"
     val crlCheckSoftFail: Boolean
