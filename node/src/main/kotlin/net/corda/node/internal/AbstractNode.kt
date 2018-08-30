@@ -369,7 +369,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     open fun startShell() {
         if (configuration.shouldInitCrashShell()) {
             val shellConfiguration = configuration.toShellConfig()
-            shellConfiguration.sshHostKeyDirectory?.let {
+            shellConfiguration.sshdPort?.let {
                 log.info("Binding Shell SSHD server on port $it.")
             }
             InteractiveShell.startShellInternal(shellConfiguration, cordappLoader.appClassLoader)
@@ -1036,5 +1036,5 @@ fun extractRpcClientSslOptions(nodeRpcOptions: NodeRpcOptions): ClientRpcSslOpti
         return null
     }
     // Here we're using the node's RPC key store as the RPC client's trust store.
-    return ClientRpcSslOptions(nodeRpcOptions.sslConfig!!.keyStorePath, nodeRpcOptions.sslConfig!!.keyStorePassword)
+    return ClientRpcSslOptions(trustStorePath = nodeRpcOptions.sslConfig!!.keyStorePath, trustStorePassword = nodeRpcOptions.sslConfig!!.keyStorePassword)
 }

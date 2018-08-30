@@ -97,6 +97,7 @@ object InteractiveShell {
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
+    // TODO sollecitom remove this
     fun startShellInternal(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
         rpcOps = { username: String, credentials: String ->
             val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
