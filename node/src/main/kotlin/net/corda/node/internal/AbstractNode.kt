@@ -1035,7 +1035,6 @@ fun extractRpcClientSslOptions(nodeRpcOptions: NodeRpcOptions): ClientRpcSslOpti
     if (!nodeRpcOptions.useSsl || nodeRpcOptions.sslConfig == null) {
         return null
     }
-    // TODO sollecitom check that this works
     // Here we're using the node's RPC key store as the RPC client's trust store.
     return ClientRpcSslOptions(nodeRpcOptions.sslConfig!!.keyStorePath, nodeRpcOptions.sslConfig!!.keyStorePassword)
 }

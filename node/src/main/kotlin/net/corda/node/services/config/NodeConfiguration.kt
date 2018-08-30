@@ -101,9 +101,6 @@ interface NodeConfiguration {
     }
 }
 
-// TODO sollecitom try and remove this
-fun NodeConfiguration.signingAndP2pConfiguration() = signingCertificateStore to p2pSslConfiguration
-
 /**
  * Currently registered JMX Reporters
  */

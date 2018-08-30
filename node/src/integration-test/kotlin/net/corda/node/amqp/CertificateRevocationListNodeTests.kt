@@ -12,7 +12,6 @@ import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
-import net.corda.node.services.config.signingAndP2pConfiguration
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
@@ -346,7 +345,7 @@ class CertificateRevocationListNodeTests {
             doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
-        val nodeCert = clientConfig.signingAndP2pConfiguration().recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
+        val nodeCert = (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
         val keyStore = clientConfig.p2pSslConfiguration.keyStore.get()
         val clientTruststore = clientConfig.p2pSslConfiguration.trustStore.get().value.internal
         val clientKeystore = keyStore.value.internal
@@ -382,7 +381,7 @@ class CertificateRevocationListNodeTests {
             doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
-        val nodeCert = serverConfig.signingAndP2pConfiguration().recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
+        val nodeCert = (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
         val keyStore = serverConfig.p2pSslConfiguration.keyStore.get()
         val serverTruststore = serverConfig.p2pSslConfiguration.trustStore.get().value.internal
         val serverKeystore = keyStore.value.internal
