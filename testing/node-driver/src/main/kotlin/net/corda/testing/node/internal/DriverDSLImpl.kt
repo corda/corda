@@ -801,10 +801,10 @@ class DriverDSLImpl(
             config += "useHTTPS" to useHTTPS
             config += "baseDirectory" to configuration.baseDirectory.toAbsolutePath().toString()
 
-            config += "keyStorePath" to configuration.p2pSslConfiguration.keyStore.path
+            config += "keyStorePath" to configuration.p2pSslConfiguration.keyStore.path.toString()
             config += "keyStorePassword" to configuration.p2pSslConfiguration.keyStore.password
 
-            config += "trustStorePath" to configuration.p2pSslConfiguration.trustStore.path
+            config += "trustStorePath" to configuration.p2pSslConfiguration.trustStore.path.toString()
             config += "trustStorePassword" to configuration.p2pSslConfiguration.trustStore.password
 
             return config
