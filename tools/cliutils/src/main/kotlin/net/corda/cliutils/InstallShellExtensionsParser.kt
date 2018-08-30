@@ -56,7 +56,6 @@ private class ShellExtensionsGenerator(val alias: String, val className: String)
     private val jarLocation: Path by lazy {
         val capsuleJarProperty = System.getProperty("capsule.jar")
         if (capsuleJarProperty != null) {
-            //Use capsule jar property
             Paths.get(capsuleJarProperty)
         } else {
             this.javaClass.location.toPath()
