@@ -42,7 +42,7 @@ abstract class EvolutionSerializer(
         clazz: Type,
         factory: SerializerFactory,
         protected val oldReaders: Map<String, OldParam>,
-        override val kotlinConstructor: KFunction<Any>?
+        override val kotlinConstructor: KFunction<Any>
 ) : ObjectSerializer(clazz, factory) {
     // explicitly set as empty to indicate it's unused by this type of serializer
     override val propertySerializers = PropertySerializersEvolution()
@@ -84,7 +84,7 @@ abstract class EvolutionSerializer(
          * TODO: rename annotation
          */
         private fun getEvolverConstructor(type: Type, oldArgs: Map<String, OldParam>): KFunction<Any>? {
-            val clazz: Class<*> = type.asClass()!!
+            val clazz: Class<*> = type.asClass()
 
             if (!clazz.isConcreteClass) return null
 
@@ -199,7 +199,7 @@ abstract class EvolutionSerializer(
             // return the synthesised object which is, given the absence of a constructor, a no op
             val constructor = getEvolverConstructor(new.type, readersAsSerialized) ?: return new
 
-            val classProperties = new.type.asClass()?.propertyDescriptors() ?: emptyMap()
+            val classProperties = new.type.asClass().propertyDescriptors()
 
             return if (classProperties.isNotEmpty() && constructor.parameters.isEmpty()) {
                 makeWithSetters(new, factory, constructor, readersAsSerialized, classProperties)
@@ -220,7 +220,7 @@ class EvolutionSerializerViaConstructor(
         clazz: Type,
         factory: SerializerFactory,
         oldReaders: Map<String, EvolutionSerializer.OldParam>,
-        kotlinConstructor: KFunction<Any>?,
+        kotlinConstructor: KFunction<Any>,
         private val constructorArgs: Array<Any?>) : EvolutionSerializer(clazz, factory, oldReaders, kotlinConstructor) {
     /**
      * Unlike a normal [readObject] call where we simply apply the parameter deserialisers
@@ -252,7 +252,7 @@ class EvolutionSerializerViaSetters(
         clazz: Type,
         factory: SerializerFactory,
         oldReaders: Map<String, EvolutionSerializer.OldParam>,
-        kotlinConstructor: KFunction<Any>?,
+        kotlinConstructor: KFunction<Any>,
         private val setters: Map<String, PropertyAccessor>) : EvolutionSerializer(clazz, factory, oldReaders, kotlinConstructor) {
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,

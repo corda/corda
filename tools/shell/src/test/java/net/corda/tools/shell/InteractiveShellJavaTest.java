@@ -52,8 +52,8 @@ public class InteractiveShellJavaTest {
             }
         }
 
-        public FlowA(Integer b) {
-            this(b.toString());
+        public FlowA(int b) {
+            this(Integer.valueOf(b).toString());
         }
 
         public FlowA(Integer b, String c) {
@@ -111,6 +111,9 @@ public class InteractiveShellJavaTest {
             this.a = a;
         }
 
+        public FlowB(Amount<Currency> amount, int abc) {
+        }
+
         @Nullable
         @Override
         public ProgressTracker getProgressTracker() {
@@ -142,6 +145,7 @@ public class InteractiveShellJavaTest {
             this.label = label;
         }
 
+        @SuppressWarnings("unused")  // Used via reflection.
         public String getLabel() {
             return label;
         }
@@ -161,17 +165,17 @@ public class InteractiveShellJavaTest {
 
     private void check(String input, String expected, Class<? extends StringFlow> flowClass) throws InteractiveShell.NoApplicableConstructor {
         InteractiveShell.INSTANCE.runFlowFromString((clazz, args) -> {
-
             StringFlow instance = null;
             try {
                 instance = (StringFlow)clazz.getConstructor(Arrays.stream(args).map(Object::getClass).toArray(Class[]::new)).newInstance(args);
             } catch (Exception e) {
                 System.out.println(e);
+                throw new RuntimeException(e);
             }
             output = instance.getA();
             OpenFuture<String> future = CordaFutureImplKt.openFuture();
             future.set("ABC");
-            return new FlowProgressHandleImpl(StateMachineRunId.Companion.createRandom(), future, Observable.just("Some string"));
+            return new FlowProgressHandleImpl<String>(StateMachineRunId.Companion.createRandom(), future, Observable.just("Some string"));
         }, input, flowClass, om);
         assertEquals(input, expected, output);
     }
@@ -245,5 +249,15 @@ public class InteractiveShellJavaTest {
     @Test
     public void unwrapLambda() throws InteractiveShell.NoApplicableConstructor {
         check("party: \"" + megaCorp.getName() + "\", a: Bambam", "Bambam", FlowB.class);
+    }
+
+    @Test
+    public void niceErrors() {
+        // Most cases are checked in the Kotlin test, so we only check raw types here.
+        try {
+            check("amount: $100", "", FlowB.class);
+        } catch (InteractiveShell.NoApplicableConstructor e) {
+            assertEquals("[amount: Amount<Currency>, abc: int]: missing parameter abc", e.getErrors().get(1));
+        }
     }
 }
