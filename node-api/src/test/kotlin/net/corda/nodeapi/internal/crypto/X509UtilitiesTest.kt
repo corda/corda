@@ -201,9 +201,8 @@ class X509UtilitiesTest {
         assertThat(CordaX500Name.build(serverCert.subjectX500Principal)).isEqualTo(MEGA_CORP.name)
 
         // Load back SSL certificate
-        // TODO sollecitom try and replace with `get()`
-        val sslKeyStore = loadKeyStore(p2pSslConfig.keyStore.path, p2pSslConfig.keyStore.password)
-        val (sslCert) = sslKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, p2pSslConfig.keyStore.password)
+        val sslKeyStore = p2pSslConfig.keyStore.get()
+        val (sslCert) = sslKeyStore.query { getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, p2pSslConfig.keyStore.password) }
 
         sslCert.checkValidity()
         sslCert.verify(serverCert.publicKey)
@@ -225,17 +224,15 @@ class X509UtilitiesTest {
         sslConfig.createDevP2PKeyStore(MEGA_CORP.name, rootCa.certificate, intermediateCa)
         sslConfig.createTrustStore(rootCa.certificate)
 
-        // TODO sollecitom try and replace with `get()`
-        val keyStore = loadKeyStore(sslConfig.keyStore.path, sslConfig.keyStore.password)
-        // TODO sollecitom try and replace with `get()`
-        val trustStore = loadKeyStore(sslConfig.trustStore.path, sslConfig.trustStore.password)
+        val keyStore = sslConfig.keyStore.get()
+        val trustStore = sslConfig.trustStore.get()
 
         val context = SSLContext.getInstance("TLS")
         val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        keyManagerFactory.init(keyStore, sslConfig.keyStore.password.toCharArray())
+        keyManagerFactory.init(keyStore.value.internal, sslConfig.keyStore.password.toCharArray())
         val keyManagers = keyManagerFactory.keyManagers
         val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-        trustMgrFactory.init(trustStore)
+        trustMgrFactory.init(trustStore.value.internal)
         val trustManagers = trustMgrFactory.trustManagers
         context.init(keyManagers, trustManagers, newSecureRandom())
 
@@ -312,11 +309,8 @@ class X509UtilitiesTest {
     private fun tempFile(name: String): Path = tempFolder.root.toPath() / name
 
     private fun TwoWaySslConfiguration.createTrustStore(rootCert: X509Certificate) {
-        // TODO sollecitom try and replace with `get(true)`
-        val trustStore = loadOrCreateKeyStore(this.trustStore.path, this.trustStore.password)
-        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
-        // TODO sollecitom try and replace with `update()`
-        trustStore.save(this.trustStore.path, this.trustStore.password)
+        val trustStore = this.trustStore.get(true)
+        trustStore[X509Utilities.CORDA_ROOT_CA] = rootCert
     }
 
     @Test
