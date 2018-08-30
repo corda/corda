@@ -4,20 +4,17 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.toStringShort
-import net.corda.core.crypto.*
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
+import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.days
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.toHexString
-import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.*
 import net.corda.finance.*
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.Commodity
@@ -28,6 +25,7 @@ import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
+import net.corda.core.identity.AbstractParty
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -105,19 +103,17 @@ class VaultQueryTests {
             "net.corda.finance.contracts",
             CashSchemaV1::class.packageName,
             DummyLinearStateSchemaV1::class.packageName,
-            SampleCashSchemaV3::class.packageName,
-            VaultQueryTestsBase.MyContractClass::class.packageName)
+            SampleCashSchemaV3::class.packageName)
+    private lateinit var services: MockServices
+    private lateinit var vaultFiller: VaultFiller
+    private lateinit var vaultFillerCashNotary: VaultFiller
+    private lateinit var notaryServices: MockServices
+    private val vaultService: VaultService get() = services.vaultService
+    private lateinit var identitySvc: IdentityService
+    private lateinit var database: CordaPersistence
 
-    override lateinit var services: MockServices
-    override lateinit var vaultFiller: VaultFiller
-    override lateinit var vaultFillerCashNotary: VaultFiller
-    override lateinit var notaryServices: MockServices
-    override val vaultService: VaultService get() = services.vaultService
-    override lateinit var identitySvc: IdentityService
-    override lateinit var database: CordaPersistence
-
-
-    override fun before() {
+    @Before
+    fun setUp() {
         // register additional identities
         val databaseAndServices = makeTestDatabaseAndMockServices(
                 cordappPackages,
