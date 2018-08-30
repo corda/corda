@@ -3,6 +3,7 @@ package net.corda.node.services.messaging
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.configureDatabase
@@ -72,12 +73,14 @@ class ArtemisMessagingTest {
         abstract class AbstractNodeConfiguration : NodeConfiguration
 
         val baseDirectory = temporaryFolder.root.toPath()
-        val signingCertificateStore = CertificateStoreStubs.Signing.withBaseDirectory(baseDirectory)
-        val p2pSslConfiguration = CertificateStoreStubs.P2P.withBaseDirectory(baseDirectory)
+        val certificatesDirectory = baseDirectory / "certificates"
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
 
         config = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath()).whenever(it).baseDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName
+            doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(p2pSslConfiguration).whenever(it).p2pSslConfiguration
             doReturn(NetworkHostAndPort("0.0.0.0", serverPort)).whenever(it).p2pAddress
