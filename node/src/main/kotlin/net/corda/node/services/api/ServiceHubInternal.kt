@@ -25,9 +25,9 @@ import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import java.security.PublicKey
 
-interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBaseInternal
-interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
+interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
     val allNodeHashes: List<SecureHash>
 
     fun getNodeByHash(nodeHash: SecureHash): NodeInfo?
