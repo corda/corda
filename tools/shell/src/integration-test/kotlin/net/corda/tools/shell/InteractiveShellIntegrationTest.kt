@@ -1,16 +1,13 @@
 package net.corda.tools.shell
 
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.google.common.io.Files
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.mock
-import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.RPCException
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
@@ -21,7 +18,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.shell.toShellConfig
-import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
@@ -31,7 +27,6 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.NodeHandleInternal
-import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
@@ -39,7 +34,6 @@ import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.util.io.Streams
-import org.crsh.text.Color
 import org.crsh.text.RenderPrintWriter
 import org.junit.Ignore
 import org.junit.Rule
@@ -257,26 +251,24 @@ class InteractiveShellIntegrationTest {
 
     @Suppress("UNUSED")
     @StartableByRPC
-    @InitiatingFlow
-    class Flow(val a: String) : FlowLogic<String>() {
+    class NoOpFlow : FlowLogic<Unit>() {
         override val progressTracker = ProgressTracker()
-        override fun call() = a
+        override fun call() {
+            println("NO OP!")
+        }
     }
 
     @Suppress("UNUSED")
     @StartableByRPC
-    @InitiatingFlow
-    class FlowA(val a: String) : FlowLogic<String>() {
+    class NoOpFlowA : FlowLogic<Unit>() {
         override val progressTracker = ProgressTracker()
-        override fun call() = a
+        override fun call() {
+            println("NO OP! (A)")
+        }
     }
 
-    private val ids = InMemoryIdentityService(listOf(megaCorp.identity), DEV_ROOT_CA.certificate)
-    @Suppress("DEPRECATION")
-    val om = JacksonSupport.createInMemoryMapper(ids, YAMLFactory())
-
     @Test
-    fun `shell should start flow with similar class name`() {
+    fun `shell should start flow with exact class name`() {
         val user = User("u", "p", setOf(all()))
         var successful = false
         driver(DriverParameters(notarySpecs = emptyList())) {
@@ -290,11 +282,51 @@ class InteractiveShellIntegrationTest {
 
             // setup and configure some mocks required by InteractiveShell.runFlowByNameFragment()
             val output = mock<RenderPrintWriter> {
-                on { println(any(), any<Color>()) } doAnswer { println("${it.arguments[0]}")  }
+                on { println(any<String>()) } doAnswer {
+                    val line = it.arguments[0]
+                    println("$line")
+                    if ((line is String) && (line.startsWith("Executing flow:")))
+                        successful = true
+                }
             }
-            val ansiProgressRenderer = mock<ANSIProgressRenderer>()
-            InteractiveShell.runFlowByNameFragment(InteractiveShellIntegrationTest::class.qualifiedName + "\$Flow", "a: Hi there", output, node.rpc, ansiProgressRenderer, om)
-            successful = true
+            val ansiProgressRenderer = mock<ANSIProgressRenderer> {
+                on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
+            }
+            InteractiveShell.runFlowByNameFragment(
+                    InteractiveShellIntegrationTest::class.qualifiedName + "\$NoOpFlow",
+                    "", output, node.rpc, ansiProgressRenderer)
+        }
+        assertThat(successful).isTrue()
+    }
+
+    @Test
+    fun `shell should fail to start flow with ambiguous class name`() {
+        val user = User("u", "p", setOf(all()))
+        var successful = false
+        driver(DriverParameters(notarySpecs = emptyList())) {
+            val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
+            val node = nodeFuture.getOrThrow()
+
+            val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
+                    user = user.username, password = user.password,
+                    hostAndPort = node.rpcAddress)
+            InteractiveShell.startShell(conf)
+
+            // setup and configure some mocks required by InteractiveShell.runFlowByNameFragment()
+            val output = mock<RenderPrintWriter> {
+                on { println(any<String>()) } doAnswer {
+                    val line = it.arguments[0]
+                    println("$line")
+                    if ((line is String) && (line.startsWith("Ambiguous name provided, please be more specific.")))
+                        successful = true
+                }
+            }
+            val ansiProgressRenderer = mock<ANSIProgressRenderer> {
+                on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
+            }
+            InteractiveShell.runFlowByNameFragment(
+                    InteractiveShellIntegrationTest::class.qualifiedName + "\$NoOpFlo",
+                    "", output, node.rpc, ansiProgressRenderer)
         }
         assertThat(successful).isTrue()
     }
