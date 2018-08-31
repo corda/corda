@@ -258,45 +258,49 @@ object InteractiveShell {
             return
         }
 
-        val flowName = matches.find { it == nameFragment }
-        val flowClazz: Class<FlowLogic<*>> = if (classLoader != null) {
-            uncheckedCast(Class.forName(flowName, true, classLoader))
-        } else {
-            uncheckedCast(Class.forName(flowName))
-        }
-        try {
-            // Show the progress tracker on the console until the flow completes or is interrupted with a
-            // Ctrl-C keypress.
-            val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, flowClazz, om)
+        // nameFragment can represent a fully qualified Flow classname (eg. com.myflow.NoOpFlow)
+        // or just the Flow classname (eg. NoOpFlow)
+        val flowName = matches.find { it.endsWith(nameFragment) }
+        flowName?.let {
+            val flowClazz: Class<FlowLogic<*>> = if (classLoader != null) {
+                uncheckedCast(Class.forName(flowName, true, classLoader))
+            } else {
+                uncheckedCast(Class.forName(flowName))
+            }
+            try {
+                // Show the progress tracker on the console until the flow completes or is interrupted with a
+                // Ctrl-C keypress.
+                val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, flowClazz, om)
 
-            latch = CountDownLatch(1)
-            ansiProgressRenderer.render(stateObservable, latch::countDown)
-            // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
-            // the tracker is done with the screen.
-            while (!Thread.currentThread().isInterrupted) {
-                try {
-                    latch.await()
-                    break
-                } catch (e: InterruptedException) {
+                latch = CountDownLatch(1)
+                ansiProgressRenderer.render(stateObservable, latch::countDown)
+                // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
+                // the tracker is done with the screen.
+                while (!Thread.currentThread().isInterrupted) {
                     try {
-                        rpcOps.killFlow(stateObservable.id)
-                    } finally {
-                        Thread.currentThread().interrupt()
+                        latch.await()
                         break
+                    } catch (e: InterruptedException) {
+                        try {
+                            rpcOps.killFlow(stateObservable.id)
+                        } finally {
+                            Thread.currentThread().interrupt()
+                            break
+                        }
                     }
                 }
+                output.println("Flow completed with result: ${stateObservable.returnValue.get()}")
+            } catch (e: NoApplicableConstructor) {
+                output.println("No matching constructor found:", Color.red)
+                e.errors.forEach { output.println("- $it", Color.red) }
+            } catch (e: PermissionException) {
+                output.println(e.message ?: "Access denied", Color.red)
+            } catch (e: ExecutionException) {
+                // ignoring it as already logged by the progress handler subscriber
+            } finally {
+                InputStreamDeserializer.closeAll()
             }
-            output.println("Flow completed with result: ${stateObservable.returnValue.get()}")
-        } catch (e: NoApplicableConstructor) {
-            output.println("No matching constructor found:", Color.red)
-            e.errors.forEach { output.println("- $it", Color.red) }
-        } catch (e: PermissionException) {
-            output.println(e.message ?: "Access denied", Color.red)
-        } catch (e: ExecutionException) {
-            // ignoring it as already logged by the progress handler subscriber
-        } finally {
-            InputStreamDeserializer.closeAll()
-        }
+        } ?: output.println("Unable to locate flow for $nameFragment")
     }
 
     class NoApplicableConstructor(val errors: List<String>) : CordaException(this.toString()) {
