@@ -9,7 +9,6 @@ import com.nhaarman.mockito_kotlin.mock
 import net.corda.client.rpc.RPCException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
@@ -23,7 +22,6 @@ import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.NodeHandleInternal
@@ -43,13 +41,11 @@ import javax.security.auth.x500.X500Principal
 import kotlin.test.assertTrue
 
 class InteractiveShellIntegrationTest {
-    companion object {
-        private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
-        private val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
-    }
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
+
+    private val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
 
     @Test
     fun `shell should not log in with invalid credentials`() {
