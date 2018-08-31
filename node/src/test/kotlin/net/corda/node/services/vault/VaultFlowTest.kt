@@ -43,11 +43,8 @@ class VaultFlowTest {
                 threadPerNode = true,
                 networkSendManuallyPumped = false
         )
-        partyA =
-                mockNetwork.createNode(MockNodeParameters(legalName = CordaX500Name("PartyA", "Berlin", "DE")))
-
-        partyB =
-                mockNetwork.createNode(MockNodeParameters(legalName = CordaX500Name("PartyB", "Berlin", "DE")))
+        partyA = mockNetwork.createNode(MockNodeParameters(legalName = CordaX500Name("PartyA", "Berlin", "DE")))
+        partyB = mockNetwork.createNode(MockNodeParameters(legalName = CordaX500Name("PartyB", "Berlin", "DE")))
         mockNetwork.startNodes()
     }
 
