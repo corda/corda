@@ -259,7 +259,6 @@ object InteractiveShell {
         }
 
         val flowName = matches.find { it == nameFragment }
-        output.println("Executing flow: $flowName ")
         val flowClazz: Class<FlowLogic<*>> = if (classLoader != null) {
             uncheckedCast(Class.forName(flowName, true, classLoader))
         } else {

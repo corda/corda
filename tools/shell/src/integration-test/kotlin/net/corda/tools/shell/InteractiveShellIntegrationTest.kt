@@ -285,7 +285,7 @@ class InteractiveShellIntegrationTest {
                 on { println(any<String>()) } doAnswer {
                     val line = it.arguments[0]
                     println("$line")
-                    if ((line is String) && (line.startsWith("Executing flow:")))
+                    if ((line is String) && (line.startsWith("Flow completed with result:")))
                         successful = true
                 }
             }
