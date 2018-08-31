@@ -6,6 +6,8 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+* Fixed an issue preventing Shell from killing an ongoing flow when CTRL+C is pressed in the terminal.
+
 * Fixed a problem that sometimes prevented nodes from starting in presence of custom state types in the database without a corresponding type from installed CorDapps.
 
 * Introduced a grace period before the initial node registration fails if the node cannot connect to the Doorman.
