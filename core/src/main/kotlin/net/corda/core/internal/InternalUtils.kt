@@ -494,16 +494,3 @@ fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): Untrustworthy
     return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) }
             ?: throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a ${payloadData.javaClass.name} ($payloadData)")
 }
-
-fun <ELEMENT, MAPPED> Iterator<ELEMENT>.map(convert: (ELEMENT) -> MAPPED): Iterator<MAPPED> {
-
-    return MappingIterator(this, convert)
-}
-
-private class MappingIterator<out ELEMENT, out MAPPED>(private val source: Iterator<ELEMENT>, private val convert: (ELEMENT) -> MAPPED) : Iterator<MAPPED> {
-
-    override fun hasNext() = source.hasNext()
-
-    override fun next() = convert.invoke(source.next())
-}
-

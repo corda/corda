@@ -1,6 +1,5 @@
 package net.corda.nodeapi.internal.config
 
-import net.corda.core.internal.map
 import net.corda.core.internal.outputStream
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -52,7 +51,7 @@ interface CertificateStore : Iterable<Pair<String, X509Certificate>> {
 
         return query {
             aliases()
-        }.map { alias -> alias to get(alias) }
+        }.asSequence().map { alias -> alias to get(alias) }.iterator()
     }
 
     fun forEach(action: (alias: String, certificate: X509Certificate) -> Unit) {
