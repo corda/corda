@@ -104,6 +104,6 @@ internal object DevCaHelper {
     }
 }
 
-fun loadDevCaKeyStore(): CertificateStore = CertificateStore.fromResource("certificates/$DEV_CA_KEY_STORE_FILE", DEV_CA_KEY_STORE_PASS)
+fun loadDevCaKeyStore(classLoader: ClassLoader = DevCaHelper::class.java.classLoader): CertificateStore = CertificateStore.fromResource("certificates/$DEV_CA_KEY_STORE_FILE", DEV_CA_KEY_STORE_PASS, classLoader)
 
-fun loadDevCaTrustStore(): CertificateStore = CertificateStore.fromResource("certificates/$DEV_CA_TRUST_STORE_FILE", DEV_CA_TRUST_STORE_PASS)
+fun loadDevCaTrustStore(classLoader: ClassLoader = DevCaHelper::class.java.classLoader): CertificateStore = CertificateStore.fromResource("certificates/$DEV_CA_TRUST_STORE_FILE", DEV_CA_TRUST_STORE_PASS, classLoader)
