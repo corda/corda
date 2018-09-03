@@ -6,6 +6,13 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+* Fixed an issue preventing Shell from returning control to the user when CTRL+C is pressed in the terminal.
+
+* Fixed a problem that sometimes prevented nodes from starting in presence of custom state types in the database without a corresponding type from installed CorDapps.
+
+* Introduced a grace period before the initial node registration fails if the node cannot connect to the Doorman.
+  It retries 10 times with a 1 minute interval in between each try. At the moment this is not configurable.
+
 * Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
 
 * Changes to the JSON/YAML serialisation format from ``JacksonSupport``, which also applies to the node shell:

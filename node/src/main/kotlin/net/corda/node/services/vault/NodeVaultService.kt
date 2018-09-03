@@ -380,8 +380,8 @@ class NodeVaultService(
                 log.trace { "State update of type: $concreteType" }
                 val seen = contractStateTypeMappings.any { it.value.contains(concreteType.name) }
                 if (!seen) {
-                    val contractInterfaces = deriveContractInterfaces(concreteType)
-                    contractInterfaces.map {
+                    val contractStateTypes = deriveContractTypes(concreteType)
+                    contractStateTypes.map {
                         val contractInterface = contractStateTypeMappings.getOrPut(it.name, { mutableSetOf() })
                         contractInterface.add(concreteType.name)
                     }
@@ -490,25 +490,42 @@ class NodeVaultService(
         val distinctTypes = results.map { it }
 
         val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
+        val unknownTypes = mutableSetOf<String>()
         distinctTypes.forEach { type ->
-            val concreteType: Class<ContractState> = uncheckedCast(Class.forName(type))
-            val contractInterfaces = deriveContractInterfaces(concreteType)
-            contractInterfaces.map {
-                val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableSetOf() })
-                contractInterface.add(concreteType.name)
+            val concreteType: Class<ContractState>? = try {
+                uncheckedCast(Class.forName(type))
+            } catch (e: ClassNotFoundException) {
+                unknownTypes += type
+                null
             }
+            concreteType?.let {
+                val contractTypes = deriveContractTypes(it)
+                contractTypes.map {
+                    val contractStateType = contractInterfaceToConcreteTypes.getOrPut(it.name) { mutableSetOf() }
+                    contractStateType.add(concreteType.name)
+                }
+            }
+        }
+        if (unknownTypes.isNotEmpty()) {
+            log.warn("There are unknown contract state types in the vault, which will prevent these states from being used. The relevant CorDapps must be loaded for these states to be used. The types not on the classpath are ${unknownTypes.joinToString(", ", "[", "]")}.")
         }
         return contractInterfaceToConcreteTypes
     }
 
-    private fun <T : ContractState> deriveContractInterfaces(clazz: Class<T>): Set<Class<T>> {
-        val myInterfaces: MutableSet<Class<T>> = mutableSetOf()
-        clazz.interfaces.forEach {
-            if (it != ContractState::class.java) {
-                myInterfaces.add(uncheckedCast(it))
-                myInterfaces.addAll(deriveContractInterfaces(uncheckedCast(it)))
+    private fun <T : ContractState> deriveContractTypes(clazz: Class<T>): Set<Class<T>> {
+        val myTypes : MutableSet<Class<T>> = mutableSetOf()
+        clazz.superclass?.let {
+            if (!it.isInstance(Any::class)) {
+                myTypes.add(uncheckedCast(it))
+                myTypes.addAll(deriveContractTypes(uncheckedCast(it)))
             }
         }
-        return myInterfaces
+        clazz.interfaces.forEach {
+            if (it != ContractState::class.java) {
+                myTypes.add(uncheckedCast(it))
+                myTypes.addAll(deriveContractTypes(uncheckedCast(it)))
+            }
+        }
+        return myTypes
     }
 }

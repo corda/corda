@@ -240,12 +240,18 @@ object InteractiveShell {
 
             val latch = CountDownLatch(1)
             ansiProgressRenderer.render(stateObservable, { latch.countDown() })
-            try {
-                // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
-                // the tracker is done with the screen.
-                latch.await()
-            } catch (e: InterruptedException) {
-                // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
+            while (!Thread.currentThread().isInterrupted) {
+                try {
+                    latch.await()
+                    break
+                } catch (e: InterruptedException) {
+                    try {
+                        // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
+                    } finally {
+                        Thread.currentThread().interrupt()
+                        break
+                    }
+                }
             }
             stateObservable.returnValue.get()?.apply {
                 if (this !is Throwable) {

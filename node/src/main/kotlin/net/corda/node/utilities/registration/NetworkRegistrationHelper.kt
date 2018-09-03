@@ -15,11 +15,14 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
+import java.io.IOException
 import java.io.StringWriter
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.cert.X509Certificate
+import java.time.Duration
+import javax.naming.ServiceUnavailableException
 
 /**
  * Helper for managing the node registration process, which checks for any existing certificates and requests them if
@@ -31,7 +34,8 @@ class NetworkRegistrationHelper(private val config: SSLConfiguration,
                                 private val certService: NetworkRegistrationService,
                                 private val networkRootTrustStorePath: Path,
                                 networkRootTrustStorePassword: String,
-                                private val certRole: CertRole) {
+                                private val certRole: CertRole,
+                                private val nextIdleDuration: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) {
 
     // Constructor for corda node, cert role is restricted to [CertRole.NODE_CA].
     constructor(config: NodeConfiguration, certService: NetworkRegistrationService, regConfig: NodeRegistrationOption) :
@@ -171,12 +175,22 @@ class NetworkRegistrationHelper(private val config: SSLConfiguration,
     private fun pollServerForCertificates(requestId: String): List<X509Certificate> {
         println("Start polling server for certificate signing approval.")
         // Poll server to download the signed certificate once request has been approved.
+        var idlePeriodDuration: Duration? = null
         while (true) {
-            val (pollInterval, certificates) = certService.retrieveCertificates(requestId)
-            if (certificates != null) {
-                return certificates
+            try {
+                val (pollInterval, certificates) = certService.retrieveCertificates(requestId)
+                if (certificates != null) {
+                    return certificates
+                }
+                Thread.sleep(pollInterval.toMillis())
+            } catch (e: ServiceUnavailableException) {
+                idlePeriodDuration = nextIdleDuration(idlePeriodDuration)
+                if (idlePeriodDuration != null) {
+                    Thread.sleep(idlePeriodDuration.toMillis())
+                } else {
+                    throw UnableToRegisterNodeWithDoormanException()
+                }
             }
-            Thread.sleep(pollInterval.toMillis())
         }
     }
 
@@ -213,6 +227,20 @@ class NetworkRegistrationHelper(private val config: SSLConfiguration,
             val requestId = requestIdStore.readLines { it.findFirst().get() }
             println("Resuming from previous certificate signing request, request ID: $requestId.")
             requestId
+        }
+    }
+}
+
+class UnableToRegisterNodeWithDoormanException : IOException()
+
+private class FixedPeriodLimitedRetrialStrategy(times: Int, private val period: Duration) : (Duration?) -> Duration? {
+    init {
+        require(times > 0)
+    }
+    private var counter = times
+    override fun invoke(@Suppress("UNUSED_PARAMETER") previousPeriod: Duration?): Duration? {
+        synchronized(this) {
+            return if (counter-- > 0) period else null
         }
     }
 }
