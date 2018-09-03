@@ -47,7 +47,7 @@ class RPCStabilityTests {
     }
 
     object DummyOps : RPCOps {
-        override val protocolVersion = 0
+        override val protocolVersion = 1000
     }
 
     private fun waitUntilNumberOfThreadsStable(executorService: ScheduledExecutorService): Map<Thread, List<StackTraceElement>> {
@@ -107,7 +107,7 @@ class RPCStabilityTests {
                 Try.on {
                     startRpcClient<RPCOps>(
                             server.get().broker.hostAndPort!!,
-                            configuration = CordaRPCClientConfiguration.DEFAULT.copy(minimumServerProtocolVersion = 1)
+                            configuration = CordaRPCClientConfiguration.DEFAULT.copy(minimumServerProtocolVersion = 1000)
                     ).get()
                 }
             }
@@ -203,7 +203,7 @@ class RPCStabilityTests {
         rpcDriver {
             val leakObservableOpsImpl = object : LeakObservableOps {
                 val leakedUnsubscribedCount = AtomicInteger(0)
-                override val protocolVersion = 0
+                override val protocolVersion = 1000
                 override fun leakObservable(): Observable<Nothing> {
                     return PublishSubject.create<Nothing>().doOnUnsubscribe {
                         leakedUnsubscribedCount.incrementAndGet()
@@ -234,7 +234,7 @@ class RPCStabilityTests {
     fun `client reconnects to rebooted server`() {
         rpcDriver {
             val ops = object : ReconnectOps {
-                override val protocolVersion = 0
+                override val protocolVersion = 1000
                 override fun ping() = "pong"
             }
 
@@ -259,7 +259,7 @@ class RPCStabilityTests {
     fun `connection failover fails, rpc calls throw`() {
         rpcDriver {
             val ops = object : ReconnectOps {
-                override val protocolVersion = 0
+                override val protocolVersion = 1000
                 override fun ping() = "pong"
             }
 
@@ -290,7 +290,7 @@ class RPCStabilityTests {
     fun `observables error when connection breaks`() {
         rpcDriver {
             val ops = object : NoOps {
-                override val protocolVersion = 0
+                override val protocolVersion = 1000
                 override fun subscribe(): Observable<Nothing> {
                     return PublishSubject.create<Nothing>()
                 }
@@ -350,7 +350,7 @@ class RPCStabilityTests {
     fun `client connects to first available server`() {
         rpcDriver {
             val ops = object : ServerOps {
-                override val protocolVersion = 0
+                override val protocolVersion = 1000
                 override fun serverId() = "server"
             }
             val serverFollower = shutdownManager.follower()
@@ -371,15 +371,15 @@ class RPCStabilityTests {
     fun `3 server failover`() {
         rpcDriver {
             val ops1 = object : ServerOps {
-                override val protocolVersion = 0
+                override val protocolVersion = 1000
                 override fun serverId() = "server1"
             }
             val ops2 = object : ServerOps {
-                override val protocolVersion = 0
+                override val protocolVersion = 1000
                 override fun serverId() = "server2"
             }
             val ops3 = object : ServerOps {
-                override val protocolVersion = 0
+                override val protocolVersion = 1000
                 override fun serverId() = "server3"
             }
             val serverFollower1 = shutdownManager.follower()
@@ -443,7 +443,7 @@ class RPCStabilityTests {
     fun `server cleans up queues after disconnected clients`() {
         rpcDriver {
             val trackSubscriberOpsImpl = object : TrackSubscriberOps {
-                override val protocolVersion = 0
+                override val protocolVersion = 1000
                 val subscriberCount = AtomicInteger(0)
                 val trackSubscriberCountObservable = UnicastSubject.create<Unit>().share().
                         doOnSubscribe { subscriberCount.incrementAndGet() }.
@@ -486,7 +486,7 @@ class RPCStabilityTests {
     }
 
     class SlowConsumerRPCOpsImpl : SlowConsumerRPCOps {
-        override val protocolVersion = 0
+        override val protocolVersion = 1000
 
         override fun streamAtInterval(interval: Duration, size: Int): Observable<ByteArray> {
             val chunk = ByteArray(size)
@@ -587,7 +587,7 @@ class RPCStabilityTests {
                 val request = RPCApi.ClientToServer.fromClientMessage(it)
                 when (request) {
                     is RPCApi.ClientToServer.RpcRequest -> {
-                        val reply = RPCApi.ServerToClient.RpcReply(request.replyId, Try.Success(0), "server")
+                        val reply = RPCApi.ServerToClient.RpcReply(request.replyId, Try.Success(1000), "server")
                         val message = session.createMessage(false)
                         reply.writeToClientMessage(SerializationDefaults.RPC_SERVER_CONTEXT, message)
                         message.putLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME, dedupeId.getAndIncrement())

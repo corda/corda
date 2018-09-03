@@ -2,6 +2,7 @@ package net.corda.node.serialization.amqp
 
 import net.corda.core.context.Trace
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.messaging.ObservableContextInterface
 import net.corda.node.services.messaging.ObservableSubscription
@@ -30,8 +31,9 @@ class RpcServerObservableSerializer : CustomSerializer.Implements<Observable<*>>
         fun createContext(
                 serializationContext: SerializationContext,
                 observableContext: ObservableContextInterface
-        ) = serializationContext.withProperty(
-                RpcServerObservableSerializer.RpcObservableContextKey, observableContext)
+        ) = serializationContext.withProperty(RpcServerObservableSerializer.RpcObservableContextKey, observableContext)
+
+        val log = contextLogger()
     }
 
     override val schemaForDocumentation = Schema(
@@ -136,5 +138,6 @@ class RpcServerObservableSerializer : CustomSerializer.Implements<Observable<*>>
             }
         }
         observableContext.observableMap.put(observableId, observableWithSubscription)
+        log.trace("Serialized observable $observableId of type $obj")
     }
 }

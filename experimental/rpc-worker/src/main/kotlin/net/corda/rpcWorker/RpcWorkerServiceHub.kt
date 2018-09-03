@@ -88,7 +88,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration, overrid
     override val networkMapCache = NetworkMapCacheImpl(persistentNetworkMapCache, identityService, database)
     @Suppress("LeakingThis")
     override val validatedTransactions: WritableTransactionStorage = DBTransactionStorage(configuration.transactionCacheSizeBytes, database)
-    private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL) }
+    private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
     private val metricRegistry = MetricRegistry()
     override val attachments = NodeAttachmentService(metricRegistry, database, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound)
 

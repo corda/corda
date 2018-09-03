@@ -18,8 +18,8 @@ object as normal, and the marshalling back and forth is handled for you.
 
 .. warning:: The built-in Corda webserver is deprecated and unsuitable for production use. If you want to interact with
    your node via HTTP, you will need to stand up your own webserver, then create an RPC connection between your node
-   and this webserver using the `CordaRPCClient`_ library. You can find an example of how to do this
-   `here <https://github.com/corda/spring-webserver>`_.
+   and this webserver using the `CordaRPCClient`_ library. You can find an example of how to do this using the popular
+   Spring Boot server `here <https://github.com/corda/spring-webserver>`_.
 
 Connecting to a node via RPC
 ----------------------------
@@ -291,30 +291,42 @@ would expect.
 
 This feature comes with a cost: the server must queue up objects emitted by the server-side observable until you
 download them. Note that the server side observation buffer is bounded, once it fills up the client is considered
-slow and kicked. You are expected to subscribe to all the observables returned, otherwise client-side memory starts
-filling up as observations come in. If you don't want an observable then subscribe then unsubscribe immediately to
-clear the client-side buffers and to stop the server from streaming. If your app quits then server side resources
-will be freed automatically.
+slow and will be disconnected. You are expected to subscribe to all the observables returned, otherwise client-side
+memory starts filling up as observations come in. If you don't want an observable then subscribe then unsubscribe
+immediately to clear the client-side buffers and to stop the server from streaming. For Kotlin users there is a
+convenience extension method called ``notUsed()`` which can be called on an observable to automate this step.
+
+If your app quits then server side resources will be freed automatically.
 
 .. warning:: If you leak an observable on the client side and it gets garbage collected, you will get a warning
    printed to the logs and the observable will be unsubscribed for you. But don't rely on this, as garbage collection
-   is non-deterministic.
+   is non-deterministic. If you set ``-Dnet.corda.client.rpc.trackRpcCallSites=true`` on the JVM command line then
+   this warning comes with a stack trace showing where the RPC that returned the forgotten observable was called from.
+   This feature is off by default because tracking RPC call sites is moderately slow.
 
 .. note:: Observables can only be used as return arguments of an RPC call. It is not currently possible to pass
-   Observables as parameters to the RPC methods.
+   Observables as parameters to the RPC methods. In other words the streaming is always server to client and not
+   the other way around.
 
 Futures
 -------
 A method can also return a ``CordaFuture`` in its object graph and it will be treated in a similar manner to
-observables. Calling the ``cancel`` method on the future will unsubscribe it from any future value and release any resources.
+observables. Calling the ``cancel`` method on the future will unsubscribe it from any future value and release
+any resources.
 
 Versioning
 ----------
-The client RPC protocol is versioned using the node's Platform Version (see :doc:`versioning`). When a proxy is created
+The client RPC protocol is versioned using the node's platform version number (see :doc:`versioning`). When a proxy is created
 the server is queried for its version, and you can specify your minimum requirement. Methods added in later versions
 are tagged with the ``@RPCSinceVersion`` annotation. If you try to use a method that the server isn't advertising support
 of, an ``UnsupportedOperationException`` is thrown. If you want to know the version of the server, just use the
 ``protocolVersion`` property (i.e. ``getProtocolVersion`` in Java).
+
+The RPC client library defaults to requiring the platform version it was built with. That means if you use the client
+library released as part of Corda N, then the node it connects to must be of version N or above. This is checked when
+the client first connects. If you want to override this behaviour, you can alter the ``minimumServerProtocolVersion``
+field in the ``CordaRPCClientConfiguration`` object passed to the client. Alternatively, just link your app against
+an older version of the library.
 
 Thread safety
 -------------
@@ -343,7 +355,6 @@ such situations:
 .. sourcecode:: Kotlin
 
     fun establishConnectionWithRetry(nodeHostAndPort: NetworkHostAndPort, username: String, password: String): CordaRPCConnection {
-
         val retryInterval = 5.seconds
 
         do {
@@ -387,7 +398,6 @@ on the ``Observable`` returned by ``CordaRPCOps``.
 .. sourcecode:: Kotlin
 
     fun performRpcReconnect(nodeHostAndPort: NetworkHostAndPort, username: String, password: String) {
-
         val connection = establishConnectionWithRetry(nodeHostAndPort, username, password)
         val proxy = connection.proxy
 
@@ -419,10 +429,6 @@ Client code if fed with instances of ``StateMachineInfo`` using call ``clientCod
 all the items. Some of these items might have already been delivered to client code prior to failover occurred.
 It is down to client code in this case handle those duplicate items as appropriate.
 
-Wire protocol
--------------
-The client RPC wire protocol is defined and documented in ``net/corda/client/rpc/RPCApi.kt``.
-
 Wire security
 -------------
 ``CordaRPCClient`` has an optional constructor parameter of type ``ClientRpcSslOptions``, defaulted to ``null``, which allows
@@ -434,7 +440,6 @@ In order for this to work, the client needs to provide a truststore containing a
 (The Node does not expect the RPC client to present a certificate, as the client already authenticates using the mechanism described above.)
 
 For the communication to be secure, we recommend using the standard SSL best practices for key management.
-
 
 Whitelisting classes with the Corda node
 ----------------------------------------

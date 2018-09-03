@@ -36,7 +36,6 @@ import kotlin.test.assertFailsWith
  */
 @RunWith(Parameterized::class)
 class AuthDBTests : NodeBasedTest() {
-
     private lateinit var node: NodeWithInfo
     private lateinit var client: CordaRPCClient
     private lateinit var db: UsersDB

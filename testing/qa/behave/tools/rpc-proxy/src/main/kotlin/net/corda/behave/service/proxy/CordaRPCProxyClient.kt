@@ -29,10 +29,14 @@ import java.security.PublicKey
 import java.time.Instant
 import javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM
 
+// TODO: Make a shared implementation of CordaRPCOps where every method is unimplemented?
+
 class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : CordaRPCOps {
     companion object {
         val log = contextLogger()
     }
+
+    override val protocolVersion: Int = 1000
 
     init {
         try {
