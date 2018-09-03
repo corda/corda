@@ -5,13 +5,8 @@ apply plugin: 'us.kirchmeier.capsule'
 
 description 'Node Explorer'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    jcenter()
+configurations {
+    runtimeArtifacts.extendsFrom runtime
 }
 
 // Force the Caplet to target Java 6. This ensures that running 'java -jar explorer.jar' on any Java 6 VM upwards

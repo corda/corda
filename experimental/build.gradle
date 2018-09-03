@@ -3,15 +3,6 @@ version '1.0-SNAPSHOT'
 
 apply plugin: 'kotlin'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    jcenter()
-}
-
 compileKotlin {
     kotlinOptions.suppressWarnings = true
 }
