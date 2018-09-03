@@ -46,8 +46,7 @@ import java.io.FileDescriptor
 import java.io.FileInputStream
 import java.io.InputStream
 import java.io.PrintWriter
-import java.lang.reflect.InvocationTargetException
-import java.lang.reflect.UndeclaredThrowableException
+import java.lang.reflect.*
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -281,6 +280,38 @@ object InteractiveShell {
         override fun toString() = (listOf("No applicable constructor for flow. Problems were:") + errors).joinToString(System.lineSeparator())
     }
 
+    /**
+     * Tidies up a possibly generic type name by chopping off the package names of classes in a hard-coded set of
+     * hierarchies that are known to be widely used and recognised, and also not have (m)any ambiguous names in them.
+     *
+     * This is used for printing error messages when something doesn't match.
+     */
+    private fun maybeAbbreviateGenericType(type: Type, extraRecognisedPackage: String): String {
+        val packagesToAbbreviate = listOf("java.", "net.corda.core.", "kotlin.", extraRecognisedPackage)
+
+        fun shouldAbbreviate(typeName: String) = packagesToAbbreviate.any { typeName.startsWith(it) }
+        fun abbreviated(typeName: String) = if (shouldAbbreviate(typeName)) typeName.split('.').last() else typeName
+
+        fun innerLoop(type: Type): String = when (type) {
+            is ParameterizedType -> {
+                val args: List<String> = type.actualTypeArguments.map(::innerLoop)
+                abbreviated(type.rawType.typeName) + '<' + args.joinToString(", ") + '>'
+            }
+            is GenericArrayType -> {
+                innerLoop(type.genericComponentType) + "[]"
+            }
+            is Class<*> -> {
+                if (type.isArray)
+                    abbreviated(type.simpleName)
+                else
+                    abbreviated(type.name).replace('$', '.')
+            }
+            else -> type.toString()
+        }
+
+        return innerLoop(type)
+    }
+
     // TODO: This utility is generally useful and might be better moved to the node class, or an RPC, if we can commit to making it stable API.
     /**
      * Given a [FlowLogic] class and a string in one-line Yaml form, finds an applicable constructor and starts
@@ -300,10 +331,17 @@ object InteractiveShell {
         // and keep track of the reasons we failed so we can print them out if no constructors are usable.
         val parser = StringToMethodCallParser(clazz, om)
         val errors = ArrayList<String>()
+
+        val classPackage = clazz.packageName
         for (ctor in clazz.constructors) {
             var paramNamesFromConstructor: List<String>? = null
+
             fun getPrototype(): List<String> {
-                val argTypes = ctor.genericParameterTypes.map { it.typeName }
+                val argTypes = ctor.genericParameterTypes.map { it: Type ->
+                    // If the type name is in the net.corda.core or java namespaces, chop off the package name
+                    // because these hierarchies don't have (m)any ambiguous names and the extra detail is just noise.
+                    maybeAbbreviateGenericType(it, classPackage)
+                }
                 return paramNamesFromConstructor!!.zip(argTypes).map { (name, type) -> "$name: $type" }
             }
 
