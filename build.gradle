@@ -210,6 +210,7 @@ allprojects {
         mavenLocal()
         mavenCentral()
         jcenter()
+        maven { url "$artifactory_contextUrl/corda-dependencies" }
         maven { url 'https://jitpack.io' }
     }
 
@@ -257,12 +258,6 @@ allprojects {
 // minor releases, so we can't work with just any Java 8, it has to be a recent one.
 if (!JavaVersion.current().java8Compatible)
     throw new GradleException("Corda requires Java 8, please upgrade to at least 1.8.0_$java8_minUpdateVersion")
-
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-}
 
 // Required for building out the fat JAR.
 dependencies {
