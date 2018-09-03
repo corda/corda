@@ -39,7 +39,9 @@ class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: Versi
     fun publish(signedNodeInfo: SignedNodeInfo) {
         val publishURL = URL("$networkMapUrl/publish")
         logger.trace { "Publishing NodeInfo to $publishURL." }
-        publishURL.post(signedNodeInfo.serialize())
+        publishURL.post(signedNodeInfo.serialize(),
+                "Platform-Version" to "${versionInfo.platformVersion}",
+                "Client-Version" to versionInfo.releaseVersion)
         logger.trace { "Published NodeInfo to $publishURL successfully." }
     }
 
