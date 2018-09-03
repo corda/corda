@@ -110,7 +110,7 @@ open class NodeStartup(val args: Array<String>) {
         } catch (e: UnableToRegisterNodeWithDoormanException) {
             logger.warn("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.")
             return false
-        } catch (e: Exception) {	        }catch (e: Exception) {
+        } catch (e: Exception) {
             logger.error("Exception during node registration", e)
             return false
         }
