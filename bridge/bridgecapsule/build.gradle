@@ -1,15 +1,3 @@
-/*
- * R3 Proprietary and Confidential
- *
- * Copyright (c) 2018 R3 Limited.  All rights reserved.
- *
- * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
- *
- * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
- *
- * This build.gradle exists to publish our capsule (executable fat jar) to maven. It cannot be placed in the
- * bridges project because the bintray plugin cannot publish two modules from one project.
- */
 apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
