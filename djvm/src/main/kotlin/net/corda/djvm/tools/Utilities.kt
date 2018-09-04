@@ -64,12 +64,9 @@ object Utilities {
      * Get the path of where any generated code will be placed. Create the directory if it does not exist.
      */
     fun createCodePath(): Path {
-        val root = Paths.get("tmp")
-                .resolve("net")
-                .resolve("corda")
-                .resolve("djvm")
-        Files.createDirectories(root)
-        return root
+        return Paths.get("tmp", "net", "corda", "djvm").let {
+            Files.createDirectories(it)
+        }
     }
 
     /**
