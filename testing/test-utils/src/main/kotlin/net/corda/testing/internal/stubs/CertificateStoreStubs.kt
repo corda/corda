@@ -46,7 +46,7 @@ class CertificateStoreStubs {
 
                 val keyStore = FileBasedCertificateStoreSupplier(certificatesDirectory / keyStoreFileName, keyStorePassword)
                 val trustStore = FileBasedCertificateStoreSupplier(certificatesDirectory / trustStoreFileName, trustStorePassword)
-                return SslConfiguration.twoWay(keyStore, trustStore)
+                return SslConfiguration.mutual(keyStore, trustStore)
             }
 
             @JvmStatic

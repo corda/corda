@@ -36,7 +36,7 @@ object DevIdentityGenerator {
         val signingCertStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "nodekeystore.jks", "cordacadevpass")
         val p2pKeyStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "sslkeystore.jks", "cordacadevpass")
         val p2pTrustStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "truststore.jks", "trustpass")
-        val p2pSslConfig = SslConfiguration.twoWay(p2pKeyStore, p2pTrustStore)
+        val p2pSslConfig = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
 
         certificatesDirectory.createDirectories()
         val nodeKeyStore = signingCertStore.get(true).also { it.registerDevSigningCertificates(legalName) }

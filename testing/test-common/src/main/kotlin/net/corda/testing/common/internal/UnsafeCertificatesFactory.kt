@@ -83,7 +83,7 @@ class KeyStores(val keyStore: UnsafeKeyStore, val trustStore: UnsafeKeyStore) {
 
         val keyStore = FileBasedCertificateStoreSupplier(keyStoreFile.file, keyStore.password)
         val trustStore = FileBasedCertificateStoreSupplier(trustStoreFile.file, trustStore.password)
-        return SslConfiguration.twoWay(keyStore, trustStore)
+        return SslConfiguration.mutual(keyStore, trustStore)
     }
 }
 

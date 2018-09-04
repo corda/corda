@@ -261,7 +261,7 @@ data class NodeConfigurationImpl(
     private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword)
     private val p2pTrustStoreFilePath: Path get() = certificatesDirectory / "truststore.jks"
     private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword)
-    override val p2pSslOptions: MutualSslConfiguration = SslConfiguration.twoWay(p2pKeyStore, p2pTrustStore)
+    override val p2pSslOptions: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
 
     override val rpcOptions: NodeRpcOptions
         get() {

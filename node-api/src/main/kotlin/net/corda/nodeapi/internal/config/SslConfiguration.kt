@@ -11,7 +11,7 @@ interface SslConfiguration {
 
     companion object {
 
-        fun twoWay(keyStore: FileBasedCertificateStoreSupplier, trustStore: FileBasedCertificateStoreSupplier): MutualSslConfiguration {
+        fun mutual(keyStore: FileBasedCertificateStoreSupplier, trustStore: FileBasedCertificateStoreSupplier): MutualSslConfiguration {
 
             return MutualSslOptions(keyStore, trustStore)
         }
