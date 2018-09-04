@@ -2,6 +2,7 @@ package net.corda.cliutils
 
 import net.corda.core.internal.rootMessage
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.loggerFor
 
 import org.apache.logging.log4j.Level
 import org.fusesource.jansi.AnsiConsole
@@ -41,11 +42,12 @@ interface Validated {
     }
 }
 
-fun CordaCliWrapper.start(vararg args: String) {
+fun CordaCliWrapper.start(args: Array<String>) {
     // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
     AnsiConsole.systemInstall()
 
     val cmd = CommandLine(this)
+    this.args = args
     cmd.commandSpec.name(alias)
     cmd.commandSpec.usageMessage().description(description)
     try {
@@ -86,6 +88,14 @@ fun CordaCliWrapper.start(vararg args: String) {
         optionListHeading = "%n@|bold,underline Options|@:%n%n",
         commandListHeading = "%n@|bold,underline Commands|@:%n%n")
 abstract class CordaCliWrapper(val alias: String, val description: String) : Callable<Int> {
+    companion object {
+        private val logger by lazy { loggerFor<CordaCliWrapper>() }
+    }
+
+    // Raw args are provided for use in logging - this is a lateinit var rather than a constructor parameter as the class
+    // needs to be parameterless for autocomplete to work.
+    lateinit var args: Array<String>
+
     @Option(names = ["-v", "--verbose", "--log-to-console"], description = ["If set, prints logging to the console as well as to a file."])
     var verbose: Boolean = false
 
@@ -115,6 +125,7 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Cal
 
     override fun call(): Int {
         initLogging()
+        logger.info("Application Args: ${args.joinToString(" ")}")
         installShellExtensionsParser.installOrUpdateShellExtensions(alias, this.javaClass.name)
         return runProgram()
     }

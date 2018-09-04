@@ -8,7 +8,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 fun main(args: Array<String>) {
-    NetworkBootstrapperRunner().start(*args)
+    NetworkBootstrapperRunner().start(args)
 }
 
 class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a local test Corda network using a set of node configuration files and CorDapp JARs") {

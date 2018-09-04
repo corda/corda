@@ -25,7 +25,7 @@ class NodeCmdLineOptions {
 
     @Option(
             names = ["-f", "--config-file"],
-            description = ["The path to the config file."]
+            description = ["The path to the config file. By default this is node.conf in the base directory."]
     )
     var configFileArgument: Path? = null
 

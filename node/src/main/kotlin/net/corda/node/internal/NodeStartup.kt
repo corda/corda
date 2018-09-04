@@ -48,7 +48,7 @@ import java.util.*
 import kotlin.system.exitProcess
 
 /** This class is responsible for starting a Node from command line arguments. */
-open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda node") {
+open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
     companion object {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         const val LOGS_DIRECTORY_NAME = "logs"
@@ -365,8 +365,6 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda node") {
         logger.info("PID: ${info.name.split("@").firstOrNull()}")  // TODO Java 9 has better support for this
         logger.info("Main class: ${NodeConfiguration::class.java.location.toURI().path}")
         logger.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
-        //TODO: Make the opts parser print this or something
-        //logger.info("Application Args: ${args.joinToString(" ")}")
         logger.info("bootclasspath: ${info.bootClassPath}")
         logger.info("classpath: ${info.classPath}")
         logger.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
