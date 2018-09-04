@@ -15,11 +15,11 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransportsFromList
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcInternalClientTcpTransport
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.rpcConnectorTcpTransport
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.rpcConnectorTcpTransportsFromList
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.rpcInternalClientTcpTransport
+import net.corda.nodeapi.internal.config.SslConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -43,7 +43,7 @@ class RPCClient<I : RPCOps>(
 
     constructor(
             hostAndPort: NetworkHostAndPort,
-            sslConfiguration: SSLConfiguration,
+            sslConfiguration: SslConfiguration,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
     ) : this(rpcInternalClientTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)

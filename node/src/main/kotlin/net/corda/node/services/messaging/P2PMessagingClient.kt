@@ -27,7 +27,6 @@ import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
@@ -35,6 +34,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOT
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -152,7 +152,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             started = true
             log.info("Connecting to message broker: $serverAddress")
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-            val tcpTransport = p2pConnectorTcpTransport(serverAddress, config)
+            val tcpTransport = p2pConnectorTcpTransport(serverAddress, config.p2pSslOptions)
             locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.

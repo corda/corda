@@ -11,11 +11,12 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.SslConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
-import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
 import org.slf4j.Logger
@@ -26,13 +27,12 @@ import java.util.*
 import javax.security.auth.x500.X500Principal
 
 val Int.MB: Long get() = this * 1024L * 1024L
-val Int.KB: Long get() = this * 1024L
 
 private val DEFAULT_FLOW_MONITOR_PERIOD_MILLIS: Duration = Duration.ofMinutes(1)
 private val DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS: Duration = Duration.ofMinutes(1)
 private const val CORDAPPS_DIR_NAME_DEFAULT = "cordapps"
 
-interface NodeConfiguration : NodeSSLConfiguration {
+interface NodeConfiguration {
     val myLegalName: CordaX500Name
     val emailAddress: String
     val jmxMonitoringHttpPort: Int?
@@ -53,20 +53,16 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val rpcOptions: NodeRpcOptions
     val messagingServerAddress: NetworkHostAndPort?
     val messagingServerExternal: Boolean
-    val enterpriseConfiguration: EnterpriseConfiguration
     // TODO Move into DevModeOptions
     val useTestClock: Boolean get() = false
     val lazyBridgeStart: Boolean
     val detectPublicIp: Boolean get() = true
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
-    val relay: RelayConfiguration?
     val noLocalShell: Boolean get() = false
     val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
     val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
     val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
-    val graphiteOptions: GraphiteOptions? get() = null
-
     // do not change this value without syncing it with ScheduledFlowsDrainingModeTest
     val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
     val extraNetworkMapKeys: List<UUID>
@@ -75,8 +71,16 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val effectiveH2Settings: NodeH2Settings?
     val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
     val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
-    val cordappDirectories: List<Path> get() = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
+    val crlCheckSoftFail: Boolean
     val jmxReporterType : JmxReporterType? get() = defaultJmxReporterType
+
+    val baseDirectory: Path
+    val certificatesDirectory: Path
+    val signingCertificateStore: FileBasedCertificateStoreSupplier
+    val p2pSslOptions: MutualSslConfiguration
+
+    val cordappDirectories: List<Path>
+
     fun validate(): List<String>
 
     companion object {
@@ -106,13 +110,6 @@ enum class JmxReporterType {
 
 data class DevModeOptions(val disableCheckpointChecker: Boolean = false, val allowCompatibilityZone: Boolean = false)
 
-data class GraphiteOptions(
-        val server: String,
-        val port: Int,
-        val prefix: String? = null, // defaults to org name and ip address when null
-        val sampleInvervallSeconds: Long = 60
-)
-
 fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
 }
@@ -125,47 +122,15 @@ data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
                         val bftSMaRt: BFTSMaRtConfiguration? = null,
                         val custom: Boolean = false,
-                        val mysql: MySQLConfiguration? = null,
                         val serviceLegalName: CordaX500Name? = null
 ) {
     init {
-        require(raft == null || bftSMaRt == null || !custom || mysql == null) {
-            "raft, bftSMaRt, custom, and mysql configs cannot be specified together"
+        require(raft == null || bftSMaRt == null || !custom) {
+            "raft, bftSMaRt, and custom configs cannot be specified together"
         }
     }
 
-    val isClusterConfig: Boolean get() = raft != null || bftSMaRt != null || mysql != null
-}
-
-data class MySQLConfiguration(
-        val dataSource: Properties,
-        /**
-         * Number of times to attempt to reconnect to the database.
-         */
-        val connectionRetries: Int = 2, // Default value for a 3 server cluster.
-        /**
-         * Time increment between re-connection attempts.
-         *
-         * The total back-off duration is calculated as: backOffIncrement * backOffBase ^ currentRetryCount
-         */
-        val backOffIncrement: Int = 500,
-        /** Exponential back-off multiplier base. */
-        val backOffBase: Double = 1.5,
-        /** The maximum number of transactions processed in a single batch. */
-        val maxBatchSize: Int = 500,
-        /** The maximum combined number of input states processed in a single batch. */
-        val maxBatchInputStates: Int = 10_000,
-        /** A batch will be processed after a specified timeout even if it has not yet reached full capacity. */
-        val batchTimeoutMs: Long = 200,
-        /**
-         * The maximum number of commit requests in flight. Once the capacity is reached the service will block on
-         * further commit requests.
-         */
-        val maxQueueSize: Int = 100_000
-        ) {
-    init {
-        require(connectionRetries >= 0) { "connectionRetries cannot be negative" }
-    }
+    val isClusterConfig: Boolean get() = raft != null || bftSMaRt != null
 }
 
 data class RaftConfig(val nodeAddress: NetworkHostAndPort, val clusterAddresses: List<NetworkHostAndPort>)
@@ -220,8 +185,8 @@ data class NodeConfigurationImpl(
         override val myLegalName: CordaX500Name,
         override val jmxMonitoringHttpPort: Int? = null,
         override val emailAddress: String,
-        override val keyStorePassword: String,
-        override val trustStorePassword: String,
+        private val keyStorePassword: String,
+        private val trustStorePassword: String,
         override val crlCheckSoftFail: Boolean,
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = null,
@@ -235,12 +200,8 @@ data class NodeConfigurationImpl(
         override val p2pAddress: NetworkHostAndPort,
         private val rpcAddress: NetworkHostAndPort? = null,
         private val rpcSettings: NodeRpcSettings,
-        override val relay: RelayConfiguration?,
-        // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
-        // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
         override val messagingServerAddress: NetworkHostAndPort?,
         override val messagingServerExternal: Boolean = (messagingServerAddress != null),
-        override val enterpriseConfiguration: EnterpriseConfiguration,
         override val notary: NotaryConfig?,
         @Suppress("DEPRECATION")
         @Deprecated("Do not configure")
@@ -254,11 +215,10 @@ data class NodeConfigurationImpl(
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
         override val sshd: SSHDConfiguration? = null,
-        override val database: DatabaseConfig = DatabaseConfig(exportHibernateJMXStatistics = devMode),
+        override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode),
         private val transactionCacheSizeMegaBytes: Int? = null,
         private val attachmentContentCacheSizeMegaBytes: Int? = null,
         override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound,
-        override val graphiteOptions: GraphiteOptions? = null,
         override val extraNetworkMapKeys: List<UUID> = emptyList(),
         // do not use or remove (breaks DemoBench together with rejection of unknown configuration keys during parsing)
         private val h2port: Int? = null,
@@ -291,6 +251,17 @@ data class NodeConfigurationImpl(
             }
         }
     }
+
+    override val certificatesDirectory = baseDirectory / "certificates"
+
+    private val signingCertificateStorePath = certificatesDirectory / "nodekeystore.jks"
+    override val signingCertificateStore = FileBasedCertificateStoreSupplier(signingCertificateStorePath, keyStorePassword)
+
+    private val p2pKeystorePath: Path get() = certificatesDirectory / "sslkeystore.jks"
+    private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword)
+    private val p2pTrustStoreFilePath: Path get() = certificatesDirectory / "truststore.jks"
+    private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword)
+    override val p2pSslOptions: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
 
     override val rpcOptions: NodeRpcOptions
         get() {
@@ -352,7 +323,7 @@ data class NodeConfigurationImpl(
                 }
             }
 
-            // if compatibilityZoneURL is set then it will be copied into the networkServices field and thus skipping
+            // if compatibiliZoneURL is set then it will be copied into the networkServices field and thus skipping
             // this check by returning above is fine.
             networkServices?.let {
                 if (devModeOptions?.allowCompatibilityZone != true) {
@@ -391,31 +362,6 @@ data class NodeConfigurationImpl(
         require(security == null || rpcUsers.isEmpty()) {
             "Cannot specify both 'rpcUsers' and 'security' in configuration"
         }
-
-        // ensure our datasource configuration is sane
-        require(dataSourceProperties.get("autoCommit") != true) { "Datbase auto commit cannot be enabled, Corda requires transactional behaviour" }
-        dataSourceProperties.set("autoCommit", false)
-        if (dataSourceProperties.get("transactionIsolation") == null) {
-            dataSourceProperties["transactionIsolation"] = database.transactionIsolationLevel.jdbcString
-        }
-
-        // enforce that SQLServer does not get sent all strings as Unicode - hibernate handles this "cleverly"
-        val dataSourceUrl = dataSourceProperties.getProperty(DataSourceConfigTag.DATA_SOURCE_URL, "")
-        if (dataSourceUrl.contains(":sqlserver:") && !dataSourceUrl.contains("sendStringParametersAsUnicode", true)) {
-            dataSourceProperties[DataSourceConfigTag.DATA_SOURCE_URL] = dataSourceUrl + ";sendStringParametersAsUnicode=false"
-        }
-
-        // Adjust connection pool size depending on N=flow thread pool size.
-        // If there is no configured pool size set it to N + 1, otherwise check that it's greater than N.
-        val flowThreadPoolSize = enterpriseConfiguration.tuning.flowThreadPoolSize
-        val maxConnectionPoolSize = dataSourceProperties.getProperty("maximumPoolSize")
-        if (maxConnectionPoolSize == null) {
-            dataSourceProperties.setProperty("maximumPoolSize", (flowThreadPoolSize + 1).toString())
-        } else {
-            require(maxConnectionPoolSize.toInt() > flowThreadPoolSize)
-        }
-
-        // Check for usage of deprecated config
         @Suppress("DEPRECATION")
         if(certificateChainCheckPolicies.isNotEmpty()) {
             logger.warn("""You are configuring certificateChainCheckPolicies. This is a setting that is not used, and will be removed in a future version.
@@ -429,8 +375,6 @@ data class NodeConfigurationImpl(
         require(h2port == null || h2Settings == null) { "Cannot specify both 'h2port' and 'h2Settings' in configuration" }
     }
 }
-
-
 
 data class NodeRpcSettings(
         val address: NetworkHostAndPort?,
@@ -555,10 +499,3 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
         }
     }
 }
-
-data class RelayConfiguration(val relayHost: String,
-                              val remoteInboundPort: Int,
-                              val username: String,
-                              val privateKeyFile: Path,
-                              val publicKeyFile: Path,
-                              val sshPort: Int = 22)

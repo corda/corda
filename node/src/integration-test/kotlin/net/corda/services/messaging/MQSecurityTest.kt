@@ -18,14 +18,12 @@ import net.corda.node.internal.NodeWithInfo
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.node.User
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.configureTestSSL
-import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.startFlow
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
@@ -33,7 +31,8 @@ import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.ClassRule
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
@@ -43,20 +42,13 @@ import kotlin.test.assertEquals
  * the attacker to [alice].
  */
 abstract class MQSecurityTest : NodeBasedTest() {
-    companion object {
-        @ClassRule
-        @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName())
-    }
-
     val rpcUser = User("user1", "pass", permissions = emptySet())
     lateinit var alice: NodeWithInfo
     lateinit var attacker: SimpleMQClient
     private val clients = ArrayList<SimpleMQClient>()
 
-    override fun setUp() {
-        super.init()
-        super.setUp()
+    @Before
+    fun start() {
         alice = startNode(ALICE_NAME, rpcUsers = extraRPCUsers + rpcUser)
         attacker = createAttacker()
         startAttacker(attacker)
@@ -68,10 +60,9 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     abstract fun startAttacker(attacker: SimpleMQClient)
 
-    override fun tearDown() {
-        rpcConnections.forEach { it.forceClose() }
+    @After
+    fun stopClients() {
         clients.forEach { it.stop() }
-        super.tearDown()
     }
 
     @Test
@@ -103,7 +94,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
         assertAllQueueCreationAttacksFail(randomQueue)
     }
 
-    fun clientTo(target: NetworkHostAndPort, sslConfiguration: SSLConfiguration? = configureTestSSL(CordaX500Name("MegaCorp", "London", "GB"))): SimpleMQClient {
+    fun clientTo(target: NetworkHostAndPort, sslConfiguration: MutualSslConfiguration? = configureTestSSL(CordaX500Name("MegaCorp", "London", "GB"))): SimpleMQClient {
         val client = SimpleMQClient(target, sslConfiguration)
         clients += client
         return client
@@ -112,6 +103,11 @@ abstract class MQSecurityTest : NodeBasedTest() {
     private val rpcConnections = mutableListOf<CordaRPCConnection>()
     private fun loginToRPC(target: NetworkHostAndPort, rpcUser: User): CordaRPCOps {
         return CordaRPCClient(target).start(rpcUser.username, rpcUser.password).also { rpcConnections.add(it) }.proxy
+    }
+
+    @After
+    fun closeRPCConnections() {
+        rpcConnections.forEach { it.forceClose() }
     }
 
     fun loginToRPCAndGetClientQueue(): String {

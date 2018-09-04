@@ -4,22 +4,11 @@ package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
-import net.corda.core.cordapp.Cordapp
-import net.corda.core.cordapp.CordappConfig
-import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.*
-import net.corda.core.flows.FlowLogic
-import net.corda.core.node.ServicesForResolution
-import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.*
-import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
-import org.slf4j.MDC
 import rx.Observable
 import rx.Observer
 import rx.subjects.PublishSubject

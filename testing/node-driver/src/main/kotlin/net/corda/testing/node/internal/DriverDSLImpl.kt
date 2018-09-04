@@ -5,7 +5,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
-import net.corda.client.rpc.internal.createCordaRPCClientWithInternalSslAndClassLoader
+import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.identity.CordaX500Name
@@ -20,6 +20,7 @@ import net.corda.node.NodeRegistrationOption
 import net.corda.node.VersionInfo
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeWithInfo
+import net.corda.node.internal.clientSslOptionsCompatibleWith
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
@@ -172,7 +173,8 @@ class DriverDSLImpl(
 
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.corda.rpcOptions.address
-        val client = createCordaRPCClientWithInternalSslAndClassLoader(config.corda.rpcOptions.adminAddress, sslConfiguration = config.corda)
+        val clientRpcSslOptions =  clientSslOptionsCompatibleWith(config.corda.rpcOptions)
+        val client = createCordaRPCClientWithSslAndClassLoader(rpcAddress, sslConfiguration = clientRpcSslOptions)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 config.corda.rpcUsers[0].run { client.start(username, password) }
@@ -842,8 +844,13 @@ class DriverDSLImpl(
             config += "rpcUsers" to configuration.toConfig().getValue("rpcUsers")
             config += "useHTTPS" to useHTTPS
             config += "baseDirectory" to configuration.baseDirectory.toAbsolutePath().toString()
-            config += "keyStorePassword" to configuration.keyStorePassword
-            config += "trustStorePassword" to configuration.trustStorePassword
+
+            config += "keyStorePath" to configuration.p2pSslOptions.keyStore.path.toString()
+            config += "keyStorePassword" to configuration.p2pSslOptions.keyStore.password
+
+            config += "trustStorePath" to configuration.p2pSslOptions.trustStore.path.toString()
+            config += "trustStorePassword" to configuration.p2pSslOptions.trustStore.password
+
             return config
         }
 
