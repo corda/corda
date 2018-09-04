@@ -4,6 +4,9 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigValueFactory
 import java.lang.reflect.Proxy
 
+// Additional benefits of going this way:
+// - Allows to validate a raw configuration object.
+// - Allows to display the structure of the configuration.
 interface ConfigSchema : Validator<Config, ConfigValidationError> {
 
     fun <TYPE> proxy(configuration: Config, type: Class<TYPE>): TYPE
