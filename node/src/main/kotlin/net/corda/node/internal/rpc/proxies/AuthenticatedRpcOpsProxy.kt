@@ -16,6 +16,8 @@ internal class AuthenticatedRpcOpsProxy(private val delegate: CordaRPCOps) : Cor
     /**
      * Returns the RPC protocol version, which is the same the node's Platform Version. Exists since version 1 so guaranteed
      * to be present.
+     *
+     * TODO: Why is this logic duplicated vs the actual implementation?
      */
     override val protocolVersion: Int get() = delegate.nodeInfo().platformVersion
 
@@ -31,7 +33,6 @@ internal class AuthenticatedRpcOpsProxy(private val delegate: CordaRPCOps) : Cor
 
     private companion object {
         private fun proxy(delegate: CordaRPCOps, context: () -> RpcAuthContext): CordaRPCOps {
-
             val handler = PermissionsEnforcingInvocationHandler(delegate, context)
             return Proxy.newProxyInstance(delegate::class.java.classLoader, arrayOf(CordaRPCOps::class.java), handler) as CordaRPCOps
         }

@@ -17,8 +17,8 @@ import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.User
 import org.apache.logging.log4j.Level
@@ -86,7 +86,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @JvmOverloads
     fun initNode(legalName: CordaX500Name,
-                  platformVersion: Int = 1,
+                  platformVersion: Int = 4,
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap()): InProcessNode {
         val baseDirectory = baseDirectory(legalName).createDirectories()
@@ -126,7 +126,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @JvmOverloads
     fun startNode(legalName: CordaX500Name,
-                  platformVersion: Int = 1,
+                  platformVersion: Int = 4,
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap()): NodeWithInfo {
         val node = initNode(legalName,platformVersion, rpcUsers,configOverrides)

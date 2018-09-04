@@ -151,8 +151,8 @@ open class NodeStartup(val args: Array<String>) {
 
         val cause = this.cause
         return when {
-            cause != null && !visited.contains(cause) -> Objects.hash(this::class.java.name, stackTrace, cause.staticLocationBasedHash(visited +  cause))
-            else -> Objects.hash(this::class.java.name, stackTrace)
+            cause != null && !visited.contains(cause) -> Objects.hash(this::class.java.name, stackTrace.customHashCode(), cause.staticLocationBasedHash(visited +  cause))
+            else -> Objects.hash(this::class.java.name, stackTrace.customHashCode())
         }
     }
 
@@ -179,6 +179,19 @@ open class NodeStartup(val args: Array<String>) {
             is ConfigException.IO -> error.logAsExpected(configFileNotFoundMessage(configFile), ::println)
             else -> error.logAsUnexpected("Unexpected error whilst reading node configuration")
         }
+    }
+
+    private fun Array<StackTraceElement?>?.customHashCode(): Int {
+
+        if (this == null) {
+            return 0
+        }
+        return Arrays.hashCode(map { it?.customHashCode() ?: 0 }.toIntArray())
+    }
+
+    private fun StackTraceElement.customHashCode(): Int {
+
+        return Objects.hash(StackTraceElement::class.java.name, methodName, lineNumber)
     }
 
     private fun configFileNotFoundMessage(configFile: Path): String {
@@ -610,3 +623,5 @@ open class NodeStartup(val args: Array<String>) {
         }
     }
 }
+
+

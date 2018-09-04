@@ -6,8 +6,8 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.internal.performance.div
+import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.node.internal.performance.startPublishingFixedRateInjector
 import net.corda.testing.node.internal.performance.startReporter
 import net.corda.testing.node.internal.performance.startTightLoopInjector
@@ -35,7 +35,7 @@ class RPCPerformanceTests : AbstractRPCTest() {
     }
 
     class TestOpsImpl : TestOps {
-        override val protocolVersion = 0
+        override val protocolVersion = 1000
         override fun simpleReply(input: ByteArray, sizeOfReply: Int): ByteArray {
             return ByteArray(sizeOfReply)
         }

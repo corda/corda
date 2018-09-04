@@ -259,7 +259,7 @@ The protocol is:
 
 * If $URL = ``https://some.server.com/some/path``
 * Node submits a PKCS#10 certificate signing request using HTTP POST to ``$URL/certificate``. It will have a MIME
-  type of ``application/octet-stream``. The ``Client-Version`` header is set to be "1.0".
+  type of ``application/octet-stream``. The ``Platform-Version`` header is set to be "1.0" and the ``Client-Version`` header to reflect the node software version.
 * The server returns an opaque string that references this request (let's call it ``$requestid``, or an HTTP error if something went wrong.
 * The returned request ID should be persisted to disk, to handle zones where approval may take a long time due to manual
   intervention being required.

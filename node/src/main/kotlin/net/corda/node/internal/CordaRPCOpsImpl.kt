@@ -50,6 +50,12 @@ internal class CordaRPCOpsImpl(
         private val flowStarter: FlowStarter,
         private val shutdownNode: () -> Unit
 ) : CordaRPCOps {
+    /**
+     * Returns the RPC protocol version, which is the same the node's platform Version. Exists since version 1 so guaranteed
+     * to be present.
+     */
+    override val protocolVersion: Int get() = nodeInfo().platformVersion
+
     override fun networkMapSnapshot(): List<NodeInfo> {
         val (snapshot, updates) = networkMapFeed()
         updates.notUsed()
