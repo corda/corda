@@ -3,9 +3,8 @@ package net.corda.nodeapi.internal
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientProducer
@@ -18,7 +17,7 @@ interface ArtemisSessionProvider {
     val started: ArtemisMessagingClient.Started?
 }
 
-class ArtemisMessagingClient(private val config: SSLConfiguration,
+class ArtemisMessagingClient(private val config: MutualSslConfiguration,
                              private val serverAddress: NetworkHostAndPort,
                              private val maxMessageSize: Int) : ArtemisSessionProvider {
     companion object {
@@ -34,7 +33,7 @@ class ArtemisMessagingClient(private val config: SSLConfiguration,
         check(started == null) { "start can't be called twice" }
         log.info("Connecting to message broker: $serverAddress")
         // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-        val tcpTransport = ArtemisTcpTransport.p2pConnectorTcpTransport(serverAddress, config)
+        val tcpTransport = InternalArtemisTcpTransport.p2pConnectorTcpTransport(serverAddress, config)
         val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
             // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
             // would be the default and the two lines below can be deleted.

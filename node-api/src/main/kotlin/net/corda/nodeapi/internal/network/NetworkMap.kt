@@ -3,12 +3,11 @@ package net.corda.nodeapi.internal.network
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.DigitalSignatureWithCert
+import net.corda.core.internal.DigitalSignatureWithCertPath
 import net.corda.core.internal.SignedDataWithCert
-import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import java.security.cert.X509Certificate
 import java.time.Instant
@@ -57,20 +56,13 @@ data class ParametersUpdate(
         val updateDeadline: Instant
 )
 
-/** Verify that a Network Map certificate is issued by Root CA and its [CertRole] is correct. */
-// TODO: Current implementation works under the assumption that there are no intermediate CAs between Root and
-//      Network Map. Consider a more flexible implementation without the above assumption.
-
+/** Verify that a Network Map certificate path and its [CertRole] is correct. */
 fun <T : Any> SignedDataWithCert<T>.verifiedNetworkMapCert(rootCert: X509Certificate): T {
     require(CertRole.extract(sig.by) == CertRole.NETWORK_MAP) { "Incorrect cert role: ${CertRole.extract(sig.by)}" }
-    X509Utilities.validateCertificateChain(rootCert, sig.by, rootCert)
+    val path = when (this.sig) {
+        is DigitalSignatureWithCertPath -> (sig as DigitalSignatureWithCertPath).path
+        else -> listOf(sig.by, rootCert)
+    }
+    X509Utilities.validateCertificateChain(rootCert, path)
     return verified()
-}
-
-class NetworkMapAndSigned private constructor(val networkMap: NetworkMap, val signed: SignedNetworkMap) {
-    constructor(networkMap: NetworkMap, signer: (SerializedBytes<NetworkMap>) -> DigitalSignatureWithCert) : this(networkMap, networkMap.signWithCert(signer))
-    constructor(signed: SignedNetworkMap) : this(signed.verified(), signed)
-
-    operator fun component1(): NetworkMap = networkMap
-    operator fun component2(): SignedNetworkMap = signed
 }

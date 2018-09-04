@@ -33,7 +33,7 @@ class RPCConcurrencyTests : AbstractRPCTest() {
     @CordaSerializable
     data class ObservableRose<out A>(val value: A, val branches: Observable<out ObservableRose<A>>)
 
-    private interface TestOps : RPCOps {
+    interface TestOps : RPCOps {
         fun newLatch(numberOfDowns: Int): Long
         fun waitLatch(id: Long)
         fun downLatch(id: Long)
@@ -43,7 +43,7 @@ class RPCConcurrencyTests : AbstractRPCTest() {
 
     class TestOpsImpl(private val pool: Executor) : TestOps {
         private val latches = ConcurrentHashMap<Long, CountDownLatch>()
-        override val protocolVersion = 0
+        override val protocolVersion = 1000
 
         override fun newLatch(numberOfDowns: Int): Long {
             val id = random63BitValue()

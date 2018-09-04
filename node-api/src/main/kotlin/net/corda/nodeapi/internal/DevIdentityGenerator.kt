@@ -7,7 +7,8 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.trace
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -31,15 +32,15 @@ object DevIdentityGenerator {
 
     /** Install a node key store for the given node directory using the given legal name. */
     fun installKeyStoreWithNodeIdentity(nodeDir: Path, legalName: CordaX500Name): Party {
-        val nodeSslConfig = object : NodeSSLConfiguration {
-            override val baseDirectory = nodeDir
-            override val keyStorePassword: String = "cordacadevpass"
-            override val trustStorePassword get() = throw NotImplementedError("Not expected to be called")
-            override val crlCheckSoftFail: Boolean = true
-        }
+        val certificatesDirectory = nodeDir / "certificates"
+        val signingCertStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "nodekeystore.jks", "cordacadevpass")
+        val p2pKeyStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "sslkeystore.jks", "cordacadevpass")
+        val p2pTrustStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "truststore.jks", "trustpass")
+        val p2pSslConfig = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
 
-        nodeSslConfig.certificatesDirectory.createDirectories()
-        val (nodeKeyStore) = nodeSslConfig.createDevKeyStores(legalName)
+        certificatesDirectory.createDirectories()
+        val nodeKeyStore = signingCertStore.get(true).also { it.registerDevSigningCertificates(legalName) }
+        p2pSslConfig.keyStore.get(true).also { it.registerDevP2pCertificates(legalName) }
 
         val identity = nodeKeyStore.storeLegalIdentity("$NODE_IDENTITY_ALIAS_PREFIX-private-key")
         return identity.party

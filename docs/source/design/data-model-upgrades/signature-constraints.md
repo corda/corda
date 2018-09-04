@@ -4,7 +4,7 @@ This design document outlines an additional kind of *contract constraint*, used 
 
 ## Background
 
-Contract constraints are a part of how Corda manages application upgrades. There are two kinds of upgrade that can be applied to the ledger:
+Contract constraints are a part of how Corda ensures the correct code is executed to verify transactions, and also how it manages application upgrades. There are two kinds of upgrade that can be applied to the ledger:
 
 * Explicit
 * Implicit
@@ -31,21 +31,20 @@ We would like a new kind of constraint that is more convenient and decentralised
 ## Goals
 
 * Improve usability by eliminating the need to change the network parameters.
-
 * Improve decentralisation by allowing apps to be developed and upgraded without the zone operator knowing or being able to influence it.
-
 * Eventually, phase out zone whitelisting constraints.
-
 
 ## Non-goals
 
 * Preventing downgrade attacks. Downgrade attack prevention will be tackled in a different design effort.
 * Phase out of hash constraints. If malicious app creators are in the users threat model then hash constraints are the way to go.
 * Handling the case where third parties re-sign app jars.
+* Package namespace ownership (a separate effort).
+* Allowing the zone operator to override older constraints, to provide a non-explicit upgrade path.
 
 ## Design details
 
-We propose being able to constrain to any attachments signed by a specified set of keys.
+We propose being able to constrain to any attachments whose files are signed by a specified set of keys.
 
 This satisfies the usability requirement because the creation of a new application is as simple as invoking the `jarsigner` tool that comes with the JDK. This can be integrated with the build system via a Gradle or Maven task. For example, Gradle can use jarsigner via [the signjar task](https://ant.apache.org/manual/Tasks/signjar.html) ([example](https://gist.github.com/Lien/7150434)). 
 
@@ -87,7 +86,7 @@ The `TransactionBuilder` class can select the right constraint given what it alr
 
 ### Tooling and workflow
 
-The primary tool required is of course `jarsigner`. In dev and integration test modes, the node will ignore missing signatures in attachment JARs and will simply log a warning if no signature is present.
+The primary tool required is of course `jarsigner`. In dev mode, the node will ignore missing signatures in attachment JARs and will simply log an error if no signature is present when a constraint requires one.
 
 To verify and print information about the signatures on a JAR, the `jarsigner` tool can be used again. In addition, we should add some new shell commands that do the same thing, but for a given attachment hash or transaction hash - these may be useful for debugging and analysis. Actually a new shell command should cover all aspects of inspecting attachments - not just signatures but what's inside them, simple way to save them to local disk etc.
 

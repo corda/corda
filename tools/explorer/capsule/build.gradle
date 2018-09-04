@@ -11,15 +11,6 @@ configurations {
     runtimeArtifacts.extendsFrom runtime
 }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    jcenter()
-}
-
 // Force the Caplet to target Java 6. This ensures that running 'java -jar explorer.jar' on any Java 6 VM upwards
 // will get as far as the Capsule version checks, meaning that if your JVM is too old, you will at least get
 // a sensible error message telling you what to do rather than a bytecode version exception that doesn't.

@@ -12,7 +12,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
@@ -21,6 +20,7 @@ import net.corda.testing.core.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.NodeHandleInternal
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.internal.*
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
@@ -247,13 +247,10 @@ private fun DriverDSLImpl.startNode(providedName: CordaX500Name, devMode: Boolea
     var customOverrides = emptyMap<String, String>()
     if (!devMode) {
         val nodeDir = baseDirectory(providedName)
-        val nodeSslConfig = object : NodeSSLConfiguration {
-            override val baseDirectory = nodeDir
-            override val keyStorePassword = "cordacadevpass"
-            override val trustStorePassword = "trustpass"
-            override val crlCheckSoftFail = true
-        }
-        nodeSslConfig.configureDevKeyAndTrustStores(providedName)
+        val certificatesDirectory = nodeDir / "certificates"
+        val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        p2pSslConfig.configureDevKeyAndTrustStores(providedName, signingCertStore, certificatesDirectory)
         customOverrides = mapOf("devMode" to "false")
     }
     return startNode(providedName = providedName, customOverrides = customOverrides)
