@@ -28,8 +28,8 @@ enum class BinaryLogicalOperator : Operator {
 
 enum class EqualityComparisonOperator : Operator {
     EQUAL,
-    EQUAL_IGNORE_CASE,
     NOT_EQUAL,
+    EQUAL_IGNORE_CASE,
     NOT_EQUAL_IGNORE_CASE
 }
 
@@ -47,15 +47,15 @@ enum class NullOperator : Operator {
 
 enum class LikenessOperator : Operator {
     LIKE,
-    LIKE_IGNORE_CASE,
     NOT_LIKE,
+    LIKE_IGNORE_CASE,
     NOT_LIKE_IGNORE_CASE
 }
 
 enum class CollectionOperator : Operator {
     IN,
-    IN_IGNORE_CASE,
     NOT_IN,
+    IN_IGNORE_CASE,
     NOT_IN_IGNORE_CASE
 }
 
