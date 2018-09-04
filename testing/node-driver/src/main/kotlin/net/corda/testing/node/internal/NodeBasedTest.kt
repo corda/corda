@@ -126,7 +126,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @JvmOverloads
     fun startNode(legalName: CordaX500Name,
-                  platformVersion: Int = 1,
+                  platformVersion: Int = 4,
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap()): NodeWithInfo {
         val node = initNode(legalName,platformVersion, rpcUsers,configOverrides)
