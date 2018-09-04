@@ -72,7 +72,7 @@ import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
+val MOCK_VERSION_INFO = VersionInfo(4, "Mock release", "Mock revision", "Mock Vendor")
 
 data class MockNodeArgs(
         val config: NodeConfiguration,
@@ -207,15 +207,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     val defaultNotaryIdentity: Party
         get() {
             return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
-        }
-
-    /**
-     * Return the identity of the default notary node.
-     * @see defaultNotaryNode
-     */
-    val defaultNotaryIdentityAndCert: PartyAndCertificate
-        get() {
-            return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
         }
 
     /**

@@ -140,7 +140,7 @@ class ArtemisRpcTests {
     class TestRpcOpsImpl : TestRpcOps {
         override fun greet(name: String): String = "Oh, hello $name!"
 
-        override val protocolVersion: Int = 1
+        override val protocolVersion: Int = 1000
     }
 
     private fun tempFile(name: String): Path = tempFolder.root.toPath() / name
