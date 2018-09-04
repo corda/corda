@@ -52,7 +52,7 @@ class CertificateStoreStubs {
             @JvmStatic
             fun withBaseDirectory(baseDirectory: Path, certificatesDirectoryName: String = DEFAULT_CERTIFICATES_DIRECTORY_NAME, keyStoreFileName: String = KeyStore.DEFAULT_STORE_FILE_NAME, keyStorePassword: String = KeyStore.DEFAULT_STORE_PASSWORD, trustStoreFileName: String = TrustStore.DEFAULT_STORE_FILE_NAME, trustStorePassword: String = TrustStore.DEFAULT_STORE_PASSWORD): MutualSslConfiguration {
 
-                return withCertificatesDirectory(baseDirectory / certificatesDirectoryName, keyStorePassword, trustStorePassword, keyStoreFileName, trustStoreFileName)
+                return withCertificatesDirectory(baseDirectory / certificatesDirectoryName, keyStoreFileName, keyStorePassword, trustStoreFileName, trustStorePassword)
             }
         }
 
