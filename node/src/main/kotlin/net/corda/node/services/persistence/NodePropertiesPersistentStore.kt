@@ -57,12 +57,14 @@ class FlowsDrainingModeOperationsImpl(readPhysicalNodeId: () -> String, private 
 
     override val values = PublishSubject.create<Pair<Boolean, Boolean>>()!!
 
-    override fun setEnabled(enabled: Boolean) {
+    override fun setEnabled(enabled: Boolean, propagateChange: Boolean) {
         var oldValue: Boolean? = null
         persistence.transaction {
             oldValue = map.put(nodeSpecificFlowsExecutionModeKey, enabled.toString())?.toBoolean() ?: false
         }
-        values.onNext(oldValue!! to enabled)
+        if (propagateChange) {
+            values.onNext(oldValue!! to enabled)
+        }
     }
 
     override fun isEnabled(): Boolean {

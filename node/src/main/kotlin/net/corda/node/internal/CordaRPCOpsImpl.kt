@@ -33,7 +33,10 @@ import net.corda.node.services.messaging.context
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
+import net.corda.nodeapi.internal.config.toConfig
 import rx.Observable
+import rx.Subscription
+import rx.subjects.PublishSubject
 import java.io.InputStream
 import java.net.ConnectException
 import java.security.PublicKey
@@ -49,6 +52,16 @@ internal class CordaRPCOpsImpl(
         private val flowStarter: FlowStarter,
         private val shutdownNode: () -> Unit
 ) : CordaRPCOps {
+
+    init {
+        // TODO sollecitom check
+        services.nodeProperties.flowsDrainingMode.values.filter { it.first && !it.second }.subscribe({ _ ->
+            synchronized(drainingShutdownHooks) {
+                drainingShutdownHooks.forEach(Subscription::unsubscribe)
+                drainingShutdownHooks.clear()
+            }
+        }, { error -> throw error })
+    }
     /**
      * Returns the RPC protocol version, which is the same the node's platform Version. Exists since version 1 so guaranteed
      * to be present.
@@ -268,16 +281,59 @@ internal class CordaRPCOpsImpl(
         return vaultTrackBy(criteria, PageSpecification(), sorting, contractStateType)
     }
 
-    override fun setFlowsDrainingModeEnabled(enabled: Boolean) {
-        services.nodeProperties.flowsDrainingMode.setEnabled(enabled)
-    }
+    override fun setFlowsDrainingModeEnabled(enabled: Boolean) = setPersistentDrainingModeProperty(true)
 
     override fun isFlowsDrainingModeEnabled(): Boolean {
         return services.nodeProperties.flowsDrainingMode.isEnabled()
     }
 
-    override fun shutdown() {
-        shutdownNode.invoke()
+    override fun shutdown() = shutdown(false)
+
+    // TODO sollecitom move to top
+    private val drainingShutdownHooks = mutableListOf<Subscription>()
+
+    override fun shutdown(drainPendingFlows: Boolean) {
+
+        if (drainPendingFlows) {
+            // TODO sollecitom add logging
+            if (!isFlowsDrainingModeEnabled()) {
+                drainingShutdownHooks += pendingFlowsCount().updates.doOnCompleted { setPersistentDrainingModeProperty(false, false) }.doOnCompleted(drainingShutdownHooks::clear).doOnCompleted(::shutdown).subscribe({ }, { error -> throw error })
+                setFlowsDrainingModeEnabled(true)
+            }
+        } else {
+            shutdownNode.invoke()
+        }
+    }
+
+    private fun setPersistentDrainingModeProperty(enabled: Boolean, propagateChange: Boolean = true) = services.nodeProperties.flowsDrainingMode.setEnabled(enabled, propagateChange)
+
+    internal fun CordaRPCOps.pendingFlowsCount(): DataFeed<Int, Pair<Int, Int>> {
+
+        val stateMachineState = stateMachinesFeed()
+        var pendingFlowsCount = stateMachineState.snapshot.size
+        var completedFlowsCount = 0
+        val updates = PublishSubject.create<Pair<Int, Int>>()
+        stateMachineState
+                .updates
+                .doOnNext { update ->
+                    when (update) {
+                        is StateMachineUpdate.Added -> {
+                            pendingFlowsCount++
+                            updates.onNext(completedFlowsCount to pendingFlowsCount)
+                        }
+                        is StateMachineUpdate.Removed -> {
+                            completedFlowsCount++
+                            updates.onNext(completedFlowsCount to pendingFlowsCount)
+                            if (completedFlowsCount == pendingFlowsCount) {
+                                updates.onCompleted()
+                            }
+                        }
+                    }
+                }.subscribe()
+        if (completedFlowsCount == 0) {
+            updates.onCompleted()
+        }
+        return DataFeed(pendingFlowsCount, updates)
     }
 
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
