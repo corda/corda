@@ -1,15 +1,15 @@
 package net.corda.bridge.services.artemis
 
 import net.corda.bridge.services.api.*
-import net.corda.bridge.services.config.BridgeSSLConfigurationImpl
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.internal.ThreadBox
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.FailoverEventType
 import org.apache.activemq.artemis.api.core.client.ServerLocator
@@ -34,13 +34,13 @@ class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
     }
 
     private val state = ThreadBox(InnerState())
-    private val sslConfiguration: BridgeSSLConfiguration
+    private val sslConfiguration: MutualSslConfiguration
     private val statusFollower: ServiceStateCombiner
     private var statusSubscriber: Subscription? = null
 
     init {
         statusFollower = ServiceStateCombiner(listOf(auditService))
-        sslConfiguration = conf.outboundConfig?.customSSLConfiguration ?: BridgeSSLConfigurationImpl(conf)
+        sslConfiguration = conf.outboundConfig?.customSSLConfiguration ?: conf.p2pSslOptions
     }
 
     override fun start() {
@@ -61,7 +61,7 @@ class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
             log.info("Connecting to message broker: ${outboundConf.artemisBrokerAddress}")
             val brokerAddresses = listOf(outboundConf.artemisBrokerAddress) + outboundConf.alternateArtemisBrokerAddresses
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-            val tcpTransports = brokerAddresses.map { ArtemisTcpTransport.p2pConnectorTcpTransport(it, sslConfiguration) }
+            val tcpTransports = brokerAddresses.map { InternalArtemisTcpTransport.p2pConnectorTcpTransport(it, sslConfiguration) }
             locator = ActiveMQClient.createServerLocatorWithoutHA(*tcpTransports.toTypedArray()).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.

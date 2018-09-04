@@ -145,7 +145,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             startNode().getOrThrow().use { node ->
                 val conf = (node as NodeHandleInternal).configuration.toShellConfig()
-                InteractiveShell.startShellInternal(conf)
+                InteractiveShell.startShell(conf)
                 assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(ActiveMQSecurityException::class.java)
             }
         }

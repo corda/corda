@@ -6,22 +6,23 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.SslConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
 import java.nio.file.Path
-import java.nio.file.Paths
-
 
 fun Config.parseAsFirewallConfiguration(): FirewallConfiguration = parseAs<FirewallConfigurationImpl>()
 
-data class BridgeSSLConfigurationImpl(override val keyStorePassword: String,
-                                      override val trustStorePassword: String,
-                                      override val certificatesDirectory: Path = Paths.get("certificates"),
-                                      override val sslKeystore: Path = certificatesDirectory / "sslkeystore.jks",
-                                      override val trustStoreFile: Path = certificatesDirectory / "truststore.jks",
-                                      override val crlCheckSoftFail: Boolean) : BridgeSSLConfiguration {
-    constructor(config: NodeSSLConfiguration) : this(config.keyStorePassword, config.trustStorePassword, config.certificatesDirectory, config.sslKeystore, config.trustStoreFile, config.crlCheckSoftFail)
+data class BridgeSSLConfigurationImpl(private val sslKeystore: Path,
+                                      private val keyStorePassword: String,
+                                      private val trustStoreFile: Path,
+                                      private val trustStorePassword: String,
+                                      private val crlCheckSoftFail: Boolean) : BridgeSSLConfiguration {
+
+    override val keyStore = FileBasedCertificateStoreSupplier(sslKeystore, keyStorePassword)
+    override val trustStore = FileBasedCertificateStoreSupplier(trustStoreFile, trustStorePassword)
 }
 
 data class BridgeOutboundConfigurationImpl(override val artemisBrokerAddress: NetworkHostAndPort,
@@ -45,12 +46,12 @@ data class BridgeHAConfigImpl(override val haConnectionString: String, override 
 
 data class FirewallConfigurationImpl(
         override val baseDirectory: Path,
-        override val certificatesDirectory: Path = baseDirectory / "certificates",
-        override val sslKeystore: Path = certificatesDirectory / "sslkeystore.jks",
-        override val trustStoreFile: Path = certificatesDirectory / "truststore.jks",
+        private val certificatesDirectory: Path = baseDirectory / "certificates",
+        private val sslKeystore: Path = certificatesDirectory / "sslkeystore.jks",
+        private val trustStoreFile: Path = certificatesDirectory / "truststore.jks",
         override val crlCheckSoftFail: Boolean,
-        override val keyStorePassword: String,
-        override val trustStorePassword: String,
+        private val keyStorePassword: String,
+        private val trustStorePassword: String,
         override val firewallMode: FirewallMode,
         override val networkParametersPath: Path,
         override val outboundConfig: BridgeOutboundConfigurationImpl?,
@@ -74,6 +75,12 @@ data class FirewallConfigurationImpl(
             require(inboundConfig != null && floatOuterConfig != null) { "Missing required configuration" }
         }
     }
+
+    private val p2pKeystorePath = sslKeystore
+    private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword)
+    private val p2pTrustStoreFilePath = trustStoreFile
+    private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword)
+    override val p2pSslOptions: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
 }
 
 

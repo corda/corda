@@ -132,7 +132,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         private val conf = parent.configuration
 
         init {
-            keyManagerFactory.init(conf.keyStore, conf.keyStorePrivateKeyPassword)
+            keyManagerFactory.init(conf.keyStore)
             trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.crlCheckSoftFail))
         }
 

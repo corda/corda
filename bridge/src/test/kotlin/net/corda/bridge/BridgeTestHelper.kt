@@ -7,9 +7,8 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.exists
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.AttachmentId
 import net.corda.nodeapi.internal.*
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -33,7 +32,7 @@ fun createNetworkParams(baseDirectory: Path): Int {
             maxMessageSize = 10485760,
             maxTransactionSize = 40000,
             epoch = 1,
-            whitelistedContractImplementations = emptyMap<String, List<AttachmentId>>()
+            whitelistedContractImplementations = emptyMap()
     )
     val copier = NetworkParametersCopier(networkParameters, overwriteFile = true)
     copier.install(baseDirectory)
@@ -55,18 +54,22 @@ fun createAndLoadConfigFromResource(baseDirectory: Path, configResource: String)
     return config
 }
 
-fun SSLConfiguration.createBridgeKeyStores(legalName: CordaX500Name,
-                                           rootCert: X509Certificate = DEV_ROOT_CA.certificate,
-                                           intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA) {
+fun FirewallConfiguration.createBridgeKeyStores(legalName: CordaX500Name,
+                                                rootCert: X509Certificate = DEV_ROOT_CA.certificate,
+                                                intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA) = p2pSslOptions.createBridgeKeyStores(legalName, rootCert, intermediateCa)
 
-    certificatesDirectory.createDirectories()
-    if (!trustStoreFile.exists()) {
-        loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/${DEV_CA_TRUST_STORE_FILE}"), DEV_CA_TRUST_STORE_PASS).save(trustStoreFile, trustStorePassword)
+fun MutualSslConfiguration.createBridgeKeyStores(legalName: CordaX500Name,
+                                                 rootCert: X509Certificate = DEV_ROOT_CA.certificate,
+                                                 intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA) {
+
+    if (!trustStore.path.exists()) {
+        val trustStore = trustStore.get(true)
+        loadDevCaTrustStore().copyTo(trustStore)
     }
 
     val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediateCa, legalName)
 
-    val sslKeyStore = loadSslKeyStore(createNew = true)
+    val sslKeyStore = keyStore.get(createNew = true)
     sslKeyStore.update {
         val tlsKeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, nodeCaCert, nodeCaKeyPair, legalName.x500Principal, tlsKeyPair.public)

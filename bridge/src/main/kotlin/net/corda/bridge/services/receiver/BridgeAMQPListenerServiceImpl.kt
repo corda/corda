@@ -7,7 +7,9 @@ import net.corda.bridge.services.api.ServiceStateSupport
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.KEYSTORE_TYPE
+import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
@@ -48,13 +50,13 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
                                           trustStorePassword: CharArray) {
         require(active) { "AuditService must be active" }
         require(keyStorePassword !== keyStorePrivateKeyPassword) { "keyStorePassword and keyStorePrivateKeyPassword must reference distinct arrays!" }
-        val keyStore = loadKeyStoreAndWipeKeys(keyStoreBytes, keyStorePassword)
-        val trustStore = loadKeyStoreAndWipeKeys(trustStoreBytes, trustStorePassword)
+
+        val keyStore = CertificateStore.of(loadKeyStore(keyStoreBytes, keyStorePassword), java.lang.String.valueOf(keyStorePrivateKeyPassword)).also { wipeKeys(keyStoreBytes, keyStorePassword) }
+        val trustStore = CertificateStore.of(loadKeyStore(trustStoreBytes, trustStorePassword), java.lang.String.valueOf(trustStorePassword)).also { wipeKeys(trustStoreBytes, trustStorePassword) }
         val bindAddress = conf.inboundConfig!!.listeningAddress
         val amqpConfiguration = object : AMQPConfiguration {
-            override val keyStore: KeyStore = keyStore
-            override val keyStorePrivateKeyPassword: CharArray = keyStorePrivateKeyPassword
-            override val trustStore: KeyStore = trustStore
+            override val keyStore = keyStore
+            override val trustStore = trustStore
             override val crlCheckSoftFail: Boolean = conf.crlCheckSoftFail
             override val maxMessageSize: Int = maximumMessageSize
             override val trace: Boolean = conf.enableAMQPPacketTrace
@@ -80,15 +82,18 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
         consoleLogger.info(msg)
     }
 
-    private fun loadKeyStoreAndWipeKeys(keyStoreBytes: ByteArray, keyStorePassword: CharArray): KeyStore {
+    private fun wipeKeys(keyStoreBytes: ByteArray, keyStorePassword: CharArray) {
+        // We overwrite the keys we don't need anymore
+        Arrays.fill(keyStoreBytes, 0xAA.toByte())
+        Arrays.fill(keyStorePassword, 0xAA55.toChar())
+    }
+
+    private fun loadKeyStore(keyStoreBytes: ByteArray, keyStorePassword: CharArray): X509KeyStore {
         val keyStore = KeyStore.getInstance(KEYSTORE_TYPE)
         ByteArrayInputStream(keyStoreBytes).use {
             keyStore.load(it, keyStorePassword)
         }
-        // We overwrite the keys we don't need anymore
-        Arrays.fill(keyStoreBytes, 0xAA.toByte())
-        Arrays.fill(keyStorePassword, 0xAA55.toChar())
-        return keyStore
+        return X509KeyStore(keyStore, java.lang.String.valueOf(keyStorePassword))
     }
 
     override fun wipeKeysAndDeactivate() {

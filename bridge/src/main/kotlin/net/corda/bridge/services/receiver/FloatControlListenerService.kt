@@ -1,7 +1,6 @@
 package net.corda.bridge.services.receiver
 
 import net.corda.bridge.services.api.*
-import net.corda.bridge.services.config.BridgeSSLConfigurationImpl
 import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_DATA_TOPIC
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
@@ -12,13 +11,13 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
 import rx.Subscription
-import java.security.KeyStore
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -39,7 +38,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
     private var connectSubscriber: Subscription? = null
     private var receiveSubscriber: Subscription? = null
     private var amqpControlServer: AMQPServer? = null
-    private val sslConfiguration: BridgeSSLConfiguration
+    private val sslConfiguration: MutualSslConfiguration
     private val floatControlAddress = conf.floatOuterConfig!!.floatAddress
     private val floatClientName = conf.floatOuterConfig!!.expectedCertificateSubject
     private var activeConnectionInfo: ConnectionChange? = null
@@ -48,7 +47,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
 
     init {
         statusFollower = ServiceStateCombiner(listOf(auditService, amqpListener))
-        sslConfiguration = conf.floatOuterConfig?.customSSLConfiguration ?: BridgeSSLConfigurationImpl(conf)
+        sslConfiguration = conf.floatOuterConfig?.customSSLConfiguration ?: conf.p2pSslOptions
     }
 
 
@@ -68,15 +67,13 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
 
     private fun startControlListener() {
         lock.withLock {
-            val keyStore = sslConfiguration.loadSslKeyStore().internal
-            val keyStorePrivateKeyPassword = sslConfiguration.keyStorePassword
-            val trustStore = sslConfiguration.loadTrustStore().internal
+            val keyStore = sslConfiguration.keyStore.get()
+            val trustStore = sslConfiguration.trustStore.get()
             val amqpConfig = object : AMQPConfiguration {
                 override val userName: String? = null
                 override val password: String? = null
-                override val keyStore: KeyStore = keyStore
-                override val keyStorePrivateKeyPassword: CharArray = keyStorePrivateKeyPassword.toCharArray()
-                override val trustStore: KeyStore = trustStore
+                override val keyStore = keyStore
+                override val trustStore = trustStore
                 override val crlCheckSoftFail: Boolean = conf.crlCheckSoftFail
                 override val maxMessageSize: Int = maximumMessageSize
                 override val trace: Boolean = conf.enableAMQPPacketTrace

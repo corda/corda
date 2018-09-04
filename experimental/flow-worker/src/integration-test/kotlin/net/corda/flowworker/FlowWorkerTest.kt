@@ -91,8 +91,8 @@ class FlowWorkerTest {
         // create test certificates
         config.configureWithDevSSLCertificate()
 
-        val trustRoot = config.loadTrustStore().getCertificate(X509Utilities.CORDA_ROOT_CA)
-        val nodeCa = config.loadNodeKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_CA)
+        val trustRoot = config.p2pSslOptions.trustStore.get().query { getCertificate(X509Utilities.CORDA_ROOT_CA) }
+        val nodeCa = config.signingCertificateStore.get().query { getCertificate(X509Utilities.CORDA_CLIENT_CA) }
 
         val broker = createFlowWorkerBroker(config, networkParameters.maxMessageSize)
         val bridgeControlListener = createBridgeControlListener(config, networkParameters.maxMessageSize)
@@ -146,8 +146,8 @@ class FlowWorkerTest {
         // create test certificates
         bankAConfig.configureWithDevSSLCertificate()
 
-        val bankATrustRoot = bankAConfig.loadTrustStore().getCertificate(X509Utilities.CORDA_ROOT_CA)
-        val bankANodeCa = bankAConfig.loadNodeKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_CA)
+        val bankATrustRoot = bankAConfig.p2pSslOptions.trustStore.get().query { getCertificate(X509Utilities.CORDA_ROOT_CA) }
+        val bankANodeCa = bankAConfig.signingCertificateStore.get().query { getCertificate(X509Utilities.CORDA_CLIENT_CA) }
 
         val bankABroker = createFlowWorkerBroker(bankAConfig, networkParameters.maxMessageSize)
         val bankABridgeControlListener = createBridgeControlListener(bankAConfig, networkParameters.maxMessageSize)
@@ -166,8 +166,8 @@ class FlowWorkerTest {
         // create test certificates
         bankBConfig.configureWithDevSSLCertificate()
 
-        val bankBTrustRoot = bankBConfig.loadTrustStore().getCertificate(X509Utilities.CORDA_ROOT_CA)
-        val bankBNodeCa = bankBConfig.loadNodeKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_CA)
+        val bankBTrustRoot = bankBConfig.p2pSslOptions.trustStore.get().query { getCertificate(X509Utilities.CORDA_ROOT_CA) }
+        val bankBNodeCa = bankBConfig.signingCertificateStore.get().query { getCertificate(X509Utilities.CORDA_CLIENT_CA) }
         // NetworkParametersCopier(networkParameters).install(bankBConfig.baseDirectory)
 
         val bankBBroker = createFlowWorkerBroker(bankBConfig, networkParameters.maxMessageSize)
@@ -234,13 +234,13 @@ class FlowWorkerTest {
     }
 
     private fun createBridgeControlListener(config: NodeConfiguration, maxMessageSize: Int): BridgeControlListener {
-        val bridgeControlListener = BridgeControlListener(config, config.messagingServerAddress!!, maxMessageSize)
+        val bridgeControlListener = BridgeControlListener(config.p2pSslOptions, config.messagingServerAddress!!, maxMessageSize)
         bridgeControlListener.start()
         return bridgeControlListener
     }
 
     private fun createArtemisClient(config: NodeConfiguration, queueAddress: String): Triple<ClientSession, ClientConsumer, ClientProducer> {
-        val artemisClient = ArtemisMessagingClient(config, config.messagingServerAddress!!, MAX_MESSAGE_SIZE)
+        val artemisClient = ArtemisMessagingClient(config.p2pSslOptions, config.messagingServerAddress!!, MAX_MESSAGE_SIZE)
         val started = artemisClient.start()
         started.session.createQueue(queueAddress, RoutingType.ANYCAST, queueAddress, true)
         return Triple(started.session, started.session.createConsumer(queueAddress), started.session.createProducer())

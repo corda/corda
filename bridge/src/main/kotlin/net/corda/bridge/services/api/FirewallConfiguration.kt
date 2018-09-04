@@ -2,8 +2,7 @@ package net.corda.bridge.services.api
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
 import java.nio.file.Path
 
@@ -28,12 +27,7 @@ enum class FirewallMode {
     FloatOuter
 }
 
-interface BridgeSSLConfiguration : SSLConfiguration {
-    override val keyStorePassword: String
-    override val trustStorePassword: String
-    override val sslKeystore: Path
-    override val trustStoreFile: Path
-}
+interface BridgeSSLConfiguration : MutualSslConfiguration
 
 
 /**
@@ -91,7 +85,8 @@ interface FloatOuterConfiguration {
     val customSSLConfiguration: BridgeSSLConfiguration?
 }
 
-interface FirewallConfiguration : NodeSSLConfiguration {
+interface FirewallConfiguration {
+    val baseDirectory: Path
     val firewallMode: FirewallMode
     val outboundConfig: BridgeOutboundConfiguration?
     val inboundConfig: BridgeInboundConfiguration?
@@ -115,4 +110,6 @@ interface FirewallConfiguration : NodeSSLConfiguration {
     // This is relevant to bridges, because we push messages into the inbox and use the async acknowledgement responses to reply to sender.
     val p2pConfirmationWindowSize: Int
     val whitelistedHeaders: List<String>
+    val crlCheckSoftFail: Boolean
+    val p2pSslOptions: MutualSslConfiguration
 }

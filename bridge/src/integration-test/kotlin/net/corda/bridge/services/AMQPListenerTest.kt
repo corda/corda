@@ -12,6 +12,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.readAll
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
@@ -25,7 +26,6 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.security.KeyStore
 import kotlin.test.assertEquals
 
 class AMQPListenerTest {
@@ -58,14 +58,14 @@ class AMQPListenerTest {
         assertEquals(true, stateFollower.next())
         assertEquals(true, amqpListenerService.active)
         assertEquals(false, serverListening("localhost", 10005))
-        val keyStoreBytes = bridgeConfig.sslKeystore.readAll()
-        val trustStoreBytes = bridgeConfig.trustStoreFile.readAll()
+        val keyStoreBytes = bridgeConfig.p2pSslOptions.keyStore.path.readAll()
+        val trustStoreBytes = bridgeConfig.p2pSslOptions.trustStore.path.readAll()
         // start listening
         amqpListenerService.provisionKeysAndActivate(keyStoreBytes,
-                bridgeConfig.keyStorePassword.toCharArray(),
-                bridgeConfig.keyStorePassword.toCharArray(),
+                bridgeConfig.p2pSslOptions.keyStore.password.toCharArray(),
+                bridgeConfig.p2pSslOptions.keyStore.password.toCharArray(),
                 trustStoreBytes,
-                bridgeConfig.trustStorePassword.toCharArray())
+                bridgeConfig.p2pSslOptions.trustStore.password.toCharArray())
         // Fire lots of activity to prove we are good
         assertEquals(TestAuditService.AuditEvent.STATUS_CHANGE, auditFollower.next())
         assertEquals(true, amqpListenerService.active)
@@ -76,12 +76,11 @@ class AMQPListenerTest {
         assertEquals(TestAuditService.AuditEvent.FAILED_CONNECTION, auditFollower.next())
         val clientConfig = createAndLoadConfigFromResource(tempFolder.root.toPath() / "client", configResource)
         clientConfig.createBridgeKeyStores(DUMMY_BANK_B_NAME)
-        val clientKeyStore = clientConfig.loadSslKeyStore().internal
-        val clientTrustStore = clientConfig.loadTrustStore().internal
+        val clientKeyStore = clientConfig.p2pSslOptions.keyStore.get()
+        val clientTrustStore = clientConfig.p2pSslOptions.trustStore.get()
         val amqpConfig = object : AMQPConfiguration {
-            override val keyStore: KeyStore = clientKeyStore
-            override val keyStorePrivateKeyPassword: CharArray = clientConfig.keyStorePassword.toCharArray()
-            override val trustStore: KeyStore = clientTrustStore
+            override val keyStore = clientKeyStore
+            override val trustStore = clientTrustStore
             override val maxMessageSize: Int = maxMessageSize
             override val trace: Boolean = true
         }
@@ -134,26 +133,28 @@ class AMQPListenerTest {
         val amqpListenerService = BridgeAMQPListenerServiceImpl(bridgeConfig, maxMessageSize, auditService)
         amqpListenerService.start()
         auditService.start()
-        val keyStoreBytes = bridgeConfig.sslKeystore.readAll()
-        val trustStoreBytes = bridgeConfig.trustStoreFile.readAll()
+        val keyStoreBytes = bridgeConfig.p2pSslOptions.keyStore.path.readAll()
+        val trustStoreBytes = bridgeConfig.p2pSslOptions.trustStore.path.readAll()
         // start listening
         amqpListenerService.provisionKeysAndActivate(keyStoreBytes,
-                bridgeConfig.keyStorePassword.toCharArray(),
-                bridgeConfig.keyStorePassword.toCharArray(),
+                bridgeConfig.p2pSslOptions.keyStore.password.toCharArray(),
+                bridgeConfig.p2pSslOptions.keyStore.password.toCharArray(),
                 trustStoreBytes,
-                bridgeConfig.trustStorePassword.toCharArray())
+                bridgeConfig.p2pSslOptions.trustStore.password.toCharArray())
         val connectionFollower = amqpListenerService.onConnection.toBlocking().iterator
         val auditFollower = auditService.onAuditEvent.toBlocking().iterator
         val clientKeys = Crypto.generateKeyPair(ECDSA_SECP256R1_SHA256)
         val clientCert = X509Utilities.createSelfSignedCACertificate(ALICE_NAME.x500Principal, clientKeys)
-        val clientKeyStore = X509KeyStore("password")
-        clientKeyStore.setPrivateKey("TLS_CERT", clientKeys.private, listOf(clientCert))
-        val clientTrustStore = X509KeyStore("password")
-        clientTrustStore.setCertificate("TLS_ROOT", clientCert)
+        val clientKeyStoreRaw = X509KeyStore("password")
+        clientKeyStoreRaw.setPrivateKey("TLS_CERT", clientKeys.private, listOf(clientCert))
+        val clientKeyStore = CertificateStore.of(clientKeyStoreRaw, "password")
+
+        val clientTrustStoreRaw = X509KeyStore("password")
+        clientTrustStoreRaw.setCertificate("TLS_ROOT", clientCert)
+        val clientTrustStore = CertificateStore.of(clientTrustStoreRaw, "password")
         val amqpConfig = object : AMQPConfiguration {
-            override val keyStore: KeyStore = clientKeyStore.internal
-            override val keyStorePrivateKeyPassword: CharArray = "password".toCharArray()
-            override val trustStore: KeyStore = clientTrustStore.internal
+            override val keyStore = clientKeyStore
+            override val trustStore = clientTrustStore
             override val maxMessageSize: Int = maxMessageSize
             override val trace: Boolean = true
         }

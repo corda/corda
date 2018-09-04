@@ -13,7 +13,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
@@ -21,7 +21,6 @@ import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
 import rx.Subscription
 import java.io.ByteArrayOutputStream
-import java.security.KeyStore
 import java.security.SecureRandom
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -41,15 +40,15 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
     private var connectSubscriber: Subscription? = null
     private var receiveSubscriber: Subscription? = null
     private var amqpControlClient: AMQPClient? = null
-    private val controlLinkSSLConfiguration: SSLConfiguration
-    private val floatListenerSSLConfiguration: SSLConfiguration
+    private val controlLinkSSLConfiguration: MutualSslConfiguration
+    private val floatListenerSSLConfiguration: MutualSslConfiguration
     private val expectedCertificateSubject: CordaX500Name
     private val secureRandom: SecureRandom = newSecureRandom()
 
     init {
         statusFollower = ServiceStateCombiner(listOf(auditService, haService, filterService))
-        controlLinkSSLConfiguration = conf.bridgeInnerConfig?.customSSLConfiguration ?: conf
-        floatListenerSSLConfiguration = conf.bridgeInnerConfig?.customFloatOuterSSLConfiguration ?: conf
+        controlLinkSSLConfiguration = conf.bridgeInnerConfig?.customSSLConfiguration ?: conf.p2pSslOptions
+        floatListenerSSLConfiguration = conf.bridgeInnerConfig?.customFloatOuterSSLConfiguration ?: conf.p2pSslOptions
         expectedCertificateSubject = conf.bridgeInnerConfig!!.expectedCertificateSubject
     }
 
@@ -58,15 +57,13 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
         statusSubscriber = statusFollower.activeChange.subscribe({
             if (it) {
                 val floatAddresses = conf.bridgeInnerConfig!!.floatAddresses
-                val controlLinkKeyStore = controlLinkSSLConfiguration.loadSslKeyStore().internal
-                val controLinkKeyStorePrivateKeyPassword = controlLinkSSLConfiguration.keyStorePassword
-                val controlLinkTrustStore = controlLinkSSLConfiguration.loadTrustStore().internal
+                val controlLinkKeyStore = controlLinkSSLConfiguration.keyStore.get()
+                val controlLinkTrustStore = controlLinkSSLConfiguration.trustStore.get()
                 val amqpConfig = object : AMQPConfiguration {
                     override val userName: String? = null
                     override val password: String? = null
-                    override val keyStore: KeyStore = controlLinkKeyStore
-                    override val keyStorePrivateKeyPassword: CharArray = controLinkKeyStorePrivateKeyPassword.toCharArray()
-                    override val trustStore: KeyStore = controlLinkTrustStore
+                    override val keyStore = controlLinkKeyStore
+                    override val trustStore = controlLinkTrustStore
                     override val crlCheckSoftFail: Boolean = conf.crlCheckSoftFail
                     override val maxMessageSize: Int = maximumMessageSize
                     override val trace: Boolean = conf.enableAMQPPacketTrace
@@ -124,12 +121,12 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
         auditService.statusChangeEvent("Connection change on float control port $connectionChange")
         if (connectionChange.connected) {
             val (freshKeyStorePassword, freshKeyStoreKeyPassword, recodedKeyStore) = recodeKeyStore(floatListenerSSLConfiguration)
-            val trustStoreBytes = floatListenerSSLConfiguration.trustStoreFile.readAll()
+            val trustStoreBytes = floatListenerSSLConfiguration.trustStore.path.readAll()
             val activateMessage = ActivateFloat(recodedKeyStore,
                     freshKeyStorePassword,
                     freshKeyStoreKeyPassword,
                     trustStoreBytes,
-                    floatListenerSSLConfiguration.trustStorePassword.toCharArray())
+                    floatListenerSSLConfiguration.trustStore.password.toCharArray())
             val amqpActivateMessage = amqpControlClient!!.createMessage(activateMessage.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes,
                     FLOAT_CONTROL_TOPIC,
                     expectedCertificateSubject.toString(),
@@ -150,9 +147,9 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
     }
 
     // Recode KeyStore to use a fresh random password for entries and overall
-    private fun recodeKeyStore(sslConfiguration: SSLConfiguration): Triple<CharArray, CharArray, ByteArray> {
-        val keyStoreOriginal = sslConfiguration.loadSslKeyStore().internal
-        val originalKeyStorePassword = sslConfiguration.keyStorePassword.toCharArray()
+    private fun recodeKeyStore(sslConfiguration: MutualSslConfiguration): Triple<CharArray, CharArray, ByteArray> {
+        val keyStoreOriginal = sslConfiguration.keyStore.get().value.internal
+        val originalKeyStorePassword = sslConfiguration.keyStore.password.toCharArray()
         val freshKeyStorePassword = CharArray(20) { secureRandom.nextInt(0xD800).toChar() } // Stick to single character Unicode range
         val freshPrivateKeyPassword = CharArray(20) { secureRandom.nextInt(0xD800).toChar() } // Stick to single character Unicode range
         for (alias in keyStoreOriginal.aliases()) {

@@ -28,6 +28,7 @@ import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.curator.test.TestingServer
@@ -387,61 +388,76 @@ class BridgeIntegrationTest {
 
 
     private fun createArtemis(): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
+        val baseDirectory = tempFolder.root.toPath()
+        val certificatesDirectory = baseDirectory / "certificates"
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
-            doReturn(tempFolder.root.toPath()).whenever(it).baseDirectory
+            doReturn(baseDirectory).whenever(it).baseDirectory
+            doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName
-            doReturn("trustpass").whenever(it).trustStorePassword
-            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(signingCertificateStore).whenever(it).signingCertificateStore
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(NetworkHostAndPort("localhost", 11005)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000), externalBridge = true)).whenever(it).enterpriseConfiguration
         }
         val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", 11005), MAX_MESSAGE_SIZE)
-        val artemisClient = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", 11005), MAX_MESSAGE_SIZE)
+        val artemisClient = ArtemisMessagingClient(artemisConfig.p2pSslOptions, NetworkHostAndPort("localhost", 11005), MAX_MESSAGE_SIZE)
         artemisServer.start()
         artemisClient.start()
         return Pair(artemisServer, artemisClient)
     }
 
     private fun createArtemis2(): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
-        val originalCertsFolderPath = tempFolder.root.toPath() / "certificates"
-        val folderPath = tempFolder.root.toPath() / "artemis2"
+        val baseDirectory = tempFolder.root.toPath()
+        val originalCertsFolderPath = baseDirectory / "certificates"
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(originalCertsFolderPath)
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(originalCertsFolderPath)
+
+        val folderPath = baseDirectory / "artemis2"
         val newCertsFolderPath = folderPath / "certificates"
         newCertsFolderPath.createDirectories()
         (originalCertsFolderPath / "truststore.jks").copyToDirectory(newCertsFolderPath)
         (originalCertsFolderPath / "sslkeystore.jks").copyToDirectory(newCertsFolderPath)
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(folderPath).whenever(it).baseDirectory
+            doReturn(originalCertsFolderPath).whenever(it).certificatesDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName
-            doReturn("trustpass").whenever(it).trustStorePassword
-            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(signingCertificateStore).whenever(it).signingCertificateStore
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(NetworkHostAndPort("localhost", 12005)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000), externalBridge = true)).whenever(it).enterpriseConfiguration
         }
         val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", 12005), MAX_MESSAGE_SIZE)
-        val artemisClient = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", 12005), MAX_MESSAGE_SIZE)
+        val artemisClient = ArtemisMessagingClient(artemisConfig.p2pSslOptions, NetworkHostAndPort("localhost", 12005), MAX_MESSAGE_SIZE)
         return Pair(artemisServer, artemisClient)
     }
 
     private fun createDummyPeerArtemis(): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
-        val originalCertsFolderPath = tempFolder.root.toPath() / "certificates"
-        val folderPath = tempFolder.root.toPath() / "artemis3"
+        val baseDirectory = tempFolder.root.toPath()
+        val originalCertsFolderPath = baseDirectory / "certificates"
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(originalCertsFolderPath)
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(originalCertsFolderPath)
+
+        val folderPath = baseDirectory / "artemis3"
         val newCertsFolderPath = folderPath / "certificates"
         newCertsFolderPath.createDirectories()
         (originalCertsFolderPath / "truststore.jks").copyToDirectory(newCertsFolderPath)
         (originalCertsFolderPath / "sslkeystore.jks").copyToDirectory(newCertsFolderPath)
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(folderPath).whenever(it).baseDirectory
+            doReturn(newCertsFolderPath).whenever(it).certificatesDirectory
             doReturn(DUMMY_BANK_A_NAME).whenever(it).myLegalName
-            doReturn("trustpass").whenever(it).trustStorePassword
-            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(signingCertificateStore).whenever(it).signingCertificateStore
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(NetworkHostAndPort("localhost", 7890)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000), externalBridge = true)).whenever(it).enterpriseConfiguration
         }
         val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", 7890), MAX_MESSAGE_SIZE)
-        val artemisClient = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", 7890), MAX_MESSAGE_SIZE)
+        val artemisClient = ArtemisMessagingClient(artemisConfig.p2pSslOptions, NetworkHostAndPort("localhost", 7890), MAX_MESSAGE_SIZE)
         artemisServer.start()
         artemisClient.start()
         artemisClient.started!!.session.createQueue(SimpleString("${P2P_PREFIX}12345"), RoutingType.ANYCAST, SimpleString("${P2P_PREFIX}12345"), true)

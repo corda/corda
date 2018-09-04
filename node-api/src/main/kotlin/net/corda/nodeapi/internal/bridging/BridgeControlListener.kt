@@ -11,9 +11,9 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOT
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisSessionProvider
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
 import org.apache.activemq.artemis.api.core.ActiveMQQueueExistsException
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -23,8 +23,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.util.*
 
-class BridgeControlListener(val config: NodeSSLConfiguration,
-
+class BridgeControlListener(val config: MutualSslConfiguration,
                             socksProxyConfig: SocksProxyConfig? = null,
                             maxMessageSize: Int,
                             val artemisMessageClientFactory: () -> ArtemisSessionProvider) : AutoCloseable {
@@ -38,7 +37,7 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
     private var controlConsumer: ClientConsumer? = null
     private var notifyConsumer: ClientConsumer? = null
 
-    constructor(config: NodeSSLConfiguration,
+    constructor(config: MutualSslConfiguration,
                 p2pAddress: NetworkHostAndPort,
 
                 maxMessageSize: Int,
