@@ -1,3 +1,9 @@
+.. highlight:: kotlin
+.. raw:: html
+
+   <script type="text/javascript" src="_static/jquery.js"></script>
+   <script type="text/javascript" src="_static/codesets.js"></script>
+
 CLI UX Guide
 ============
 
@@ -11,11 +17,6 @@ Option names
 
 * Options should be specified on the command line using a double dash, e.g. ``--parameter``.
 * Options that consist of multiple words should be separated via hyphens e.g. ``--my-multiple-word-parameter-name``.
-* A ``--help`` option should be provided which details all possible options with a brief description and any short name equivalents.
-* A ``--version`` option that should output the version number of the software.
-* A ``--logging-level`` option should be provided which specifies the logging level to be used in any logging files. Acceptable values should be ``DEBUG``, ``TRACE``, ``INFO``, ``WARN`` and ``ERROR``.
-* A ``--verbose`` option should be provided which specifies that logging output should be displayed in the console.
-* A ``--install-completion`` option should be provided that creates and installs a bash completion file.
 
 Short names
 ~~~~~~~~~~~
@@ -23,7 +24,9 @@ Short names
 * Where possible a POSIX style short option should be provided for ease of use (see http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap12.html#tag_12_02).
 
   * These should be prefixed with a single hyphen.
-  * For example ``-v`` for ``--verbose``, ``-d`` for ``--dev-mode``.
+  * For example ``-V`` for ``--verbose``, ``-d`` for ``--dev-mode``.
+  * Consider adding short options for commands that would be ran regularly as part of troubleshooting/operational processes.
+  * Short options should not be used for commands that would be used just once, for example initialising/registration type tasks.
 
 * The picocli interface allows combinations of options without parameters, for example, ```-v`` and ```-d`` can be combined as ``-vd``.
 
@@ -38,6 +41,17 @@ Positional parameters
 
   * For example, avoid ``java -jar test.jar configfile1 cordapp1 cordapp2`` where parameter 1 is the config file and any subsequent parameters are the CorDapps.
   * Use ``java -jar test.jar cordapp1 cordapp2 --config-file configfile1`` instead.
+
+Standard options
+~~~~~~~~~~~~~~~~
+
+* A ``--help`` option should be provided which details all possible options with a brief description and any short name equivalents. A ``-h`` short option should also be provided.
+* A ``--version`` option that should output the version number of the software. A ``-V`` short option should also be provided.
+* A ``--logging-level`` option should be provided which specifies the logging level to be used in any logging files. Acceptable values should be ``DEBUG``, ``TRACE``, ``INFO``, ``WARN`` and ``ERROR``.
+* ``--verbose`` and ``--log-to-console`` options should be provided (both equivalent) which specifies that logging output should be displayed in the console.
+  A ``-v`` short option should also be provided.
+* A ``--install-shell-extensions`` option should be provided that creates and installs a bash completion file.
+
 
 Defaults
 ~~~~~~~~
@@ -57,6 +71,53 @@ Parameter stability
 ~~~~~~~~~~~~~~~~~~~
 
 * Avoid removing parameters. If, for some reason, a parameter needs to be renamed, add a new parameter with the new name and deprecate the old parameter, or alternatively keep both versions of the parameter.
+
+
+The ``CordaCliWrapper`` base class
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``CordaCliWrapper`` base class from the ``cliutils`` module should be used as a base where practicable, this will provide a set of default options out of the box.
+In order to use it, create a class containing your command line options using the syntax provided at (see the `picocli<https://picocli.info/#_options>`_ website for more information)
+
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        class UsefulUtility : CordaCliWrapper(
+            "useful-utility", // the alias to be used for this utility in bash. When --install-shell-extensions is run
+                              // you will be able to invoke this command by running <useful-utility --opts> from the command line
+            "A command line utility that is super useful!" // A description of this utility to be displayed when --help is run
+        ) {
+            @Option(names = ["--extra-usefulness", "-e"], // A list of the different ways this option can be referenced
+                    description = ["Use this option to add extra usefulness"] // Help description to be displayed for this option
+            )
+            private var extraUsefulness: Boolean = false // This default option will be shown in the help output
+
+            override fun runProgram(): Int { // override this function to run the actual program
+                try {
+                    // do some stuff
+                } catch (KnownException: ex) {
+                    return 100 // return a special exit code for known exceptions
+                }
+
+                return 0 // this is the exit code to be returned to the system
+            }
+        }
+
+
+Then in your ``main()`` method:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        import net.corda.cliutils.start
+
+        fun main(args: Array<String>) {
+            UsefulUtility().start(args)
+        }
+
 
 
 Application behavior
