@@ -4,21 +4,11 @@ package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
-import net.corda.core.cordapp.Cordapp
-import net.corda.core.cordapp.CordappConfig
-import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.*
-import net.corda.core.flows.FlowLogic
-import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.*
-import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
-import org.slf4j.MDC
 import rx.Observable
 import rx.Observer
 import rx.subjects.PublishSubject
@@ -388,18 +378,6 @@ fun <T, U : T> uncheckedCast(obj: T) = obj as U
 
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
 
-/** Provide access to internal method for AttachmentClassLoaderTests */
-@DeleteForDJVM
-fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
-    return toWireTransactionWithContext(services, serializationContext)
-}
-
-/** Provide access to internal method for AttachmentClassLoaderTests */
-@DeleteForDJVM
-fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
-    return toLedgerTransactionWithContext(services, serializationContext)
-}
-
 /** Returns the location of this class. */
 val Class<*>.location: URL get() = protectionDomain.codeSource.location
 
@@ -499,28 +477,12 @@ fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> = SignedD
 
 fun ByteBuffer.copyBytes(): ByteArray = ByteArray(remaining()).also { get(it) }
 
-fun createCordappContext(cordapp: Cordapp, attachmentId: SecureHash?, classLoader: ClassLoader, config: CordappConfig): CordappContext {
-    return CordappContext(cordapp, attachmentId, classLoader, config)
-}
-
 val PublicKey.hash: SecureHash get() = encoded.sha256()
-
-/** Checks if this flow is an idempotent flow. */
-fun Class<out FlowLogic<*>>.isIdempotentFlow(): Boolean {
-    return IdempotentFlow::class.java.isAssignableFrom(this)
-}
 
 /**
  * Extension method for providing a sumBy method that processes and returns a Long
  */
 fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long = this.map { selector(it) }.sum()
-
-/**
- * Ensures each log entry from the current thread will contain id of the transaction in the MDC.
- */
-internal fun SignedTransaction.pushToLoggingContext() {
-    MDC.put("tx_id", id.toString())
-}
 
 fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
     val payloadData: T = try {

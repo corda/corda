@@ -14,7 +14,6 @@ import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.Message
-import net.corda.node.services.messaging.MessagingService
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.User
@@ -108,9 +107,5 @@ fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> 
 fun StartedNodeServices.newContext(): InvocationContext = testContext(myInfo.chooseIdentity().name)
 
 fun InMemoryMessagingNetwork.MessageTransfer.getMessage(): Message = message
-
-internal interface InternalMockMessagingService : MessagingService {
-    fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer?
-}
 
 fun CordaRPCClient.start(user: User) = start(user.username, user.password)

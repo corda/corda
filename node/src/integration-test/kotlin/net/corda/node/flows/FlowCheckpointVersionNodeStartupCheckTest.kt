@@ -33,6 +33,8 @@ class FlowCheckpointVersionNodeStartupCheckTest {
         val classes = setOf(net.corda.testMessage.MessageState::class.java,
                 net.corda.testMessage.MessageContract::class.java,
                 net.test.cordapp.v1.SendMessageFlow::class.java,
+                net.corda.testMessage.MessageSchema::class.java,
+                net.corda.testMessage.MessageSchemaV1::class.java,
                 net.test.cordapp.v1.Record::class.java)
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery"), invokeRpc("vaultTrack")))
     }

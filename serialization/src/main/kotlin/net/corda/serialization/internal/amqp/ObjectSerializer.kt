@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.internal.isConcreteClass
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
@@ -18,7 +19,7 @@ import kotlin.reflect.jvm.javaConstructor
  */
 open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type get() = clazz
-    open val kotlinConstructor = constructorForDeserialization(clazz)
+    open val kotlinConstructor = if (clazz.asClass().isConcreteClass) constructorForDeserialization(clazz) else null
     val javaConstructor by lazy { kotlinConstructor?.javaConstructor }
 
     companion object {
@@ -63,7 +64,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
         if (propertySerializers.size != javaConstructor?.parameterCount &&
                 javaConstructor?.parameterCount ?: 0 > 0
         ) {
-            throw NotSerializableException("Serialization constructor for class $type expects "
+            throw AMQPNotSerializableException(type, "Serialization constructor for class $type expects "
                     + "${javaConstructor?.parameterCount} parameters but we have ${propertySerializers.size} "
                     + "properties to serialize.")
         }
@@ -86,7 +87,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             context: SerializationContext): Any = ifThrowsAppend({ clazz.typeName }) {
         if (obj is List<*>) {
             if (obj.size > propertySerializers.size) {
-                throw NotSerializableException("Too many properties in described type $typeName")
+                throw AMQPNotSerializableException(type, "Too many properties in described type $typeName")
             }
 
             return if (propertySerializers.byConstructor) {
@@ -95,7 +96,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
                 readObjectBuildViaSetters(obj, schemas, input, context)
             }
         } else {
-            throw NotSerializableException("Body of described type is unexpected $obj")
+            throw AMQPNotSerializableException(type, "Body of described type is unexpected $obj")
         }
     }
 
@@ -120,7 +121,8 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             context: SerializationContext): Any = ifThrowsAppend({ clazz.typeName }) {
         logger.trace { "Calling setter based construction for ${clazz.typeName}" }
 
-        val instance: Any = javaConstructor?.newInstanceUnwrapped() ?: throw NotSerializableException(
+        val instance: Any = javaConstructor?.newInstanceUnwrapped() ?: throw AMQPNotSerializableException(
+                type,
                 "Failed to instantiate instance of object $clazz")
 
         // read the properties out of the serialised form, since we're invoking the setters the order we
@@ -149,13 +151,15 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
         logger.trace { "Calling constructor: '$javaConstructor' with properties '$properties'" }
 
         if (properties.size != javaConstructor?.parameterCount) {
-            throw NotSerializableException("Serialization constructor for class $type expects "
+            throw AMQPNotSerializableException(type, "Serialization constructor for class $type expects "
                     + "${javaConstructor?.parameterCount} parameters but we have ${properties.size} "
                     + "serialized properties.")
         }
 
         return javaConstructor?.newInstanceUnwrapped(*properties.toTypedArray())
-                ?: throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
+                ?: throw AMQPNotSerializableException(
+                        type,
+                        "Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
     }
 
     private fun <T> Constructor<T>.newInstanceUnwrapped(vararg args: Any?): T {

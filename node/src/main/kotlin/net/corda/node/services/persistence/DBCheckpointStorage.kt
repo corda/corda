@@ -15,7 +15,9 @@ import java.util.stream.Stream
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
-import javax.persistence.Lob
+import org.hibernate.annotations.Type
+import java.sql.Connection
+import java.sql.SQLException
 
 /**
  * Simple checkpoint key value storage in DB.
@@ -30,18 +32,27 @@ class DBCheckpointStorage : CheckpointStorage {
             @Column(name = "checkpoint_id", length = 64, nullable = false)
             var checkpointId: String = "",
 
-            @Lob
+            @Type(type = "corda-blob")
             @Column(name = "checkpoint_value", nullable = false)
             var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
     )
 
     override fun addCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>) {
-        currentDBSession().saveOrUpdate(DBCheckpoint().apply {
+        currentDBSession().save(DBCheckpoint().apply {
             checkpointId = id.uuid.toString()
             this.checkpoint = checkpoint.bytes
             log.debug { "Checkpoint $checkpointId, size=${this.checkpoint.size}" }
         })
     }
+
+    override fun updateCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>) {
+        currentDBSession().update(DBCheckpoint().apply {
+            checkpointId = id.uuid.toString()
+            this.checkpoint = checkpoint.bytes
+            log.debug { "Checkpoint $checkpointId, size=${this.checkpoint.size}" }
+        })
+    }
+
 
     override fun removeCheckpoint(id: StateMachineRunId): Boolean {
         val session = currentDBSession()
@@ -66,4 +77,18 @@ class DBCheckpointStorage : CheckpointStorage {
             StateMachineRunId(UUID.fromString(it.checkpointId)) to SerializedBytes<Checkpoint>(it.checkpoint)
         }
     }
+
+    override fun getCheckpointCount(connection: Connection): Long =
+        try {
+            connection.prepareStatement("select count(*) from node_checkpoints").use { ps ->
+                ps.executeQuery().use { rs ->
+                    rs.next()
+                    rs.getLong(1)
+                }
+            }
+        } catch (e: SQLException) {
+            // Happens when the table was not created yet.
+            0L
+        }
+
 }

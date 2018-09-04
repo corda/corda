@@ -34,11 +34,12 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: Seria
     ): Any {
         val enumName = (obj as List<*>)[0] as String
         val enumOrd = obj[1] as Int
-        val fromOrd = type.asClass()!!.enumConstants[enumOrd] as Enum<*>?
+        val fromOrd = type.asClass().enumConstants[enumOrd] as Enum<*>?
 
         if (enumName != fromOrd?.name) {
-            throw NotSerializableException("Deserializing obj as enum $type with value $enumName.$enumOrd but "
-                    + "ordinality has changed")
+            throw AMQPNotSerializableException(
+                    type,
+                    "Deserializing obj as enum $type with value $enumName.$enumOrd but ordinality has changed")
         }
         return fromOrd
     }
@@ -46,7 +47,7 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: Seria
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
                              context: SerializationContext, debugIndent: Int
     ) {
-        if (obj !is Enum<*>) throw NotSerializableException("Serializing $obj as enum when it isn't")
+        if (obj !is Enum<*>) throw AMQPNotSerializableException(type, "Serializing $obj as enum when it isn't")
 
         data.withDescribed(typeNotation.descriptor) {
             withList {

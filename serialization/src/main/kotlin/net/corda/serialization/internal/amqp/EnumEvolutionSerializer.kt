@@ -80,7 +80,7 @@ class EnumEvolutionSerializer(
             val renameRules: List<RenameSchemaTransform>? = uncheckedCast(transforms[TransformTypes.Rename])
 
             // What values exist on the enum as it exists on the class path
-            val localValues = new.type.asClass()!!.enumConstants.map { it.toString() }
+            val localValues = new.type.asClass().enumConstants.map { it.toString() }
 
             val conversions: MutableMap<String, String> = localValues
                     .union(defaultRules?.map { it.new }?.toSet() ?: emptySet())
@@ -112,7 +112,9 @@ class EnumEvolutionSerializer(
                     .associateBy({ it.value.toInt() }, { conversions[it.name] }))
 
             if (ordinals.filterNot { serialisedOrds[it.value] == it.key }.isNotEmpty()) {
-                throw NotSerializableException("Constants have been reordered, additions must be appended to the end")
+                throw AMQPNotSerializableException(
+                        new.type,
+                        "Constants have been reordered, additions must be appended to the end")
             }
 
             return EnumEvolutionSerializer(new.type, factory, conversions, ordinals)
@@ -125,10 +127,10 @@ class EnumEvolutionSerializer(
         val enumName = (obj as List<*>)[0] as String
 
         if (enumName !in conversions) {
-            throw NotSerializableException("No rule to evolve enum constant $type::$enumName")
+            throw AMQPNotSerializableException(type, "No rule to evolve enum constant $type::$enumName")
         }
 
-        return type.asClass()!!.enumConstants[ordinals[conversions[enumName]]!!]
+        return type.asClass().enumConstants[ordinals[conversions[enumName]]!!]
     }
 
     override fun writeClassInfo(output: SerializationOutput) {

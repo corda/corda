@@ -22,7 +22,6 @@ const val NODE_DATABASE_PREFIX = "node_"
 // This class forms part of the node config and so any changes to it must be handled with care
 data class DatabaseConfig(
         val initialiseSchema: Boolean = true,
-        val serverNameTablePrefix: String = "",
         val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ,
         val exportHibernateJMXStatistics: Boolean = false,
         val mappedSchemaCacheSize: Long = 100
@@ -51,6 +50,7 @@ val contextDatabaseOrNull: CordaPersistence? get() = _contextDatabase.get()
 class CordaPersistence(
         databaseConfig: DatabaseConfig,
         schemas: Set<MappedSchema>,
+        val jdbcUrl: String,
         attributeConverters: Collection<AttributeConverter<*, *>> = emptySet()
 ) : Closeable {
     companion object {
@@ -60,7 +60,7 @@ class CordaPersistence(
     private val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
-            HibernateConfiguration(schemas, databaseConfig, attributeConverters)
+            HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl)
         }
     }
     val entityManagerFactory get() = hibernateConfig.sessionFactoryForRegisteredSchemas
@@ -83,7 +83,6 @@ class CordaPersistence(
         // Check not in read-only mode.
         transaction {
             check(!connection.metaData.isReadOnly) { "Database should not be readonly." }
-            checkCorrectAttachmentsContractsTableName(connection)
         }
     }
 
@@ -271,18 +270,3 @@ private fun Throwable.hasSQLExceptionCause(): Boolean =
         }
 
 class CouldNotCreateDataSourceException(override val message: String?, override val cause: Throwable? = null) : Exception()
-
-class IncompatibleAttachmentsContractsTableName(override val message: String?, override val cause: Throwable? = null) : Exception()
-
-private fun checkCorrectAttachmentsContractsTableName(connection: Connection) {
-    val correctName = "NODE_ATTACHMENTS_CONTRACTS"
-    val incorrectV30Name = "NODE_ATTACHMENTS_CONTRACT_CLASS_NAME"
-    val incorrectV31Name = "NODE_ATTCHMENTS_CONTRACTS"
-
-    fun warning(incorrectName: String, version: String) = "The database contains the older table name $incorrectName instead of $correctName, see upgrade notes to migrate from Corda database version $version https://docs.corda.net/head/upgrade-notes.html."
-
-    if (!connection.metaData.getTables(null, null, correctName, null).next()) {
-        if (connection.metaData.getTables(null, null, incorrectV30Name, null).next()) { throw IncompatibleAttachmentsContractsTableName(warning(incorrectV30Name, "3.0")) }
-        if (connection.metaData.getTables(null, null, incorrectV31Name, null).next()) { throw IncompatibleAttachmentsContractsTableName(warning(incorrectV31Name, "3.1")) }
-    }
-}

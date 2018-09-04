@@ -1,7 +1,6 @@
 package net.corda.serialization.internal.amqp
 
 import com.google.common.primitives.Primitives
-import com.google.common.reflect.TypeResolver
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
@@ -54,7 +53,7 @@ open class SerializerFactory(
         val whitelist: ClassWhitelist,
         val classCarpenter: ClassCarpenter,
         private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
-        val fingerPrinter: FingerPrinter = SerializerFingerPrinter(),
+        val fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
         private val serializersByType: MutableMap<Type, AMQPSerializer<Any>>,
         val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>>,
         private val customSerializers: MutableList<SerializerFor>,
@@ -66,13 +65,13 @@ open class SerializerFactory(
     constructor(whitelist: ClassWhitelist,
                 classCarpenter: ClassCarpenter,
                 evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
-                fingerPrinter: FingerPrinter = SerializerFingerPrinter(),
+                fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
                 onlyCustomSerializers: Boolean = false
     ) : this(
             whitelist,
             classCarpenter,
             evolutionSerializerGetter,
-            fingerPrinter,
+            fingerPrinterConstructor,
             ConcurrentHashMap(),
             ConcurrentHashMap(),
             CopyOnWriteArrayList(),
@@ -86,18 +85,16 @@ open class SerializerFactory(
                 carpenterClassLoader: ClassLoader,
                 lenientCarpenter: Boolean = false,
                 evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
-                fingerPrinter: FingerPrinter = SerializerFingerPrinter(),
+                fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
                 onlyCustomSerializers: Boolean = false
     ) : this(
             whitelist,
             ClassCarpenterImpl(whitelist, carpenterClassLoader, lenientCarpenter),
             evolutionSerializerGetter,
-            fingerPrinter,
+            fingerPrinterConstructor,
             onlyCustomSerializers)
 
-    init {
-        fingerPrinter.setOwner(this)
-    }
+    val fingerPrinter by lazy { fingerPrinterConstructor(this) }
 
     val classloader: ClassLoader get() = classCarpenter.classloader
 
@@ -118,10 +115,9 @@ open class SerializerFactory(
         // can be useful to enable but will be *extremely* chatty if you do
         logger.trace { "Get Serializer for $actualClass ${declaredType.typeName}" }
 
-        val declaredClass = declaredType.asClass() ?: throw NotSerializableException(
-                "Declared types of $declaredType are not supported.")
-
-        val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
+        val declaredClass = declaredType.asClass()
+        val actualType: Type = if (actualClass == null) declaredType
+            else inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
 
         val serializer = when {
         // Declared class may not be set to Collection, but actual class could be a collection.
@@ -144,9 +140,11 @@ open class SerializerFactory(
                 }
             }
             Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
-                logger.info("class=[${actualClass?.simpleName} | $declaredClass] is an enumeration "
-                        + "declaredType=${declaredType.typeName} "
-                        + "isEnum=${declaredType::class.java.isEnum}")
+                logger.trace {
+                    "class=[${actualClass?.simpleName} | $declaredClass] is an enumeration " +
+                    "declaredType=${declaredType.typeName} " +
+                    "isEnum=${declaredType::class.java.isEnum}"
+                }
 
                 serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
                     whitelist.requireWhitelisted(actualType)
@@ -161,75 +159,6 @@ open class SerializerFactory(
         serializersByDescriptor.putIfAbsent(serializer.typeDescriptor, serializer)
 
         return serializer
-    }
-
-    /**
-     * Try and infer concrete types for any generics type variables for the actual class encountered,
-     * based on the declared type.
-     */
-    // TODO: test GenericArrayType
-    private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>,
-                                   declaredType: Type): Type? = when (declaredType) {
-        is ParameterizedType -> inferTypeVariables(actualClass, declaredClass, declaredType)
-    // Nothing to infer, otherwise we'd have ParameterizedType
-        is Class<*> -> actualClass
-        is GenericArrayType -> {
-            val declaredComponent = declaredType.genericComponentType
-            inferTypeVariables(actualClass?.componentType, declaredComponent.asClass()!!, declaredComponent)?.asArray()
-        }
-        is TypeVariable<*> -> actualClass
-        is WildcardType -> actualClass
-        else -> null
-    }
-
-    /**
-     * Try and infer concrete types for any generics type variables for the actual class encountered, based on the declared
-     * type, which must be a [ParameterizedType].
-     */
-    private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>, declaredType: ParameterizedType): Type? {
-        if (actualClass == null || declaredClass == actualClass) {
-            return null
-        } else if (declaredClass.isAssignableFrom(actualClass)) {
-            return if (actualClass.typeParameters.isNotEmpty()) {
-                // The actual class can never have type variables resolved, due to the JVM's use of type erasure, so let's try and resolve them
-                // Search for declared type in the inheritance hierarchy and then see if that fills in all the variables
-                val implementationChain: List<Type>? = findPathToDeclared(actualClass, declaredType, mutableListOf())
-                if (implementationChain != null) {
-                    val start = implementationChain.last()
-                    val rest = implementationChain.dropLast(1).drop(1)
-                    val resolver = rest.reversed().fold(TypeResolver().where(start, declaredType)) { resolved, chainEntry ->
-                        val newResolved = resolved.resolveType(chainEntry)
-                        TypeResolver().where(chainEntry, newResolved)
-                    }
-                    // The end type is a special case as it is a Class, so we need to fake up a ParameterizedType for it to get the TypeResolver to do anything.
-                    val endType = DeserializedParameterizedType(actualClass, actualClass.typeParameters)
-                    val resolvedType = resolver.resolveType(endType)
-                    resolvedType
-                } else throw NotSerializableException("No inheritance path between actual $actualClass and declared $declaredType.")
-            } else actualClass
-        } else throw NotSerializableException("Found object of type $actualClass in a property expecting $declaredType")
-    }
-
-    // Stop when reach declared type or return null if we don't find it.
-    private fun findPathToDeclared(startingType: Type, declaredType: Type, chain: MutableList<Type>): List<Type>? {
-        chain.add(startingType)
-        val startingClass = startingType.asClass()
-        if (startingClass == declaredType.asClass()) {
-            // We're done...
-            return chain
-        }
-        // Now explore potential options of superclass and all interfaces
-        val superClass = startingClass?.genericSuperclass
-        val superClassChain = if (superClass != null) {
-            val resolved = TypeResolver().where(startingClass.asParameterizedType(), startingType.asParameterizedType()).resolveType(superClass)
-            findPathToDeclared(resolved, declaredType, ArrayList(chain))
-        } else null
-        if (superClassChain != null) return superClassChain
-        for (iface in startingClass?.genericInterfaces ?: emptyArray()) {
-            val resolved = TypeResolver().where(startingClass!!.asParameterizedType(), startingType.asParameterizedType()).resolveType(iface)
-            return findPathToDeclared(resolved, declaredType, ArrayList(chain)) ?: continue
-        }
-        return null
     }
 
     /**
@@ -251,7 +180,7 @@ open class SerializerFactory(
      * that expects to find getters and a constructor with a parameter for each property.
      */
     open fun register(customSerializer: CustomSerializer<out Any>) {
-        logger.info ("action=\"Registering custom serializer\", class=\"${customSerializer.type}\"")
+        logger.trace("action=\"Registering custom serializer\", class=\"${customSerializer.type}\"")
         if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
             customSerializers += customSerializer
             serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
@@ -262,7 +191,7 @@ open class SerializerFactory(
     }
 
     fun registerExternal(customSerializer: CorDappCustomSerializer) {
-        logger.info ("action=\"Registering external serializer\", class=\"${customSerializer.type}\"")
+        logger.trace("action=\"Registering external serializer\", class=\"${customSerializer.type}\"")
         if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
             customSerializers += customSerializer
             serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
@@ -276,14 +205,14 @@ open class SerializerFactory(
     private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor, sentinel: Boolean = false) {
         val metaSchema = CarpenterMetaSchema.newInstance()
         for (typeNotation in schemaAndDescriptor.schemas.schema.types) {
-            logger.debug { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=${typeNotation.name}" }
+            logger.trace { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=${typeNotation.name}" }
             try {
                 val serialiser = processSchemaEntry(typeNotation)
                 // if we just successfully built a serializer for the type but the type fingerprint
                 // doesn't match that of the serialised object then we are dealing with  different
                 // instance of the class, as such we need to build an EvolutionSerializer
                 if (serialiser.typeDescriptor != typeNotation.descriptor.name) {
-                    logger.info("typeNotation=${typeNotation.name} action=\"requires Evolution\"")
+                    logger.trace { "typeNotation=${typeNotation.name} action=\"requires Evolution\"" }
                     getEvolutionSerializer(typeNotation, serialiser, schemaAndDescriptor.schemas)
                 }
             } catch (e: ClassNotFoundException) {
@@ -292,7 +221,7 @@ open class SerializerFactory(
                     throw e
                 }
                 else {
-                    logger.info("typeNotation=\"${typeNotation.name}\" action=\"carpentry required\"")
+                    logger.trace { "typeNotation=\"${typeNotation.name}\" action=\"carpentry required\"" }
                 }
                 metaSchema.buildFor(typeNotation, classloader)
             }
@@ -317,7 +246,7 @@ open class SerializerFactory(
 
             // prevent carpenter exceptions escaping into the world, convert things into a nice
             // NotSerializableException for when this escapes over the wire
-            throw NotSerializableException(e.name)
+            NotSerializableException(e.name)
         }
         processSchema(schemaAndDescriptor, true)
     }
@@ -342,7 +271,9 @@ open class SerializerFactory(
     private fun processCompositeType(typeNotation: CompositeType): AMQPSerializer<Any> {
         // TODO: class loader logic, and compare the schema.
         val type = typeForName(typeNotation.name, classloader)
-        return get(type.asClass() ?: throw NotSerializableException("Unable to build composite type for $type"), type)
+        return get(
+                type.asClass(),
+                type)
     }
 
     private fun makeClassSerializer(
@@ -354,13 +285,15 @@ open class SerializerFactory(
         if (clazz.isSynthetic) {
             // Explicitly ban synthetic classes, we have no way of recreating them when deserializing. This also
             // captures Lambda expressions and other anonymous functions
-            throw NotSerializableException(type.typeName)
+            throw AMQPNotSerializableException(
+                    type,
+                    "Serializer does not support synthetic classes")
         } else if (isPrimitive(clazz)) {
             AMQPPrimitiveSerializer(clazz)
         } else {
             findCustomSerializer(clazz, declaredType) ?: run {
                 if (onlyCustomSerializers) {
-                    throw NotSerializableException("Only allowing custom serializers")
+                    throw AMQPNotSerializableException(type, "Only allowing custom serializers")
                 }
                 if (type.isArray()) {
                     // Don't need to check the whitelist since each element will come back through the whitelisting process.
@@ -385,7 +318,6 @@ open class SerializerFactory(
     }
 
     private fun doFindCustomSerializer(key: CustomSerializersCacheKey): AMQPSerializer<Any>? {
-
         val (clazz, declaredType) = key
 
         // e.g. Imagine if we provided a Map serializer this way, then it won't work if the declared type is
@@ -393,7 +325,7 @@ open class SerializerFactory(
         // super type.  Could be done, but do we need it?
         for (customSerializer in customSerializers) {
             if (customSerializer.isSerializerFor(clazz)) {
-                val declaredSuperClass = declaredType.asClass()?.superclass
+                val declaredSuperClass = declaredType.asClass().superclass
 
 
                 return if (declaredSuperClass == null
@@ -471,7 +403,7 @@ open class SerializerFactory(
             is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
             is WildcardType -> "?"
             is TypeVariable<*> -> "?"
-            else -> throw NotSerializableException("Unable to render type $type to a string.")
+            else -> throw AMQPNotSerializableException(type, "Unable to render type $type to a string.")
         }
 
         private fun typeForName(name: String, classloader: ClassLoader): Type {
@@ -482,7 +414,7 @@ open class SerializerFactory(
                 } else if (elementType is Class<*>) {
                     java.lang.reflect.Array.newInstance(elementType, 0).javaClass
                 } else {
-                    throw NotSerializableException("Not able to deserialize array type: $name")
+                    throw AMQPNoTypeNotSerializableException("Not able to deserialize array type: $name")
                 }
             } else if (name.endsWith("[p]")) {
                 // There is no need to handle the ByteArray case as that type is coercible automatically
@@ -496,7 +428,7 @@ open class SerializerFactory(
                     "double[p]" -> DoubleArray::class.java
                     "short[p]" -> ShortArray::class.java
                     "long[p]" -> LongArray::class.java
-                    else -> throw NotSerializableException("Not able to deserialize array type: $name")
+                    else -> throw AMQPNoTypeNotSerializableException("Not able to deserialize array type: $name")
                 }
             } else {
                 DeserializedParameterizedType.make(name, classloader)

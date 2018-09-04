@@ -26,6 +26,9 @@ object VaultSchema
 @CordaSerializable
 object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, version = 1,
         mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java, VaultTxnNote::class.java)) {
+
+    override val migrationResource = "vault-schema.changelog-master"
+
     @Entity
     @Table(name = "vault_states", indexes = [Index(name = "state_status_idx", columnList = "state_status"), Index(name = "lock_id_idx", columnList = "lock_id, state_status")])
     class VaultStates(
@@ -56,6 +59,10 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
              *  will contain a temporary unique [UUID] obtained from a flow session */
             @Column(name = "lock_id", nullable = true)
             var lockId: String? = null,
+
+            /** Used to determine whether a state abides by the relevancy rules of the recording node */
+            @Column(name = "is_relevant", nullable = false)
+            var isRelevant: Vault.RelevancyStatus,
 
             /** refers to the last time a lock was taken (reserved) or updated (released, re-reserved) */
             @Column(name = "lock_timestamp", nullable = true)

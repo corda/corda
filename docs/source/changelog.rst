@@ -6,7 +6,24 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* The RPC client library now checks at startup whether the server is of the client libraries major version or higher.
+  Therefore to connect to a Corda 4 node you must use version 4 or lower of the library. This behaviour can be overridden
+  by specifying a lower number in the ``CordaRPCClientConfiguration`` class.
+
+* Removed experimental feature ``CordformDefinition``
+
+* Vault query fix: support query by parent classes of Contract State classes (see https://github.com/corda/corda/issues/3714)
+
+* Added ``registerResponderFlow`` method to ``StartedMockNode``, to support isolated testing of responder flow behaviour.
+
+* "app", "rpc", "p2p" and "unknown" are no longer allowed as uploader values when importing attachments. These are used
+  internally in security sensitive code.
+
 * Introduced ``TestCorDapp`` and utilities to support asymmetric setups for nodes through ``DriverDSL``, ``MockNetwork`` and ``MockServices``.
+
+* Change type of the ``checkpoint_value`` column. Please check the upgrade-notes on how to update your database.
+
+* Removed buggy :serverNameTablePrefix: configuration.
 
 * ``freeLocalHostAndPort``, ``freePort``, and ``getFreeLocalPorts`` from ``TestUtils`` have been deprecated as they
   don't provide any guarantee the returned port will be available which can result in flaky tests. Use ``PortAllocation.Incremental``
@@ -131,7 +148,7 @@ Unreleased
     Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
   * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
   * The deprecated web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
-  * Property keys with double quotes (e.g. `"key"`) in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
+  * Property keys with double quotes (e.g. "key") in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
 
 * Added public support for creating ``CordaRPCClient`` using SSL. For this to work the node needs to provide client applications
   a certificate to be added to a truststore. See :doc:`tutorial-clientrpc-api`
@@ -148,7 +165,7 @@ Unreleased
 
   * The whitelist.txt file is no longer needed. The existing network parameters file is used to update the current contracts
     whitelist.
-  * The CorDapp jars are also copied to each nodes' `cordapps` directory.
+  * The CorDapp jars are also copied to each nodes' ``cordapps`` directory.
 
 * Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation of internal data.
 
@@ -158,7 +175,7 @@ Unreleased
   reference to the outer class) as per the Java documentation `here <https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html>`_
   we are disallowing this as the paradigm in general makes little sense for contract states.
 
-* Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
+* Node can be shut down abruptly by ``shutdown`` function in ``CordaRPCOps`` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
 
 * API change: ``net.corda.core.schemas.PersistentStateRef`` fields (index and txId) are now non-nullable.
   The fields were always effectively non-nullable - values were set from non-nullable fields of other objects.
@@ -172,11 +189,18 @@ Unreleased
 
 * Table name with a typo changed from ``NODE_ATTCHMENTS_CONTRACTS`` to ``NODE_ATTACHMENTS_CONTRACTS``.
 
-* Node logs a warning for any ``MappedSchema`` containing a JPA entity referencing another JPA entity from a different ``MappedSchema`.
-  The log entry starts with `Cross-reference between MappedSchemas.`.
+* Node logs a warning for any ``MappedSchema`` containing a JPA entity referencing another JPA entity from a different ``MappedSchema``.
+  The log entry starts with "Cross-reference between MappedSchemas".
   API: Persistence documentation no longer suggests mapping between different schemas.
 
 * Upgraded Artemis to v2.6.2.
+
+* Introduced the concept of "reference input states". A reference input state is a ``ContractState`` which can be referred
+  to in a transaction by the contracts of input and output states but whose contract is not executed as part of the
+  transaction verification process and is not consumed when the transaction is committed to the ledger but is checked
+  for "current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a
+  normal state when it occurs in an input or output position. *This feature is only available on Corda networks running
+  with a minimum platform version of 4.*
 
 .. _changelog_v3.1:
 

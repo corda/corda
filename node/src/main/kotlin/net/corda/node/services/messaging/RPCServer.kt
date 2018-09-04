@@ -13,16 +13,13 @@ import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LifeCycle
+import net.corda.core.internal.buildNamed
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
 import net.corda.core.serialization.deserialize
-import net.corda.core.utilities.Try
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.days
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.seconds
+import net.corda.core.utilities.*
 import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.serialization.amqp.RpcServerObservableSerializer
@@ -157,7 +154,7 @@ class RPCServer(
             log.debug { "Unsubscribing from Observable with id $key because of $cause" }
             value!!.subscription.unsubscribe()
         }
-        return Caffeine.newBuilder().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).build()
+        return Caffeine.newBuilder().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).buildNamed("RPCServer_observableSubscription")
     }
 
     fun start(activeMqServerControl: ActiveMQServerControl) {
@@ -247,9 +244,10 @@ class RPCServer(
         }
     }
 
-    fun close() {
+    fun close(queueDrainTimeout: Duration = 5.seconds) {
+        // Putting Stop message onto the queue will eventually make senderThread to stop.
         sendJobQueue.put(RpcSendJob.Stop)
-        senderThread?.join()
+        senderThread?.join(queueDrainTimeout.toMillis())
         reaperScheduledFuture?.cancel(false)
         rpcExecutor?.shutdownNow()
         reaperExecutor?.shutdownNow()
@@ -308,7 +306,18 @@ class RPCServer(
     private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
         lifeCycle.requireState(State.STARTED)
         val clientToServer = RPCApi.ClientToServer.fromClientMessage(artemisMessage)
-        log.debug { "-> RPC -> $clientToServer" }
+        if (log.isDebugEnabled) {
+            when (clientToServer) {
+                is RPCApi.ClientToServer.RpcRequest -> {
+                    val username = artemisMessage.getStringProperty("_AMQ_VALIDATED_USER") ?: "(unknown)"
+                    // Don't print the whole object because most of the data is useless.
+                    log.debug { "-> RPC by $username -> ${clientToServer.methodName}" }
+                }
+                is RPCApi.ClientToServer.ObservablesClosed -> {
+                    log.debug { "-> RPC observable closed -> $clientToServer"}
+                }
+            }
+        }
         try {
             when (clientToServer) {
                 is RPCApi.ClientToServer.RpcRequest -> {
@@ -352,12 +361,15 @@ class RPCServer(
         return Try.on {
             try {
                 CURRENT_RPC_CONTEXT.set(context)
-                log.debug { "Calling $methodName" }
+                log.trace { "Calling $methodName" }
                 val method = methodTable[methodName] ?:
                         throw RPCException("Received RPC for unknown method $methodName - possible client/server version skew?")
                 method.invoke(ops, *arguments.toTypedArray())
             } catch (e: InvocationTargetException) {
                 throw e.cause ?: RPCException("Caught InvocationTargetException without cause")
+            } catch (e: Exception) {
+                log.warn("Caught exception attempting to invoke RPC $methodName", e)
+                throw e
             } finally {
                 CURRENT_RPC_CONTEXT.remove()
             }

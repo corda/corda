@@ -23,13 +23,13 @@ import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
-import net.corda.node.utilities.registration.UnableToRegisterNodeWithDoormanException
+import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
-import net.corda.nodeapi.internal.persistence.IncompatibleAttachmentsContractsTableName
+import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -37,11 +37,14 @@ import org.slf4j.bridge.SLF4JBridgeHandler
 import sun.misc.VMSupport
 import java.io.Console
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.DayOfWeek
+import java.time.ZonedDateTime
 import java.util.*
 import kotlin.system.exitProcess
 
@@ -68,10 +71,7 @@ open class NodeStartup(val args: Array<String>) {
 
         val registrationMode = checkRegistrationMode()
         val cmdlineOptions: CmdLineOptions = if (registrationMode && !args.contains("--initial-registration")) {
-            "Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.".let {
-                println(it)
-                logger.info(it)
-            }
+            println("Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.")
             // Pretend that the node was started with `--initial-registration` to help prevent user error.
             NodeArgsParser().parseOrExit(*args.plus("--initial-registration"))
         } else {
@@ -98,102 +98,121 @@ open class NodeStartup(val args: Array<String>) {
 
         drawBanner(versionInfo)
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
-        val conf = try {
-            val (rawConfig, conf0Result) = loadConfigFile(cmdlineOptions)
-            if (cmdlineOptions.devMode) {
-                println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
-            }
-            val conf0 = conf0Result.getOrThrow()
-            if (cmdlineOptions.bootstrapRaftCluster) {
-                if (conf0 is NodeConfigurationImpl) {
-                    println("Bootstrapping raft cluster (starting up as seed node).")
-                    // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
-                    conf0.copy(notary = conf0.notary?.copy(raft = conf0.notary?.raft?.copy(clusterAddresses = emptyList())))
-                } else {
-                    println("bootstrap-raft-notaries flag not recognized, exiting...")
-                    return false
-                }
-            } else {
-                conf0
-            }
-        } catch (e: UnknownConfigurationKeysException) {
-            logger.error(e.message)
-            return false
-        } catch (e: ConfigException.IO) {
-            println("""
-                Unable to load the node config file from '${cmdlineOptions.configFile}'.
 
-                Try experimenting with the --base-directory flag to change which directory the node
-                is looking in, or use the --config-file flag to specify it explicitly.
-            """.trimIndent())
-            return false
-        } catch (e: Exception) {
-            logger.error("Unexpected error whilst reading node configuration", e)
-            return false
-        }
-        val errors = conf.validate()
+        val configuration = (attempt { loadConfiguration(cmdlineOptions) }.doOnException(handleConfigurationLoadingError(cmdlineOptions.configFile)) as? Try.Success)?.let(Try.Success<NodeConfiguration>::value) ?: return false
+
+        val errors = configuration.validate()
         if (errors.isNotEmpty()) {
-            logger.error("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
+            logger.error("Invalid node configuration. Errors were:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
             return false
         }
 
-        try {
-            banJavaSerialisation(conf)
-            preNetworkRegistration(conf)
-            if (cmdlineOptions.nodeRegistrationOption != null) {
-                // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
-                registerWithNetwork(conf, versionInfo, cmdlineOptions.nodeRegistrationOption)
-                // At this point the node registration was succesfull. We can delete the marker file.
-                deleteNodeRegistrationMarker(cmdlineOptions.baseDirectory)
-                return true
-            }
-            logStartupInfo(versionInfo, cmdlineOptions, conf)
-        } catch (e: UnableToRegisterNodeWithDoormanException) {
-            logger.warn("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.")
-            return false
-        } catch (e: Exception) {
-            logger.error("Exception during node registration", e)
-            return false
+        attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success ?: return false
+
+        attempt { preNetworkRegistration(configuration) }.doOnException(handleRegistrationError) as? Try.Success ?: return false
+
+        cmdlineOptions.nodeRegistrationOption?.let {
+            // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
+            attempt { registerWithNetwork(configuration, versionInfo, cmdlineOptions.nodeRegistrationOption) }.doOnException(handleRegistrationError) as? Try.Success ?: return false
+
+            // At this point the node registration was successful. We can delete the marker file.
+            deleteNodeRegistrationMarker(cmdlineOptions.baseDirectory)
+            return true
         }
 
-        try {
-            cmdlineOptions.baseDirectory.createDirectories()
-            startNode(conf, versionInfo, startTime, cmdlineOptions)
-        } catch (e: MultipleCordappsForFlowException) {
-            logger.error(e.message)
-            return false
-        } catch (e: CouldNotCreateDataSourceException) {
-            logger.error(e.message, e.cause)
-            return false
-        } catch (e: CheckpointIncompatibleException) {
-            logger.error(e.message)
-            return false
-        } catch (e: AddressBindingException) {
-            logger.error(e.message)
-            return false
-        } catch (e: NetworkParametersReader.Error) {
-            logger.error(e.message)
-            return false
-        } catch (e: IncompatibleAttachmentsContractsTableName) {
-            e.message?.let { Node.printWarning(it) }
-            logger.error(e.message)
-            return false
-        } catch (e: Exception) {
-            if (e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
-                logger.error("One of the ports required by the Corda node is already in use.")
-                return false
-            }
-            if (e.message?.startsWith("Unknown named curve:") == true) {
-                logger.error("Exception during node startup - ${e.message}. " +
-                        "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
-            } else {
-                logger.error("Exception during node startup", e)
-            }
-            return false
-        }
+        logStartupInfo(versionInfo, cmdlineOptions, configuration)
 
-        logger.info("Node exiting successfully")
-        return true
+        return attempt { startNode(configuration, versionInfo, startTime, cmdlineOptions) }.doOnSuccess { logger.info("Node exiting successfully") }.doOnException(handleStartError).isSuccess
+    }
+
+    private fun <RESULT> attempt(action: () -> RESULT): Try<RESULT> = Try.on(action)
+
+    private fun Exception.isExpectedWhenStartingNode() = startNodeExpectedErrors.any { error -> error.isInstance(this) }
+
+    private val startNodeExpectedErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
+
+    private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print("$message [errorCode=${errorCode()}]")
+
+    private fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" } ?: ""} [errorCode=${errorCode()}]", error)
+
+    private fun Exception.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
+
+    private fun Exception.errorCode(): String {
+
+        val hash = staticLocationBasedHash()
+        return Integer.toOctalString(hash)
+    }
+
+    private fun Throwable.staticLocationBasedHash(visited: Set<Throwable> = setOf(this)): Int {
+
+        val cause = this.cause
+        return when {
+            cause != null && !visited.contains(cause) -> Objects.hash(this::class.java.name, stackTrace.customHashCode(), cause.staticLocationBasedHash(visited +  cause))
+            else -> Objects.hash(this::class.java.name, stackTrace.customHashCode())
+        }
+    }
+
+    private val handleRegistrationError = { error: Exception ->
+        when (error) {
+            is NodeRegistrationException -> error.logAsExpected("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.")
+            else -> error.logAsUnexpected("Exception during node registration")
+        }
+    }
+
+    private val handleStartError = { error: Exception ->
+        when {
+            error.isExpectedWhenStartingNode() -> error.logAsExpected()
+            error is CouldNotCreateDataSourceException -> error.logAsUnexpected()
+            error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")
+            error.isOpenJdkKnownIssue() -> error.logAsExpected("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
+            else -> error.logAsUnexpected("Exception during node startup")
+        }
+    }
+
+    private fun handleConfigurationLoadingError(configFile: Path) = { error: Exception ->
+        when (error) {
+            is UnknownConfigurationKeysException -> error.logAsExpected()
+            is ConfigException.IO -> error.logAsExpected(configFileNotFoundMessage(configFile), ::println)
+            else -> error.logAsUnexpected("Unexpected error whilst reading node configuration")
+        }
+    }
+
+    private fun Array<StackTraceElement?>?.customHashCode(): Int {
+
+        if (this == null) {
+            return 0
+        }
+        return Arrays.hashCode(map { it?.customHashCode() ?: 0 }.toIntArray())
+    }
+
+    private fun StackTraceElement.customHashCode(): Int {
+
+        return Objects.hash(StackTraceElement::class.java.name, methodName, lineNumber)
+    }
+
+    private fun configFileNotFoundMessage(configFile: Path): String {
+        return """
+                Unable to load the node config file from '$configFile'.
+
+                Try setting the --base-directory flag to change which directory the node
+                is looking in, or use the --config-file flag to specify it explicitly.
+            """.trimIndent()
+    }
+
+    private fun loadConfiguration(cmdlineOptions: CmdLineOptions): NodeConfiguration {
+
+        val (rawConfig, configurationResult) = loadConfigFile(cmdlineOptions)
+        if (cmdlineOptions.devMode) {
+            println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
+        }
+        val configuration = configurationResult.getOrThrow()
+        return if (cmdlineOptions.bootstrapRaftCluster) {
+            println("Bootstrapping raft cluster (starting up as seed node).")
+            // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
+            (configuration as NodeConfigurationImpl).copy(notary = configuration.notary?.copy(raft = configuration.notary?.raft?.copy(clusterAddresses = emptyList())))
+        } else {
+            configuration
+        }
     }
 
     private fun checkRegistrationMode(): Boolean {
@@ -235,7 +254,7 @@ open class NodeStartup(val args: Array<String>) {
                 marker.delete()
             }
         } catch (e: Exception) {
-            logger.warn("Could not delete the marker file that was created for `--initial-registration`.", e)
+            e.logAsUnexpected("Could not delete the marker file that was created for `--initial-registration`.", print = logger::warn)
         }
     }
 
@@ -244,6 +263,8 @@ open class NodeStartup(val args: Array<String>) {
     protected open fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
 
     protected open fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
+
+        cmdlineOptions.baseDirectory.createDirectories()
         val node = createNode(conf, versionInfo)
         if (cmdlineOptions.clearNetworkMapCache) {
             node.clearNetworkMapCache()
@@ -322,20 +343,22 @@ open class NodeStartup(val args: Array<String>) {
             Emoji.renderIfSupported {
                 Node.printWarning("This node is running in developer mode! ${Emoji.developer} This is not safe for production deployment.")
             }
+        } else {
+            logger.info("The Corda node is running in production mode. If this is a developer environment you can set 'devMode=true' in the node.conf file.")
         }
 
-        val startedNode = node.start()
-        Node.printBasicNodeInfo("Loaded CorDapps", startedNode.services.cordappProvider.cordapps.joinToString { it.name })
-        startedNode.internals.nodeReadyFuture.thenMatch({
+        val nodeInfo = node.start()
+        Node.printBasicNodeInfo("Loaded CorDapps", node.services.cordappProvider.cordapps.joinToString { it.name })
+        node.nodeReadyFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            val name = startedNode.info.legalIdentitiesAndCerts.first().name.organisation
+            val name = nodeInfo.legalIdentitiesAndCerts.first().name.organisation
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.
             if (conf.shouldStartLocalShell()) {
-                startedNode.internals.startupComplete.then {
+                node.startupComplete.then {
                     try {
-                        InteractiveShell.runLocalShell({ startedNode.dispose() })
+                        InteractiveShell.runLocalShell(node::stop)
                     } catch (e: Throwable) {
                         logger.error("Shell failed to start", e)
                     }
@@ -348,7 +371,7 @@ open class NodeStartup(val args: Array<String>) {
                 { th ->
                     logger.error("Unexpected exception during registration", th)
                 })
-        startedNode.internals.run()
+        node.run()
     }
 
     protected open fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
@@ -417,23 +440,31 @@ open class NodeStartup(val args: Array<String>) {
         // exists, we try to take the file lock first before replacing it and if that fails it means we're being started
         // twice with the same directory: that's a user error and we should bail out.
         val pidFile = (baseDirectory / "process-id").toFile()
-        pidFile.createNewFile()
-        val pidFileRw = RandomAccessFile(pidFile, "rw")
-        val pidFileLock = pidFileRw.channel.tryLock()
-        if (pidFileLock == null) {
-            println("It appears there is already a node running with the specified data directory $baseDirectory")
-            println("Shut that other node down and try again. It may have process ID ${pidFile.readText()}")
+        try {
+            pidFile.createNewFile()
+            val pidFileRw = RandomAccessFile(pidFile, "rw")
+            val pidFileLock = pidFileRw.channel.tryLock()
+
+            if (pidFileLock == null) {
+                println("It appears there is already a node running with the specified data directory $baseDirectory")
+                println("Shut that other node down and try again. It may have process ID ${pidFile.readText()}")
+                System.exit(1)
+            }
+            pidFile.deleteOnExit()
+            // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
+            // when our process shuts down, but we try in stop() anyway just to be nice.
+            addShutdownHook {
+                pidFileLock.release()
+            }
+            val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
+            pidFileRw.setLength(0)
+            pidFileRw.write(ourProcessID.toByteArray())
+        } catch (ex: IOException) {
+            val appUser = System.getProperty("user.name")
+            println("Application user '$appUser' does not have necessary permissions for Node base directory '$baseDirectory'.")
+            println("Corda Node process in now exiting. Please check directory permissions and try starting the Node again.")
             System.exit(1)
         }
-        pidFile.deleteOnExit()
-        // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
-        // when our process shuts down, but we try in stop() anyway just to be nice.
-        addShutdownHook {
-            pidFileLock.release()
-        }
-        val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
-        pidFileRw.setLength(0)
-        pidFileRw.write(ourProcessID.toByteArray())
     }
 
     protected open fun initLogging(cmdlineOptions: CmdLineOptions) {
@@ -497,8 +528,8 @@ open class NodeStartup(val args: Array<String>) {
                     "It's kind of like a block chain but\ncords sounded healthier than chains.",
                     "Computer science and finance together.\nYou should see our crazy Christmas parties!",
                     "I met my bank manager yesterday and asked\nto check my balance ... he pushed me over!",
-                    "A banker with nobody around may find\nthemselves .... a-loan! <applause>",
-                    "Whenever I go near my bank I get\nwithdrawal symptoms ${Emoji.coolGuy}",
+                    "A banker left to their own devices may find\nthemselves .... a-loan! <applause>",
+                    "Whenever I go near my bank\nI get withdrawal symptoms ${Emoji.coolGuy}",
                     "There was an earthquake in California,\na local bank went into de-fault.",
                     "I asked for insurance if the nearby\nvolcano erupted. They said I'd be covered.",
                     "I had an account with a bank in the\nNorth Pole, but they froze all my assets ${Emoji.santaClaus}",
@@ -509,11 +540,48 @@ open class NodeStartup(val args: Array<String>) {
                     "I won $3M on the lottery so I donated a quarter\nof it to charity. Now I have $2,999,999.75.",
                     "There are two rules for financial success:\n1) Don't tell everything you know.",
                     "Top tip: never say \"oops\", instead\nalways say \"Ah, Interesting!\"",
-                    "Computers are useless. They can only\ngive you answers.  -- Picasso"
+                    "Computers are useless. They can only\ngive you answers.  -- Picasso",
+                    "Regular naps prevent old age, especially\nif you take them whilst driving.",
+                    "Always borrow money from a pessimist.\nHe won't expect it back.",
+                    "War does not determine who is right.\nIt determines who is left.",
+                    "A bus stops at a bus station. A train stops at a\ntrain station. What happens at a workstation?",
+                    "I got a universal remote control yesterday.\nI thought, this changes everything.",
+                    "Did you ever walk into an office and\nthink, whiteboards are remarkable!",
+                    "The good thing about lending out your time machine\nis that you basically get it back immediately.",
+                    "I used to work in a shoe recycling\nshop. It was sole destroying.",
+                    "What did the fish say\nwhen he hit a wall? Dam.",
+                    "You should really try a seafood diet.\nIt's easy: you see food and eat it.",
+                    "I recently sold my vacuum cleaner,\nall it was doing was gathering dust.",
+                    "My professor accused me of plagiarism.\nHis words, not mine!",
+                    "Change is inevitable, except\nfrom a vending machine.",
+                    "If at first you don't succeed, destroy\nall the evidence that you tried.",
+                    "If at first you don't succeed, \nthen we have something in common!",
+                    "Moses had the first tablet that\ncould connect to the cloud.",
+                    "How did my parents fight boredom before the internet?\nI asked my 17 siblings and they didn't know either.",
+                    "Cats spend two thirds of their lives sleeping\nand the other third making viral videos.",
+                    "The problem with troubleshooting\nis that trouble shoots back.",
+                    "I named my dog 'Six Miles' so I can tell\npeople I walk Six Miles every day.",
+                    "People used to laugh at me when I said I wanted\nto be a comedian. Well they're not laughing now!",
+                    "My wife just found out I replaced our bed\nwith a trampoline; she hit the roof.",
+                    "My boss asked me who is the stupid one, me or him?\nI said everyone knows he doesn't hire stupid people.",
+                    "Don't trust atoms.\nThey make up everything.",
+                    "Keep the dream alive:\nhit the snooze button.",
+                    "Rest in peace, boiled water.\nYou will be mist.",
+                    "When I discovered my toaster wasn't\nwaterproof, I was shocked.",
+                    "Where do cryptographers go for\nentertainment? The security theatre.",
+                    "How did the Java programmer get rich?\nThey inherited a factory.",
+                    "Why did the developer quit his job?\nHe didn't get ar-rays."
             )
 
             if (Emoji.hasEmojiTerminal)
                 messages += "Kind of like a regular database but\nwith emojis, colours and ascii art. ${Emoji.coolGuy}"
+
+
+            if (ZonedDateTime.now().dayOfWeek == DayOfWeek.FRIDAY) {
+                // Make it quite likely people see it.
+                repeat(20) { messages += "Ah, Friday.\nMy second favourite F-word." }
+            }
+
             val (msg1, msg2) = messages.randomOrNull()!!.split('\n')
 
             println(Ansi.ansi().newline().fgBrightRed().a(
@@ -521,7 +589,10 @@ open class NodeStartup(val args: Array<String>) {
                     """  / ____/     _________/ /___ _""").newline().a(
                     """ / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
                     """/ /___  /_/ / /  / /_/ / /_/ /          """).fgBrightBlue().a(msg2).newline().fgBrightRed().a(
-                    """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").newline().newline().reset())
+                    """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -------------------------------------------------------------").newline().newline().reset())
+
         }
     }
 }
+
+

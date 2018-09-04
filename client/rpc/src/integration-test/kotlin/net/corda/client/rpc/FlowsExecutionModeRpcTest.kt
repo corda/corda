@@ -6,8 +6,7 @@ import net.corda.core.internal.packageName
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.schemas.CashSchemaV1
-import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
+import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.testing.core.ALICE_NAME
@@ -49,13 +48,13 @@ class FlowsExecutionModeRpcTest {
 class FlowsExecutionModeTests : NodeBasedTest(listOf("net.corda.finance.contracts", CashSchemaV1::class.packageName)) {
 
     private val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
-    private lateinit var node: StartedNode<Node>
+    private lateinit var node: NodeWithInfo
     private lateinit var client: CordaRPCClient
 
     @Before
     fun setup() {
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
-        client = CordaRPCClient(node.internals.configuration.rpcOptions.address)
+        client = CordaRPCClient(node.node.configuration.rpcOptions.address)
     }
 
     @Test

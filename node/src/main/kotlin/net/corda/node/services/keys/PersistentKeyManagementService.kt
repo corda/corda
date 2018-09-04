@@ -2,9 +2,9 @@ package net.corda.node.services.keys
 
 import net.corda.core.crypto.*
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
+import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -25,9 +25,8 @@ import javax.persistence.Lob
  *
  * This class needs database transactions to be in-flight during method calls and init.
  */
-class PersistentKeyManagementService(val identityService: IdentityService,
+class PersistentKeyManagementService(val identityService: PersistentIdentityService,
                                      private val database: CordaPersistence) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
-
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
@@ -50,6 +49,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     private companion object {
         fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
             return AppendOnlyPersistentMap(
+                    "PersistentKeyManagementService_keys",
                     toPersistentEntityKey = { it.toStringShort() },
                     fromPersistentEntity = { Pair(Crypto.decodePublicKey(it.publicKey), Crypto.decodePrivateKey(
                             it.privateKey)) },
@@ -70,7 +70,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     override val keys: Set<PublicKey> get() = database.transaction { keysMap.allPersisted().map { it.first }.toSet() }
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = database.transaction {
-        candidateKeys.filter { keysMap[it] != null }
+        identityService.stripCachedPeerKeys(candidateKeys).filter { keysMap[it] != null } // TODO: bulk cache access.
     }
 
     override fun freshKey(): PublicKey {

@@ -7,7 +7,6 @@ import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
-import java.io.NotSerializableException
 import java.lang.reflect.Type
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.jvm.jvmErasure
@@ -56,7 +55,9 @@ class CorDappCustomSerializer(
 
     init {
         if (types.size != 2) {
-            throw NotSerializableException("Unable to determine serializer parent types")
+            throw AMQPNotSerializableException(
+                    CorDappCustomSerializer::class.java,
+                    "Unable to determine serializer parent types")
         }
     }
 
@@ -92,8 +93,8 @@ class CorDappCustomSerializer(
      * For 3rd party plugin serializers we are going to exist on exact type matching. i.e. we will
      * not support base class serializers for derivedtypes
      */
-    override fun isSerializerFor(clazz: Class<*>) : Boolean {
-        return type.asClass()?.let { TypeToken.of(it) == TypeToken.of(clazz) } ?: false
-    }
+    override fun isSerializerFor(clazz: Class<*>) =
+        TypeToken.of(type.asClass()) == TypeToken.of(clazz)
+
 }
 

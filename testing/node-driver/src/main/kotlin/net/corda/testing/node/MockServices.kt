@@ -24,7 +24,6 @@ import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
@@ -112,10 +111,10 @@ open class MockServices private constructor(
             val cordappLoader = cordappLoaderForPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
-            val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
+            val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
-                    override val vaultService: VaultService = makeVaultService(database.hibernateConfig, schemaService, database)
+                    override val vaultService: VaultService = makeVaultService(schemaService, database)
 
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                         ServiceHubInternal.recordTransactions(statesToRecord, txs,
@@ -212,6 +211,12 @@ open class MockServices private constructor(
     constructor(firstIdentity: TestIdentity, vararg moreIdentities: TestIdentity) : this(
             listOf(getCallerPackage(MockServices::class)!!),
             firstIdentity,
+            *moreIdentities
+    )
+
+    constructor(cordappPackages: List<String>, firstIdentity: TestIdentity, vararg moreIdentities: TestIdentity) : this(
+            cordappPackages,
+            firstIdentity,
             makeTestIdentityService(*listOf(firstIdentity, *moreIdentities).map { it.identity }.toTypedArray()),
             firstIdentity.keyPair
     )
@@ -251,10 +256,8 @@ open class MockServices private constructor(
             }
         }
 
-    internal fun makeVaultService(hibernateConfig: HibernateConfiguration, schemaService: SchemaService, database: CordaPersistence): VaultServiceInternal {
-        val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database).apply { start() }
-        HibernateObserver.install(vaultService.rawUpdates, hibernateConfig, schemaService)
-        return vaultService
+    internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence): VaultServiceInternal {
+        return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService).apply { start() }
     }
 
     // This needs to be internal as MutableClassToInstanceMap is a guava type and shouldn't be part of our public API

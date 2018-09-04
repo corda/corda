@@ -1,6 +1,5 @@
 package net.corda.node.services.network
 
-import net.corda.cordform.CordformNode
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import net.corda.core.node.NodeInfo
@@ -11,6 +10,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.seconds
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
@@ -64,7 +64,8 @@ class NodeInfoWatcher(private val nodePath: Path,
     }
 
     internal data class NodeInfoFromFile(val nodeInfohash: SecureHash, val lastModified: FileTime)
-    private val nodeInfosDir = nodePath / CordformNode.NODE_INFO_DIRECTORY
+
+    private val nodeInfosDir = nodePath / NODE_INFO_DIRECTORY
     private val nodeInfoFilesMap = HashMap<Path, NodeInfoFromFile>()
     val processedNodeInfoHashes: Set<SecureHash> get() = nodeInfoFilesMap.values.map { it.nodeInfohash }.toSet()
 
@@ -74,7 +75,7 @@ class NodeInfoWatcher(private val nodePath: Path,
     }
 
     /**
-     * Read all the files contained in [nodePath] / [CordformNode.NODE_INFO_DIRECTORY] and keep watching
+     * Read all the files contained in [nodePath] / [NODE_INFO_DIRECTORY] and keep watching
      * the folder for further updates.
      *
      * We simply list the directory content every 5 seconds, the Java implementation of WatchService has been proven to

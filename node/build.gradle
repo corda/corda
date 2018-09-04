@@ -48,7 +48,8 @@ sourceSets {
 jib.container {
   mainClass = "net.corda.node.Corda"
   args = ['--log-to-console', '--no-local-shell', '--config-file=/config/node.conf']
-  jvmFlags = ['-Xmx1g', '-javaagent:/app/libs/quasar-core-0.7.10.jar']
+  // The Groovy string needs to be converted to a `java.lang.String` below.
+  jvmFlags = ['-Xmx1g', "-javaagent:/app/libs/quasar-core-${quasar_version}-jdk8.jar".toString()]
 }
 
 // Use manual resource copying of log4j2.xml rather than source sets.
@@ -70,9 +71,6 @@ dependencies {
     compile project(":confidential-identities")
     compile project(':client:rpc')
     compile project(':tools:shell')
-    compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
-
-    compile group: 'co.paralleluniverse', name: 'quasar-core', version: '0.7.10:jdk8@jar'
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
@@ -85,7 +83,7 @@ dependencies {
 
     // Kryo: object graph serialization.
     compile "com.esotericsoftware:kryo:4.0.0"
-    compile "de.javakaffee:kryo-serializers:0.41"
+    compile "de.javakaffee:kryo-serializers:0.42"
 
     compile "com.google.guava:guava:$guava_version"
 
@@ -168,6 +166,9 @@ dependencies {
     // Apache Shiro: authentication, authorization and session management.
     compile "org.apache.shiro:shiro-core:${shiro_version}"
 
+    //Picocli for command line interface
+    compile "info.picocli:picocli:$picocli_version"
+
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
@@ -188,6 +189,8 @@ dependencies {
 
     // Jolokia JVM monitoring agent, required to push logs through slf4j
     compile "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
+    // Optional New Relic JVM reporter, used to push metrics to the configured account associated with a newrelic.yml configuration. See https://mvnrepository.com/artifact/com.palominolabs.metrics/metrics-new-relic
+    compile "com.palominolabs.metrics:metrics-new-relic:${metrics_new_relic_version}"
 }
 
 task integrationTest(type: Test) {

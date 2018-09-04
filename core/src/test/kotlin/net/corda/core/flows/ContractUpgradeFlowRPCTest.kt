@@ -8,14 +8,13 @@ import com.natpryce.hamkrest.isA
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.flows.matchers.rpc.willReturn
-import net.corda.core.flows.matchers.rpc.willThrow
+import net.corda.testing.internal.matchers.rpc.willReturn
+import net.corda.testing.internal.matchers.rpc.willThrow
 import net.corda.core.flows.mixins.WithContracts
 import net.corda.core.flows.mixins.WithFinality
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction
 import net.corda.core.transactions.SignedTransaction
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
@@ -24,7 +23,6 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.*
-import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import org.junit.AfterClass
 import org.junit.Test
 
@@ -85,7 +83,7 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
     }
 
     //region RPC DSL
-    private fun RPCDriverDSL.startProxy(node: StartedNode<MockNode>, user: User): CordaRPCOps {
+    private fun RPCDriverDSL.startProxy(node: TestStartedNode, user: User): CordaRPCOps {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,
@@ -113,16 +111,16 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
     //endregion
 
     //region Matchers
-    private fun StartedNode<*>.hasDummyContractUpgradeTransaction() =
+    private fun TestStartedNode.hasDummyContractUpgradeTransaction() =
             hasContractUpgradeTransaction<DummyContract.State, DummyContractV2.State>()
 
-    private inline fun <reified FROM : Any, reified TO: Any> StartedNode<*>.hasContractUpgradeTransaction() =
+    private inline fun <reified FROM : Any, reified TO: Any> TestStartedNode.hasContractUpgradeTransaction() =
         has<StateAndRef<ContractState>, ContractUpgradeLedgerTransaction>(
             "a contract upgrade transaction",
             { getContractUpgradeTransaction(it) },
             isUpgrade<FROM, TO>())
 
-    private fun StartedNode<*>.getContractUpgradeTransaction(state: StateAndRef<ContractState>) =
+    private fun TestStartedNode.getContractUpgradeTransaction(state: StateAndRef<ContractState>) =
         services.validatedTransactions.getTransaction(state.ref.txhash)!!
                 .resolveContractUpgradeTransaction(services)
 

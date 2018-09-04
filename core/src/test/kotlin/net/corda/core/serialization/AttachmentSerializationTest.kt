@@ -6,14 +6,13 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.TestDataVendingFlow
+import net.corda.core.flows.TestNoSecurityDataVendingFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.core.ALICE_NAME
@@ -21,6 +20,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
@@ -44,11 +44,11 @@ private fun
         Attachment.extractContent() = ByteArrayOutputStream().apply { extractFile("content", this) }.toString(UTF_8.name())
 
 @Suppress("deprecation")
-private fun StartedNode<*>.saveAttachment(content: String) = database.transaction {
+private fun TestStartedNode.saveAttachment(content: String) = database.transaction {
     attachments.importAttachment(createAttachmentData(content).inputStream())
 }
 
-private fun StartedNode<*>.hackAttachment(attachmentId: SecureHash, content: String) = database.transaction {
+private fun TestStartedNode.hackAttachment(attachmentId: SecureHash, content: String) = database.transaction {
     updateAttachment(attachmentId, createAttachmentData(content))
 }
 
@@ -66,8 +66,8 @@ private fun updateAttachment(attachmentId: SecureHash, data: ByteArray) {
 
 class AttachmentSerializationTest {
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var server: StartedNode<InternalMockNetwork.MockNode>
-    private lateinit var client: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var server: TestStartedNode
+    private lateinit var client: TestStartedNode
     private lateinit var serverIdentity: Party
 
     @Before
@@ -89,7 +89,7 @@ class AttachmentSerializationTest {
         @Suspendable
         override fun call() {
             if (sendData) {
-                subFlow(TestDataVendingFlow(clientSession))
+                subFlow(TestNoSecurityDataVendingFlow(clientSession))
             }
             clientSession.receive<String>().unwrap { assertEquals("ping one", it) }
             clientSession.sendAndReceive<String>("pong").unwrap { assertEquals("ping two", it) }
@@ -151,7 +151,7 @@ class AttachmentSerializationTest {
     }
 
     private fun launchFlow(clientLogic: ClientLogic, rounds: Int, sendData: Boolean = false) {
-        server.internalRegisterFlowFactory(
+        server.registerFlowFactory(
                 ClientLogic::class.java,
                 InitiatedFlowFactory.Core { ServerLogic(it, sendData) },
                 ServerLogic::class.java,

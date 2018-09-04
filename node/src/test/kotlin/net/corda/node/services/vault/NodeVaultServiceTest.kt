@@ -1,6 +1,7 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
+import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.argThat
 import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
@@ -11,10 +12,7 @@ import net.corda.core.identity.*
 import net.corda.core.internal.NotaryChangeTransactionBuilder
 import net.corda.core.internal.packageName
 import net.corda.core.node.StatesToRecord
-import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.*
@@ -31,10 +29,12 @@ import net.corda.finance.utils.sumCash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.testing.contracts.DummyContract
+import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.vault.VaultFiller
+import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
@@ -48,13 +48,15 @@ import java.math.BigDecimal
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import javax.persistence.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NodeVaultServiceTest {
     private companion object {
-        val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+        val cordappPackages = listOf("net.corda.finance.contracts.asset", CashSchemaV1::class.packageName, "net.corda.testing.contracts",
+                "net.corda.testing.internal.vault")
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
         val bankOfCorda = TestIdentity(BOC_NAME)
@@ -97,8 +99,8 @@ class NodeVaultServiceTest {
         vaultFiller = VaultFiller(services, dummyNotary)
         // This is safe because MockServices only ever have a single identity
         identity = services.myInfo.singleIdentityAndCert()
-        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock())
-        bocServices = MockServices(cordappPackages, bankOfCorda, rigorousMock())
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock<IdentityService>())
+        bocServices = MockServices(cordappPackages, bankOfCorda, rigorousMock<IdentityService>())
         services.identityService.verifyAndRegisterIdentity(DUMMY_CASH_ISSUER_IDENTITY)
         services.identityService.verifyAndRegisterIdentity(BOC_IDENTITY)
     }
@@ -601,7 +603,7 @@ class NodeVaultServiceTest {
         assertEquals(services.identityService.partyFromKey(identity.owningKey), identity.party)
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
         val thirdPartyServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
-            doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MEGA_CORP.name })
+            doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MEGA_CORP.name }, any())
         })
         val thirdPartyIdentity = thirdPartyServices.keyManagementService.freshKeyAndCert(thirdPartyServices.myInfo.singleIdentityAndCert(), false)
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
@@ -729,5 +731,105 @@ class NodeVaultServiceTest {
             vaultService.queryBy<Cash.State>().states.size
         }
         assertThat(recordedStates).isEqualTo(coins.size)
+    }
+
+    @Test
+    fun `test state relevance criteria`() {
+        fun createTx(number: Int, vararg participants: Party): SignedTransaction {
+            return services.signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).apply {
+                addOutputState(DummyState(number, participants.toList()), DummyContract.PROGRAM_ID)
+                addCommand(DummyCommandData, listOf(megaCorp.publicKey))
+            })
+        }
+
+        fun List<StateAndRef<DummyState>>.getNumbers() = map { it.state.data.magicNumber }.toSet()
+
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(1, megaCorp.party)))
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(2, miniCorp.party)))
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(3, miniCorp.party, megaCorp.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(4, miniCorp.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(5, bankOfCorda.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(6, megaCorp.party, bankOfCorda.party)))
+        services.recordTransactions(StatesToRecord.NONE, listOf(createTx(7, bankOfCorda.party)))
+
+        // Test one.
+        // RelevancyStatus is RELEVANT by default. This should return two states.
+        val resultOne = vaultService.queryBy<DummyState>().states.getNumbers()
+        assertEquals(setOf(1, 3, 4, 5, 6), resultOne)
+
+        // Test two.
+        // RelevancyStatus set to NOT_RELEVANT.
+        val criteriaTwo = VaultQueryCriteria(isRelevant = Vault.RelevancyStatus.NOT_RELEVANT)
+        val resultTwo = vaultService.queryBy<DummyState>(criteriaTwo).states.getNumbers()
+        assertEquals(setOf(4, 5), resultTwo)
+
+        // Test three.
+        // RelevancyStatus set to ALL.
+        val criteriaThree = VaultQueryCriteria(isRelevant = Vault.RelevancyStatus.RELEVANT)
+        val resultThree = vaultService.queryBy<DummyState>(criteriaThree).states.getNumbers()
+        assertEquals(setOf(1, 3, 6), resultThree)
+
+        // We should never see 2 or 7.
+    }
+
+    @Test
+    fun `Unique column constraint failing causes linear state to not persist to vault`() {
+        fun createTx(): SignedTransaction {
+            return services.signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).apply {
+                addOutputState(UniqueDummyLinearContract.State(listOf(megaCorp.party), "Dummy linear id"), UNIQUE_DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
+                addCommand(DummyCommandData, listOf(megaCorp.publicKey))
+            })
+        }
+
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx()))
+        assertThatExceptionOfType(PersistenceException::class.java).isThrownBy {
+            services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx()))
+        }
+        assertEquals(1, database.transaction {
+            vaultService.queryBy<UniqueDummyLinearContract.State>().states.size
+        })
+    }
+
+    @Test
+    fun `Unique column constraint failing causes fungible state to not persist to vault`() {
+        fun createTx(): SignedTransaction {
+            return services.signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).apply {
+                addOutputState(UniqueDummyFungibleContract.State(10.DOLLARS `issued by` DUMMY_CASH_ISSUER, megaCorp.party), UNIQUE_DUMMY_FUNGIBLE_CONTRACT_PROGRAM_ID)
+                addCommand(DummyCommandData, listOf(megaCorp.publicKey))
+            })
+        }
+
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx()))
+        assertThatExceptionOfType(PersistenceException::class.java).isThrownBy {
+            services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx()))
+        }
+        assertEquals(1, database.transaction {
+            vaultService.queryBy<UniqueDummyFungibleContract.State>().states.size
+        })
+        assertEquals(10.DOLLARS.quantity, database.transaction {
+            vaultService.queryBy<UniqueDummyFungibleContract.State>().states.first().state.data.amount.quantity
+        })
+    }
+
+    @Test
+    fun `Unique column constraint failing causes all states in transaction to fail`() {
+        fun createTx(): SignedTransaction {
+            return services.signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).apply {
+                addOutputState(UniqueDummyLinearContract.State(listOf(megaCorp.party), "Dummy linear id"), UNIQUE_DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
+                addOutputState(DummyDealContract.State(listOf(megaCorp.party), "Dummy linear id"), DUMMY_DEAL_PROGRAM_ID)
+                addCommand(DummyCommandData, listOf(megaCorp.publicKey))
+            })
+        }
+
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx()))
+        assertThatExceptionOfType(PersistenceException::class.java).isThrownBy {
+            services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx()))
+        }
+        assertEquals(1, database.transaction {
+            vaultService.queryBy<UniqueDummyLinearContract.State>().states.size
+        })
+        assertEquals(1, database.transaction {
+            vaultService.queryBy<DummyDealContract.State>().states.size
+        })
     }
 }

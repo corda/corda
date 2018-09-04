@@ -54,6 +54,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address "localhost:10003"
             adminAddress "localhost:10004"
         }
+        extraConfig = ['h2Settings.address' : 'localhost:10014']
         cordapps = ["$project.group:finance:$corda_release_version"]
     }
     node {
@@ -65,6 +66,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address "localhost:10006"
             adminAddress "localhost:10007"
         }
+        extraConfig = ['h2Settings.address' : 'localhost:10015']
     }
     node {
         name "O=Bank B,L=New York,C=US"
@@ -75,6 +77,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address "localhost:10009"
             adminAddress "localhost:10010"
         }
+        extraConfig = ['h2Settings.address' : 'localhost:10016']
     }
     node {
         name "O=BankOfCorda,L=New York,C=US"
@@ -85,6 +88,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address "localhost:10012"
             adminAddress "localhost:10013"
         }
+        extraConfig = ['h2Settings.address' : 'localhost:10017']
     }
 }
 

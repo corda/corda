@@ -42,6 +42,8 @@ class CashSelectionSQLServerImpl : AbstractCashSelection() {
     //      Query plan does index scan on pennies_idx, which may be unavoidable due to the nature of the query.
     override fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean {
         val sb = StringBuilder()
+        // state_status = 0 -> UNCONSUMED.
+        // is_relevant = 0 -> RELEVANT.
         sb.append( """
             ;WITH CTE AS
             (
@@ -56,6 +58,7 @@ class CashSelectionSQLServerImpl : AbstractCashSelection() {
                 ON vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
             WHERE
               vs.state_status = 0
+              AND vs.is_relevant = 0
               AND ccs.ccy_code = ?
               AND (vs.lock_id = ? OR vs.lock_id IS NULL)
             """

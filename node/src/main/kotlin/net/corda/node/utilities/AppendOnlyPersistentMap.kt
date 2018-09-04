@@ -124,14 +124,25 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
 
     protected fun loadValue(key: K): V? {
         val session = currentDBSession()
-        // IMPORTANT: The flush is needed because detach() makes the queue of unflushed entries invalid w.r.t. Hibernate internal state if the found entity is unflushed.
-        // We want the detach() so that we rely on our cache memory management and don't retain strong references in the Hibernate session.
-        session.flush()
+        val flushing = contextTransaction.flushing
+        if (!flushing) {
+            // IMPORTANT: The flush is needed because detach() makes the queue of unflushed entries invalid w.r.t. Hibernate internal state if the found entity is unflushed.
+            // We want the detach() so that we rely on our cache memory management and don't retain strong references in the Hibernate session.
+            session.flush()
+        }
         val result = session.find(persistentEntityClass, toPersistentEntityKey(key))
-        return result?.apply { session.detach(result) }?.let(fromPersistentEntity)?.second
+        return result?.apply { if (!flushing) session.detach(result) }?.let(fromPersistentEntity)?.second
     }
 
     operator fun contains(key: K) = get(key) != null
+
+    /**
+     * Allow checking the cache content without falling back to database if there's a miss.
+     *
+     * @param key The cache key
+     * @return The value in the cache, or null if not present.
+     */
+    fun getIfCached(key: K): V? = cache.getIfPresent(key!!)?.value
 
     /**
      * Removes all of the mappings from this map and underlying storage. The map will be empty after this call returns.
@@ -298,6 +309,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
 
 // Open for tests to override
 open class AppendOnlyPersistentMap<K, V, E, out EK>(
+        name: String,
         toPersistentEntityKey: (K) -> EK,
         fromPersistentEntity: (E) -> Pair<K, V>,
         toPersistentEntity: (key: K, value: V) -> E,
@@ -310,6 +322,7 @@ open class AppendOnlyPersistentMap<K, V, E, out EK>(
         persistentEntityClass) {
     //TODO determine cacheBound based on entity class later or with node config allowing tuning, or using some heuristic based on heap size
     override val cache = NonInvalidatingCache(
+            name = name,
             bound = cacheBound,
             loadFunction = { key: K ->
                 // This gets called if a value is read and the cache has no Transactional for this key yet.
@@ -342,6 +355,7 @@ open class AppendOnlyPersistentMap<K, V, E, out EK>(
 
 // Same as above, but with weighted values (e.g. memory footprint sensitive).
 class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
+        name: String,
         toPersistentEntityKey: (K) -> EK,
         fromPersistentEntity: (E) -> Pair<K, V>,
         toPersistentEntity: (key: K, value: V) -> E,
@@ -354,6 +368,7 @@ class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
         toPersistentEntity,
         persistentEntityClass) {
     override val cache = NonInvalidatingWeightBasedCache(
+            name,
             maxWeight = maxWeight,
             weigher = Weigher { key, value -> weighingFunc(key, value) },
             loadFunction = { key: K ->

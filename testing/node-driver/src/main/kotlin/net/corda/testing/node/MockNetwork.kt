@@ -4,13 +4,15 @@ import com.google.common.jimfs.Jimfs
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.toFuture
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.StartedNode
+import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -19,6 +21,7 @@ import net.corda.testing.node.internal.*
 import rx.Observable
 import java.math.BigInteger
 import java.nio.file.Path
+import java.util.concurrent.Future
 
 /**
  * Immutable builder for configuring a [StartedMockNode] or an [UnstartedMockNode] via [MockNetwork.createNode] and
@@ -68,7 +71,7 @@ data class MockNodeParameters constructor(
  * Immutable builder for configuring a [MockNetwork]. Kotlin users can also use named parameters to the constructor
  * of [MockNetwork], which is more convenient.
  *
- * @property networkSendManuallyPumped If true then messages will not be routed from sender to receiver until you use
+ * @property networkSendManuallyPumped If false then messages will not be routed from sender to receiver until you use
  * the [MockNetwork.runNetwork] method. This is useful for writing single-threaded unit test code that can examine the
  * state of the mock network before and after a message is sent, without races and without the receiving node immediately
  * sending a response. The default is false, so you must call runNetwork.
@@ -125,12 +128,24 @@ class UnstartedMockNode private constructor(private val node: InternalMockNetwor
      * @return A [StartedMockNode] object.
      */
     fun start(): StartedMockNode = StartedMockNode.create(node.start())
+
+    /**
+     * A [StartedMockNode] object for this running node.
+     * @throws [IllegalStateException] if the node is not running yet.
+     */
+    val started: StartedMockNode
+        get() = StartedMockNode.create(node.started ?: throw IllegalStateException("Node ID=$id is not running"))
+
+    /**
+     * Whether this node has been started yet.
+     */
+    val isStarted: Boolean get() = node.started != null
 }
 
 /** A class that represents a started mock node for testing. */
-class StartedMockNode private constructor(private val node: StartedNode<InternalMockNetwork.MockNode>) {
+class StartedMockNode private constructor(private val node: TestStartedNode) {
     companion object {
-        internal fun create(node: StartedNode<InternalMockNetwork.MockNode>): StartedMockNode {
+        internal fun create(node: TestStartedNode): StartedMockNode {
             return StartedMockNode(node)
         }
     }
@@ -162,7 +177,7 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
      * @return the message that was processed, if any in this round.
      */
     fun pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
-        return (node.network as InternalMockMessagingService).pumpReceive(block)
+        return node.network.pumpReceive(block)
     }
 
     /** Returns the currently live flows of type [flowClass], and their corresponding result future. */
@@ -178,7 +193,68 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
             statement()
         }
     }
+
+    /**
+     * Register an [InitiatedFlowFactory], to control relationship between initiating and receiving flow classes
+     * explicitly on a node-by-node basis. This is used when we want to manually specify that a particular initiating
+     * flow class will have a particular responder.
+     *
+     * An [ResponderFlowFactory] is responsible for converting a [FlowSession] into the [FlowLogic] that will respond
+     * to the initiated flow. The registry records one responder type, and hence one factory, for each initiator flow
+     * type. If a factory is already registered for the type, it is overwritten in the registry when a new factory is
+     * registered.
+     *
+     * Note that this change affects _only_ the node on which this method is called, and not the entire network.
+     *
+     * @property initiatingFlowClass The [FlowLogic]-inheriting class to register a new responder for.
+     * @property flowFactory The flow factory that will create the responding flow.
+     * @property responderFlowClass The class of the responder flow.
+     * @return A [CordaFuture] that will complete the first time the responding flow is created.
+     */
+    fun <F : FlowLogic<*>> registerResponderFlow(initiatingFlowClass: Class<out FlowLogic<*>>,
+                                                 flowFactory: ResponderFlowFactory<F>,
+                                                 responderFlowClass: Class<F>): CordaFuture<F> =
+            node.registerFlowFactory(
+                    initiatingFlowClass,
+                    InitiatedFlowFactory.CorDapp(flowVersion = 0, appName = "", factory = flowFactory::invoke),
+                    responderFlowClass, true)
+                    .toFuture()
 }
+
+/**
+ * Responsible for converting a [FlowSession] into the [FlowLogic] that will respond to an initiated flow.
+ *
+ * @param F The [FlowLogic]-inherited type of the responder class this factory creates.
+ */
+@FunctionalInterface
+interface ResponderFlowFactory<F : FlowLogic<*>> {
+    /**
+     * Given the provided [FlowSession], create a responder [FlowLogic] of the desired type.
+     *
+     * @param flowSession The [FlowSession] to use to create the responder flow object.
+     * @return The constructed responder flow object.
+     */
+    fun invoke(flowSession: FlowSession): F
+}
+
+/**
+ * Kotlin-only utility function using a reified type parameter and a lambda parameter to simplify the
+ * [InitiatedFlowFactory.registerFlowFactory] function.
+ *
+ * @param F The [FlowLogic]-inherited type of the responder to register.
+ * @property initiatingFlowClass The [FlowLogic]-inheriting class to register a new responder for.
+ * @property flowFactory A lambda converting a [FlowSession] into an instance of the responder class [F].
+ * @return A [CordaFuture] that will complete the first time the responding flow is created.
+ */
+inline fun <reified F : FlowLogic<*>> StartedMockNode.registerResponderFlow(
+        initiatingFlowClass: Class<out FlowLogic<*>>,
+        noinline flowFactory: (FlowSession) -> F): Future<F> =
+        registerResponderFlow(
+                initiatingFlowClass,
+                object : ResponderFlowFactory<F> {
+                    override fun invoke(flowSession: FlowSession) = flowFactory(flowSession)
+                },
+                F::class.java)
 
 /**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
@@ -204,7 +280,7 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
  * @property cordappPackages A [List] of cordapp packages to scan for any cordapp code, e.g. contract verification code, flows and services.
  * @property defaultParameters A [MockNetworkParameters] object which contains the same parameters as the constructor, provided
  * as a convenience for Java users.
- * @property networkSendManuallyPumped If true then messages will not be routed from sender to receiver until you use
+ * @property networkSendManuallyPumped If false then messages will not be routed from sender to receiver until you use
  * the [MockNetwork.runNetwork] method. This is useful for writing single-threaded unit test code that can examine the
  * state of the mock network before and after a message is sent, without races and without the receiving node immediately
  * sending a response. The default is false, so you must call runNetwork.
@@ -347,7 +423,7 @@ open class MockNetwork(
                             forcedID: Int? = null,
                             entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                             configOverrides: (NodeConfiguration) -> Any? = {},
-                            additionalCordapps: Set<TestCorDapp> = emptySet()): UnstartedMockNode {
+                            additionalCordapps: Set<TestCorDapp>): UnstartedMockNode {
         val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides, additionalCordapps)
         return UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(InternalMockNodeParameters(parameters)))
     }

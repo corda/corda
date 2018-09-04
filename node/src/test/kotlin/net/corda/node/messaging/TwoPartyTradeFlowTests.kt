@@ -34,7 +34,6 @@ import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
@@ -48,7 +47,6 @@ import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.VaultFiller
-import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.*
 import net.corda.testing.node.ledger
@@ -76,7 +74,7 @@ import kotlin.test.assertTrue
 @RunWith(Parameterized::class)
 class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     companion object {
-        private val cordappPackages = setOf("net.corda.finance.contracts")
+        private val cordappPackages = listOf("net.corda.finance.contracts", "net.corda.finance.schemas")
         @JvmStatic
         @Parameterized.Parameters(name = "Anonymous = {0}")
         fun data(): Collection<Boolean> = listOf(true, false)
@@ -226,7 +224,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             aliceNode.internals.disableDBCloseOnStop()
             bobNode.internals.disableDBCloseOnStop()
 
-            val bobAddr = bobNode.network.myAddress as InMemoryMessagingNetwork.PeerHandle
+            val bobAddr = bobNode.network.myAddress
             mockNet.runNetwork() // Clear network map registration messages
 
             val notary = mockNet.defaultNotaryIdentity
@@ -313,7 +311,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     // Creates a mock node with an overridden storage service that uses a RecordingMap, that lets us test the order
     // of gets and puts.
-    private fun makeNodeWithTracking(name: CordaX500Name): StartedNode<InternalMockNetwork.MockNode> {
+    private fun makeNodeWithTracking(name: CordaX500Name): TestStartedNode {
         // Create a node in the mock network ...
         return mockNet.createNode(InternalMockNodeParameters(legalName = name), nodeFactory = { args, cordappLoader ->
             if (cordappLoader != null) {
@@ -543,8 +541,8 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     private fun runBuyerAndSeller(notary: Party,
                                   buyer: Party,
-                                  sellerNode: StartedNode<InternalMockNetwork.MockNode>,
-                                  buyerNode: StartedNode<InternalMockNetwork.MockNode>,
+                                  sellerNode: TestStartedNode,
+                                  buyerNode: TestStartedNode,
                                   assetToSell: StateAndRef<OwnableState>): RunResult {
         val buyerFlows: Observable<out FlowLogic<*>> = buyerNode.registerInitiatedFlow(BuyerAcceptor::class.java)
         val firstBuyerFiber = buyerFlows.toFuture().map { it.stateMachine }
@@ -638,10 +636,10 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
     private fun insertFakeTransactions(
             wtxToSign: List<WireTransaction>,
-            node: StartedNode<*>,
+            node: TestStartedNode,
             identity: Party,
-            notaryNode: StartedNode<*>,
-            vararg extraSigningNodes: StartedNode<*>): Map<SecureHash, SignedTransaction> {
+            notaryNode: TestStartedNode,
+            vararg extraSigningNodes: TestStartedNode): Map<SecureHash, SignedTransaction> {
         val notaryParty = mockNet.defaultNotaryIdentity
         val signed = wtxToSign.map {
             val id = it.id

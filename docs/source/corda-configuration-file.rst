@@ -1,4 +1,4 @@
-Node configuration
+Configuring a node
 ==================
 
 .. contents::
@@ -76,7 +76,6 @@ absolute path to the node's base directory.
 
 :database: Database configuration:
 
-        :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
         :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
             ``java.sql.Connection``, but without the ``TRANSACTION_`` prefix. Defaults to REPEATABLE_READ.
         :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
@@ -87,7 +86,7 @@ absolute path to the node's base directory.
 
 :h2Port: Deprecated. Use ``h2Settings`` instead.
 
-:h2Settings:  Sets the H2 JDBC server port. See :doc:`node-database-access-h2`.
+:h2Settings:  Sets the H2 JDBC server host and port. See :doc:`node-database-access-h2`. For non-localhost address the database passowrd needs to be set in ``dataSourceProperties``.
 
 :messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
 
@@ -245,6 +244,13 @@ absolute path to the node's base directory.
 :flowMonitorPeriodMillis: ``Duration`` of the period suspended flows waiting for IO are logged. Default value is ``60 seconds``.
 
 :flowMonitorSuspensionLoggingThresholdMillis: Threshold ``Duration`` suspended flows waiting for IO need to exceed before they are logged. Default value is ``60 seconds``.
+
+:jmxReporterType:  Provides an option for registering an alternative JMX reporter. Available options are ``JOLOKIA`` and ``NEW_RELIC``. If no value is provided, ``JOLOKIA`` will be used.
+
+                    .. note:: The Jolokia configuration is provided by default.  The New Relic configuration leverages the Dropwizard_ NewRelicReporter solution. See `Introduction to New Relic for Java`_ for details on how to get started and how to install the New Relic Java agent.
+
+                        .. _Dropwizard: https://metrics.dropwizard.io/3.2.3/manual/third-party.html
+                        .. _Introduction to New Relic for Java: https://docs.newrelic.com/docs/agents/java-agent/getting-started/introduction-new-relic-java
 
 Examples
 --------

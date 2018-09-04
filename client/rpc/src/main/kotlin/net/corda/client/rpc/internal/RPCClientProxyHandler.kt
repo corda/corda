@@ -10,14 +10,11 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
-import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableSerializer
+import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSerializer
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
-import net.corda.core.internal.LazyStickyPool
-import net.corda.core.internal.LifeCycle
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.times
+import net.corda.core.internal.*
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.serialize
@@ -31,26 +28,15 @@ import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
+import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
-import org.apache.activemq.artemis.api.core.client.ClientConsumer
-import org.apache.activemq.artemis.api.core.client.ClientMessage
-import org.apache.activemq.artemis.api.core.client.ClientProducer
-import org.apache.activemq.artemis.api.core.client.ClientSession
-import org.apache.activemq.artemis.api.core.client.ClientSessionFactory
-import org.apache.activemq.artemis.api.core.client.FailoverEventType
-import org.apache.activemq.artemis.api.core.client.ServerLocator
 import rx.Notification
 import rx.Observable
 import rx.subjects.UnicastSubject
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.reflect.jvm.javaMethod
@@ -111,12 +97,18 @@ class RPCClientProxyHandler(
         // To check whether toString() is being invoked
         val toStringMethod: Method = Object::toString.javaMethod!!
 
-        private fun addRpcCallSiteToThrowable(throwable: Throwable, callSite: Throwable) {
+        private fun addRpcCallSiteToThrowable(throwable: Throwable, callSite: CallSite) {
             var currentThrowable = throwable
             while (true) {
                 val cause = currentThrowable.cause
                 if (cause == null) {
-                    currentThrowable.initCause(callSite)
+                    try {
+                        currentThrowable.initCause(callSite)
+                    } catch (e: IllegalStateException) {
+                        // OK, we did our best, but the first throwable with a null cause was instantiated using
+                        // Throwable(Throwable) or Throwable(String, Throwable) which means initCause can't ever
+                        // be called even if it was passed null.
+                    }
                     break
                 } else {
                     currentThrowable = cause
@@ -155,27 +147,27 @@ class RPCClientProxyHandler(
     private val observablesToReap = ThreadBox(object {
         var observables = ArrayList<InvocationId>()
     })
-    private val serializationContextWithObservableContext = RpcClientObservableSerializer.createContext(serializationContext, observableContext)
+    private val serializationContextWithObservableContext = RpcClientObservableDeSerializer.createContext(serializationContext, observableContext)
 
     private fun createRpcObservableMap(): RpcObservableMap {
         val onObservableRemove = RemovalListener<InvocationId, UnicastSubject<Notification<*>>> { key, _, cause ->
             val observableId = key!!
-            val rpcCallSite = callSiteMap?.remove(observableId)
+            val rpcCallSite: CallSite? = callSiteMap?.remove(observableId)
             if (cause == RemovalCause.COLLECTED) {
                 log.warn(listOf(
                         "A hot observable returned from an RPC was never subscribed to.",
                         "This wastes server-side resources because it was queueing observations for retrieval.",
                         "It is being closed now, but please adjust your code to call .notUsed() on the observable",
-                        "to close it explicitly. (Java users: subscribe to it then unsubscribe). This warning",
-                        "will appear less frequently in future versions of the platform and you can ignore it",
-                        "if you want to.").joinToString(" "), rpcCallSite)
+                        "to close it explicitly. (Java users: subscribe to it then unsubscribe). If you aren't sure",
+                        "where the leak is coming from, set -Dnet.corda.client.rpc.trackRpcCallSites=true on the JVM",
+                        "command line and you will get a stack trace with this warning."
+                ).joinToString(" "), rpcCallSite)
+                rpcCallSite?.printStackTrace()
             }
             observablesToReap.locked { observables.add(observableId) }
         }
         return Caffeine.newBuilder().
-                weakValues().
-                removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).
-                build()
+                weakValues().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).buildNamed("RpcClientProxyHandler_rpcObservable")
     }
 
     private var sessionFactory: ClientSessionFactory? = null
@@ -231,6 +223,9 @@ class RPCClientProxyHandler(
         startSessions()
     }
 
+    /** A throwable that doesn't represent a real error - it's just here to wrap a stack trace. */
+    class CallSite(val rpcName: String) : Throwable("<Call site of root RPC '$rpcName'>")
+
     // This is the general function that transforms a client side RPC to internal Artemis messages.
     override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?): Any? {
         lifeCycle.requireState { it == State.STARTED || it == State.SERVER_VERSION_NOT_SET }
@@ -246,7 +241,7 @@ class RPCClientProxyHandler(
             throw RPCException("RPC server is not available.")
 
         val replyId = InvocationId.newInstance()
-        callSiteMap?.set(replyId, Throwable("<Call site of root RPC '${method.name}'>"))
+        callSiteMap?.set(replyId, CallSite(method.name))
         try {
             val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
             val request = RPCApi.ClientToServer.RpcRequest(
@@ -288,56 +283,71 @@ class RPCClientProxyHandler(
 
     // The handler for Artemis messages.
     private fun artemisMessageHandler(message: ClientMessage) {
-        val serverToClient = RPCApi.ServerToClient.fromClientMessage(serializationContextWithObservableContext, message)
-        val deduplicationSequenceNumber = message.getLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME)
-        if (deduplicationChecker.checkDuplicateMessageId(serverToClient.deduplicationIdentity, deduplicationSequenceNumber)) {
-            log.info("Message duplication detected, discarding message")
-            return
+        fun completeExceptionally(id: InvocationId, e: Throwable, future: SettableFuture<Any?>?) {
+            val rpcCallSite: CallSite? = callSiteMap?.get(id)
+            if (rpcCallSite != null) addRpcCallSiteToThrowable(e, rpcCallSite)
+            future?.setException(e.cause ?: e)
         }
-        log.debug { "Got message from RPC server $serverToClient" }
-        when (serverToClient) {
-            is RPCApi.ServerToClient.RpcReply -> {
-                val replyFuture = rpcReplyMap.remove(serverToClient.id)
-                if (replyFuture == null) {
-                    log.error("RPC reply arrived to unknown RPC ID ${serverToClient.id}, this indicates an internal RPC error.")
-                } else {
-                    val result = serverToClient.result
-                    when (result) {
-                        is Try.Success -> replyFuture.set(result.value)
-                        is Try.Failure -> {
-                            val rpcCallSite = callSiteMap?.get(serverToClient.id)
-                            if (rpcCallSite != null) addRpcCallSiteToThrowable(result.exception, rpcCallSite)
-                            replyFuture.setException(result.exception)
+
+        try {
+            // Deserialize the reply from the server, both the wrapping metadata and the actual body of the return value.
+            val serverToClient: RPCApi.ServerToClient = try {
+                RPCApi.ServerToClient.fromClientMessage(serializationContextWithObservableContext, message)
+            } catch (e: RPCApi.ServerToClient.FailedToDeserializeReply) {
+                // Might happen if something goes wrong during mapping the response to classes, evolution, class synthesis etc.
+                log.error("Failed to deserialize RPC body", e)
+                completeExceptionally(e.id, e, rpcReplyMap.remove(e.id))
+                return
+            }
+            val deduplicationSequenceNumber = message.getLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME)
+            if (deduplicationChecker.checkDuplicateMessageId(serverToClient.deduplicationIdentity, deduplicationSequenceNumber)) {
+                log.info("Message duplication detected, discarding message")
+                return
+            }
+            log.debug { "Got message from RPC server $serverToClient" }
+            when (serverToClient) {
+                is RPCApi.ServerToClient.RpcReply -> {
+                    val replyFuture = rpcReplyMap.remove(serverToClient.id)
+                    if (replyFuture == null) {
+                        log.error("RPC reply arrived to unknown RPC ID ${serverToClient.id}, this indicates an internal RPC error.")
+                    } else {
+                        val result: Try<Any?> = serverToClient.result
+                        when (result) {
+                            is Try.Success -> replyFuture.set(result.value)
+                            is Try.Failure -> {
+                                completeExceptionally(serverToClient.id, result.exception, replyFuture)
+                            }
+                        }
+                    }
+                }
+                is RPCApi.ServerToClient.Observation -> {
+                    val observable: UnicastSubject<Notification<*>>? = observableContext.observableMap.getIfPresent(serverToClient.id)
+                    if (observable == null) {
+                        log.debug("Observation ${serverToClient.content} arrived to unknown Observable with ID ${serverToClient.id}. " +
+                                "This may be due to an observation arriving before the server was " +
+                                "notified of observable shutdown")
+                    } else {
+                        // We schedule the onNext() on an executor sticky-pooled based on the Observable ID.
+                        observationExecutorPool.run(serverToClient.id) { executor ->
+                            executor.submit {
+                                val content = serverToClient.content
+                                if (content.isOnCompleted || content.isOnError) {
+                                    observableContext.observableMap.invalidate(serverToClient.id)
+                                }
+                                // Add call site information on error
+                                if (content.isOnError) {
+                                    val rpcCallSite = callSiteMap?.get(serverToClient.id)
+                                    if (rpcCallSite != null) addRpcCallSiteToThrowable(content.throwable, rpcCallSite)
+                                }
+                                observable.onNext(content)
+                            }
                         }
                     }
                 }
             }
-            is RPCApi.ServerToClient.Observation -> {
-                val observable = observableContext.observableMap.getIfPresent(serverToClient.id)
-                if (observable == null) {
-                    log.debug("Observation ${serverToClient.content} arrived to unknown Observable with ID ${serverToClient.id}. " +
-                            "This may be due to an observation arriving before the server was " +
-                            "notified of observable shutdown")
-                } else {
-                    // We schedule the onNext() on an executor sticky-pooled based on the Observable ID.
-                    observationExecutorPool.run(serverToClient.id) { executor ->
-                        executor.submit {
-                            val content = serverToClient.content
-                            if (content.isOnCompleted || content.isOnError) {
-                                observableContext.observableMap.invalidate(serverToClient.id)
-                            }
-                            // Add call site information on error
-                            if (content.isOnError) {
-                                val rpcCallSite = callSiteMap?.get(serverToClient.id)
-                                if (rpcCallSite != null) addRpcCallSiteToThrowable(content.throwable, rpcCallSite)
-                            }
-                            observable.onNext(content)
-                        }
-                    }
-                }
-            }
+        } finally {
+            message.acknowledge()
         }
-        message.acknowledge()
     }
 
     /**
@@ -556,13 +566,14 @@ class RPCClientProxyHandler(
 
 private typealias RpcObservableMap = Cache<InvocationId, UnicastSubject<Notification<*>>>
 private typealias RpcReplyMap = ConcurrentHashMap<InvocationId, SettableFuture<Any?>>
-private typealias CallSiteMap = ConcurrentHashMap<InvocationId, Throwable?>
+private typealias CallSiteMap = ConcurrentHashMap<InvocationId, RPCClientProxyHandler.CallSite?>
 
 /**
- * Holds a context available during Kryo deserialisation of messages that are expected to contain Observables.
+ * Holds a context available during de-serialisation of messages that are expected to contain Observables.
  *
- * @param observableMap holds the Observables that are ultimately exposed to the user.
- * @param hardReferenceStore holds references to Observables we want to keep alive while they are subscribed to.
+ * @property observableMap holds the Observables that are ultimately exposed to the user.
+ * @property hardReferenceStore holds references to Observables we want to keep alive while they are subscribed to.
+ * @property callSiteMap keeps stack traces captured when an RPC was invoked, useful for debugging when an observable leaks.
  */
 data class ObservableContext(
         val callSiteMap: CallSiteMap?,

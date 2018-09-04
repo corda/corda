@@ -10,12 +10,11 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.DataSourceFactory
-import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
+import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.PasswordEncryption
-import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.node.internal.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.shiro.authc.credential.DefaultPasswordService
 import org.junit.After
@@ -34,8 +33,7 @@ import kotlin.test.assertFailsWith
  */
 @RunWith(Parameterized::class)
 class AuthDBTests : NodeBasedTest() {
-
-    private lateinit var node: StartedNode<Node>
+    private lateinit var node: NodeWithInfo
     private lateinit var client: CordaRPCClient
     private lateinit var db: UsersDB
 
@@ -95,7 +93,7 @@ class AuthDBTests : NodeBasedTest() {
         )
 
         node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = securityConfig)
-        client = CordaRPCClient(node.internals.configuration.rpcOptions.address)
+        client = CordaRPCClient(node.node.configuration.rpcOptions.address)
     }
 
     @Test

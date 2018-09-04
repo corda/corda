@@ -11,7 +11,6 @@ import net.corda.core.identity.Party;
 import net.corda.core.messaging.DataFeed;
 import net.corda.core.node.services.IdentityService;
 import net.corda.core.node.services.Vault;
-import net.corda.core.node.services.VaultQueryException;
 import net.corda.core.node.services.VaultService;
 import net.corda.core.node.services.vault.*;
 import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria;
@@ -33,7 +32,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import rx.Observable;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -41,6 +39,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static net.corda.core.node.services.vault.Builder.sum;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.*;
@@ -310,13 +309,13 @@ public class VaultQueryJavaTests {
     @Test
     public void trackDealStatesPagedSorted() {
         List<String> dealIds = asList("123", "456", "789");
-        UniqueIdentifier uid =
-                database.transaction(tx -> {
-                    Vault<LinearState> states = vaultFiller.fillWithSomeTestLinearStates(10, null);
-                    UniqueIdentifier _uid = states.getStates().iterator().next().component1().getData().getLinearId();
-                    vaultFiller.fillWithSomeTestDeals(dealIds);
-                    return _uid;
-                });
+        UniqueIdentifier uid = new UniqueIdentifier("999");
+        database.transaction(tx -> {
+            vaultFiller.fillWithSomeTestLinearStates(10, null);
+            vaultFiller.fillWithSomeTestLinearStates(1, null, emptyList(), uid);
+            vaultFiller.fillWithSomeTestDeals(dealIds);
+            return tx;
+        });
         database.transaction(tx -> {
             // DOCSTART VaultJavaQueryExample5
             @SuppressWarnings("unchecked")
@@ -338,7 +337,7 @@ public class VaultQueryJavaTests {
             Vault.Page<ContractState> snapshot = results.getSnapshot();
             // DOCEND VaultJavaQueryExample5
 
-            assertThat(snapshot.getStates()).hasSize(13);
+            assertThat(snapshot.getStates()).hasSize(4);
 
             return tx;
         });

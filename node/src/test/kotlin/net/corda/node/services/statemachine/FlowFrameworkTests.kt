@@ -27,7 +27,6 @@ import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.persistence.checkpoints
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
@@ -36,7 +35,6 @@ import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.internal.*
-import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
@@ -55,47 +53,41 @@ class FlowFrameworkTests {
         init {
             LogHelper.setLevel("+net.corda.flow")
         }
+    }
 
-        private lateinit var mockNet: InternalMockNetwork
-        private lateinit var aliceNode: StartedNode<MockNode>
-        private lateinit var bobNode: StartedNode<MockNode>
-        private lateinit var alice: Party
-        private lateinit var bob: Party
-        private lateinit var notaryIdentity: Party
-        private val receivedSessionMessages = ArrayList<SessionTransfer>()
+    private lateinit var mockNet: InternalMockNetwork
+    private lateinit var aliceNode: TestStartedNode
+    private lateinit var bobNode: TestStartedNode
+    private lateinit var alice: Party
+    private lateinit var bob: Party
+    private lateinit var notaryIdentity: Party
+    private val receivedSessionMessages = ArrayList<SessionTransfer>()
 
-        @BeforeClass
-        @JvmStatic
-        fun beforeClass() {
-            mockNet = InternalMockNetwork(
-                    cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
-                    servicePeerAllocationStrategy = RoundRobin()
-            )
+    @Before
+    fun setUpMockNet() {
+        mockNet = InternalMockNetwork(
+                cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                servicePeerAllocationStrategy = RoundRobin()
+        )
 
-            aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
-            bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
+        aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
+        bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
 
-            // Extract identities
-            alice = aliceNode.info.singleIdentity()
-            bob = bobNode.info.singleIdentity()
-            notaryIdentity = mockNet.defaultNotaryIdentity
+        // Extract identities
+        alice = aliceNode.info.singleIdentity()
+        bob = bobNode.info.singleIdentity()
+        notaryIdentity = mockNet.defaultNotaryIdentity
 
-            receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
-        }
+        receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
+    }
 
-        private fun receivedSessionMessagesObservable(): Observable<SessionTransfer> {
-            return mockNet.messagingNetwork.receivedMessages.toSessionTransfers()
-        }
-
-        @AfterClass @JvmStatic
-        fun afterClass() {
-            mockNet.stopNodes()
-        }
-
+    private fun receivedSessionMessagesObservable(): Observable<SessionTransfer> {
+        return mockNet.messagingNetwork.receivedMessages.toSessionTransfers()
     }
 
     @After
     fun cleanUp() {
+        mockNet.stopNodes()
         receivedSessionMessages.clear()
     }
 
@@ -446,7 +438,7 @@ class FlowFrameworkTests {
 
     private val normalEnd = ExistingSessionMessage(SessionId(0), EndSessionMessage) // NormalSessionEnd(0)
 
-    private fun StartedNode<*>.sendSessionMessage(message: SessionMessage, destination: Party) {
+    private fun TestStartedNode.sendSessionMessage(message: SessionMessage, destination: Party) {
         services.networkService.apply {
             val address = getAddressOfParty(PartyInfo.SingleNode(destination, emptyList()))
             send(createMessage(FlowMessagingImpl.sessionTopic, message.serialize().bytes), address)
@@ -468,53 +460,46 @@ class FlowFrameworkTripartyTests {
         }
 
         private lateinit var mockNet: InternalMockNetwork
-        private lateinit var aliceNode: StartedNode<MockNode>
-        private lateinit var bobNode: StartedNode<MockNode>
-        private lateinit var charlieNode: StartedNode<MockNode>
+        private lateinit var aliceNode: TestStartedNode
+        private lateinit var bobNode: TestStartedNode
+        private lateinit var charlieNode: TestStartedNode
         private lateinit var alice: Party
         private lateinit var bob: Party
         private lateinit var charlie: Party
         private lateinit var notaryIdentity: Party
         private val receivedSessionMessages = ArrayList<SessionTransfer>()
+    }
 
-        @BeforeClass
-        @JvmStatic
-        fun beforeClass() {
-            mockNet = InternalMockNetwork(
-                    cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
-                    servicePeerAllocationStrategy = RoundRobin()
-            )
+    @Before
+    fun setUpGlobalMockNet() {
+        mockNet = InternalMockNetwork(
+                cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                servicePeerAllocationStrategy = RoundRobin()
+        )
 
-            aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
-            bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
-            charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
+        aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
+        bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
+        charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
 
 
-            // Extract identities
-            alice = aliceNode.info.singleIdentity()
-            bob = bobNode.info.singleIdentity()
-            charlie = charlieNode.info.singleIdentity()
-            notaryIdentity = mockNet.defaultNotaryIdentity
+        // Extract identities
+        alice = aliceNode.info.singleIdentity()
+        bob = bobNode.info.singleIdentity()
+        charlie = charlieNode.info.singleIdentity()
+        notaryIdentity = mockNet.defaultNotaryIdentity
 
-            receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
-        }
-
-        @AfterClass @JvmStatic
-        fun afterClass() {
-            mockNet.stopNodes()
-        }
-
-        private fun receivedSessionMessagesObservable(): Observable<SessionTransfer> {
-            return mockNet.messagingNetwork.receivedMessages.toSessionTransfers()
-        }
-
+        receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
     }
 
     @After
     fun cleanUp() {
+        mockNet.stopNodes()
         receivedSessionMessages.clear()
     }
 
+    private fun receivedSessionMessagesObservable(): Observable<SessionTransfer> {
+        return mockNet.messagingNetwork.receivedMessages.toSessionTransfers()
+    }
 
     @Test
     fun `sending to multiple parties`() {
@@ -619,7 +604,7 @@ class FlowFrameworkTripartyTests {
         assertThat(receivedSessionMessages).containsExactly(*expected)
     }
 
-    private fun assertSessionTransfers(node: StartedNode<MockNode>, vararg expected: SessionTransfer): List<SessionTransfer> {
+    private fun assertSessionTransfers(node: TestStartedNode, vararg expected: SessionTransfer): List<SessionTransfer> {
         val actualForNode = receivedSessionMessages.filter { it.from == node.internals.id || it.to == node.network.myAddress }
         assertThat(actualForNode).containsExactly(*expected)
         return actualForNode
@@ -636,8 +621,8 @@ class FlowFrameworkPersistenceTests {
 
     private lateinit var mockNet: InternalMockNetwork
     private val receivedSessionMessages = ArrayList<SessionTransfer>()
-    private lateinit var aliceNode: StartedNode<MockNode>
-    private lateinit var bobNode: StartedNode<MockNode>
+    private lateinit var aliceNode: TestStartedNode
+    private lateinit var bobNode: TestStartedNode
     private lateinit var notaryIdentity: Party
     private lateinit var alice: Party
     private lateinit var bob: Party
@@ -749,7 +734,7 @@ class FlowFrameworkPersistenceTests {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //region Helpers
 
-    private inline fun <reified P : FlowLogic<*>> StartedNode<MockNode>.restartAndGetRestoredFlow(): P {
+    private inline fun <reified P : FlowLogic<*>> TestStartedNode.restartAndGetRestoredFlow(): P {
         val newNode = mockNet.restartNode(this)
         newNode.internals.acceptableLiveFiberCountOnStop = 1
         mockNet.runNetwork()
@@ -760,7 +745,7 @@ class FlowFrameworkPersistenceTests {
         assertThat(receivedSessionMessages).containsExactly(*expected)
     }
 
-    private fun assertSessionTransfers(node: StartedNode<MockNode>, vararg expected: SessionTransfer): List<SessionTransfer> {
+    private fun assertSessionTransfers(node: TestStartedNode, vararg expected: SessionTransfer): List<SessionTransfer> {
         val actualForNode = receivedSessionMessages.filter { it.from == node.internals.id || it.to == node.network.myAddress }
         assertThat(actualForNode).containsExactly(*expected)
         return actualForNode
@@ -775,7 +760,7 @@ class FlowFrameworkPersistenceTests {
 
 private fun sessionConfirm(flowVersion: Int = 1) = ExistingSessionMessage(SessionId(0), ConfirmSessionMessage(SessionId(0), FlowInfo(flowVersion, "")))
 
-private inline fun <reified P : FlowLogic<*>> StartedNode<*>.getSingleFlow(): Pair<P, CordaFuture<*>> {
+private inline fun <reified P : FlowLogic<*>> TestStartedNode.getSingleFlow(): Pair<P, CordaFuture<*>> {
     return smm.findStateMachines(P::class.java).single()
 }
 
@@ -809,8 +794,8 @@ private fun Observable<MessageTransfer>.toSessionTransfers(): Observable<Session
 
 private fun errorMessage(errorResponse: FlowException? = null) = ExistingSessionMessage(SessionId(0), ErrorSessionMessage(errorResponse, 0))
 
-private infix fun StartedNode<MockNode>.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(internals.id, message)
-private infix fun Pair<Int, SessionMessage>.to(node: StartedNode<*>): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
+private infix fun TestStartedNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(internals.id, message)
+private infix fun Pair<Int, SessionMessage>.to(node: TestStartedNode): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
 
 private data class SessionTransfer(val from: Int, val message: SessionMessage, val to: MessageRecipients) {
     val isPayloadTransfer: Boolean get() =
@@ -819,11 +804,11 @@ private data class SessionTransfer(val from: Int, val message: SessionMessage, v
     override fun toString(): String = "$from sent $message to $to"
 }
 
-private inline fun <reified P : FlowLogic<*>> StartedNode<*>.registerFlowFactory(
+private inline fun <reified P : FlowLogic<*>> TestStartedNode.registerFlowFactory(
         initiatingFlowClass: KClass<out FlowLogic<*>>,
         initiatedFlowVersion: Int = 1,
         noinline flowFactory: (FlowSession) -> P): CordaFuture<P> {
-    val observable = internalRegisterFlowFactory(
+    val observable = registerFlowFactory(
             initiatingFlowClass.java,
             InitiatedFlowFactory.CorDapp(initiatedFlowVersion, "", flowFactory),
             P::class.java,

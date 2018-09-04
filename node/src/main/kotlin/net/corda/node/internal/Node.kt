@@ -1,8 +1,13 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
+import com.codahale.metrics.MetricFilter
+import com.codahale.metrics.MetricRegistry
+import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
+import com.palominolabs.metrics.newrelic.NewRelicReporter
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
@@ -10,7 +15,8 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
-import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.notary.NotaryService
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
@@ -33,10 +39,14 @@ import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
 import net.corda.node.serialization.kryo.KryoServerSerializationScheme
 import net.corda.node.services.Permissions
+import net.corda.node.services.api.FlowStarter
+import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.config.shouldStartLocalShell
+import net.corda.node.services.config.JmxReporterType
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.utilities.AddressUtils
@@ -49,17 +59,29 @@ import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.serialization.internal.*
+import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.net.BindException
+import java.net.InetAddress
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.system.exitProcess
+import java.util.concurrent.TimeUnit
+
+class NodeWithInfo(val node: Node, val info: NodeInfo) {
+    val services: StartedNodeServices = object : StartedNodeServices, ServiceHubInternal by node.services, FlowStarter by node.flowStarter {}
+    fun dispose() = node.stop()
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> =
+            node.registerInitiatedFlow(node.smm, initiatedFlowClass)
+}
 
 /**
  * A Node manages a standalone server that takes part in the P2P network. It creates the services found in [ServiceHub],
@@ -71,7 +93,7 @@ open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 private val initialiseSerialization: Boolean = true,
                 cordappLoader: CordappLoader = makeCordappLoader(configuration)
-) : AbstractNode(
+) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
         versionInfo,
@@ -79,6 +101,10 @@ open class Node(configuration: NodeConfiguration,
         // Under normal (non-test execution) it will always be "1"
         AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1)
 ) {
+
+    override fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): NodeInfo =
+            nodeInfo
+
     companion object {
         private val staticLog = contextLogger()
         var renderBasicInfoToConsole = true
@@ -177,7 +203,7 @@ open class Node(configuration: NodeConfiguration,
     override fun startMessagingService(rpcOps: RPCOps, nodeInfo: NodeInfo, myNotaryIdentity: PartyAndCertificate?, networkParameters: NetworkParameters) {
         require(nodeInfo.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
 
-        val client = network as P2PMessagingClient
+        network as P2PMessagingClient
 
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
@@ -201,12 +227,12 @@ open class Node(configuration: NodeConfiguration,
             startLocalRpcBroker(securityManager)
         }
 
-        val bridgeControlListener = BridgeControlListener(configuration, client.serverAddress, networkParameters.maxMessageSize)
+        val bridgeControlListener = BridgeControlListener(configuration.p2pSslOptions, network.serverAddress, networkParameters.maxMessageSize)
 
         printBasicNodeInfo("Advertised P2P messaging addresses", nodeInfo.addresses.joinToString())
         val rpcServerConfiguration = RPCServerConfiguration.DEFAULT
         rpcServerAddresses?.let {
-            internalRpcMessagingClient = InternalRPCMessagingClient(configuration, it.admin, MAX_RPC_MESSAGE_SIZE, CordaX500Name.build(configuration.loadSslKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal), rpcServerConfiguration)
+            internalRpcMessagingClient = InternalRPCMessagingClient(configuration.p2pSslOptions, it.admin, MAX_RPC_MESSAGE_SIZE, CordaX500Name.build(configuration.p2pSslOptions.keyStore.get()[X509Utilities.CORDA_CLIENT_TLS].subjectX500Principal), rpcServerConfiguration)
             printBasicNodeInfo("RPC connection address", it.primary.toString())
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
         }
@@ -230,8 +256,8 @@ open class Node(configuration: NodeConfiguration,
             closeOnStop()
             init(rpcOps, securityManager)
         }
-        client.closeOnStop()
-        client.start(
+        network.closeOnStop()
+        network.start(
                 myIdentity = nodeInfo.legalIdentities[0].owningKey,
                 serviceIdentity = if (nodeInfo.legalIdentities.size == 1) null else nodeInfo.legalIdentities[1].owningKey,
                 advertisedAddress = nodeInfo.addresses[0],
@@ -245,9 +271,9 @@ open class Node(configuration: NodeConfiguration,
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(configuration, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
+                        ArtemisRpcBroker.withSsl(configuration.p2pSslOptions, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     } else {
-                        ArtemisRpcBroker.withoutSsl(configuration, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
+                        ArtemisRpcBroker.withoutSsl(configuration.p2pSslOptions, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     }
                 }
                 rpcBroker!!.closeOnStop()
@@ -314,13 +340,20 @@ open class Node(configuration: NodeConfiguration,
 
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
             val effectiveH2Settings = configuration.effectiveH2Settings
-
+            //forbid execution of arbitrary code via SQL except those classes required by H2 itself
+            System.setProperty("h2.allowedClasses", "org.h2.mvstore.db.MVTableEngine,org.locationtech.jts.geom.Geometry,org.h2.server.TcpServer")
             if (effectiveH2Settings?.address != null) {
+                if (!InetAddress.getByName(effectiveH2Settings.address.host).isLoopbackAddress
+                        && configuration.dataSourceProperties.getProperty("dataSource.password").isBlank()) {
+                    throw CouldNotCreateDataSourceException("Database password is required for H2 server listening on ${InetAddress.getByName(effectiveH2Settings.address.host)}.")
+                }
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
+                val baseDir = Paths.get(databaseName).parent.toString()
                 val server = org.h2.tools.Server.createTcpServer(
                         "-tcpPort", effectiveH2Settings.address.port.toString(),
                         "-tcpAllowOthers",
                         "-tcpDaemon",
+                        "-baseDir", baseDir,
                         "-key", "node", databaseName)
                 // override interface that createTcpServer listens on (which is always 0.0.0.0)
                 System.setProperty("h2.bindAddress", effectiveH2Settings.address.host)
@@ -350,23 +383,13 @@ open class Node(configuration: NodeConfiguration,
         return super.generateAndSaveNodeInfo()
     }
 
-    override fun start(): StartedNode<Node> {
+    override fun start(): NodeInfo {
         initialiseSerialization()
-        val started: StartedNode<Node> = uncheckedCast(super.start())
+        val nodeInfo: NodeInfo = super.start()
         nodeReadyFuture.thenMatch({
             serverThread.execute {
-                // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
-                //
-                // https://jolokia.org/agent/jvm.html
-                JmxReporter.forRegistry(started.services.monitoringService.metrics).inDomain("net.corda").createsObjectNamesWith { _, domain, name ->
-                    // Make the JMX hierarchy a bit better organised.
-                    val category = name.substringBefore('.')
-                    val subName = name.substringAfter('.', "")
-                    if (subName == "")
-                        ObjectName("$domain:name=$category")
-                    else
-                        ObjectName("$domain:type=$category,name=$subName")
-                }.build().start()
+
+                registerJmxReporter(services.monitoringService.metrics)
 
                 _startupComplete.set(Unit)
             }
@@ -376,7 +399,48 @@ open class Node(configuration: NodeConfiguration,
         shutdownHook = addShutdownHook {
             stop()
         }
-        return started
+        return nodeInfo
+    }
+
+    /**
+     * A hook to allow configuration override of the JmxReporter being used.
+     */
+    fun registerJmxReporter(metrics: MetricRegistry) {
+        log.info("Registering JMX reporter:")
+        when (configuration.jmxReporterType) {
+            JmxReporterType.JOLOKIA -> registerJolokiaReporter(metrics)
+            JmxReporterType.NEW_RELIC -> registerNewRelicReporter(metrics)
+        }
+    }
+
+    private fun registerJolokiaReporter(registry: MetricRegistry) {
+        log.info("Registering Jolokia JMX reporter:")
+        // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
+        //
+        // https://jolokia.org/agent/jvm.html
+        JmxReporter.forRegistry(registry).inDomain("net.corda").createsObjectNamesWith { _, domain, name ->
+            // Make the JMX hierarchy a bit better organised.
+            val category = name.substringBefore('.')
+            val subName = name.substringAfter('.', "")
+            if (subName == "")
+                ObjectName("$domain:name=$category")
+            else
+                ObjectName("$domain:type=$category,name=$subName")
+        }.build().start()
+    }
+
+    private fun registerNewRelicReporter (registry: MetricRegistry) {
+        log.info("Registering New Relic JMX Reporter:")
+        val reporter = NewRelicReporter.forRegistry(registry)
+                .name("New Relic Reporter")
+                .filter(MetricFilter.ALL)
+                .attributeFilter(AllEnabledMetricAttributeFilter())
+                .rateUnit(TimeUnit.SECONDS)
+                .durationUnit(TimeUnit.MILLISECONDS)
+                .metricNamePrefix("corda/")
+                .build()
+
+        reporter.start(1, TimeUnit.MINUTES)
     }
 
     override val rxIoScheduler: Scheduler get() = Schedulers.io()

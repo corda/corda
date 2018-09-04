@@ -44,7 +44,7 @@ class NodeTest {
         }
     }
 
-    private fun AbstractNode.generateNodeInfo(): NodeInfo {
+    private fun Node.generateNodeInfo(): NodeInfo {
         assertNull(nodeInfoFile())
         generateAndSaveNodeInfo()
         val path = nodeInfoFile()!!
@@ -169,6 +169,7 @@ class NodeTest {
                 rpcSettings = NodeRpcSettings(address = fakeAddress, adminAddress = null, ssl = null),
                 messagingServerAddress = null,
                 notary = null
+
         )
     }
 }

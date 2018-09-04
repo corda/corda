@@ -77,6 +77,7 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
         private val log = contextLogger()
         fun createMap(): AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef> =
                 AppendOnlyPersistentMap(
+                        "PersistentUniquenessProvider_transactions",
                         toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
                         fromPersistentEntity = {
                             //TODO null check will become obsolete after making DB/JPA columns not nullable
@@ -103,10 +104,12 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
             txId: SecureHash,
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow?) {
+            timeWindow: TimeWindow?,
+            references: List<StateRef>
+    ) {
         mutex.locked {
             logRequest(txId, callerIdentity, requestSignature)
-            val conflictingStates = findAlreadyCommitted(states, commitLog)
+            val conflictingStates = findAlreadyCommitted(states, references, commitLog)
             if (conflictingStates.isNotEmpty()) {
                 handleConflicts(txId, conflictingStates)
             } else {
@@ -126,12 +129,23 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
         session.persist(request)
     }
 
-    private fun findAlreadyCommitted(states: List<StateRef>, commitLog: AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef>): LinkedHashMap<StateRef, StateConsumptionDetails> {
+    private fun findAlreadyCommitted(
+            states: List<StateRef>,
+            references: List<StateRef>,
+            commitLog: AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef>
+    ): LinkedHashMap<StateRef, StateConsumptionDetails> {
         val conflictingStates = LinkedHashMap<StateRef, StateConsumptionDetails>()
-        for (inputState in states) {
-            val consumingTx = commitLog[inputState]
-            if (consumingTx != null) conflictingStates[inputState] = StateConsumptionDetails(consumingTx.sha256())
+
+        fun checkConflicts(toCheck: List<StateRef>, type: StateConsumptionDetails.ConsumedStateType) {
+            return toCheck.forEach { stateRef ->
+                val consumingTx = commitLog[stateRef]
+                if (consumingTx != null) conflictingStates[stateRef] = StateConsumptionDetails(consumingTx.sha256(), type)
+            }
         }
+
+        checkConflicts(states, StateConsumptionDetails.ConsumedStateType.INPUT_STATE)
+        checkConflicts(references, StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
+
         return conflictingStates
     }
 

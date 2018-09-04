@@ -45,6 +45,12 @@ open class MappedSchema(schemaFamily: Class<*>,
                         val version: Int,
                         val mappedTypes: Iterable<Class<*>>) {
     val name: String = schemaFamily.name
+
+    /**
+     * Optional classpath resource containing the database changes for the [mappedTypes]
+     */
+    open val migrationResource: String? = null
+
     override fun toString(): String = "${this.javaClass.simpleName}(name=$name, version=$version)"
 
     override fun equals(other: Any?): Boolean {

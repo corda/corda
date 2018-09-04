@@ -3,12 +3,15 @@ package net.corda.core.transactions
 import net.corda.core.CordaException
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 import java.util.function.Predicate
+import kotlin.reflect.KClass
 
 /**
  * Implemented by [WireTransaction] and [FilteredTransaction]. A TraversableTransaction allows you to iterate
@@ -18,26 +21,29 @@ import java.util.function.Predicate
  */
 abstract class TraversableTransaction(open val componentGroups: List<ComponentGroup>) : CoreTransaction() {
     /** Hashes of the ZIP/JAR files that are needed to interpret the contents of this wire transaction. */
-    val attachments: List<SecureHash> = deserialiseComponentGroup(ComponentGroupEnum.ATTACHMENTS_GROUP, { SerializedBytes<SecureHash>(it).deserialize() })
+    val attachments: List<SecureHash> = deserialiseComponentGroup(SecureHash::class, ATTACHMENTS_GROUP)
 
     /** Pointers to the input states on the ledger, identified by (tx identity hash, output index). */
-    override val inputs: List<StateRef> = deserialiseComponentGroup(ComponentGroupEnum.INPUTS_GROUP, { SerializedBytes<StateRef>(it).deserialize() })
+    override val inputs: List<StateRef> = deserialiseComponentGroup(StateRef::class, INPUTS_GROUP)
 
-    override val outputs: List<TransactionState<ContractState>> = deserialiseComponentGroup(ComponentGroupEnum.OUTPUTS_GROUP, { SerializedBytes<TransactionState<ContractState>>(it).deserialize(context = SerializationFactory.defaultFactory.defaultContext.withAttachmentsClassLoader(attachments)) })
+    /** Pointers to reference states, identified by (tx identity hash, output index). */
+    override val references: List<StateRef> = deserialiseComponentGroup(StateRef::class, REFERENCES_GROUP)
+
+    override val outputs: List<TransactionState<ContractState>> = deserialiseComponentGroup(TransactionState::class, OUTPUTS_GROUP, attachmentsContext = true)
 
     /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
     val commands: List<Command<*>> = deserialiseCommands()
 
     override val notary: Party? = let {
-        val notaries: List<Party> = deserialiseComponentGroup(ComponentGroupEnum.NOTARY_GROUP, { SerializedBytes<Party>(it).deserialize() })
+        val notaries: List<Party> = deserialiseComponentGroup(Party::class, NOTARY_GROUP)
         check(notaries.size <= 1) { "Invalid Transaction. More than 1 notary party detected." }
-        if (notaries.isNotEmpty()) notaries[0] else null
+        notaries.firstOrNull()
     }
 
     val timeWindow: TimeWindow? = let {
-        val timeWindows: List<TimeWindow> = deserialiseComponentGroup(ComponentGroupEnum.TIMEWINDOW_GROUP, { SerializedBytes<TimeWindow>(it).deserialize() })
+        val timeWindows: List<TimeWindow> = deserialiseComponentGroup(TimeWindow::class, TIMEWINDOW_GROUP)
         check(timeWindows.size <= 1) { "Invalid Transaction. More than 1 time-window detected." }
-        if (timeWindows.isNotEmpty()) timeWindows[0] else null
+        timeWindows.firstOrNull()
     }
 
     /**
@@ -49,22 +55,27 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
      * - list of each attachment that is present
      * - The notary [Party], if present (list with one element)
      * - The time-window of the transaction, if present (list with one element)
+     * - list of each reference input that is present
      */
     val availableComponentGroups: List<List<Any>>
         get() {
-            val result = mutableListOf(inputs, outputs, commands, attachments)
+            val result = mutableListOf(inputs, outputs, commands, attachments, references)
             notary?.let { result += listOf(it) }
             timeWindow?.let { result += listOf(it) }
             return result
         }
 
     // Helper function to return a meaningful exception if deserialisation of a component fails.
-    private fun <T> deserialiseComponentGroup(groupEnum: ComponentGroupEnum, deserialiseBody: (ByteArray) -> T): List<T> {
+    private fun <T : Any> deserialiseComponentGroup(clazz: KClass<T>,
+                                                    groupEnum: ComponentGroupEnum,
+                                                    attachmentsContext: Boolean = false): List<T> {
+        val factory = SerializationFactory.defaultFactory
+        val context = factory.defaultContext.let { if (attachmentsContext) it.withAttachmentsClassLoader(attachments) else it }
         val group = componentGroups.firstOrNull { it.groupIndex == groupEnum.ordinal }
         return if (group != null && group.components.isNotEmpty()) {
             group.components.mapIndexed { internalIndex, component ->
                 try {
-                    deserialiseBody(component.bytes)
+                    factory.deserialize(component, clazz.java, context)
                 } catch (e: MissingAttachmentsException) {
                     throw e
                 } catch (e: Exception) {
@@ -83,11 +94,13 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
         // TODO: we could avoid deserialising unrelated signers.
         //      However, current approach ensures the transaction is not malformed
         //      and it will throw if any of the signers objects is not List of public keys).
-        val signersList = deserialiseComponentGroup(ComponentGroupEnum.SIGNERS_GROUP, { SerializedBytes<List<PublicKey>>(it).deserialize() })
-        val commandDataList = deserialiseComponentGroup(ComponentGroupEnum.COMMANDS_GROUP, { SerializedBytes<CommandData>(it).deserialize(context = SerializationFactory.defaultFactory.defaultContext.withAttachmentsClassLoader(attachments)) })
-        val group = componentGroups.firstOrNull { it.groupIndex == ComponentGroupEnum.COMMANDS_GROUP.ordinal }
+        val signersList: List<List<PublicKey>> = uncheckedCast(deserialiseComponentGroup(List::class, SIGNERS_GROUP))
+        val commandDataList: List<CommandData> = deserialiseComponentGroup(CommandData::class, COMMANDS_GROUP, attachmentsContext = true)
+        val group = componentGroups.firstOrNull { it.groupIndex == COMMANDS_GROUP.ordinal }
         return if (group is FilteredComponentGroup) {
-            check(commandDataList.size <= signersList.size) { "Invalid Transaction. Less Signers (${signersList.size}) than CommandData (${commandDataList.size}) objects" }
+            check(commandDataList.size <= signersList.size) {
+                "Invalid Transaction. Less Signers (${signersList.size}) than CommandData (${commandDataList.size}) objects"
+            }
             val componentHashes = group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) }
             val leafIndices = componentHashes.map { group.partialMerkleTree.leafIndex(it) }
             if (leafIndices.isNotEmpty())
@@ -96,7 +109,9 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
         } else {
             // It is a WireTransaction
             // or a FilteredTransaction with no Commands (in which case group is null).
-            check(commandDataList.size == signersList.size) { "Invalid Transaction. Sizes of CommandData (${commandDataList.size}) and Signers (${signersList.size}) do not match" }
+            check(commandDataList.size == signersList.size) {
+                "Invalid Transaction. Sizes of CommandData (${commandDataList.size}) and Signers (${signersList.size}) do not match"
+            }
             commandDataList.mapIndexed { index, commandData -> Command(commandData, signersList[index]) }
         }
     }
@@ -141,46 +156,47 @@ class FilteredTransaction internal constructor(
             var signersIncluded = false
 
             fun <T : Any> filter(t: T, componentGroupIndex: Int, internalIndex: Int) {
-                if (filtering.test(t)) {
-                    val group = filteredSerialisedComponents[componentGroupIndex]
-                    // Because the filter passed, we know there is a match. We also use first Vs single as the init function
-                    // of WireTransaction ensures there are no duplicated groups.
-                    val serialisedComponent = wtx.componentGroups.first { it.groupIndex == componentGroupIndex }.components[internalIndex]
-                    if (group == null) {
-                        // As all of the helper Map structures, like availableComponentNonces, availableComponentHashes
-                        // and groupsMerkleRoots, are computed lazily via componentGroups.forEach, there should always be
-                        // a match on Map.get ensuring it will never return null.
-                        filteredSerialisedComponents[componentGroupIndex] = mutableListOf(serialisedComponent)
-                        filteredComponentNonces[componentGroupIndex] = mutableListOf(wtx.availableComponentNonces[componentGroupIndex]!![internalIndex])
-                        filteredComponentHashes[componentGroupIndex] = mutableListOf(wtx.availableComponentHashes[componentGroupIndex]!![internalIndex])
-                    } else {
-                        group.add(serialisedComponent)
-                        // If the group[componentGroupIndex] existed, then we guarantee that
-                        // filteredComponentNonces[componentGroupIndex] and filteredComponentHashes[componentGroupIndex] are not null.
-                        filteredComponentNonces[componentGroupIndex]!!.add(wtx.availableComponentNonces[componentGroupIndex]!![internalIndex])
-                        filteredComponentHashes[componentGroupIndex]!!.add(wtx.availableComponentHashes[componentGroupIndex]!![internalIndex])
-                    }
-                    // If at least one command is visible, then all command-signers should be visible as well.
-                    // This is required for visibility purposes, see FilteredTransaction.checkAllCommandsVisible() for more details.
-                    if (componentGroupIndex == ComponentGroupEnum.COMMANDS_GROUP.ordinal && !signersIncluded) {
-                        signersIncluded = true
-                        val signersGroupIndex = ComponentGroupEnum.SIGNERS_GROUP.ordinal
-                        // There exist commands, thus the signers group is not empty.
-                        val signersGroupComponents = wtx.componentGroups.first { it.groupIndex == signersGroupIndex }
-                        filteredSerialisedComponents[signersGroupIndex] = signersGroupComponents.components.toMutableList()
-                        filteredComponentNonces[signersGroupIndex] = wtx.availableComponentNonces[signersGroupIndex]!!.toMutableList()
-                        filteredComponentHashes[signersGroupIndex] = wtx.availableComponentHashes[signersGroupIndex]!!.toMutableList()
-                    }
+                if (!filtering.test(t)) return
+
+                val group = filteredSerialisedComponents[componentGroupIndex]
+                // Because the filter passed, we know there is a match. We also use first Vs single as the init function
+                // of WireTransaction ensures there are no duplicated groups.
+                val serialisedComponent = wtx.componentGroups.first { it.groupIndex == componentGroupIndex }.components[internalIndex]
+                if (group == null) {
+                    // As all of the helper Map structures, like availableComponentNonces, availableComponentHashes
+                    // and groupsMerkleRoots, are computed lazily via componentGroups.forEach, there should always be
+                    // a match on Map.get ensuring it will never return null.
+                    filteredSerialisedComponents[componentGroupIndex] = mutableListOf(serialisedComponent)
+                    filteredComponentNonces[componentGroupIndex] = mutableListOf(wtx.availableComponentNonces[componentGroupIndex]!![internalIndex])
+                    filteredComponentHashes[componentGroupIndex] = mutableListOf(wtx.availableComponentHashes[componentGroupIndex]!![internalIndex])
+                } else {
+                    group.add(serialisedComponent)
+                    // If the group[componentGroupIndex] existed, then we guarantee that
+                    // filteredComponentNonces[componentGroupIndex] and filteredComponentHashes[componentGroupIndex] are not null.
+                    filteredComponentNonces[componentGroupIndex]!!.add(wtx.availableComponentNonces[componentGroupIndex]!![internalIndex])
+                    filteredComponentHashes[componentGroupIndex]!!.add(wtx.availableComponentHashes[componentGroupIndex]!![internalIndex])
+                }
+                // If at least one command is visible, then all command-signers should be visible as well.
+                // This is required for visibility purposes, see FilteredTransaction.checkAllCommandsVisible() for more details.
+                if (componentGroupIndex == COMMANDS_GROUP.ordinal && !signersIncluded) {
+                    signersIncluded = true
+                    val signersGroupIndex = SIGNERS_GROUP.ordinal
+                    // There exist commands, thus the signers group is not empty.
+                    val signersGroupComponents = wtx.componentGroups.first { it.groupIndex == signersGroupIndex }
+                    filteredSerialisedComponents[signersGroupIndex] = signersGroupComponents.components.toMutableList()
+                    filteredComponentNonces[signersGroupIndex] = wtx.availableComponentNonces[signersGroupIndex]!!.toMutableList()
+                    filteredComponentHashes[signersGroupIndex] = wtx.availableComponentHashes[signersGroupIndex]!!.toMutableList()
                 }
             }
 
             fun updateFilteredComponents() {
-                wtx.inputs.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.INPUTS_GROUP.ordinal, internalIndex) }
-                wtx.outputs.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.OUTPUTS_GROUP.ordinal, internalIndex) }
-                wtx.commands.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.COMMANDS_GROUP.ordinal, internalIndex) }
-                wtx.attachments.forEachIndexed { internalIndex, it -> filter(it, ComponentGroupEnum.ATTACHMENTS_GROUP.ordinal, internalIndex) }
-                if (wtx.notary != null) filter(wtx.notary, ComponentGroupEnum.NOTARY_GROUP.ordinal, 0)
-                if (wtx.timeWindow != null) filter(wtx.timeWindow, ComponentGroupEnum.TIMEWINDOW_GROUP.ordinal, 0)
+                wtx.inputs.forEachIndexed { internalIndex, it -> filter(it, INPUTS_GROUP.ordinal, internalIndex) }
+                wtx.outputs.forEachIndexed { internalIndex, it -> filter(it, OUTPUTS_GROUP.ordinal, internalIndex) }
+                wtx.commands.forEachIndexed { internalIndex, it -> filter(it, COMMANDS_GROUP.ordinal, internalIndex) }
+                wtx.attachments.forEachIndexed { internalIndex, it -> filter(it, ATTACHMENTS_GROUP.ordinal, internalIndex) }
+                if (wtx.notary != null) filter(wtx.notary, NOTARY_GROUP.ordinal, 0)
+                if (wtx.timeWindow != null) filter(wtx.timeWindow, TIMEWINDOW_GROUP.ordinal, 0)
+                wtx.references.forEachIndexed { internalIndex, it -> filter(it, REFERENCES_GROUP.ordinal, internalIndex) }
                 // It is highlighted that because there is no a signers property in TraversableTransaction,
                 // one cannot specifically filter them in or out.
                 // The above is very important to ensure someone won't filter out the signers component group if at least one
@@ -190,10 +206,17 @@ class FilteredTransaction internal constructor(
                 // we decide to filter and attach this field to a FilteredTransaction.
                 // An example would be to redact certain contract state types, but otherwise leave a transaction alone,
                 // including the unknown new components.
-                wtx.componentGroups.filter { it.groupIndex >= ComponentGroupEnum.values().size }.forEach { componentGroup -> componentGroup.components.forEachIndexed { internalIndex, component -> filter(component, componentGroup.groupIndex, internalIndex) } }
+                wtx.componentGroups
+                        .filter { it.groupIndex >= values().size }
+                        .forEach { componentGroup -> componentGroup.components.forEachIndexed { internalIndex, component -> filter(component, componentGroup.groupIndex, internalIndex) } }
             }
 
-            fun createPartialMerkleTree(componentGroupIndex: Int) = PartialMerkleTree.build(MerkleTree.getMerkleTree(wtx.availableComponentHashes[componentGroupIndex]!!), filteredComponentHashes[componentGroupIndex]!!)
+            fun createPartialMerkleTree(componentGroupIndex: Int): PartialMerkleTree {
+                return PartialMerkleTree.build(
+                        MerkleTree.getMerkleTree(wtx.availableComponentHashes[componentGroupIndex]!!),
+                        filteredComponentHashes[componentGroupIndex]!!
+                )
+            }
 
             fun createFilteredComponentGroups(): List<FilteredComponentGroup> {
                 updateFilteredComponents()
@@ -218,8 +241,11 @@ class FilteredTransaction internal constructor(
     @Throws(FilteredTransactionVerificationException::class)
     fun verify() {
         verificationCheck(groupHashes.isNotEmpty()) { "At least one component group hash is required" }
-        // Verify the top level Merkle tree (group hashes are its leaves, including allOnesHash for empty list or null components in WireTransaction).
-        verificationCheck(MerkleTree.getMerkleTree(groupHashes).hash == id) { "Top level Merkle tree cannot be verified against transaction's id" }
+        // Verify the top level Merkle tree (group hashes are its leaves, including allOnesHash for empty list or null
+        // components in WireTransaction).
+        verificationCheck(MerkleTree.getMerkleTree(groupHashes).hash == id) {
+            "Top level Merkle tree cannot be verified against transaction's id"
+        }
 
         // For completely blind verification (no components are included).
         if (filteredComponentGroups.isEmpty()) return
@@ -228,8 +254,12 @@ class FilteredTransaction internal constructor(
         filteredComponentGroups.forEach { (groupIndex, components, nonces, groupPartialTree) ->
             verificationCheck(groupIndex < groupHashes.size) { "There is no matching component group hash for group $groupIndex" }
             val groupMerkleRoot = groupHashes[groupIndex]
-            verificationCheck(groupMerkleRoot == PartialMerkleTree.rootAndUsedHashes(groupPartialTree.root, mutableListOf())) { "Partial Merkle tree root and advertised full Merkle tree root for component group $groupIndex do not match" }
-            verificationCheck(groupPartialTree.verify(groupMerkleRoot, components.mapIndexed { index, component -> componentHash(nonces[index], component) })) { "Visible components in group $groupIndex cannot be verified against their partial Merkle tree" }
+            verificationCheck(groupMerkleRoot == PartialMerkleTree.rootAndUsedHashes(groupPartialTree.root, mutableListOf())) {
+                "Partial Merkle tree root and advertised full Merkle tree root for component group $groupIndex do not match"
+            }
+            verificationCheck(groupPartialTree.verify(groupMerkleRoot, components.mapIndexed { index, component -> componentHash(nonces[index], component) })) {
+                "Visible components in group $groupIndex cannot be verified against their partial Merkle tree"
+            }
         }
     }
 
@@ -276,7 +306,9 @@ class FilteredTransaction internal constructor(
             val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) }).hash
             visibilityCheck(groupPartialRoot == groupFullRoot) { "Some components for group ${group.groupIndex} are not visible" }
             // Verify the top level Merkle tree from groupHashes.
-            visibilityCheck(MerkleTree.getMerkleTree(groupHashes).hash == id) { "Transaction is malformed. Top level Merkle tree cannot be verified against transaction's id" }
+            visibilityCheck(MerkleTree.getMerkleTree(groupHashes).hash == id) {
+                "Transaction is malformed. Top level Merkle tree cannot be verified against transaction's id"
+            }
         }
     }
 
@@ -291,15 +323,17 @@ class FilteredTransaction internal constructor(
      */
     @Throws(ComponentVisibilityException::class)
     fun checkCommandVisibility(publicKey: PublicKey) {
-        val commandSigners = componentGroups.firstOrNull { it.groupIndex == ComponentGroupEnum.SIGNERS_GROUP.ordinal }
+        val commandSigners = componentGroups.firstOrNull { it.groupIndex == SIGNERS_GROUP.ordinal }
         val expectedNumOfCommands = expectedNumOfCommands(publicKey, commandSigners)
         val receivedForThisKeyNumOfCommands = commands.filter { publicKey in it.signers }.size
-        visibilityCheck(expectedNumOfCommands == receivedForThisKeyNumOfCommands) { "$expectedNumOfCommands commands were expected, but received $receivedForThisKeyNumOfCommands" }
+        visibilityCheck(expectedNumOfCommands == receivedForThisKeyNumOfCommands) {
+            "$expectedNumOfCommands commands were expected, but received $receivedForThisKeyNumOfCommands"
+        }
     }
 
     // Function to return number of expected commands to sign.
     private fun expectedNumOfCommands(publicKey: PublicKey, commandSigners: ComponentGroup?): Int {
-        checkAllComponentsVisible(ComponentGroupEnum.SIGNERS_GROUP)
+        checkAllComponentsVisible(SIGNERS_GROUP)
         if (commandSigners == null) return 0
         fun signersKeys (internalIndex: Int, opaqueBytes: OpaqueBytes): List<PublicKey> {
             try {
@@ -335,7 +369,10 @@ class FilteredTransaction internal constructor(
  */
 @KeepForDJVM
 @CordaSerializable
-data class FilteredComponentGroup(override val groupIndex: Int, override val components: List<OpaqueBytes>, val nonces: List<SecureHash>, val partialMerkleTree: PartialMerkleTree) : ComponentGroup(groupIndex, components) {
+data class FilteredComponentGroup(override val groupIndex: Int,
+                                  override val components: List<OpaqueBytes>,
+                                  val nonces: List<SecureHash>,
+                                  val partialMerkleTree: PartialMerkleTree) : ComponentGroup(groupIndex, components) {
     init {
         check(components.size == nonces.size) { "Size of transaction components and nonces do not match" }
     }

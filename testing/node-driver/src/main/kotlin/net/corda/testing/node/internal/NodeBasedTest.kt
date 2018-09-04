@@ -11,7 +11,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.internal.Node
-import net.corda.node.internal.StartedNode
+import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -46,7 +46,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     val tempFolder = TemporaryFolder()
 
     private lateinit var defaultNetworkParameters: NetworkParametersCopier
-    private val nodes = mutableListOf<StartedNode<Node>>()
+    private val nodes = mutableListOf<NodeWithInfo>()
     private val nodeInfos = mutableListOf<NodeInfo>()
     private val portAllocation = PortAllocation.Incremental(10000)
 
@@ -71,8 +71,8 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
             // Wait until ports are released
             val portNotBoundChecks = nodes.flatMap {
                 listOf(
-                        addressMustNotBeBoundFuture(shutdownExecutor, it.internals.configuration.p2pAddress),
-                        addressMustNotBeBoundFuture(shutdownExecutor, it.internals.configuration.rpcOptions.address)
+                        addressMustNotBeBoundFuture(shutdownExecutor, it.node.configuration.p2pAddress),
+                        addressMustNotBeBoundFuture(shutdownExecutor, it.node.configuration.rpcOptions.address)
                 )
             }
             nodes.clear()
@@ -84,9 +84,9 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @JvmOverloads
     fun startNode(legalName: CordaX500Name,
-                  platformVersion: Int = 1,
+                  platformVersion: Int = 4,
                   rpcUsers: List<User> = emptyList(),
-                  configOverrides: Map<String, Any> = emptyMap()): StartedNode<Node> {
+                  configOverrides: Map<String, Any> = emptyMap()): NodeWithInfo {
         val baseDirectory = baseDirectory(legalName).createDirectories()
         val p2pAddress = configOverrides["p2pAddress"] ?: portAllocation.nextHostAndPort().toString()
         val config = ConfigHelper.loadConfig(
@@ -118,14 +118,16 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
         }
 
         defaultNetworkParameters.install(baseDirectory)
-        val node = InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion)).start()
-        nodes += node
+        val node = InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion))
+        val nodeInfo = node.start()
+        val nodeWithInfo = NodeWithInfo(node, nodeInfo)
+        nodes += nodeWithInfo
         ensureAllNetworkMapCachesHaveAllNodeInfos()
         thread(name = legalName.organisation) {
-            node.internals.run()
+            node.run()
         }
 
-        return node
+        return nodeWithInfo
     }
 
     protected fun baseDirectory(legalName: CordaX500Name): Path {
@@ -133,7 +135,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     }
 
     private fun ensureAllNetworkMapCachesHaveAllNodeInfos() {
-        val runningNodes = nodes.filter { it.internals.started != null }
+        val runningNodes = nodes.filter { it.node.started != null }
         val runningNodesInfo = runningNodes.map { it.info }
         for (node in runningNodes)
             for (nodeInfo in runningNodesInfo) {

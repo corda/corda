@@ -4,7 +4,9 @@ import net.corda.core.contracts.Amount
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.utilities.*
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
@@ -29,6 +31,8 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
     //          appear in the WHERE clause, hence restricting row selection and adjusting the returned total in the outer query.
     //       3) Currently (version 9.6), FOR UPDATE cannot be specified with window functions
     override fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean {
+        // state_status = 0 -> UNCONSUMED.
+        // is_relevant = 0 -> RELEVANT.
         val selectJoin = """SELECT nested.transaction_id, nested.output_index, nested.pennies,
                         nested.total+nested.pennies as total_pennies, nested.lock_id
                        FROM
@@ -38,6 +42,7 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
                         FROM vault_states AS vs, contract_cash_states AS ccs
                         WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
                         AND vs.state_status = 0
+                        AND vs.is_relevant = 0
                         AND ccs.ccy_code = ?
                         AND (vs.lock_id = ? OR vs.lock_id is null)
                         """ +

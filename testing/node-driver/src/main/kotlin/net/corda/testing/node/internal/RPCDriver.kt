@@ -17,11 +17,12 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.seconds
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.messaging.RPCServer
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.MAX_MESSAGE_SIZE
@@ -53,6 +54,7 @@ import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager3
 import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
 import java.util.*
 import net.corda.nodeapi.internal.config.User as InternalUser
 
@@ -100,7 +102,6 @@ val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality
 // Use a global pool so that we can run RPC tests in parallel
 private val globalPortAllocation = PortAllocation.Incremental(10000)
 private val globalDebugPortAllocation = PortAllocation.Incremental(5005)
-private val globalMonitorPortAllocation = PortAllocation.Incremental(7005)
 
 fun <A> rpcDriver(
         isDebug: Boolean = false,
@@ -219,14 +220,14 @@ data class RPCDriverDSL(
                 bindingsDirectory = "$artemisDir/bindings"
                 journalDirectory = "$artemisDir/journal"
                 largeMessagesDirectory = "$artemisDir/large-messages"
-                acceptorConfigurations = setOf(ArtemisTcpTransport.rpcAcceptorTcpTransport(hostAndPort, null))
+                acceptorConfigurations = setOf(InternalArtemisTcpTransport.rpcAcceptorTcpTransport(hostAndPort, null))
                 configureCommonSettings(maxFileSize, maxBufferedBytesPerClient)
             }
         }
 
         val inVmClientTransportConfiguration = TransportConfiguration(InVMConnectorFactory::class.java.name)
         fun createNettyClientTransportConfiguration(hostAndPort: NetworkHostAndPort): TransportConfiguration {
-            return ArtemisTcpTransport.rpcConnectorTcpTransport(hostAndPort, null)
+            return InternalArtemisTcpTransport.rpcConnectorTcpTransport(hostAndPort, null)
         }
     }
 
@@ -244,10 +245,11 @@ data class RPCDriverDSL(
             maxFileSize: Int = MAX_MESSAGE_SIZE,
             maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,
-            ops: I
+            ops: I,
+            queueDrainTimeout: Duration = 5.seconds
     ): CordaFuture<RpcServerHandle> {
         return startInVmRpcBroker(rpcUser, maxFileSize, maxBufferedBytesPerClient).map { broker ->
-            startRpcServerWithBrokerRunning(rpcUser, nodeLegalName, configuration, ops, broker)
+            startRpcServerWithBrokerRunning(rpcUser, nodeLegalName, configuration, ops, broker, queueDrainTimeout)
         }
     }
 
@@ -337,7 +339,7 @@ data class RPCDriverDSL(
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
     ): CordaFuture<I> {
         return driverDSL.executorService.fork {
-            val client = RPCClient<I>(ArtemisTcpTransport.rpcConnectorTcpTransport(rpcAddress, null), configuration)
+            val client = RPCClient<I>(InternalArtemisTcpTransport.rpcConnectorTcpTransport(rpcAddress, null), configuration)
             val connection = client.start(rpcOpsClass, username, password, externalTrace)
             driverDSL.shutdownManager.registerShutdown {
                 connection.close()
@@ -440,7 +442,7 @@ data class RPCDriverDSL(
         }
     }
 
-    fun startInVmRpcBroker(
+    private fun startInVmRpcBroker(
             rpcUser: User = rpcTestUser,
             maxFileSize: Int = MAX_MESSAGE_SIZE,
             maxBufferedBytesPerClient: Long = 10L * MAX_MESSAGE_SIZE
@@ -468,7 +470,8 @@ data class RPCDriverDSL(
             nodeLegalName: CordaX500Name = fakeNodeLegalName,
             configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,
             ops: I,
-            brokerHandle: RpcBrokerHandle
+            brokerHandle: RpcBrokerHandle,
+            queueDrainTimeout: Duration = 5.seconds
     ): RpcServerHandle {
         val locator = ActiveMQClient.createServerLocatorWithoutHA(brokerHandle.clientTransportConfiguration).apply {
             minLargeMessageSize = MAX_MESSAGE_SIZE
@@ -485,7 +488,7 @@ data class RPCDriverDSL(
                 configuration
         )
         driverDSL.shutdownManager.registerShutdown {
-            rpcServer.close()
+            rpcServer.close(queueDrainTimeout)
             locator.close()
         }
         rpcServer.start(brokerHandle.serverControl)
@@ -520,7 +523,7 @@ class RandomRpcUser {
                 Generator.sequence(method.parameters.map {
                     generatorStore[it.type] ?: throw Exception("No generator for ${it.type}")
                 }).map { arguments ->
-                    Call(method, { method.invoke(handle.proxy, *arguments.toTypedArray()) })
+                    Call(method) { method.invoke(handle.proxy, *arguments.toTypedArray()) }
                 }
             }
             val callGenerator = Generator.choice(callGenerators)

@@ -81,13 +81,6 @@ class NodeArgsParserTest {
     }
 
     @Test
-    fun `both base-directory and config-file`() {
-        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
-            parser.parse("--base-directory", "base", "--config-file", "conf")
-        }.withMessageContaining("base-directory").withMessageContaining("config-file")
-    }
-
-    @Test
     fun `base-directory without argument`() {
         assertThatExceptionOfType(OptionException::class.java).isThrownBy {
             parser.parse("--base-directory")

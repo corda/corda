@@ -13,7 +13,6 @@ This section should be read in order:
 
    key-concepts-ecosystem
    key-concepts-ledger
-   key-concepts-identity
    key-concepts-states
    key-concepts-contracts
    key-concepts-transactions
@@ -25,6 +24,7 @@ This section should be read in order:
    key-concepts-node
    key-concepts-tearoffs
    key-concepts-tradeoffs
+   key-concepts-djvm
 
 The detailed thinking and rationale behind these concepts are presented in two white papers:
 

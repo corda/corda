@@ -195,7 +195,7 @@ class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session
  *
  * @param otherSideSession The session which is providing you a transaction to sign.
  */
-abstract class SignTransactionFlow(val otherSideSession: FlowSession,
+abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSession: FlowSession,
                                    override val progressTracker: ProgressTracker = SignTransactionFlow.tracker()) : FlowLogic<SignedTransaction>() {
 
     companion object {

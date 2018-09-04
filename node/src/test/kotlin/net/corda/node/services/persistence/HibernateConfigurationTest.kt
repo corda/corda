@@ -4,6 +4,7 @@ import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
@@ -24,6 +25,7 @@ import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DummyFungibleContract
 import net.corda.finance.schemas.CashSchemaV1
+import net.corda.finance.schemas.SampleCashSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
@@ -31,8 +33,8 @@ import net.corda.node.internal.configureDatabase
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.schema.ContractStateAndRef
-import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -40,6 +42,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.DummyDealStateSchemaV1
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV2
 import net.corda.testing.internal.vault.VaultFiller
@@ -81,7 +84,7 @@ class HibernateConfigurationTest {
 
     // Hibernate configuration objects
     lateinit var hibernateConfig: HibernateConfiguration
-    private lateinit var hibernatePersister: HibernateObserver
+    private lateinit var hibernatePersister: PersistentStateService
     private lateinit var sessionFactory: SessionFactory
     private lateinit var entityManager: EntityManager
     private lateinit var criteriaBuilder: CriteriaBuilder
@@ -96,10 +99,10 @@ class HibernateConfigurationTest {
 
     @Before
     fun setUp() {
-        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset")
+        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", "net.corda.finance.schemas")
         bankServices = MockServices(cordappPackages, BOC.name, rigorousMock(), BOC_KEY)
-        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock())
-        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock())
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock<IdentityService>())
+        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock<IdentityService>())
         notary = notaryServices.myInfo.singleIdentity()
         val dataSourceProps = makeTestDataSourceProperties()
         val identityService = rigorousMock<IdentityService>().also { mock ->
@@ -109,16 +112,16 @@ class HibernateConfigurationTest {
                 doReturn(it.party).whenever(mock).wellKnownPartyFromX500Name(it.name)
             }
         }
-        val schemaService = NodeSchemaService()
+        val schemaService = NodeSchemaService(extraSchemas = setOf(CashSchemaV1, SampleCashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, DummyLinearStateSchemaV1, DummyLinearStateSchemaV2, DummyDealStateSchemaV1))
         database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
         database.transaction {
             hibernateConfig = database.hibernateConfig
 
             // `consumeCash` expects we can self-notarise transactions
             services = object : MockServices(cordappPackages, BOB_NAME, rigorousMock<IdentityServiceInternal>().also {
-                doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == BOB_NAME })
+                doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == BOB_NAME }, any())
             }, generateKeyPair(), dummyNotary.keyPair) {
-                override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, database).apply { start() }
+                override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, database, schemaService).apply { start() }
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         (validatedTransactions as WritableTransactionStorage).addTransaction(stx)
@@ -130,7 +133,7 @@ class HibernateConfigurationTest {
                 override fun jdbcSession() = database.createSession()
             }
             vaultFiller = VaultFiller(services, dummyNotary, notary, ::Random)
-            hibernatePersister = HibernateObserver.install(services.vaultService.rawUpdates, hibernateConfig, schemaService)
+            hibernatePersister = PersistentStateService(schemaService)
         }
 
         identity = services.myInfo.singleIdentity()
@@ -617,6 +620,52 @@ class HibernateConfigurationTest {
         // execute query
         val queryResults = entityManager.createQuery(criteriaQuery).resultList
         assertThat(queryResults).hasSize(10)
+    }
+
+    /**
+     *  Composite OR query
+     */
+    @Test
+    fun `composite or query across VaultStates, VaultLinearStates and DummyLinearStates`() {
+        val uniqueID456 = UniqueIdentifier("456")
+        database.transaction {
+            vaultFiller.fillWithSomeTestLinearStates(1, externalId = "123", linearString = "123", linearNumber = 123, linearBoolean = true)
+            vaultFiller.fillWithSomeTestLinearStates(1, uniqueIdentifier = uniqueID456)
+            vaultFiller.fillWithSomeTestLinearStates(1, externalId = "789")
+        }
+        val sessionFactory = sessionFactoryForSchemas(VaultSchemaV1, DummyLinearStateSchemaV1)
+        val criteriaBuilder = sessionFactory.criteriaBuilder
+        val entityManager = sessionFactory.createEntityManager()
+
+        // structure query
+        val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
+        val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
+        val vaultLinearStates = criteriaQuery.from(VaultSchemaV1.VaultLinearStates::class.java)
+        val dummyLinearStates = criteriaQuery.from(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java)
+
+        criteriaQuery.select(vaultStates)
+        val joinPredicate1 = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultLinearStates.get<PersistentStateRef>("stateRef"))
+        val joinPredicate2 = criteriaBuilder.and(criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), dummyLinearStates.get<PersistentStateRef>("stateRef")))
+
+        // and predicates on VaultLinearStates
+        val andLinearStatesPredicate1 = criteriaBuilder.and(criteriaBuilder.equal(vaultLinearStates.get<String>("externalId"), uniqueID456.externalId))
+        val andLinearStatesPredicate2 = criteriaBuilder.and(criteriaBuilder.equal(vaultLinearStates.get<UUID>("uuid"), uniqueID456.id))
+        val andLinearStatesPredicate = criteriaBuilder.and(andLinearStatesPredicate1, andLinearStatesPredicate2)
+
+        // and predicates on PersistentDummyLinearState
+        val andDummyLinearStatesPredicate1 = criteriaBuilder.and(criteriaBuilder.equal(dummyLinearStates.get<String>("linearString"), "123"))
+        val andDummyLinearStatesPredicate2 = criteriaBuilder.and(criteriaBuilder.equal(dummyLinearStates.get<Long>("linearNumber"), 123L))
+        val andDummyLinearStatesPredicate3 = criteriaBuilder.and(criteriaBuilder.equal(dummyLinearStates.get<Boolean>("linearBoolean"), true))
+        val andDummyLinearStatesPredicate = criteriaBuilder.and(andDummyLinearStatesPredicate1, criteriaBuilder.and(andDummyLinearStatesPredicate2, andDummyLinearStatesPredicate3))
+
+        // or predicates
+        val orPredicates = criteriaBuilder.or(andLinearStatesPredicate, andDummyLinearStatesPredicate)
+
+        criteriaQuery.where(joinPredicate1, joinPredicate2, orPredicates)
+
+        // execute query
+        val queryResults = entityManager.createQuery(criteriaQuery).resultList
+        assertThat(queryResults).hasSize(2)
     }
 
     /**

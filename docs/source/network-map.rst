@@ -117,8 +117,9 @@ The current set of network parameters:
 
 :epoch: Version number of the network parameters. Starting from 1, this will always increment whenever any of the
         parameters change.
+        
 :whitelistedContractImplementations: List of whitelisted versions of contract code.
-        For each contract class there is a list of hashes of the approved CorDapp jar versions containing that contract.
+        For each contract class there is a list of SHA-256 hashes of the approved CorDapp jar versions containing that contract.
         Read more about *Zone constraints* here :doc:`api-contract-constraints`
 
 :eventHorizon: Time after which nodes are considered to be unresponsive and removed from network map. Nodes republish their

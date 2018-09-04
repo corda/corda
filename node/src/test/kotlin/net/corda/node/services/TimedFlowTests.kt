@@ -22,7 +22,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
@@ -35,10 +34,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetworkParameters
-import net.corda.testing.node.internal.cordappsForPackages
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import org.junit.AfterClass
 import org.junit.Before
 import org.junit.BeforeClass
@@ -58,7 +54,7 @@ class TimedFlowTests {
 
         private lateinit var mockNet: InternalMockNetwork
         private lateinit var notary: Party
-        private lateinit var node: StartedNode<InternalMockNetwork.MockNode>
+        private lateinit var node: TestStartedNode
 
         init {
             LogHelper.setLevel("+net.corda.flow", "+net.corda.testing.node", "+net.corda.node.services.messaging")
@@ -83,7 +79,7 @@ class TimedFlowTests {
             mockNet.stopNodes()
         }
 
-        private fun startClusterAndNode(mockNet: InternalMockNetwork): Pair<Party, StartedNode<InternalMockNetwork.MockNode>> {
+        private fun startClusterAndNode(mockNet: InternalMockNetwork): Pair<Party, TestStartedNode> {
             val replicaIds = (0 until CLUSTER_SIZE)
             val notaryIdentity = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
                     replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
@@ -164,7 +160,7 @@ class TimedFlowTests {
         }
     }
 
-    private fun StartedNode<InternalMockNetwork.MockNode>.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
+    private fun TestStartedNode.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
         return services.signInitialTransaction(
                 TransactionBuilder(notary).apply {
                     addCommand(dummyCommand(services.myInfo.singleIdentity().owningKey))

@@ -47,7 +47,7 @@ dependencies {
     compile "org.eclipse.jetty:jetty-continuation:${jetty_version}"
 
     compile "org.glassfish.jersey.core:jersey-server:$jersey_version"
-    compile "org.glassfish.jersey.containers:jersey-container-servlet-core:$jersey_version"
+    compile "org.glassfish.jersey.containers:jersey-container-servlet:$jersey_version"
     compile "org.glassfish.jersey.containers:jersey-container-jetty-http:$jersey_version"
     compile "org.glassfish.jersey.media:jersey-media-json-jackson:$jersey_version"
 

@@ -1,0 +1,138 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="R3.Corda" id="1511451595465-22">
+        <createTable tableName="vault_fungible_states">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issuer_name" type="NVARCHAR(255)"/>
+            <column name="issuer_ref" type="varbinary(512)"/>
+            <column name="owner_name" type="NVARCHAR(255)"/>
+            <column name="quantity" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-23">
+        <createTable tableName="vault_fungible_states_parts">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="participants" type="NVARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-24">
+        <createTable tableName="vault_linear_states">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="external_id" type="NVARCHAR(255)"/>
+            <column name="uuid" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-25">
+        <createTable tableName="vault_linear_states_parts">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="participants" type="NVARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-26">
+        <createTable tableName="vault_states">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="consumed_timestamp" type="timestamp"/>
+            <column name="contract_state_class_name" type="NVARCHAR(255)"/>
+            <column name="lock_id" type="NVARCHAR(255)"/>
+            <column name="lock_timestamp" type="timestamp"/>
+            <column name="notary_name" type="NVARCHAR(255)"/>
+            <column name="recorded_timestamp" type="timestamp"/>
+            <column name="state_status" type="INT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-27">
+        <createTable tableName="vault_transaction_notes">
+            <column name="seq_no" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="note" type="NVARCHAR(255)"/>
+            <column name="transaction_id" type="NVARCHAR(64)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-47">
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="vault_fungible_states_pkey"
+                       tableName="vault_fungible_states"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-48">
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="vault_linear_states_pkey"
+                       tableName="vault_linear_states"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-49">
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="vault_states_pkey"
+                       tableName="vault_states"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-50">
+        <addPrimaryKey columnNames="seq_no" constraintName="vault_transaction_notes_pkey"
+                       tableName="vault_transaction_notes"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-53">
+        <createIndex indexName="external_id_index" tableName="vault_linear_states">
+            <column name="external_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-55">
+        <createIndex indexName="lock_id_idx" tableName="vault_states">
+            <column name="lock_id"/>
+            <column name="state_status"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-58">
+        <createIndex indexName="state_status_idx" tableName="vault_states">
+            <column name="state_status"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-59">
+        <createIndex indexName="transaction_id_index" tableName="vault_transaction_notes">
+            <column name="transaction_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-60">
+        <createIndex indexName="uuid_index" tableName="vault_linear_states">
+            <column name="uuid"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-64">
+        <addForeignKeyConstraint baseColumnNames="output_index,transaction_id"
+                                 baseTableName="vault_fungible_states_parts"
+                                 constraintName="FK__fung_st_parts__fung_st"
+                                 referencedColumnNames="output_index,transaction_id"
+                                 referencedTableName="vault_fungible_states"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-65">
+        <addForeignKeyConstraint baseColumnNames="output_index,transaction_id" baseTableName="vault_linear_states_parts"
+                                 constraintName="FK__lin_stat_parts__lin_stat"
+                                 referencedColumnNames="output_index,transaction_id"
+                                 referencedTableName="vault_linear_states"/>
+    </changeSet>
+</databaseChangeLog>

@@ -202,8 +202,8 @@ class StaffedFlowHospital {
                     return Diagnosis.DISCHARGE
                 } else {
                     val errorMsg = "Maximum number of retries reached for flow ${flowFiber.snapshot().flowLogic.javaClass}. " +
-                            "If the flow involves notarising a transaction, this usually means that the notary is being overloaded and " +
-                            "unable to service requests fast enough. Please try again later."
+                            "If the flow involves notarising a transaction, it means that no response was received from the notary." +
+                            "This could be either due to the the notary being overloaded or unable to reach this node."
                     newError.setMessage(errorMsg)
                     log.warn(errorMsg)
                 }

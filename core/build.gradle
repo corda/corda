@@ -71,11 +71,6 @@ dependencies {
     // Hamkrest, for fluent, composable matchers
     testCompile "com.natpryce:hamkrest:$hamkrest_version"
 
-    // Quasar, for suspendable fibres.
-    compileOnly("$quasar_group:quasar-core:$quasar_version:jdk8") {
-        transitive = false
-    }
-
     // Thread safety annotations
     compile "com.google.code.findbugs:jsr305:$jsr305_version"
 
@@ -88,6 +83,9 @@ dependencies {
 
     // Guava: Google utilities library.
     testCompile "com.google.guava:guava:$guava_version"
+
+    // For caches rather than guava
+    compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
     // Smoke tests do NOT have any Node code on the classpath!
     smokeTestCompile project(':smoke-test-utils')

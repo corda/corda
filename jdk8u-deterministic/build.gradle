@@ -45,3 +45,7 @@ task copyJdk(type: Copy) {
 
 assemble.dependsOn copyJdk
 jar.enabled = false
+
+artifacts {
+    jdk file: file(rt_jar), type: 'jar', builtBy: copyJdk
+}

@@ -5,14 +5,13 @@ import net.corda.core.crypto.newSecureRandom
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHex
-import net.corda.nodeapi.ArtemisTcpTransport
+import net.corda.nodeapi.internal.InternalArtemisTcpTransport
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.toBc
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
 import java.net.Socket
-import java.security.KeyStore
-import java.security.SecureRandom
 import java.security.cert.*
 import java.util.*
 import javax.net.ssl.*
@@ -111,8 +110,8 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
     sslContext.init(keyManagers, trustManagers, newSecureRandom())
     val sslEngine = sslContext.createSSLEngine(target.host, target.port)
     sslEngine.useClientMode = true
-    sslEngine.enabledProtocols = ArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
-    sslEngine.enabledCipherSuites = ArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
+    sslEngine.enabledProtocols = InternalArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
+    sslEngine.enabledCipherSuites = InternalArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
     sslEngine.enableSessionCreation = true
     return SslHandler(sslEngine)
 }
@@ -126,13 +125,13 @@ internal fun createServerSslHelper(keyManagerFactory: KeyManagerFactory,
     val sslEngine = sslContext.createSSLEngine()
     sslEngine.useClientMode = false
     sslEngine.needClientAuth = true
-    sslEngine.enabledProtocols = ArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
-    sslEngine.enabledCipherSuites = ArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
+    sslEngine.enabledProtocols = InternalArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
+    sslEngine.enabledCipherSuites = InternalArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
     sslEngine.enableSessionCreation = true
     return SslHandler(sslEngine)
 }
 
-internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: KeyStore, crlCheckSoftFail: Boolean): ManagerFactoryParameters {
+internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore, crlCheckSoftFail: Boolean): ManagerFactoryParameters {
     val certPathBuilder = CertPathBuilder.getInstance("PKIX")
     val revocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
     revocationChecker.options = EnumSet.of(
@@ -145,7 +144,11 @@ internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: KeyStore, crlC
         // the following reasons: The CRL or OCSP response cannot be obtained because of a network error.
         revocationChecker.options = revocationChecker.options + PKIXRevocationChecker.Option.SOFT_FAIL
     }
-    val pkixParams = PKIXBuilderParameters(trustStore, X509CertSelector())
+    val pkixParams = PKIXBuilderParameters(trustStore.value.internal, X509CertSelector())
     pkixParams.addCertPathChecker(revocationChecker)
     return CertPathTrustManagerParameters(pkixParams)
 }
+
+fun KeyManagerFactory.init(keyStore: CertificateStore) = init(keyStore.value.internal, keyStore.password.toCharArray())
+
+fun TrustManagerFactory.init(trustStore: CertificateStore) = init(trustStore.value.internal)

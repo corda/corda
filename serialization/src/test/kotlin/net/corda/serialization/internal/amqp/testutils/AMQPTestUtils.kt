@@ -4,6 +4,7 @@ import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.core.internal.packageName
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.serialization.internal.AllWhitelist
@@ -98,9 +99,9 @@ fun <T : Any> SerializationOutput.serializeAndReturnSchema(
 
 
 @Throws(NotSerializableException::class)
-fun <T : Any> SerializationOutput.serialize(obj: T): SerializedBytes<T> {
+fun <T : Any> SerializationOutput.serialize(obj: T, encoding: SerializationEncoding? = null): SerializedBytes<T> {
     try {
-        return _serialize(obj, testSerializationContext)
+        return _serialize(obj, testSerializationContext.withEncoding(encoding))
     } finally {
         andFinally()
     }
