@@ -6,7 +6,7 @@ import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.SslConfiguration
-import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import org.apache.commons.io.FileUtils
 import sun.security.tools.keytool.CertAndKeyGen
@@ -79,7 +79,7 @@ class KeyStores(val keyStore: UnsafeKeyStore, val trustStore: UnsafeKeyStore) {
         }
     }
 
-    private fun sslConfiguration(keyStoreFile: TemporaryFile, trustStoreFile: TemporaryFile): TwoWaySslConfiguration {
+    private fun sslConfiguration(keyStoreFile: TemporaryFile, trustStoreFile: TemporaryFile): MutualSslConfiguration {
 
         val keyStore = FileBasedCertificateStoreSupplier(keyStoreFile.file, keyStore.password)
         val trustStore = FileBasedCertificateStoreSupplier(trustStoreFile.file, trustStore.password)
@@ -88,7 +88,7 @@ class KeyStores(val keyStore: UnsafeKeyStore, val trustStore: UnsafeKeyStore) {
 }
 
 interface AutoClosableSSLConfiguration : AutoCloseable {
-    val value: TwoWaySslConfiguration
+    val value: MutualSslConfiguration
 }
 
 typealias KeyStoreEntry = Pair<String, UnsafeCertificate>
@@ -191,7 +191,7 @@ private fun newKeyStore(type: String, password: String): KeyStore {
     return keyStore
 }
 
-fun withKeyStores(server: KeyStores, client: KeyStores, action: (brokerSslOptions: TwoWaySslConfiguration, clientSslOptions: TwoWaySslConfiguration) -> Unit) {
+fun withKeyStores(server: KeyStores, client: KeyStores, action: (brokerSslOptions: MutualSslConfiguration, clientSslOptions: MutualSslConfiguration) -> Unit) {
     val serverDir = Files.createTempDirectory(null)
     FileUtils.forceDeleteOnExit(serverDir.toFile())
 

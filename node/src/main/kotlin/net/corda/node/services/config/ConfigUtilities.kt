@@ -9,7 +9,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.*
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
-import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.toProperties
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import org.slf4j.LoggerFactory
@@ -70,7 +70,7 @@ object ConfigHelper {
 fun NodeConfiguration.configureWithDevSSLCertificate() = p2pSslOptions.configureDevKeyAndTrustStores(myLegalName, signingCertificateStore, certificatesDirectory)
 
 // TODO Move this to KeyStoreConfigHelpers
-fun TwoWaySslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier, certificatesDirectory: Path) {
+fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier, certificatesDirectory: Path) {
 
     val specifiedTrustStore = trustStore.getOptional()
 

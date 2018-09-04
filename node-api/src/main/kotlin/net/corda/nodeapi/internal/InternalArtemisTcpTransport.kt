@@ -7,7 +7,7 @@ import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.SslConfiguration
-import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
@@ -99,12 +99,12 @@ class InternalArtemisTcpTransport {
         internal val acceptorFactoryClassName = "org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory"
         internal val connectorFactoryClassName = NettyConnectorFactory::class.java.name
 
-        fun p2pAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: TwoWaySslConfiguration?, enableSSL: Boolean = true): TransportConfiguration {
+        fun p2pAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: MutualSslConfiguration?, enableSSL: Boolean = true): TransportConfiguration {
 
             return p2pAcceptorTcpTransport(hostAndPort, config?.keyStore, config?.trustStore, enableSSL = enableSSL)
         }
 
-        fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, config: TwoWaySslConfiguration?, enableSSL: Boolean = true): TransportConfiguration {
+        fun p2pConnectorTcpTransport(hostAndPort: NetworkHostAndPort, config: MutualSslConfiguration?, enableSSL: Boolean = true): TransportConfiguration {
 
             return p2pConnectorTcpTransport(hostAndPort, config?.keyStore, config?.trustStore, enableSSL = enableSSL)
         }

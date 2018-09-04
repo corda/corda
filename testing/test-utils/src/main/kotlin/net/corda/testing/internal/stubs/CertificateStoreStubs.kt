@@ -3,7 +3,7 @@ package net.corda.testing.internal.stubs
 import net.corda.core.internal.div
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.SslConfiguration
-import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import java.nio.file.Path
 
 class CertificateStoreStubs {
@@ -42,7 +42,7 @@ class CertificateStoreStubs {
         companion object {
 
             @JvmStatic
-            fun withCertificatesDirectory(certificatesDirectory: Path, keyStoreFileName: String = KeyStore.DEFAULT_STORE_FILE_NAME, keyStorePassword: String = KeyStore.DEFAULT_STORE_PASSWORD, trustStoreFileName: String = TrustStore.DEFAULT_STORE_FILE_NAME, trustStorePassword: String = TrustStore.DEFAULT_STORE_PASSWORD): TwoWaySslConfiguration {
+            fun withCertificatesDirectory(certificatesDirectory: Path, keyStoreFileName: String = KeyStore.DEFAULT_STORE_FILE_NAME, keyStorePassword: String = KeyStore.DEFAULT_STORE_PASSWORD, trustStoreFileName: String = TrustStore.DEFAULT_STORE_FILE_NAME, trustStorePassword: String = TrustStore.DEFAULT_STORE_PASSWORD): MutualSslConfiguration {
 
                 val keyStore = FileBasedCertificateStoreSupplier(certificatesDirectory / keyStoreFileName, keyStorePassword)
                 val trustStore = FileBasedCertificateStoreSupplier(certificatesDirectory / trustStoreFileName, trustStorePassword)
@@ -50,7 +50,7 @@ class CertificateStoreStubs {
             }
 
             @JvmStatic
-            fun withBaseDirectory(baseDirectory: Path, certificatesDirectoryName: String = DEFAULT_CERTIFICATES_DIRECTORY_NAME, keyStoreFileName: String = KeyStore.DEFAULT_STORE_FILE_NAME, keyStorePassword: String = KeyStore.DEFAULT_STORE_PASSWORD, trustStoreFileName: String = TrustStore.DEFAULT_STORE_FILE_NAME, trustStorePassword: String = TrustStore.DEFAULT_STORE_PASSWORD): TwoWaySslConfiguration {
+            fun withBaseDirectory(baseDirectory: Path, certificatesDirectoryName: String = DEFAULT_CERTIFICATES_DIRECTORY_NAME, keyStoreFileName: String = KeyStore.DEFAULT_STORE_FILE_NAME, keyStorePassword: String = KeyStore.DEFAULT_STORE_PASSWORD, trustStoreFileName: String = TrustStore.DEFAULT_STORE_FILE_NAME, trustStorePassword: String = TrustStore.DEFAULT_STORE_PASSWORD): MutualSslConfiguration {
 
                 return withCertificatesDirectory(baseDirectory / certificatesDirectoryName, keyStorePassword, trustStorePassword, keyStoreFileName, trustStoreFileName)
             }

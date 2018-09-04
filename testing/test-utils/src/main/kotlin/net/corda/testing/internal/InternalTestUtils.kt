@@ -11,10 +11,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_FILE
-import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_PASS
-import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.*
@@ -40,7 +37,7 @@ inline fun <reified T : Any> T.amqpSpecific(reason: String, function: () -> Unit
     loggerFor<T>().info("Ignoring AMQP specific test, reason: $reason")
 }
 
-fun configureTestSSL(legalName: CordaX500Name): TwoWaySslConfiguration {
+fun configureTestSSL(legalName: CordaX500Name): MutualSslConfiguration {
 
     val certificatesDirectory = Files.createTempDirectory("certs")
     val config = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
@@ -119,7 +116,7 @@ fun NodeInfo.chooseIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
  */
 fun NodeInfo.chooseIdentity(): Party = chooseIdentityAndCert().party
 
-fun p2pSslOptions(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "London", "GB")): TwoWaySslConfiguration {
+fun p2pSslOptions(path: Path, name: CordaX500Name = CordaX500Name("MegaCorp", "London", "GB")): MutualSslConfiguration {
     val sslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(path, keyStorePassword = "serverstorepass")
     val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
     sslConfig.keyStore.get(true).registerDevP2pCertificates(name, rootCa.certificate, intermediateCa)

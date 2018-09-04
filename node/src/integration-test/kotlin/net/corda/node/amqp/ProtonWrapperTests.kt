@@ -15,7 +15,7 @@ import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.InternalArtemisTcpTransport
-import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
@@ -104,7 +104,7 @@ class ProtonWrapperTests {
         }
     }
 
-    private fun TwoWaySslConfiguration.createTrustStore(rootCert: X509Certificate) {
+    private fun MutualSslConfiguration.createTrustStore(rootCert: X509Certificate) {
 
         trustStore.get(true)[X509Utilities.CORDA_ROOT_CA] = rootCert
     }

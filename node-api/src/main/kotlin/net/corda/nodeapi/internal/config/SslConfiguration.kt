@@ -11,20 +11,20 @@ interface SslConfiguration {
 
     companion object {
 
-        fun twoWay(keyStore: FileBasedCertificateStoreSupplier, trustStore: FileBasedCertificateStoreSupplier): TwoWaySslConfiguration {
+        fun twoWay(keyStore: FileBasedCertificateStoreSupplier, trustStore: FileBasedCertificateStoreSupplier): MutualSslConfiguration {
 
-            return TwoWaySslOptions(keyStore, trustStore)
+            return MutualSslOptions(keyStore, trustStore)
         }
     }
 }
 
-interface TwoWaySslConfiguration : SslConfiguration {
+interface MutualSslConfiguration : SslConfiguration {
 
     override val keyStore: FileBasedCertificateStoreSupplier
     override val trustStore: FileBasedCertificateStoreSupplier
 }
 
-private class TwoWaySslOptions(override val keyStore: FileBasedCertificateStoreSupplier, override val trustStore: FileBasedCertificateStoreSupplier) : TwoWaySslConfiguration
+private class MutualSslOptions(override val keyStore: FileBasedCertificateStoreSupplier, override val trustStore: FileBasedCertificateStoreSupplier) : MutualSslConfiguration
 
 // Don't use this internally. It's still here because it's used by ArtemisTcpTransport, which is in public node-api by mistake.
 interface SSLConfiguration {

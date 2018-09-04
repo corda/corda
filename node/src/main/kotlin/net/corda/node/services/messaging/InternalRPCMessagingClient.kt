@@ -8,7 +8,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
 import net.corda.nodeapi.internal.InternalArtemisTcpTransport
-import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ServerLocator
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
@@ -16,7 +16,7 @@ import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 /**
  * Used by the Node to communicate with the RPC broker.
  */
-class InternalRPCMessagingClient(val sslConfig: TwoWaySslConfiguration, val serverAddress: NetworkHostAndPort, val maxMessageSize: Int, val nodeName: CordaX500Name, val rpcServerConfiguration: RPCServerConfiguration) : SingletonSerializeAsToken(), AutoCloseable {
+class InternalRPCMessagingClient(val sslConfig: MutualSslConfiguration, val serverAddress: NetworkHostAndPort, val maxMessageSize: Int, val nodeName: CordaX500Name, val rpcServerConfiguration: RPCServerConfiguration) : SingletonSerializeAsToken(), AutoCloseable {
     private var locator: ServerLocator? = null
     private var rpcServer: RPCServer? = null
 

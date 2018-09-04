@@ -19,7 +19,7 @@ import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.rpcConnectorTcpTransport
-import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
@@ -95,7 +95,7 @@ class ArtemisRpcTests {
         }.isInstanceOf(RPCException::class.java)
     }
 
-    private fun testSslCommunication(nodeSSlconfig: TwoWaySslConfiguration,
+    private fun testSslCommunication(nodeSSlconfig: MutualSslConfiguration,
                                      brokerSslOptions: BrokerRpcSslOptions?,
                                      useSslForBroker: Boolean,
                                      clientSslOptions: ClientRpcSslOptions?,

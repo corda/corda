@@ -10,7 +10,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
-import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.protonwrapper.netty.init
 import net.corda.nodeapi.internal.registerDevP2pCertificates
@@ -309,7 +309,7 @@ class X509UtilitiesTest {
 
     private fun tempFile(name: String): Path = tempFolder.root.toPath() / name
 
-    private fun TwoWaySslConfiguration.createTrustStore(rootCert: X509Certificate) {
+    private fun MutualSslConfiguration.createTrustStore(rootCert: X509Certificate) {
         val trustStore = this.trustStore.get(true)
         trustStore[X509Utilities.CORDA_ROOT_CA] = rootCert
     }

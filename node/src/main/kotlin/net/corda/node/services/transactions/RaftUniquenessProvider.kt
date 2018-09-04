@@ -28,7 +28,7 @@ import net.corda.core.utilities.debug
 import net.corda.node.services.config.RaftConfig
 import net.corda.node.services.transactions.RaftTransactionCommitLog.Commands.CommitTransaction
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.nodeapi.internal.config.TwoWaySslConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.nio.file.Path
@@ -51,7 +51,7 @@ import javax.persistence.Table
 @ThreadSafe
 class RaftUniquenessProvider(
         private val storagePath: Path,
-        private val transportConfiguration: TwoWaySslConfiguration,
+        private val transportConfiguration: MutualSslConfiguration,
         private val db: CordaPersistence,
         private val clock: Clock,
         private val metrics: MetricRegistry,
@@ -153,7 +153,7 @@ class RaftUniquenessProvider(
                 .build()
     }
 
-    private fun buildTransport(config: TwoWaySslConfiguration): Transport? {
+    private fun buildTransport(config: MutualSslConfiguration): Transport? {
         return NettyTransport.builder()
                 .withSsl()
                 .withSslProtocol(SslProtocol.TLSv1_2)
