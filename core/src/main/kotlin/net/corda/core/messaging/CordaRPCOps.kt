@@ -96,12 +96,6 @@ data class StateMachineTransactionMapping(val stateMachineRunId: StateMachineRun
 
 /** RPC operations that the node exposes to clients. */
 interface CordaRPCOps : RPCOps {
-    /**
-     * Returns the RPC protocol version, which is the same the node's Platform Version. Exists since version 1 so guaranteed
-     * to be present.
-     */
-    override val protocolVersion: Int get() = nodeInfo().platformVersion
-
     /** Returns a list of currently in-progress state machine infos. */
     fun stateMachinesSnapshot(): List<StateMachineInfo>
 

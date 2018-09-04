@@ -16,9 +16,10 @@ handling, and ensures the Corda service is run at boot.
 
    * Oracle Java 8. The supported versions are listed in :doc:`getting-set-up`
 
-1. Add a system user which will be used to run Corda:
+1. As root/sys admin user - add a system user which will be used to run Corda:
 
     ``sudo adduser --system --no-create-home --group corda``
+
 
 2. Create a directory called ``/opt/corda`` and change its ownership to the user you want to use to run Corda:
 
