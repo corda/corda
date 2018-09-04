@@ -1,6 +1,7 @@
 package net.corda.node.services.config.shell
 
 import net.corda.core.internal.div
+import net.corda.node.internal.clientSslOptionsCompatibleWith
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_SHELL_USER
 import net.corda.tools.shell.ShellConfiguration
@@ -14,8 +15,8 @@ fun NodeConfiguration.toShellConfig() = ShellConfiguration(
         cordappsDirectory = this.baseDirectory.toString() / CORDAPPS_DIR,
         user = INTERNAL_SHELL_USER,
         password = INTERNAL_SHELL_USER,
-        hostAndPort = this.rpcOptions.adminAddress,
-        nodeSslConfig = this,
+        hostAndPort = this.rpcOptions.address,
+        ssl = clientSslOptionsCompatibleWith(this.rpcOptions),
         sshdPort = this.sshd?.port,
         sshHostKeyDirectory = this.baseDirectory / SSHD_HOSTKEY_DIR,
         noLocalShell = this.noLocalShell)
