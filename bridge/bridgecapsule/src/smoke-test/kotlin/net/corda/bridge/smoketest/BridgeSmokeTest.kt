@@ -72,10 +72,10 @@ class BridgeSmokeTest {
         val artemisConfig = CertificateStoreStubs.P2P.withBaseDirectory(baseDirectory)
 
         artemisConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
-        copyBridgeResource("corda-firewall.jar")
-        copyBridgeResource("firewall.conf")
+        copyBridgeResource("corda-firewall.jar", baseDirectory)
+        copyBridgeResource("firewall.conf", baseDirectory)
         createNetworkParams(baseDirectory)
-        val (artemisServer, artemisClient) = createArtemis()
+        val (artemisServer, artemisClient) = createArtemis(baseDirectory, baseDirectory / "certificates", artemisConfig)
         val zkServer = TestingServer(11105, false)
         try {
             installBridgeControlResponder(artemisClient)
@@ -89,13 +89,12 @@ class BridgeSmokeTest {
         }
     }
 
-    private fun copyBridgeResource(resourceName: String) {
-        val testDir = tempFolder.root.toPath()
-        // Find the finance jar file for the smoke tests of this module
+    private fun copyBridgeResource(resourceName: String, baseDirectory: Path) {
+        // Find the firewall jar file for the smoke tests of this module
         val bridgeJar = Paths.get("build", "resources/smokeTest/net/corda/bridge/smoketest").list {
             it.filter { resourceName in it.toString() }.toList().single()
         }
-        bridgeJar.copyToDirectory(testDir)
+        bridgeJar.copyToDirectory(baseDirectory)
     }
 
     private fun createNetworkParams(baseDirectory: Path) {
@@ -200,18 +199,16 @@ class BridgeSmokeTest {
         }
     }
 
-    private fun createArtemis(): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
-        val baseDirectory = tempFolder.root.toPath()
-        val certificatesDirectory = baseDirectory / "certificates"
-        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+    private fun createArtemis(baseDirectory: Path, certificatesDirectory: Path, p2pSslConfiguration: MutualSslConfiguration): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
+
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
 
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName
-            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(NetworkHostAndPort("localhost", 11005)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000), externalBridge = true)).whenever(it).enterpriseConfiguration
