@@ -291,7 +291,7 @@ class CordaRPCClient private constructor(
                 sslConfiguration: ClientRpcSslOptions? = null,
                 classLoader: ClassLoader? = null
         ): CordaRPCClient {
-            return CordaRPCClient(haAddressPool.first(), configuration, sslConfiguration, null, classLoader, haAddressPool)
+            return CordaRPCClient(haAddressPool.first(), configuration, sslConfiguration, classLoader, haAddressPool)
         }
     }
 
@@ -309,7 +309,7 @@ class CordaRPCClient private constructor(
 
     private fun getRpcClient(): RPCClient<CordaRPCOps> {
         return when {
-        // Client->RPC broker
+            // Client->RPC broker
             haAddressPool.isEmpty() -> RPCClient(
                     rpcConnectorTcpTransport(hostAndPort, config = sslConfiguration),
                     configuration,

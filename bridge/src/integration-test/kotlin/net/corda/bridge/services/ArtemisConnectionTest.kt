@@ -6,6 +6,7 @@ import net.corda.bridge.createAndLoadConfigFromResource
 import net.corda.bridge.createBridgeKeyStores
 import net.corda.bridge.createNetworkParams
 import net.corda.bridge.services.artemis.BridgeArtemisConnectionServiceImpl
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.EnterpriseConfiguration
 import net.corda.node.services.config.MutualExclusionConfiguration
@@ -15,6 +16,7 @@ import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -84,11 +86,17 @@ class ArtemisConnectionTest {
 
 
     private fun createArtemis(): ArtemisMessagingServer {
+
+        val baseDirectory = tempFolder.root.toPath()
+        val certificatesDirectory = baseDirectory / "certificates"
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslOptions = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
-            doReturn(tempFolder.root.toPath()).whenever(it).baseDirectory
+            doReturn(baseDirectory).whenever(it).baseDirectory
+            doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(DUMMY_BANK_A_NAME).whenever(it).myLegalName
-            doReturn("trustpass").whenever(it).trustStorePassword
-            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(signingCertificateStore).whenever(it).signingCertificateStore
+            doReturn(p2pSslOptions).whenever(it).p2pSslOptions
             doReturn(NetworkHostAndPort("localhost", 11005)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000), externalBridge = true)).whenever(it).enterpriseConfiguration

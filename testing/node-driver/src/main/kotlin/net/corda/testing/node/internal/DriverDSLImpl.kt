@@ -28,9 +28,6 @@ import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
-
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
-import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -46,6 +43,7 @@ import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.internal.setGlobalSerialization
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
@@ -1172,19 +1170,17 @@ private fun Config.toNodeOnly(): Config {
     return if (hasPath("webAddress")) withoutPath("webAddress").withoutPath("useHTTPS") else this
 }
 
-internal fun DriverParameters.cordappsForAllNodes(): Set<TestCorDapp> = cordappsForAllNodes ?: cordappsInCurrentAndAdditionalPackages(extraCordappPackagesToScan)
+internal fun DriverParameters.cordappsForAllNodes(): Set<TestCorDapp> = cordappsForAllNodes
+        ?: cordappsInCurrentAndAdditionalPackages(extraCordappPackagesToScan)
 
 fun DriverDSL.startNode(providedName: CordaX500Name, devMode: Boolean, parameters: NodeParameters = NodeParameters()): CordaFuture<NodeHandle> {
     var customOverrides = emptyMap<String, String>()
     if (!devMode) {
         val nodeDir = baseDirectory(providedName)
-        val nodeSslConfig = object : NodeSSLConfiguration {
-            override val baseDirectory = nodeDir
-            override val keyStorePassword = "cordacadevpass"
-            override val trustStorePassword = "trustpass"
-            override val crlCheckSoftFail = true
-        }
-        nodeSslConfig.configureDevKeyAndTrustStores(providedName)
+        val certificatesDirectory = nodeDir / "certificates"
+        val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        p2pSslConfig.configureDevKeyAndTrustStores(providedName, signingCertStore, certificatesDirectory)
         customOverrides = mapOf("devMode" to "false")
     }
     return startNode(parameters, providedName = providedName, customOverrides = customOverrides)

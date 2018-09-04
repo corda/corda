@@ -5,6 +5,9 @@ package net.corda.core.internal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.*
+import net.corda.core.flows.FlowLogic
+import net.corda.core.node.ServicesForResolution
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.*
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.UntrustworthyData

@@ -5,7 +5,7 @@ import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.internal.readAll
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import rx.Subscription
 
@@ -22,23 +22,23 @@ class InProcessBridgeReceiverService(val conf: FirewallConfiguration,
     private val statusFollower: ServiceStateCombiner
     private var statusSubscriber: Subscription? = null
     private var receiveSubscriber: Subscription? = null
-    private val sslConfiguration: SSLConfiguration
+    private val sslConfiguration: MutualSslConfiguration
 
     init {
         statusFollower = ServiceStateCombiner(listOf(auditService, haService, amqpListenerService, filterService))
-        sslConfiguration = conf.inboundConfig?.customSSLConfiguration ?: conf
+        sslConfiguration = conf.inboundConfig?.customSSLConfiguration ?: conf.p2pSslOptions
     }
 
     override fun start() {
         statusSubscriber = statusFollower.activeChange.subscribe({
             if (it) {
-                val keyStoreBytes = sslConfiguration.sslKeystore.readAll()
-                val trustStoreBytes = sslConfiguration.trustStoreFile.readAll()
+                val keyStoreBytes = sslConfiguration.keyStore.path.readAll()
+                val trustStoreBytes = sslConfiguration.trustStore.path.readAll()
                 amqpListenerService.provisionKeysAndActivate(keyStoreBytes,
-                        sslConfiguration.keyStorePassword.toCharArray(),
-                        sslConfiguration.keyStorePassword.toCharArray(),
+                        sslConfiguration.keyStore.password.toCharArray(),
+                        sslConfiguration.keyStore.password.toCharArray(),
                         trustStoreBytes,
-                        sslConfiguration.trustStorePassword.toCharArray())
+                        sslConfiguration.trustStore.password.toCharArray())
             } else {
                 if (amqpListenerService.running) {
                     amqpListenerService.wipeKeysAndDeactivate()

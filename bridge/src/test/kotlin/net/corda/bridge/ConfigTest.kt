@@ -62,23 +62,23 @@ class ConfigTest {
     fun `Load overridden cert config`() {
         val configResource = "/net/corda/bridge/custombasecerts/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(Paths.get("customcerts/mysslkeystore.jks"), config.sslKeystore)
-        assertEquals(Paths.get("customcerts/mytruststore.jks"), config.trustStoreFile)
+        assertEquals(Paths.get("customcerts/mysslkeystore.jks"), config.p2pSslOptions.keyStore.path)
+        assertEquals(Paths.get("customcerts/mytruststore.jks"), config.p2pSslOptions.trustStore.path)
     }
 
     @Test
     fun `Load custom inner certificate config`() {
         val configResource = "/net/corda/bridge/separatedwithcustomcerts/bridge/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(Paths.get("outboundcerts/outboundkeys.jks"), config.outboundConfig!!.customSSLConfiguration!!.sslKeystore)
-        assertEquals(Paths.get("outboundcerts/outboundtrust.jks"), config.outboundConfig!!.customSSLConfiguration!!.trustStoreFile)
-        assertEquals("outboundkeypassword", config.outboundConfig!!.customSSLConfiguration!!.keyStorePassword)
-        assertEquals("outboundtrustpassword", config.outboundConfig!!.customSSLConfiguration!!.trustStorePassword)
+        assertEquals(Paths.get("outboundcerts/outboundkeys.jks"), config.outboundConfig!!.customSSLConfiguration!!.keyStore.path)
+        assertEquals(Paths.get("outboundcerts/outboundtrust.jks"), config.outboundConfig!!.customSSLConfiguration!!.trustStore.path)
+        assertEquals("outboundkeypassword", config.outboundConfig!!.customSSLConfiguration!!.keyStore.password)
+        assertEquals("outboundtrustpassword", config.outboundConfig!!.customSSLConfiguration!!.trustStore.password)
         assertNull(config.inboundConfig)
-        assertEquals(Paths.get("tunnelcerts/tunnelkeys.jks"), config.bridgeInnerConfig!!.customSSLConfiguration!!.sslKeystore)
-        assertEquals(Paths.get("tunnelcerts/tunneltrust.jks"), config.bridgeInnerConfig!!.customSSLConfiguration!!.trustStoreFile)
-        assertEquals("tunnelkeypassword", config.bridgeInnerConfig!!.customSSLConfiguration!!.keyStorePassword)
-        assertEquals("tunneltrustpassword", config.bridgeInnerConfig!!.customSSLConfiguration!!.trustStorePassword)
+        assertEquals(Paths.get("tunnelcerts/tunnelkeys.jks"), config.bridgeInnerConfig!!.customSSLConfiguration!!.keyStore.path)
+        assertEquals(Paths.get("tunnelcerts/tunneltrust.jks"), config.bridgeInnerConfig!!.customSSLConfiguration!!.trustStore.path)
+        assertEquals("tunnelkeypassword", config.bridgeInnerConfig!!.customSSLConfiguration!!.keyStore.password)
+        assertEquals("tunneltrustpassword", config.bridgeInnerConfig!!.customSSLConfiguration!!.trustStore.password)
         assertNull(config.floatOuterConfig)
     }
 
@@ -86,15 +86,15 @@ class ConfigTest {
     fun `Load custom outer certificate config`() {
         val configResource = "/net/corda/bridge/separatedwithcustomcerts/float/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(Paths.get("inboundcerts/inboundkeys.jks"), config.inboundConfig!!.customSSLConfiguration!!.sslKeystore)
-        assertEquals(Paths.get("inboundcerts/inboundtrust.jks"), config.inboundConfig!!.customSSLConfiguration!!.trustStoreFile)
-        assertEquals("inboundkeypassword", config.inboundConfig!!.customSSLConfiguration!!.keyStorePassword)
-        assertEquals("inboundtrustpassword", config.inboundConfig!!.customSSLConfiguration!!.trustStorePassword)
+        assertEquals(Paths.get("inboundcerts/inboundkeys.jks"), config.inboundConfig!!.customSSLConfiguration!!.keyStore.path)
+        assertEquals(Paths.get("inboundcerts/inboundtrust.jks"), config.inboundConfig!!.customSSLConfiguration!!.trustStore.path)
+        assertEquals("inboundkeypassword", config.inboundConfig!!.customSSLConfiguration!!.keyStore.password)
+        assertEquals("inboundtrustpassword", config.inboundConfig!!.customSSLConfiguration!!.trustStore.password)
         assertNull(config.outboundConfig)
-        assertEquals(Paths.get("tunnelcerts/tunnelkeys.jks"), config.floatOuterConfig!!.customSSLConfiguration!!.sslKeystore)
-        assertEquals(Paths.get("tunnelcerts/tunneltrust.jks"), config.floatOuterConfig!!.customSSLConfiguration!!.trustStoreFile)
-        assertEquals("tunnelkeypassword", config.floatOuterConfig!!.customSSLConfiguration!!.keyStorePassword)
-        assertEquals("tunneltrustpassword", config.floatOuterConfig!!.customSSLConfiguration!!.trustStorePassword)
+        assertEquals(Paths.get("tunnelcerts/tunnelkeys.jks"), config.floatOuterConfig!!.customSSLConfiguration!!.keyStore.path)
+        assertEquals(Paths.get("tunnelcerts/tunneltrust.jks"), config.floatOuterConfig!!.customSSLConfiguration!!.trustStore.path)
+        assertEquals("tunnelkeypassword", config.floatOuterConfig!!.customSSLConfiguration!!.keyStore.password)
+        assertEquals("tunneltrustpassword", config.floatOuterConfig!!.customSSLConfiguration!!.trustStore.password)
         assertNull(config.bridgeInnerConfig)
     }
 

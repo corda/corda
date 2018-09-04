@@ -92,7 +92,7 @@ class NodeWithInfo(val node: Node, val info: NodeInfo) {
 open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 private val initialiseSerialization: Boolean = true,
-                cordappLoader: CordappLoader = makeCordappLoader(configuration)
+                cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo)
 ) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
@@ -134,8 +134,11 @@ open class Node(configuration: NodeConfiguration,
         }
 
         private val sameVmNodeCounter = AtomicInteger()
-        private fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
-            return JarScanningCordappLoader.fromDirectories(configuration.cordappDirectories)
+
+        @JvmStatic
+        protected fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
+
+            return JarScanningCordappLoader.fromDirectories(configuration.cordappDirectories, versionInfo)
         }
         // TODO: make this configurable.
         const val MAX_RPC_MESSAGE_SIZE = 10485760
@@ -195,6 +198,7 @@ open class Node(configuration: NodeConfiguration,
                 nodeExecutor = serverThread,
                 database = database,
                 networkMap = networkMapCache,
+                metricRegistry = metricRegistry,
                 isDrainingModeOn = nodeProperties.flowsDrainingMode::isEnabled,
                 drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values
         )
@@ -227,10 +231,18 @@ open class Node(configuration: NodeConfiguration,
             startLocalRpcBroker(securityManager)
         }
 
-        val bridgeControlListener = BridgeControlListener(configuration.p2pSslOptions, network.serverAddress, networkParameters.maxMessageSize)
+        val externalBridge = configuration.enterpriseConfiguration.externalBridge
+        val bridgeControlListener = if (externalBridge == null || !externalBridge) {
+            BridgeControlListener(configuration.p2pSslOptions, network.serverAddress, networkParameters.maxMessageSize)
+        } else {
+            null
+        }
 
         printBasicNodeInfo("Advertised P2P messaging addresses", nodeInfo.addresses.joinToString())
-        val rpcServerConfiguration = RPCServerConfiguration.DEFAULT
+
+        val rpcServerConfiguration = RPCServerConfiguration.DEFAULT.copy(
+                rpcThreadPoolSize = configuration.enterpriseConfiguration.tuning.rpcThreadPoolSize
+        )
         rpcServerAddresses?.let {
             internalRpcMessagingClient = InternalRPCMessagingClient(configuration.p2pSslOptions, it.admin, MAX_RPC_MESSAGE_SIZE, CordaX500Name.build(configuration.p2pSslOptions.keyStore.get()[X509Utilities.CORDA_CLIENT_TLS].subjectX500Principal), rpcServerConfiguration)
             printBasicNodeInfo("RPC connection address", it.primary.toString())
@@ -247,7 +259,7 @@ open class Node(configuration: NodeConfiguration,
             start()
         }
         // Start P2P bridge service
-        bridgeControlListener.apply {
+        bridgeControlListener?.apply {
             closeOnStop()
             start()
         }
@@ -260,8 +272,9 @@ open class Node(configuration: NodeConfiguration,
         network.start(
                 myIdentity = nodeInfo.legalIdentities[0].owningKey,
                 serviceIdentity = if (nodeInfo.legalIdentities.size == 1) null else nodeInfo.legalIdentities[1].owningKey,
-                advertisedAddress = nodeInfo.addresses[0],
-                maxMessageSize = networkParameters.maxMessageSize
+                advertisedAddress = nodeInfo.addresses.single(),
+                maxMessageSize = networkParameters.maxMessageSize,
+                legalName = nodeInfo.legalIdentities[0].name.toString()
         )
     }
 
@@ -286,12 +299,16 @@ open class Node(configuration: NodeConfiguration,
 
     private fun getAdvertisedAddress(): NetworkHostAndPort {
         return with(configuration) {
-            val host = if (detectPublicIp) {
-                tryDetectIfNotPublicHost(p2pAddress.host) ?: p2pAddress.host
+            if (relay != null) {
+                NetworkHostAndPort(relay!!.relayHost, relay!!.remoteInboundPort)
             } else {
-                p2pAddress.host
+                val host = if (detectPublicIp) {
+                    tryDetectIfNotPublicHost(p2pAddress.host) ?: p2pAddress.host
+                } else {
+                    p2pAddress.host
+                }
+                NetworkHostAndPort(host, p2pAddress.port)
             }
-            NetworkHostAndPort(host, p2pAddress.port)
         }
     }
 
@@ -369,6 +386,8 @@ open class Node(configuration: NodeConfiguration,
                 }
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
+        } else if (databaseUrl != null) {
+            printBasicNodeInfo("Database connection url is", databaseUrl)
         }
 
         super.startDatabase()

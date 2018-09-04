@@ -29,14 +29,10 @@ import java.security.PublicKey
 import java.time.Instant
 import javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM
 
-// TODO: Make a shared implementation of CordaRPCOps where every method is unimplemented?
-
 class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : CordaRPCOps {
     companion object {
         val log = contextLogger()
     }
-
-    override val protocolVersion: Int = 1000
 
     init {
         try {
@@ -79,51 +75,51 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
     }
 
     override fun stateMachinesSnapshot(): List<StateMachineInfo> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): Vault.Page<T> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria, contractStateType: Class<out T>): Vault.Page<T> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun <T : ContractState> vaultQueryByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun <T : ContractState> vaultQueryByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun <T : ContractState> vaultTrack(contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun <T : ContractState> vaultTrackByCriteria(contractStateType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun <T : ContractState> vaultTrackByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun <T : ContractState> vaultTrackByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun internalVerifiedTransactionsSnapshot(): List<SignedTransaction> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun internalFindVerifiedTransaction(txnId: SecureHash): SignedTransaction? {
@@ -131,107 +127,107 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
     }
 
     override fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun stateMachineRecordedTransactionMappingSnapshot(): List<StateMachineTransactionMapping> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun stateMachineRecordedTransactionMappingFeed(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun networkParametersFeed(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun acceptNewNetworkParameters(parametersHash: SecureHash) {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun addVaultTransactionNote(txnId: SecureHash, txnNote: String) {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun getVaultTransactionNotes(txnId: SecureHash): Iterable<String> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun openAttachment(id: SecureHash): InputStream {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun uploadAttachment(jar: InputStream): SecureHash {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun currentNodeTime(): Instant {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun waitUntilNetworkReady(): CordaFuture<Void?> {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun partyFromKey(key: PublicKey): Party? {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun wellKnownPartyFromX500Name(x500Name: CordaX500Name): Party? {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun notaryPartyFromX500Name(x500Name: CordaX500Name): Party? {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun clearNetworkMapCache() {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun setFlowsDrainingModeEnabled(enabled: Boolean) {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun isFlowsDrainingModeEnabled(): Boolean {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun shutdown() {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun killFlow(id: StateMachineRunId): Boolean {
-        TODO("not implemented") 
+        TODO("not implemented")
     }
 
     override fun refreshNetworkMapCache() {

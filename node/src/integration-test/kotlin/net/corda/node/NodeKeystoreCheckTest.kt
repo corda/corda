@@ -7,14 +7,25 @@ import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.ClassRule
 import org.junit.Test
 import javax.security.auth.x500.X500Principal
 
-class NodeKeystoreCheckTest {
+class NodeKeystoreCheckTest : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+    }
+
     @Test
     fun `starting node in non-dev mode with no key store`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {

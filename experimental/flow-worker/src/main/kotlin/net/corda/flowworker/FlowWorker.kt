@@ -43,7 +43,7 @@ class FlowWorker(flowWorkerId: String, private val flowWorkerServiceHub: FlowWor
         flowWorkerServiceHub.start()
         runOnStop += { flowWorkerServiceHub.stop() }
 
-        val flowWorkerMessagingClient = ArtemisMessagingClient(flowWorkerServiceHub.configuration, flowWorkerServiceHub.configuration.messagingServerAddress!!, flowWorkerServiceHub.networkParameters.maxMessageSize)
+        val flowWorkerMessagingClient = ArtemisMessagingClient(flowWorkerServiceHub.configuration.p2pSslOptions, flowWorkerServiceHub.configuration.messagingServerAddress!!, flowWorkerServiceHub.networkParameters.maxMessageSize)
         runOnStop += { flowWorkerMessagingClient.stop() }
 
         val session = flowWorkerMessagingClient.start().session

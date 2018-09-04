@@ -56,14 +56,13 @@ class CordaRpcWorkerOps(
         const val RPC_WORKER_QUEUE_ADDRESS_PREFIX = "${ArtemisMessagingComponent.INTERNAL_PREFIX}rpc.worker."
     }
 
-    override val protocolVersion: Int = 1000
     private val flowWorkerQueueAddress = "${FlowWorker.FLOW_WORKER_QUEUE_ADDRESS_PREFIX}${services.myInfo.legalIdentities[0].owningKey.toStringShort()}"
 
     private val rpcWorkerQueueAddress = "$RPC_WORKER_QUEUE_ADDRESS_PREFIX${services.myInfo.legalIdentities[0].owningKey.toStringShort()}"
     private val rpcWorkerId = UUID.randomUUID().toString()
     private val rpcWorkerQueueName = "$rpcWorkerQueueAddress.$rpcWorkerId"
 
-    private val artemisClient = ArtemisMessagingClient(services.configuration, services.configuration.messagingServerAddress!!, services.networkParameters.maxMessageSize)
+    private val artemisClient = ArtemisMessagingClient(services.configuration.p2pSslOptions, services.configuration.messagingServerAddress!!, services.networkParameters.maxMessageSize)
     private lateinit var session: ClientSession
     private lateinit var producer: ClientProducer
 

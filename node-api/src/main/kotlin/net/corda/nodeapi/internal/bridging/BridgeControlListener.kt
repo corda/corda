@@ -11,29 +11,49 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOT
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisSessionProvider
+import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
+import org.apache.activemq.artemis.api.core.ActiveMQQueueExistsException
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientMessage
+import org.apache.activemq.artemis.api.core.client.ClientSession
+import rx.Observable
+import rx.subjects.PublishSubject
 import java.util.*
 
 class BridgeControlListener(val config: MutualSslConfiguration,
+                            socksProxyConfig: SocksProxyConfig? = null,
                             maxMessageSize: Int,
                             val artemisMessageClientFactory: () -> ArtemisSessionProvider) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
-    private val bridgeManager: BridgeManager = AMQPBridgeManager(config, maxMessageSize, artemisMessageClientFactory)
+    private val bridgeControlQueue = "$BRIDGE_CONTROL.$bridgeId"
+    private val bridgeNotifyQueue = "$BRIDGE_NOTIFY.$bridgeId"
+    private val bridgeManager: BridgeManager = AMQPBridgeManager(config, socksProxyConfig, maxMessageSize,
+            artemisMessageClientFactory)
     private val validInboundQueues = mutableSetOf<String>()
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
+    private var notifyConsumer: ClientConsumer? = null
 
     constructor(config: MutualSslConfiguration,
                 p2pAddress: NetworkHostAndPort,
-                maxMessageSize: Int) : this(config, maxMessageSize, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+
+                maxMessageSize: Int,
+                socksProxy: SocksProxyConfig? = null) : this(config, socksProxy, maxMessageSize, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+
 
     companion object {
         private val log = contextLogger()
     }
+
+    val active: Boolean
+        get() = validInboundQueues.isNotEmpty()
+
+    private val _activeChange = PublishSubject.create<Boolean>().toSerialized()
+    val activeChange: Observable<Boolean>
+        get() = _activeChange
 
     fun start() {
         stop()
@@ -43,8 +63,21 @@ class BridgeControlListener(val config: MutualSslConfiguration,
         artemis.start()
         val artemisClient = artemis.started!!
         val artemisSession = artemisClient.session
-        val bridgeControlQueue = "$BRIDGE_CONTROL.$bridgeId"
-        artemisSession.createTemporaryQueue(BRIDGE_CONTROL, RoutingType.MULTICAST, bridgeControlQueue)
+        registerBridgeControlListener(artemisSession)
+        registerBridgeDuplicateChecker(artemisSession)
+        val startupMessage = BridgeControl.BridgeToNodeSnapshotRequest(bridgeId).serialize(context = SerializationDefaults.P2P_CONTEXT).bytes
+        val bridgeRequest = artemisSession.createMessage(false)
+        bridgeRequest.writeBodyBufferBytes(startupMessage)
+        artemisClient.producer.send(BRIDGE_NOTIFY, bridgeRequest)
+    }
+
+    private fun registerBridgeControlListener(artemisSession: ClientSession) {
+        try {
+            artemisSession.createTemporaryQueue(BRIDGE_CONTROL, RoutingType.MULTICAST, bridgeControlQueue)
+        } catch (ex: ActiveMQQueueExistsException) {
+            // Ignore if there is a queue still not cleaned up
+        }
+
         val control = artemisSession.createConsumer(bridgeControlQueue)
         controlConsumer = control
         control.setMessageHandler { msg ->
@@ -54,17 +87,44 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                 log.error("Unable to process bridge control message", ex)
             }
         }
-        val startupMessage = BridgeControl.BridgeToNodeSnapshotRequest(bridgeId).serialize(context = SerializationDefaults.P2P_CONTEXT).bytes
-        val bridgeRequest = artemisSession.createMessage(false)
-        bridgeRequest.writeBodyBufferBytes(startupMessage)
-        artemisClient.producer.send(BRIDGE_NOTIFY, bridgeRequest)
+    }
+
+    private fun registerBridgeDuplicateChecker(artemisSession: ClientSession) {
+        try {
+            artemisSession.createTemporaryQueue(BRIDGE_NOTIFY, RoutingType.MULTICAST, bridgeNotifyQueue)
+        } catch (ex: ActiveMQQueueExistsException) {
+            // Ignore if there is a queue still not cleaned up
+        }
+        val notify = artemisSession.createConsumer(bridgeNotifyQueue)
+        notifyConsumer = notify
+        notify.setMessageHandler { msg ->
+            try {
+                val data: ByteArray = ByteArray(msg.bodySize).apply { msg.bodyBuffer.readBytes(this) }
+                val notifyMessage = data.deserialize<BridgeControl.BridgeToNodeSnapshotRequest>(context = SerializationDefaults.P2P_CONTEXT)
+                if (notifyMessage.bridgeIdentity != bridgeId) {
+                    log.error("Fatal Error! Two bridges have been configured simultaneously! Check the enterpriseConfiguration.externalBridge status")
+                    System.exit(1)
+                }
+            } catch (ex: Exception) {
+                log.error("Unable to process bridge notification message", ex)
+            }
+        }
     }
 
     fun stop() {
+        if (active) {
+            _activeChange.onNext(false)
+        }
         validInboundQueues.clear()
         controlConsumer?.close()
         controlConsumer = null
-        artemis?.stop()
+        notifyConsumer?.close()
+        notifyConsumer = null
+        artemis?.apply {
+            started?.session?.deleteQueue(bridgeControlQueue)
+            started?.session?.deleteQueue(bridgeNotifyQueue)
+            stop()
+        }
         artemis = null
         bridgeManager.stop()
     }
@@ -100,7 +160,11 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                 for (outQueue in controlMessage.sendQueues) {
                     bridgeManager.deployBridge(outQueue.queueName, outQueue.targets.first(), outQueue.legalNames.toSet())
                 }
+                val wasActive = active
                 validInboundQueues.addAll(controlMessage.inboxQueues)
+                if (!wasActive && active) {
+                    _activeChange.onNext(true)
+                }
             }
             is BridgeControl.BridgeToNodeSnapshotRequest -> {
                 log.error("Message from Bridge $controlMessage detected on wrong topic!")

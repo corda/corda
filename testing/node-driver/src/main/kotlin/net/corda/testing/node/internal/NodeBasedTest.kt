@@ -10,15 +10,15 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
-import net.corda.node.internal.EnterpriseNode
 import net.corda.node.internal.NodeWithInfo
+import net.corda.node.internal.EnterpriseNode
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.User
 import org.apache.logging.log4j.Level
@@ -86,9 +86,9 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @JvmOverloads
     fun initNode(legalName: CordaX500Name,
-                  platformVersion: Int = 4,
-                  rpcUsers: List<User> = emptyList(),
-                  configOverrides: Map<String, Any> = emptyMap()): InProcessNode {
+                 platformVersion: Int = 4,
+                 rpcUsers: List<User> = emptyList(),
+                 configOverrides: Map<String, Any> = emptyMap()): InProcessNode {
         val baseDirectory = baseDirectory(legalName).createDirectories()
         val p2pAddress = configOverrides["p2pAddress"] ?: portAllocation.nextHostAndPort().toString()
         val config = ConfigHelper.loadConfig(
