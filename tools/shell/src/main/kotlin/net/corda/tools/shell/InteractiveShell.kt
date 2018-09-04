@@ -9,7 +9,6 @@ import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.PermissionException
-import net.corda.client.rpc.internal.createCordaRPCClientWithInternalSslAndClassLoader
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
@@ -86,24 +85,6 @@ object InteractiveShell {
                             maxReconnectAttempts = 1
                     ),
                     sslConfiguration = configuration.ssl,
-                    classLoader = classLoader)
-            this.connection = client.start(username, credentials)
-            connection.proxy
-        }
-        _startShell(configuration, classLoader)
-    }
-
-    /**
-     * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
-     * internals.
-     */
-    fun startShellInternal(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
-        rpcOps = { username: String, credentials: String ->
-            val client = createCordaRPCClientWithInternalSslAndClassLoader(hostAndPort = configuration.hostAndPort,
-                    configuration = CordaRPCClientConfiguration.DEFAULT.copy(
-                            maxReconnectAttempts = 1
-                    ),
-                    sslConfiguration = configuration.nodeSslConfig,
                     classLoader = classLoader)
             this.connection = client.start(username, credentials)
             connection.proxy
