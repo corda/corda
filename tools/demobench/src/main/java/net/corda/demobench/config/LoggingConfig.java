@@ -10,6 +10,7 @@ import java.util.logging.*;
  * to be added to the JVM's command line.
  */
 public class LoggingConfig {
+    private static final String LOGGING_CONFIG = "logging.properties";
 
     public LoggingConfig() throws IOException {
         try (InputStream input = getLoggingProperties()) {
@@ -20,10 +21,11 @@ public class LoggingConfig {
 
     private static InputStream getLoggingProperties() throws IOException {
         ClassLoader classLoader = LoggingConfig.class.getClassLoader();
-        InputStream input = classLoader.getResourceAsStream("logging.properties");
+        InputStream input = classLoader.getResourceAsStream(LOGGING_CONFIG);
         if (input == null) {
-            Path javaHome = Paths.get(System.getProperty("java.home"));
-            input = Files.newInputStream(javaHome.resolve("lib").resolve("logging.properties"));
+            // Use the default JUL logging configuration properties instead.
+            Path logging = Paths.get(System.getProperty("java.home"), "lib", LOGGING_CONFIG);
+            input = Files.newInputStream(logging, StandardOpenOption.READ);
         }
         return input;
     }

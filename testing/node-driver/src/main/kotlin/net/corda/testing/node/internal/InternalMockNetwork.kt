@@ -53,6 +53,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.TestCorDapp
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.testThreadFactory
@@ -456,8 +457,11 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
 
     private fun createNodeImpl(parameters: InternalMockNodeParameters, nodeFactory: (MockNodeArgs, CordappLoader?) -> MockNode, start: Boolean): MockNode {
         val id = parameters.forcedID ?: nextNodeId++
-        val config = mockNodeConfiguration().also {
-            doReturn(baseDirectory(id).createDirectories()).whenever(it).baseDirectory
+        val baseDirectory = baseDirectory(id)
+        val certificatesDirectory = baseDirectory / "certificates"
+        certificatesDirectory.createDirectories()
+        val config = mockNodeConfiguration(certificatesDirectory).also {
+            doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
@@ -561,12 +565,17 @@ abstract class MessagingServiceSpy {
     abstract fun send(message: Message, target: MessageRecipients, sequenceKey: Any)
 }
 
-private fun mockNodeConfiguration(): NodeConfiguration {
+private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguration {
     @DoNotImplement
     abstract class AbstractNodeConfiguration : NodeConfiguration
+
+    val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
+    val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+
     return rigorousMock<AbstractNodeConfiguration>().also {
-        doReturn("cordacadevpass").whenever(it).keyStorePassword
-        doReturn("trustpass").whenever(it).trustStorePassword
+        doReturn(certificatesDirectory.createDirectories()).whenever(it).certificatesDirectory
+        doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
+        doReturn(signingCertificateStore).whenever(it).signingCertificateStore
         doReturn(emptyList<User>()).whenever(it).rpcUsers
         doReturn(null).whenever(it).notary
         doReturn(DatabaseConfig()).whenever(it).database

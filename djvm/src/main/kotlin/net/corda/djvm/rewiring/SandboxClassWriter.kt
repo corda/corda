@@ -4,6 +4,7 @@ import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.ClassWriter.COMPUTE_FRAMES
 import org.objectweb.asm.ClassWriter.COMPUTE_MAXS
+import org.objectweb.asm.Type
 
 /**
  * Class writer for sandbox execution, with configurable a [classLoader] to ensure correct deduction of the used class
@@ -52,7 +53,7 @@ open class SandboxClassWriter(
                 do {
                     clazz = clazz.superclass
                 } while (!clazz.isAssignableFrom(class2))
-                clazz.name.replace('.', '/')
+                Type.getInternalName(clazz)
             }
         }
     }

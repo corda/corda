@@ -6,6 +6,8 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* Getter added to ``CordaRPCOps`` for the node's network parameters.
+
 * The RPC client library now checks at startup whether the server is of the client libraries major version or higher.
   Therefore to connect to a Corda 4 node you must use version 4 or lower of the library. This behaviour can be overridden
   by specifying a lower number in the ``CordaRPCClientConfiguration`` class.

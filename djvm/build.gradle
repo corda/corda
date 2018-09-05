@@ -1,6 +1,10 @@
 plugins {
     id 'com.github.johnrengelman.shadow' version '2.0.4'
 }
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+description 'Corda deterministic JVM sandbox'
 
 ext {
     // Shaded version of ASM to avoid conflict with root project.
@@ -30,8 +34,8 @@ dependencies {
 jar.enabled = false
 
 shadowJar {
-    baseName = "djvm"
-    classifier = ""
+    baseName 'corda-djvm'
+    classifier ''
     dependencies {
         exclude(dependency('com.jcabi:.*:.*'))
         exclude(dependency('org.apache.*:.*:.*'))
@@ -40,10 +44,14 @@ shadowJar {
         exclude(dependency('io.github.lukehutch:.*:.*'))
     }
     relocate 'org.objectweb.asm', 'djvm.org.objectweb.asm'
-    artifacts {
-        shadow(tasks.shadowJar.archivePath) {
-            builtBy shadowJar
-        }
-    }
 }
 assemble.dependsOn shadowJar
+
+artifacts {
+    publish shadowJar
+}
+
+publish {
+    disableDefaultJar true
+    name shadowJar.baseName
+}
