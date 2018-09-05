@@ -42,6 +42,18 @@ interface Validated {
     }
 }
 
+/** This is generally covered by commons-lang. */
+object CordaSystemUtils {
+    const val OS_NAME = "os.name"
+
+    const val MAC_PREFIX = "Mac"
+    const val WIN_PREFIX = "Windows"
+
+    fun isOsMac() = getOsName().startsWith(MAC_PREFIX)
+    fun isOsWindows() = getOsName().startsWith(WIN_PREFIX)
+    fun getOsName() = System.getProperty(OS_NAME)
+}
+
 fun CordaCliWrapper.start(args: Array<String>) {
     // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
     AnsiConsole.systemInstall()
@@ -51,8 +63,9 @@ fun CordaCliWrapper.start(args: Array<String>) {
     cmd.commandSpec.name(alias)
     cmd.commandSpec.usageMessage().description(description)
     try {
-        val results = cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(Help.Ansi.ON),
-                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(Help.Ansi.ON),
+        val defaultAnsiMode = if (CordaSystemUtils.isOsWindows()) { Help.Ansi.ON } else { Help.Ansi.AUTO }
+        val results = cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(defaultAnsiMode),
+                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(defaultAnsiMode),
                 *args)
         // If an error code has been returned, use this and exit
         results?.firstOrNull()?.let {
