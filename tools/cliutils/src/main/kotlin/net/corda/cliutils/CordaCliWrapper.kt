@@ -37,7 +37,7 @@ interface Validated {
             logger.error(RED + "Exceptions when parsing command line arguments:")
             logger.error(errors.joinToString("\n") + RESET)
             CommandLine(this).usage(System.err)
-            exitProcess(1)
+            exitProcess(ExitCodes.FAILURE)
         }
     }
 }
@@ -58,10 +58,12 @@ fun CordaCliWrapper.start(args: Array<String>) {
         results?.firstOrNull()?.let {
             if (it is Int) {
                 exitProcess(it)
+            } else {
+                exitProcess(ExitCodes.FAILURE)
             }
         }
         // If no results returned, picocli ran something without invoking the main program, e.g. --help or --version, so exit successfully
-        exitProcess(0)
+        exitProcess(ExitCodes.SUCCESS)
     } catch (e: ExecutionException) {
         val throwable = e.cause ?: e
         if (this.verbose) {
@@ -69,7 +71,7 @@ fun CordaCliWrapper.start(args: Array<String>) {
         } else {
             System.err.println("*ERROR*: ${throwable.rootMessage ?: "Use --verbose for more details"}")
         }
-        exitProcess(1)
+        exitProcess(ExitCodes.FAILURE)
     }
 }
 
