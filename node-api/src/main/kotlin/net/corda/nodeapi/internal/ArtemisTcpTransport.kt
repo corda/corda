@@ -14,7 +14,7 @@ import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import java.nio.file.Path
 
 // This avoids internal types from leaking in the public API. The "external" ArtemisTcpTransport delegates to this internal one.
-class InternalArtemisTcpTransport {
+class ArtemisTcpTransport {
     companion object {
         val CIPHER_SUITES = listOf(
                 "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",

@@ -34,7 +34,7 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
         check(started == null) { "start can't be called twice" }
         log.info("Connecting to message broker: $serverAddress")
         // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-        val tcpTransport = InternalArtemisTcpTransport.p2pConnectorTcpTransport(serverAddress, config)
+        val tcpTransport = ArtemisTcpTransport.p2pConnectorTcpTransport(serverAddress, config)
         val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
             // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
             // would be the default and the two lines below can be deleted.
