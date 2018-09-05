@@ -37,11 +37,13 @@ import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import rx.Observable
 import rx.Subscription
+import rx.schedulers.Schedulers
 import rx.subjects.PublishSubject
 import java.io.InputStream
 import java.net.ConnectException
 import java.security.PublicKey
 import java.time.Instant
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
@@ -58,16 +60,16 @@ internal class CordaRPCOpsImpl(
         private val logger = loggerFor<CordaRPCOpsImpl>()
     }
 
-    private val drainingShutdownHooks = mutableListOf<Subscription>()
+    private val drainingShutdownHook = AtomicReference<Subscription>()
 
     init {
-        services.nodeProperties.flowsDrainingMode.values.filter { it.first && !it.second }.subscribe({ _ ->
-            synchronized(drainingShutdownHooks) {
-                drainingShutdownHooks.forEach(Subscription::unsubscribe)
-                drainingShutdownHooks.clear()
-            }
-        }, { error -> throw error })
+        services.nodeProperties.flowsDrainingMode.values.filter { it.first && !it.second }.observeOn(Schedulers.io()).subscribe({ _ ->
+            drainingShutdownHook.get()?.let(Subscription::unsubscribe)
+        }, { error ->
+            throw error
+        })
     }
+
     /**
      * Returns the RPC protocol version, which is the same the node's platform Version. Exists since version 1 so guaranteed
      * to be present.
@@ -295,15 +297,15 @@ internal class CordaRPCOpsImpl(
         return services.nodeProperties.flowsDrainingMode.isEnabled()
     }
 
-    override fun shutdown() = shutdown(false)
+    override fun shutdown() = terminate(false)
 
-    override fun shutdown(drainPendingFlows: Boolean) {
+    override fun terminate(drainPendingFlows: Boolean) {
 
         if (drainPendingFlows) {
             logger.info("Draining pending flows before shutting down.")
             if (!isFlowsDrainingModeEnabled()) {
                 setFlowsDrainingModeEnabled(true)
-                drainingShutdownHooks += pendingFlowsCount().updates.doOnCompleted { setPersistentDrainingModeProperty(false, false) }.doOnCompleted(drainingShutdownHooks::clear).doOnCompleted { logger.info("Pending flows drained. Shutting down.") }.doOnCompleted(shutdownNode::invoke).subscribe({ }, { error -> throw error })
+                drainingShutdownHook.set(pendingFlowsCount().updates.doOnCompleted { setPersistentDrainingModeProperty(false, false) }.doOnCompleted { drainingShutdownHook.get()?.unsubscribe() }.doOnCompleted { logger.info("Pending flows drained. Shutting down.") }.doOnCompleted(shutdownNode::invoke).observeOn(Schedulers.io()).subscribe({ }, { error -> throw error }))
             }
         } else {
             shutdownNode.invoke()

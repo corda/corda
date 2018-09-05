@@ -875,7 +875,7 @@ private class NetworkVisibilityController {
             val (snapshot, updates) = rpc.networkMapFeed()
             visibleNodeCount = snapshot.size
             checkIfAllVisible()
-            subscription = updates.subscribe {
+            subscription = updates.subscribe({
                 when (it) {
                     is NetworkMapCache.MapChange.Added -> {
                         visibleNodeCount++
@@ -889,7 +889,9 @@ private class NetworkVisibilityController {
                         // Nothing to do here but better being exhaustive.
                     }
                 }
-            }
+            }, { error ->
+                // TODO sollecitom add handling here
+            })
             return future
         }
 

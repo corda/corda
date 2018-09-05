@@ -408,7 +408,7 @@ interface CordaRPCOps : RPCOps {
      * Shuts the node down. Returns immediately.
      * @param drainPendingFlows whether the node will wait for pending flows to be completed before exiting. While draining, new flows from RPC will be rejected.
      */
-    fun shutdown(drainPendingFlows: Boolean)
+    fun terminate(drainPendingFlows: Boolean = false)
 }
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),

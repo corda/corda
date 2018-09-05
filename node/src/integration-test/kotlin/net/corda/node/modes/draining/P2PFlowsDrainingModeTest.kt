@@ -1,6 +1,7 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.client.rpc.RPCException
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
@@ -14,10 +15,12 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
+import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
@@ -26,6 +29,7 @@ import rx.Observable
 import rx.Subscription
 import rx.schedulers.Schedulers
 import rx.subjects.AsyncSubject
+import rx.subjects.PublishSubject
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -85,31 +89,31 @@ class P2PFlowsDrainingModeTest {
         }
     }
 
-//    @Test
-//    fun `clean shutdown by draining`() {
-//        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
-//            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
-//            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
-//            var successful = false
-//            val latch = CountDownLatch(1)
-//            nodeB.rpc.setFlowsDrainingModeEnabled(true)
-//            IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
-//
-//            nodeA.rpc.shutdown(true)
-//            nodeA.rpc.drainAndShutdown()
-//                    .doOnError { error ->
-//                        error.printStackTrace()
-//                        successful = false
-//                    }
-//                    .doOnCompleted { successful = true }
-//                    .doAfterTerminate { latch.countDown() }
-//                    .subscribe()
-//            nodeB.rpc.setFlowsDrainingModeEnabled(false)
-//            latch.await()
-//
-//            assertThat(successful).isTrue()
-//        }
-//    }
+    //    @Test
+    //    fun `clean shutdown by draining`() {
+    //        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
+    //            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
+    //            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
+    //            var successful = false
+    //            val latch = CountDownLatch(1)
+    //            nodeB.rpc.setFlowsDrainingModeEnabled(true)
+    //            IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
+    //
+    //            nodeA.rpc.shutdown(true)
+    //            nodeA.rpc.drainAndShutdown()
+    //                    .doOnError { error ->
+    //                        error.printStackTrace()
+    //                        successful = false
+    //                    }
+    //                    .doOnCompleted { successful = true }
+    //                    .doAfterTerminate { latch.countDown() }
+    //                    .subscribe()
+    //            nodeB.rpc.setFlowsDrainingModeEnabled(false)
+    //            latch.await()
+    //
+    //            assertThat(successful).isTrue()
+    //        }
+    //    }
 
     @Test
     fun blah() {
@@ -117,8 +121,8 @@ class P2PFlowsDrainingModeTest {
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val latch = CountDownLatch(1)
 
-            nodeA.rpc.waitForShutdown().doAfterTerminate(latch::countDown).subscribe()
-            nodeA.rpc.shutdown()
+            nodeA.rpc.waitForShutdown().doAfterTerminate(latch::countDown).observeOn(Schedulers.io()).subscribe({ }, { error ->  })
+            nodeA.rpc.terminate()
             latch.await()
             logger.info("Worked!")
         }
@@ -128,16 +132,50 @@ class P2PFlowsDrainingModeTest {
 private fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
 
     val completable = AsyncSubject.create<Unit>()
-    val subscription = AtomicReference<Subscription>()
-    subscription.set(Schedulers.io().createWorker().schedulePeriodically({
-        try {
-            nodeInfo()
-        } catch (e: Exception) {
+    stateMachinesFeed().updates.observeOn(Schedulers.io()).subscribe({ _ -> }, { error ->
+        if (error is RPCException) {
             completable.onCompleted()
-            subscription.get().unsubscribe()
+        } else {
+            throw error
         }
-    }, 0, 1, TimeUnit.SECONDS))
+    })
     return completable
+}
+
+//private fun NodeHandle.waitForShutdown(): Observable<Unit> {
+//
+//    val nodeIsShut: PublishSubject<Unit> = PublishSubject.create()
+//    val maxCount = 20
+//    var count = 0
+//    CloseableExecutor(Executors.newSingleThreadScheduledExecutor()).use { scheduler ->
+//
+//        val task = scheduler.scheduleAtFixedRate({
+//            try {
+//                println("Checking whether node is still running...")
+//                start(rpcUser.username, rpcUser.password).use {
+//                    println("... node is still running.")
+//                    if (count == maxCount) {
+//                        nodeIsShut.onError(AssertionError("Node does not get shutdown by RPC"))
+//                    }
+//                    count++
+//                }
+//            } catch (e: RPCException) {
+//                println("... node is not running.")
+//                nodeIsShut.onCompleted()
+//            } catch (e: ActiveMQSecurityException) {
+//                // nothing here - this happens if trying to connect before the node is started
+//            } catch (e: Throwable) {
+//                nodeIsShut.onError(e)
+//            }
+//        }, 1, 1, TimeUnit.SECONDS)
+//    }
+//    return nodeIsShut
+//}
+
+private class CloseableExecutor(private val delegate: ScheduledExecutorService) : AutoCloseable, ScheduledExecutorService by delegate {
+    override fun close() {
+        delegate.shutdown()
+    }
 }
 
 @StartableByRPC
