@@ -28,6 +28,7 @@ import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.context
@@ -35,10 +36,15 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import rx.Observable
+import rx.Subscription
+import rx.schedulers.Schedulers
+import rx.subjects.PublishSubject
 import java.io.InputStream
 import java.net.ConnectException
 import java.security.PublicKey
 import java.time.Instant
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.log
 
 /**
  * Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
@@ -50,6 +56,24 @@ internal class CordaRPCOpsImpl(
         private val flowStarter: FlowStarter,
         private val shutdownNode: () -> Unit
 ) : CordaRPCOps {
+
+    private companion object {
+        private val logger = loggerFor<CordaRPCOpsImpl>()
+    }
+
+    private val drainingShutdownHook = AtomicReference<Subscription>()
+
+    init {
+        services.nodeProperties.flowsDrainingMode.values.observeOn(Schedulers.io()).filter { it.first && !it.second }.subscribe({ _ ->
+            // TODO sollecitom uncomment
+            drainingShutdownHook.get()?.let(Subscription::unsubscribe)
+        }, { error ->
+            // TODO sollecitom handle better without logging and re-throwing
+            logger.error(error.message, error)
+            throw error
+        })
+    }
+
     /**
      * Returns the RPC protocol version, which is the same the node's platform Version. Exists since version 1 so guaranteed
      * to be present.
@@ -271,16 +295,63 @@ internal class CordaRPCOpsImpl(
         return vaultTrackBy(criteria, PageSpecification(), sorting, contractStateType)
     }
 
-    override fun setFlowsDrainingModeEnabled(enabled: Boolean) {
-        services.nodeProperties.flowsDrainingMode.setEnabled(enabled)
-    }
+    override fun setFlowsDrainingModeEnabled(enabled: Boolean) = setPersistentDrainingModeProperty(true)
 
     override fun isFlowsDrainingModeEnabled(): Boolean {
         return services.nodeProperties.flowsDrainingMode.isEnabled()
     }
 
-    override fun shutdown() {
-        shutdownNode.invoke()
+    override fun shutdown() = terminate(false)
+
+    override fun terminate(drainPendingFlows: Boolean) {
+
+        if (drainPendingFlows) {
+            logger.info("Draining pending flows before shutting down.")
+            // TODO sollecitom make it atomic
+            if (!isFlowsDrainingModeEnabled()) {
+                setFlowsDrainingModeEnabled(true)
+            }
+            drainingShutdownHook.set(pendingFlowsCount().updates.observeOn(Schedulers.io()).doOnCompleted { setPersistentDrainingModeProperty(false, false) }.doOnCompleted { drainingShutdownHook.get()?.unsubscribe() }.doOnCompleted { logger.info("Pending flows drained. Shutting down.") }.doOnCompleted(shutdownNode::invoke).subscribe({ }, { error ->
+                // TODO sollecitom handle this properly without logging & re-throwing
+                logger.error(error.message, error)
+                throw error
+            }))
+        } else {
+            shutdownNode.invoke()
+        }
+    }
+
+    private fun setPersistentDrainingModeProperty(enabled: Boolean, propagateChange: Boolean = true) = services.nodeProperties.flowsDrainingMode.setEnabled(enabled, propagateChange)
+
+    private fun pendingFlowsCount(): DataFeed<Int, Pair<Int, Int>> {
+
+        val updates = PublishSubject.create<Pair<Int, Int>>()
+        val initialPendingFlowsCount = stateMachinesFeed().let {
+            var completedFlowsCount = 0
+            var pendingFlowsCount = it.snapshot.size
+            it.updates.observeOn(Schedulers.io()).subscribe({ update ->
+                when (update) {
+                    is StateMachineUpdate.Added -> {
+                        pendingFlowsCount++
+                        updates.onNext(completedFlowsCount to pendingFlowsCount)
+                    }
+                    is StateMachineUpdate.Removed -> {
+                        completedFlowsCount++
+                        updates.onNext(completedFlowsCount to pendingFlowsCount)
+                        if (completedFlowsCount == pendingFlowsCount) {
+                            updates.onCompleted()
+                        }
+                    }
+                }
+            }, { error ->
+                updates.onError(error)
+            })
+            if (pendingFlowsCount == 0) {
+                updates.onCompleted()
+            }
+            pendingFlowsCount
+        }
+        return DataFeed(initialPendingFlowsCount, updates)
     }
 
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {

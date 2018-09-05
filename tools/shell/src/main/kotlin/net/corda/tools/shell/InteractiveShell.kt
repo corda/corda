@@ -470,32 +470,33 @@ object InteractiveShell {
             display {
                 println("...waiting for in-flight flows to be completed")
             }
-            cordaRPCOps.pendingFlowsCount().updates
-                    .doOnError { error ->
-                        log.error(error.message)
-                        throw error
-                    }
-                    .doOnNext { (first, second) ->
-                        display {
-                            println("...remaining: ${first}/${second}")
-                        }
-                    }
-                    .doOnCompleted {
-                        if (isSsh) {
-                            // print in the original Shell process
-                            System.out.println("Shutting down the node via remote SSH session (it may take a while)")
-                        }
-                        display {
-                            println("Shutting down the node (it may take a while)")
-                        }
-                        cordaRPCOps.shutdown()
-                        isShuttingDown = true
-                        connection.forceClose()
-                        display {
-                            println("...done, quitting standalone shell now.")
-                        }
-                        onExit.invoke()
-                    }.toBlocking().single()
+            // TODO sollecitom fix
+//            cordaRPCOps.pendingFlowsCount().updates
+//                    .doOnError { error ->
+//                        log.error(error.message)
+//                        throw error
+//                    }
+//                    .doOnNext { (first, second) ->
+//                        display {
+//                            println("...remaining: ${first}/${second}")
+//                        }
+//                    }
+//                    .doOnCompleted {
+//                        if (isSsh) {
+//                            // print in the original Shell process
+//                            System.out.println("Shutting down the node via remote SSH session (it may take a while)")
+//                        }
+//                        display {
+//                            println("Shutting down the node (it may take a while)")
+//                        }
+//                        cordaRPCOps.shutdown()
+//                        isShuttingDown = true
+//                        connection.forceClose()
+//                        display {
+//                            println("...done, quitting standalone shell now.")
+//                        }
+//                        onExit.invoke()
+//                    }.toBlocking().single()
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
             display {
                 println(e.message, Color.red)

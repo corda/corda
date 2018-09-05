@@ -427,7 +427,8 @@ open class NodeStartup(val args: Array<String>) {
         fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
         return VersionInfo(
-                manifestValue("Corda-Platform-Version")?.toInt() ?: 1,
+                // TODO sollecitom extract this platform version into a class
+                manifestValue("Corda-Platform-Version")?.toInt() ?: 4,
                 manifestValue("Corda-Release-Version") ?: "Unknown",
                 manifestValue("Corda-Revision") ?: "Unknown",
                 manifestValue("Corda-Vendor") ?: "Unknown"

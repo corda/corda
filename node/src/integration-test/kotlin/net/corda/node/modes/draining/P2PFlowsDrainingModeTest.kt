@@ -1,10 +1,11 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.client.rpc.internal.drainAndShutdown
+import net.corda.client.rpc.RPCException
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
@@ -14,18 +15,26 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
+import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import rx.Observable
+import rx.Subscription
+import rx.schedulers.Schedulers
+import rx.subjects.AsyncSubject
+import rx.subjects.PublishSubject
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.fail
 
 class P2PFlowsDrainingModeTest {
@@ -80,6 +89,8 @@ class P2PFlowsDrainingModeTest {
         }
     }
 
+    // TODO sollecitom investigate why B never processes the flows
+    // TODO sollecitom investigate the exceptions thrown by protonwrapper - even if the test passes
     @Test
     fun `clean shutdown by draining`() {
         driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
@@ -87,23 +98,51 @@ class P2PFlowsDrainingModeTest {
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
             var successful = false
             val latch = CountDownLatch(1)
+
             nodeB.rpc.setFlowsDrainingModeEnabled(true)
             IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
 
-            nodeA.rpc.drainAndShutdown()
-                    .doOnError { error ->
-                        error.printStackTrace()
-                        successful = false
-                    }
-                    .doOnCompleted { successful = true }
-                    .doAfterTerminate { latch.countDown() }
-                    .subscribe()
+            nodeA.waitForShutdown().doOnCompleted { successful = true }.doAfterTerminate(latch::countDown).subscribe({ }, { error ->
+                error.printStackTrace()
+                successful = false
+            })
+            nodeA.rpc.terminate(true)
             nodeB.rpc.setFlowsDrainingModeEnabled(false)
             latch.await()
 
             assertThat(successful).isTrue()
         }
     }
+
+    @Test
+    fun blah() {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
+
+            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
+            val latch = CountDownLatch(1)
+
+            nodeA.waitForShutdown().doAfterTerminate(latch::countDown).subscribe({ }, { error ->  })
+            nodeA.rpc.terminate()
+
+            latch.await()
+        }
+    }
+}
+
+// TODO sollecitom investigate possibly racy exception thrown by Artemis as per https://issues.apache.org/jira/browse/ARTEMIS-1949
+// TODO sollecitom make it available to all driver-based tests
+private fun NodeHandle.waitForShutdown(): Observable<Unit> {
+
+    val completable = AsyncSubject.create<Unit>()
+    rpc.stateMachinesFeed().updates.observeOn(Schedulers.io()).subscribe({ _ -> }, { error ->
+        if (error is RPCException) {
+            completable.onCompleted()
+        } else {
+            Schedulers.shutdown()
+            throw error
+        }
+    })
+    return completable.observeOn(Schedulers.io()).doAfterTerminate(::stop)
 }
 
 @StartableByRPC

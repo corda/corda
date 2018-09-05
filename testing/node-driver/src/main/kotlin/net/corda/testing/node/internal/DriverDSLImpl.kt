@@ -878,7 +878,7 @@ private class NetworkVisibilityController {
             val (snapshot, updates) = rpc.networkMapFeed()
             visibleNodeCount = snapshot.size
             checkIfAllVisible()
-            subscription = updates.subscribe {
+            subscription = updates.subscribe({
                 when (it) {
                     is NetworkMapCache.MapChange.Added -> {
                         visibleNodeCount++
@@ -892,7 +892,9 @@ private class NetworkVisibilityController {
                         // Nothing to do here but better being exhaustive.
                     }
                 }
-            }
+            }, { error ->
+                // TODO sollecitom add handling here
+            })
             return future
         }
 
@@ -958,9 +960,10 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
-        return dsl(coerce(driverDsl))
+        return dsl(coerce(driverDsl)).also { Schedulers.shutdown() }
     } catch (exception: Throwable) {
         DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
+        Schedulers.shutdown()
         throw exception
     } finally {
         driverDsl.shutdown()
@@ -1005,9 +1008,10 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
-        return dsl(coerce(driverDsl))
+        return dsl(coerce(driverDsl)).also { Schedulers.shutdown() }
     } catch (exception: Throwable) {
         DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
+        Schedulers.shutdown()
         throw exception
     } finally {
         driverDsl.shutdown()

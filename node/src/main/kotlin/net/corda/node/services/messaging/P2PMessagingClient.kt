@@ -310,12 +310,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
                     return
                 }
                 eventsSubscription = p2pConsumer!!.messages
-                        .doOnError { error -> throw error }
-                        .doOnNext { message -> deliver(message) }
                         // this `run()` method is semantically meant to block until the message consumption runs, hence the latch here
                         .doOnCompleted(latch::countDown)
-                        .doOnError { error -> throw error }
-                        .subscribe()
+                        .subscribe({ message -> deliver(message) }, { error -> throw error })
                 p2pConsumer!!
             }
             consumer.start()
