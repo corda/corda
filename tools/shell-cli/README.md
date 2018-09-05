@@ -1,7 +1,7 @@
 Standalone Shell
 ----------------
 
-Documentation for shell CLI can be found [here](http://docs.corda.net/website/releases/docs_head/shell.html)
+Documentation for the standalone shell can be found [here](https://docs.corda.net/head/shell.html#the-standalone-shell)
 
 To build this from the command line on Unix or MacOS:
 
