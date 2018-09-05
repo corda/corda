@@ -121,61 +121,27 @@ class P2PFlowsDrainingModeTest {
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val latch = CountDownLatch(1)
 
-            nodeA.rpc.waitForShutdown().doAfterTerminate(latch::countDown).observeOn(Schedulers.io()).subscribe({ }, { error ->  })
+            nodeA.waitForShutdown().doAfterTerminate(latch::countDown).subscribe({ }, { error ->  })
             nodeA.rpc.terminate()
             latch.await()
             logger.info("Worked!")
+            Schedulers.shutdown()
         }
     }
 }
 
-private fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
+// TODO sollecitom make it available to all driver-based tests
+private fun NodeHandle.waitForShutdown(): Observable<Unit> {
 
     val completable = AsyncSubject.create<Unit>()
-    stateMachinesFeed().updates.observeOn(Schedulers.io()).subscribe({ _ -> }, { error ->
+    rpc.stateMachinesFeed().updates.observeOn(Schedulers.io()).subscribe({ _ -> }, { error ->
         if (error is RPCException) {
             completable.onCompleted()
         } else {
             throw error
         }
     })
-    return completable
-}
-
-//private fun NodeHandle.waitForShutdown(): Observable<Unit> {
-//
-//    val nodeIsShut: PublishSubject<Unit> = PublishSubject.create()
-//    val maxCount = 20
-//    var count = 0
-//    CloseableExecutor(Executors.newSingleThreadScheduledExecutor()).use { scheduler ->
-//
-//        val task = scheduler.scheduleAtFixedRate({
-//            try {
-//                println("Checking whether node is still running...")
-//                start(rpcUser.username, rpcUser.password).use {
-//                    println("... node is still running.")
-//                    if (count == maxCount) {
-//                        nodeIsShut.onError(AssertionError("Node does not get shutdown by RPC"))
-//                    }
-//                    count++
-//                }
-//            } catch (e: RPCException) {
-//                println("... node is not running.")
-//                nodeIsShut.onCompleted()
-//            } catch (e: ActiveMQSecurityException) {
-//                // nothing here - this happens if trying to connect before the node is started
-//            } catch (e: Throwable) {
-//                nodeIsShut.onError(e)
-//            }
-//        }, 1, 1, TimeUnit.SECONDS)
-//    }
-//    return nodeIsShut
-//}
-
-private class CloseableExecutor(private val delegate: ScheduledExecutorService) : AutoCloseable, ScheduledExecutorService by delegate {
-    override fun close() {
-        delegate.shutdown()
-    }
+    return completable.observeOn(Schedulers.io()).doAfterTerminate(::stop).doAfterTerminate(Schedulers::shutdown)
 }
 
 @StartableByRPC
