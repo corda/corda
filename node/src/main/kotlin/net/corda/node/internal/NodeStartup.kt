@@ -26,6 +26,7 @@ import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
+import net.corda.nodeapi.internal.DEFAULT_PLATFORM_VERSION
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
@@ -427,7 +428,7 @@ open class NodeStartup(val args: Array<String>) {
         fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
         return VersionInfo(
-                manifestValue("Corda-Platform-Version")?.toInt() ?: 1,
+                manifestValue("Corda-Platform-Version")?.toInt() ?: DEFAULT_PLATFORM_VERSION,
                 manifestValue("Corda-Release-Version") ?: "Unknown",
                 manifestValue("Corda-Revision") ?: "Unknown",
                 manifestValue("Corda-Vendor") ?: "Unknown"

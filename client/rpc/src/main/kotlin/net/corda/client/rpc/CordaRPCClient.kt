@@ -12,6 +12,7 @@ import net.corda.core.utilities.days
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
+import net.corda.nodeapi.internal.DEFAULT_PLATFORM_VERSION
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import java.time.Duration
 
@@ -45,7 +46,7 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
          * The default value is whatever version of Corda this RPC library was shipped as a part of. Therefore if you
          * use the RPC library from Corda 4, it will by default only connect to a node of version 4 or above.
          */
-        open val minimumServerProtocolVersion: Int = 4,
+        open val minimumServerProtocolVersion: Int = DEFAULT_PLATFORM_VERSION,
 
         /**
          * If set to true the client will track RPC call sites (default is false). If an error occurs subsequently
