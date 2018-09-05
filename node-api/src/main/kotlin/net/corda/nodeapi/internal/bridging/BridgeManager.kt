@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.bridging
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 
 /**
@@ -10,13 +9,9 @@ import net.corda.core.utilities.NetworkHostAndPort
  */
 @VisibleForTesting
 interface BridgeManager : AutoCloseable {
-    fun deployBridge(queueName: String, target: NetworkHostAndPort, legalNames: Set<CordaX500Name>)
+    fun deployBridge(queueName: String, targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>)
 
-    fun destroyBridges(node: NodeInfo)
-
-    fun destroyBridge(queueName: String, hostAndPort: NetworkHostAndPort)
-
-    fun bridgeExists(bridgeName: String): Boolean
+    fun destroyBridge(queueName: String, targets: List<NetworkHostAndPort>)
 
     fun start()
 
