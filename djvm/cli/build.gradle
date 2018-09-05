@@ -19,7 +19,6 @@ dependencies {
     compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
 
     compile "info.picocli:picocli:$picocli_version"
-    compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
     compile project(path: ":djvm", configuration: "shadow")
 
     // Deterministic runtime - used in whitelist generation
