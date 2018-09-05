@@ -89,6 +89,7 @@ class P2PFlowsDrainingModeTest {
         }
     }
 
+    // TODO sollecitom investigate why B never processes the flows
     // TODO sollecitom investigate the exceptions thrown by protonwrapper - even if the test passes
     @Test
     fun `clean shutdown by draining`() {
