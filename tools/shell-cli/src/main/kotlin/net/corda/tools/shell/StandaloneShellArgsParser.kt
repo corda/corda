@@ -163,8 +163,8 @@ private class ShellConfigurationFile {
     )
 
     data class Extensions(
-            val cordapps: Cordapps,
-            val sshd: Sshd,
+            val cordapps: Cordapps?,
+            val sshd: Sshd?,
             val commands: Commands?
     )
 
