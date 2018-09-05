@@ -44,6 +44,7 @@ import java.net.ConnectException
 import java.security.PublicKey
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.log
 
 /**
  * Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
@@ -63,9 +64,12 @@ internal class CordaRPCOpsImpl(
     private val drainingShutdownHook = AtomicReference<Subscription>()
 
     init {
-        services.nodeProperties.flowsDrainingMode.values.filter { it.first && !it.second }.observeOn(Schedulers.io()).subscribe({ _ ->
+        services.nodeProperties.flowsDrainingMode.values.observeOn(Schedulers.io()).filter { it.first && !it.second }.subscribe({ _ ->
+            // TODO sollecitom uncomment
             drainingShutdownHook.get()?.let(Subscription::unsubscribe)
         }, { error ->
+            // TODO sollecitom handle better without logging and re-throwing
+            logger.error(error.message, error)
             throw error
         })
     }
@@ -303,10 +307,15 @@ internal class CordaRPCOpsImpl(
 
         if (drainPendingFlows) {
             logger.info("Draining pending flows before shutting down.")
+            // TODO sollecitom make it atomic
             if (!isFlowsDrainingModeEnabled()) {
                 setFlowsDrainingModeEnabled(true)
-                drainingShutdownHook.set(pendingFlowsCount().updates.doOnCompleted { setPersistentDrainingModeProperty(false, false) }.doOnCompleted { drainingShutdownHook.get()?.unsubscribe() }.doOnCompleted { logger.info("Pending flows drained. Shutting down.") }.doOnCompleted(shutdownNode::invoke).observeOn(Schedulers.io()).subscribe({ }, { error -> throw error }))
             }
+            drainingShutdownHook.set(pendingFlowsCount().updates.observeOn(Schedulers.io()).doOnCompleted { setPersistentDrainingModeProperty(false, false) }.doOnCompleted { drainingShutdownHook.get()?.unsubscribe() }.doOnCompleted { logger.info("Pending flows drained. Shutting down.") }.doOnCompleted(shutdownNode::invoke).subscribe({ }, { error ->
+                // TODO sollecitom handle this properly without logging & re-throwing
+                logger.error(error.message, error)
+                throw error
+            }))
         } else {
             shutdownNode.invoke()
         }
@@ -314,33 +323,35 @@ internal class CordaRPCOpsImpl(
 
     private fun setPersistentDrainingModeProperty(enabled: Boolean, propagateChange: Boolean = true) = services.nodeProperties.flowsDrainingMode.setEnabled(enabled, propagateChange)
 
-    private fun CordaRPCOps.pendingFlowsCount(): DataFeed<Int, Pair<Int, Int>> {
+    private fun pendingFlowsCount(): DataFeed<Int, Pair<Int, Int>> {
 
-        val stateMachineState = stateMachinesFeed()
-        var pendingFlowsCount = stateMachineState.snapshot.size
-        var completedFlowsCount = 0
         val updates = PublishSubject.create<Pair<Int, Int>>()
-        stateMachineState
-                .updates
-                .doOnNext { update ->
-                    when (update) {
-                        is StateMachineUpdate.Added -> {
-                            pendingFlowsCount++
-                            updates.onNext(completedFlowsCount to pendingFlowsCount)
-                        }
-                        is StateMachineUpdate.Removed -> {
-                            completedFlowsCount++
-                            updates.onNext(completedFlowsCount to pendingFlowsCount)
-                            if (completedFlowsCount == pendingFlowsCount) {
-                                updates.onCompleted()
-                            }
+        val initialPendingFlowsCount = stateMachinesFeed().let {
+            var completedFlowsCount = 0
+            var pendingFlowsCount = it.snapshot.size
+            it.updates.observeOn(Schedulers.io()).subscribe({ update ->
+                when (update) {
+                    is StateMachineUpdate.Added -> {
+                        pendingFlowsCount++
+                        updates.onNext(completedFlowsCount to pendingFlowsCount)
+                    }
+                    is StateMachineUpdate.Removed -> {
+                        completedFlowsCount++
+                        updates.onNext(completedFlowsCount to pendingFlowsCount)
+                        if (completedFlowsCount == pendingFlowsCount) {
+                            updates.onCompleted()
                         }
                     }
-                }.subscribe()
-        if (completedFlowsCount == 0) {
-            updates.onCompleted()
+                }
+            }, { error ->
+                updates.onError(error)
+            })
+            if (pendingFlowsCount == 0) {
+                updates.onCompleted()
+            }
+            pendingFlowsCount
         }
-        return DataFeed(pendingFlowsCount, updates)
+        return DataFeed(initialPendingFlowsCount, updates)
     }
 
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
