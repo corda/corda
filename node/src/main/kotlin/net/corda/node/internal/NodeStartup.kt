@@ -6,6 +6,8 @@ import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
 import net.corda.cliutils.CordaCliWrapper
+import net.corda.cliutils.CordaVersionProvider
+import net.corda.cliutils.ExitCodes
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
@@ -58,13 +60,6 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
 
     @Mixin
     var cmdLineOptions = NodeCmdLineOptions()
-
-    private class ExitCodes {
-        companion object {
-            val SUCCESS: Int = 0
-            val FAILURE: Int = 1
-        }
-    }
 
     /**
      * @return exit code based on the success of the node startup. This value is intended to be the exit code of the process.
@@ -404,14 +399,11 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
     }
 
     protected open fun getVersionInfo(): VersionInfo {
-        // Manifest properties are only available if running from the corda jar
-        fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
-
         return VersionInfo(
-                manifestValue("Corda-Platform-Version")?.toInt() ?: 1,
-                manifestValue("Corda-Release-Version") ?: "Unknown",
-                manifestValue("Corda-Revision") ?: "Unknown",
-                manifestValue("Corda-Vendor") ?: "Unknown"
+                CordaVersionProvider.platformVersion,
+                CordaVersionProvider.releaseVersion,
+                CordaVersionProvider.revision,
+                CordaVersionProvider.vendor
         )
     }
 

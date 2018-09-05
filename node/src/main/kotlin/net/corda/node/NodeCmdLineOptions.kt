@@ -30,23 +30,17 @@ class NodeCmdLineOptions {
     var configFileArgument: Path? = null
 
     val configFile : Path
-        get() {
-            return if (configFileArgument == null) {
-                baseDirectory / "node.conf"
-            } else {
-                configFileArgument!!
-            }
-        }
+        get() = configFileArgument ?: (baseDirectory / "node.conf")
 
     @Option(
             names = ["--sshd"],
-            description = ["If set, enables sshd server for node administration."]
+            description = ["If set, enables SSH server for node administration."]
     )
     var sshdServer: Boolean = false
 
     @Option(
             names = ["--sshd-port"],
-            description = ["The port to start the sshd server on, if enabled."]
+            description = ["The port to start the SSH server on, if enabled."]
     )
     var sshdServerPort: Int = 2222
 
@@ -88,13 +82,13 @@ class NodeCmdLineOptions {
 
     @Option(
             names = ["--just-generate-node-info"],
-            description = ["Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then quit"]
+            description = ["Perform the node start-up task necessary to generate its node info, save it to disk, then quit"]
     )
     var justGenerateNodeInfo: Boolean = false
 
     @Option(
             names = ["--just-generate-rpc-ssl-settings"],
-            description = ["Generate the ssl keystore and truststore for a secure RPC connection."]
+            description = ["Generate the SSL key and trust stores for a secure RPC connection."]
     )
     var justGenerateRpcSslCerts: Boolean = false
 
@@ -131,7 +125,7 @@ class NodeCmdLineOptions {
         return rawConfig to Try.on {
             rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
                 if (nodeRegistrationOption != null) {
-                    require(!config.devMode) { "registration cannot occur in devMode" }
+                    require(!config.devMode) { "Registration cannot occur in devMode" }
                     require(config.compatibilityZoneURL != null || config.networkServices != null) {
                         "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
                     }
