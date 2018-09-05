@@ -77,12 +77,21 @@ The ``CordaCliWrapper`` base class
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``CordaCliWrapper`` base class from the ``cliutils`` module should be used as a base where practicable, this will provide a set of default options out of the box.
-In order to use it, create a class containing your command line options using the syntax provided at (see the `picocli<https://picocli.info/#_options>`_ website for more information)
+In order to use it, create a class containing your command line options using the syntax provided at (see the `picocli<https://picocli.info/>`_ website for more information)
 
 
 .. container:: codeset
 
     .. sourcecode:: kotlin
+
+        import net.corda.cliutils.ExitCodes
+        import net.corda.cliutils.CordaCliWrapper
+
+        class UsefulUtilityExitCodes: ExitCodes {
+            companion object {
+                val APPLICATION_SPECIFIC_ERROR_CODE: Int = 100
+            }
+        }
 
         class UsefulUtility : CordaCliWrapper(
             "useful-utility", // the alias to be used for this utility in bash. When --install-shell-extensions is run
@@ -98,10 +107,10 @@ In order to use it, create a class containing your command line options using th
                 try {
                     // do some stuff
                 } catch (KnownException: ex) {
-                    return 100 // return a special exit code for known exceptions
+                    return UsefulUtilityExitCodes.APPLICATION_SPECIFIC_ERROR_CODE // return a special exit code for known exceptions
                 }
 
-                return 0 // this is the exit code to be returned to the system
+                return UsefulUtilityExitCodes.SUCCESS // this is the exit code to be returned to the system inherited from the ExitCodes base class
             }
         }
 
