@@ -63,7 +63,7 @@ class SandboxExecutorTest : TestBase() {
             val obj = Object()
             val hash1 = obj.hashCode()
             val hash2 = obj.hashCode()
-            assert(hash1 == hash2)
+            require(hash1 == hash2)
             return Object().hashCode()
         }
     }

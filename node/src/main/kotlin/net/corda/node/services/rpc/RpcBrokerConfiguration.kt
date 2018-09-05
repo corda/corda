@@ -7,8 +7,8 @@ import net.corda.node.internal.artemis.SecureArtemisConfiguration
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.rpcAcceptorTcpTransport
-import net.corda.nodeapi.internal.InternalArtemisTcpTransport.Companion.rpcInternalAcceptorTcpTransport
+import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcAcceptorTcpTransport
+import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcInternalAcceptorTcpTransport
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
