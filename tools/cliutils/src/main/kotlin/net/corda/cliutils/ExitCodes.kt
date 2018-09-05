@@ -1,8 +1,8 @@
 package net.corda.cliutils
 
-class ExitCodes {
+open class ExitCodes {
     companion object {
-        val SUCCESS: Int = 0
-        val FAILURE: Int = 1
+        const val SUCCESS: Int = 0
+        const val FAILURE: Int = 1
     }
 }
