@@ -22,7 +22,7 @@ import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.messaging.RPCServer
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.internal.InternalArtemisTcpTransport
+import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.MAX_MESSAGE_SIZE
@@ -220,14 +220,14 @@ data class RPCDriverDSL(
                 bindingsDirectory = "$artemisDir/bindings"
                 journalDirectory = "$artemisDir/journal"
                 largeMessagesDirectory = "$artemisDir/large-messages"
-                acceptorConfigurations = setOf(InternalArtemisTcpTransport.rpcAcceptorTcpTransport(hostAndPort, null))
+                acceptorConfigurations = setOf(ArtemisTcpTransport.rpcAcceptorTcpTransport(hostAndPort, null))
                 configureCommonSettings(maxFileSize, maxBufferedBytesPerClient)
             }
         }
 
         val inVmClientTransportConfiguration = TransportConfiguration(InVMConnectorFactory::class.java.name)
         fun createNettyClientTransportConfiguration(hostAndPort: NetworkHostAndPort): TransportConfiguration {
-            return InternalArtemisTcpTransport.rpcConnectorTcpTransport(hostAndPort, null)
+            return ArtemisTcpTransport.rpcConnectorTcpTransport(hostAndPort, null)
         }
     }
 
@@ -339,7 +339,7 @@ data class RPCDriverDSL(
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
     ): CordaFuture<I> {
         return driverDSL.executorService.fork {
-            val client = RPCClient<I>(InternalArtemisTcpTransport.rpcConnectorTcpTransport(rpcAddress, null), configuration)
+            val client = RPCClient<I>(ArtemisTcpTransport.rpcConnectorTcpTransport(rpcAddress, null), configuration)
             val connection = client.start(rpcOpsClass, username, password, externalTrace)
             driverDSL.shutdownManager.registerShutdown {
                 connection.close()
