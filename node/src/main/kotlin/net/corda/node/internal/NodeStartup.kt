@@ -196,7 +196,7 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
 
     private fun loadConfiguration(): NodeConfiguration {
         val (rawConfig, configurationResult) = loadConfigFile()
-        if (cmdLineOptions.devMode != null) {
+        if (cmdLineOptions.devMode == true) {
             println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
         }
         val configuration = configurationResult.getOrThrow()
