@@ -5,6 +5,8 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
+import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -27,7 +29,7 @@ class PersistentNetworkMapCacheTest {
 
     private var portCounter = 1000
     private val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
-    private val charlieNetMapCache = PersistentNetworkMapCache(database, CHARLIE.name)
+    private val charlieNetMapCache = PersistentNetworkMapCache(database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate), CHARLIE.name)
 
     @After
     fun cleanUp() {
