@@ -2,7 +2,6 @@ package net.corda.node
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import net.corda.cliutils.ConfigFilePathArgsParser
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.utilities.Try
@@ -10,8 +9,6 @@ import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
-import net.corda.tools.shell.SSHDConfiguration
-import picocli.CommandLine.Mixin
 import picocli.CommandLine.Option
 import java.nio.file.Path
 import java.nio.file.Paths
