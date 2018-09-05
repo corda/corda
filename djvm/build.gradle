@@ -14,9 +14,7 @@ ext {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
-    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
-    compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
+    compile "org.slf4j:slf4j-api:$slf4j_version"
 
     // ASM: byte code manipulation library
     compile "org.ow2.asm:asm:$asm_version"
@@ -29,6 +27,7 @@ dependencies {
     // Test utilities
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
 }
 
 jar.enabled = false
@@ -37,8 +36,6 @@ shadowJar {
     baseName 'corda-djvm'
     classifier ''
     dependencies {
-        exclude(dependency('com.jcabi:.*:.*'))
-        exclude(dependency('org.apache.*:.*:.*'))
         exclude(dependency('org.jetbrains.*:.*:.*'))
         exclude(dependency('org.slf4j:.*:.*'))
         exclude(dependency('io.github.lukehutch:.*:.*'))
