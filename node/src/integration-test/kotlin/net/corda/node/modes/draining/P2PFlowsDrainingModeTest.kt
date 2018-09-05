@@ -118,18 +118,19 @@ class P2PFlowsDrainingModeTest {
     @Test
     fun blah() {
         driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
+
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val latch = CountDownLatch(1)
 
             nodeA.waitForShutdown().doAfterTerminate(latch::countDown).subscribe({ }, { error ->  })
             nodeA.rpc.terminate()
+
             latch.await()
-            logger.info("Worked!")
-            Schedulers.shutdown()
         }
     }
 }
 
+// TODO sollecitom investigate possibly racy exception thrown by Artemis as per https://issues.apache.org/jira/browse/ARTEMIS-1949
 // TODO sollecitom make it available to all driver-based tests
 private fun NodeHandle.waitForShutdown(): Observable<Unit> {
 
@@ -138,10 +139,11 @@ private fun NodeHandle.waitForShutdown(): Observable<Unit> {
         if (error is RPCException) {
             completable.onCompleted()
         } else {
+            Schedulers.shutdown()
             throw error
         }
     })
-    return completable.observeOn(Schedulers.io()).doAfterTerminate(::stop).doAfterTerminate(Schedulers::shutdown)
+    return completable.observeOn(Schedulers.io()).doAfterTerminate(::stop)
 }
 
 @StartableByRPC
