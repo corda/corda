@@ -1,10 +1,10 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.client.rpc.internal.drainAndShutdown
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
@@ -22,10 +22,15 @@ import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import rx.Observable
+import rx.Subscription
+import rx.schedulers.Schedulers
+import rx.subjects.AsyncSubject
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.fail
 
 class P2PFlowsDrainingModeTest {
@@ -80,30 +85,59 @@ class P2PFlowsDrainingModeTest {
         }
     }
 
+//    @Test
+//    fun `clean shutdown by draining`() {
+//        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
+//            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
+//            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
+//            var successful = false
+//            val latch = CountDownLatch(1)
+//            nodeB.rpc.setFlowsDrainingModeEnabled(true)
+//            IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
+//
+//            nodeA.rpc.shutdown(true)
+//            nodeA.rpc.drainAndShutdown()
+//                    .doOnError { error ->
+//                        error.printStackTrace()
+//                        successful = false
+//                    }
+//                    .doOnCompleted { successful = true }
+//                    .doAfterTerminate { latch.countDown() }
+//                    .subscribe()
+//            nodeB.rpc.setFlowsDrainingModeEnabled(false)
+//            latch.await()
+//
+//            assertThat(successful).isTrue()
+//        }
+//    }
+
     @Test
-    fun `clean shutdown by draining`() {
+    fun blah() {
         driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
-            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
-            var successful = false
             val latch = CountDownLatch(1)
-            nodeB.rpc.setFlowsDrainingModeEnabled(true)
-            IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
 
-            nodeA.rpc.drainAndShutdown()
-                    .doOnError { error ->
-                        error.printStackTrace()
-                        successful = false
-                    }
-                    .doOnCompleted { successful = true }
-                    .doAfterTerminate { latch.countDown() }
-                    .subscribe()
-            nodeB.rpc.setFlowsDrainingModeEnabled(false)
+            nodeA.rpc.waitForShutdown().doAfterTerminate(latch::countDown).subscribe()
+            nodeA.rpc.shutdown()
             latch.await()
-
-            assertThat(successful).isTrue()
+            logger.info("Worked!")
         }
     }
+}
+
+private fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
+
+    val completable = AsyncSubject.create<Unit>()
+    val subscription = AtomicReference<Subscription>()
+    subscription.set(Schedulers.io().createWorker().schedulePeriodically({
+        try {
+            nodeInfo()
+        } catch (e: Exception) {
+            completable.onCompleted()
+            subscription.get().unsubscribe()
+        }
+    }, 0, 1, TimeUnit.SECONDS))
+    return completable
 }
 
 @StartableByRPC
