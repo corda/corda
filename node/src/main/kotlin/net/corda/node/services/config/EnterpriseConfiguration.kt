@@ -3,9 +3,11 @@ package net.corda.node.services.config
 import java.io.File
 import java.net.InetAddress
 import java.nio.file.Path
+import net.corda.nodeapi.internal.config.ExternalBrokerConnectionConfiguration
 
 data class EnterpriseConfiguration(
         val mutualExclusionConfiguration: MutualExclusionConfiguration,
+        val externalBrokerConnectionConfiguration: ExternalBrokerConnectionConfiguration = ExternalBrokerConnectionConfiguration.DEFAULT,
         val useMultiThreadedSMM: Boolean = true,
         val tuning: PerformanceTuning = PerformanceTuning.default,
         val externalBridge: Boolean? = null,

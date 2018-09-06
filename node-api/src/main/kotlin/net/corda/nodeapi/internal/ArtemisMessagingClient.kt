@@ -4,6 +4,7 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
+import net.corda.nodeapi.internal.config.ExternalBrokerConnectionConfiguration
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.*
@@ -20,7 +21,9 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
                              private val maxMessageSize: Int,
                              private val autoCommitSends: Boolean = true,
                              private val autoCommitAcks: Boolean = true,
-                             private val confirmationWindowSize: Int = -1) : ArtemisSessionProvider {
+                             private val confirmationWindowSize: Int = -1,
+                             private val externalBrokerConnectionConfig: ExternalBrokerConnectionConfiguration? = null
+)  : ArtemisSessionProvider {
     companion object {
         private val log = loggerFor<ArtemisMessagingClient>()
     }
@@ -43,6 +46,14 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
             minLargeMessageSize = maxMessageSize
             isUseGlobalPools = nodeSerializationEnv != null
             confirmationWindowSize = this@ArtemisMessagingClient.confirmationWindowSize
+            externalBrokerConnectionConfig?.let {
+                reconnectAttempts = externalBrokerConnectionConfig.reconnectAttempts
+                retryInterval = externalBrokerConnectionConfig.retryInterval.toMillis()
+                retryIntervalMultiplier = externalBrokerConnectionConfig.retryIntervalMultiplier
+                maxRetryInterval = externalBrokerConnectionConfig.maxRetryInterval.toMillis()
+                isFailoverOnInitialConnection = externalBrokerConnectionConfig.failoverOnInitialAttempt
+                initialConnectAttempts = externalBrokerConnectionConfig.initialConnectAttempts
+            }
             addIncomingInterceptor(ArtemisMessageSizeChecksInterceptor(maxMessageSize))
         }
         val sessionFactory = locator.createSessionFactory()

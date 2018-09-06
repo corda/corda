@@ -161,8 +161,35 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
                 isUseGlobalPools = nodeSerializationEnv != null
                 confirmationWindowSize = config.enterpriseConfiguration.tuning.p2pConfirmationWindowSize
+                // Configuration for dealing with external broker failover
+                if (config.messagingServerExternal) {
+                    reconnectAttempts = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.reconnectAttempts
+                    retryInterval = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.retryInterval.toMillis()
+                    retryIntervalMultiplier = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.retryIntervalMultiplier
+                    maxRetryInterval = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.maxRetryInterval.toMillis()
+                    isFailoverOnInitialConnection = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.failoverOnInitialAttempt
+                    initialConnectAttempts = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.initialConnectAttempts
+                }
             }
             val sessionFactory = locator!!.createSessionFactory()
+            sessionFactory.addFailoverListener { event ->
+                when (event) {
+                    FailoverEventType.FAILURE_DETECTED -> {
+                        log.warn("Connection to the broker was lost. Starting ${config.enterpriseConfiguration.externalBrokerConnectionConfiguration.reconnectAttempts} reconnect attempts.")
+                    }
+                    FailoverEventType.FAILOVER_COMPLETED -> {
+                        log.info("Connection to broker re-established.")
+                    }
+                    FailoverEventType.FAILOVER_FAILED -> {
+                        log.error("Could not reconnect to the broker after ${config.enterpriseConfiguration.externalBrokerConnectionConfiguration.reconnectAttempts} attempts. Node is shutting down.")
+                        Thread.sleep(config.enterpriseConfiguration.externalBrokerConnectionConfiguration.retryInterval.toMillis())
+                        Runtime.getRuntime().halt(1)
+                    }
+                    else -> {
+                        log.warn("Cannot handle event $event.")
+                    }
+                }
+            }
             // Login using the node username. The broker will authenticate us as its node (as opposed to another peer)
             // using our TLS certificate.
             // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer

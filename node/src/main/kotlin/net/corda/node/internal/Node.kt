@@ -52,6 +52,7 @@ import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.DemoClock
+import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_SHELL_USER
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
@@ -233,7 +234,16 @@ open class Node(configuration: NodeConfiguration,
 
         val externalBridge = configuration.enterpriseConfiguration.externalBridge
         val bridgeControlListener = if (externalBridge == null || !externalBridge) {
-            BridgeControlListener(configuration.p2pSslOptions, network.serverAddress, networkParameters.maxMessageSize)
+            val artemisClient =  {
+                ArtemisMessagingClient(configuration.p2pSslOptions,
+                        network.serverAddress,
+                        networkParameters.maxMessageSize,
+                        true,
+                        true,
+                        -1,
+                        configuration.enterpriseConfiguration.externalBrokerConnectionConfiguration)
+            }
+            BridgeControlListener(configuration.p2pSslOptions, null, networkParameters.maxMessageSize, artemisClient)
         } else {
             null
         }
