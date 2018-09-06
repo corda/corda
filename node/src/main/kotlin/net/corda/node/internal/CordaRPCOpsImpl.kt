@@ -294,42 +294,28 @@ internal class CordaRPCOpsImpl(
         return vaultTrackBy(criteria, PageSpecification(), sorting, contractStateType)
     }
 
-//    override fun setFlowsDrainingModeEnabled(enabled: Boolean) = setPersistentDrainingModeProperty(true)
-    override fun setFlowsDrainingModeEnabled(enabled: Boolean) {
-        services.nodeProperties.flowsDrainingMode.setEnabled(enabled)
-    }
+    override fun setFlowsDrainingModeEnabled(enabled: Boolean) = setPersistentDrainingModeProperty(enabled, propagateChange = true)
 
-    override fun isFlowsDrainingModeEnabled(): Boolean {
-        return services.nodeProperties.flowsDrainingMode.isEnabled()
-    }
+    override fun isFlowsDrainingModeEnabled() = services.nodeProperties.flowsDrainingMode.isEnabled()
 
-//    override fun shutdown() = terminate(false)
-    override fun shutdown() {
-        shutdownNode.invoke()
-    }
+    override fun shutdown() = terminate(false)
 
     override fun terminate(drainPendingFlows: Boolean) {
 
         if (drainPendingFlows) {
             logger.info("Draining pending flows before shutting down.")
             setFlowsDrainingModeEnabled(true)
-            pendingFlowsCount().updates.doOnCompleted { setPersistentDrainingModeProperty(false, false) }.doOnCompleted { drainingShutdownHook.get()?.unsubscribe() }.doOnCompleted { logger.info("Pending flows drained. Shutting down.") }.doOnCompleted(shutdownNode::invoke).subscribe({ }, { error ->
-//            pendingFlowsCount().updates.observeOn(Schedulers.io()).doOnCompleted { setPersistentDrainingModeProperty(false, false) }.doOnCompleted { drainingShutdownHook.get()?.unsubscribe() }.doOnCompleted { logger.info("Pending flows drained. Shutting down.") }.doOnCompleted(shutdownNode::invoke).subscribe({ }, { error ->
+            drainingShutdownHook.set(pendingFlowsCount().updates.doOnCompleted { setPersistentDrainingModeProperty(false, false) }.doOnCompleted { drainingShutdownHook.get()?.unsubscribe() }.doOnCompleted { logger.info("Pending flows drained. Shutting down.") }.doOnCompleted(shutdownNode::invoke).subscribe({ }, { error ->
                 // TODO sollecitom handle this properly without logging & re-throwing
                 logger.error(error.message, error)
                 throw error
-            })
-//            drainingShutdownHook.set(pendingFlowsCount().updates.observeOn(Schedulers.io()).doOnCompleted { setPersistentDrainingModeProperty(false, false) }.doOnCompleted { drainingShutdownHook.get()?.unsubscribe() }.doOnCompleted { logger.info("Pending flows drained. Shutting down.") }.doOnCompleted(shutdownNode::invoke).subscribe({ }, { error ->
-//                // TODO sollecitom handle this properly without logging & re-throwing
-//                logger.error(error.message, error)
-//                throw error
-//            }))
+            }))
         } else {
             shutdownNode.invoke()
         }
     }
 
-    private fun setPersistentDrainingModeProperty(enabled: Boolean, propagateChange: Boolean = true) = services.nodeProperties.flowsDrainingMode.setEnabled(enabled, propagateChange)
+    private fun setPersistentDrainingModeProperty(enabled: Boolean, propagateChange: Boolean) = services.nodeProperties.flowsDrainingMode.setEnabled(enabled, propagateChange)
 
     // TODO sollecitom once this works, try and change it back from GIT history
     private fun pendingFlowsCount(): DataFeed<Int, Pair<Int, Int>> {

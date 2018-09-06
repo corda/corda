@@ -142,10 +142,11 @@ private fun NodeHandle.waitForShutdown(): Observable<Unit> {
 
     val completable = AsyncSubject.create<Unit>()
     rpc.stateMachinesFeed().updates.subscribe({ _ -> }, { error ->
-        if (error is RPCException) {
+        // TODO sollecitom consider whether to use the error message here or whether to create a sub-type for connection failure
+        if (error is RPCException && error.message == "Connection failure detected.") {
             completable.onCompleted()
         } else {
-            throw error
+            completable.onError(error)
         }
     })
     return completable.doAfterTerminate(::stop)
