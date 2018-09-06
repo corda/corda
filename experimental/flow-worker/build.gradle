@@ -25,12 +25,14 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
-    compile(project(':core'))
-    compile(project(':node'))
-
+    compile project(':core')
+    compile project(':node')
+    compile project(path: ':node-api', configuration: 'shadow')
+    testCompile "org.apache.curator:curator-test:${curator_version}"
+    // Apache Curator: a client library for Zookeeper
     testCompile "junit:junit:$junit_version"
-    testCompile(project(':node-driver'))
-    integrationTestCompile(project(':bridge'))
+    testCompile project(':node-driver')
+    integrationTestCompile project(':bridge')
 }
 
 task integrationTest(type: Test) {
