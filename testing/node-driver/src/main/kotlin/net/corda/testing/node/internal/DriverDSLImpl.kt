@@ -966,6 +966,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
         throw exception
     } finally {
+        driverDsl.shutdown()
         shutdownHook.cancel()
         serializationEnv.unset()
     }
