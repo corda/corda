@@ -8,7 +8,7 @@ apply plugin: 'com.jfrog.artifactory'
 description 'Node Explorer'
 
 configurations {
-    runtimeArtifacts.extendsFrom runtime
+    runtimeArtifacts.extendsFrom runtimeClasspath
 }
 
 // Force the Caplet to target Java 6. This ensures that running 'java -jar explorer.jar' on any Java 6 VM upwards
@@ -19,12 +19,12 @@ configurations {
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
-task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').compileJava) {
+task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').tasks.jar) {
     applicationClass 'net.corda.explorer.Main'
     archiveName "node-explorer-${corda_release_version}.jar"
     applicationSource = files(
-        project(':tools:explorer').configurations.runtime,
-        project(':tools:explorer').jar,
+        project(':tools:explorer').configurations.runtimeClasspath,
+        project(':tools:explorer').tasks.jar,
         project(':tools:explorer').sourceSets.main.java.outputDir.toString() + '/ExplorerCaplet.class'
     )
     classifier 'fat'
@@ -54,6 +54,7 @@ artifacts {
 
 jar {
     classifier "ignore"
+    enabled = false
 }
 
 publish {
