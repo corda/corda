@@ -50,6 +50,7 @@ interface NodeConfiguration {
     val notary: NotaryConfig?
     val additionalNodeInfoPollingFrequencyMsec: Long
     val p2pAddress: NetworkHostAndPort
+    val additionalP2PAddresses: List<NetworkHostAndPort>
     val rpcOptions: NodeRpcOptions
     val messagingServerAddress: NetworkHostAndPort?
     val messagingServerExternal: Boolean
@@ -198,6 +199,7 @@ data class NodeConfigurationImpl(
         override val verifierType: VerifierType,
         override val flowTimeout: FlowTimeoutConfiguration,
         override val p2pAddress: NetworkHostAndPort,
+        override val additionalP2PAddresses: List<NetworkHostAndPort> = emptyList(),
         private val rpcAddress: NetworkHostAndPort? = null,
         private val rpcSettings: NodeRpcSettings,
         override val messagingServerAddress: NetworkHostAndPort?,

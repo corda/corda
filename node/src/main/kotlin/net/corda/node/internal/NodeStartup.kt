@@ -5,8 +5,9 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
-import joptsimple.OptionParser
-import joptsimple.util.PathConverter
+import net.corda.cliutils.CordaCliWrapper
+import net.corda.cliutils.CordaVersionProvider
+import net.corda.cliutils.ExitCodes
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
@@ -22,19 +23,18 @@ import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
-import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.node.utilities.registration.NodeRegistrationException
+import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
-import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
-import org.fusesource.jansi.AnsiConsole
 import org.slf4j.bridge.SLF4JBridgeHandler
+import picocli.CommandLine.Mixin
 import sun.misc.VMSupport
 import java.io.Console
 import java.io.File
@@ -50,7 +50,7 @@ import java.util.*
 import kotlin.system.exitProcess
 
 /** This class is responsible for starting a Node from command line arguments. */
-open class NodeStartup(val args: Array<String>) {
+open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
     companion object {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         const val LOGS_DIRECTORY_NAME = "logs"
@@ -58,31 +58,33 @@ open class NodeStartup(val args: Array<String>) {
         private const val INITIAL_REGISTRATION_MARKER = ".initialregistration"
     }
 
+    @Mixin
+    var cmdLineOptions = NodeCmdLineOptions()
 
     /**
-     * @return true if the node startup was successful. This value is intended to be the exit code of the process.
+     * @return exit code based on the success of the node startup. This value is intended to be the exit code of the process.
      */
-    open fun run(): Boolean {
+    override fun runProgram(): Int {
         val startTime = System.currentTimeMillis()
         if (!canNormalizeEmptyPath()) {
             println("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.")
             println("Corda will now exit...")
-            return false
+            return ExitCodes.FAILURE
         }
 
         val registrationMode = checkRegistrationMode()
-        val cmdlineOptions: CmdLineOptions = if (registrationMode && !args.contains("--initial-registration")) {
+
+        if (registrationMode && !cmdLineOptions.isRegistration) {
             println("Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.")
             // Pretend that the node was started with `--initial-registration` to help prevent user error.
-            NodeArgsParser().parseOrExit(*args.plus("--initial-registration"))
-        } else {
-            NodeArgsParser().parseOrExit(*args)
+            cmdLineOptions.isRegistration = true
         }
+
         // We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
-        enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
+        enforceSingleNodeIsRunning(cmdLineOptions.baseDirectory)
 
-        initLogging(cmdlineOptions)
+        initLogging()
         // Register all cryptography [Provider]s.
         // Required to install our [SecureRandom] before e.g., UUID asks for one.
         // This needs to go after initLogging(netty clashes with our logging).
@@ -90,40 +92,34 @@ open class NodeStartup(val args: Array<String>) {
 
         val versionInfo = getVersionInfo()
 
-        if (cmdlineOptions.isVersion) {
-            println("${versionInfo.vendor} ${versionInfo.releaseVersion}")
-            println("Revision ${versionInfo.revision}")
-            println("Platform Version ${versionInfo.platformVersion}")
-            return true
-        }
-
         drawBanner(versionInfo)
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
-        val configuration = (attempt { loadConfiguration(cmdlineOptions) }.doOnException(handleConfigurationLoadingError(cmdlineOptions.configFile)) as? Try.Success)?.let(Try.Success<NodeConfiguration>::value) ?: return false
+        val configuration = (attempt { loadConfiguration() }.doOnException(handleConfigurationLoadingError(cmdLineOptions.configFile)) as? Try.Success)?.let(Try.Success<NodeConfiguration>::value) ?: return ExitCodes.FAILURE
 
         val errors = configuration.validate()
         if (errors.isNotEmpty()) {
             logger.error("Invalid node configuration. Errors were:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
-            return false
+            return ExitCodes.FAILURE
         }
 
-        attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success ?: return false
+        attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success ?: return ExitCodes.FAILURE
 
-        attempt { preNetworkRegistration(configuration) }.doOnException(handleRegistrationError) as? Try.Success ?: return false
+        attempt { preNetworkRegistration(configuration) }.doOnException(handleRegistrationError) as? Try.Success ?: return ExitCodes.FAILURE
 
-        cmdlineOptions.nodeRegistrationOption?.let {
+        cmdLineOptions.nodeRegistrationOption?.let {
             // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
-            attempt { registerWithNetwork(configuration, versionInfo, cmdlineOptions.nodeRegistrationOption) }.doOnException(handleRegistrationError) as? Try.Success ?: return false
-
+            attempt { registerWithNetwork(configuration, versionInfo, it) }.doOnException(handleRegistrationError) as? Try.Success ?: return ExitCodes.FAILURE
             // At this point the node registration was successful. We can delete the marker file.
-            deleteNodeRegistrationMarker(cmdlineOptions.baseDirectory)
-            return true
+            deleteNodeRegistrationMarker(cmdLineOptions.baseDirectory)
+            return ExitCodes.SUCCESS
         }
 
-        logStartupInfo(versionInfo, cmdlineOptions, configuration)
+        logStartupInfo(versionInfo, configuration)
 
-        return attempt { startNode(configuration, versionInfo, startTime, cmdlineOptions) }.doOnSuccess { logger.info("Node exiting successfully") }.doOnException(handleStartError).isSuccess
+        attempt { startNode(configuration, versionInfo, startTime) }.doOnSuccess { logger.info("Node exiting successfully") }.doOnException(handleStartError) as? Try.Success ?: return ExitCodes.FAILURE
+
+        return ExitCodes.SUCCESS
     }
 
     private fun <RESULT> attempt(action: () -> RESULT): Try<RESULT> = Try.on(action)
@@ -139,13 +135,11 @@ open class NodeStartup(val args: Array<String>) {
     private fun Exception.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
 
     private fun Exception.errorCode(): String {
-
         val hash = staticLocationBasedHash()
         return Integer.toOctalString(hash)
     }
 
     private fun Throwable.staticLocationBasedHash(visited: Set<Throwable> = setOf(this)): Int {
-
         val cause = this.cause
         return when {
             cause != null && !visited.contains(cause) -> Objects.hash(this::class.java.name, stackTrace.customHashCode(), cause.staticLocationBasedHash(visited +  cause))
@@ -200,14 +194,13 @@ open class NodeStartup(val args: Array<String>) {
             """.trimIndent()
     }
 
-    private fun loadConfiguration(cmdlineOptions: CmdLineOptions): NodeConfiguration {
-
-        val (rawConfig, configurationResult) = loadConfigFile(cmdlineOptions)
-        if (cmdlineOptions.devMode) {
+    private fun loadConfiguration(): NodeConfiguration {
+        val (rawConfig, configurationResult) = loadConfigFile()
+        if (cmdLineOptions.devMode == true) {
             println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
         }
         val configuration = configurationResult.getOrThrow()
-        return if (cmdlineOptions.bootstrapRaftCluster) {
+        return if (cmdLineOptions.bootstrapRaftCluster) {
             println("Bootstrapping raft cluster (starting up as seed node).")
             // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
             (configuration as NodeConfigurationImpl).copy(notary = configuration.notary?.copy(raft = configuration.notary?.raft?.copy(clusterAddresses = emptyList())))
@@ -217,27 +210,11 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     private fun checkRegistrationMode(): Boolean {
-        // Parse the command line args just to get the base directory. The base directory is needed to determine
-        // if the node registration marker file exists, _before_ we call NodeArgsParser.parse().
-        // If it does exist, we call NodeArgsParser with `--initial-registration` added to the argument list. This way
-        // we make sure that the initial registration is completed, even if the node was restarted before the first
-        // attempt to register succeeded and the node administrator forgets to specify `--initial-registration` upon
-        // restart.
-        val optionParser = OptionParser()
-        optionParser.allowsUnrecognizedOptions()
-        val baseDirectoryArg = optionParser
-                .accepts("base-directory", "The node working directory where all the files are kept")
-                .withRequiredArg()
-                .withValuesConvertedBy(PathConverter())
-                .defaultsTo(Paths.get("."))
-        val isRegistrationArg =
-                optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
-        val optionSet = optionParser.parse(*args)
-        val baseDirectory = optionSet.valueOf(baseDirectoryArg).normalize().toAbsolutePath()
+        val baseDirectory = cmdLineOptions.baseDirectory.normalize().toAbsolutePath()
         // If the node was started with `--initial-registration`, create marker file.
         // We do this here to ensure the marker is created even if parsing the args with NodeArgsParser fails.
         val marker = File((baseDirectory / INITIAL_REGISTRATION_MARKER).toUri())
-        if (!optionSet.has(isRegistrationArg) && !marker.exists()) {
+        if (!cmdLineOptions.isRegistration && !marker.exists()) {
             return false
         }
         try {
@@ -263,20 +240,19 @@ open class NodeStartup(val args: Array<String>) {
 
     protected open fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
 
-    protected open fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
-
-        cmdlineOptions.baseDirectory.createDirectories()
+    protected open fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long) {
+        cmdLineOptions.baseDirectory.createDirectories()
         val node = createNode(conf, versionInfo)
-        if (cmdlineOptions.clearNetworkMapCache) {
+        if (cmdLineOptions.clearNetworkMapCache) {
             node.clearNetworkMapCache()
             return
         }
-        if (cmdlineOptions.justGenerateNodeInfo) {
+        if (cmdLineOptions.justGenerateNodeInfo) {
             // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
             node.generateAndSaveNodeInfo()
             return
         }
-        if (cmdlineOptions.justGenerateRpcSslCerts) {
+        if (cmdLineOptions.justGenerateRpcSslCerts) {
             val (keyPair, cert) = createKeyPairAndSelfSignedTLSCertificate(conf.myLegalName.x500Principal)
 
             val keyStorePath = conf.baseDirectory / "certificates" / "rpcsslkeystore.jks"
@@ -375,7 +351,7 @@ open class NodeStartup(val args: Array<String>) {
         node.run()
     }
 
-    protected open fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
+    protected open fun logStartupInfo(versionInfo: VersionInfo, conf: NodeConfiguration) {
         logger.info("Vendor: ${versionInfo.vendor}")
         logger.info("Release: ${versionInfo.releaseVersion}")
         logger.info("Platform Version: ${versionInfo.platformVersion}")
@@ -384,12 +360,11 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("PID: ${info.name.split("@").firstOrNull()}")  // TODO Java 9 has better support for this
         logger.info("Main class: ${NodeConfiguration::class.java.location.toURI().path}")
         logger.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
-        logger.info("Application Args: ${args.joinToString(" ")}")
         logger.info("bootclasspath: ${info.bootClassPath}")
         logger.info("classpath: ${info.classPath}")
         logger.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
         logger.info("Machine: ${lookupMachineNameAndMaybeWarn()}")
-        logger.info("Working Directory: ${cmdlineOptions.baseDirectory}")
+        logger.info("Working Directory: ${cmdLineOptions.baseDirectory}")
         val agentProperties = VMSupport.getAgentProperties()
         if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
             logger.info("Debug port: ${agentProperties.getProperty("sun.jdwp.listenerAddress")}")
@@ -417,21 +392,18 @@ open class NodeStartup(val args: Array<String>) {
         println("Corda node will now terminate.")
     }
 
-    protected open fun loadConfigFile(cmdlineOptions: CmdLineOptions): Pair<Config, Try<NodeConfiguration>> = cmdlineOptions.loadConfig()
+    protected open fun loadConfigFile(): Pair<Config, Try<NodeConfiguration>> = cmdLineOptions.loadConfig()
 
     protected open fun banJavaSerialisation(conf: NodeConfiguration) {
         SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
     }
 
     protected open fun getVersionInfo(): VersionInfo {
-        // Manifest properties are only available if running from the corda jar
-        fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
-
         return VersionInfo(
-                PLATFORM_VERSION,
-                manifestValue("Corda-Release-Version") ?: "Unknown",
-                manifestValue("Corda-Revision") ?: "Unknown",
-                manifestValue("Corda-Vendor") ?: "Unknown"
+                CordaVersionProvider.platformVersion,
+                CordaVersionProvider.releaseVersion,
+                CordaVersionProvider.revision,
+                CordaVersionProvider.vendor
         )
     }
 
@@ -468,14 +440,14 @@ open class NodeStartup(val args: Array<String>) {
         }
     }
 
-    protected open fun initLogging(cmdlineOptions: CmdLineOptions) {
-        val loggingLevel = cmdlineOptions.loggingLevel.name.toLowerCase(Locale.ENGLISH)
+    override fun initLogging() {
+        val loggingLevel = loggingLevel.name().toLowerCase(Locale.ENGLISH)
         System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
-        if (cmdlineOptions.logToConsole) {
+        if (verbose) {
             System.setProperty("consoleLogLevel", loggingLevel)
             Node.renderBasicInfoToConsole = false
         }
-        System.setProperty("log-path", (cmdlineOptions.baseDirectory / LOGS_DIRECTORY_NAME).toString())
+        System.setProperty("log-path", (cmdLineOptions.baseDirectory / LOGS_DIRECTORY_NAME).toString())
         SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
         SLF4JBridgeHandler.install()
     }
@@ -516,9 +488,6 @@ open class NodeStartup(val args: Array<String>) {
     }
 
     open fun drawBanner(versionInfo: VersionInfo) {
-        // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
-        AnsiConsole.systemInstall()
-
         Emoji.renderIfSupported {
             val messages = arrayListOf(
                     "The only distributed ledger that pays\nhomage to Pac Man in its logo.",
