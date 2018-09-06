@@ -60,18 +60,16 @@ internal class CordaRPCOpsImpl(
         private val logger = loggerFor<CordaRPCOpsImpl>()
     }
 
+    // TODO sollecitom unsubscribe if containing server is stopped
     private val drainingShutdownHook = AtomicReference<Subscription>()
 
-//    init {
-//        services.nodeProperties.flowsDrainingMode.values.observeOn(Schedulers.io()).filter { it.first && !it.second }.subscribe({ _ ->
-//            // TODO sollecitom uncomment
-//            drainingShutdownHook.get()?.let(Subscription::unsubscribe)
-//        }, { error ->
-//            // TODO sollecitom handle better without logging and re-throwing
-//            logger.error(error.message, error)
-//            throw error
-//        })
-//    }
+    init {
+        services.nodeProperties.flowsDrainingMode.values.filter { it.first && !it.second }.subscribe({ _ ->
+            drainingShutdownHook.get()?.let(Subscription::unsubscribe)
+        }, { _ ->
+            // Nothing to do in case of errors here.
+        })
+    }
 
     /**
      * Returns the RPC protocol version, which is the same the node's platform Version. Exists since version 1 so guaranteed
