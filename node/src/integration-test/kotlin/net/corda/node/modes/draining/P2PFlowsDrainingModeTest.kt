@@ -138,18 +138,18 @@ class P2PFlowsDrainingModeTest {
     }
 }
 
-// TODO sollecitom make it available to all driver-based tests
+// TODO sollecitom make it available to all driver-based tests, or even to NetworkMap based ones.
 private fun NodeHandle.waitForShutdown(): Observable<Unit> {
 
     return rpc.waitForShutdown().doAfterTerminate(::stop)
 }
 
-// TODO sollecitom make it available to shell etc
+// TODO sollecitom make it available to all driver-based tests, or even to NetworkMap based ones.
 private fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
 
     val completable = AsyncSubject.create<Unit>()
     stateMachinesFeed().updates.subscribe({ _ -> }, { error ->
-        // TODO sollecitom consider whether to use the error message here or whether to create a sub-type for connection failure
+        // TODO sollecitom create an RPCException sub-type specific for connection failures. Then, replace the check with an `is` check.
         if (error is RPCException && error.message == "Connection failure detected.") {
             completable.onCompleted()
         } else {

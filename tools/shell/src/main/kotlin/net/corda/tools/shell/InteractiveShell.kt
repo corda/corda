@@ -42,6 +42,7 @@ import org.crsh.vfs.spi.url.ClassPathMountFactory
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.Subscriber
+import rx.subjects.PublishSubject
 import java.io.FileDescriptor
 import java.io.FileInputStream
 import java.io.InputStream
@@ -452,6 +453,7 @@ object InteractiveShell {
     }
 
 
+    // TODO sollecitom replace the implementation with a call to `terminate(true)`.
     @JvmStatic
     fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps, isSsh: Boolean = false) {
 
@@ -477,7 +479,7 @@ object InteractiveShell {
                     }
                     .doOnNext { (first, second) ->
                         display {
-                            println("...remaining: ${first}/${second}")
+                            println("...remaining: $first/$second")
                         }
                     }
                     .doOnCompleted {
@@ -511,6 +513,36 @@ object InteractiveShell {
             InputStreamSerializer.invokeContext = null
             InputStreamDeserializer.closeAll()
         }
+    }
+
+    // TODO sollecitom try to avoid this duplication with regards to the same function in CordaRPCOpsImpl, without exposing this as public API.
+    private fun CordaRPCOps.pendingFlowsCount(): DataFeed<Int, Pair<Int, Int>> {
+
+        val stateMachineState = stateMachinesFeed()
+        var pendingFlowsCount = stateMachineState.snapshot.size
+        var completedFlowsCount = 0
+        val updates = PublishSubject.create<Pair<Int, Int>>()
+        stateMachineState
+                .updates
+                .doOnNext { update ->
+                    when (update) {
+                        is StateMachineUpdate.Added -> {
+                            pendingFlowsCount++
+                            updates.onNext(completedFlowsCount to pendingFlowsCount)
+                        }
+                        is StateMachineUpdate.Removed -> {
+                            completedFlowsCount++
+                            updates.onNext(completedFlowsCount to pendingFlowsCount)
+                            if (completedFlowsCount == pendingFlowsCount) {
+                                updates.onCompleted()
+                            }
+                        }
+                    }
+                }.subscribe()
+        if (pendingFlowsCount == 0) {
+            updates.onCompleted()
+        }
+        return DataFeed(pendingFlowsCount, updates)
     }
 
     private fun printAndFollowRPCResponse(response: Any?, out: PrintWriter): CordaFuture<Unit> {
