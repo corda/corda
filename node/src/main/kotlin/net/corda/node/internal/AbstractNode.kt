@@ -76,6 +76,7 @@ import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import org.slf4j.Logger
 import rx.Observable
 import rx.Scheduler
+import rx.schedulers.Schedulers
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
