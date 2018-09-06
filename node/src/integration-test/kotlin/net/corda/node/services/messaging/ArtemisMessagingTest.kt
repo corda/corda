@@ -10,7 +10,9 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.config.*
-import net.corda.node.services.network.NetworkMapCacheImpl
+import net.corda.node.services.config.FlowTimeoutConfiguration
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
@@ -66,7 +68,7 @@ class ArtemisMessagingTest {
     private var messagingClient: P2PMessagingClient? = null
     private var messagingServer: ArtemisMessagingServer? = null
 
-    private lateinit var networkMapCache: NetworkMapCacheImpl
+    private lateinit var networkMapCache: PersistentNetworkMapCache
 
     @Before
     fun setUp() {
@@ -90,8 +92,7 @@ class ArtemisMessagingTest {
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeInternalTestDataSourceProperties(configSupplier = { ConfigFactory.empty() }), DatabaseConfig(runMigration = true), { null }, { null })
-        val persistentNetworkMapCache = PersistentNetworkMapCache(database, ALICE_NAME).apply { start(emptyList()) }
-        networkMapCache = NetworkMapCacheImpl(persistentNetworkMapCache, rigorousMock(), database).apply { start() }
+        networkMapCache = PersistentNetworkMapCache(database, rigorousMock(), ALICE_NAME).apply { start(emptyList()) }
     }
 
     @After

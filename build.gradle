@@ -369,6 +369,7 @@ bintrayConfig {
             'corda-rpc',
             'corda-core',
             'corda-core-deterministic',
+            'corda-djvm',
             'corda',
             'corda-finance',
             'corda-node',

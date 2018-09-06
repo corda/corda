@@ -18,9 +18,10 @@ import net.corda.djvm.utilities.Discovery
 import net.corda.djvm.validation.RuleValidator
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.Type
 import java.lang.reflect.InvocationTargetException
 
-open class TestBase {
+abstract class TestBase {
 
     companion object {
 
@@ -38,8 +39,7 @@ open class TestBase {
         /**
          * Get the full name of type [T].
          */
-        inline fun <reified T> nameOf(prefix: String = "") =
-                "$prefix${T::class.java.name.replace('.', '/')}"
+        inline fun <reified T> nameOf(prefix: String = "") = "$prefix${Type.getInternalName(T::class.java)}"
 
     }
 
@@ -115,7 +115,7 @@ open class TestBase {
         var thrownException: Throwable? = null
         Thread {
             try {
-                val pinnedTestClasses = pinnedClasses.map { it.name.replace('.', '/') }.toSet()
+                val pinnedTestClasses = pinnedClasses.map(Type::getInternalName).toSet()
                 val analysisConfiguration = AnalysisConfiguration(
                         whitelist = whitelist,
                         additionalPinnedClasses = pinnedTestClasses,

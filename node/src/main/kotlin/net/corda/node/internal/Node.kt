@@ -42,11 +42,7 @@ import net.corda.node.services.Permissions
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.SecurityConfiguration
-import net.corda.node.services.config.shouldInitCrashShell
-import net.corda.node.services.config.shouldStartLocalShell
-import net.corda.node.services.config.JmxReporterType
+import net.corda.node.services.config.*
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.utilities.AddressUtils
@@ -58,8 +54,8 @@ import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.serialization.internal.*
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
+import net.corda.serialization.internal.*
 import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -71,10 +67,10 @@ import java.net.InetAddress
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Clock
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.management.ObjectName
 import kotlin.system.exitProcess
-import java.util.concurrent.TimeUnit
 
 class NodeWithInfo(val node: Node, val info: NodeInfo) {
     val services: StartedNodeServices = object : StartedNodeServices, ServiceHubInternal by node.services, FlowStarter by node.flowStarter {}
@@ -295,7 +291,7 @@ open class Node(configuration: NodeConfiguration,
         }
     }
 
-    override fun myAddresses(): List<NetworkHostAndPort> = listOf(getAdvertisedAddress())
+    override fun myAddresses(): List<NetworkHostAndPort> = listOf(getAdvertisedAddress()) + configuration.additionalP2PAddresses
 
     private fun getAdvertisedAddress(): NetworkHostAndPort {
         return with(configuration) {

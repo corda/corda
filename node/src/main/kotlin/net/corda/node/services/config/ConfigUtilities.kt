@@ -5,6 +5,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigFactory.systemEnvironment
 import com.typesafe.config.ConfigFactory.systemProperties
 import com.typesafe.config.ConfigParseOptions
+import net.corda.cliutils.CordaSystemUtils
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
@@ -120,18 +121,7 @@ fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
         }
     }
 }
+
 /** Parse a value to be database schema name friendly and removes the last part if it matches a port ("_" followed by at least 5 digits) */
 fun parseToDbSchemaFriendlyName(value: String) =
         value.replace(" ", "").replace("-", "_").replace(Regex("_\\d{5,}$"),"")
-
-/** This is generally covered by commons-lang. */
-object CordaSystemUtils {
-    const val OS_NAME = "os.name"
-
-    const val MAC_PREFIX = "Mac"
-    const val WIN_PREFIX = "Windows"
-
-    fun isOsMac() = getOsName().startsWith(MAC_PREFIX)
-    fun isOsWindows() = getOsName().startsWith(WIN_PREFIX)
-    fun getOsName() = System.getProperty(OS_NAME)
-}
