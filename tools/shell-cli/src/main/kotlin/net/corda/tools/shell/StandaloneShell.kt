@@ -1,45 +1,33 @@
 package net.corda.tools.shell
 
 import com.jcabi.manifests.Manifests
-import joptsimple.OptionException
-import net.corda.core.internal.*
+import net.corda.cliutils.CordaCliWrapper
+import net.corda.cliutils.ExitCodes
+import net.corda.cliutils.start
+import net.corda.core.internal.exists
+import net.corda.core.internal.isRegularFile
+import net.corda.core.internal.list
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
+import picocli.CommandLine.Mixin
+import java.io.BufferedReader
+import java.io.IOException
+import java.io.InputStreamReader
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 import kotlin.streams.toList
-import java.io.IOException
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
-
-    val argsParser = CommandLineOptionParser()
-    val cmdlineOptions = try {
-        argsParser.parse(*args)
-    } catch (e: OptionException) {
-        println("Invalid command line arguments: ${e.message}")
-        argsParser.printHelp(System.out)
-        exitProcess(1)
-    }
-
-    if (cmdlineOptions.help) {
-        argsParser.printHelp(System.out)
-        return
-    }
-    val config = try {
-        cmdlineOptions.toConfig()
-    } catch(e: Exception) {
-        println("Configuration exception: ${e.message}")
-        exitProcess(1)
-    }
-    StandaloneShell(config).run()
+    StandaloneShell().start(args)
 }
 
-class StandaloneShell(private val configuration: ShellConfiguration) {
+class StandaloneShell : CordaCliWrapper("corda-shell", "The Corda standalone shell.") {
+    @Mixin
+    var cmdLineOptions = ShellCmdLineOptions()
+
+    lateinit var configuration: ShellConfiguration
 
     private fun getCordappsInDirectory(cordappsDir: Path?): List<URL> =
             if (cordappsDir == null || !cordappsDir.exists()) {
@@ -67,7 +55,14 @@ class StandaloneShell(private val configuration: ShellConfiguration) {
 
     private fun getManifestEntry(key: String) = if (Manifests.exists(key)) Manifests.read(key) else "Unknown"
 
-    fun run() {
+    override fun runProgram(): Int {
+        configuration = try {
+            cmdLineOptions.toConfig()
+        } catch(e: Exception) {
+            println("Configuration exception: ${e.message}")
+            return ExitCodes.FAILURE
+        }
+
         val cordappJarPaths = getCordappsInDirectory(configuration.cordappsDirectory)
         val classLoader: ClassLoader = URLClassLoader(cordappJarPaths.toTypedArray(), javaClass.classLoader)
         with(configuration) {
@@ -84,7 +79,7 @@ class StandaloneShell(private val configuration: ShellConfiguration) {
               InteractiveShell.nodeInfo()
         } catch (e: Exception) {
             println("Cannot login to ${configuration.hostAndPort}, reason: \"${e.message}\"")
-            exitProcess(1)
+            return ExitCodes.FAILURE
         }
 
         val exit = CountDownLatch(1)
@@ -106,6 +101,6 @@ class StandaloneShell(private val configuration: ShellConfiguration) {
 
         exit.await()
         // because we can't clean certain Crash Shell threads that block on read()
-        exitProcess(0)
+        return ExitCodes.SUCCESS
     }
 }
