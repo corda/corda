@@ -36,7 +36,7 @@ class NodeInfoWatcherTest {
     val tempFolder = TemporaryFolder()
 
     private val scheduler = TestScheduler()
-    private val testSubscriber = TestSubscriber<NodeInfoUpdate>()
+    private val testSubscriber = TestSubscriber<List<NodeInfoUpdate>>()
 
     private lateinit var nodeInfoAndSigned: NodeInfoAndSigned
     private lateinit var nodeInfoPath: Path
@@ -83,7 +83,7 @@ class NodeInfoWatcherTest {
         val subscription = nodeInfoWatcher.nodeInfoUpdates().subscribe(testSubscriber)
         try {
             advanceTime()
-            val readNodes = testSubscriber.onNextEvents.distinct()
+            val readNodes = testSubscriber.onNextEvents.distinct().flatten()
             assertEquals(0, readNodes.size)
         } finally {
             subscription.unsubscribe()
@@ -98,7 +98,7 @@ class NodeInfoWatcherTest {
         advanceTime()
 
         try {
-            val readNodes = testSubscriber.onNextEvents.distinct()
+            val readNodes = testSubscriber.onNextEvents.distinct().flatten()
             assertEquals(1, readNodes.size)
             assertEquals(nodeInfoAndSigned.nodeInfo, (readNodes.first() as? NodeInfoUpdate.Add)?.nodeInfo)
         } finally {
@@ -116,7 +116,8 @@ class NodeInfoWatcherTest {
             // Ensure the watch service is started.
             advanceTime()
             // Check no nodeInfos are read.
-            assertEquals(0, testSubscriber.valueCount)
+
+            assertEquals(0, testSubscriber.onNextEvents.distinct().flatten().size)
             createNodeInfoFileInPath()
 
             advanceTime()
@@ -124,7 +125,7 @@ class NodeInfoWatcherTest {
             // We need the WatchService to report a change and that might not happen immediately.
             testSubscriber.awaitValueCount(1, 5, TimeUnit.SECONDS)
             // The same folder can be reported more than once, so take unique values.
-            val readNodes = testSubscriber.onNextEvents.distinct()
+            val readNodes = testSubscriber.onNextEvents.distinct().flatten()
             assertEquals(nodeInfoAndSigned.nodeInfo, (readNodes.first() as? NodeInfoUpdate.Add)?.nodeInfo)
         } finally {
             subscription.unsubscribe()

@@ -145,7 +145,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // TODO Break cyclic dependency
         identityService.database = database
     }
-    val networkMapCache = PersistentNetworkMapCache(database, identityService, configuration.myLegalName).tokenize()
+    val networkMapCache = PersistentNetworkMapCache(database, identityService).tokenize()
     val checkpointStorage = DBCheckpointStorage()
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
@@ -216,7 +216,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     /** Set to non-null once [start] has been successfully called. */
-    open val started get() = _started
+    open val started: S? get() = _started
     @Volatile
     private var _started: S? = null
 
@@ -301,13 +301,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
         servicesForResolution.start(netParams)
+        networkMapCache.start(netParams.notaries)
 
         startDatabase()
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
 
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
-            networkMapCache.start(netParams.notaries)
             updateNodeInfo(identity, identityKeyPair, publish = true)
         }
 
@@ -455,7 +455,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         } else {
             1.days
         }
-        val executor = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("Network Map Updater", Executors.defaultThreadFactory()))
+        val executor = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("Network Map Updater"))
         executor.submit(object : Runnable {
             override fun run() {
                 val republishInterval = try {
