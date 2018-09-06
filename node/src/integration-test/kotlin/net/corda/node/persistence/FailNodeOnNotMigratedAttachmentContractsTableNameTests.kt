@@ -5,6 +5,7 @@ import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
+import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.test.node.Message
 import net.corda.test.node.MessageState
 import net.corda.test.node.SendMessageFlow
@@ -13,6 +14,8 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.node.User
+import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.nio.file.Path
 import java.sql.DriverManager
@@ -32,9 +35,9 @@ class FailNodeOnNotMigratedAttachmentContractsTableNameTests {
     fun `node fails when not detecting compatible table name`(tableNameFromMapping: String, tableNameInDB: String) {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlow>(), Permissions.invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val baseDir: Path = driver(DriverParameters(startNodesInProcess = true,
-                portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
+        val baseDir: Path = driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
             val (nodeName, baseDir) = {
+                defaultNotaryNode.getOrThrow()
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
@@ -49,11 +52,8 @@ class FailNodeOnNotMigratedAttachmentContractsTableNameTests {
                 it.createStatement().execute("ALTER TABLE $tableNameFromMapping RENAME TO $tableNameInDB")
                 it.commit()
             }
-            assertFailsWith(net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException::class) {
-                val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow()
-                nodeHandle.stop()
-            }
-             baseDir
+            assertThatThrownBy { startNode(providedName = nodeName, rpcUsers = listOf(user)).getOrThrow() }.isInstanceOf(DatabaseIncompatibleException::class.java)
+            baseDir
         }
 
         // check that the node didn't recreated the correct table matching it's entity mapping

@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.network
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.DigitalSignatureWithCertPath
 import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
@@ -9,7 +10,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import java.security.cert.X509Certificate
 import java.time.Instant
-
 
 const val NETWORK_PARAMS_FILE_NAME = "network-parameters"
 const val NETWORK_PARAMS_UPDATE_FILE_NAME = "network-parameters-update"
@@ -54,8 +54,13 @@ data class ParametersUpdate(
         val updateDeadline: Instant
 )
 
+/** Verify that a Network Map certificate path and its [CertRole] is correct. */
 fun <T : Any> SignedDataWithCert<T>.verifiedNetworkMapCert(rootCert: X509Certificate): T {
     require(CertRole.extract(sig.by) == CertRole.NETWORK_MAP) { "Incorrect cert role: ${CertRole.extract(sig.by)}" }
-    X509Utilities.validateCertificateChain(rootCert, sig.by, rootCert)
+    val path = when (this.sig) {
+        is DigitalSignatureWithCertPath -> (sig as DigitalSignatureWithCertPath).path
+        else -> listOf(sig.by, rootCert)
+    }
+    X509Utilities.validateCertificateChain(rootCert, path)
     return verified()
 }

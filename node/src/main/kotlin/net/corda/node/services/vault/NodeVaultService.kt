@@ -381,10 +381,10 @@ class NodeVaultService(
                 log.trace { "State update of type: $concreteType" }
                 val seen = contractStateTypeMappings.any { it.value.contains(concreteType.name) }
                 if (!seen) {
-                    val contractTypes = deriveContractTypes(concreteType)
-                    contractTypes.map {
-                        val contractStateType = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
-                        contractStateType.add(concreteType.name)
+                    val contractStateTypes = deriveContractTypes(concreteType)
+                    contractStateTypes.map {
+                        val contractInterface = contractStateTypeMappings.getOrPut(it.name, { mutableSetOf() })
+                        contractInterface.add(concreteType.name)
                     }
                 }
             }
@@ -491,7 +491,8 @@ class NodeVaultService(
         val distinctTypes = results.map { it }
 
         val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
-        distinctTypes.forEach { type ->
+        val unknownTypes = mutableSetOf<String>()
+        distinctTypes.forEach { type ->                           
             val concreteType: Class<ContractState> = uncheckedCast(Class.forName(type))
             concreteType?.let {
                 val contractTypes = deriveContractTypes(it)
@@ -500,6 +501,9 @@ class NodeVaultService(
                     contractStateType.add(it.name)
                 }
             }
+        }
+        if (unknownTypes.isNotEmpty()) {
+            log.warn("There are unknown contract state types in the vault, which will prevent these states from being used. The relevant CorDapps must be loaded for these states to be used. The types not on the classpath are ${unknownTypes.joinToString(", ", "[", "]")}.")
         }
     }
 
