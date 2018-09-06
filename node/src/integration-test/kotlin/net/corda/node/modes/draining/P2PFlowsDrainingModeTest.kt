@@ -2,12 +2,10 @@ package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.RPCException
-import net.corda.client.rpc.internal.drainAndShutdown
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.pendingFlowsCount
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
@@ -27,7 +25,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
-import rx.schedulers.Schedulers
 import rx.subjects.AsyncSubject
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
