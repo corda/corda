@@ -3,6 +3,7 @@ package net.corda.node.utilities.registration
 import com.google.common.net.MediaType
 import net.corda.core.internal.openHttpConnection
 import net.corda.core.utilities.seconds
+import net.corda.node.VersionInfo
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import okhttp3.CacheControl
 import okhttp3.Headers
@@ -17,12 +18,10 @@ import java.util.*
 import java.util.zip.ZipInputStream
 import javax.naming.ServiceUnavailableException
 
-class HTTPNetworkRegistrationService(compatibilityZoneURL: URL) : NetworkRegistrationService {
+class HTTPNetworkRegistrationService(compatibilityZoneURL: URL, val versionInfo: VersionInfo) : NetworkRegistrationService {
     private val registrationURL = URL("$compatibilityZoneURL/certificate")
 
     companion object {
-        // TODO: Propagate version information from gradle
-        val clientVersion = "1.0"
         private val TRANSIENT_ERROR_STATUS_CODES = setOf(HTTP_BAD_GATEWAY, HTTP_UNAVAILABLE, HTTP_GATEWAY_TIMEOUT)
     }
 
@@ -57,12 +56,13 @@ class HTTPNetworkRegistrationService(compatibilityZoneURL: URL) : NetworkRegistr
         conn.doOutput = true
         conn.requestMethod = "POST"
         conn.setRequestProperty("Content-Type", "application/octet-stream")
-        conn.setRequestProperty("Client-Version", clientVersion)
+        conn.setRequestProperty("Client-Version", versionInfo.releaseVersion)
+        conn.setRequestProperty("Platform-Version", versionInfo.platformVersion.toString())
         conn.outputStream.write(request.encoded)
 
         return when (conn.responseCode) {
             HTTP_OK -> IOUtils.toString(conn.inputStream, conn.charset)
-            HTTP_FORBIDDEN -> throw IOException("Client version $clientVersion is forbidden from accessing permissioning server, please upgrade to newer version.")
+            HTTP_FORBIDDEN -> throw IOException("Client version ${versionInfo.releaseVersion} is forbidden from accessing permissioning server, please upgrade to newer version.")
             else -> throwUnexpectedResponseCode(conn)
         }
     }

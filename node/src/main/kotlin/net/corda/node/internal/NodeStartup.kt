@@ -205,7 +205,7 @@ open class NodeStartup(val args: Array<String>) {
         println("*       Registering as a new participant with Corda network      *")
         println("*                                                                *")
         println("******************************************************************")
-        NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
+        NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL, getVersionInfo()), nodeRegistrationConfig).buildKeystore()
     }
 
     open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration = cmdlineOptions.loadConfig()
