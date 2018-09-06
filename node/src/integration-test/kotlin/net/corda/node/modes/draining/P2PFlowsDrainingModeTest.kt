@@ -97,31 +97,6 @@ class P2PFlowsDrainingModeTest {
             nodeB.rpc.setFlowsDrainingModeEnabled(true)
             IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
 
-            nodeA.rpc.drainAndShutdown()
-                    .doOnError { error ->
-                        error.printStackTrace()
-                        successful = false
-                    }
-                    .doOnCompleted { successful = true }
-                    .doAfterTerminate { latch.countDown() }
-                    .subscribe()
-            nodeB.rpc.setFlowsDrainingModeEnabled(false)
-            latch.await()
-
-            assertThat(successful).isTrue()
-        }
-    }
-
-    @Test
-    fun `clean shutdown by draining 3`() {
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
-            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
-            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
-            var successful = false
-            val latch = CountDownLatch(1)
-            nodeB.rpc.setFlowsDrainingModeEnabled(true)
-            IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
-
             nodeA.waitForShutdown().doOnError { error ->
                 error.printStackTrace()
                 successful = false
@@ -140,8 +115,14 @@ class P2PFlowsDrainingModeTest {
 // TODO sollecitom make it available to all driver-based tests
 private fun NodeHandle.waitForShutdown(): Observable<Unit> {
 
+    return rpc.waitForShutdown().doAfterTerminate(::stop)
+}
+
+// TODO sollecitom make it available to shell etc
+private fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
+
     val completable = AsyncSubject.create<Unit>()
-    rpc.stateMachinesFeed().updates.subscribe({ _ -> }, { error ->
+    stateMachinesFeed().updates.subscribe({ _ -> }, { error ->
         // TODO sollecitom consider whether to use the error message here or whether to create a sub-type for connection failure
         if (error is RPCException && error.message == "Connection failure detected.") {
             completable.onCompleted()
@@ -149,7 +130,7 @@ private fun NodeHandle.waitForShutdown(): Observable<Unit> {
             completable.onError(error)
         }
     })
-    return completable.doAfterTerminate(::stop)
+    return completable
 }
 
 @StartableByRPC
