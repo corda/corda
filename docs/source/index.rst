@@ -79,6 +79,7 @@ We look forward to seeing what you can do with Corda!
    design/monitoring-management/design.md
    design/sgx-integration/design.md
    design/sgx-infrastructure/design.md
+   design/threat-model/corda-threat-model.md
 
 .. conditional-toctree::
    :caption: Participate
