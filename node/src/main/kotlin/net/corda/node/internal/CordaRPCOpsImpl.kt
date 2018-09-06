@@ -303,12 +303,12 @@ internal class CordaRPCOpsImpl(
     override fun terminate(drainPendingFlows: Boolean) {
 
         if (drainPendingFlows) {
-            logger.info("Draining pending flows before shutting down.")
+            logger.info("Waiting for pending flows to complete before shutting down.")
             setFlowsDrainingModeEnabled(true)
-            drainingShutdownHook.set(pendingFlowsCount().updates.doOnCompleted { setPersistentDrainingModeProperty(false, false) }.doOnCompleted { drainingShutdownHook.get()?.unsubscribe() }.doOnCompleted { logger.info("Pending flows drained. Shutting down.") }.doOnCompleted(shutdownNode::invoke).subscribe({ }, { error ->
-                // TODO sollecitom handle this properly without logging & re-throwing
-                logger.error(error.message, error)
-                throw error
+            drainingShutdownHook.set(pendingFlowsCount().updates.doOnCompleted { setPersistentDrainingModeProperty(false, false) }.doOnCompleted { drainingShutdownHook.get()?.unsubscribe() }.doOnCompleted { logger.info("No more pending flows to drain. Shutting down.") }.doOnCompleted(shutdownNode::invoke).subscribe({
+                // Nothing to do on each update here, only completion matters.
+            }, { error ->
+                logger.error("Error while waiting for pending flows to drain in preparation for shutdown. Cause was: ${error.message}", error)
             }))
         } else {
             shutdownNode.invoke()
