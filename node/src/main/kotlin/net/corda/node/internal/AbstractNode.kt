@@ -794,6 +794,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         runOnStop.clear()
         shutdownExecutor.shutdown()
+        Schedulers.shutdown()
         _started = null
     }
 
