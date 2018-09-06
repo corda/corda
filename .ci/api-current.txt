@@ -2529,7 +2529,6 @@ public interface net.corda.core.messaging.CordaRPCOps extends net.corda.core.mes
   public abstract void clearNetworkMapCache()
   @NotNull
   public abstract java.time.Instant currentNodeTime()
-  public abstract int getProtocolVersion()
   @NotNull
   public abstract Iterable<String> getVaultTransactionNotes(net.corda.core.crypto.SecureHash)
   @RPCReturnsObservables
@@ -5767,7 +5766,7 @@ public class net.corda.client.jackson.StringToMethodCallParser extends java.lang
   @NotNull
   public final net.corda.client.jackson.StringToMethodCallParser<T>$ParsedMethodCall parse(T, String)
   @NotNull
-  public final Object[] parseArguments(String, java.util.List<? extends kotlin.Pair<String, ? extends Class<?>>>, String)
+  public final Object[] parseArguments(String, java.util.List<? extends kotlin.Pair<String, ? extends reflect.Type>>, String)
   public static final net.corda.client.jackson.StringToMethodCallParser$Companion Companion
 ##
 public static final class net.corda.client.jackson.StringToMethodCallParser$Companion extends java.lang.Object

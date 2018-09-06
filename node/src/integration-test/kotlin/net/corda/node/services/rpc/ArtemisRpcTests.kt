@@ -17,13 +17,13 @@ import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.internal.createNodeSslConfig
+import net.corda.testing.internal.p2pSslOptions
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.assertj.core.api.Assertions.assertThat
@@ -58,12 +58,12 @@ class ArtemisRpcTests {
         val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
         val trustStorePath = saveToTrustStore(tempFile("rpcTruststore.jks"), selfSignCert)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
-        testSslCommunication(createNodeSslConfig(tempFolder.root.toPath()), brokerSslOptions, true, clientSslOptions)
+        testSslCommunication(p2pSslOptions(tempFolder.root.toPath()), brokerSslOptions, true, clientSslOptions)
     }
 
     @Test
     fun rpc_with_ssl_disabled() {
-        testSslCommunication(createNodeSslConfig(tempFolder.root.toPath()), null, false, null)
+        testSslCommunication(p2pSslOptions(tempFolder.root.toPath()), null, false, null)
     }
 
     @Test
@@ -73,7 +73,7 @@ class ArtemisRpcTests {
         val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
         // here client sslOptions are passed null (as in, do not use SSL)
         assertThatThrownBy {
-            testSslCommunication(createNodeSslConfig(tempFolder.root.toPath()), brokerSslOptions, true, null)
+            testSslCommunication(p2pSslOptions(tempFolder.root.toPath()), brokerSslOptions, true, null)
         }.isInstanceOf(ActiveMQConnectionTimedOutException::class.java)
     }
 
@@ -91,11 +91,11 @@ class ArtemisRpcTests {
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
         assertThatThrownBy {
-            testSslCommunication(createNodeSslConfig(tempFolder.root.toPath()), brokerSslOptions, true, clientSslOptions)
+            testSslCommunication(p2pSslOptions(tempFolder.root.toPath()), brokerSslOptions, true, clientSslOptions)
         }.isInstanceOf(RPCException::class.java)
     }
 
-    private fun testSslCommunication(nodeSSlconfig: SSLConfiguration,
+    private fun testSslCommunication(nodeSSlconfig: MutualSslConfiguration,
                                      brokerSslOptions: BrokerRpcSslOptions?,
                                      useSslForBroker: Boolean,
                                      clientSslOptions: ClientRpcSslOptions?,
@@ -140,7 +140,7 @@ class ArtemisRpcTests {
     class TestRpcOpsImpl : TestRpcOps {
         override fun greet(name: String): String = "Oh, hello $name!"
 
-        override val protocolVersion: Int = 1
+        override val protocolVersion: Int = 1000
     }
 
     private fun tempFile(name: String): Path = tempFolder.root.toPath() / name

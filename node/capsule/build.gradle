@@ -9,7 +9,7 @@ apply plugin: 'com.jfrog.artifactory'
 description 'Corda standalone node'
 
 configurations {
-    runtimeArtifacts.extendsFrom runtime
+    runtimeArtifacts.extendsFrom runtimeClasspath
     capsuleRuntime
 }
 
@@ -26,18 +26,20 @@ dependencies {
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
-task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
+jar.enabled = false
+
+task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     applicationClass 'net.corda.node.Corda'
     archiveName "corda-${corda_release_version}.jar"
     applicationSource = files(
-            project(':node').configurations.runtime,
-            project(':node').jar,
-            project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet.class',
-            project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet$1.class',
-            "$rootDir/config/dev/log4j2.xml",
-            "$rootDir/node/build/resources/main/reference.conf"
+        project(':node').configurations.runtimeClasspath,
+        project(':node').tasks.jar,
+        project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet.class',
+        project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet$1.class',
+        project(':node').buildDir.toString() + '/resources/main/reference.conf',
+        "$rootDir/config/dev/log4j2.xml",
+        'NOTICE' // Copy CDDL notice
     )
-    from 'NOTICE' // Copy CDDL notice
     from configurations.capsuleRuntime.files.collect { zipTree(it) }
 
     capsuleManifest {
@@ -61,10 +63,12 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
     }
 }
 
+assemble.dependsOn buildCordaJAR
+
 artifacts {
     runtimeArtifacts buildCordaJAR
     publish buildCordaJAR {
-        classifier ""
+        classifier ''
     }
 }
 

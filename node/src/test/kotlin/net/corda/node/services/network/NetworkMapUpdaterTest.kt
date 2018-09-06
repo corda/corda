@@ -3,7 +3,6 @@ package net.corda.node.services.network
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.*
-import net.corda.cordform.CordformNode.NODE_INFO_DIRECTORY
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sign
@@ -14,7 +13,9 @@ import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
+import net.corda.node.VersionInfo
 import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
@@ -63,7 +64,8 @@ class NetworkMapUpdaterTest {
     fun setUp() {
         server = NetworkMapServer(cacheExpiryMs.millis)
         val address = server.start()
-        networkMapClient = NetworkMapClient(URL("http://$address")).apply { start(DEV_ROOT_CA.certificate) }
+        networkMapClient = NetworkMapClient(URL("http://$address"),
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
     }
 
     @After

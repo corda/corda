@@ -11,7 +11,9 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.SslConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
@@ -30,7 +32,7 @@ private val DEFAULT_FLOW_MONITOR_PERIOD_MILLIS: Duration = Duration.ofMinutes(1)
 private val DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS: Duration = Duration.ofMinutes(1)
 private const val CORDAPPS_DIR_NAME_DEFAULT = "cordapps"
 
-interface NodeConfiguration : NodeSSLConfiguration {
+interface NodeConfiguration {
     val myLegalName: CordaX500Name
     val emailAddress: String
     val jmxMonitoringHttpPort: Int?
@@ -48,6 +50,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val notary: NotaryConfig?
     val additionalNodeInfoPollingFrequencyMsec: Long
     val p2pAddress: NetworkHostAndPort
+    val additionalP2PAddresses: List<NetworkHostAndPort>
     val rpcOptions: NodeRpcOptions
     val messagingServerAddress: NetworkHostAndPort?
     val messagingServerExternal: Boolean
@@ -69,8 +72,15 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val effectiveH2Settings: NodeH2Settings?
     val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
     val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
-    val cordappDirectories: List<Path> get() = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
+    val crlCheckSoftFail: Boolean
     val jmxReporterType : JmxReporterType? get() = defaultJmxReporterType
+
+    val baseDirectory: Path
+    val certificatesDirectory: Path
+    val signingCertificateStore: FileBasedCertificateStoreSupplier
+    val p2pSslOptions: MutualSslConfiguration
+
+    val cordappDirectories: List<Path>
 
     fun validate(): List<String>
 
@@ -176,8 +186,8 @@ data class NodeConfigurationImpl(
         override val myLegalName: CordaX500Name,
         override val jmxMonitoringHttpPort: Int? = null,
         override val emailAddress: String,
-        override val keyStorePassword: String,
-        override val trustStorePassword: String,
+        private val keyStorePassword: String,
+        private val trustStorePassword: String,
         override val crlCheckSoftFail: Boolean,
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = null,
@@ -189,6 +199,7 @@ data class NodeConfigurationImpl(
         override val verifierType: VerifierType,
         override val flowTimeout: FlowTimeoutConfiguration,
         override val p2pAddress: NetworkHostAndPort,
+        override val additionalP2PAddresses: List<NetworkHostAndPort> = emptyList(),
         private val rpcAddress: NetworkHostAndPort? = null,
         private val rpcSettings: NodeRpcSettings,
         override val messagingServerAddress: NetworkHostAndPort?,
@@ -242,6 +253,17 @@ data class NodeConfigurationImpl(
             }
         }
     }
+
+    override val certificatesDirectory = baseDirectory / "certificates"
+
+    private val signingCertificateStorePath = certificatesDirectory / "nodekeystore.jks"
+    override val signingCertificateStore = FileBasedCertificateStoreSupplier(signingCertificateStorePath, keyStorePassword)
+
+    private val p2pKeystorePath: Path get() = certificatesDirectory / "sslkeystore.jks"
+    private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword)
+    private val p2pTrustStoreFilePath: Path get() = certificatesDirectory / "truststore.jks"
+    private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword)
+    override val p2pSslOptions: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
 
     override val rpcOptions: NodeRpcOptions
         get() {
@@ -355,8 +377,6 @@ data class NodeConfigurationImpl(
         require(h2port == null || h2Settings == null) { "Cannot specify both 'h2port' and 'h2Settings' in configuration" }
     }
 }
-
-
 
 data class NodeRpcSettings(
         val address: NetworkHostAndPort?,

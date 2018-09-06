@@ -2,8 +2,10 @@ package net.corda.client.rpc.internal.serialization.amqp
 
 
 import net.corda.client.rpc.internal.ObservableContext
+import net.corda.client.rpc.internal.RPCClientProxyHandler
 import net.corda.core.context.Trace
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.RPCApi
 import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.codec.Data
@@ -17,11 +19,12 @@ import java.util.concurrent.atomic.AtomicInteger
 import javax.transaction.NotSupportedException
 
 /**
- * De-serializer for Rx[Observable] instances for the RPC Client library. Can only be used to deserialize such objects,
- * just as the corresponding RPC server side code ([RpcServerObservableSerializer]) can only serialize them. Observables are only notionally serialized,
- * what is actually sent is a reference to the observable that can then be subscribed to.
+ * De-serializer for Rx [Observable] instances for the RPC Client library. Can only be used to deserialize such objects,
+ * just as the corresponding RPC server side class [RpcServerObservableSerializer] can only serialize them. Observables
+ * are only notionally serialized, what is actually sent is a reference to the observable that can then be subscribed to.
  */
 object RpcClientObservableDeSerializer : CustomSerializer.Implements<Observable<*>>(Observable::class.java) {
+    private val log = loggerFor<RpcClientObservableDeSerializer>()
     private object RpcObservableContextKey
 
     fun createContext(
@@ -96,22 +99,23 @@ object RpcClientObservableDeSerializer : CustomSerializer.Implements<Observable<
         }
 
         val rpcCallSite = getRpcCallSite(context, observableContext)
-
         observableContext.observableMap.put(observableId, observable)
         observableContext.callSiteMap?.put(observableId, rpcCallSite)
+        log.trace("Deserialising observable $observableId", rpcCallSite)
 
         // We pin all Observables into a hard reference store (rooted in the RPC proxy) on subscription so that users
         // don't need to store a reference to the Observables themselves.
         return pinInSubscriptions(observable, observableContext.hardReferenceStore).doOnUnsubscribe {
             // This causes Future completions to give warnings because the corresponding OnComplete sent from the server
             // will arrive after the client unsubscribes from the observable and consequently invalidates the mapping.
-            // The unsubscribe is due to [ObservableToFuture]'s use of first().
+            // The unsubscribe is due to ObservableToFuture's use of first().
             observableContext.observableMap.invalidate(observableId)
         }.dematerialize<Any>()
     }
 
-    private fun getRpcCallSite(context: SerializationContext, observableContext: ObservableContext): Throwable? {
+    private fun getRpcCallSite(context: SerializationContext, observableContext: ObservableContext): RPCClientProxyHandler.CallSite? {
         val rpcRequestOrObservableId = context.properties[RPCApi.RpcRequestOrObservableIdKey] as Trace.InvocationId
+        // Will only return non-null if the trackRpcCallSites option in the RPC configuration has been specified.
         return observableContext.callSiteMap?.get(rpcRequestOrObservableId)
     }
 

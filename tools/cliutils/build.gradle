@@ -1,0 +1,17 @@
+apply plugin: 'java'
+apply plugin: 'kotlin'
+
+description 'CLI Utilities'
+
+dependencies {
+    compile project(":core")
+    
+    compile "info.picocli:picocli:$picocli_version"
+    compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+
+    // JAnsi: for drawing things to the terminal in nicely coloured ways.
+    compile "org.fusesource.jansi:jansi:$jansi_version"
+
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+}

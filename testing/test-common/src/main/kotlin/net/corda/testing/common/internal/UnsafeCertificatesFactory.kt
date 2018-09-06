@@ -4,7 +4,9 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createFile
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.SslConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import org.apache.commons.io.FileUtils
 import sun.security.tools.keytool.CertAndKeyGen
@@ -65,7 +67,7 @@ class KeyStores(val keyStore: UnsafeKeyStore, val trustStore: UnsafeKeyStore) {
         val keyStoreFile = keyStore.toTemporaryFile("sslkeystore", directory = directory)
         val trustStoreFile = trustStore.toTemporaryFile("truststore", directory = directory)
 
-        val sslConfiguration = sslConfiguration(directory)
+        val sslConfiguration = sslConfiguration(keyStoreFile, trustStoreFile)
 
         return object : AutoClosableSSLConfiguration {
             override val value = sslConfiguration
@@ -77,16 +79,16 @@ class KeyStores(val keyStore: UnsafeKeyStore, val trustStore: UnsafeKeyStore) {
         }
     }
 
-    data class TestSslOptions(override val certificatesDirectory: Path,
-                              override val keyStorePassword: String,
-                              override val trustStorePassword: String,
-                              override val crlCheckSoftFail: Boolean) : SSLConfiguration
+    private fun sslConfiguration(keyStoreFile: TemporaryFile, trustStoreFile: TemporaryFile): MutualSslConfiguration {
 
-    private fun sslConfiguration(directory: Path) = TestSslOptions(directory, keyStore.password, trustStore.password, true)
+        val keyStore = FileBasedCertificateStoreSupplier(keyStoreFile.file, keyStore.password)
+        val trustStore = FileBasedCertificateStoreSupplier(trustStoreFile.file, trustStore.password)
+        return SslConfiguration.mutual(keyStore, trustStore)
+    }
 }
 
 interface AutoClosableSSLConfiguration : AutoCloseable {
-    val value: SSLConfiguration
+    val value: MutualSslConfiguration
 }
 
 typealias KeyStoreEntry = Pair<String, UnsafeCertificate>
@@ -189,7 +191,7 @@ private fun newKeyStore(type: String, password: String): KeyStore {
     return keyStore
 }
 
-fun withKeyStores(server: KeyStores, client: KeyStores, action: (brokerSslOptions: SSLConfiguration, clientSslOptions: SSLConfiguration) -> Unit) {
+fun withKeyStores(server: KeyStores, client: KeyStores, action: (brokerSslOptions: MutualSslConfiguration, clientSslOptions: MutualSslConfiguration) -> Unit) {
     val serverDir = Files.createTempDirectory(null)
     FileUtils.forceDeleteOnExit(serverDir.toFile())
 

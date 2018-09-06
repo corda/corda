@@ -10,6 +10,7 @@ import java.util.*
  * Implements an unbound caching layer on top of a table accessed via Hibernate mapping.
  */
 class PersistentMap<K : Any, V, E, out EK>(
+        name: String,
         val toPersistentEntityKey: (K) -> EK,
         val fromPersistentEntity: (E) -> Pair<K, V>,
         val toPersistentEntity: (key: K, value: V) -> E,
@@ -21,6 +22,7 @@ class PersistentMap<K : Any, V, E, out EK>(
     }
 
     private val cache = NonInvalidatingUnboundCache(
+            name,
             loadFunction = { key -> Optional.ofNullable(loadValue(key)) },
             removalListener = ExplicitRemoval(toPersistentEntityKey, persistentEntityClass)
     )

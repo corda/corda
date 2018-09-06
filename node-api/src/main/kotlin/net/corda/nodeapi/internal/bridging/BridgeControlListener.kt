@@ -11,14 +11,14 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOT
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisSessionProvider
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import java.util.*
 
-class BridgeControlListener(val config: NodeSSLConfiguration,
+class BridgeControlListener(val config: MutualSslConfiguration,
                             maxMessageSize: Int,
                             val artemisMessageClientFactory: () -> ArtemisSessionProvider) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
@@ -27,7 +27,7 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
 
-    constructor(config: NodeSSLConfiguration,
+    constructor(config: MutualSslConfiguration,
                 p2pAddress: NetworkHostAndPort,
                 maxMessageSize: Int) : this(config, maxMessageSize, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
@@ -98,7 +98,7 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
                     return
                 }
                 for (outQueue in controlMessage.sendQueues) {
-                    bridgeManager.deployBridge(outQueue.queueName, outQueue.targets.first(), outQueue.legalNames.toSet())
+                    bridgeManager.deployBridge(outQueue.queueName, outQueue.targets, outQueue.legalNames.toSet())
                 }
                 validInboundQueues.addAll(controlMessage.inboxQueues)
             }
@@ -110,14 +110,14 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
                     log.error("Invalid queue names in control message $controlMessage")
                     return
                 }
-                bridgeManager.deployBridge(controlMessage.bridgeInfo.queueName, controlMessage.bridgeInfo.targets.first(), controlMessage.bridgeInfo.legalNames.toSet())
+                bridgeManager.deployBridge(controlMessage.bridgeInfo.queueName, controlMessage.bridgeInfo.targets, controlMessage.bridgeInfo.legalNames.toSet())
             }
             is BridgeControl.Delete -> {
                 if (!controlMessage.bridgeInfo.queueName.startsWith(PEERS_PREFIX)) {
                     log.error("Invalid queue names in control message $controlMessage")
                     return
                 }
-                bridgeManager.destroyBridge(controlMessage.bridgeInfo.queueName, controlMessage.bridgeInfo.targets.first())
+                bridgeManager.destroyBridge(controlMessage.bridgeInfo.queueName, controlMessage.bridgeInfo.targets)
             }
         }
     }

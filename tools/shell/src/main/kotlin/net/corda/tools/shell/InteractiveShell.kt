@@ -9,7 +9,6 @@ import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.PermissionException
-import net.corda.client.rpc.internal.createCordaRPCClientWithInternalSslAndClassLoader
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
@@ -47,8 +46,7 @@ import java.io.FileDescriptor
 import java.io.FileInputStream
 import java.io.InputStream
 import java.io.PrintWriter
-import java.lang.reflect.InvocationTargetException
-import java.lang.reflect.UndeclaredThrowableException
+import java.lang.reflect.*
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -87,24 +85,6 @@ object InteractiveShell {
                             maxReconnectAttempts = 1
                     ),
                     sslConfiguration = configuration.ssl,
-                    classLoader = classLoader)
-            this.connection = client.start(username, credentials)
-            connection.proxy
-        }
-        _startShell(configuration, classLoader)
-    }
-
-    /**
-     * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
-     * internals.
-     */
-    fun startShellInternal(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
-        rpcOps = { username: String, credentials: String ->
-            val client = createCordaRPCClientWithInternalSslAndClassLoader(hostAndPort = configuration.hostAndPort,
-                    configuration = CordaRPCClientConfiguration.DEFAULT.copy(
-                            maxReconnectAttempts = 1
-                    ),
-                    sslConfiguration = configuration.nodeSslConfig,
                     classLoader = classLoader)
             this.connection = client.start(username, credentials)
             connection.proxy
@@ -300,6 +280,38 @@ object InteractiveShell {
         override fun toString() = (listOf("No applicable constructor for flow. Problems were:") + errors).joinToString(System.lineSeparator())
     }
 
+    /**
+     * Tidies up a possibly generic type name by chopping off the package names of classes in a hard-coded set of
+     * hierarchies that are known to be widely used and recognised, and also not have (m)any ambiguous names in them.
+     *
+     * This is used for printing error messages when something doesn't match.
+     */
+    private fun maybeAbbreviateGenericType(type: Type, extraRecognisedPackage: String): String {
+        val packagesToAbbreviate = listOf("java.", "net.corda.core.", "kotlin.", extraRecognisedPackage)
+
+        fun shouldAbbreviate(typeName: String) = packagesToAbbreviate.any { typeName.startsWith(it) }
+        fun abbreviated(typeName: String) = if (shouldAbbreviate(typeName)) typeName.split('.').last() else typeName
+
+        fun innerLoop(type: Type): String = when (type) {
+            is ParameterizedType -> {
+                val args: List<String> = type.actualTypeArguments.map(::innerLoop)
+                abbreviated(type.rawType.typeName) + '<' + args.joinToString(", ") + '>'
+            }
+            is GenericArrayType -> {
+                innerLoop(type.genericComponentType) + "[]"
+            }
+            is Class<*> -> {
+                if (type.isArray)
+                    abbreviated(type.simpleName)
+                else
+                    abbreviated(type.name).replace('$', '.')
+            }
+            else -> type.toString()
+        }
+
+        return innerLoop(type)
+    }
+
     // TODO: This utility is generally useful and might be better moved to the node class, or an RPC, if we can commit to making it stable API.
     /**
      * Given a [FlowLogic] class and a string in one-line Yaml form, finds an applicable constructor and starts
@@ -319,19 +331,26 @@ object InteractiveShell {
         // and keep track of the reasons we failed so we can print them out if no constructors are usable.
         val parser = StringToMethodCallParser(clazz, om)
         val errors = ArrayList<String>()
+
+        val classPackage = clazz.packageName
         for (ctor in clazz.constructors) {
             var paramNamesFromConstructor: List<String>? = null
+
             fun getPrototype(): List<String> {
-                val argTypes = ctor.parameterTypes.map { it.simpleName }
+                val argTypes = ctor.genericParameterTypes.map { it: Type ->
+                    // If the type name is in the net.corda.core or java namespaces, chop off the package name
+                    // because these hierarchies don't have (m)any ambiguous names and the extra detail is just noise.
+                    maybeAbbreviateGenericType(it, classPackage)
+                }
                 return paramNamesFromConstructor!!.zip(argTypes).map { (name, type) -> "$name: $type" }
             }
 
             try {
                 // Attempt construction with the given arguments.
                 paramNamesFromConstructor = parser.paramNamesFromConstructor(ctor)
-                val args = parser.parseArguments(clazz.name, paramNamesFromConstructor.zip(ctor.parameterTypes), inputData)
-                if (args.size != ctor.parameterTypes.size) {
-                    errors.add("${getPrototype()}: Wrong number of arguments (${args.size} provided, ${ctor.parameterTypes.size} needed)")
+                val args = parser.parseArguments(clazz.name, paramNamesFromConstructor.zip(ctor.genericParameterTypes), inputData)
+                if (args.size != ctor.genericParameterTypes.size) {
+                    errors.add("${getPrototype()}: Wrong number of arguments (${args.size} provided, ${ctor.genericParameterTypes.size} needed)")
                     continue
                 }
                 val flow = ctor.newInstance(*args) as FlowLogic<*>
@@ -345,10 +364,10 @@ object InteractiveShell {
             } catch (e: StringToMethodCallParser.UnparseableCallException.TooManyParameters) {
                 errors.add("${getPrototype()}: too many parameters")
             } catch (e: StringToMethodCallParser.UnparseableCallException.ReflectionDataMissing) {
-                val argTypes = ctor.parameterTypes.map { it.simpleName }
+                val argTypes = ctor.genericParameterTypes.map { it.typeName }
                 errors.add("$argTypes: <constructor missing parameter reflection data>")
             } catch (e: StringToMethodCallParser.UnparseableCallException) {
-                val argTypes = ctor.parameterTypes.map { it.simpleName }
+                val argTypes = ctor.genericParameterTypes.map { it.typeName }
                 errors.add("$argTypes: ${e.message}")
             }
         }

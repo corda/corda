@@ -29,9 +29,8 @@ data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
  * instances and threads.
  */
 @KeepForDJVM
-class DeserializationInput @JvmOverloads constructor(
-        private val serializerFactory: SerializerFactory,
-        private val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist
+class DeserializationInput constructor(
+        private val serializerFactory: SerializerFactory
 ) {
     private val objectHistory: MutableList<Any> = mutableListOf()
     private val logger = loggerFor<DeserializationInput>()
@@ -80,9 +79,9 @@ class DeserializationInput @JvmOverloads constructor(
         }
     }
 
-
+    @VisibleForTesting
     @Throws(AMQPNoTypeNotSerializableException::class)
-    fun getEnvelope(byteSequence: ByteSequence) = getEnvelope(byteSequence, encodingWhitelist)
+    fun getEnvelope(byteSequence: ByteSequence, context: SerializationContext) = getEnvelope(byteSequence, context.encodingWhitelist)
 
     @Throws(
             AMQPNotSerializableException::class,
@@ -102,7 +101,7 @@ class DeserializationInput @JvmOverloads constructor(
         } catch (nse: NotSerializableException) {
             throw nse
         } catch (t: Throwable) {
-            throw NotSerializableException("Unexpected throwable: ${t.message}").apply { initCause(t) }
+            throw NotSerializableException("Internal deserialization failure: ${t.javaClass.name}: ${t.message}").apply { initCause(t) }
         } finally {
             objectHistory.clear()
         }
@@ -116,7 +115,7 @@ class DeserializationInput @JvmOverloads constructor(
     @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: SerializationContext): T =
             des {
-                val envelope = getEnvelope(bytes, encodingWhitelist)
+                val envelope = getEnvelope(bytes, context.encodingWhitelist)
 
                 logger.trace("deserialize blob scheme=\"${envelope.schema.toString()}\"")
 
@@ -130,7 +129,7 @@ class DeserializationInput @JvmOverloads constructor(
             clazz: Class<T>,
             context: SerializationContext
     ): ObjectAndEnvelope<T> = des {
-        val envelope = getEnvelope(bytes, encodingWhitelist)
+        val envelope = getEnvelope(bytes, context.encodingWhitelist)
         // Now pick out the obj and schema from the envelope.
         ObjectAndEnvelope(
                 clazz.cast(readObjectOrNull(
@@ -157,7 +156,7 @@ class DeserializationInput @JvmOverloads constructor(
                             "is outside of the bounds for the list of size: ${objectHistory.size}")
 
                 val objectRetrieved = objectHistory[objectIndex]
-                if (!objectRetrieved::class.java.isSubClassOf(type.asClass()!!)) {
+                if (!objectRetrieved::class.java.isSubClassOf(type.asClass())) {
                     throw AMQPNotSerializableException(
                             type,
                             "Existing reference type mismatch. Expected: '$type', found: '${objectRetrieved::class.java}' " +

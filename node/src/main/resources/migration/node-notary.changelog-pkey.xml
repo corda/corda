@@ -1,0 +1,21 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+    <changeSet id="non-clustered_pk-notary_state" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="node_notary_committed_states" constraintName="node_notary_states_pkey"/>
+        <addPrimaryKey tableName="node_notary_committed_states" columnNames="output_index, transaction_id"
+                       constraintName="node_notary_states_pkey" clustered="false"/>
+    </changeSet>
+    <changeSet id="non-clustered_pk-bft_stae" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="node_bft_committed_states" constraintName="node_bft_states_pkey"/>
+        <addPrimaryKey tableName="node_bft_committed_states" columnNames="output_index, transaction_id"
+                       constraintName="node_bft_states_pkey" clustered="false"/>
+    </changeSet>
+    <changeSet id="non-clustered_pk-raft_state" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="node_raft_committed_states" constraintName="node_raft_state_pkey"/>
+        <addPrimaryKey tableName="node_raft_committed_states" columnNames="output_index, transaction_id"
+                       constraintName="node_raft_state_pkey" clustered="false"/>
+    </changeSet>
+</databaseChangeLog>

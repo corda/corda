@@ -1,0 +1,54 @@
+plugins {
+    id 'com.github.johnrengelman.shadow' version '2.0.4'
+}
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+description 'Corda deterministic JVM sandbox'
+
+ext {
+    // Shaded version of ASM to avoid conflict with root project.
+    asm_version = '6.1.1'
+}
+
+configurations {
+    testCompile.extendsFrom shadow
+}
+
+dependencies {
+    shadow "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    shadow "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    shadow "org.slf4j:slf4j-api:$slf4j_version"
+
+    // ASM: byte code manipulation library
+    compile "org.ow2.asm:asm:$asm_version"
+    compile "org.ow2.asm:asm-tree:$asm_version"
+    compile "org.ow2.asm:asm-commons:$asm_version"
+
+    // Classpath scanner
+    shadow "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
+
+    // Test utilities
+    testCompile "junit:junit:$junit_version"
+    testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+}
+
+jar.enabled = false
+
+shadowJar {
+    baseName 'corda-djvm'
+    classifier ''
+    relocate 'org.objectweb.asm', 'djvm.org.objectweb.asm'
+}
+assemble.dependsOn shadowJar
+
+artifacts {
+    publish shadowJar
+}
+
+publish {
+    dependenciesFrom configurations.shadow
+    disableDefaultJar true
+    name shadowJar.baseName
+}

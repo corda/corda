@@ -48,6 +48,10 @@ object X509Utilities {
     const val CORDA_CLIENT_TLS = "cordaclienttls"
     const val CORDA_CLIENT_CA = "cordaclientca"
 
+    // TODO These don't need to be prefixes, but can be the full aliases.
+    const val NODE_IDENTITY_ALIAS_PREFIX = "identity"
+    const val DISTRIBUTED_NOTARY_ALIAS_PREFIX = "distributed-notary"
+
     val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
 
     /**
@@ -402,7 +406,7 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
             isCA = true,
-            role = CertRole.INTERMEDIATE_CA
+            role = CertRole.DOORMAN_CA
     ),
 
     NETWORK_MAP(
