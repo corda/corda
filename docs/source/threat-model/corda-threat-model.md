@@ -175,7 +175,7 @@ connections. Node identity is authenticated using the certificates exchanged
 as part of the TLS protocol. Only the node that owns the corresponding private
 key can assert their true identity.
 
-NodeInfo updates contain the Node's public identity certificate and must be
+NodeInfo updates contain the node's public identity certificate and must be
 signed by the corresponding private key. Only the node in possession of this
 private key can sign the NodeInfo.
 
@@ -228,7 +228,7 @@ Doorman
 </td>  
 <td>
 
-An malicious zone operator attempts to join the Corda Network by impersonating
+A malicious attacker attempts to join the Corda Network by impersonating
 an existing organisation and issues a fraudulent registration request.
 
  **Impact**
@@ -256,7 +256,7 @@ fields in a database), or modification of data in transit.
 
 To be successful, an attacker would require privileged access to some part of
 the network infrastructure (either public or internal private networks). They
-might also have access to a Node's file-system, database or even direct memory
+might also have access to a node's file-system, database or even direct memory
 access.  
   
 <table>  
@@ -333,7 +333,7 @@ Node Vault
 </td>  
 <td>
 
-An attacker gains access to the Node's vault and modifies tables in the
+An attacker gains access to the node's vault and modifies tables in the
 database.
 
  **Impact**
@@ -380,7 +380,7 @@ or removed from the map.
 <td>
 
 Individual Node entries in the NetworkMap must be signed by the associated
-Node's private key. The signatures are validated by the NetworkMap service,
+node's private key. The signatures are validated by the NetworkMap service,
 and all other Nodes in the network, to ensure they have not been tampered
 with. An attacker would need to acquire a node's private identity signing key
 to be able to make modifications to a NodeInfo. This is only possible if the
@@ -629,7 +629,7 @@ Node Process (JVM)
 An attacker who gains access to the machine running the Node attempts to read
 memory from the JVM process.
 
-An attacker with access the file-system attempts to read the Node's
+An attacker with access the file-system attempts to read the node's
 cryptographic key-store, containing the private identity keys.
 
  **Impact**
@@ -696,7 +696,7 @@ attack and thereafter until normal service can be resumed.
 
 Communication over the ledger network is primarily peer-to-peer. Therefore the
 network as a whole is relatively resilient to DoS attacks. Notaries and
-Oracles will only communicate with peers in the network, so are protected from
+oracles will only communicate with peers in the network, so are protected from
 non-member-on-member application-level attack.
 
 Corda Network Services are protected by enterprise-grade DDoS detection and
@@ -826,7 +826,8 @@ Updates to the network map must be signed by participant nodes and are
 authenticated before being processed.
 
 The network map is designed to be distributed by a CDN (Content Delivery
-Network). It is secured large-scale anti-DDoS networks.
+Network). This design leverages the architecture and security controls of the 
+CDN and is expected to be resilient to DDoS (Distributed Denial of Service) attack.
 
 The Network Map is also cached locally by nodes on the network. If the network
 map online service were temporarily unavailable, the Corda network would not
