@@ -33,7 +33,7 @@ targetCompatibility = 1.6
 
 jar.enabled = false
 
-task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
+task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     applicationClass 'net.corda.node.Corda'
     archiveName "corda-enterprise-${corda_release_version}.jar"
     applicationSource = files(
