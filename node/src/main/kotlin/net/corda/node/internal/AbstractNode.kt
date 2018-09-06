@@ -232,10 +232,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open fun makeRPCOps(): CordaRPCOps {
-        val ops: CordaRPCOps = CordaRPCOpsImpl(services, smm, flowStarter) { shutdownExecutor.submit { stop() } }
+        val ops = CordaRPCOpsImpl(services, smm, flowStarter) { shutdownExecutor.submit { stop() } }
+        ops.closeOnStop()
         // Mind that order is relevant here.
         val proxies = listOf<(CordaRPCOps) -> CordaRPCOps>(::AuthenticatedRpcOpsProxy, { ExceptionSerialisingRpcOpsProxy(it, true) })
-        return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
+        return proxies.fold<(CordaRPCOps) -> CordaRPCOps, CordaRPCOps>(ops) { delegate, decorate -> decorate(delegate) }
     }
 
     private fun initKeyStore(): X509Certificate {

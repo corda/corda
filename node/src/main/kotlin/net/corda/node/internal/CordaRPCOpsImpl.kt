@@ -39,6 +39,7 @@ import rx.Observable
 import rx.Subscription
 import rx.schedulers.Schedulers
 import rx.subjects.PublishSubject
+import java.io.Closeable
 import java.io.InputStream
 import java.net.ConnectException
 import java.security.PublicKey
@@ -54,13 +55,12 @@ internal class CordaRPCOpsImpl(
         private val smm: StateMachineManager,
         private val flowStarter: FlowStarter,
         private val shutdownNode: () -> Unit
-) : CordaRPCOps {
+) : CordaRPCOps, AutoCloseable {
 
     private companion object {
         private val logger = loggerFor<CordaRPCOpsImpl>()
     }
 
-    // TODO sollecitom unsubscribe if containing server is stopped
     private val drainingShutdownHook = AtomicReference<Subscription>()
 
     init {
@@ -311,6 +311,11 @@ internal class CordaRPCOpsImpl(
         } else {
             shutdownNode.invoke()
         }
+    }
+
+    override fun close() {
+
+        drainingShutdownHook.get()?.let(Subscription::unsubscribe)
     }
 
     private fun setPersistentDrainingModeProperty(enabled: Boolean, propagateChange: Boolean) = services.nodeProperties.flowsDrainingMode.setEnabled(enabled, propagateChange)
