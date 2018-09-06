@@ -8,7 +8,7 @@ interface NodePropertiesStore {
 
     interface FlowsDrainingModeOperations {
 
-        fun setEnabled(enabled: Boolean)
+        fun setEnabled(enabled: Boolean, propagateChange: Boolean = true)
 
         fun isEnabled(): Boolean
 

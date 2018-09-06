@@ -404,6 +404,12 @@ interface CordaRPCOps : RPCOps {
      * This does not wait for flows to be completed.
      */
     fun shutdown()
+
+    /**
+     * Shuts the node down. Returns immediately.
+     * @param drainPendingFlows whether the node will wait for pending flows to be completed before exiting. While draining, new flows from RPC will be rejected.
+     */
+    fun terminate(drainPendingFlows: Boolean = false)
 }
 
 /**

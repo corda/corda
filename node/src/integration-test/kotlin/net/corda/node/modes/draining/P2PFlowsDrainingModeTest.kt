@@ -1,10 +1,13 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.internal.drainAndShutdown
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.pendingFlowsCount
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
@@ -14,6 +17,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.chooseIdentity
@@ -22,6 +26,9 @@ import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import rx.Observable
+import rx.schedulers.Schedulers
+import rx.subjects.AsyncSubject
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -104,6 +111,44 @@ class P2PFlowsDrainingModeTest {
             assertThat(successful).isTrue()
         }
     }
+
+    @Test
+    fun `clean shutdown by draining 3`() {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
+            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
+            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
+            var successful = false
+            val latch = CountDownLatch(1)
+            nodeB.rpc.setFlowsDrainingModeEnabled(true)
+            IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
+
+            nodeA.waitForShutdown().doOnError { error ->
+                error.printStackTrace()
+                successful = false
+            }.doOnCompleted { successful = true }.doAfterTerminate { latch.countDown() }.subscribe()
+
+            nodeA.rpc.terminate(true)
+            nodeB.rpc.setFlowsDrainingModeEnabled(false)
+
+            latch.await()
+
+            assertThat(successful).isTrue()
+        }
+    }
+}
+
+// TODO sollecitom make it available to all driver-based tests
+private fun NodeHandle.waitForShutdown(): Observable<Unit> {
+
+    val completable = AsyncSubject.create<Unit>()
+    rpc.stateMachinesFeed().updates.subscribe({ _ -> }, { error ->
+        if (error is RPCException) {
+            completable.onCompleted()
+        } else {
+            throw error
+        }
+    })
+    return completable.doAfterTerminate(::stop)
 }
 
 @StartableByRPC
