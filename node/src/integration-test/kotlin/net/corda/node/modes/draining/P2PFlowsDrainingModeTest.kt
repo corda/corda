@@ -85,7 +85,7 @@ class P2PFlowsDrainingModeTest {
     }
 
     @Test
-    fun `clean shutdown by draining`() {
+    fun `terminate node waiting for pending flows`() {
         driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
@@ -101,6 +101,35 @@ class P2PFlowsDrainingModeTest {
 
             nodeA.rpc.terminate(true)
             nodeB.rpc.setFlowsDrainingModeEnabled(false)
+
+            latch.await()
+
+            assertThat(successful).isTrue()
+        }
+    }
+
+    // TODO sollecitom come up with a way of showing that switching off draining mode cancels terminate(true) [obviously it could be tested with timeouts]
+    @Test
+    fun `terminate resets persistent draining mode property when waiting for pending flows`() {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
+            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
+            var successful = false
+            val latch = CountDownLatch(1)
+
+            // This is useless, as `terminate(true)` sets draining mode anyway, but it's here to ensure that it removes the persistent value anyway.
+            nodeA.rpc.setFlowsDrainingModeEnabled(true)
+            nodeA.rpc.waitForShutdown().doOnError { error ->
+                error.printStackTrace()
+                successful = false
+                latch.countDown()
+            }.doOnCompleted {
+                nodeA.stop()
+                val nodeARestarted = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
+                successful = !nodeARestarted.rpc.isFlowsDrainingModeEnabled()
+                latch.countDown()
+            }.subscribe()
+
+            nodeA.rpc.terminate(true)
 
             latch.await()
 
