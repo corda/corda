@@ -20,6 +20,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.sign
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
@@ -68,6 +69,8 @@ class CordaRpcWorkerOps(
 
     private val flowReplyStateMachineRunIdMap = ConcurrentHashMap<Trace.InvocationId, SettableFuture<StateMachineRunId>>()
     private val flowReplyResultMap = ConcurrentHashMap<Trace.InvocationId, OpenFuture<Any?>>()
+
+    override val networkParameters: NetworkParameters = services.networkParameters
 
     fun start() {
         session = artemisClient.start().session

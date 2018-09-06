@@ -14,6 +14,7 @@ import net.corda.core.internal.openHttpConnection
 import net.corda.core.internal.responseAs
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
@@ -23,6 +24,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.testing.common.internal.testNetworkParameters
 import java.io.InputStream
 import java.net.URL
 import java.security.PublicKey
@@ -73,6 +75,8 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
     override fun registeredFlows(): List<String> {
         return doGet(targetHostAndPort, "registered-flows")
     }
+
+    override val networkParameters: NetworkParameters get() = testNetworkParameters()
 
     override fun stateMachinesSnapshot(): List<StateMachineInfo> {
         TODO("not implemented")
