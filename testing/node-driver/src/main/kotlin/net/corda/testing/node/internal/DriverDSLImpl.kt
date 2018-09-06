@@ -957,13 +957,11 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
-        return dsl(coerce(driverDsl)).also { Schedulers.shutdown() }
+        return dsl(coerce(driverDsl))
     } catch (exception: Throwable) {
         DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
-        Schedulers.shutdown()
         throw exception
     } finally {
-        driverDsl.shutdown()
         shutdownHook.cancel()
         serializationEnv.unset()
     }
@@ -1005,10 +1003,9 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
-        return dsl(coerce(driverDsl)).also { Schedulers.shutdown() }
+        return dsl(coerce(driverDsl))
     } catch (exception: Throwable) {
         DriverDSLImpl.log.error("Driver shutting down because of exception", exception)
-        Schedulers.shutdown()
         throw exception
     } finally {
         driverDsl.shutdown()
