@@ -27,6 +27,7 @@ import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
+import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
@@ -416,7 +417,7 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
 
     protected open fun getVersionInfo(): VersionInfo {
         return VersionInfo(
-                CordaVersionProvider.platformVersion,
+                PLATFORM_VERSION,
                 CordaVersionProvider.releaseVersion,
                 CordaVersionProvider.revision,
                 CordaVersionProvider.vendor

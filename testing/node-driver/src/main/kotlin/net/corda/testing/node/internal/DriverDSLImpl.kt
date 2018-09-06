@@ -25,6 +25,7 @@ import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
+import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
@@ -296,7 +297,7 @@ class DriverDSLImpl(
                         "devMode" to false)
         )).checkAndOverrideForInMemoryDB()
 
-        val versionInfo = VersionInfo(1, "1", "1", "1")
+        val versionInfo = VersionInfo(PLATFORM_VERSION, "1", "1", "1")
         config.corda.certificatesDirectory.createDirectories()
         // Create network root truststore.
         val rootTruststorePath = config.corda.certificatesDirectory / "network-root-truststore.jks"
@@ -920,7 +921,7 @@ class NetworkVisibilityController {
             val (snapshot, updates) = rpc.networkMapFeed()
             visibleNodeCount = snapshot.size
             checkIfAllVisible()
-            subscription = updates.subscribe {
+            subscription = updates.subscribe({
                 when (it) {
                     is NetworkMapCache.MapChange.Added -> {
                         visibleNodeCount++
@@ -934,7 +935,9 @@ class NetworkVisibilityController {
                         // Nothing to do here but better being exhaustive.
                     }
                 }
-            }
+            }, { _ ->
+                // Nothing to do on errors here.
+            })
             return future
         }
 

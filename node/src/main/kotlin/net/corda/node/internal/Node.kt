@@ -285,7 +285,6 @@ open class Node(configuration: NodeConfiguration,
                         ArtemisRpcBroker.withoutSsl(configuration.p2pSslOptions, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     }
                 }
-                rpcBroker!!.closeOnStop()
                 rpcBroker!!.addresses
             }
         }
