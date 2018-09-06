@@ -7,14 +7,15 @@ import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PrivateKey
+import java.security.PublicKey
 import java.security.cert.X509Certificate
 
 /**
  * Wrapper around a [KeyStore] object but only dealing with [X509Certificate]s and with a better API.
  */
-class X509KeyStore private constructor(val internal: KeyStore, private val storePassword: String, private val keyStoreFile: Path? = null) {
+class X509KeyStore private constructor(val internal: KeyStore, private val storePassword: String, private val keyStoreFile: Path? = null, private val saveSupported: Boolean = true) {
     /** Wrap an existing [KeyStore]. [save] is not supported. */
-    constructor(keyStore: KeyStore, storePassword: String) : this(keyStore, storePassword, null)
+    constructor(keyStore: KeyStore, storePassword: String) : this(keyStore, storePassword, null, false)
 
     /** Create an empty [KeyStore] using the given password. [save] is not supported. */
     constructor(storePassword: String) : this(
@@ -55,8 +56,12 @@ class X509KeyStore private constructor(val internal: KeyStore, private val store
 
     fun getCertificateAndKeyPair(alias: String, keyPassword: String): CertificateAndKeyPair {
         val cert = getCertificate(alias)
-        val publicKey = Crypto.toSupportedPublicKey(cert.publicKey)
+        val publicKey = getPublicKey(alias)
         return CertificateAndKeyPair(cert, KeyPair(publicKey, getPrivateKey(alias, keyPassword)))
+    }
+
+    fun getPublicKey(alias: String): PublicKey {
+        return Crypto.toSupportedPublicKey(getCertificate(alias).publicKey)
     }
 
     fun getPrivateKey(alias: String, keyPassword: String): PrivateKey {
@@ -65,14 +70,18 @@ class X509KeyStore private constructor(val internal: KeyStore, private val store
 
     fun setPrivateKey(alias: String, key: PrivateKey, certificates: List<X509Certificate>, keyPassword: String) {
         internal.setKeyEntry(alias, key, keyPassword.toCharArray(), certificates.toTypedArray())
+        save()
     }
 
     fun setCertificate(alias: String, certificate: X509Certificate) {
         internal.setCertificateEntry(alias, certificate)
+        save()
     }
 
     fun save() {
-        internal.save(checkWritableToFile(), storePassword)
+        if (saveSupported) {
+            internal.save(checkWritableToFile(), storePassword)
+        }
     }
 
     fun update(action: X509KeyStore.() -> Unit) {

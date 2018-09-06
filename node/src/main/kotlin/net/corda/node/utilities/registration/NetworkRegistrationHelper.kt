@@ -1,28 +1,31 @@
 package net.corda.node.utilities.registration
 
+import net.corda.core.crypto.AliasPrivateKey
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.internal.cryptoservice.BCCryptoService
 import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_VALIDITY_WINDOW
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
+import org.bouncycastle.operator.ContentSigner
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.IOException
 import java.io.StringWriter
 import java.net.ConnectException
 import java.nio.file.Path
 import java.security.KeyPair
-import java.security.KeyStore
 import java.security.PublicKey
 import java.security.cert.X509Certificate
 import java.time.Duration
@@ -33,23 +36,25 @@ import javax.security.auth.x500.X500Principal
  * Helper for managing the node registration process, which checks for any existing certificates and requests them if
  * needed.
  */
-// TODO: Use content signer instead of keypairs.
-open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
-                                     private val signingCertificateStore: CertificateStoreSupplier,
-                                     private val myLegalName: CordaX500Name,
-                                     private val emailAddress: String,
-                                     private val certService: NetworkRegistrationService,
-                                     private val networkRootTrustStorePath: Path,
-                                     networkRootTrustStorePassword: String,
-                                     private val keyAlias: String,
-                                     private val certRole: CertRole,
-                                     private val nextIdleDuration: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) {
+open class NetworkRegistrationHelper(
+        config: NodeConfiguration,
+        private val certService: NetworkRegistrationService,
+        private val networkRootTrustStorePath: Path,
+        networkRootTrustStorePassword: String,
+        private val nodeCaKeyAlias: String,
+        private val certRole: CertRole,
+        private val nextIdleDuration: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))
+) {
 
     companion object {
         const val SELF_SIGNED_PRIVATE_KEY = "SelfSignedPrivateKey"
         val logger = contextLogger()
     }
-
+    private val certificatesDirectory: Path = config.certificatesDirectory
+    private val myLegalName: CordaX500Name = config.myLegalName
+    private val emailAddress: String = config.emailAddress
+    private val cryptoService = config.makeCryptoService()
+    private val certificateStore = config.signingCertificateStore.get(true)
     private val requestIdStore = certificatesDirectory / "certificate-request-id.txt"
     protected val rootTrustStore: X509KeyStore
     protected val rootCert: X509Certificate
@@ -64,57 +69,67 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
     }
 
     /**
-     * Ensure the initial keystore for a node is set up.
+     * Ensure the initial keys and certificates for a node are set up.
      *
      * This checks the "config.certificatesDirectory" field for certificates required to connect to a Corda network.
      * If the certificates are not found, a PKCS #10 certification request will be submitted to the
      * Corda network permissioning server via [NetworkRegistrationService]. This process will enter a polling loop until
-     * the request has been approved, and then the certificate chain will be downloaded and stored in [KeyStore] reside in
-     * the certificates directory.
+     * the request has been approved, and then the certificate chain will be downloaded and stored in [certificateStore].
      *
      * @throws CertificateRequestException if the certificate retrieved by doorman is invalid.
      */
-    fun buildKeystore() {
+    fun generateKeysAndRegister() {
         certificatesDirectory.createDirectories()
-        val nodeKeyStore = signingCertificateStore.get(createNew = true)
-        if (keyAlias in nodeKeyStore) {
+        // We need this in case cryptoService and certificateStore share the same KeyStore (for backwards compatibility purposes).
+        // If we didn't, then an update to cryptoService wouldn't be reflected to certificateStore that is already loaded in memory.
+        val certStore: CertificateStore = if (cryptoService is BCCryptoService) cryptoService.certificateStore else certificateStore
+
+        // SELF_SIGNED_PRIVATE_KEY is used as progress indicator.
+        if (certStore.contains(nodeCaKeyAlias) && !certStore.contains(SELF_SIGNED_PRIVATE_KEY)) {
             println("Certificate already exists, Corda node will now terminate...")
             return
         }
-        // TODO: Use different password for private key.
-        val privateKeyPassword = nodeKeyStore.password
+
+        val tlsCrlIssuerCert = getTlsCrlIssuerCert()
+
+        // We use SELF_SIGNED_PRIVATE_KEY as progress indicator so we just store a dummy key and cert.
+        // When registration succeeds, this entry should be deleted.
+        certStore.query { setPrivateKey(SELF_SIGNED_PRIVATE_KEY, AliasPrivateKey(SELF_SIGNED_PRIVATE_KEY), listOf(NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS.ECDSAR1_CERT), certificateStore.entryPassword) }
+
+        val nodeCaPublicKey = loadOrGenerateKeyPair()
+
+        val requestId = submitOrResumeCertificateSigningRequest(nodeCaPublicKey, cryptoService.getSigner(nodeCaKeyAlias))
+
+        val nodeCaCertificates = pollServerForCertificates(requestId)
+        validateCertificates(nodeCaPublicKey, nodeCaCertificates)
+
+        certStore.setCertPathOnly(nodeCaKeyAlias, nodeCaCertificates)
+        certStore.value.internal.deleteEntry(SELF_SIGNED_PRIVATE_KEY)
+        certStore.value.save()
+        println("Private key '$nodeCaKeyAlias' and its certificate-chain stored successfully.")
+
+        onSuccess(nodeCaPublicKey, cryptoService.getSigner(nodeCaKeyAlias), nodeCaCertificates, tlsCrlIssuerCert?.subjectX500Principal?.toX500Name())
+        // All done, clean up temp files.
+        requestIdStore.deleteIfExists()
+    }
+
+    private fun loadOrGenerateKeyPair(): PublicKey {
+        return if (cryptoService.containsKey(nodeCaKeyAlias)) {
+            cryptoService.getPublicKey(nodeCaKeyAlias)!!
+        } else {
+            cryptoService.generateKeyPair(nodeCaKeyAlias, X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME.schemeNumberID)
+        }
+    }
+
+    private fun getTlsCrlIssuerCert(): X509Certificate? {
         val tlsCrlIssuerCert = validateAndGetTlsCrlIssuerCert()
         if (tlsCrlIssuerCert == null && isTlsCrlIssuerCertRequired()) {
             System.err.println("""tlsCrlIssuerCert config does not match the root certificate issuer and nor is there any other certificate in the trust store with a matching issuer.
-                | Please make sure the config is correct or that the correct certificate for the CRL issuer is added to the node's trust store.
-                | The node will now terminate.""".trimMargin())
+                    | Please make sure the config is correct or that the correct certificate for the CRL issuer is added to the node's trust store.
+                    | The node will now terminate.""".trimMargin())
             throw IllegalArgumentException("TLS CRL issuer certificate not found in the trust store.")
         }
-
-        val keyPair = nodeKeyStore.loadOrCreateKeyPair(SELF_SIGNED_PRIVATE_KEY, privateKeyPassword)
-
-        val requestId = try {
-            submitOrResumeCertificateSigningRequest(keyPair)
-        } catch (e: Exception) {
-            throw if (e is ConnectException || e is ServiceUnavailableException || e is IOException) {
-                NodeRegistrationException(e.message, e)
-            } else e
-        }
-
-        val certificates = try {
-            pollServerForCertificates(requestId)
-        } catch (certificateRequestException: CertificateRequestException) {
-            System.err.println(certificateRequestException.message)
-            System.err.println("Please make sure the details in configuration file are correct and try again.")
-            System.err.println("Corda node will now terminate.")
-            requestIdStore.deleteIfExists()
-            throw certificateRequestException
-        }
-        validateCertificates(keyPair.public, certificates)
-        storePrivateKeyWithCertificates(nodeKeyStore, keyPair, certificates, keyAlias, privateKeyPassword)
-        onSuccess(keyPair, certificates, tlsCrlIssuerCert?.subjectX500Principal?.toX500Name())
-        // All done, clean up temp files.
-        requestIdStore.deleteIfExists()
+        return tlsCrlIssuerCert
     }
 
     private fun validateCertificates(registeringPublicKey: PublicKey, certificates: List<X509Certificate>) {
@@ -149,18 +164,6 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
         println("Certificate signing request approved, storing private key with the certificate chain.")
     }
 
-    private fun storePrivateKeyWithCertificates(nodeKeystore: CertificateStore, keyPair: KeyPair, certificates: List<X509Certificate>, keyAlias: String, keyPassword: String) {
-        // Save private key and certificate chain to the key store.
-        with(nodeKeystore.value) {
-            setPrivateKey(keyAlias, keyPair.private, certificates, keyPassword = keyPassword)
-            // The key was temporarily stored as SELF_SIGNED_PRIVATE_KEY, but now that it's signed by the Doorman we
-            // can delete this old record.
-            internal.deleteEntry(SELF_SIGNED_PRIVATE_KEY)
-            save()
-        }
-        println("Private key '$keyAlias' and certificate stored in node signing keystore.")
-    }
-
     private fun CertificateStore.loadOrCreateKeyPair(alias: String, entryPassword: String = password): KeyPair {
         // Create or load self signed keypair from the key store.
         // We use the self sign certificate to store the key temporarily in the keystore while waiting for the request approval.
@@ -184,65 +187,80 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
      * @return List of certificate chain.
      */
     private fun pollServerForCertificates(requestId: String): List<X509Certificate> {
-        println("Start polling server for certificate signing approval.")
-        // Poll server to download the signed certificate once request has been approved.
-        var idlePeriodDuration: Duration? = null
-        while (true) {
-            try {
-                val (pollInterval, certificates) = certService.retrieveCertificates(requestId)
-                if (certificates != null) {
-                    return certificates
-                }
-                Thread.sleep(pollInterval.toMillis())
-            } catch (e: ServiceUnavailableException) {
-                idlePeriodDuration = nextIdleDuration(idlePeriodDuration)
-                if (idlePeriodDuration != null) {
-                    Thread.sleep(idlePeriodDuration.toMillis())
-                } else {
-                    throw NodeRegistrationException("Compatibility Zone registration service is currently unavailable, "
-                            + "try again later!.", e)
+        try {
+            println("Start polling server for certificate signing approval.")
+            // Poll server to download the signed certificate once request has been approved.
+            var idlePeriodDuration: Duration? = null
+            while (true) {
+                try {
+                    val (pollInterval, certificates) = certService.retrieveCertificates(requestId)
+                    if (certificates != null) {
+                        return certificates
+                    }
+                    Thread.sleep(pollInterval.toMillis())
+                } catch (e: ServiceUnavailableException) {
+                    idlePeriodDuration = nextIdleDuration(idlePeriodDuration)
+                    if (idlePeriodDuration != null) {
+                        Thread.sleep(idlePeriodDuration.toMillis())
+                    } else {
+                        throw NodeRegistrationException("Compatibility Zone registration service is currently unavailable, "
+                                + "try again later!.", e)
+                    }
                 }
             }
+        } catch (certificateRequestException: CertificateRequestException) {
+            System.err.println(certificateRequestException.message)
+            System.err.println("Please make sure the details in configuration file are correct and try again.")
+            System.err.println("Corda node will now terminate.")
+            requestIdStore.deleteIfExists()
+            throw certificateRequestException
         }
     }
 
     /**
-     * Submit Certificate Signing Request to Certificate signing service if request ID not found in file system
+     * Submit Certificate Signing Request to Certificate signing service if request ID not found in file system.
      * New request ID will be stored in requestId.txt
-     * @param keyPair Public Private key pair generated for SSL certification.
+     * @param publicKey public key for which we need a certificate.
+     * @param contentSigner the [ContentSigner] that will sign the CSR.
      * @return Request ID return from the server.
      */
-    private fun submitOrResumeCertificateSigningRequest(keyPair: KeyPair): String {
-        // Retrieve request id from file if exists, else post a request to server.
-        return if (!requestIdStore.exists()) {
-            val request = X509Utilities.createCertificateSigningRequest(myLegalName.x500Principal, emailAddress, keyPair, certRole)
-            val writer = StringWriter()
-            JcaPEMWriter(writer).use {
-                it.writeObject(PemObject("CERTIFICATE REQUEST", request.encoded))
+    private fun submitOrResumeCertificateSigningRequest(publicKey: PublicKey, contentSigner: ContentSigner): String {
+        try {
+            // Retrieve request id from file if exists, else post a request to server.
+            return if (!requestIdStore.exists()) {
+                val request = X509Utilities.createCertificateSigningRequest(myLegalName.x500Principal, emailAddress, publicKey, contentSigner, certRole)
+                val writer = StringWriter()
+                JcaPEMWriter(writer).use {
+                    it.writeObject(PemObject("CERTIFICATE REQUEST", request.encoded))
+                }
+                println("Certificate signing request with the following information will be submitted to the Corda certificate signing server.")
+                println()
+                println("Legal Name: $myLegalName")
+                println("Email: $emailAddress")
+                println()
+                println("Public Key: $publicKey")
+                println()
+                println("$writer")
+                // Post request to signing server via http.
+                println("Submitting certificate signing request to Corda certificate signing server.")
+                val requestId = certService.submitRequest(request)
+                // Persists request ID to file in case of node shutdown.
+                requestIdStore.writeLines(listOf(requestId))
+                println("Successfully submitted request to Corda certificate signing server, request ID: $requestId.")
+                requestId
+            } else {
+                val requestId = requestIdStore.readLines { it.findFirst().get() }
+                println("Resuming from previous certificate signing request, request ID: $requestId.")
+                requestId
             }
-            println("Certificate signing request with the following information will be submitted to the Corda certificate signing server.")
-            println()
-            println("Legal Name: $myLegalName")
-            println("Email: $emailAddress")
-            println()
-            println("Public Key: ${keyPair.public}")
-            println()
-            println("$writer")
-            // Post request to signing server via http.
-            println("Submitting certificate signing request to Corda certificate signing server.")
-            val requestId = certService.submitRequest(request)
-            // Persists request ID to file in case of node shutdown.
-            requestIdStore.writeLines(listOf(requestId))
-            println("Successfully submitted request to Corda certificate signing server, request ID: $requestId.")
-            requestId
-        } else {
-            val requestId = requestIdStore.readLines { it.findFirst().get() }
-            println("Resuming from previous certificate signing request, request ID: $requestId.")
-            requestId
+        } catch (e: Exception) {
+            throw if (e is ConnectException || e is ServiceUnavailableException || e is IOException) {
+                NodeRegistrationException(e.message, e)
+            } else e
         }
     }
 
-    protected open fun onSuccess(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>, tlsCrlCertificateIssuer: X500Name?) {}
+    protected open fun onSuccess(publicKey: PublicKey, contentSigner: ContentSigner, certificates: List<X509Certificate>, tlsCrlCertificateIssuer: X500Name?) {}
 
     protected open fun validateAndGetTlsCrlIssuerCert(): X509Certificate? = null
 
@@ -256,14 +274,9 @@ class NodeRegistrationException(
 
 class NodeRegistrationHelper(
         private val config: NodeConfiguration,
-        certService: NetworkRegistrationService,
-        regConfig: NodeRegistrationOption,
-        computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))
-) : NetworkRegistrationHelper(
-                config.certificatesDirectory,
-                config.signingCertificateStore,
-                config.myLegalName,
-                config.emailAddress,
+        certService: NetworkRegistrationService, regConfig: NodeRegistrationOption, computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) :
+        NetworkRegistrationHelper(
+                config,
                 certService,
                 regConfig.networkRootTrustStorePath,
                 regConfig.networkRootTrustStorePassword,
@@ -275,29 +288,38 @@ class NodeRegistrationHelper(
         val logger = contextLogger()
     }
 
-    override fun onSuccess(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>, tlsCrlCertificateIssuer: X500Name?) {
-        createSSLKeystore(nodeCAKeyPair, certificates, tlsCrlCertificateIssuer)
+    override fun onSuccess(publicKey: PublicKey, contentSigner: ContentSigner, certificates: List<X509Certificate>, tlsCrlCertificateIssuer: X500Name?) {
+        createSSLKeystore(publicKey, contentSigner, certificates, tlsCrlCertificateIssuer)
         createTruststore(certificates.last())
     }
 
-    private fun createSSLKeystore(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>, tlsCertCrlIssuer: X500Name?) {
+    private fun createSSLKeystore(nodeCaPublicKey: PublicKey, nodeCaContentSigner: ContentSigner, nodeCaCertificateChain: List<X509Certificate>, tlsCertCrlIssuer: X500Name?) {
         val keyStore = config.p2pSslOptions.keyStore
         val certificateStore = keyStore.get(createNew = true)
         certificateStore.update {
             println("Generating SSL certificate for node messaging service.")
             val sslKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+            val issuerCertificate = nodeCaCertificateChain.first()
+            val validityWindow = X509Utilities.getCertificateValidityWindow(DEFAULT_VALIDITY_WINDOW.first, DEFAULT_VALIDITY_WINDOW.second, issuerCertificate)
+
             val sslCert = X509Utilities.createCertificate(
                     CertificateType.TLS,
-                    certificates.first(),
-                    nodeCAKeyPair,
+                    issuerCertificate.subjectX500Principal,
+                    nodeCaPublicKey,
+                    nodeCaContentSigner,
                     config.myLegalName.x500Principal,
                     sslKeyPair.public,
+                    validityWindow,
                     crlDistPoint = config.tlsCertCrlDistPoint?.toString(),
                     crlIssuer = tlsCertCrlIssuer)
+
             logger.info("Generated TLS certificate: $sslCert")
-            setPrivateKey(CORDA_CLIENT_TLS, sslKeyPair.private, listOf(sslCert) + certificates, certificateStore.entryPassword)
+
+            val sslCertificateChain: List<X509Certificate> = listOf(sslCert) + nodeCaCertificateChain
+            X509Utilities.validateCertificateChain(rootCert, sslCertificateChain)
+            setPrivateKey(CORDA_CLIENT_TLS, sslKeyPair.private, sslCertificateChain, keyStore.entryPassword)
         }
-        println("SSL private key and certificate stored in ${keyStore.path}.")
+        println("SSL private key and certificate chain stored in ${keyStore.path}.")
     }
 
     private fun createTruststore(rootCertificate: X509Certificate) {
