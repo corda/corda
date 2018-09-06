@@ -317,34 +317,35 @@ internal class CordaRPCOpsImpl(
 
     private fun setPersistentDrainingModeProperty(enabled: Boolean, propagateChange: Boolean) = services.nodeProperties.flowsDrainingMode.setEnabled(enabled, propagateChange)
 
-    // TODO sollecitom once this works, try and change it back from GIT history
     private fun pendingFlowsCount(): DataFeed<Int, Pair<Int, Int>> {
 
-        val stateMachineState = stateMachinesFeed()
-        var pendingFlowsCount = stateMachineState.snapshot.size
-        var completedFlowsCount = 0
         val updates = PublishSubject.create<Pair<Int, Int>>()
-        stateMachineState
-                .updates
-                .doOnNext { update ->
-                    when (update) {
-                        is StateMachineUpdate.Added -> {
-                            pendingFlowsCount++
-                            updates.onNext(completedFlowsCount to pendingFlowsCount)
-                        }
-                        is StateMachineUpdate.Removed -> {
-                            completedFlowsCount++
-                            updates.onNext(completedFlowsCount to pendingFlowsCount)
-                            if (completedFlowsCount == pendingFlowsCount) {
-                                updates.onCompleted()
-                            }
+        val initialPendingFlowsCount = stateMachinesFeed().let {
+            var completedFlowsCount = 0
+            var pendingFlowsCount = it.snapshot.size
+            it.updates.observeOn(Schedulers.io()).subscribe({ update ->
+                when (update) {
+                    is StateMachineUpdate.Added -> {
+                        pendingFlowsCount++
+                        updates.onNext(completedFlowsCount to pendingFlowsCount)
+                    }
+                    is StateMachineUpdate.Removed -> {
+                        completedFlowsCount++
+                        updates.onNext(completedFlowsCount to pendingFlowsCount)
+                        if (completedFlowsCount == pendingFlowsCount) {
+                            updates.onCompleted()
                         }
                     }
-                }.subscribe()
-        if (pendingFlowsCount == 0) {
-            updates.onCompleted()
+                }
+            }, { error ->
+                updates.onError(error)
+            })
+            if (pendingFlowsCount == 0) {
+                updates.onCompleted()
+            }
+            pendingFlowsCount
         }
-        return DataFeed(pendingFlowsCount, updates)
+        return DataFeed(initialPendingFlowsCount, updates)
     }
 
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
