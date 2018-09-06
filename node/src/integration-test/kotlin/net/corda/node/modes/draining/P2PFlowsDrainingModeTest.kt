@@ -108,7 +108,7 @@ class P2PFlowsDrainingModeTest {
         }
     }
 
-    // TODO sollecitom come up with a way of showing that switching off draining mode cancels terminate(true) [obviously it could be tested with timeouts]
+    // TODO sollecitom come up with a nice way of showing that switching off draining mode cancels terminate(true) [obviously it could be tested with timeouts]
     @Test
     fun `terminate resets persistent draining mode property when waiting for pending flows`() {
         driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
