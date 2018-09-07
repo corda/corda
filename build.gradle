@@ -207,6 +207,12 @@ allprojects {
         if (project.path.startsWith(':experimental') && System.getProperty("experimental.test.enable") == null) {
             enabled = false
         }
+
+        // Required to use Gradle build cache (until Gradle 5.0 is released with default value of "append" set to false)
+        // See https://github.com/gradle/gradle/issues/5269 and https://github.com/gradle/gradle/pull/6419
+        extensions.configure(TypeOf.typeOf(JacocoTaskExtension), { ex ->
+            ex.append = false
+        })
     }
 
     group 'net.corda'
