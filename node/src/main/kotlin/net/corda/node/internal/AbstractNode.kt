@@ -53,7 +53,10 @@ import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.network.*
+import net.corda.node.services.network.NetworkMapClient
+import net.corda.node.services.network.NetworkMapUpdater
+import net.corda.node.services.network.NodeInfoWatcher
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.*
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
@@ -64,10 +67,11 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.JVMAgentRegistry
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.node.utilities.NodeBuildProperties
-import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_PREFIX
+import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.persistence.*
 import net.corda.nodeapi.internal.storeLegalIdentity
 import net.corda.tools.shell.InteractiveShell
@@ -142,8 +146,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // TODO Break cyclic dependency
         identityService.database = database
     }
-    private val persistentNetworkMapCache = PersistentNetworkMapCache(database, configuration.myLegalName)
-    val networkMapCache = NetworkMapCacheImpl(persistentNetworkMapCache, identityService, database).tokenize()
+    val networkMapCache = PersistentNetworkMapCache(database, identityService, configuration.myLegalName).tokenize()
     val checkpointStorage = DBCheckpointStorage()
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
@@ -205,7 +208,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     /**
      * Completes once the node has successfully registered with the network map service
-     * or has loaded network map data from local database
+     * or has loaded network map data from local database.
      */
     val nodeReadyFuture: CordaFuture<Unit> get() = networkMapCache.nodeReady.map { Unit }
 
@@ -253,7 +256,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
         return database.use {
             it.transaction {
-                persistentNetworkMapCache.start(notaries = emptyList())
                 val (_, nodeInfoAndSigned) = updateNodeInfo(identity, identityKeyPair, publish = false)
                 nodeInfoAndSigned.nodeInfo
             }
@@ -265,8 +267,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         log.info("Starting clearing of network map cache entries...")
         startDatabase()
         database.use {
-            persistentNetworkMapCache.start(notaries = emptyList())
-            persistentNetworkMapCache.clearNetworkMapCache()
+            networkMapCache.clearNetworkMapCache()
         }
     }
 
@@ -307,8 +308,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
 
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
-            persistentNetworkMapCache.start(netParams.notaries)
-            networkMapCache.start()
+            networkMapCache.start(netParams.notaries)
             updateNodeInfo(identity, identityKeyPair, publish = true)
         }
 
@@ -351,7 +351,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    /** Subclasses must override this to create a [StartedNode] of the desired type, using the provided machinery. */
+    /** Subclasses must override this to create a "started" node of the desired type, using the provided machinery. */
     abstract fun createStartedNode(nodeInfo: NodeInfo, rpcOps: CordaRPCOps, notaryService: NotaryService?): S
 
     private fun verifyCheckpointsCompatible(tokenizableServices: List<Any>) {
@@ -523,7 +523,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private fun isNotaryService(serviceClass: Class<*>) = NotaryService::class.java.isAssignableFrom(serviceClass)
 
     /**
-     * This customizes the ServiceHub for each CordaService that is initiating flows
+     * This customizes the ServiceHub for each CordaService that is initiating flows.
      */
     // TODO Move this into its own file
     private class AppServiceHubImpl<T : SerializeAsToken>(private val serviceHub: ServiceHub, private val flowStarter: FlowStarter) : AppServiceHub, ServiceHub by serviceHub {
@@ -788,7 +788,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // Meanwhile, we let the remote service send us updates until the acknowledgment buffer overflows and it
         // unsubscribes us forcibly, rather than blocking the shutdown process.
 
-        // Run shutdown hooks in opposite order to starting
+        // Run shutdown hooks in opposite order to starting.
         for (toRun in runOnStop.reversed()) {
             toRun()
         }
@@ -808,11 +808,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val keyStore = configuration.signingCertificateStore.get()
 
         val (id, singleName) = if (notaryConfig == null || !notaryConfig.isClusterConfig) {
-            // Node's main identity or if it's a single node notary
-            Pair(DevIdentityGenerator.NODE_IDENTITY_ALIAS_PREFIX, configuration.myLegalName)
+            // Node's main identity or if it's a single node notary.
+            Pair(NODE_IDENTITY_ALIAS_PREFIX, configuration.myLegalName)
         } else {
             // The node is part of a distributed notary whose identity must already be generated beforehand.
-            Pair(DevIdentityGenerator.DISTRIBUTED_NOTARY_ALIAS_PREFIX, null)
+            Pair(DISTRIBUTED_NOTARY_ALIAS_PREFIX, null)
         }
         // TODO: Integrate with Key management service?
         val privateKeyAlias = "$id-private-key"

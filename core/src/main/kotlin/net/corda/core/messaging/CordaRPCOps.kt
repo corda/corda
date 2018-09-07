@@ -76,7 +76,8 @@ sealed class StateMachineUpdate {
 // DOCSTART 1
 /**
  * Data class containing information about the scheduled network parameters update. The info is emitted every time node
- * receives network map with [ParametersUpdate] which wasn't seen before. For more information see: [CordaRPCOps.networkParametersFeed] and [CordaRPCOps.acceptNewNetworkParameters].
+ * receives network map with [ParametersUpdate] which wasn't seen before. For more information see: [CordaRPCOps.networkParametersFeed]
+ * and [CordaRPCOps.acceptNewNetworkParameters].
  * @property hash new [NetworkParameters] hash
  * @property parameters new [NetworkParameters] data structure
  * @property description description of the update
@@ -226,6 +227,9 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange>
+
+    /** Returns the network parameters the node is operating under. */
+    val networkParameters: NetworkParameters
 
     /**
      * Returns [DataFeed] object containing information on currently scheduled parameters update (null if none are currently scheduled)
@@ -428,7 +432,7 @@ fun CordaRPCOps.pendingFlowsCount(): DataFeed<Int, Pair<Int, Int>> {
                     }
                 }
             }.subscribe()
-    if (completedFlowsCount == 0) {
+    if (pendingFlowsCount == 0) {
         updates.onCompleted()
     }
     return DataFeed(pendingFlowsCount, updates)

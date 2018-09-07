@@ -28,6 +28,7 @@ import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
+import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
@@ -197,7 +198,8 @@ class DriverDSLImpl(
     ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
-        val name = providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
+        val name = providedName
+                ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
 
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
@@ -270,7 +272,7 @@ class DriverDSLImpl(
                         "devMode" to false)
         )).checkAndOverrideForInMemoryDB()
 
-        val versionInfo = VersionInfo(1, "1", "1", "1")
+        val versionInfo = VersionInfo(PLATFORM_VERSION, "1", "1", "1")
         config.corda.certificatesDirectory.createDirectories()
         // Create network root truststore.
         val rootTruststorePath = config.corda.certificatesDirectory / "network-root-truststore.jks"
@@ -604,7 +606,8 @@ class DriverDSLImpl(
                     }
                 }
             }
-            val p2pReadyFuture = addressMustBeBoundFuture(executorService, config.corda.p2pAddress, process)
+            val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
+            val p2pReadyFuture = addressMustBeBoundFuture(executorService, effectiveP2PAddress, process)
             return p2pReadyFuture.flatMap {
                 val processDeathFuture = poll(executorService, "process death while waiting for RPC (${config.corda.myLegalName})") {
                     if (process.isAlive) null else process
@@ -614,7 +617,7 @@ class DriverDSLImpl(
                     val networkMapFuture = executorService.fork { visibilityHandle.listen(rpc) }.flatMap { it }
                     firstOf(processDeathFuture, networkMapFuture) {
                         if (it == processDeathFuture) {
-                            throw ListenProcessDeathException(config.corda.p2pAddress, process)
+                            throw ListenProcessDeathException(effectiveP2PAddress, process)
                         }
                         // Will interrupt polling for process death as this is no longer relevant since the process been
                         // successfully started and reflected itself in the NetworkMap.
@@ -689,6 +692,7 @@ class DriverDSLImpl(
                 executorService: ScheduledExecutorService,
                 config: NodeConfig
         ): CordaFuture<Pair<NodeWithInfo, Thread>> {
+            val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
             return executorService.fork {
                 log.info("Starting in-process Node ${config.corda.myLegalName.organisation}")
                 if (!(ManagementFactory.getRuntimeMXBean().inputArguments.any { it.contains("quasar") })) {
@@ -705,7 +709,7 @@ class DriverDSLImpl(
                 }
                 nodeWithInfo to nodeThread
             }.flatMap { nodeAndThread ->
-                addressMustBeBoundFuture(executorService, config.corda.p2pAddress).map { nodeAndThread }
+                addressMustBeBoundFuture(executorService, effectiveP2PAddress).map { nodeAndThread }
             }
         }
 
@@ -875,7 +879,7 @@ private class NetworkVisibilityController {
             val (snapshot, updates) = rpc.networkMapFeed()
             visibleNodeCount = snapshot.size
             checkIfAllVisible()
-            subscription = updates.subscribe {
+            subscription = updates.subscribe({
                 when (it) {
                     is NetworkMapCache.MapChange.Added -> {
                         visibleNodeCount++
@@ -889,7 +893,9 @@ private class NetworkVisibilityController {
                         // Nothing to do here but better being exhaustive.
                     }
                 }
-            }
+            }, { _ ->
+                // Nothing to do on errors here.
+            })
             return future
         }
 

@@ -3,6 +3,7 @@ package net.corda.node.services.config
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
+import net.corda.cliutils.CordaSystemUtils
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
@@ -104,16 +105,4 @@ fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
             }
         }
     }
-}
-
-/** This is generally covered by commons-lang. */
-object CordaSystemUtils {
-    const val OS_NAME = "os.name"
-
-    const val MAC_PREFIX = "Mac"
-    const val WIN_PREFIX = "Windows"
-
-    fun isOsMac() = getOsName().startsWith(MAC_PREFIX)
-    fun isOsWindows() = getOsName().startsWith(WIN_PREFIX)
-    fun getOsName() = System.getProperty(OS_NAME)
 }
