@@ -268,7 +268,7 @@ open class Node(configuration: NodeConfiguration,
         network.start(
                 myIdentity = nodeInfo.legalIdentities[0].owningKey,
                 serviceIdentity = if (nodeInfo.legalIdentities.size == 1) null else nodeInfo.legalIdentities[1].owningKey,
-                advertisedAddress = nodeInfo.addresses.single(),
+                advertisedAddress = nodeInfo.addresses[0],
                 maxMessageSize = networkParameters.maxMessageSize,
                 legalName = nodeInfo.legalIdentities[0].name.toString()
         )
