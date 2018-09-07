@@ -61,22 +61,23 @@ dependencies {
     compile "com.jcabi:jcabi-manifests:1.1"
     
     // For logging, required for ANSIProgressRenderer.
-    compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
+    compile "org.apache.logging.log4j:log4j-core:$log4j_version"
 
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
-    testCompile "org.assertj:assertj-core:${assertj_version}"
+    testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile project(':test-utils')
     testCompile project(':finance')
-
-    // Integration test helpers.
-    integrationTestCompile "junit:junit:$junit_version"
-    integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
 
     // Jsh: Testing SSH server.
     integrationTestCompile "com.jcraft:jsch:$jsch_version"
 
     integrationTestCompile project(':node-driver')
+}
+
+tasks.withType(JavaCompile) {
+    // Resolves a Gradle warning about not scanning for pre-processors.
+    options.compilerArgs << '-proc:none'
 }
 
 task integrationTest(type: Test) {
