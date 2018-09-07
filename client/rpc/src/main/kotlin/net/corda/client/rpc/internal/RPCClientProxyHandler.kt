@@ -14,6 +14,7 @@ import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSer
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
@@ -64,7 +65,7 @@ import kotlin.reflect.jvm.javaMethod
  * automatically signal the server. This is done using a cache that holds weak references to the [UnicastSubject]s.
  * The cleanup happens in batches using a dedicated reaper, scheduled on [reaperExecutor].
  *
- * The client will attempt to failover in case the server become unreachable. Depending on the [ServerLocataor] instance
+ * The client will attempt to failover in case the server become unreachable. Depending on the [ServerLocator] instance
  * passed in the constructor, failover is either handle at Artemis level or client level. If only one transport
  * was used to create the [ServerLocator], failover is handled by Artemis (retrying based on [CordaRPCClientConfiguration].
  * If a list of transport configurations was used, failover is handled locally. Artemis is able to do it, however the
@@ -80,7 +81,8 @@ class RPCClientProxyHandler(
         serializationContext: SerializationContext,
         private val sessionId: Trace.SessionId,
         private val externalTrace: Trace?,
-        private val impersonatedActor: Actor?
+        private val impersonatedActor: Actor?,
+        private val targetLegalIdentity: CordaX500Name?
 ) : InvocationHandler {
 
     private enum class State {
@@ -274,6 +276,9 @@ class RPCClientProxyHandler(
     private fun sendMessage(message: RPCApi.ClientToServer) {
         val artemisMessage = producerSession!!.createMessage(false)
         message.writeToClientMessage(artemisMessage)
+        targetLegalIdentity?.let {
+            artemisMessage.putStringProperty(RPCApi.RPC_TARGET_LEGAL_IDENTITY, it.toString())
+        }
         sendExecutor!!.submit {
             artemisMessage.putLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME, deduplicationSequenceNumber.getAndIncrement())
             log.debug { "-> RPC -> $message" }
