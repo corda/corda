@@ -22,7 +22,7 @@ jar {
     from(project(':node:capsule').tasks['buildCordaJAR']) {
         rename 'corda-(.*)', 'corda.jar'
     }
-    archiveName = "network-bootstrapper-${corda_release_version}.jar"
+    baseName = "network-bootstrapper"
     manifest {
         attributes(
                 'Automatic-Module-Name': 'net.corda.bootstrapper',
