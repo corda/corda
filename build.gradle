@@ -91,9 +91,6 @@ buildscript {
         maven {
             url "$artifactory_contextUrl/corda-releases"
         }
-        maven {
-            url 'https://plugins.gradle.org/m2/'
-        }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
@@ -124,6 +121,7 @@ plugins {
 
     // Add the shadow plugin to the plugins classpath for the entire project.
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
+    id "com.gradle.build-scan" version "1.16"
 }
 
 ext {
