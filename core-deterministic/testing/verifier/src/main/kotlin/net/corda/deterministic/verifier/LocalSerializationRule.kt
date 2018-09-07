@@ -1,4 +1,4 @@
-package net.corda.deterministic.common
+package net.corda.deterministic.verifier
 
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
