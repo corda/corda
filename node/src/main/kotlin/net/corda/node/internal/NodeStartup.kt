@@ -10,6 +10,7 @@ import net.corda.cliutils.ExitCodes
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
@@ -325,7 +326,8 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
         }
 
         val nodeInfo = node.start()
-        Node.printBasicNodeInfo("Loaded CorDapps", node.services.cordappProvider.cordapps.joinToString { it.name })
+        logLoadedCorDapps(node.services.cordappProvider.cordapps)
+
         node.nodeReadyFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             val name = nodeInfo.legalIdentitiesAndCerts.first().name.organisation
@@ -405,6 +407,17 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
                 CordaVersionProvider.revision,
                 CordaVersionProvider.vendor
         )
+    }
+
+    open protected fun logLoadedCorDapps(corDapps: List<CordappImpl>) {
+        fun CordappImpl.Info.description() = "$shortName version $version by $vendor"
+
+        Node.printBasicNodeInfo("Loaded ${corDapps.size} CorDapp(s)", corDapps.map { it.info }.joinToString(", ", transform = CordappImpl.Info::description))
+        corDapps.map { it.info }.filter { it.hasUnknownFields() }.let { malformed ->
+            if (malformed.isNotEmpty()) {
+                logger.warn("Found ${malformed.size} CorDapp(s) with unknown information. They will be unable to run on Corda in the future.")
+            }
+        }
     }
 
     private fun enforceSingleNodeIsRunning(baseDirectory: Path) {
