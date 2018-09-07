@@ -5,6 +5,10 @@ package net.corda.core.node.services.vault
 import net.corda.core.DoNotImplement
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.node.services.vault.CollectionOperator.*
+import net.corda.core.node.services.vault.ColumnPredicate.*
+import net.corda.core.node.services.vault.EqualityComparisonOperator.*
+import net.corda.core.node.services.vault.LikenessOperator.*
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Field
@@ -24,7 +28,9 @@ enum class BinaryLogicalOperator : Operator {
 
 enum class EqualityComparisonOperator : Operator {
     EQUAL,
-    NOT_EQUAL
+    NOT_EQUAL,
+    EQUAL_IGNORE_CASE,
+    NOT_EQUAL_IGNORE_CASE
 }
 
 enum class BinaryComparisonOperator : Operator {
@@ -41,12 +47,16 @@ enum class NullOperator : Operator {
 
 enum class LikenessOperator : Operator {
     LIKE,
-    NOT_LIKE
+    NOT_LIKE,
+    LIKE_IGNORE_CASE,
+    NOT_LIKE_IGNORE_CASE
 }
 
 enum class CollectionOperator : Operator {
     IN,
-    NOT_IN
+    NOT_IN,
+    IN_IGNORE_CASE,
+    NOT_IN_IGNORE_CASE
 }
 
 @CordaSerializable
@@ -251,27 +261,45 @@ object Builder {
     fun <R : Comparable<R>> Field.comparePredicate(operator: BinaryComparisonOperator, value: R) = info().comparePredicate(operator, value)
     fun <R : Comparable<R>> FieldInfo.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
 
-    fun <O, R> KProperty1<O, R?>.equal(value: R) = predicate(ColumnPredicate.EqualityComparison(EqualityComparisonOperator.EQUAL, value))
-    fun <O, R> KProperty1<O, R?>.notEqual(value: R) = predicate(ColumnPredicate.EqualityComparison(EqualityComparisonOperator.NOT_EQUAL, value))
+    @JvmOverloads
+    fun <O, R> KProperty1<O, R?>.equal(value: R, exactMatch: Boolean = true) = predicate(Builder.equal(value, exactMatch))
+
+    @JvmOverloads
+    fun <O, R> KProperty1<O, R?>.notEqual(value: R, exactMatch: Boolean = true) = predicate(Builder.notEqual(value, exactMatch))
+
     fun <O, R : Comparable<R>> KProperty1<O, R?>.lessThan(value: R) = comparePredicate(BinaryComparisonOperator.LESS_THAN, value)
+
     fun <O, R : Comparable<R>> KProperty1<O, R?>.lessThanOrEqual(value: R) = comparePredicate(BinaryComparisonOperator.LESS_THAN_OR_EQUAL, value)
+
     fun <O, R : Comparable<R>> KProperty1<O, R?>.greaterThan(value: R) = comparePredicate(BinaryComparisonOperator.GREATER_THAN, value)
+
     fun <O, R : Comparable<R>> KProperty1<O, R?>.greaterThanOrEqual(value: R) = comparePredicate(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, value)
+
     fun <O, R : Comparable<R>> KProperty1<O, R?>.between(from: R, to: R) = predicate(ColumnPredicate.Between(from, to))
-    fun <O, R : Comparable<R>> KProperty1<O, R?>.`in`(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.IN, collection))
-    fun <O, R : Comparable<R>> KProperty1<O, R?>.notIn(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.NOT_IN, collection))
+
+    @JvmOverloads
+    fun <O, R : Comparable<R>> KProperty1<O, R?>.`in`(collection: Collection<R>, exactMatch: Boolean = true) = predicate(Builder.`in`(collection, exactMatch))
+
+    @JvmOverloads
+    fun <O, R : Comparable<R>> KProperty1<O, R?>.notIn(collection: Collection<R>, exactMatch: Boolean = true) = predicate(Builder.notIn(collection, exactMatch))
 
     @JvmStatic
+    @JvmOverloads
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
-    fun <R> Field.equal(value: R) = info().equal(value)
-    @JvmStatic
-    fun <R> FieldInfo.equal(value: R) = predicate(ColumnPredicate.EqualityComparison(EqualityComparisonOperator.EQUAL, value))
+    fun <R> Field.equal(value: R, exactMatch: Boolean = true) = info().equal(value, exactMatch)
 
     @JvmStatic
-    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
-    fun <R> Field.notEqual(value: R) = info().notEqual(value)
+    @JvmOverloads
+    fun <R> FieldInfo.equal(value: R, exactMatch: Boolean = true) = predicate(Builder.equal(value, exactMatch))
+
     @JvmStatic
-    fun <R> FieldInfo.notEqual(value: R) = predicate(ColumnPredicate.EqualityComparison(EqualityComparisonOperator.NOT_EQUAL, value))
+    @JvmOverloads
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R> Field.notEqual(value: R, exactMatch: Boolean = true) = info().notEqual(value, exactMatch)
+
+    @JvmStatic
+    @JvmOverloads
+    fun <R> FieldInfo.notEqual(value: R, exactMatch: Boolean = true) = predicate(Builder.equal(value, exactMatch))
 
     @JvmStatic
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
@@ -304,44 +332,77 @@ object Builder {
     fun <R : Comparable<R>> FieldInfo.between(from: R, to: R) = predicate(ColumnPredicate.Between(from, to))
 
     @JvmStatic
+    @JvmOverloads
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
-    fun <R : Comparable<R>> Field.`in`(collection: Collection<R>) = info().`in`(collection)
-    fun <R : Comparable<R>> FieldInfo.`in`(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.IN, collection))
+    fun <R : Comparable<R>> Field.`in`(collection: Collection<R>, exactMatch: Boolean = true) = info().`in`(collection, exactMatch)
 
     @JvmStatic
-    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
-    fun <R : Comparable<R>> Field.notIn(collection: Collection<R>) = info().notIn(collection)
-    @JvmStatic
-    fun <R : Comparable<R>> FieldInfo.notIn(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.NOT_IN, collection))
+    @JvmOverloads
+    fun <R : Comparable<R>> FieldInfo.`in`(collection: Collection<R>, exactMatch: Boolean = true) = predicate(Builder.`in`(collection, exactMatch))
 
-    fun <R> equal(value: R) = ColumnPredicate.EqualityComparison(EqualityComparisonOperator.EQUAL, value)
-    fun <R> notEqual(value: R) = ColumnPredicate.EqualityComparison(EqualityComparisonOperator.NOT_EQUAL, value)
+    @JvmStatic
+    @JvmOverloads
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R : Comparable<R>> Field.notIn(collection: Collection<R>, exactMatch: Boolean = true) = info().notIn(collection, exactMatch)
+
+    @JvmStatic
+    @JvmOverloads
+    fun <R : Comparable<R>> FieldInfo.notIn(collection: Collection<R>, exactMatch: Boolean = true) = predicate(Builder.notIn(collection, exactMatch))
+
+    @JvmOverloads
+    fun <R> equal(value: R, exactMatch: Boolean = true) = EqualityComparison(if (exactMatch) EQUAL else EQUAL_IGNORE_CASE, value)
+
+    @JvmOverloads
+    fun <R> notEqual(value: R, exactMatch: Boolean = true) = EqualityComparison(if (exactMatch) NOT_EQUAL else NOT_EQUAL_IGNORE_CASE, value)
+
     fun <R : Comparable<R>> lessThan(value: R) = compare(BinaryComparisonOperator.LESS_THAN, value)
+
     fun <R : Comparable<R>> lessThanOrEqual(value: R) = compare(BinaryComparisonOperator.LESS_THAN_OR_EQUAL, value)
+
     fun <R : Comparable<R>> greaterThan(value: R) = compare(BinaryComparisonOperator.GREATER_THAN, value)
+
     fun <R : Comparable<R>> greaterThanOrEqual(value: R) = compare(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, value)
+
     fun <R : Comparable<R>> between(from: R, to: R) = ColumnPredicate.Between(from, to)
-    fun <R : Comparable<R>> `in`(collection: Collection<R>) = ColumnPredicate.CollectionExpression(CollectionOperator.IN, collection)
-    fun <R : Comparable<R>> notIn(collection: Collection<R>) = ColumnPredicate.CollectionExpression(CollectionOperator.NOT_IN, collection)
-    fun like(string: String) = ColumnPredicate.Likeness(LikenessOperator.LIKE, string)
-    fun notLike(string: String) = ColumnPredicate.Likeness(LikenessOperator.NOT_LIKE, string)
+
+    @JvmOverloads
+    fun <R : Comparable<R>> `in`(collection: Collection<R>, exactMatch: Boolean = true) = CollectionExpression(if (exactMatch) IN else IN_IGNORE_CASE, collection)
+
+    @JvmOverloads
+    fun <R : Comparable<R>> notIn(collection: Collection<R>, exactMatch: Boolean = true) = CollectionExpression(if (exactMatch) NOT_IN else NOT_IN_IGNORE_CASE, collection)
+
+    @JvmOverloads
+    fun like(string: String, exactMatch: Boolean = true) = Likeness(if (exactMatch) LIKE else LIKE_IGNORE_CASE, string)
+
+    @JvmOverloads
+    fun notLike(string: String, exactMatch: Boolean = true) = Likeness(if (exactMatch) NOT_LIKE else NOT_LIKE_IGNORE_CASE, string)
+
     fun <R> isNull() = ColumnPredicate.NullExpression<R>(NullOperator.IS_NULL)
     fun <R> isNotNull() = ColumnPredicate.NullExpression<R>(NullOperator.NOT_NULL)
 
+    @JvmOverloads
+    fun <O> KProperty1<O, String?>.like(string: String, exactMatch: Boolean = true) = predicate(Builder.like(string, exactMatch))
 
-    fun <O> KProperty1<O, String?>.like(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.LIKE, string))
     @JvmStatic
+    @JvmOverloads
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
-    fun Field.like(string: String) = info().like(string)
-    @JvmStatic
-    fun FieldInfo.like(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.LIKE, string))
+    fun Field.like(string: String, exactMatch: Boolean = true) = info().like(string, exactMatch)
 
-    fun <O> KProperty1<O, String?>.notLike(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.NOT_LIKE, string))
     @JvmStatic
+    @JvmOverloads
+    fun FieldInfo.like(string: String, exactMatch: Boolean = true) = predicate(Builder.like(string, exactMatch))
+
+    @JvmOverloads
+    fun <O> KProperty1<O, String?>.notLike(string: String, exactMatch: Boolean = true) = predicate(Builder.notLike(string, exactMatch))
+
+    @JvmStatic
+    @JvmOverloads
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
-    fun Field.notLike(string: String) = info().notLike(string)
+    fun Field.notLike(string: String, exactMatch: Boolean = true) = info().notLike(string, exactMatch)
+
     @JvmStatic
-    fun FieldInfo.notLike(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.NOT_LIKE, string))
+    @JvmOverloads
+    fun FieldInfo.notLike(string: String, exactMatch: Boolean = true) = predicate(Builder.notLike(string, exactMatch))
 
     fun <O, R> KProperty1<O, R?>.isNull() = predicate(ColumnPredicate.NullExpression(NullOperator.IS_NULL))
     @JvmStatic

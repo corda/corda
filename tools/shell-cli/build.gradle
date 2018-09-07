@@ -2,9 +2,7 @@ description 'Corda Shell CLI'
 
 buildscript {
     repositories {
-        maven {
-            url "https://plugins.gradle.org/m2/"
-        }
+        gradlePluginPortal()
     }
     dependencies {
         classpath "com.github.jengelman.gradle.plugins:shadow:$shadow_version"
@@ -12,15 +10,16 @@ buildscript {
 }
 
 apply plugin: 'application'
+// We need to set mainClassName before applying the shadow plugin.
+mainClassName = 'net.corda.tools.shell.StandaloneShellKt'
+
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
-mainClassName = 'net.corda.tools.shell.StandaloneShellKt'
-
 dependencies {
     compile project(':tools:shell')
-    compile group: 'org.slf4j', name: 'slf4j-simple', version: slf4j_version
+    compile "org.slf4j:slf4j-simple:$slf4j_version"
 
     testCompile(project(':test-utils')) {
         exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
@@ -36,10 +35,11 @@ shadowJar  {
 }
 
 task buildShellCli(dependsOn: shadowJar)
+assemble.dependsOn buildShellCli
 
 artifacts {
     publish shadowJar {
-        classifier ""
+        classifier = ""
     }
 }
 

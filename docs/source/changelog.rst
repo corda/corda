@@ -6,6 +6,9 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+
+* Case insensitive vault queries can be specified via a boolean on applicable SQL criteria builder operators. By default queries will be case sensitive.
+
 * Getter added to ``CordaRPCOps`` for the node's network parameters.
 
 * The RPC client library now checks at startup whether the server is of the client libraries major version or higher.
