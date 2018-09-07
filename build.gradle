@@ -109,7 +109,6 @@ buildscript {
         classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
         classpath "org.owasp:dependency-check-gradle:${dependency_checker_version}"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
-        classpath 'com.gradle:build-scan-plugin:1.15.1'
     }
 }
 
@@ -133,7 +132,6 @@ apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.artifactory'
-apply plugin: 'com.gradle.build-scan'
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
 // IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
@@ -210,9 +208,9 @@ allprojects {
 
         // Required to use Gradle build cache (until Gradle 5.0 is released with default value of "append" set to false)
         // See https://github.com/gradle/gradle/issues/5269 and https://github.com/gradle/gradle/pull/6419
-        extensions.configure(TypeOf.typeOf(JacocoTaskExtension), { ex ->
+        extensions.configure(TypeOf.typeOf(JacocoTaskExtension)) { ex ->
             ex.append = false
-        })
+        }
     }
 
     group 'net.corda'
