@@ -84,8 +84,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration, overrid
         identityService.database = database
     }
 
-    private val persistentNetworkMapCache = PersistentNetworkMapCache(database, myInfo.legalIdentities[0].name)
-    override val networkMapCache = NetworkMapCacheImpl(persistentNetworkMapCache, identityService, database)
+    override val networkMapCache = PersistentNetworkMapCache(database, identityService, myInfo.legalIdentities[0].name)
     @Suppress("LeakingThis")
     override val validatedTransactions: WritableTransactionStorage = DBTransactionStorage(configuration.transactionCacheSizeBytes, database)
     private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
@@ -218,13 +217,12 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration, overrid
 
         database.startHikariPool(configuration.dataSourceProperties, configuration.database, schemas)
         identityService.start(trustRoot, listOf(myInfo.legalIdentitiesAndCerts.first().certificate, nodeCa))
-        persistentNetworkMapCache.start(networkParameters.notaries)
 
         runOnStop += { rpcOps.shutdown() }
         rpcOps.start()
 
         database.transaction {
-            networkMapCache.start()
+            networkMapCache.start(networkParameters.notaries)
             networkMapCache.addNode(myInfo)
         }
 

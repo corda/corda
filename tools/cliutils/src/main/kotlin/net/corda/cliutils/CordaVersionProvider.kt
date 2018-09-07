@@ -9,13 +9,17 @@ import picocli.CommandLine
  */
 class CordaVersionProvider : CommandLine.IVersionProvider {
     companion object {
-        val releaseVersion: String by lazy { Manifests.read("Corda-Release-Version") }
-        val revision: String by lazy { Manifests.read("Corda-Revision") }
+        private fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
+
+        val releaseVersion: String by lazy { manifestValue("Corda-Release-Version") ?: "Unknown" }
+        val revision: String by lazy { manifestValue("Corda-Revision") ?: "Unknown" }
+        val vendor: String by lazy { manifestValue("Corda-Vendor") ?: "Unknown" }
+        val platformVersion: Int by lazy { manifestValue("Corda-Platform-Version")?.toInt() ?: 1 }
     }
 
     override fun getVersion(): Array<String> {
         return if (Manifests.exists("Corda-Release-Version") && Manifests.exists("Corda-Revision")) {
-            arrayOf("Version: $releaseVersion", "Revision: $revision")
+            arrayOf("Version: $releaseVersion", "Revision: $revision", "Platform Version: $platformVersion", "Vendor: $vendor")
         } else {
             arrayOf("No version data is available in the MANIFEST file.")
         }

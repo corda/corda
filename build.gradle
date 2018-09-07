@@ -369,6 +369,7 @@ bintrayConfig {
             'corda-rpc',
             'corda-core',
             'corda-core-deterministic',
+            'corda-djvm',
             'corda',
             'corda-finance',
             'corda-node',
@@ -477,6 +478,6 @@ if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BU
 }
 
 wrapper {
-    gradleVersion = "4.8.1"
+    gradleVersion = "4.10"
     distributionType = Wrapper.DistributionType.ALL
 }

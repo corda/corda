@@ -49,7 +49,6 @@ import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.P2PMessagingClient
-import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.*
@@ -120,8 +119,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
         identityService.database = database
     }
 
-    private val persistentNetworkMapCache = PersistentNetworkMapCache(database, myInfo.legalIdentities[0].name)
-    override val networkMapCache = NetworkMapCacheImpl(persistentNetworkMapCache, identityService, database).tokenize()
+    override val networkMapCache = PersistentNetworkMapCache(database, identityService, myInfo.legalIdentities[0].name)
     private val checkpointStorage = DBCheckpointStorage()
     @Suppress("LeakingThis")
     override val validatedTransactions: WritableTransactionStorage = DBTransactionStorage(configuration.transactionCacheSizeBytes, database).tokenize()
@@ -370,10 +368,9 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
 
         database.startHikariPool(configuration.dataSourceProperties, configuration.database, schemas)
         identityService.start(trustRoot, listOf(myInfo.legalIdentitiesAndCerts.first().certificate, nodeCa))
-        persistentNetworkMapCache.start(networkParameters.notaries)
 
         database.transaction {
-            networkMapCache.start()
+            networkMapCache.start(networkParameters.notaries)
         }
 
         identityService.ourNames = myInfo.legalIdentities.map { it.name }.toSet()

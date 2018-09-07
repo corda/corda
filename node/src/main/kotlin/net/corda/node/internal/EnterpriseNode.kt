@@ -48,7 +48,7 @@ open class EnterpriseNode(configuration: NodeConfiguration,
         }
     }
 
-    class Startup(args: Array<String>) : NodeStartup(args) {
+    class Startup : NodeStartup() {
         override fun preNetworkRegistration(conf: NodeConfiguration) {
             super.preNetworkRegistration(conf)
             conf.relay?.let { connectToRelay(it, conf.p2pAddress.port) }

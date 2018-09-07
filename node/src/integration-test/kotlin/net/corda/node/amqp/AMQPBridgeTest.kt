@@ -270,7 +270,7 @@ class AMQPBridgeTest {
         if (sourceQueueName != null) {
             // Local queue for outgoing messages
             artemis.session.createQueue(sourceQueueName, RoutingType.ANYCAST, sourceQueueName, true)
-            bridgeManager.deployBridge(sourceQueueName, amqpAddress, setOf(BOB.name))
+            bridgeManager.deployBridge(sourceQueueName, listOf(amqpAddress), setOf(BOB.name))
         }
         return Triple(artemisServer, artemisClient, bridgeManager)
     }

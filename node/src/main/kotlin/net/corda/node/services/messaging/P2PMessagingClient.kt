@@ -122,7 +122,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private lateinit var advertisedAddress: NetworkHostAndPort
     private var maxMessageSize: Int = -1
 
-    override val myAddress: SingleMessageRecipient get() = NodeAddress(myIdentity, advertisedAddress)
+    override val myAddress: SingleMessageRecipient get() = NodeAddress(myIdentity)
     override val ourSenderUUID = UUID.randomUUID().toString()
 
     private val state = ThreadBox(InnerState())
@@ -269,7 +269,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         fun gatherAddresses(node: NodeInfo): Sequence<BridgeEntry> {
             return state.locked {
                 node.legalIdentitiesAndCerts.map {
-                    val messagingAddress = NodeAddress(it.party.owningKey, node.addresses.first())
+                    val messagingAddress = NodeAddress(it.party.owningKey)
                     BridgeEntry(messagingAddress.queueName, node.addresses, node.legalIdentities.map { it.name })
                 }.filter { producerSession!!.queueQuery(SimpleString(it.queueName)).isExists }.asSequence()
             }
@@ -278,14 +278,14 @@ class P2PMessagingClient(val config: NodeConfiguration,
         fun deployBridges(node: NodeInfo) {
             gatherAddresses(node)
                     .forEach {
-                        sendBridgeControl(BridgeControl.Create(myIdentity.toStringShort(), it))
+                        sendBridgeControl(BridgeControl.Create(config.myLegalName.toString(), it))
                     }
         }
 
         fun destroyBridges(node: NodeInfo) {
             gatherAddresses(node)
                     .forEach {
-                        sendBridgeControl(BridgeControl.Delete(myIdentity.toStringShort(), it))
+                        sendBridgeControl(BridgeControl.Delete(config.myLegalName.toString(), it))
                     }
         }
 
@@ -325,7 +325,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 delayStartQueues += queue.toString()
             }
         }
-        val startupMessage = BridgeControl.NodeToBridgeSnapshot(myIdentity.toStringShort(), inboxes, requiredBridges)
+        val startupMessage = BridgeControl.NodeToBridgeSnapshot(config.myLegalName.toString(), inboxes, requiredBridges)
         sendBridgeControl(startupMessage)
     }
 
@@ -346,12 +346,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
                     return
                 }
                 eventsSubscription = p2pConsumer!!.messages
-                        .doOnError { error -> throw error }
-                        .doOnNext { message -> deliver(message) }
                         // this `run()` method is semantically meant to block until the message consumption runs, hence the latch here
                         .doOnCompleted(latch::countDown)
-                        .doOnError { error -> throw error }
-                        .subscribe()
+                        .subscribe({ message -> deliver(message) }, { error -> throw error })
                 p2pConsumer!!
             }
             consumer.start()
@@ -537,7 +534,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
             for (node in peers) {
                 val bridge = BridgeEntry(queueName, node.addresses, node.legalIdentities.map { it.name })
-                val createBridgeMessage = BridgeControl.Create(myIdentity.toStringShort(), bridge)
+                val createBridgeMessage = BridgeControl.Create(config.myLegalName.toString(), bridge)
                 sendBridgeControl(createBridgeMessage)
             }
         }
@@ -582,7 +579,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
         return when (partyInfo) {
-            is PartyInfo.SingleNode -> NodeAddress(partyInfo.party.owningKey, partyInfo.addresses.single())
+            is PartyInfo.SingleNode -> NodeAddress(partyInfo.party.owningKey)
             is PartyInfo.DistributedNode -> ServiceAddress(partyInfo.party.owningKey)
         }
     }

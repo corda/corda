@@ -19,6 +19,7 @@ import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
 import net.corda.core.internal.sign
 import net.corda.core.messaging.*
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
@@ -61,6 +62,8 @@ internal class CordaRPCOpsImpl(
         updates.notUsed()
         return snapshot
     }
+
+    override val networkParameters: NetworkParameters get() = services.networkParameters
 
     override fun networkParametersFeed(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
         return services.networkMapUpdater.trackParametersUpdate()

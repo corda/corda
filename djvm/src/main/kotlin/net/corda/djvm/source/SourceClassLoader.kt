@@ -80,7 +80,7 @@ open class SourceClassLoader(
                 when {
                     !Files.exists(it) -> throw FileNotFoundException("File not found; $it")
                     Files.isDirectory(it) -> {
-                        listOf(it.toURL()) + Files.list(it).filter { isJarFile(it) }.map { it.toURL() }.toList()
+                        listOf(it.toURL()) + Files.list(it).filter(::isJarFile).map { it.toURL() }.toList()
                     }
                     Files.isReadable(it) && isJarFile(it) -> listOf(it.toURL())
                     else -> throw IllegalArgumentException("Expected JAR or class file, but found $it")
