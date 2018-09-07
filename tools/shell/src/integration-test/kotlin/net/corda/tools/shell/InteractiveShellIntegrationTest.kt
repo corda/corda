@@ -32,6 +32,7 @@ import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.util.io.Streams
+import org.crsh.text.Color
 import org.crsh.text.RenderPrintWriter
 import org.junit.Ignore
 import org.junit.Rule
@@ -263,8 +264,17 @@ class InteractiveShellIntegrationTest {
         }
     }
 
+    @Suppress("UNUSED")
+    @StartableByRPC
+    class BurbleFlow : FlowLogic<Unit>() {
+        override val progressTracker = ProgressTracker()
+        override fun call() {
+            println("NO OP! (Burble)")
+        }
+    }
+
     @Test
-    fun `shell should start flow with exact class name`() {
+    fun `shell should start flow with fully qualified class name`() {
         val user = User("u", "p", setOf(all()))
         var successful = false
         driver(DriverParameters(notarySpecs = emptyList())) {
@@ -290,6 +300,38 @@ class InteractiveShellIntegrationTest {
             }
             InteractiveShell.runFlowByNameFragment(
                     InteractiveShellIntegrationTest::class.qualifiedName + "\$NoOpFlow",
+                    "", output, node.rpc, ansiProgressRenderer)
+        }
+        assertThat(successful).isTrue()
+    }
+
+    @Test
+    fun `shell should start flow with unique un-qualified class name`() {
+        val user = User("u", "p", setOf(all()))
+        var successful = false
+        driver(DriverParameters(notarySpecs = emptyList())) {
+            val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
+            val node = nodeFuture.getOrThrow()
+
+            val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
+                    user = user.username, password = user.password,
+                    hostAndPort = node.rpcAddress)
+            InteractiveShell.startShell(conf)
+
+            // setup and configure some mocks required by InteractiveShell.runFlowByNameFragment()
+            val output = mock<RenderPrintWriter> {
+                on { println(any<String>()) } doAnswer {
+                    val line = it.arguments[0]
+                    println("$line")
+                    if ((line is String) && (line.startsWith("Flow completed with result:")))
+                        successful = true
+                }
+            }
+            val ansiProgressRenderer = mock<ANSIProgressRenderer> {
+                on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
+            }
+            InteractiveShell.runFlowByNameFragment(
+                    "InteractiveShellIntegrationTest\$NoOpFlowA",
                     "", output, node.rpc, ansiProgressRenderer)
         }
         assertThat(successful).isTrue()
@@ -322,6 +364,38 @@ class InteractiveShellIntegrationTest {
             }
             InteractiveShell.runFlowByNameFragment(
                     InteractiveShellIntegrationTest::class.qualifiedName + "\$NoOpFlo",
+                    "", output, node.rpc, ansiProgressRenderer)
+        }
+        assertThat(successful).isTrue()
+    }
+
+    @Test
+    fun `shell should fail to start flow with incorrectly matching class name`() {
+        val user = User("u", "p", setOf(all()))
+        var successful = false
+        driver(DriverParameters(notarySpecs = emptyList())) {
+            val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
+            val node = nodeFuture.getOrThrow()
+
+            val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
+                    user = user.username, password = user.password,
+                    hostAndPort = node.rpcAddress)
+            InteractiveShell.startShell(conf)
+
+            // setup and configure some mocks required by InteractiveShell.runFlowByNameFragment()
+            val output = mock<RenderPrintWriter> {
+                on { println(any<String>(), any<Color>()) } doAnswer {
+                    val line = it.arguments[0]
+                    println("$line")
+                    if ((line is String) && (line.startsWith("No matching flow found")))
+                        successful = true
+                }
+            }
+            val ansiProgressRenderer = mock<ANSIProgressRenderer> {
+                on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
+            }
+            InteractiveShell.runFlowByNameFragment(
+                    "Burble",
                     "", output, node.rpc, ansiProgressRenderer)
         }
         assertThat(successful).isTrue()

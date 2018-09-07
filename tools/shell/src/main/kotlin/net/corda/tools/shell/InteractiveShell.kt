@@ -255,10 +255,12 @@ object InteractiveShell {
         }
         // nameFragment can represent a fully qualified Flow classname (eg. com.myflow.NoOpFlow)
         // or just the Flow classname (eg. NoOpFlow)
-        val flowName = matches.find { it.endsWith(nameFragment) }
-        if (matches.size > 1 && flowName == null) {
+        val flowName = matches.find { it.endsWith(nameFragment) } ?: if (matches.size > 1) {
             output.println("Ambiguous name provided, please be more specific. Your options are:")
             matches.forEachIndexed { i, s -> output.println("${i + 1}. $s", Color.yellow) }
+            return
+        } else {
+            output.println("No matching flow found, run 'flow list' to see your options.", Color.red)
             return
         }
 
