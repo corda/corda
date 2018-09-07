@@ -329,7 +329,7 @@ open class Node(configuration: NodeConfiguration,
      * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
      * on H2 URLs and configuration see: http://www.h2database.com/html/features.html#database_url
      */
-    override fun startDatabase() {
+    override fun startDatabase(metricRegistry: MetricRegistry?) {
         val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
         val h2Prefix = "jdbc:h2:file:"
 
@@ -366,7 +366,7 @@ open class Node(configuration: NodeConfiguration,
             }
         }
 
-        super.startDatabase()
+        super.startDatabase(metricRegistry)
         database.closeOnStop()
     }
 
