@@ -20,7 +20,7 @@ class NodeKeystoreCheckTest {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             assertThatThrownBy {
                 startNode(customOverrides = mapOf("devMode" to false)).getOrThrow()
-            }.hasMessageContaining("Identity certificate not found")
+            }.hasMessageContaining("Identity and/or TLS certificate not found.")
         }
     }
 
