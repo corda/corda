@@ -695,41 +695,51 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @VisibleForTesting
     protected open fun acceptableLiveFiberCountOnStop(): Int = 0
 
-    private fun getCertificateStores(): Triple<CertificateStore, CertificateStore, CertificateStore> {
+    private fun getCertificateStores(): AllCertificateStores? {
         return try {
             // The following will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            val trustStore = configuration.p2pSslOptions.trustStore.get()
             val sslKeyStore = configuration.p2pSslOptions.keyStore.get()
             val identitiesKeyStore = configuration.signingCertificateStore.get()
-            Triple(trustStore, sslKeyStore, identitiesKeyStore)
+            val trustStore = configuration.p2pSslOptions.trustStore.get()
+            AllCertificateStores(trustStore, sslKeyStore, identitiesKeyStore)
         } catch (e: KeyStoreException) {
             log.warn("At least one of the keystores or truststore passwords does not match configuration.")
-            throw e
+            null
         } catch (e: IOException) {
             log.error("IO exception while trying to validate keystores and truststore", e)
-            throw e
+            null
         }
     }
 
+    private data class AllCertificateStores(val trustStore: CertificateStore, val sslKeyStore: CertificateStore, val identitiesKeyStore: CertificateStore)
+
     private fun validateKeyStores(): X509Certificate {
         // Step 1. Check trustStore, sslKeyStore and identitiesKeyStore exist.
-        val (trustStore, sslKeyStore, identitiesKeyStore) = getCertificateStores()
-        // Step 2. Check that trustStore contains the correct key-alias entry.
-        require(X509Utilities.CORDA_ROOT_CA in trustStore) {
-            "Alias for trustRoot key not found. Please ensure you have an updated trustRoot file."
-        }
-        // Step 3. Check that keyStores contain the correct key-alias entries.
-        require(X509Utilities.CORDA_CLIENT_TLS in sslKeyStore
-                && X509Utilities.CORDA_CLIENT_CA in identitiesKeyStore) {
-            "Identity and/or TLS certificate not found. " +
-                    "Please either copy your existing keys and certificate from another node, " +
+        val certStores = getCertificateStores()
+        requireNotNull(certStores) {
+            "One or more keyStores (identity or TLS) or trustStore not found. " +
+                    "Please either copy your existing keys and certificates from another node, " +
                     "or if you don't have one yet, fill out the config file and run corda.jar --initial-registration. " +
                     "Read more at: https://docs.corda.net/permissioning.html"
         }
-        // Step 4. Check all cert paths chain to the trusted root.
-        val trustRoot = trustStore[X509Utilities.CORDA_ROOT_CA]
-        val sslCertChainRoot = sslKeyStore.query { getCertificateChain(X509Utilities.CORDA_CLIENT_TLS) }.last()
-        val nodeCaCertChainRoot = identitiesKeyStore.query { getCertificateChain(X509Utilities.CORDA_CLIENT_CA) }.last()
+        // Step 2. Check that trustStore contains the correct key-alias entry.
+        require(X509Utilities.CORDA_ROOT_CA in certStores!!.trustStore) {
+            "Alias for trustRoot key not found. Please ensure you have an updated trustStore file."
+        }
+        // Step 3. Check that tls keyStore contains the correct key-alias entry.
+        require(X509Utilities.CORDA_CLIENT_TLS in certStores.sslKeyStore) {
+            "Alias for TLS key not found. Please ensure you have an updated TLS keyStore file."
+        }
+
+        // Step 4. Check that identity keyStores contain the correct key-alias entry for Node CA.
+        require(X509Utilities.CORDA_CLIENT_CA in certStores.identitiesKeyStore) {
+            "Alias for Node CA key not found. Please ensure you have an updated identity keyStore file."
+        }
+
+        // Step 5. Check all cert paths chain to the trusted root.
+        val trustRoot = certStores.trustStore[X509Utilities.CORDA_ROOT_CA]
+        val sslCertChainRoot = certStores.sslKeyStore.query { getCertificateChain(X509Utilities.CORDA_CLIENT_TLS) }.last()
+        val nodeCaCertChainRoot = certStores.identitiesKeyStore.query { getCertificateChain(X509Utilities.CORDA_CLIENT_CA) }.last()
 
         require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
         require(nodeCaCertChainRoot == trustRoot) { "Client CA certificate must chain to the trusted root." }
