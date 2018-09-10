@@ -134,5 +134,5 @@ class TransactionBuilderTest {
         override val id: SecureHash get() = throw UnsupportedOperationException()
 
         override val signers: List<PublicKey> get() = parties.map { it.owningKey }
-    }, DummyContract.PROGRAM_ID)
+    }, DummyContract.PROGRAM_ID, signers = parties.map { it.owningKey })
 }
