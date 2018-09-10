@@ -1,5 +1,6 @@
 package net.corda.node.services.rpc
 
+import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
@@ -21,7 +22,6 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.RandomFree
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -94,7 +94,7 @@ class ArtemisRpcTests {
 //            client.trustStore["cordaclienttls"] = rootCertificate
 
             withKeyStores(server, client) { brokerSslOptions, clientSslOptions ->
-                testSslCommunication(brokerSslOptions, true, clientSslOptions, clientConnectionSpy = expectExceptionOfType(ActiveMQNotConnectedException::class))
+                testSslCommunication(brokerSslOptions, true, clientSslOptions, clientConnectionSpy = expectExceptionOfType(RPCException::class))
             }
         }
     }
@@ -115,7 +115,7 @@ class ArtemisRpcTests {
             client.trustStore["cordaclienttls"] = rootCertificate
 
             withKeyStores(server, client) { brokerSslOptions, clientSslOptions ->
-                testSslCommunication(brokerSslOptions, true, clientSslOptions, clientConnectionSpy = expectExceptionOfType(ActiveMQNotConnectedException::class))
+                testSslCommunication(brokerSslOptions, true, clientSslOptions, clientConnectionSpy = expectExceptionOfType(RPCException::class))
             }
         }
     }
@@ -158,7 +158,7 @@ class ArtemisRpcTests {
             client.trustStore["cordaclienttls"] = rootCertificate
 
             withKeyStores(server, client) { brokerSslOptions, clientSslOptions ->
-                testSslCommunication(brokerSslOptions, true, clientSslOptions, clientConnectionSpy = expectExceptionOfType(ActiveMQNotConnectedException::class))
+                testSslCommunication(brokerSslOptions, true, clientSslOptions, clientConnectionSpy = expectExceptionOfType(RPCException::class))
             }
         }
     }
