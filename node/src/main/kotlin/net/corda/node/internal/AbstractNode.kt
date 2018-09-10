@@ -304,7 +304,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         servicesForResolution.start(netParams)
         networkMapCache.start(netParams.notaries)
 
-        startDatabase()
+        startDatabase(metricRegistry)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
 
@@ -728,10 +728,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     // Specific class so that MockNode can catch it.
     class DatabaseConfigurationException(msg: String) : CordaException(msg)
 
-    protected open fun startDatabase() {
+    protected open fun startDatabase(metricRegistry: MetricRegistry? = null) {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        database.startHikariPool(props, configuration.database, schemaService.internalSchemas())
+        database.startHikariPool(props, configuration.database, schemaService.internalSchemas(), metricRegistry)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -1014,9 +1014,9 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters)
 }
 
-fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>) {
+fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null) {
     try {
-        val dataSource = DataSourceFactory.createDataSource(hikariProperties)
+        val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
         val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig)
         schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         start(dataSource)
