@@ -21,16 +21,16 @@ class ContractAttachmentSerializerTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    private lateinit var factory: SerializationFactory
-    private lateinit var context: SerializationContext
-    private lateinit var contextWithToken: SerializationContext
+    private lateinit var factory: CheckpointSerializationFactory
+    private lateinit var context: CheckpointSerializationContext
+    private lateinit var contextWithToken: CheckpointSerializationContext
     private val mockServices = MockServices(emptyList(), CordaX500Name("MegaCorp", "London", "GB"), rigorousMock())
 
     @Before
     fun setup() {
-        factory = testSerialization.serializationFactory
+        factory = testSerialization.checkpointSerializationFactory
         context = testSerialization.checkpointContext
-        contextWithToken = context.withTokenContext(SerializeAsTokenContextImpl(Any(), factory, context, mockServices))
+        contextWithToken = context.withTokenContext(CheckpointSerializeAsTokenContextImpl(Any(), factory, context, mockServices))
     }
 
     @Test

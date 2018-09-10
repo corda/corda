@@ -14,8 +14,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationContext.UseCase.Checkpoint
-import net.corda.core.serialization.SerializationContext.UseCase.Storage
 import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.*
@@ -275,16 +273,16 @@ object SignedTransactionSerializer : Serializer<SignedTransaction>() {
     }
 }
 
+// Retained because it's part of a public API.
 sealed class UseCaseSerializer<T>(private val allowedUseCases: EnumSet<SerializationContext.UseCase>) : Serializer<T>() {
     protected fun checkUseCase() {
-        net.corda.serialization.internal.checkUseCase(allowedUseCases)
+        // No longer checked.
     }
 }
 
 @ThreadSafe
-object PrivateKeySerializer : UseCaseSerializer<PrivateKey>(EnumSet.of(Storage, Checkpoint)) {
+object PrivateKeySerializer : UseCaseSerializer<PrivateKey>(EnumSet.noneOf(SerializationContext.UseCase::class.java)) {
     override fun write(kryo: Kryo, output: Output, obj: PrivateKey) {
-        checkUseCase()
         output.writeBytesWithLength(obj.encoded)
     }
 

@@ -207,7 +207,14 @@ interface SerializationContext {
      * The use case that we are serializing for, since it influences the implementations chosen.
      */
     @KeepForDJVM
-    enum class UseCase { P2P, RPCServer, RPCClient, Storage, Checkpoint, Testing }
+    enum class UseCase {
+        P2P,
+        RPCServer,
+        RPCClient,
+        Storage,
+        @Deprecated("Checkpoint use case is no longer supported by the default SerializationContext. Use a CheckpointSerializationContext instead.") Checkpoint,
+        Testing
+    }
 }
 
 /**
@@ -226,6 +233,7 @@ enum class ContextPropertyKeys {
 @KeepForDJVM
 object SerializationDefaults {
     val SERIALIZATION_FACTORY get() = effectiveSerializationEnv.serializationFactory
+    val CHECKPOINT_SERIALIZATION_FACTORY get() = effectiveSerializationEnv.checkpointSerializationFactory
     val P2P_CONTEXT get() = effectiveSerializationEnv.p2pContext
     @DeleteForDJVM val RPC_SERVER_CONTEXT get() = effectiveSerializationEnv.rpcServerContext
     @DeleteForDJVM val RPC_CLIENT_CONTEXT get() = effectiveSerializationEnv.rpcClientContext

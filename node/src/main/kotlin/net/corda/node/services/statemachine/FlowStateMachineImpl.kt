@@ -12,7 +12,7 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
-import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.CheckpointSerializationContext
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
@@ -69,7 +69,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             val actionExecutor: ActionExecutor,
             val stateMachine: StateMachine,
             val serviceHub: ServiceHubInternal,
-            val checkpointSerializationContext: SerializationContext,
+            val checkpointSerializationContext: CheckpointSerializationContext,
             val unfinishedFibers: ReusableLatch
     )
 

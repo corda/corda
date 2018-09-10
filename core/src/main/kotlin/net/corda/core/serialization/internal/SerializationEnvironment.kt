@@ -6,17 +6,20 @@ import net.corda.core.internal.InheritableThreadLocalToggleField
 import net.corda.core.internal.SimpleToggleField
 import net.corda.core.internal.ThreadLocalToggleField
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.serialization.CheckpointSerializationContext
+import net.corda.core.serialization.CheckpointSerializationFactory
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 
 @KeepForDJVM
 interface SerializationEnvironment {
     val serializationFactory: SerializationFactory
+    val checkpointSerializationFactory: CheckpointSerializationFactory
     val p2pContext: SerializationContext
     val rpcServerContext: SerializationContext
     val rpcClientContext: SerializationContext
     val storageContext: SerializationContext
-    val checkpointContext: SerializationContext
+    val checkpointContext: CheckpointSerializationContext
 }
 
 @KeepForDJVM
@@ -26,18 +29,21 @@ open class SerializationEnvironmentImpl(
         rpcServerContext: SerializationContext? = null,
         rpcClientContext: SerializationContext? = null,
         storageContext: SerializationContext? = null,
-        checkpointContext: SerializationContext? = null) : SerializationEnvironment {
+        checkpointContext: CheckpointSerializationContext? = null,
+        checkpointSerializationFactory: CheckpointSerializationFactory? = null) : SerializationEnvironment {
     // Those that are passed in as null are never inited:
     override lateinit var rpcServerContext: SerializationContext
     override lateinit var rpcClientContext: SerializationContext
     override lateinit var storageContext: SerializationContext
-    override lateinit var checkpointContext: SerializationContext
+    override lateinit var checkpointContext: CheckpointSerializationContext
+    override lateinit var checkpointSerializationFactory: CheckpointSerializationFactory
 
     init {
         rpcServerContext?.let { this.rpcServerContext = it }
         rpcClientContext?.let { this.rpcClientContext = it }
         storageContext?.let { this.storageContext = it }
         checkpointContext?.let { this.checkpointContext = it }
+        checkpointSerializationFactory?.let { this.checkpointSerializationFactory = it  }
     }
 }
 

@@ -21,12 +21,12 @@ class SerializationTokenTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    private lateinit var factory: SerializationFactory
-    private lateinit var context: SerializationContext
+    private lateinit var factory: CheckpointSerializationFactory
+    private lateinit var context: CheckpointSerializationContext
 
     @Before
     fun setup() {
-        factory = testSerialization.serializationFactory
+        factory = testSerialization.checkpointSerializationFactory
         context = testSerialization.checkpointContext.withWhitelisted(SingletonSerializationToken::class.java)
     }
 
@@ -42,7 +42,7 @@ class SerializationTokenTest {
         override fun equals(other: Any?) = other is LargeTokenizable && other.bytes.size == this.bytes.size
     }
 
-    private fun serializeAsTokenContext(toBeTokenized: Any) = SerializeAsTokenContextImpl(toBeTokenized, factory, context, rigorousMock())
+    private fun serializeAsTokenContext(toBeTokenized: Any) = CheckpointSerializeAsTokenContextImpl(toBeTokenized, factory, context, rigorousMock())
     @Test
     fun `write token and read tokenizable`() {
         val tokenizableBefore = LargeTokenizable()

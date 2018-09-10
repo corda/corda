@@ -1,10 +1,7 @@
 package net.corda.serialization.internal;
 
-import net.corda.core.serialization.SerializationContext;
-import net.corda.core.serialization.SerializationFactory;
-import net.corda.core.serialization.SerializedBytes;
+import net.corda.core.serialization.*;
 import net.corda.node.serialization.kryo.CordaClosureSerializer;
-import net.corda.node.serialization.kryo.KryoSerializationSchemeKt;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import org.junit.Before;
 import org.junit.Rule;
@@ -20,19 +17,17 @@ import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 public final class LambdaCheckpointSerializationTest {
     @Rule
     public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
-    private SerializationFactory factory;
-    private SerializationContext context;
+    private CheckpointSerializationFactory factory;
+    private CheckpointSerializationContext context;
 
     @Before
     public void setup() {
-        factory = testSerialization.getSerializationFactory();
-        context = new SerializationContextImpl(
-                KryoSerializationSchemeKt.getKryoMagic(),
+        factory = testSerialization.getCheckpointSerializationFactory();
+        context = new CheckpointSerializationContextImpl(
                 getClass().getClassLoader(),
                 AllWhitelist.INSTANCE,
                 Collections.emptyMap(),
                 true,
-                SerializationContext.UseCase.Checkpoint,
                 null
         );
     }

@@ -45,6 +45,7 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
 
     private lateinit var env: SerializationEnvironment
     val serializationFactory get() = env.serializationFactory
+    val checkpointSerializationFactory get() = env.checkpointSerializationFactory
     val checkpointContext get() = env.checkpointContext
 
     override fun apply(base: Statement, description: Description): Statement {

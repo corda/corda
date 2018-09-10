@@ -8,6 +8,7 @@ import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.internal.writer
+import net.corda.core.serialization.CheckpointSerializationContext
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.contextLogger
@@ -25,7 +26,7 @@ import java.util.*
 /**
  * Corda specific class resolver which enables extra customisation for the purposes of serialization using Kryo
  */
-class CordaClassResolver(serializationContext: SerializationContext) : DefaultClassResolver() {
+class CordaClassResolver(serializationContext: CheckpointSerializationContext) : DefaultClassResolver() {
     val whitelist: ClassWhitelist = TransientClassWhiteList(serializationContext.whitelist)
 
     // These classes are assignment-compatible Java equivalents of Kotlin classes.

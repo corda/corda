@@ -9,7 +9,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.SubFlow
 import net.corda.node.services.statemachine.SubFlowVersion
-import net.corda.serialization.internal.SerializeAsTokenContextImpl
+import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
 
 object CheckpointVerifier {
@@ -20,7 +20,7 @@ object CheckpointVerifier {
      */
     fun verifyCheckpointsCompatible(checkpointStorage: CheckpointStorage, currentCordapps: List<Cordapp>, platformVersion: Int, serviceHub: ServiceHub, tokenizableServices: List<Any>) {
         val checkpointSerializationContext = SerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
-                SerializeAsTokenContextImpl(tokenizableServices, SerializationDefaults.SERIALIZATION_FACTORY, SerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
+                CheckpointSerializeAsTokenContextImpl(tokenizableServices, SerializationDefaults.CHECKPOINT_SERIALIZATION_FACTORY, SerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
         )
         checkpointStorage.getAllCheckpoints().forEach { (_, serializedCheckpoint) ->
 

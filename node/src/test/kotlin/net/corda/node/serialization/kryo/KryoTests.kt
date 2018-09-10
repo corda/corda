@@ -5,7 +5,6 @@ import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.primitives.Ints
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
@@ -36,15 +35,8 @@ import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.test.*
 
-class TestScheme : AbstractKryoSerializationScheme() {
-    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
-        return magic == kryoMagic && target != SerializationContext.UseCase.RPCClient
-    }
-
-    override fun rpcClientKryoPool(context: SerializationContext): KryoPool = throw UnsupportedOperationException()
-
-    override fun rpcServerKryoPool(context: SerializationContext): KryoPool = throw UnsupportedOperationException()
-}
+//TODO: get rid of this.
+class TestScheme : AbstractKryoSerializationScheme()
 
 @RunWith(Parameterized::class)
 class KryoTests(private val compression: CordaSerializationEncoding?) {
@@ -55,18 +47,17 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         fun compression() = arrayOf<CordaSerializationEncoding?>(null) + CordaSerializationEncoding.values()
     }
 
-    private lateinit var factory: SerializationFactory
-    private lateinit var context: SerializationContext
+    private lateinit var factory: CheckpointSerializationFactory
+    private lateinit var context: CheckpointSerializationContext
 
     @Before
     fun setup() {
-        factory = SerializationFactoryImpl().apply { registerScheme(TestScheme()) }
-        context = SerializationContextImpl(kryoMagic,
+        factory = CheckpointSerializationFactoryImpl(TestScheme())
+        context = CheckpointSerializationContextImpl(
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),
                 true,
-                SerializationContext.UseCase.Storage,
                 compression,
                 rigorousMock<EncodingWhitelist>().also {
                     if (compression != null) doReturn(true).whenever(it).acceptEncoding(compression)
@@ -197,7 +188,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
 
     @Test
     fun `serialize - deserialize Logger`() {
-        val storageContext: SerializationContext = context // TODO: make it storage context
+        val storageContext: CheckpointSerializationContext = context
         val logger = LoggerFactory.getLogger("aName")
         val logger2 = logger.serialize(factory, storageContext).deserialize(factory, storageContext)
         assertEquals(logger.name, logger2.name)
@@ -286,13 +277,12 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
             }
         }
         Tmp()
-        val factory = SerializationFactoryImpl().apply { registerScheme(TestScheme()) }
-        val context = SerializationContextImpl(kryoMagic,
+        val factory = CheckpointSerializationFactoryImpl(TestScheme())
+        val context = CheckpointSerializationContextImpl(
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),
                 true,
-                SerializationContext.UseCase.P2P,
                 null)
         pt.serialize(factory, context)
     }

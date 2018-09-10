@@ -36,7 +36,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.injectOldProgressTracker
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
-import net.corda.serialization.internal.SerializeAsTokenContextImpl
+import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
 import rx.Observable
@@ -103,7 +103,7 @@ class SingleThreadedStateMachineManager(
     private val transitionExecutor = makeTransitionExecutor()
     private val ourSenderUUID = serviceHub.networkService.ourSenderUUID
 
-    private var checkpointSerializationContext: SerializationContext? = null
+    private var checkpointSerializationContext: CheckpointSerializationContext? = null
     private var actionExecutor: ActionExecutor? = null
 
     override val allStateMachines: List<FlowLogic<*>>
@@ -123,7 +123,7 @@ class SingleThreadedStateMachineManager(
     override fun start(tokenizableServices: List<Any>) {
         checkQuasarJavaAgentPresence()
         val checkpointSerializationContext = SerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
-                SerializeAsTokenContextImpl(tokenizableServices, SerializationDefaults.SERIALIZATION_FACTORY, SerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
+                CheckpointSerializeAsTokenContextImpl(tokenizableServices, SerializationDefaults.CHECKPOINT_SERIALIZATION_FACTORY, SerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
         )
         this.checkpointSerializationContext = checkpointSerializationContext
         this.actionExecutor = makeActionExecutor(checkpointSerializationContext)
@@ -742,7 +742,7 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    private fun makeActionExecutor(checkpointSerializationContext: SerializationContext): ActionExecutor {
+    private fun makeActionExecutor(checkpointSerializationContext: CheckpointSerializationContext): ActionExecutor {
         return ActionExecutorImpl(
                 serviceHub,
                 checkpointStorage,
