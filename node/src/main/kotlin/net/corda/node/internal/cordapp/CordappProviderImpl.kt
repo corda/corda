@@ -8,6 +8,7 @@ import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
+import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.createCordappContext
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
@@ -34,7 +35,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
     /**
      * Current known CorDapps loaded on this node
      */
-    override val cordapps get() = cordappLoader.cordapps
+    override val cordapps: List<CordappImpl> get() = cordappLoader.cordapps
 
     fun start(whitelistedContractImplementations: Map<String, List<AttachmentId>>) {
         cordappAttachments.putAll(loadContractsIntoAttachmentStore())

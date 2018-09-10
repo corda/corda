@@ -83,7 +83,7 @@ include 'tools:notary-healthcheck:client'
 if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
     include 'core-deterministic'
     include 'core-deterministic:testing'
-    include 'core-deterministic:testing:common'
     include 'core-deterministic:testing:data'
+    include 'core-deterministic:testing:verifier'
     include 'serialization-deterministic'
 }
