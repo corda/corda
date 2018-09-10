@@ -9,7 +9,6 @@ import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.node.services.CordaService
-import net.corda.node.VersionInfo
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
@@ -127,8 +126,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 findAllFlows(this),
                 url.url,
                 info,
-                getJarHash(url.url),
-                name
+                getJarHash(url.url)
         )
     }
 

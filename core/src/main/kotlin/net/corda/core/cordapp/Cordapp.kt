@@ -47,6 +47,5 @@ interface Cordapp {
     val allFlows: List<Class<out FlowLogic<*>>>
     val jarPath: URL
     val cordappClasses: List<String>
-    val info: Info
     val jarHash: SecureHash.SHA256
 }

@@ -4,9 +4,9 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
-import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.nodeapi.internal.DEV_ROOT_CA
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.internal.IntegrationTest
@@ -22,7 +22,6 @@ class PersistentNetworkMapCacheTest : IntegrationTest() {
     private companion object {
         val ALICE = TestIdentity(ALICE_NAME, 70)
         val BOB = TestIdentity(BOB_NAME, 80)
-        val CHARLIE = TestIdentity(CHARLIE_NAME, 90)
 
         @ClassRule
         @JvmField
@@ -37,7 +36,7 @@ class PersistentNetworkMapCacheTest : IntegrationTest() {
 
     //Enterprise only - objects created in the setup method, below initialized with dummy values to avoid need for nullable type declaration
     private var database = CordaPersistence(DatabaseConfig(), emptySet())
-    private var charlieNetMapCache = PersistentNetworkMapCache(database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate), CHARLIE.name)
+    private var charlieNetMapCache = PersistentNetworkMapCache(database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
 
     @Before()
     fun setup() {

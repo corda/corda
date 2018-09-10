@@ -23,11 +23,6 @@ fun createTestManifest(name: String, title: String, version: String, vendor: Str
     return manifest
 }
 
-internal fun createTestManifest(name: String, title: String, jarUUID: UUID): Manifest {
-
-    return createTestManifest(name, title, "test-$jarUUID", "R3")
-}
-
 operator fun Manifest.set(key: String, value: String) {
     mainAttributes.putValue(key, value)
 }
