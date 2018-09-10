@@ -3,10 +3,10 @@ package net.corda.node
 import net.corda.core.internal.div
 import net.corda.node.internal.NodeStartup
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
-import org.apache.logging.log4j.Level
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.BeforeClass
 import org.junit.Test
+import org.slf4j.event.Level
 import java.nio.file.Path
 import java.nio.file.Paths
 
