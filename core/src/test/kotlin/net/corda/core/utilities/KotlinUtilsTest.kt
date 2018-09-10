@@ -42,7 +42,7 @@ class KotlinUtilsTest {
     fun `checkpointing a transient property with non-capturing lambda`() {
         val original = NonCapturingTransientProperty()
         val originalVal = original.transientVal
-        val copy = original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize(context = KRYO_CHECKPOINT_CONTEXT)
+        val copy = original.checkpointSerialize(context = KRYO_CHECKPOINT_CONTEXT).checkpointDeserialize(context = KRYO_CHECKPOINT_CONTEXT)
         val copyVal = copy.transientVal
         assertThat(copyVal).isNotEqualTo(originalVal)
         assertThat(copy.transientVal).isEqualTo(copyVal)
@@ -53,14 +53,14 @@ class KotlinUtilsTest {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
         val original = NonCapturingTransientProperty()
-        original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
+        original.checkpointSerialize(context = KRYO_CHECKPOINT_CONTEXT).checkpointDeserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
     }
 
     @Test
     fun `checkpointing a transient property with capturing lambda`() {
         val original = CapturingTransientProperty("Hello")
         val originalVal = original.transientVal
-        val copy = original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize(context = KRYO_CHECKPOINT_CONTEXT)
+        val copy = original.checkpointSerialize(context = KRYO_CHECKPOINT_CONTEXT).checkpointDeserialize(context = KRYO_CHECKPOINT_CONTEXT)
         val copyVal = copy.transientVal
         assertThat(copyVal).isNotEqualTo(originalVal)
         assertThat(copy.transientVal).isEqualTo(copyVal)
@@ -74,7 +74,7 @@ class KotlinUtilsTest {
 
         val original = CapturingTransientProperty("Hello")
 
-        original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
+        original.checkpointSerialize(context = KRYO_CHECKPOINT_CONTEXT).checkpointDeserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
     }
 
     private class NullTransientProperty {

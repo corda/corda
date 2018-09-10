@@ -235,7 +235,7 @@ class ActionExecutorImpl(
     }
 
     private fun serializeCheckpoint(checkpoint: Checkpoint): SerializedBytes<Checkpoint> {
-        return checkpoint.serialize(context = checkpointSerializationContext)
+        return checkpoint.checkpointSerialize(context = checkpointSerializationContext)
     }
 
     private fun cancelFlowTimeout(action: Action.CancelFlowTimeout) {

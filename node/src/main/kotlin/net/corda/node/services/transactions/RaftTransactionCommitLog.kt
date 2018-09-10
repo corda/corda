@@ -201,7 +201,7 @@ class RaftTransactionCommitLog<E, EK>(
             private val factory = CheckpointSerializationFactory.defaultFactory
 
             override fun write(obj: T, buffer: BufferOutput<*>, serializer: Serializer) {
-                val serialized = obj.serialize(context = context)
+                val serialized = obj.checkpointSerialize(context = context)
                 buffer.writeInt(serialized.size)
                 buffer.write(serialized.bytes)
             }

@@ -163,32 +163,32 @@ interface CheckpointSerializationContext {
 /*
  * Convenience extension method for deserializing a ByteSequence, utilising the default factory.
  */
-inline fun <reified T : Any> ByteSequence.deserialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
-                                                      context: CheckpointSerializationContext): T {
+inline fun <reified T : Any> ByteSequence.checkpointDeserialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
+                                                                context: CheckpointSerializationContext): T {
     return serializationFactory.deserialize(this, T::class.java, context)
 }
 
 /**
  * Convenience extension method for deserializing SerializedBytes with type matching, utilising the default factory.
  */
-inline fun <reified T : Any> SerializedBytes<T>.deserialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
-                                                            context: CheckpointSerializationContext): T {
+inline fun <reified T : Any> SerializedBytes<T>.checkpointDeserialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
+                                                                      context: CheckpointSerializationContext): T {
     return serializationFactory.deserialize(this, T::class.java, context)
 }
 
 /**
  * Convenience extension method for deserializing a ByteArray, utilising the default factory.
  */
-inline fun <reified T : Any> ByteArray.deserialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
-                                                   context: CheckpointSerializationContext): T {
+inline fun <reified T : Any> ByteArray.checkpointDeserialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
+                                                             context: CheckpointSerializationContext): T {
     require(isNotEmpty()) { "Empty bytes" }
-    return this.sequence().deserialize(serializationFactory, context)
+    return this.sequence().checkpointDeserialize(serializationFactory, context)
 }
 
 /**
  * Convenience extension method for serializing an object of type T, utilising the default factory.
  */
-fun <T : Any> T.serialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
-                          context: CheckpointSerializationContext): SerializedBytes<T> {
+fun <T : Any> T.checkpointSerialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
+                                    context: CheckpointSerializationContext): SerializedBytes<T> {
     return serializationFactory.serialize(this, context)
 }

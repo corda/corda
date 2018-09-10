@@ -13,7 +13,6 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.serialization.CheckpointSerializationContext
-import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
@@ -369,7 +368,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 Event.Suspend(
                         ioRequest = ioRequest,
                         maySkipCheckpoint = skipPersistingCheckpoint,
-                        fiber = this.serialize(context = serializationContext.value)
+                        fiber = this.serializeKryo(context = serializationContext.value)
                 )
             } catch (throwable: Throwable) {
                 Event.Error(throwable)

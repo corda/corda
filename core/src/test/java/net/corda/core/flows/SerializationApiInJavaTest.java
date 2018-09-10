@@ -7,7 +7,7 @@ import net.corda.testing.core.SerializationEnvironmentRule;
 import org.junit.Rule;
 import org.junit.Test;
 
-import static net.corda.core.serialization.CheckpointSerializationAPIKt.serialize;
+import static net.corda.core.serialization.CheckpointSerializationAPIKt.checkpointSerialize;
 import static net.corda.core.serialization.SerializationAPIKt.serialize;
 import static org.junit.Assert.assertNull;
 
@@ -36,6 +36,6 @@ public class SerializationApiInJavaTest {
         serialize("hello", factory, defaults.getRPC_SERVER_CONTEXT());
         serialize("hello", factory, defaults.getRPC_CLIENT_CONTEXT());
         serialize("hello", factory, defaults.getSTORAGE_CONTEXT());
-        serialize("hello", checkpointSerializationFactory, defaults.getCHECKPOINT_CONTEXT());
+        checkpointSerialize("hello", checkpointSerializationFactory, defaults.getCHECKPOINT_CONTEXT());
     }
 }

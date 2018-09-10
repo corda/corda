@@ -33,7 +33,7 @@ class PrivateKeySerializationTest(private val privateKey: PrivateKey, private va
     @Test
     fun `passed with expected UseCases`() {
         assertTrue { privateKey.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes.isNotEmpty() }
-        assertTrue { privateKey.serialize(context = SerializationDefaults.CHECKPOINT_CONTEXT).bytes.isNotEmpty() }
+        assertTrue { privateKey.serializeKryo(context = SerializationDefaults.CHECKPOINT_CONTEXT).bytes.isNotEmpty() }
     }
 
     @Test

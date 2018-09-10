@@ -5,7 +5,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.serialize
 import net.corda.node.internal.CheckpointIncompatibleException
 import net.corda.node.internal.CheckpointVerifier
 import net.corda.node.internal.configureDatabase
@@ -189,9 +188,9 @@ class DBCheckpointStorageTests {
         val logic: FlowLogic<*> = object : FlowLogic<Unit>() {
             override fun call() {}
         }
-        val frozenLogic = logic.serialize(context = SerializationDefaults.CHECKPOINT_CONTEXT)
+        val frozenLogic = logic.serializeKryo(context = SerializationDefaults.CHECKPOINT_CONTEXT)
         val checkpoint = Checkpoint.create(InvocationContext.shell(), FlowStart.Explicit, logic.javaClass, frozenLogic, ALICE, SubFlowVersion.CoreFlow(version)).getOrThrow()
-        return id to checkpoint.serialize(context = SerializationDefaults.CHECKPOINT_CONTEXT)
+        return id to checkpoint.serializeKryo(context = SerializationDefaults.CHECKPOINT_CONTEXT)
     }
 
 }

@@ -37,8 +37,8 @@ class ContractAttachmentSerializerTest {
     fun `write contract attachment and read it back`() {
         val contractAttachment = ContractAttachment(GeneratedAttachment(EMPTY_BYTE_ARRAY), DummyContract.PROGRAM_ID)
         // no token context so will serialize the whole attachment
-        val serialized = contractAttachment.serialize(factory, context)
-        val deserialized = serialized.deserialize(factory, context)
+        val serialized = contractAttachment.checkpointSerialize(factory, context)
+        val deserialized = serialized.checkpointDeserialize(factory, context)
 
         assertEquals(contractAttachment.id, deserialized.attachment.id)
         assertEquals(contractAttachment.contract, deserialized.contract)
@@ -53,8 +53,8 @@ class ContractAttachmentSerializerTest {
         mockServices.attachments.importAttachment(attachment.open(), "test", null)
 
         val contractAttachment = ContractAttachment(attachment, DummyContract.PROGRAM_ID)
-        val serialized = contractAttachment.serialize(factory, contextWithToken)
-        val deserialized = serialized.deserialize(factory, contextWithToken)
+        val serialized = contractAttachment.checkpointSerialize(factory, contextWithToken)
+        val deserialized = serialized.checkpointDeserialize(factory, contextWithToken)
 
         assertEquals(contractAttachment.id, deserialized.attachment.id)
         assertEquals(contractAttachment.contract, deserialized.contract)
@@ -70,7 +70,7 @@ class ContractAttachmentSerializerTest {
         mockServices.attachments.importAttachment(attachment.open(), "test", null)
 
         val contractAttachment = ContractAttachment(attachment, DummyContract.PROGRAM_ID)
-        val serialized = contractAttachment.serialize(factory, contextWithToken)
+        val serialized = contractAttachment.checkpointSerialize(factory, contextWithToken)
 
         assertThat(serialized.size).isLessThan(largeAttachmentSize)
     }
@@ -82,8 +82,8 @@ class ContractAttachmentSerializerTest {
         // don't importAttachment in mockService
 
         val contractAttachment = ContractAttachment(attachment, DummyContract.PROGRAM_ID)
-        val serialized = contractAttachment.serialize(factory, contextWithToken)
-        val deserialized = serialized.deserialize(factory, contextWithToken)
+        val serialized = contractAttachment.checkpointSerialize(factory, contextWithToken)
+        val deserialized = serialized.checkpointDeserialize(factory, contextWithToken)
 
         assertThatThrownBy { deserialized.attachment.open() }.isInstanceOf(MissingAttachmentsException::class.java)
     }
@@ -94,8 +94,8 @@ class ContractAttachmentSerializerTest {
         // don't importAttachment in mockService
 
         val contractAttachment = ContractAttachment(attachment, DummyContract.PROGRAM_ID)
-        val serialized = contractAttachment.serialize(factory, contextWithToken)
-        serialized.deserialize(factory, contextWithToken)
+        val serialized = contractAttachment.checkpointSerialize(factory, contextWithToken)
+        serialized.checkpointDeserialize(factory, contextWithToken)
 
         // MissingAttachmentsException thrown if we try to open attachment
     }

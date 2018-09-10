@@ -74,7 +74,7 @@ class FiberDeserializationChecker {
                 when (job) {
                     is Job.Check -> {
                         try {
-                            job.serializedFiber.deserialize(context = checkpointSerializationContext)
+                            job.serializedFiber.checkpointDeserialize(context = checkpointSerializationContext)
                         } catch (throwable: Throwable) {
                             log.error("Encountered unrestorable checkpoint!", throwable)
                             foundUnrestorableFibers = true
