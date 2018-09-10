@@ -5,8 +5,8 @@ import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.ByteSequence
 
 /**
- * An abstraction for serializing and deserializing objects, with support for versioning of the wire format via
- * a header / prefix in the bytes.
+ * A deterministic version of [CheckpointSerializationFactory] that does not use thread-locals to manage serialization
+ * context.
  */
 @KeepForDJVM
 abstract class CheckpointSerializationFactory {

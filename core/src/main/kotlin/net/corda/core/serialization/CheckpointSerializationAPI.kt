@@ -8,8 +8,7 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.sequence
 
 /**
- * An abstraction for serializing and deserializing objects, with support for versioning of the wire format via
- * a header / prefix in the bytes.
+ * An abstraction for serializing and deserializing objects at checkpoints, using Kryo serialization.
  */
 abstract class CheckpointSerializationFactory {
     /**
@@ -87,7 +86,7 @@ abstract class CheckpointSerializationFactory {
 }
 
 /**
- * Parameters to serialization and deserialization.
+ * Parameters to checkpoint serialization and deserialization.
  */
 @KeepForDJVM
 @DoNotImplement
@@ -156,8 +155,13 @@ interface CheckpointSerializationContext {
     fun withEncodingWhitelist(encodingWhitelist: EncodingWhitelist): CheckpointSerializationContext
 }
 
-/**
- * Convenience extension method for deserializing a ByteSequence, utilising the defaults.
+/*
+ * The following extension methods are disambiguated from the AMQP-serialization methods by requiring that an
+ * explicit [CheckpointSerializationContext] parameter be provided.
+ */
+
+/*
+ * Convenience extension method for deserializing a ByteSequence, utilising the default factory.
  */
 inline fun <reified T : Any> ByteSequence.deserialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
                                                       context: CheckpointSerializationContext): T {
@@ -165,7 +169,7 @@ inline fun <reified T : Any> ByteSequence.deserialize(serializationFactory: Chec
 }
 
 /**
- * Convenience extension method for deserializing SerializedBytes with type matching, utilising the defaults.
+ * Convenience extension method for deserializing SerializedBytes with type matching, utilising the default factory.
  */
 inline fun <reified T : Any> SerializedBytes<T>.deserialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
                                                             context: CheckpointSerializationContext): T {
@@ -173,7 +177,7 @@ inline fun <reified T : Any> SerializedBytes<T>.deserialize(serializationFactory
 }
 
 /**
- * Convenience extension method for deserializing a ByteArray, utilising the defaults.
+ * Convenience extension method for deserializing a ByteArray, utilising the default factory.
  */
 inline fun <reified T : Any> ByteArray.deserialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
                                                    context: CheckpointSerializationContext): T {
@@ -182,7 +186,7 @@ inline fun <reified T : Any> ByteArray.deserialize(serializationFactory: Checkpo
 }
 
 /**
- * Convenience extension method for serializing an object of type T, utilising the defaults.
+ * Convenience extension method for serializing an object of type T, utilising the default factory.
  */
 fun <T : Any> T.serialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
                           context: CheckpointSerializationContext): SerializedBytes<T> {
