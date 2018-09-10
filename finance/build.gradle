@@ -71,11 +71,22 @@ jar {
     exclude "META-INF/*.MF"
     exclude "META-INF/LICENSE"
     exclude "META-INF/NOTICE"
+
+    manifest {
+        attributes(
+                "Manifest-Version": "1.0",
+                "Specification-Title": description,
+                "Specification-Version": version,
+                "Specification-Vendor": "Corda Open Source",
+                "Implementation-Title": "$group.$baseName",
+        )
+    }
 }
 
 cordapp {
     info {
-        vendor "R3"
+        name "net/corda/finance"
+        vendor "Corda Open Source"
     }
 }
 

@@ -2,6 +2,7 @@ package net.corda.node.cordapp
 
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.FlowLogic
+import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.schemas.MappedSchema
 
 /**
@@ -12,7 +13,7 @@ interface CordappLoader {
     /**
      * Returns all [Cordapp]s found.
      */
-    val cordapps: List<Cordapp>
+    val cordapps: List<CordappImpl>
 
     /**
      * Returns a [ClassLoader] containing all types from all [Cordapp]s.

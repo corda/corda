@@ -1,13 +1,10 @@
 package net.corda.node.internal.cordapp
 
-import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.cordapp.CordappImpl
-import java.util.*
 import java.util.jar.Attributes
 import java.util.jar.Manifest
 
 fun createTestManifest(name: String, title: String, version: String, vendor: String): Manifest {
-
     val manifest = Manifest()
 
     // Mandatory manifest attribute. If not present, all other entries are silently skipped.
@@ -27,21 +24,19 @@ fun createTestManifest(name: String, title: String, version: String, vendor: Str
 }
 
 operator fun Manifest.set(key: String, value: String) {
-
     mainAttributes.putValue(key, value)
 }
 
-internal fun Manifest?.toCordappInfo(defaultShortName: String): Cordapp.Info {
-
-    var unknown = CordappImpl.Info.UNKNOWN
+fun Manifest?.toCordappInfo(defaultShortName: String): CordappImpl.Info {
+    var info = CordappImpl.Info.UNKNOWN
     (this?.mainAttributes?.getValue("Name") ?: defaultShortName).let { shortName ->
-        unknown = unknown.copy(shortName = shortName)
+        info = info.copy(shortName = shortName)
     }
     this?.mainAttributes?.getValue("Implementation-Vendor")?.let { vendor ->
-        unknown = unknown.copy(vendor = vendor)
+        info = info.copy(vendor = vendor)
     }
     this?.mainAttributes?.getValue("Implementation-Version")?.let { version ->
-        unknown = unknown.copy(version = version)
+        info = info.copy(version = version)
     }
-    return unknown
+    return info
 }
