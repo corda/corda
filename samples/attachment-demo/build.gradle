@@ -40,9 +40,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
                                                                              "InvokeRpc.attachmentExists",
                                                                              "InvokeRpc.openAttachment",
                                                                              "InvokeRpc.uploadAttachment",
-                                                                             "InvokeRpc.internalVerifiedTransactionsFeed"]],
-                    ['username': "admin", 'password': 'password', 'permissions': ['ALL']]
-    ]
+                                                                             "InvokeRpc.internalVerifiedTransactionsFeed"]]]
 
     directory "./build/nodes"
     node {
