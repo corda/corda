@@ -23,8 +23,10 @@ import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -50,7 +52,7 @@ class AttachmentLoadingTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val attachments = MockAttachmentStorage()
-    private val provider = CordappProviderImpl(JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR), 4), MockCordappConfigProvider(), attachments).apply {
+    private val provider = CordappProviderImpl(JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR), VersionInfo.UNKNOWN.copy(PLATFORM_VERSION)), MockCordappConfigProvider(), attachments).apply {
         start(testNetworkParameters().whitelistedContractImplementations)
     }
     private val cordapp get() = provider.cordapps.first()
