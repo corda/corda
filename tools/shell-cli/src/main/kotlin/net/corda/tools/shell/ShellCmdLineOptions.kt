@@ -20,7 +20,7 @@ class ShellCmdLineOptions {
 
     @Option(
             names = ["-c", "--cordapp-directory"],
-            description = ["The path to the directory containing CorDapp jars, CorDapps are required when starting flows."]
+            description = ["The path to the directory containing CorDapp JARs, CorDapps are required when starting flows."]
     )
     var cordappDirectory: Path? = null
 
