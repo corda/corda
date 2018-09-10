@@ -114,8 +114,8 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         val unfilteredCordapps = cordappJarPaths.map { scanCordapp(it).toCordapp(it) }
         val cordapps: MutableList<CordappImpl> = mutableListOf()
         for (cordapp in unfilteredCordapps) {
-            if (cordapp.info.minPlatformVersion > versionInfo.platformVersion) {
-                logger.warn("Not loading CorDapp ${cordapp.info.shortName} (${cordapp.info.vendor}) as it requires minimum platform version ${cordapp.info.minPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
+            if (cordapp.info.minimumPlatformVersion > versionInfo.platformVersion) {
+                logger.warn("Not loading CorDapp ${cordapp.info.shortName} (${cordapp.info.vendor}) as it requires minimum platform version ${cordapp.info.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
             } else {
                 cordapps.add(cordapp)
             }

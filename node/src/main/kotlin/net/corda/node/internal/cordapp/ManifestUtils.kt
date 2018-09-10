@@ -40,6 +40,6 @@ fun Manifest?.toCordappInfo(defaultShortName: String): CordappImpl.Info {
     }
     val minPlatformVersion = this?.mainAttributes?.getValue("Min-Platform-Version")?.toInt() ?: 1
     val targetPlatformVersion = this?.mainAttributes?.getValue("Target-Platform-Version")?.toInt() ?: minPlatformVersion
-    info = info.copy(minPlatformVersion = minPlatformVersion, targetPlatformVersion = targetPlatformVersion)
+    info = info.copy(minimumPlatformVersion = minPlatformVersion, targetPlatformVersion = targetPlatformVersion)
     return info
 }

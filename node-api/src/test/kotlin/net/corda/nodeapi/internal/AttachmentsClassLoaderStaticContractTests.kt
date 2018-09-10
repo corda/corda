@@ -15,6 +15,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
@@ -110,7 +111,7 @@ class AttachmentsClassLoaderStaticContractTests {
         val cordapps = cordappsForPackages(packages)
         return testDirectory().let { directory ->
             cordapps.packageInDirectory(directory)
-            JarScanningCordappLoader.fromDirectories(listOf(directory))
+            JarScanningCordappLoader.fromDirectories(listOf(directory), VersionInfo.UNKNOWN.copy(platformVersion = PLATFORM_VERSION))
         }
     }
 
