@@ -26,7 +26,7 @@ class ShellCmdLineOptions {
 
     @Option(
             names = ["-o", "--commands-directory"],
-            description = ["The path to the directory containing additional CrAsH shell commands."]
+            description = ["The path to the directory containing additional CRaSH shell commands."]
     )
     var commandsDirectory: Path? = null
 
