@@ -1,12 +1,11 @@
-package net.corda.node.utilities.profiling
+package net.corda.core.internal.profiling
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.LoadingCache
-import com.google.common.primitives.Longs
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.internal.addShutdownHook
 import java.io.File
 import java.io.FileOutputStream
+import java.nio.ByteBuffer
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -38,14 +37,16 @@ class CacheTracing {
                 file.parentFile.mkdirs()
             }
             FileOutputStream(fileName, true).use {
+                val buffer = ByteBuffer.allocate(java.lang.Long.BYTES)
                 var firstRun = true // make sure the loop runs at least once (in case of very short lived process where the thread might be started after shutdown is initiated.
                 while (running || firstRun) {
                     Thread.sleep(100) // sleep first, then check for work (so that work arriving during sleep does not get lost in shutdown)
                     var item: Long? = null
                     while ({ item = queue.poll(); item }() != null) {
-                        it.write(Longs.toByteArray(item!!))
+                        buffer.putLong(item!!)
+                        it.write(buffer.array())
+                        buffer.clear()
                     }
-                    firstRun = false
                 }
             }
         }
@@ -91,21 +92,35 @@ class CacheTracing {
         }
     }
 
+    data class CacheTracingConfig(val enabled: Boolean, val targetDir: Path, val converter: (key: Any?) -> Long)
+
     companion object {
-        fun <K, V> wrap(cache: Cache<K, V>, converter: (key: K) -> Long, config: CacheTracingConfig?, traceName: String): Cache<K, V> {
-            return if (config != null && config.enabled) TracingCacheWrapper(cache, getCollector(config.targetDir, traceName, converter)) else cache
+        var cacheTracingConfig: CacheTracingConfig? = null
+
+        fun <K, V> wrap(cache: Cache<K, V>, name: String): Cache<K, V> {
+            return wrap(cache, cacheTracingConfig, name)
         }
 
-        fun <K, V> wrap(cache: LoadingCache<K, V>, converter: (key: K) -> Long, config: CacheTracingConfig?, traceName: String): LoadingCache<K, V> {
-            return if (config != null && config.enabled) TracingLoadingCacheWrapper(cache, getCollector(config.targetDir, traceName, converter)) else cache
+        fun <K, V> wrap(cache: LoadingCache<K, V>, name: String): LoadingCache<K, V> {
+            return wrap(cache, cacheTracingConfig, name)
+        }
+
+        fun <K, V> wrap(cache: Cache<K, V>, config: CacheTracingConfig?, traceName: String): Cache<K, V> {
+            return if (config != null && config.enabled) TracingCacheWrapper(cache, getCollector(config.targetDir, traceName, config.converter)) else cache
+        }
+
+        fun <K, V> wrap(cache: LoadingCache<K, V>, config: CacheTracingConfig?, traceName: String): LoadingCache<K, V> {
+            return if (config != null && config.enabled) TracingLoadingCacheWrapper(cache, getCollector(config.targetDir, traceName, config.converter)) else cache
         }
 
         private val collectors = ConcurrentHashMap<String, TraceCollector<*>>()
 
         @Synchronized
-        private fun <K> getCollector(targetDir: Path, traceName: String, converter: (key: K) -> Long): TraceCollector<K> {
+        private fun <K> getCollector(targetDir: Path, traceName: String, converter: (key: Any?) -> Long): TraceCollector<K> {
             if (collectors.isEmpty()) {
-                addShutdownHook { shutdown() }
+                val hook = Thread { shutdown() }
+                val runtime = Runtime.getRuntime()
+                runtime.addShutdownHook(hook)
             }
             val fileName = targetDir.resolve("trace_$traceName.bin").toAbsolutePath().toString()
             @Suppress("UNCHECKED_CAST") // need to suppress this warning - no way to check against an erased type

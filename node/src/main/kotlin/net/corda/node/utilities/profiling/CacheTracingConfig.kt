@@ -1,10 +1,19 @@
 package net.corda.node.utilities.profiling
 
+import net.corda.core.internal.profiling.CacheTracing
 import net.corda.node.services.config.EnterpriseConfiguration
-import java.nio.file.Path
+import java.nio.charset.Charset
 
-data class CacheTracingConfig(val enabled: Boolean, val targetDir: Path)
+val longHash = com.google.common.hash.Hashing.sipHash24()
 
-fun EnterpriseConfiguration.getTracingConfig(): CacheTracingConfig {
-    return CacheTracingConfig(this.enableCacheTracing, this.traceTargetDirectory)
+private fun convertObject(key: Any?): Long {
+    if (key == null) {
+        return 0
+    }
+    return longHash.hashString(key.toString(), Charset.defaultCharset()).asLong()
+}
+
+
+fun EnterpriseConfiguration.getTracingConfig(): CacheTracing.CacheTracingConfig {
+    return CacheTracing.CacheTracingConfig(this.enableCacheTracing, this.traceTargetDirectory, { convertObject(it) })
 }

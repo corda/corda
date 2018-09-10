@@ -1,9 +1,8 @@
-package net.corda.node.utilities.profiling
-
+package net.corda.core.internal.profiling
 
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.primitives.Longs
-import net.corda.node.utilities.profiling.CacheTracing.Companion.wrap
+import net.corda.core.internal.profiling.CacheTracing.Companion.wrap
 import org.junit.Test
 import java.io.FileInputStream
 import kotlin.test.assertEquals
@@ -14,12 +13,12 @@ class CacheTracingTest {
         val tempDir = createTempDir()
         val cache = Caffeine.newBuilder().maximumSize(10).build<Long, Long>()
 
-        val wrappedCache = wrap(cache, { key: Long -> key }, CacheTracingConfig(true, tempDir.toPath()), "test")
+        val wrappedCache = wrap(cache, CacheTracing.CacheTracingConfig(true, tempDir.toPath(), { key: Any? -> key as Long }), "test")
 
         wrappedCache.put(1L, 1L)
         wrappedCache.putAll(mutableMapOf(2L to 2L, 3L to 3L))
-        wrappedCache.get(4) { it }
-        wrappedCache.getIfPresent(5)
+        wrappedCache.get(4L) { it }
+        wrappedCache.getIfPresent(5L)
 
         CacheTracing.shutdown()
 
@@ -33,12 +32,12 @@ class CacheTracingTest {
         val tempDir = createTempDir()
         val cache = Caffeine.newBuilder().maximumSize(10).build<Long, Long>()
 
-        val wrappedCache = wrap(cache, { key: Long -> key }, CacheTracingConfig(true, tempDir.toPath().resolve("foo/bar")), "test")
+        val wrappedCache = wrap(cache, CacheTracing.CacheTracingConfig(true, tempDir.toPath().resolve("foo/bar"), { key: Any? -> key as Long }), "test")
 
         wrappedCache.put(1L, 1L)
         wrappedCache.putAll(mutableMapOf(2L to 2L, 3L to 3L))
-        wrappedCache.get(4) { it }
-        wrappedCache.getIfPresent(5)
+        wrappedCache.get(4L) { it }
+        wrappedCache.getIfPresent(5L)
 
         CacheTracing.shutdown()
 
@@ -53,7 +52,7 @@ class CacheTracingTest {
         val tempDir = createTempDir()
         val cache = Caffeine.newBuilder().maximumSize(10).build<Long, Long>()
 
-        val wrappedCache = wrap(cache, { key: Long -> key }, CacheTracingConfig(true, tempDir.toPath()), "test")
+        val wrappedCache = wrap(cache, CacheTracing.CacheTracingConfig(true, tempDir.toPath(), { key: Any? -> key as Long }), "test")
 
         wrappedCache.put(1L, 1L)
         CacheTracing.shutdown()
@@ -72,14 +71,14 @@ class CacheTracingTest {
         val tempDir = createTempDir()
         val cache = Caffeine.newBuilder().maximumSize(10).build<Long, Long> { it }
 
-        val wrappedCache = wrap(cache, { key: Long -> key }, CacheTracingConfig(true, tempDir.toPath()), "test")
+        val wrappedCache = wrap(cache, CacheTracing.CacheTracingConfig(true, tempDir.toPath(), { key: Any? -> key as Long }), "test")
 
         wrappedCache.put(1L, 1L)
         wrappedCache.putAll(mutableMapOf(2L to 2L, 3L to 3L))
-        wrappedCache.get(4)
-        wrappedCache.getIfPresent(5)
-        wrappedCache.getAll(listOf(1, 3))
-        wrappedCache.refresh(3)
+        wrappedCache.get(4L)
+        wrappedCache.getIfPresent(5L)
+        wrappedCache.getAll(listOf(1L, 3L))
+        wrappedCache.refresh(3L)
 
         CacheTracing.shutdown()
 

@@ -69,7 +69,6 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.JVMAgentRegistry
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.node.utilities.NodeBuildProperties
-import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
@@ -909,8 +908,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 services,
                 database,
                 schemaService,
-                configuration.transactionCacheSizeBytes,
-                configuration.enterpriseConfiguration.getTracingConfig())
+                configuration.transactionCacheSizeBytes
+        )
     }
 
     /** Load configured JVM agents */

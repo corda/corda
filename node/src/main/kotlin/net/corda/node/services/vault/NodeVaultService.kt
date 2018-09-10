@@ -24,8 +24,6 @@ import net.corda.node.services.config.KB
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.utilities.profiling.CacheTracing.Companion.wrap
-import net.corda.node.utilities.profiling.CacheTracingConfig
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.currentDBSession
@@ -62,8 +60,7 @@ class NodeVaultService(
         private val servicesForResolution: ServicesForResolution,
         private val database: CordaPersistence,
         private val schemaService: SchemaService,
-        transactionCacheSizeBytes: Long = NodeConfiguration.defaultTransactionCacheSize,
-        cacheTraceConfig: CacheTracingConfig? = null
+        transactionCacheSizeBytes: Long = NodeConfiguration.defaultTransactionCacheSize
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
         private val log = contextLogger()
@@ -92,14 +89,7 @@ class NodeVaultService(
      * This caches what states are in the vault for a particular transaction. Size the cache based on one entry per 8KB of transaction cache.
      * This size results in minimum of 1024.
      */
-    private val producedStatesMapping = wrap(
-            Caffeine.newBuilder().maximumSize(transactionCacheSizeBytes / 8.KB).build<SecureHash, BitSet>(),
-            converter = { key: SecureHash -> longHash.hashBytes(key.bytes).asLong() },
-            config = cacheTraceConfig,
-            traceName = "vaulteservice"
-    )
-
-    private val longHash = com.google.common.hash.Hashing.sipHash24()
+    private val producedStatesMapping = Caffeine.newBuilder().maximumSize(transactionCacheSizeBytes / 8.KB).buildNamed<SecureHash, BitSet>("NodeVaultService_producedStates")
 
     override fun start() {
         criteriaBuilder = database.hibernateConfig.sessionFactoryForRegisteredSchemas.criteriaBuilder
