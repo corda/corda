@@ -1,22 +1,15 @@
-buildscript {
-    ext {
-        tornadofx_version = '1.7.15'
-        jna_version = '4.1.0'
-        purejavacomm_version = '0.0.18'
-        controlsfx_version = '8.40.12'
+ext {
+    tornadofx_version = '1.7.15'
+    jna_version = '4.1.0'
+    purejavacomm_version = '0.0.18'
+    controlsfx_version = '8.40.12'
 
-        java_home = System.properties.'java.home'
-        pkg_source = "$buildDir/packagesrc"
-        pkg_outDir = "$buildDir/javapackage"
-        dist_source = "$pkg_source/demobench-$version"
-        pkg_version = version.indexOf('-') >= 0 ? version.substring(0, version.indexOf('-')) : version
-        pkg_macosxKeyUserName = 'R3CEV'
-    }
-
-    repositories {
-        mavenLocal()
-        mavenCentral()
-    }
+    java_home = System.properties.'java.home'
+    pkg_source = "$buildDir/packagesrc"
+    pkg_outDir = "$buildDir/javapackage"
+    dist_source = "$pkg_source/demobench-$version"
+    pkg_version = version.indexOf('-') >= 0 ? version.substring(0, version.indexOf('-')) : version
+    pkg_macosxKeyUserName = 'R3CEV'
 }
 
 apply plugin: 'java'
@@ -82,6 +75,11 @@ dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
+}
+
+tasks.withType(JavaCompile) {
+    // Resolves a Gradle warning about not scanning for pre-processors.
+    options.compilerArgs << '-proc:none'
 }
 
 jar {
