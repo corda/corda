@@ -370,7 +370,7 @@ class InteractiveShellIntegrationTest {
     }
 
     @Test
-    fun `shell should fail to start flow with incorrectly matching class name`() {
+    fun `shell should start flow with partially matching class name`() {
         val user = User("u", "p", setOf(all()))
         var successful = false
         driver(DriverParameters(notarySpecs = emptyList())) {
@@ -384,10 +384,10 @@ class InteractiveShellIntegrationTest {
 
             // setup and configure some mocks required by InteractiveShell.runFlowByNameFragment()
             val output = mock<RenderPrintWriter> {
-                on { println(any<String>(), any<Color>()) } doAnswer {
+                on { println(any<String>()) } doAnswer {
                     val line = it.arguments[0]
                     println("$line")
-                    if ((line is String) && (line.startsWith("No matching flow found")))
+                    if ((line is String) && (line.startsWith("Flow completed with result")))
                         successful = true
                 }
             }

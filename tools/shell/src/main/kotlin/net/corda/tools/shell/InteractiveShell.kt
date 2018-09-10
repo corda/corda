@@ -252,18 +252,13 @@ object InteractiveShell {
         if (matches.isEmpty()) {
             output.println("No matching flow found, run 'flow list' to see your options.", Color.red)
             return
-        }
-        // nameFragment can represent a fully qualified Flow classname (eg. com.myflow.NoOpFlow)
-        // or just the Flow classname (eg. NoOpFlow)
-        val flowName = matches.find { it.endsWith(nameFragment) } ?: if (matches.size > 1) {
+        } else if (matches.size > 1 && matches.find { it.endsWith(nameFragment)} == null) {
             output.println("Ambiguous name provided, please be more specific. Your options are:")
             matches.forEachIndexed { i, s -> output.println("${i + 1}. $s", Color.yellow) }
             return
-        } else {
-            output.println("No matching flow found, run 'flow list' to see your options.", Color.red)
-            return
         }
 
+        val flowName = matches.find { it.endsWith(nameFragment)} ?: matches.single()
         val flowClazz: Class<FlowLogic<*>> = if (classLoader != null) {
             uncheckedCast(Class.forName(flowName, true, classLoader))
         } else {
