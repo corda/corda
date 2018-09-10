@@ -1,9 +1,18 @@
 package net.corda.testing.dsl
 
 import net.corda.core.DoNotImplement
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.AttachmentConstraint
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import java.security.PublicKey
@@ -80,6 +89,13 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * @param contractClassName The contract class to attach
      */
     fun _attachment(contractClassName: ContractClassName)
+
+    /**
+     * Attaches an attachment containing the named contract to the transaction
+     * @param contractClassName The contract class to attach
+     * @param attachmentId The attachment
+     */
+    fun _attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List<PublicKey>)
 }
 
 /**
@@ -185,6 +201,9 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private 
      * @see TransactionDSLInterpreter._attachment
      */
     fun attachment(contractClassName: ContractClassName) = _attachment(contractClassName)
+
+    fun attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List<PublicKey>) = _attachment(contractClassName, attachmentId, signers)
+    fun attachment(contractClassName: ContractClassName, attachmentId: AttachmentId) = _attachment(contractClassName, attachmentId, emptyList())
 
     fun attachments(vararg contractClassNames: ContractClassName) = contractClassNames.forEach { attachment(it) }
 }

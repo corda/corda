@@ -11,6 +11,7 @@ import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -147,7 +148,11 @@ data class TestTransactionDSLInterpreter private constructor(
     override fun _tweak(dsl: TransactionDSLInterpreter.() -> EnforceVerifyOrFail) = copy().dsl()
 
     override fun _attachment(contractClassName: ContractClassName) {
-        (services.cordappProvider as MockCordappProvider).addMockCordapp(contractClassName, services.attachments as MockAttachmentStorage)
+        attachment((services.cordappProvider as MockCordappProvider).addMockCordapp(contractClassName, services.attachments as MockAttachmentStorage))
+    }
+
+    override fun _attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List<PublicKey>){
+        attachment((services.cordappProvider as MockCordappProvider).addMockCordapp(contractClassName, services.attachments as MockAttachmentStorage, attachmentId, signers))
     }
 }
 

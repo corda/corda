@@ -9,6 +9,7 @@ import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.serialization.internal.GeneratedAttachment
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
+import java.security.PublicKey
 
 /**
  * A serializer for [ContractAttachment] that uses a proxy object to write out the full attachment eagerly.
@@ -23,13 +24,13 @@ class ContractAttachmentSerializer(factory: SerializerFactory) : CustomSerialize
         } catch (e: Exception) {
             throw MissingAttachmentsException(listOf(obj.id))
         }
-        return ContractAttachmentProxy(GeneratedAttachment(bytes), obj.contract, obj.additionalContracts, obj.uploader)
+        return ContractAttachmentProxy(GeneratedAttachment(bytes), obj.contract, obj.additionalContracts, obj.uploader, obj.signers)
     }
 
     override fun fromProxy(proxy: ContractAttachmentProxy): ContractAttachment {
-        return ContractAttachment(proxy.attachment, proxy.contract, proxy.contracts, proxy.uploader)
+        return ContractAttachment(proxy.attachment, proxy.contract, proxy.contracts, proxy.uploader, proxy.signers)
     }
 
     @KeepForDJVM
-    data class ContractAttachmentProxy(val attachment: Attachment, val contract: ContractClassName, val contracts: Set<ContractClassName>, val uploader: String?)
+    data class ContractAttachmentProxy(val attachment: Attachment, val contract: ContractClassName, val contracts: Set<ContractClassName>, val uploader: String?, val signers: List<PublicKey>)
 }
