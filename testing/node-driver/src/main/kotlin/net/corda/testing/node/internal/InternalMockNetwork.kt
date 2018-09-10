@@ -275,7 +275,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         }
     }
 
-    open class MockNode(args: MockNodeArgs, cordappLoader: CordappLoader = JarScanningCordappLoader.fromDirectories(args.config.cordappDirectories, args.version.platformVersion)) : AbstractNode<TestStartedNode>(
+    open class MockNode(args: MockNodeArgs, cordappLoader: CordappLoader = JarScanningCordappLoader.fromDirectories(args.config.cordappDirectories, args.version)) : AbstractNode<TestStartedNode>(
             args.config,
             TestClock(Clock.systemUTC()),
             args.version,
@@ -472,7 +472,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         val cordappDirectories = sharedCorDappsDirectories + TestCordappDirectories.cached(cordapps)
         doReturn(cordappDirectories).whenever(config).cordappDirectories
 
-        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version), JarScanningCordappLoader.fromDirectories(cordappDirectories, parameters.version.platformVersion))
+        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version), JarScanningCordappLoader.fromDirectories(cordappDirectories, parameters.version))
         _nodes += node
         if (start) {
             node.start()
