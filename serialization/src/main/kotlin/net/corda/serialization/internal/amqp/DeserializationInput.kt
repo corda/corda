@@ -101,7 +101,7 @@ class DeserializationInput constructor(
         } catch (nse: NotSerializableException) {
             throw nse
         } catch (t: Throwable) {
-            throw NotSerializableException("Unexpected throwable: ${t.message}").apply { initCause(t) }
+            throw NotSerializableException("Internal deserialization failure: ${t.javaClass.name}: ${t.message}").apply { initCause(t) }
         } finally {
             objectHistory.clear()
         }
@@ -156,7 +156,7 @@ class DeserializationInput constructor(
                             "is outside of the bounds for the list of size: ${objectHistory.size}")
 
                 val objectRetrieved = objectHistory[objectIndex]
-                if (!objectRetrieved::class.java.isSubClassOf(type.asClass()!!)) {
+                if (!objectRetrieved::class.java.isSubClassOf(type.asClass())) {
                     throw AMQPNotSerializableException(
                             type,
                             "Existing reference type mismatch. Expected: '$type', found: '${objectRetrieved::class.java}' " +

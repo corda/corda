@@ -19,6 +19,7 @@ import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
 import net.corda.core.internal.sign
 import net.corda.core.messaging.*
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
@@ -49,11 +50,19 @@ internal class CordaRPCOpsImpl(
         private val flowStarter: FlowStarter,
         private val shutdownNode: () -> Unit
 ) : CordaRPCOps {
+    /**
+     * Returns the RPC protocol version, which is the same the node's platform Version. Exists since version 1 so guaranteed
+     * to be present.
+     */
+    override val protocolVersion: Int get() = nodeInfo().platformVersion
+
     override fun networkMapSnapshot(): List<NodeInfo> {
         val (snapshot, updates) = networkMapFeed()
         updates.notUsed()
         return snapshot
     }
+
+    override val networkParameters: NetworkParameters get() = services.networkParameters
 
     override fun networkParametersFeed(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
         return services.networkMapUpdater.trackParametersUpdate()

@@ -35,6 +35,7 @@ class PersistentIdentityService : SingletonSerializeAsToken(), IdentityServiceIn
 
         fun createPKMap(): AppendOnlyPersistentMap<SecureHash, PartyAndCertificate, PersistentIdentity, String> {
             return AppendOnlyPersistentMap(
+                    "PersistentIdentityService_partyByKey",
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = {
                         Pair(
@@ -51,6 +52,7 @@ class PersistentIdentityService : SingletonSerializeAsToken(), IdentityServiceIn
 
         fun createX500Map(): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentIdentityNames, String> {
             return AppendOnlyPersistentMap(
+                    "PersistentIdentityService_partyByName",
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = { Pair(CordaX500Name.parse(it.name), SecureHash.parse(it.publicKeyHash)) },
                     toPersistentEntity = { key: CordaX500Name, value: SecureHash ->

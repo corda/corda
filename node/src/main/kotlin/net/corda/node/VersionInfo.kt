@@ -14,4 +14,9 @@ data class VersionInfo(
         /** The exact version control commit ID of the node build. */
         val revision: String,
         /** The node vendor */
-        val vendor: String)
+        val vendor: String) {
+
+    companion object {
+        val UNKNOWN = VersionInfo(1, "Unknown", "Unknown", "Unknown")
+    }
+}

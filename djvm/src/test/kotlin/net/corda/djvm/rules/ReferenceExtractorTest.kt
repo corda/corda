@@ -4,6 +4,7 @@ import foo.bar.sandbox.Callable
 import net.corda.djvm.TestBase
 import net.corda.djvm.assertions.AssertionExtensions.assertThat
 import org.junit.Test
+import org.objectweb.asm.Type
 import java.util.*
 
 class ReferenceExtractorTest : TestBase() {
@@ -32,7 +33,7 @@ class ReferenceExtractorTest : TestBase() {
     @Test
     fun `can find field references`() = validate<B> { context ->
         assertThat(context.references)
-                .hasMember(B::class.java.name.replace('.', '/'), "foo", "Ljava/lang/String;")
+                .hasMember(Type.getInternalName(B::class.java), "foo", "Ljava/lang/String;")
     }
 
     class B {
@@ -47,7 +48,7 @@ class ReferenceExtractorTest : TestBase() {
     @Test
     fun `can find class references`() = validate<C> { context ->
         assertThat(context.references)
-                .hasClass(A::class.java.name.replace('.', '/'))
+                .hasClass(Type.getInternalName(A::class.java))
     }
 
     class C {

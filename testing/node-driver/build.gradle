@@ -26,7 +26,6 @@ sourceSets {
 
 dependencies {
     compile project(':test-utils')
-    compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
 
     // Integration test helpers
     testCompile "org.assertj:assertj-core:$assertj_version"

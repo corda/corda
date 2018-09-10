@@ -801,6 +801,139 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     @Test
+    fun `logical operator case insensitive EQUAL`() {
+        database.transaction {
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.equal("gBp", false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive EQUAL does not affect numbers`() {
+        database.transaction {
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.equal(10000, false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive NOT_EQUAL does not return results containing the same characters as the case insensitive string`() {
+        database.transaction {
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.notEqual("gBp", false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(2)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive NOT_EQUAL does not affect numbers`() {
+        database.transaction {
+            listOf(USD, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            vaultFiller.fillWithSomeTestCash(AMOUNT(50, GBP), notaryServices, 1, DUMMY_CASH_ISSUER)
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.notEqual(10000, false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive IN`() {
+        database.transaction {
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            val currencies = listOf("cHf", "gBp")
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.`in`(currencies, false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(2)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive IN does not affect numbers`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(AMOUNT(100, USD), notaryServices, 1, DUMMY_CASH_ISSUER)
+            vaultFiller.fillWithSomeTestCash(AMOUNT(200, CHF), notaryServices, 1, DUMMY_CASH_ISSUER)
+            vaultFiller.fillWithSomeTestCash(AMOUNT(50, GBP), notaryServices, 1, DUMMY_CASH_ISSUER)
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.`in`(listOf(10000L, 20000L), false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(2)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive NOT IN does not return results containing the same characters as the case insensitive strings`() {
+        database.transaction {
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            val currencies = listOf("cHf", "gBp")
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.notIn(currencies, false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive NOT_IN does not affect numbers`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(AMOUNT(100, USD), notaryServices, 1, DUMMY_CASH_ISSUER)
+            vaultFiller.fillWithSomeTestCash(AMOUNT(200, CHF), notaryServices, 1, DUMMY_CASH_ISSUER)
+            vaultFiller.fillWithSomeTestCash(AMOUNT(50, GBP), notaryServices, 1, DUMMY_CASH_ISSUER)
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.notIn(listOf(10000L, 20000L), false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive LIKE`() {
+        database.transaction {
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.like("%bP", false) }  // GPB
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `logical operator NOT LIKE does not return results containing the same characters as the case insensitive string`() {
+        database.transaction {
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.notLike("%bP", false) }  // GPB
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(2)
+        }
+    }
+
+    @Test
     fun `aggregate functions without group clause`() {
         database.transaction {
             listOf(100.DOLLARS, 200.DOLLARS, 300.DOLLARS, 400.POUNDS, 500.SWISS_FRANCS).zip(1..5).forEach { (howMuch, states) ->

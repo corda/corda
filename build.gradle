@@ -46,7 +46,7 @@ buildscript {
     ext.hibernate_version = '5.2.6.Final'
     ext.h2_version = '1.4.197' // Update docs if renamed or removed.
     ext.postgresql_version = '42.1.4'
-    ext.rxjava_version = '1.2.4'
+    ext.rxjava_version = '1.3.8'
     ext.dokka_version = '0.9.17'
     ext.eddsa_version = '0.2.0'
     ext.dependency_checker_version = '3.1.0'
@@ -57,7 +57,7 @@ buildscript {
     ext.shiro_version = '1.4.0'
     ext.shadow_version = '2.0.4'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
-    ext.liquibase_version = '3.6.2'
+    ext.liquibase_version = '3.5.5'
     ext.artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
     ext.docker_compose_rule_version = '0.33.0'
@@ -195,6 +195,7 @@ allprojects {
 
         if (System.getProperty("test.maxParallelForks") != null) {
             maxParallelForks = Integer.valueOf(System.getProperty("test.maxParallelForks"))
+            logger.debug("System property test.maxParallelForks found - setting max parallel forks to $maxParallelForks for $project")
         }
 
         if (project.path.startsWith(':experimental') && System.getProperty("experimental.test.enable") == null) {
@@ -209,8 +210,8 @@ allprojects {
         mavenLocal()
         mavenCentral()
         jcenter()
+        maven { url "$artifactory_contextUrl/corda-dependencies" }
         maven { url 'https://jitpack.io' }
-        maven { url "$artifactory_contextUrl/corda-releases" } // cordform-common
     }
 
     configurations {
@@ -236,6 +237,8 @@ allprojects {
             // We want to use SLF4J's version of these bindings: jcl-over-slf4j
             // Remove any transitive dependency on Apache's version.
             exclude group: 'commons-logging', module: 'commons-logging'
+            // Remove any transitive dependency on Logback (e.g. Liquibase 3.6 introduces this dependency)
+            exclude group: 'ch.qos.logback'
 
             // Netty-All is an uber-jar which contains every Netty module.
             // Exclude it to force us to use the individual Netty modules instead.
@@ -255,12 +258,6 @@ allprojects {
 // minor releases, so we can't work with just any Java 8, it has to be a recent one.
 if (!JavaVersion.current().java8Compatible)
     throw new GradleException("Corda requires Java 8, please upgrade to at least 1.8.0_$java8_minUpdateVersion")
-
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-}
 
 // Required for building out the fat JAR.
 dependencies {
@@ -334,6 +331,8 @@ bintrayConfig {
             'corda-rpc',
             'corda-core',
             'corda-core-deterministic',
+            'corda-deterministic-verifier',
+            'corda-djvm',
             'corda',
             'corda-finance',
             'corda-node',
@@ -432,6 +431,6 @@ if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BU
 }
 
 wrapper {
-    gradleVersion = "4.8.1"
+    gradleVersion = "4.10"
     distributionType = Wrapper.DistributionType.ALL
 }

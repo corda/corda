@@ -11,7 +11,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.node.services.Vault.StateModificationStatus.*
+import net.corda.core.node.services.Vault.RelevancyStatus.*
 import net.corda.core.node.services.Vault.StateStatus
 import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.CordaSerializable
@@ -107,23 +107,22 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     }
 
     /**
-     * If the querying node is a participant in a state then it is classed as [MODIFIABLE], although technically the
-     * state is only _potentially_ modifiable as the contract code may forbid them from performing any actions.
+     * If the querying node is a participant in a state then it is classed as [RELEVANT].
      *
-     * If the querying node is not a participant in a state then it is classed as [NOT_MODIFIABLE]. These types of
+     * If the querying node is not a participant in a state then it is classed as [NOT_RELEVANT]. These types of
      * states can still be recorded in the vault if the transaction containing them was recorded with the
      * [StatesToRecord.ALL_VISIBLE] flag. This will typically happen for things like reference data which can be
      * referenced in transactions as a [ReferencedStateAndRef] but cannot be modified by any party but the maintainer.
      *
-     * If both [MODIFIABLE] and [NOT_MODIFIABLE] states are required to be returned from a query, then the [ALL] flag
+     * If both [RELEVANT] and [NOT_RELEVANT] states are required to be returned from a query, then the [ALL] flag
      * can be used.
      *
      * NOTE: Default behaviour is for ALL STATES to be returned as this is how Corda behaved before the introduction of
      * this query criterion.
      */
     @CordaSerializable
-    enum class StateModificationStatus {
-        MODIFIABLE, NOT_MODIFIABLE, ALL
+    enum class RelevancyStatus {
+        RELEVANT, NOT_RELEVANT, ALL
     }
 
     @CordaSerializable
@@ -161,7 +160,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             val notary: AbstractParty?,
             val lockId: String?,
             val lockUpdateTime: Instant?,
-            val isModifiable: Vault.StateModificationStatus?
+            val isRelevant: Vault.RelevancyStatus?
     ) {
         constructor(ref: StateRef,
                     contractStateClassName: String,

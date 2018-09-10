@@ -53,6 +53,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.TestCorDapp
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.testThreadFactory
@@ -72,7 +73,7 @@ import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
+val MOCK_VERSION_INFO = VersionInfo(4, "Mock release", "Mock revision", "Mock Vendor")
 
 data class MockNodeArgs(
         val config: NodeConfiguration,
@@ -207,15 +208,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     val defaultNotaryIdentity: Party
         get() {
             return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
-        }
-
-    /**
-     * Return the identity of the default notary node.
-     * @see defaultNotaryNode
-     */
-    val defaultNotaryIdentityAndCert: PartyAndCertificate
-        get() {
-            return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
         }
 
     /**
@@ -465,8 +457,11 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
 
     private fun createNodeImpl(parameters: InternalMockNodeParameters, nodeFactory: (MockNodeArgs, CordappLoader?) -> MockNode, start: Boolean): MockNode {
         val id = parameters.forcedID ?: nextNodeId++
-        val config = mockNodeConfiguration().also {
-            doReturn(baseDirectory(id).createDirectories()).whenever(it).baseDirectory
+        val baseDirectory = baseDirectory(id)
+        val certificatesDirectory = baseDirectory / "certificates"
+        certificatesDirectory.createDirectories()
+        val config = mockNodeConfiguration(certificatesDirectory).also {
+            doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
@@ -553,7 +548,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
 
     /** Block until all scheduled activity, active flows and network activity has ceased. */
     fun waitQuiescent() {
-        busyLatch.await()
+        busyLatch.await(30000) // don't hang forever if for some reason things don't complete
     }
 
     override fun close() = stopNodes()
@@ -570,12 +565,17 @@ abstract class MessagingServiceSpy {
     abstract fun send(message: Message, target: MessageRecipients, sequenceKey: Any)
 }
 
-private fun mockNodeConfiguration(): NodeConfiguration {
+private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguration {
     @DoNotImplement
     abstract class AbstractNodeConfiguration : NodeConfiguration
+
+    val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
+    val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+
     return rigorousMock<AbstractNodeConfiguration>().also {
-        doReturn("cordacadevpass").whenever(it).keyStorePassword
-        doReturn("trustpass").whenever(it).trustStorePassword
+        doReturn(certificatesDirectory.createDirectories()).whenever(it).certificatesDirectory
+        doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
+        doReturn(signingCertificateStore).whenever(it).signingCertificateStore
         doReturn(emptyList<User>()).whenever(it).rpcUsers
         doReturn(null).whenever(it).notary
         doReturn(DatabaseConfig()).whenever(it).database

@@ -30,7 +30,6 @@ import java.net.URL
  * @property allFlows List of all flow classes
  * @property jarPath The path to the JAR for this CorDapp
  * @property jarHash Hash of the jar
- * @property info Cordapp metadata
  */
 @DoNotImplement
 @DeleteForDJVM
@@ -48,25 +47,5 @@ interface Cordapp {
     val allFlows: List<Class<out FlowLogic<*>>>
     val jarPath: URL
     val cordappClasses: List<String>
-    val info: Info
     val jarHash: SecureHash.SHA256
-
-    /**
-     * CorDapp's information, including vendor and version.
-     *
-     * @property shortName Cordapp's shortName
-     * @property vendor Cordapp's vendor
-     * @property version Cordapp's version
-     * @property minPlatformVersion the minimum platform version required to run this Cordapp
-     * @property targetPlatformVersion the platform version this Cordapp was tested on
-     */
-    @DoNotImplement
-    interface Info {
-        val shortName: String
-        val vendor: String
-        val version: String
-        val minPlatformVersion: Int
-        val targetPlatformVersion: Int
-        fun hasUnknownFields(): Boolean
-    }
 }

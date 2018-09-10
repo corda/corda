@@ -3,18 +3,20 @@ package net.corda.node.services.network
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.*
-import net.corda.cordform.CordformNode.NODE_INFO_DIRECTORY
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
+import net.corda.node.VersionInfo
 import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
@@ -26,8 +28,8 @@ import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned
 import net.corda.testing.node.internal.network.NetworkMapServer
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -54,6 +56,7 @@ class NetworkMapUpdaterTest {
     private val nodeInfoDir = baseDir / NODE_INFO_DIRECTORY
     private val scheduler = TestScheduler()
     private val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
+    private val nodeReadyFuture = openFuture<Void?>()
     private val networkMapCache = createMockNetworkMapCache()
     private lateinit var server: NetworkMapServer
     private lateinit var networkMapClient: NetworkMapClient
@@ -63,7 +66,8 @@ class NetworkMapUpdaterTest {
     fun setUp() {
         server = NetworkMapServer(cacheExpiryMs.millis)
         val address = server.start()
-        networkMapClient = NetworkMapClient(URL("http://$address")).apply { start(DEV_ROOT_CA.certificate) }
+        networkMapClient = NetworkMapClient(URL("http://$address"),
+                VersionInfo(1, "TEST", "TEST", "TEST")).apply { start(DEV_ROOT_CA.certificate) }
     }
 
     @After
@@ -98,16 +102,18 @@ class NetworkMapUpdaterTest {
         startUpdater()
         networkMapClient.publish(signedNodeInfo2)
 
+        assertThat(nodeReadyFuture).isNotDone()
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
         verify(networkMapCache, times(2)).addNode(any())
         verify(networkMapCache, times(1)).addNode(nodeInfo1)
         verify(networkMapCache, times(1)).addNode(nodeInfo2)
+        assertThat(nodeReadyFuture).isDone()
 
         NodeInfoWatcher.saveToFile(nodeInfoDir, fileNodeInfoAndSigned)
         networkMapClient.publish(signedNodeInfo3)
         networkMapClient.publish(signedNodeInfo4)
-        scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
+        advanceTime()
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
         // 4 node info from network map, and 1 from file.
@@ -134,7 +140,7 @@ class NetworkMapUpdaterTest {
         networkMapClient.publish(signedNodeInfo4)
 
         startUpdater()
-        scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
+        advanceTime()
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
 
@@ -160,7 +166,7 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `receive node infos from directory, without a network map`() {
-        setUpdater()
+        setUpdater(netMapClient = null)
         val fileNodeInfoAndSigned = createNodeInfoAndSigned("Info from file")
 
         // Not subscribed yet.
@@ -169,10 +175,12 @@ class NetworkMapUpdaterTest {
         startUpdater()
 
         NodeInfoWatcher.saveToFile(nodeInfoDir, fileNodeInfoAndSigned)
-        scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
+        assertThat(nodeReadyFuture).isNotDone()
+        advanceTime()
 
         verify(networkMapCache, times(1)).addNode(any())
         verify(networkMapCache, times(1)).addNode(fileNodeInfoAndSigned.nodeInfo)
+        assertThat(nodeReadyFuture).isDone()
 
         assertThat(networkMapCache.allNodeHashes).containsOnly(fileNodeInfoAndSigned.nodeInfo.serialize().hash)
     }
@@ -221,7 +229,7 @@ class NetworkMapUpdaterTest {
     fun `fetch nodes from private network`() {
         setUpdater(extraNetworkMapKeys = listOf(privateNetUUID))
         server.addNodesToPrivateNetwork(privateNetUUID, listOf(ALICE_NAME))
-        Assertions.assertThatThrownBy { networkMapClient.getNetworkMap(privateNetUUID).payload.nodeInfoHashes }
+        assertThatThrownBy { networkMapClient.getNetworkMap(privateNetUUID).payload.nodeInfoHashes }
                 .isInstanceOf(IOException::class.java)
                 .hasMessageContaining("Response Code 404")
         val (aliceInfo, signedAliceInfo) = createNodeInfoAndSigned(ALICE_NAME) // Goes to private network map
@@ -243,7 +251,7 @@ class NetworkMapUpdaterTest {
 
         NodeInfoWatcher.saveToFile(nodeInfoDir, fileNodeInfoAndSigned1)
         NodeInfoWatcher.saveToFile(nodeInfoDir, fileNodeInfoAndSigned2)
-        scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
+        advanceTime()
         verify(networkMapCache, times(2)).addNode(any())
         verify(networkMapCache, times(1)).addNode(fileNodeInfoAndSigned1.nodeInfo)
         verify(networkMapCache, times(1)).addNode(fileNodeInfoAndSigned2.nodeInfo)
@@ -251,7 +259,7 @@ class NetworkMapUpdaterTest {
         // Remove one of the nodes
         val fileName1 = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}${fileNodeInfoAndSigned1.nodeInfo.legalIdentities[0].name.serialize().hash}"
         (nodeInfoDir / fileName1).delete()
-        scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
+        advanceTime()
         verify(networkMapCache, times(1)).removeNode(any())
         verify(networkMapCache, times(1)).removeNode(fileNodeInfoAndSigned1.nodeInfo)
         assertThat(networkMapCache.allNodeHashes).containsOnly(fileNodeInfoAndSigned2.signed.raw.hash)
@@ -273,14 +281,14 @@ class NetworkMapUpdaterTest {
         // Publish to network map the one with lower serial.
         networkMapClient.publish(serverSignedNodeInfo)
         startUpdater()
-        scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
+        advanceTime()
         verify(networkMapCache, times(1)).addNode(localNodeInfo)
         Thread.sleep(2L * cacheExpiryMs)
         // Node from file has higher serial than the one from NetworkMapServer
         assertThat(networkMapCache.allNodeHashes).containsOnly(localSignedNodeInfo.signed.raw.hash)
         val fileName = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}${localNodeInfo.legalIdentities[0].name.serialize().hash}"
         (nodeInfoDir / fileName).delete()
-        scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
+        advanceTime()
         verify(networkMapCache, times(1)).removeNode(any())
         verify(networkMapCache).removeNode(localNodeInfo)
         Thread.sleep(2L * cacheExpiryMs)
@@ -329,7 +337,7 @@ class NetworkMapUpdaterTest {
         assert(networkMapCache.allNodeHashes.size == 1)
         networkMapClient.publish(signedNodeInfo2)
         Thread.sleep(2L * cacheExpiryMs)
-        scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
+        advanceTime()
 
         verify(networkMapCache, times(1)).addNode(signedNodeInfo2.verified())
         verify(networkMapCache, times(1)).removeNode(signedNodeInfo1.verified())
@@ -339,6 +347,7 @@ class NetworkMapUpdaterTest {
 
     private fun createMockNetworkMapCache(): NetworkMapCacheInternal {
         return mock {
+            on { nodeReady }.thenReturn(nodeReadyFuture)
             val data = ConcurrentHashMap<Party, NodeInfo>()
             on { addNode(any()) }.then {
                 val nodeInfo = it.arguments[0] as NodeInfo
@@ -356,5 +365,9 @@ class NetworkMapUpdaterTest {
 
     private fun createNodeInfoAndSigned(org: String): NodeInfoAndSigned {
         return createNodeInfoAndSigned(CordaX500Name(org, "London", "GB"))
+    }
+
+    private fun advanceTime() {
+        scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
     }
 }

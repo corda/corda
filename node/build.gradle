@@ -71,7 +71,7 @@ dependencies {
     compile project(":confidential-identities")
     compile project(':client:rpc')
     compile project(':tools:shell')
-    compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
+    compile project(':tools:cliutils')
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
@@ -104,9 +104,6 @@ dependencies {
         // Gains our proton-j version from core module.
         exclude group: 'org.apache.qpid', module: 'proton-j'
     }
-
-    // JAnsi: for drawing things to the terminal in nicely coloured ways.
-    compile "org.fusesource.jansi:jansi:$jansi_version"
 
     // Manifests: for reading stuff from the manifest file
     compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"

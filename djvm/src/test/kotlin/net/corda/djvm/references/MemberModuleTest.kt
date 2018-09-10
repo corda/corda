@@ -4,6 +4,7 @@ import net.corda.djvm.annotations.NonDeterministic
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.annotations.NotNull
 import org.junit.Test
+import org.objectweb.asm.Type
 
 class MemberModuleTest {
 
@@ -132,7 +133,7 @@ class MemberModuleTest {
     }
 
     private val java.lang.Class<*>.descriptor: String
-        get() = "L${name.replace('.', '/')};"
+        get() = Type.getDescriptor(this)
 
     private fun member(member: String) =
             MemberReference("", member, "")

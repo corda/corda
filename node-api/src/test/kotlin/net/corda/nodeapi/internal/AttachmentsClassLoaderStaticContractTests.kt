@@ -1,12 +1,16 @@
 package net.corda.nodeapi.internal
 
+import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.AbstractAttachment
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
@@ -66,11 +70,20 @@ class AttachmentsClassLoaderStaticContractTests {
         }
     }
 
+    private val unsignedAttachment = object : AbstractAttachment({ byteArrayOf() }) {
+        override val id: SecureHash get() = throw UnsupportedOperationException()
+    }
+
+    private val attachments = rigorousMock<AttachmentStorage>().also {
+            doReturn(unsignedAttachment).whenever(it).openAttachment(any())
+    }
+
     private val serviceHub = rigorousMock<ServicesForResolution>().also {
-        val cordappProviderImpl = CordappProviderImpl(cordappLoaderForPackages(listOf("net.corda.nodeapi.internal"), 1000), MockCordappConfigProvider(), MockAttachmentStorage())
+        val cordappProviderImpl = CordappProviderImpl(cordappLoaderForPackages(listOf("net.corda.nodeapi.internal")), MockCordappConfigProvider(), MockAttachmentStorage())
         cordappProviderImpl.start(testNetworkParameters().whitelistedContractImplementations)
         doReturn(cordappProviderImpl).whenever(it).cordappProvider
         doReturn(testNetworkParameters()).whenever(it).networkParameters
+        doReturn(attachments).whenever(it).attachments
     }
 
     @Test
@@ -92,12 +105,12 @@ class AttachmentsClassLoaderStaticContractTests {
         assertNotNull(contract)
     }
 
-    private fun cordappLoaderForPackages(packages: Iterable<String>, platformVersion: Int): CordappLoader {
+    private fun cordappLoaderForPackages(packages: Iterable<String>): CordappLoader {
 
         val cordapps = cordappsForPackages(packages)
         return testDirectory().let { directory ->
             cordapps.packageInDirectory(directory)
-            JarScanningCordappLoader.fromDirectories(listOf(directory), platformVersion)
+            JarScanningCordappLoader.fromDirectories(listOf(directory))
         }
     }
 

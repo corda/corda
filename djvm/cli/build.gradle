@@ -1,45 +1,48 @@
-buildscript {
-    repositories {
-        mavenCentral()
-        jcenter()
-    }
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.3'
+plugins {
+    id 'com.github.johnrengelman.shadow'
+}
+
+repositories {
+    maven {
+        url "$artifactory_contextUrl/corda-dev"
     }
 }
 
-plugins {
-    id 'com.github.johnrengelman.shadow'
+configurations {
+    deterministicRt
 }
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
 
     compile "info.picocli:picocli:$picocli_version"
-    compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
     compile project(path: ":djvm", configuration: "shadow")
+
+    // Deterministic runtime - used in whitelist generation
+    deterministicRt project(path: ':jdk8u-deterministic', configuration: 'jdk')
 }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-}
-
-jar {
-    manifest {
-        attributes(
-                'Main-Class': 'net.corda.djvm.tools.cli.Program',
-                'Automatic-Module-Name': 'net.corda.djvm',
-                'Build-Date': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
-        )
-    }
-}
+jar.enabled = false
 
 shadowJar {
     baseName = "corda-djvm"
+    classifier = 'cli'
+    manifest {
+        attributes(
+            'Automatic-Module-Name': 'net.corda.djvm',
+            'Main-Class': 'net.corda.djvm.tools.cli.Program',
+            'Build-Date': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        )
+    }
+}
+assemble.dependsOn shadowJar
+
+task generateWhitelist(type: JavaExec, dependsOn: shadowJar) {
+    // This is an example of how a whitelist can be generated from a JAR. In most applications though, it is recommended
+    // that the minimal set whitelist is used.
+    main = '-jar'
+    args = [shadowJar.outputs.files.singleFile, 'whitelist', 'generate', '-o', "$buildDir/jdk8-deterministic.dat.gz", configurations.deterministicRt.files[0] ]
 }

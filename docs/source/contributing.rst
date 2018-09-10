@@ -65,20 +65,7 @@ make merging more complicated.
 Things to consider when writing CLI apps
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* Set exit codes using ``exitProcess``. Zero means success. Other numbers mean errors. Setting a unique error code
-  (starting from 1) for each thing that can conceivably break makes your tool shell-scripting friendly
-
-* Do a bit of work to figure out reasonable defaults. Nobody likes having to set a dozen flags before the tool will
-  cooperate
-
-* Your ``--help`` text or other docs should ideally include examples. Writing examples is also a good way to find out
-  that your program requires a dozen flags to do anything
-
-* Flags should have sensible defaults
-
-* Don’t print logging output to the console unless the user requested it via a ``–verbose`` flag (conventionally
-  shortened to ``-v``) or a ``–log-to-console`` flag. Logs should be either suppressed or saved to a text file during
-  normal usage, except for errors, which are always OK to print
+Make sure any changes to CLI applications conform to the :doc:`cli-ux-guidelines`.
 
 Testing the changes
 -------------------

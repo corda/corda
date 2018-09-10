@@ -24,32 +24,29 @@ data class CordappImpl(
         override val customSchemas: Set<MappedSchema>,
         override val allFlows: List<Class<out FlowLogic<*>>>,
         override val jarPath: URL,
-        override val info: Cordapp.Info = CordappImpl.Info.UNKNOWN,
-        override val jarHash: SecureHash.SHA256,
-        override val name: String = jarPath.toPath().fileName.toString().removeSuffix(".jar") ) : Cordapp {
+        val info: Info,
+        override val jarHash: SecureHash.SHA256) : Cordapp {
+    override val name: String = jarName(jarPath)
+
+    companion object {
+        fun jarName(url: URL): String = url.toPath().fileName.toString().removeSuffix(".jar")
+    }
 
     /**
      * An exhaustive list of all classes relevant to the node within this CorDapp
      *
      * TODO: Also add [SchedulableFlow] as a Cordapp class
      */
-    override val cordappClasses = ((rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass }).map { it.name } + contractClassNames)
+    override val cordappClasses: List<String> = (rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass }).map { it.name } + contractClassNames
 
-    data class Info(
-            override val shortName: String,
-            override val vendor: String,
-            override val version: String,
-            override val minPlatformVersion: Int,
-            override val targetPlatformVersion: Int
-    ): Cordapp.Info {
+    // TODO Why a seperate Info class and not just have the fields directly in CordappImpl?
+    data class Info(val shortName: String, val vendor: String, val version: String, val minPlatformVersion: Int, val targetPlatformVersion: Int) {
         companion object {
             private const val UNKNOWN_VALUE = "Unknown"
 
             val UNKNOWN = Info(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE, 1, 1)
         }
 
-        override fun hasUnknownFields(): Boolean {
-            return setOf(shortName, vendor, version).any { it == UNKNOWN_VALUE }
-        }
+        fun hasUnknownFields(): Boolean = arrayOf(shortName, vendor, version).any { it == UNKNOWN_VALUE }
     }
 }

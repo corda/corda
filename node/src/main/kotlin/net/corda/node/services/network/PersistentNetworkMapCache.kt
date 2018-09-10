@@ -1,25 +1,28 @@
 package net.corda.node.services.network
 
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
-import net.corda.node.services.api.NetworkMapCacheBaseInternal
+import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
@@ -34,7 +37,7 @@ import javax.annotation.concurrent.ThreadSafe
 /** Database-based network map cache. */
 @ThreadSafe
 open class PersistentNetworkMapCache(private val database: CordaPersistence,
-                                     private val myLegalName: CordaX500Name) : SingletonSerializeAsToken(), NetworkMapCacheBaseInternal {
+                                     private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken() {
     companion object {
         private val logger = contextLogger()
     }
@@ -44,10 +47,8 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
     override val changed: Observable<MapChange> = _changed.wrapWithDatabaseTransaction()
     private val changePublisher: rx.Observer<MapChange> get() = _changed.bufferUntilDatabaseCommit()
 
-    // TODO revisit the logic under which nodeReady and loadDBSuccess are set.
-    // with the NetworkMapService redesign their meaning is not too well defined.
-    private val _nodeReady = openFuture<Void?>()
-    override val nodeReady: CordaFuture<Void?> = _nodeReady
+    override val nodeReady: OpenFuture<Void?> = openFuture()
+
     private lateinit var notaries: List<NotaryInfo>
 
     override val notaryIdentities: List<Party> get() = notaries.map { it.identity }
@@ -67,14 +68,14 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
 
     fun start(notaries: List<NotaryInfo>) {
         this.notaries = notaries
-        val otherNodeInfoCount = database.transaction {
-            session.createQuery(
-                    "select count(*) from ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n join n.legalIdentitiesAndCerts i where i.name != :myLegalName")
-                    .setParameter("myLegalName", myLegalName.toString())
-                    .singleResult as Long
-        }
-        if (otherNodeInfoCount > 0) {
-            _nodeReady.set(null)
+    }
+
+    override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
+        return database.transaction {
+            val wellKnownParty = identityService.wellKnownPartyFromAnonymous(party)
+            wellKnownParty?.let {
+                getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
+            }
         }
     }
 
@@ -122,7 +123,9 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
 
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> = nodesByKeyCache[identityKey]!!
 
-    private val nodesByKeyCache = NonInvalidatingCache<PublicKey, List<NodeInfo>>(1024) { key ->
+    private val nodesByKeyCache = NonInvalidatingCache<PublicKey, List<NodeInfo>>(
+            "PersistentNetworkMap_nodesByKey",
+            1024) { key ->
         database.transaction { queryByIdentityKey(session, key) }
     }
 
@@ -140,7 +143,9 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
         return identityByLegalNameCache.get(name)!!.orElse(null)
     }
 
-    private val identityByLegalNameCache = NonInvalidatingCache<CordaX500Name, Optional<PartyAndCertificate>>(1024) { name ->
+    private val identityByLegalNameCache = NonInvalidatingCache<CordaX500Name, Optional<PartyAndCertificate>>(
+            "PersistentNetworkMap_idByLegalName",
+            1024) { name ->
         Optional.ofNullable(database.transaction { queryIdentityByLegalName(session, name) })
     }
 
@@ -156,6 +161,7 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
             val previousNode = getNodesByLegalIdentityKey(node.legalIdentities.first().owningKey).firstOrNull()
             if (previousNode == null) {
                 logger.info("No previous node found")
+                if (!verifyAndRegisterIdentities(node)) return
                 database.transaction {
                     updateInfoDB(node, session)
                     changePublisher.onNext(MapChange.Added(node))
@@ -165,6 +171,8 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
                 return
             } else if (previousNode != node) {
                 logger.info("Previous node was found as: $previousNode")
+                // TODO We should be adding any new identities as well
+                if (!verifyIdentities(node)) return
                 database.transaction {
                     updateInfoDB(node, session)
                     changePublisher.onNext(MapChange.Modified(node, previousNode))
@@ -173,10 +181,28 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
                 logger.info("Previous node was identical to incoming one - doing nothing")
             }
         }
-        if (node.legalIdentities[0].name != myLegalName) {
-            _nodeReady.set(null)
-        }
         logger.debug { "Done adding node with info: $node" }
+    }
+
+    private fun verifyIdentities(node: NodeInfo): Boolean {
+        val failures = node.legalIdentitiesAndCerts.mapNotNull { Try.on { it.verify(identityService.trustAnchor) } as? Try.Failure }
+        if (failures.isNotEmpty()) {
+            logger.warn("$node has ${failures.size} invalid identities:")
+            failures.forEach { logger.warn("", it) }
+        }
+        return failures.isEmpty()
+    }
+
+    private fun verifyAndRegisterIdentities(node: NodeInfo): Boolean {
+        // First verify all the node's identities are valid before registering any of them
+        return if (verifyIdentities(node)) {
+            for (identity in node.legalIdentitiesAndCerts) {
+                identityService.verifyAndRegisterIdentity(identity)
+            }
+            true
+        } else {
+            false
+        }
     }
 
     override fun removeNode(node: NodeInfo) {

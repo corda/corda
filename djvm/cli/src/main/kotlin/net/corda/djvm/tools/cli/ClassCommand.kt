@@ -7,9 +7,6 @@ import net.corda.djvm.execution.*
 import net.corda.djvm.references.ClassModule
 import net.corda.djvm.source.ClassSource
 import net.corda.djvm.source.SourceClassLoader
-import net.corda.djvm.tools.Utilities.find
-import net.corda.djvm.tools.Utilities.onEmpty
-import net.corda.djvm.tools.Utilities.userClassPath
 import net.corda.djvm.utilities.Discovery
 import djvm.org.objectweb.asm.ClassReader
 import picocli.CommandLine.Option

@@ -1,6 +1,6 @@
 /**
  * This build.gradle exists to publish our capsule (executable fat jar) to maven. It cannot be placed in the
- * node project because the bintray plugin cannot publish two modules from one project.
+ * webserver project because the bintray plugin cannot publish two modules from one project.
  */
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
@@ -26,18 +26,20 @@ dependencies {
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
-task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').compileJava) {
+jar.enabled = false
+
+task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     applicationClass 'net.corda.webserver.WebServer'
     archiveName "corda-webserver-${corda_release_version}.jar"
     applicationSource = files(
-            project(':webserver').configurations.runtime,
-            project(':webserver').jar,
-            project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet.class',
-            project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet$1.class',
-            "$rootDir/config/dev/log4j2.xml",
-            "$rootDir/node/build/resources/main/reference.conf"
+        project(':webserver').configurations.runtimeClasspath,
+        project(':webserver').tasks.jar,
+        project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet.class',
+        project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet$1.class',
+        project(':node').buildDir.toString() + '/resources/main/reference.conf',
+        "$rootDir/config/dev/log4j2.xml",
+        project(':node:capsule').projectDir.toString() + '/NOTICE' // Copy CDDL notice
     )
-    from 'NOTICE' // Copy CDDL notice
     from configurations.capsuleRuntime.files.collect { zipTree(it) }
 
     capsuleManifest {
@@ -57,10 +59,12 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').compileJava
     }
 }
 
+assemble.dependsOn buildWebserverJar
+
 artifacts {
     runtimeArtifacts buildWebserverJar
     publish buildWebserverJar {
-        classifier ""
+        classifier ''
     }
 }
 

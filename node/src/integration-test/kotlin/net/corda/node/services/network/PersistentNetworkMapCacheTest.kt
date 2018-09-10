@@ -1,10 +1,11 @@
 package net.corda.node.services.network
 
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
+import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -18,7 +19,6 @@ class PersistentNetworkMapCacheTest {
     private companion object {
         val ALICE = TestIdentity(ALICE_NAME, 70)
         val BOB = TestIdentity(BOB_NAME, 80)
-        val CHARLIE = TestIdentity(CHARLIE_NAME, 90)
     }
 
     @Rule
@@ -27,7 +27,7 @@ class PersistentNetworkMapCacheTest {
 
     private var portCounter = 1000
     private val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
-    private val charlieNetMapCache = PersistentNetworkMapCache(database, CHARLIE.name)
+    private val charlieNetMapCache = PersistentNetworkMapCache(database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
 
     @After
     fun cleanUp() {
@@ -38,7 +38,6 @@ class PersistentNetworkMapCacheTest {
     fun addNode() {
         val alice = createNodeInfo(listOf(ALICE))
         charlieNetMapCache.addNode(alice)
-        assertThat(charlieNetMapCache.nodeReady).isDone()
         val fromDb = database.transaction {
             session.createQuery(
                     "from ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name}",
@@ -46,32 +45,6 @@ class PersistentNetworkMapCacheTest {
             ).resultList.map { it.toNodeInfo() }
         }
         assertThat(fromDb).containsOnly(alice)
-    }
-
-    @Test
-    fun `adding the node's own node-info doesn't complete the nodeReady future`() {
-        val charlie = createNodeInfo(listOf(CHARLIE))
-        charlieNetMapCache.addNode(charlie)
-        assertThat(charlieNetMapCache.nodeReady).isNotDone()
-        assertThat(charlieNetMapCache.getNodeByLegalName(CHARLIE.name)).isEqualTo(charlie)
-    }
-
-    @Test
-    fun `starting with just the node's own node-info in the db`() {
-        val charlie = createNodeInfo(listOf(CHARLIE))
-        saveNodeInfoIntoDb(charlie)
-        assertThat(charlieNetMapCache.allNodes).containsOnly(charlie)
-        charlieNetMapCache.start(emptyList())
-        assertThat(charlieNetMapCache.nodeReady).isNotDone()
-    }
-
-    @Test
-    fun `starting with another node-info in the db`() {
-        val alice = createNodeInfo(listOf(ALICE))
-        saveNodeInfoIntoDb(alice)
-        assertThat(charlieNetMapCache.allNodes).containsOnly(alice)
-        charlieNetMapCache.start(emptyList())
-        assertThat(charlieNetMapCache.nodeReady).isDone()
     }
 
     @Test
@@ -134,20 +107,5 @@ class PersistentNetworkMapCacheTest {
                 platformVersion = 3,
                 serial = 1
         )
-    }
-
-    private fun saveNodeInfoIntoDb(nodeInfo: NodeInfo) {
-        database.transaction {
-            session.save(NodeInfoSchemaV1.PersistentNodeInfo(
-                    id = 0,
-                    hash = nodeInfo.serialize().hash.toString(),
-                    addresses = nodeInfo.addresses.map { NodeInfoSchemaV1.DBHostAndPort.fromHostAndPort(it) },
-                    legalIdentitiesAndCerts = nodeInfo.legalIdentitiesAndCerts.mapIndexed { idx, elem ->
-                        NodeInfoSchemaV1.DBPartyAndCertificate(elem, isMain = idx == 0)
-                    },
-                    platformVersion = nodeInfo.platformVersion,
-                    serial = nodeInfo.serial
-            ))
-        }
     }
 }
