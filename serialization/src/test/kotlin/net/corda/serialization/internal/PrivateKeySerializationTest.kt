@@ -3,6 +3,7 @@ package net.corda.serialization.internal
 import net.corda.core.crypto.Crypto
 import net.corda.core.serialization.SerializationContext.UseCase.*
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.checkpointSerialize
 import net.corda.core.serialization.serialize
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -33,7 +34,7 @@ class PrivateKeySerializationTest(private val privateKey: PrivateKey, private va
     @Test
     fun `passed with expected UseCases`() {
         assertTrue { privateKey.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes.isNotEmpty() }
-        assertTrue { privateKey.serializeKryo(context = SerializationDefaults.CHECKPOINT_CONTEXT).bytes.isNotEmpty() }
+        assertTrue { privateKey.checkpointSerialize(context = SerializationDefaults.CHECKPOINT_CONTEXT).bytes.isNotEmpty() }
     }
 
     @Test
