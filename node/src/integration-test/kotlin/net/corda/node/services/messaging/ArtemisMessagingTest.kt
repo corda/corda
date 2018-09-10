@@ -93,7 +93,7 @@ class ArtemisMessagingTest {
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeInternalTestDataSourceProperties(configSupplier = { ConfigFactory.empty() }), DatabaseConfig(runMigration = true), { null }, { null })
-        networkMapCache = PersistentNetworkMapCache(database, rigorousMock(), ALICE_NAME).apply { start(emptyList()) }
+        networkMapCache = PersistentNetworkMapCache(database, rigorousMock()).apply { start(emptyList()) }
     }
 
     @After

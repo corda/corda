@@ -33,6 +33,7 @@ class MockCordappProvider(
                 serializationCustomSerializers = emptyList(),
                 customSchemas = emptySet(),
                 jarPath = Paths.get("").toUri().toURL(),
+                info = CordappImpl.Info.UNKNOWN,
                 allFlows = emptyList(),
                 jarHash = SecureHash.allOnesHash)
         if (cordappRegistry.none { it.first.contractClassNames.contains(contractClassName) }) {
@@ -40,7 +41,9 @@ class MockCordappProvider(
         }
     }
 
-    override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? = cordappRegistry.find { it.first.contractClassNames.contains(contractClassName) }?.second ?: super.getContractAttachmentID(contractClassName)
+    override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? {
+        return cordappRegistry.find { it.first.contractClassNames.contains(contractClassName) }?.second ?: super.getContractAttachmentID(contractClassName)
+    }
 
     private fun findOrImportAttachment(contractClassNames: List<ContractClassName>, data: ByteArray, attachments: MockAttachmentStorage): AttachmentId {
         val existingAttachment = attachments.files.filter {

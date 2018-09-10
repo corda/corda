@@ -1,5 +1,5 @@
-@file:JvmName("Enclavelet")
-package net.corda.deterministic.common
+@file:JvmName("Verifier")
+package net.corda.deterministic.verifier
 
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.LedgerTransaction
@@ -11,7 +11,7 @@ import net.corda.core.transactions.LedgerTransaction
  * TODO: Transaction data is meant to be encrypted under an enclave-private key.
  */
 @Throws(Exception::class)
-fun verifyInEnclave(reqBytes: ByteArray) {
+fun verifyTransaction(reqBytes: ByteArray) {
     deserialize(reqBytes).verify()
 }
 

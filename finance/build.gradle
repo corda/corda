@@ -75,19 +75,17 @@ jar {
     manifest {
         attributes(
                 "Manifest-Version": "1.0",
-                "Name": "net/corda/finance",
                 "Specification-Title": description,
                 "Specification-Version": version,
                 "Specification-Vendor": "R3",
                 "Implementation-Title": "$group.$baseName",
-                "Implementation-Version": version,
-                "Implementation-Vendor": "R3"
         )
     }
 }
 
 cordapp {
     info {
+        name "net/corda/finance"
         vendor "R3"
     }
 }

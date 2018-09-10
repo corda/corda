@@ -119,7 +119,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
         identityService.database = database
     }
 
-    override val networkMapCache = PersistentNetworkMapCache(database, identityService, myInfo.legalIdentities[0].name)
+    override val networkMapCache = PersistentNetworkMapCache(database, identityService)
     private val checkpointStorage = DBCheckpointStorage()
     @Suppress("LeakingThis")
     override val validatedTransactions: WritableTransactionStorage = DBTransactionStorage(configuration.transactionCacheSizeBytes, database).tokenize()

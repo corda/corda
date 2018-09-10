@@ -49,6 +49,5 @@ artifacts {
 
 publish {
     dependenciesFrom configurations.shadow
-    disableDefaultJar true
     name shadowJar.baseName
 }

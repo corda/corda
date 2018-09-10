@@ -1,6 +1,5 @@
 package net.corda.node.services.network
 
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
@@ -8,6 +7,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
@@ -37,8 +37,7 @@ import javax.annotation.concurrent.ThreadSafe
 /** Database-based network map cache. */
 @ThreadSafe
 open class PersistentNetworkMapCache(private val database: CordaPersistence,
-                                     private val identityService: IdentityService,
-                                     private val myLegalName: CordaX500Name) : NetworkMapCacheInternal, SingletonSerializeAsToken() {
+                                     private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken() {
     companion object {
         private val logger = contextLogger()
     }
@@ -48,10 +47,8 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
     override val changed: Observable<MapChange> = _changed.wrapWithDatabaseTransaction()
     private val changePublisher: rx.Observer<MapChange> get() = _changed.bufferUntilDatabaseCommit()
 
-    // TODO revisit the logic under which nodeReady and loadDBSuccess are set.
-    // with the NetworkMapService redesign their meaning is not too well defined.
-    private val _nodeReady = openFuture<Void?>()
-    override val nodeReady: CordaFuture<Void?> = _nodeReady
+    override val nodeReady: OpenFuture<Void?> = openFuture()
+
     private lateinit var notaries: List<NotaryInfo>
 
     override val notaryIdentities: List<Party> get() = notaries.map { it.identity }
@@ -71,15 +68,6 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
 
     fun start(notaries: List<NotaryInfo>) {
         this.notaries = notaries
-        val otherNodeInfoCount = database.transaction {
-            session.createQuery(
-                    "select count(*) from ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n join n.legalIdentitiesAndCerts i where i.name != :myLegalName")
-                    .setParameter("myLegalName", myLegalName.toString())
-                    .singleResult as Long
-        }
-        if (otherNodeInfoCount > 0) {
-            _nodeReady.set(null)
-        }
     }
 
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
@@ -192,9 +180,6 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
             } else {
                 logger.info("Previous node was identical to incoming one - doing nothing")
             }
-        }
-        if (node.legalIdentities[0].name != myLegalName) {
-            _nodeReady.set(null)
         }
         logger.debug { "Done adding node with info: $node" }
     }

@@ -137,6 +137,7 @@ open class Node(configuration: NodeConfiguration,
 
             return JarScanningCordappLoader.fromDirectories(configuration.cordappDirectories, versionInfo)
         }
+
         // TODO: make this configurable.
         const val MAX_RPC_MESSAGE_SIZE = 10485760
     }

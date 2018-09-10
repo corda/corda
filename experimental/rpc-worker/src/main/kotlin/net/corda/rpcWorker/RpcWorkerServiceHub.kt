@@ -36,7 +36,10 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.network.*
+import net.corda.node.services.network.NetworkMapClient
+import net.corda.node.services.network.NetworkMapUpdater
+import net.corda.node.services.network.NodeInfoWatcher
+import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.DBTransactionMappingStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
@@ -84,7 +87,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration, overrid
         identityService.database = database
     }
 
-    override val networkMapCache = PersistentNetworkMapCache(database, identityService, myInfo.legalIdentities[0].name)
+    override val networkMapCache = PersistentNetworkMapCache(database, identityService)
     @Suppress("LeakingThis")
     override val validatedTransactions: WritableTransactionStorage = DBTransactionStorage(configuration.transactionCacheSizeBytes, database)
     private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
