@@ -54,5 +54,5 @@ class CordappConfigFileProviderTests {
     /**
      * Writes the config to the path provided - will (and must) overwrite any existing config
      */
-    private fun writeConfig(config: Config) = cordappConfFile.git writeText(config.root().render(ConfigRenderOptions.concise()))
+    private fun writeConfig(config: Config) = cordappConfFile.writeText(config.root().render(ConfigRenderOptions.concise()))
 }
