@@ -153,7 +153,7 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Cal
  */
 class LoggingLevelConverter : ITypeConverter<Level> {
     override fun convert(value: String?): Level {
-        return value?.let { Level.valueOf(it) }
+        return value?.let { Level.valueOf(it.toUpperCase()) }
                 ?: throw TypeConversionException("Unknown option for --logging-level: $value")
     }
 
