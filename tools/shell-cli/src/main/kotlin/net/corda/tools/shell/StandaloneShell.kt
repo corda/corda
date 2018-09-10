@@ -9,6 +9,7 @@ import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.list
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
+import org.slf4j.bridge.SLF4JBridgeHandler
 import picocli.CommandLine.Mixin
 import java.io.BufferedReader
 import java.io.IOException
@@ -54,6 +55,12 @@ class StandaloneShell : CordaCliWrapper("corda-shell", "The Corda standalone she
             if (System.console() != null) System.console().readPassword(format, *args) else this.readLine(format, *args).toCharArray()
 
     private fun getManifestEntry(key: String) = if (Manifests.exists(key)) Manifests.read(key) else "Unknown"
+
+    override fun initLogging() {
+        super.initLogging()
+        SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
+        SLF4JBridgeHandler.install()
+    }
 
     override fun runProgram(): Int {
         configuration = try {

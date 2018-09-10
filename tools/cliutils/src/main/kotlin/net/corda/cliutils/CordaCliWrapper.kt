@@ -4,10 +4,11 @@ import net.corda.core.internal.rootMessage
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
 
-import org.apache.logging.log4j.Level
 import org.fusesource.jansi.AnsiConsole
+import org.slf4j.event.Level
 import picocli.CommandLine
 import picocli.CommandLine.*
+import java.nio.file.Paths
 import kotlin.system.exitProcess
 import java.util.*
 import java.util.concurrent.Callable
@@ -127,11 +128,12 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Cal
     // This needs to be called before loggers (See: NodeStartup.kt:51 logger called by lazy, initLogging happens before).
     // Node's logging is more rich. In corda configurations two properties, defaultLoggingLevel and consoleLogLevel, are usually used.
     open fun initLogging() {
-        val loggingLevel = loggingLevel.name().toLowerCase(Locale.ENGLISH)
+        val loggingLevel = loggingLevel.name.toLowerCase(Locale.ENGLISH)
         System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
         if (verbose) {
             System.setProperty("consoleLogLevel", loggingLevel)
         }
+        System.setProperty("log-path", Paths.get(".").toString())
     }
 
     // Override this function with the actual method to be run once all the arguments have been parsed. The return number
@@ -147,11 +149,11 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Cal
 }
 
 /**
- * Converter from String to log4j logging Level.
+ * Converter from String to slf4j logging Level.
  */
 class LoggingLevelConverter : ITypeConverter<Level> {
     override fun convert(value: String?): Level {
-        return value?.let { Level.getLevel(it) }
+        return value?.let { Level.valueOf(it) }
                 ?: throw TypeConversionException("Unknown option for --logging-level: $value")
     }
 

@@ -20,7 +20,8 @@ apply plugin: 'com.jfrog.artifactory'
 dependencies {
     compile project(':tools:shell')
     compile project(':tools:cliutils')
-    compile group: 'org.slf4j', name: 'slf4j-simple', version: slf4j_version
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
 
     testCompile(project(':test-utils')) {
         exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
