@@ -153,7 +153,7 @@ class TLSAuthenticationTests {
                 intermediateCAScheme = Crypto.RSA_SHA256,
                 client1CAScheme = Crypto.RSA_SHA256,
                 client1TLSScheme = Crypto.ECDSA_SECP256R1_SHA256,
-                client2CAScheme = Crypto.ECDSA_SECP256K1_SHA256,
+                client2CAScheme = Crypto.ECDSA_SECP256R1_SHA256,
                 client2TLSScheme = Crypto.RSA_SHA256
         )
 
