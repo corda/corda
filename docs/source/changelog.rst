@@ -6,6 +6,9 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+
+* Vault query fix: support query by parent classes of Contract State classes (see https://github.com/corda/corda/issues/3714)
+
 * Fixed an issue preventing Shell from returning control to the user when CTRL+C is pressed in the terminal.
 
 * Fixed a problem that sometimes prevented nodes from starting in presence of custom state types in the database without a corresponding type from installed CorDapps.
