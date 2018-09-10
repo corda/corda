@@ -20,7 +20,3 @@ The Platform Version is part of the node's ``NodeInfo`` object, which is availab
 a CorDapp to find out which version it's running on and determine whether a desired feature is available. When a node
 registers with the Network Map Service it will use the node's Platform Version to enforce a minimum version requirement
 for the network.
-
-.. note:: A future release may introduce the concept of a target platform version, which would be similar to Android's
-   ``targetSdkVersion``, and would provide a means of maintaining behavioural compatibility for the cases where the
-   platform's behaviour has changed.

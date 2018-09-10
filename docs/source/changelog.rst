@@ -7,6 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* Introduce minimum and target platform version for CorDapps.
+
 * Case insensitive vault queries can be specified via a boolean on applicable SQL criteria builder operators. By default queries will be case sensitive.
 
 * Getter added to ``CordaRPCOps`` for the node's network parameters.
@@ -22,7 +24,7 @@ Unreleased
 * Added ``registerResponderFlow`` method to ``StartedMockNode``, to support isolated testing of responder flow behaviour.
 
 * "app", "rpc", "p2p" and "unknown" are no longer allowed as uploader values when importing attachments. These are used
-  internally in security sensitive code.
+  internally in security sensitive code.`
 
 * Introduced ``TestCorDapp`` and utilities to support asymmetric setups for nodes through ``DriverDSL``, ``MockNetwork`` and ``MockServices``.
 

@@ -189,3 +189,30 @@ CorDapp configuration can be accessed from ``CordappContext::config`` whenever a
 
 There is an example project that demonstrates in ``samples`` called ``cordapp-configuration`` and API documentation in
 `<api/kotlin/corda/net.corda.core.cordapp/index.html>`_.
+
+
+Minimum and target platform version
+-----------------------------------
+
+CorDapps can advertise their minimum and target platform version. The minimum platform version indicates that a node has to run at least this version in order to be able to run this CorDapp. The target platform version indicates that a CorDapp was tested with this version of the Corda Platform and should be run at this API level if possible. It provides a means of maintaining behavioural compatibility for the cases where the platform's behaviour has changed. These attributes are specified in the JAR manifest of the CorDapp, for example:
+
+.. sourcecode:: groovy
+
+    'Min-Platform-Version': 3
+    'Target-Platform-Version': 4
+
+
+In gradle, this can be achieved by modifying the jar task as shown in this example:
+
+.. container:: codeset
+
+    .. sourcecode:: groovy
+
+        jar {
+            manifest {
+                attributes(
+                        'Min-Platform-Version': 3
+                        'Target-Platform-Version': 4
+                )
+            }
+        }
