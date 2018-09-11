@@ -4360,6 +4360,12 @@ public interface net.corda.core.schemas.QueryableState extends net.corda.core.co
 ##
 public interface net.corda.core.schemas.StatePersistable
 ##
+public interface net.corda.core.serialization.CheckpointSerializationScheme
+  @NotNull
+  public abstract T deserialize(net.corda.core.utilities.ByteSequence, Class<T>, net.corda.core.serialization.CheckpointSerializationContext)
+  @NotNull
+  public abstract net.corda.core.serialization.SerializedBytes<T> serialize(T, net.corda.core.serialization.CheckpointSerializationContext)
+##
 public interface net.corda.core.serialization.ClassWhitelist
   public abstract boolean hasListed(Class<?>)
 ##
