@@ -1,5 +1,6 @@
 package net.corda.node.internal
 
+import com.codahale.metrics.MetricRegistry
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import com.zaxxer.hikari.util.PropertyElf
@@ -35,10 +36,14 @@ object DataSourceFactory {
         }.set(null, SynchronizedGetPutRemove<String, Database>())
     }
 
-    fun createDataSource(hikariProperties: Properties, pool: Boolean = true): DataSource {
+    fun createDataSource(hikariProperties: Properties, pool: Boolean = true, metricRegistry: MetricRegistry? = null): DataSource {
         val config = HikariConfig(hikariProperties)
         return if (pool) {
-            HikariDataSource(config)
+            val dataSource = HikariDataSource(config)
+            if (metricRegistry != null) {
+                dataSource.metricRegistry = metricRegistry
+            }
+            dataSource
         } else {
             // Basic init for the one test that wants to go via this API but without starting a HikariPool:
             (Class.forName(hikariProperties.getProperty("dataSourceClassName")).newInstance() as DataSource).also {

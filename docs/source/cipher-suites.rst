@@ -73,7 +73,7 @@ are compatible with TLS 1.2, while the default scheme per key type is also shown
 | | and SHA-256           | | vendors.                                                    |     | - tls                   |
 |                         |                                                               |     | - network map (CN)      |
 +-------------------------+---------------------------------------------------------------+-----+-------------------------+
-| | ECDSA using the       | | secp256k1 is the curve adopted by Bitcoin and as such there | YES |                         |
+| | ECDSA using the       | | secp256k1 is the curve adopted by Bitcoin and as such there | NO  |                         |
 | | Koblitz k1 curve      | | is a wealth of infrastructure, code and advanced algorithms |     |                         |
 | | (secp256k1)           | | designed for use with it. This curve is standardised by     |     |                         |
 | | and SHA-256           | | NIST as part of the "Suite B" cryptographic algorithms and  |     |                         |

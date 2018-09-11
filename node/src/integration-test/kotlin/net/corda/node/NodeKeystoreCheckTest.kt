@@ -31,14 +31,14 @@ class NodeKeystoreCheckTest : IntegrationTest() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             assertThatThrownBy {
                 startNode(customOverrides = mapOf("devMode" to false)).getOrThrow()
-            }.hasMessageContaining("Identity certificate not found")
+            }.hasMessageContaining("One or more keyStores (identity or TLS) or trustStore not found.")
         }
     }
 
     @Test
     fun `node should throw exception if cert path doesn't chain to the trust root`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-            // Create keystores
+            // Create keystores.
             val keystorePassword = "password"
             val certificatesDirectory = baseDirectory(ALICE_NAME) / "certificates"
             val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, keystorePassword)
@@ -57,7 +57,7 @@ class NodeKeystoreCheckTest : IntegrationTest() {
 
             // Fiddle with node keystore.
             signingCertStore.get().update {
-                // Self signed root
+                // Self signed root.
                 val badRootKeyPair = Crypto.generateKeyPair()
                 val badRoot = X509Utilities.createSelfSignedCACertificate(X500Principal("O=Bad Root,L=Lodnon,C=GB"), badRootKeyPair)
                 val nodeCA = getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
