@@ -383,7 +383,7 @@ artifactory {
         contextUrl = artifactory_contextUrl
         repository {
             repoKey = 'corda-dev'
-            username = 'teamcity'
+            username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
             password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
         }
 
