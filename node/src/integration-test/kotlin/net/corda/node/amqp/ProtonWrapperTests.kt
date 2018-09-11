@@ -16,13 +16,13 @@ import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.registerDevP2pCertificates
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import net.corda.nodeapi.internal.protonwrapper.netty.init
+import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.nodeapi.internal.registerDevSigningCertificates
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -85,6 +85,22 @@ class ProtonWrapperTests {
                 amqpClient.write(msg)
                 assertEquals(MessageStatus.Acknowledged, msg.onComplete.get())
                 receiveSubs.unsubscribe()
+            }
+        }
+    }
+
+    @Test
+    fun `AMPQ Client fails to connect when crl soft fail check is disabled`() {
+        val amqpServer = createServer(serverPort, CordaX500Name("Rogue 1", "London", "GB"),
+                maxMessageSize = MAX_MESSAGE_SIZE, crlCheckSoftFail = false)
+        amqpServer.use {
+            amqpServer.start()
+            val amqpClient = createClient()
+            amqpClient.use {
+                val clientConnected = amqpClient.onConnection.toFuture()
+                amqpClient.start()
+                val clientConnect = clientConnected.get()
+                assertEquals(false, clientConnect.connected)
             }
         }
     }
@@ -470,7 +486,10 @@ class ProtonWrapperTests {
                 sharedThreadPool = sharedEventGroup)
     }
 
-    private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME, maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPServer {
+    private fun createServer(port: Int,
+                             name: CordaX500Name = ALICE_NAME,
+                             maxMessageSize: Int = MAX_MESSAGE_SIZE,
+                             crlCheckSoftFail: Boolean = true): AMQPServer {
         val baseDirectory = temporaryFolder.root.toPath() / "server"
         val certificatesDirectory = baseDirectory / "certificates"
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
@@ -481,7 +500,7 @@ class ProtonWrapperTests {
             doReturn(name).whenever(it).myLegalName
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
-            doReturn(true).whenever(it).crlCheckSoftFail
+            doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
 
