@@ -40,6 +40,7 @@ dependencies {
     integrationTestCompile project(":test-utils")
     integrationTestCompile project(":node-driver")
     compile project(":experimental:flow-worker")
+    compile project(":bridge")
 }
 
 jar {
