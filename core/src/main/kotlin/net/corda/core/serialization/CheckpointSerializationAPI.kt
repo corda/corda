@@ -72,6 +72,7 @@ class CheckpointSerializationFactory(
 }
 
 @KeepForDJVM
+@DoNotImplement
 interface CheckpointSerializationScheme {
     @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: CheckpointSerializationContext): T
