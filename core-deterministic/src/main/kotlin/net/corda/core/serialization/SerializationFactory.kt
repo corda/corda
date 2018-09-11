@@ -1,6 +1,8 @@
 package net.corda.core.serialization
 
+import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
+import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.ByteSequence
 
@@ -68,28 +70,20 @@ abstract class SerializationFactory {
      * Allow subclasses to temporarily mark themselves as the current factory for the current thread during serialization/deserialization.
      * Will restore the prior context on exiting the block.
      */
-    fun <T> asCurrent(block: SerializationFactory.() -> T): T {
-        val priorContext = _currentFactory
-        _currentFactory= this
-        try {
-            return this.block()
-        } finally {
-            _currentFactory = priorContext
-        }
-    }
+    @Deprecated("This serves no useful purpose, and is no longer supported")
+    fun <T> asCurrent(block: SerializationFactory.() -> T): T =
+            throw UnsupportedOperationException()
 
     companion object {
-        private var _currentFactory: SerializationFactory? = null
-
         /**
          * A default factory for serialization/deserialization, taking into account the [currentFactory] if set.
          */
-        val defaultFactory: SerializationFactory get() = currentFactory ?: effectiveSerializationEnv.serializationFactory
+        val defaultFactory: SerializationFactory get() = effectiveSerializationEnv.serializationFactory
 
         /**
-         * If there is a need to nest serialization/deserialization with a modified context during serialization or deserialization,
-         * this will return the current factory used to start serialization/deserialization.
+         * Always just the default factory.
          */
-        val currentFactory: SerializationFactory? get() = _currentFactory
+        @Deprecated("Has no meaning distinct from defaultFactory, which should be used instead")
+        val currentFactory: SerializationFactory? get() = defaultFactory
     }
 }

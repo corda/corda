@@ -4,7 +4,6 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.serialization.*
 import net.corda.core.serialization.SerializationContext.*
 import net.corda.core.serialization.internal.*
-import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
@@ -46,8 +45,8 @@ class AMQPClientSerializationScheme(
         }
     }
 
-    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
-        return magic == amqpMagic && (target == UseCase.RPCClient || target == UseCase.P2P)
+    override fun canDeserializeVersion(target: UseCase): Boolean {
+        return target == UseCase.RPCClient || target == UseCase.P2P
     }
 
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {

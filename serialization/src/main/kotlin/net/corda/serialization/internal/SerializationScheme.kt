@@ -7,7 +7,6 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.buildNamed
-import net.corda.core.internal.copyBytes
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.amqp.amqpMagic
@@ -24,8 +23,7 @@ internal object NullEncodingWhitelist : EncodingWhitelist {
 }
 
 @KeepForDJVM
-data class SerializationContextImpl @JvmOverloads constructor(override val preferredSerializationVersion: SerializationMagic,
-                                                              override val deserializationClassLoader: ClassLoader,
+data class SerializationContextImpl @JvmOverloads constructor(override val deserializationClassLoader: ClassLoader,
                                                               override val whitelist: ClassWhitelist,
                                                               override val properties: Map<Any, Any>,
                                                               override val objectReferencesEnabled: Boolean,
@@ -33,6 +31,14 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
                                                               override val encoding: SerializationEncoding?,
                                                               override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist,
                                                               override val lenientCarpenterEnabled: Boolean = false) : SerializationContext {
+
+
+    override val preferredSerializationVersion: SerializationMagic
+        get() = throw UnsupportedOperationException()
+
+    override fun withPreferredSerializationVersion(magic: SerializationMagic): SerializationContext =
+        throw UnsupportedOperationException()
+
     private val builder = AttachmentsClassLoaderBuilder(properties, deserializationClassLoader)
 
     /**
@@ -66,7 +72,6 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
         })
     }
 
-    override fun withPreferredSerializationVersion(magic: SerializationMagic) = copy(preferredSerializationVersion = magic)
     override fun withEncoding(encoding: SerializationEncoding?) = copy(encoding = encoding)
     override fun withEncodingWhitelist(encodingWhitelist: EncodingWhitelist) = copy(encodingWhitelist = encodingWhitelist)
 }
@@ -102,14 +107,10 @@ internal class AttachmentsClassLoaderBuilder(private val properties: Map<Any, An
 @KeepForDJVM
 open class SerializationFactoryImpl(
     // TODO: This is read-mostly. Probably a faster implementation to be found.
-    private val schemes: MutableMap<Pair<CordaSerializationMagic, SerializationContext.UseCase>, SerializationScheme>
+    private val schemes: MutableMap<SerializationContext.UseCase, SerializationScheme>
 ) : SerializationFactory() {
     @DeleteForDJVM
     constructor() : this(ConcurrentHashMap())
-
-    companion object {
-        val magicSize = amqpMagic.size
-    }
 
     private val creator: List<StackTraceElement> = Exception().stackTrace.asList()
 
@@ -117,36 +118,32 @@ open class SerializationFactoryImpl(
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    private fun schemeFor(byteSequence: ByteSequence, target: SerializationContext.UseCase): Pair<SerializationScheme, CordaSerializationMagic> {
+    private fun schemeFor(target: SerializationContext.UseCase): SerializationScheme {
         // truncate sequence to at most magicSize, and make sure it's a copy to avoid holding onto large ByteArrays
-        val magic = CordaSerializationMagic(byteSequence.slice(end = magicSize).copyBytes())
-        val lookupKey = magic to target
-        return schemes.computeIfAbsent(lookupKey) {
-            registeredSchemes.filter { it.canDeserializeVersion(magic, target) }.forEach { return@computeIfAbsent it } // XXX: Not single?
-            logger.warn("Cannot find serialization scheme for: [$lookupKey, " +
-                    "${if (magic == amqpMagic) "AMQP" else "UNKNOWN MAGIC"}] registeredSchemes are: $registeredSchemes")
-            throw UnsupportedOperationException("Serialization scheme $lookupKey not supported.")
-        } to magic
+        return schemes.computeIfAbsent(target) {
+            registeredSchemes.filter { it.canDeserializeVersion(target) }.forEach { return@computeIfAbsent it } // XXX: Not single?
+            logger.warn("Cannot find serialization scheme for: [$target, AMQP]" +
+                    " registeredSchemes are: $registeredSchemes")
+            throw UnsupportedOperationException("Serialization scheme $target not supported.")
+        }
     }
 
     @Throws(NotSerializableException::class)
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-        return asCurrent { withCurrentContext(context) { schemeFor(byteSequence, context.useCase).first.deserialize(byteSequence, clazz, context) } }
+        return withCurrentContext(context) { schemeFor(context.useCase).deserialize(byteSequence, clazz, context) }
     }
 
     @Throws(NotSerializableException::class)
     override fun <T : Any> deserializeWithCompatibleContext(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): ObjectWithCompatibleContext<T> {
-        return asCurrent {
-            withCurrentContext(context) {
-                val (scheme, magic) = schemeFor(byteSequence, context.useCase)
+        return withCurrentContext(context) {
+                val scheme = schemeFor(context.useCase)
                 val deserializedObject = scheme.deserialize(byteSequence, clazz, context)
-                ObjectWithCompatibleContext(deserializedObject, context.withPreferredSerializationVersion(magic))
+                ObjectWithCompatibleContext(deserializedObject, context)
             }
-        }
     }
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-        return asCurrent { withCurrentContext(context) { schemeFor(context.preferredSerializationVersion, context.useCase).first.serialize(obj, context) } }
+        return withCurrentContext(context) { schemeFor(context.useCase).serialize(obj, context) }
     }
 
     fun registerScheme(scheme: SerializationScheme) {
@@ -168,7 +165,7 @@ open class SerializationFactoryImpl(
 
 @KeepForDJVM
 interface SerializationScheme {
-    fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean
+    fun canDeserializeVersion(target: SerializationContext.UseCase): Boolean
     @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T
 

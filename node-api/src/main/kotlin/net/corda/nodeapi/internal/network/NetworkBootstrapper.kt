@@ -15,7 +15,6 @@ import net.corda.core.serialization.*
 import net.corda.core.serialization.internal.AMQPSerializationEnvironment
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
-import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -23,7 +22,6 @@ import net.corda.nodeapi.internal.*
 import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
-import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.amqpMagic
@@ -386,8 +384,8 @@ internal constructor(private val initSerEnv: Boolean,
         override fun rpcClientSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
         override fun rpcServerSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
 
-        override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
-            return magic == amqpMagic && target == SerializationContext.UseCase.P2P
+        override fun canDeserializeVersion(target: SerializationContext.UseCase): Boolean {
+            return target == SerializationContext.UseCase.P2P
         }
     }
 }

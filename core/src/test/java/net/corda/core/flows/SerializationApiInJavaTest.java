@@ -20,7 +20,6 @@ public class SerializationApiInJavaTest {
 
     @Test
     public void enforceSerializationFactoryApi() {
-        assertNull(SerializationFactory.Companion.getCurrentFactory());
         SerializationFactory factory = SerializationFactory.Companion.getDefaultFactory();
         assertNull(factory.getCurrentContext());
         serialize("hello", factory, factory.getDefaultContext());

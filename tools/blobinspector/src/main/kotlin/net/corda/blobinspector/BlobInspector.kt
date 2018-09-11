@@ -142,9 +142,7 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
 }
 
 private object AMQPInspectorSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
-    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
-        return magic == amqpMagic
-    }
+    override fun canDeserializeVersion(target: SerializationContext.UseCase): Boolean = true
 
     override fun rpcClientSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
     override fun rpcServerSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()

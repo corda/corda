@@ -78,31 +78,24 @@ abstract class SerializationFactory {
      * Allow subclasses to temporarily mark themselves as the current factory for the current thread during serialization/deserialization.
      * Will restore the prior context on exiting the block.
      */
-    fun <T> asCurrent(block: SerializationFactory.() -> T): T {
-        val priorContext = _currentFactory.get()
-        _currentFactory.set(this)
-        try {
-            return this.block()
-        } finally {
-            _currentFactory.set(priorContext)
-        }
-    }
+    @Deprecated("This serves no useful purpose, and is no longer supported")
+    fun <T> asCurrent(block: SerializationFactory.() -> T): T =
+            throw UnsupportedOperationException()
 
     companion object {
-        private val _currentFactory = ThreadLocal<SerializationFactory?>()
-
         /**
          * A default factory for serialization/deserialization, taking into account the [currentFactory] if set.
          */
-        val defaultFactory: SerializationFactory get() = currentFactory ?: effectiveSerializationEnv.serializationFactory
+        val defaultFactory: SerializationFactory get() = effectiveSerializationEnv.serializationFactory
 
         /**
-         * If there is a need to nest serialization/deserialization with a modified context during serialization or deserialization,
-         * this will return the current factory used to start serialization/deserialization.
+         * Always just the default factory.
          */
-        val currentFactory: SerializationFactory? get() = _currentFactory.get()
+        @Deprecated("Has no meaning distinct from defaultFactory, which should be used instead")
+        val currentFactory: SerializationFactory? get() = defaultFactory
     }
 }
+
 typealias SerializationMagic = ByteSequence
 @DoNotImplement
 interface SerializationEncoding
@@ -116,7 +109,9 @@ interface SerializationContext {
     /**
      * When serializing, use the format this header sequence represents.
      */
+    @Deprecated("Will always be AMQP")
     val preferredSerializationVersion: SerializationMagic
+
     /**
      * If non-null, apply this encoding (typically compression) when serializing.
      */
@@ -191,6 +186,7 @@ interface SerializationContext {
     /**
      * Helper method to return a new context based on this context but with serialization using the format this header sequence represents.
      */
+    @Deprecated("Should only ever be AMQP")
     fun withPreferredSerializationVersion(magic: SerializationMagic): SerializationContext
 
     /**

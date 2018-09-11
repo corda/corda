@@ -19,7 +19,7 @@ import net.corda.serialization.internal.SerializationScheme
 import java.lang.reflect.Modifier
 import java.util.*
 
-val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == amqpMagic
+val AMQP_ENABLED get() = true
 
 fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
     require(types.toSet().size == types.size) {

@@ -8,7 +8,6 @@ import net.corda.serialization.internal.amqp.amqpMagic
 val serializationProperties: MutableMap<Any, Any> = mutableMapOf()
 
 val serializationContext = SerializationContextImpl(
-        preferredSerializationVersion = amqpMagic,
         deserializationClassLoader = ClassLoader.getSystemClassLoader(),
         whitelist = AllWhitelist,
         properties = serializationProperties,

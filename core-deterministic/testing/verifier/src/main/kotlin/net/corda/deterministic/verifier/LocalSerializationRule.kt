@@ -11,7 +11,6 @@ import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
 import net.corda.serialization.internal.amqp.SerializerFactory
-import net.corda.serialization.internal.amqp.amqpMagic
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
@@ -23,7 +22,6 @@ class LocalSerializationRule(private val label: String) : TestRule {
 
     private companion object {
         private val AMQP_P2P_CONTEXT = SerializationContextImpl(
-                amqpMagic,
                 LocalSerializationRule::class.java.classLoader,
                 GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
                 emptyMap(),
@@ -80,8 +78,8 @@ class LocalSerializationRule(private val label: String) : TestRule {
             throw UnsupportedOperationException()
         }
 
-        override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
-            return canDeserializeVersion(magic) && target == P2P
+        override fun canDeserializeVersion(target: SerializationContext.UseCase): Boolean {
+            return target == P2P
         }
     }
 }

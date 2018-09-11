@@ -13,7 +13,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.loggerFor
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.DEV_ROOT_CA

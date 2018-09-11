@@ -7,7 +7,6 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.node.serialization.amqp.RpcServerObservableSerializer
 import net.corda.nodeapi.RPCApi
-import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.AllWhitelist
@@ -40,7 +39,6 @@ class AMQPRoundTripRPCSerializationScheme(
     }
 
     override fun canDeserializeVersion(
-            magic: CordaSerializationMagic,
             target: SerializationContext.UseCase) = true
 
     fun rpcClientSerializerFactory(observableContext: ClientObservableContext, id: Trace.InvocationId) =

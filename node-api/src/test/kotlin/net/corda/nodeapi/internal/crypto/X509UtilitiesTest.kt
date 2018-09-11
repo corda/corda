@@ -332,7 +332,7 @@ class X509UtilitiesTest {
     @Test
     fun `serialize - deserialize X509Certififcate`() {
         val factory = SerializationFactoryImpl().apply { registerScheme(AMQPServerSerializationScheme()) }
-        val context = SerializationContextImpl(amqpMagic,
+        val context = SerializationContextImpl(
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),
@@ -349,7 +349,6 @@ class X509UtilitiesTest {
     fun `serialize - deserialize X509CertPath`() {
         val factory = SerializationFactoryImpl().apply { registerScheme(AMQPServerSerializationScheme()) }
         val context = SerializationContextImpl(
-                amqpMagic,
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),

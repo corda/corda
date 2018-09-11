@@ -5,7 +5,6 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.AllWhitelist
-import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.amqp.testutils.serializationProperties
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -28,7 +27,6 @@ class AbstractAMQPSerializationSchemeTest {
     @Test
     fun `number of cached factories must be bounded by maxFactories`() {
         val genesisContext = SerializationContextImpl(
-                ByteSequence.of(byteArrayOf('c'.toByte(), 'o'.toByte(), 'r'.toByte(), 'd'.toByte(), 'a'.toByte(), 0.toByte(), 0.toByte(), 1.toByte())),
                 ClassLoader.getSystemClassLoader(),
                 AllWhitelist,
                 serializationProperties,
@@ -49,7 +47,7 @@ class AbstractAMQPSerializationSchemeTest {
                 return factory
             }
 
-            override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
+            override fun canDeserializeVersion(target: SerializationContext.UseCase): Boolean {
                 return true
             }
 
