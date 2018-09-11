@@ -4,6 +4,7 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationContext.UseCase.P2P
 import net.corda.core.serialization.SerializationCustomSerializer
+import net.corda.core.serialization.internal.AMQPSerializationEnvironment
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.serialization.internal.*
@@ -62,7 +63,7 @@ class LocalSerializationRule(private val label: String) : TestRule {
         val factory = SerializationFactoryImpl(mutableMapOf()).apply {
             registerScheme(AMQPSerializationScheme(emptySet(), AccessOrderLinkedHashMap(128)))
         }
-        return object : SerializationEnvironmentImpl(factory, AMQP_P2P_CONTEXT) {
+        return object : SerializationEnvironmentImpl(amqp = AMQPSerializationEnvironment(factory, p2pContext = AMQP_P2P_CONTEXT)) {
             override fun toString() = "testSerializationEnv($label)"
         }
     }

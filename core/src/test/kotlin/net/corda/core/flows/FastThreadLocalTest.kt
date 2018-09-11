@@ -104,7 +104,7 @@ class FastThreadLocalTest {
     }
 
     private fun contentIsNotSerialized(threadLocalGet: () -> UnserializableObj) = scheduled(1, ::FastThreadLocalThread) {
-        // Use false like AbstractKryoSerializationScheme, the default of true doesn't work at all:
+        // Use false like AbstractKryoCheckpointSerializer, the default of true doesn't work at all:
         val serializer = Fiber.getFiberSerializer(false)
         val returnValue = UUID.randomUUID()
         val deserializedFiber = serializer.read(openFuture<ByteArray>().let {

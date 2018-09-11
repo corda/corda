@@ -11,11 +11,11 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.AMQPSerializationEnvironment
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
+import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -375,11 +375,11 @@ internal constructor(private val initSerEnv: Boolean,
     // We need to to set serialization env, because generation of parameters is run from Cordform.
     private fun initialiseSerialization() {
         _contextSerializationEnv.set(SerializationEnvironmentImpl(
-                SerializationFactoryImpl().apply {
-                    registerScheme(AMQPParametersSerializationScheme)
-                },
-                AMQP_P2P_CONTEXT)
-        )
+                amqp = AMQPSerializationEnvironment(
+                    SerializationFactoryImpl().apply {
+                        registerScheme(AMQPParametersSerializationScheme)
+                    },
+                    p2pContext = AMQP_P2P_CONTEXT)))
     }
 
     private object AMQPParametersSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {

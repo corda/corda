@@ -6,13 +6,17 @@ import net.corda.core.internal.InheritableThreadLocalToggleField
 import net.corda.core.internal.SimpleToggleField
 import net.corda.core.internal.ThreadLocalToggleField
 import net.corda.core.internal.VisibleForTesting
+<<<<<<< HEAD
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
+=======
+import net.corda.core.serialization.*
+>>>>>>> Eliminate CheckpointSerializationFactory
 
 @KeepForDJVM
 interface SerializationEnvironment {
     val serializationFactory: SerializationFactory
-    val checkpointSerializationFactory: CheckpointSerializationFactory
+    val checkpointSerializer: CheckpointSerializer
     val p2pContext: SerializationContext
     val rpcServerContext: SerializationContext
     val rpcClientContext: SerializationContext
@@ -21,28 +25,48 @@ interface SerializationEnvironment {
 }
 
 @KeepForDJVM
-open class SerializationEnvironmentImpl(
-        override val serializationFactory: SerializationFactory,
-        override val p2pContext: SerializationContext,
-        rpcServerContext: SerializationContext? = null,
-        rpcClientContext: SerializationContext? = null,
-        storageContext: SerializationContext? = null,
-        checkpointContext: CheckpointSerializationContext? = null,
-        checkpointSerializationFactory: CheckpointSerializationFactory? = null) : SerializationEnvironment {
-    // Those that are passed in as null are never inited:
-    override lateinit var rpcServerContext: SerializationContext
-    override lateinit var rpcClientContext: SerializationContext
-    override lateinit var storageContext: SerializationContext
-    override lateinit var checkpointContext: CheckpointSerializationContext
-    override lateinit var checkpointSerializationFactory: CheckpointSerializationFactory
+data class AMQPSerializationEnvironment(
+    val serializationFactory: SerializationFactory,
+    val p2pContext: SerializationContext,
+    val rpc: RPCSerializationEnvironment? = null,
+    val storageContext: SerializationContext? = null)
 
-    init {
-        rpcServerContext?.let { this.rpcServerContext = it }
-        rpcClientContext?.let { this.rpcClientContext = it }
-        storageContext?.let { this.storageContext = it }
-        checkpointContext?.let { this.checkpointContext = it }
-        checkpointSerializationFactory?.let { this.checkpointSerializationFactory = it  }
-    }
+@KeepForDJVM
+data class RPCSerializationEnvironment(
+        val serverContext: SerializationContext,
+        val clientContext: SerializationContext? = null)
+
+@KeepForDJVM
+data class CheckpointSerializationEnvironment (
+    val checkpointSerializer: CheckpointSerializer,
+    val checkpointContext : CheckpointSerializationContext
+)
+
+@KeepForDJVM
+open class SerializationEnvironmentImpl(
+        private val amqp: AMQPSerializationEnvironment? = null,
+        private val checkpoint: CheckpointSerializationEnvironment? = null) : SerializationEnvironment {
+
+    private val amqpIfSupported get() = amqp ?:
+        throw UnsupportedOperationException("AMQP serialization not supported in this environment")
+
+    private val checkpointIfSupported get() = checkpoint ?:
+        throw UnsupportedOperationException("Checkpoint serialization not supported in this environment")
+
+    private val rpcIfSupported get() = amqpIfSupported.rpc ?:
+        throw UnsupportedOperationException("RPC serialization not supported in this environment")
+
+    override val checkpointSerializer get() = checkpointIfSupported.checkpointSerializer
+    override val checkpointContext get() = checkpointIfSupported.checkpointContext
+
+    override val serializationFactory get() = amqpIfSupported.serializationFactory
+    override val p2pContext get() = amqpIfSupported.p2pContext
+    override val rpcServerContext get() = rpcIfSupported.serverContext
+    override val rpcClientContext get() = rpcIfSupported.clientContext ?:
+            throw UnsupportedOperationException("RPC client serialization not supported in this environment")
+
+    override val storageContext get() = amqpIfSupported.storageContext ?:
+        throw UnsupportedOperationException("Storage serialization not supported in this environment")
 }
 
 private val _nodeSerializationEnv = SimpleToggleField<SerializationEnvironment>("nodeSerializationEnv", true)

@@ -12,6 +12,7 @@ import net.corda.core.internal.rootMessage
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.AMQPSerializationEnvironment
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.base64ToByteArray
@@ -129,11 +130,13 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
     private fun initialiseSerialization() {
         // Deserialise with the lenient carpenter as we only care for the AMQP field getters
         _contextSerializationEnv.set(SerializationEnvironmentImpl(
-                SerializationFactoryImpl().apply {
-                    registerScheme(AMQPInspectorSerializationScheme)
-                },
-                p2pContext = AMQP_P2P_CONTEXT.withLenientCarpenter(),
-                storageContext = AMQP_STORAGE_CONTEXT.withLenientCarpenter()
+                amqp = AMQPSerializationEnvironment(
+                        SerializationFactoryImpl().apply {
+                            registerScheme(AMQPInspectorSerializationScheme)
+                        },
+                        p2pContext = AMQP_P2P_CONTEXT.withLenientCarpenter(),
+                        storageContext = AMQP_STORAGE_CONTEXT.withLenientCarpenter()
+                )
         ))
     }
 }

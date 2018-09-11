@@ -201,7 +201,7 @@ class RaftTransactionCommitLog<E, EK>(
 
         class CordaKryoSerializer<T : Any> : TypeSerializer<T> {
             private val context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withEncoding(CordaSerializationEncoding.SNAPPY)
-            private val factory = CheckpointSerializationFactory.defaultFactory
+            private val checkpointSerializer = CheckpointSerializationDefaults.CHECKPOINT_SERIALIZER
 
             override fun write(obj: T, buffer: BufferOutput<*>, serializer: Serializer) {
                 val serialized = obj.checkpointSerialize(context = context)
@@ -213,7 +213,7 @@ class RaftTransactionCommitLog<E, EK>(
                 val size = buffer.readInt()
                 val serialized = ByteArray(size)
                 buffer.read(serialized)
-                return factory.deserialize(ByteSequence.of(serialized), type, context)
+                return checkpointSerializer.deserialize(ByteSequence.of(serialized), type, context)
             }
         }
     }
