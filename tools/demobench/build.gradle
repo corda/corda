@@ -88,8 +88,7 @@ jar {
     manifest {
         attributes(
             'Main-Class': mainClassName,
-            'Class-Path': configurations.runtime.collect { it.getName() }.join(' '),
-            'Automatic-Module-Name': 'net.corda.tools.demobench'
+            'Class-Path': configurations.runtimeClasspath.collect { it.name }.join(' '),
         )
     }
 }
