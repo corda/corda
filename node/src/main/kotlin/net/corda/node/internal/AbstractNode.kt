@@ -72,7 +72,11 @@ import net.corda.node.utilities.NodeBuildProperties
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
 import net.corda.nodeapi.internal.persistence.*
@@ -248,20 +252,20 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
 
-    private fun initKeyStore(): X509Certificate {
+    private fun initKeyStores(): X509Certificate {
         if (configuration.devMode) {
             configuration.configureWithDevSSLCertificate()
         }
-        return validateKeyStore()
+        return validateKeyStores()
     }
 
     open fun generateAndSaveNodeInfo(): NodeInfo {
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
-        val trustRoot = initKeyStore()
+        val trustRoot = initKeyStores()
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         startDatabase()
-        val nodeCa = configuration.signingCertificateStore.get()[X509Utilities.CORDA_CLIENT_CA]
+        val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
         return database.use {
             it.transaction {
@@ -288,8 +292,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         log.info("Node starting up ...")
 
-        val trustRoot = initKeyStore()
-        val nodeCa = configuration.signingCertificateStore.get()[X509Utilities.CORDA_CLIENT_CA]
+        val trustRoot = initKeyStores()
+        val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         initialiseJVMAgents()
 
         schemaService.mappedSchemasWarnings().forEach {
@@ -313,7 +317,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         servicesForResolution.start(netParams)
         networkMapCache.start(netParams.notaries)
 
-        startDatabase()
+        startDatabase(metricRegistry)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
 
@@ -718,30 +722,50 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @VisibleForTesting
     protected open fun acceptableLiveFiberCountOnStop(): Int = 0
 
-    private fun validateKeyStore(): X509Certificate {
-        val containCorrectKeys = try {
-            // This will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            val sslKeystore = configuration.p2pSslOptions.keyStore.get()
-            val identitiesKeystore = configuration.signingCertificateStore.get()
-            X509Utilities.CORDA_CLIENT_TLS in sslKeystore && X509Utilities.CORDA_CLIENT_CA in identitiesKeystore
+    private fun getCertificateStores(): AllCertificateStores? {
+        return try {
+            // The following will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
+            val sslKeyStore = configuration.p2pSslOptions.keyStore.get()
+            val identitiesKeyStore = configuration.signingCertificateStore.get()
+            val trustStore = configuration.p2pSslOptions.trustStore.get()
+            AllCertificateStores(trustStore, sslKeyStore, identitiesKeyStore)
         } catch (e: KeyStoreException) {
-            log.warn("Certificate key store found but key store password does not match configuration.")
-            false
+            log.warn("At least one of the keystores or truststore passwords does not match configuration.")
+            null
         } catch (e: IOException) {
-            log.error("IO exception while trying to validate keystore", e)
-            false
+            log.error("IO exception while trying to validate keystores and truststore", e)
+            null
         }
-        require(containCorrectKeys) {
-            "Identity certificate not found. " +
-                    "Please either copy your existing identity key and certificate from another node, " +
+    }
+
+    private data class AllCertificateStores(val trustStore: CertificateStore, val sslKeyStore: CertificateStore, val identitiesKeyStore: CertificateStore)
+
+    private fun validateKeyStores(): X509Certificate {
+        // Step 1. Check trustStore, sslKeyStore and identitiesKeyStore exist.
+        val certStores = requireNotNull(getCertificateStores()) {
+            "One or more keyStores (identity or TLS) or trustStore not found. " +
+                    "Please either copy your existing keys and certificates from another node, " +
                     "or if you don't have one yet, fill out the config file and run corda.jar --initial-registration. " +
                     "Read more at: https://docs.corda.net/permissioning.html"
         }
+        // Step 2. Check that trustStore contains the correct key-alias entry.
+        require(CORDA_ROOT_CA in certStores.trustStore) {
+            "Alias for trustRoot key not found. Please ensure you have an updated trustStore file."
+        }
+        // Step 3. Check that tls keyStore contains the correct key-alias entry.
+        require(CORDA_CLIENT_TLS in certStores.sslKeyStore) {
+            "Alias for TLS key not found. Please ensure you have an updated TLS keyStore file."
+        }
 
-        // Check all cert path chain to the trusted root
-        val sslCertChainRoot = configuration.p2pSslOptions.keyStore.get().query { getCertificateChain(X509Utilities.CORDA_CLIENT_TLS) }.last()
-        val nodeCaCertChainRoot = configuration.signingCertificateStore.get().query { getCertificateChain(X509Utilities.CORDA_CLIENT_CA) }.last()
-        val trustRoot = configuration.p2pSslOptions.trustStore.get()[X509Utilities.CORDA_ROOT_CA]
+        // Step 4. Check that identity keyStores contain the correct key-alias entry for Node CA.
+        require(CORDA_CLIENT_CA in certStores.identitiesKeyStore) {
+            "Alias for Node CA key not found. Please ensure you have an updated identity keyStore file."
+        }
+
+        // Step 5. Check all cert paths chain to the trusted root.
+        val trustRoot = certStores.trustStore[CORDA_ROOT_CA]
+        val sslCertChainRoot = certStores.sslKeyStore.query { getCertificateChain(CORDA_CLIENT_TLS) }.last()
+        val nodeCaCertChainRoot = certStores.identitiesKeyStore.query { getCertificateChain(CORDA_CLIENT_CA) }.last()
 
         require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
         require(nodeCaCertChainRoot == trustRoot) { "Client CA certificate must chain to the trusted root." }
@@ -759,7 +783,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     // Specific class so that MockNode can catch it.
     class DatabaseConfigurationException(msg: String) : CordaException(msg)
 
-    protected open fun startDatabase() {
+    protected open fun startDatabase(metricRegistry: MetricRegistry? = null) {
         log.debug {
             val driverClasses = DriverManager.getDrivers().asSequence().map { it.javaClass.name }
             "Available JDBC drivers: $driverClasses"
@@ -768,7 +792,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
         val isH2Database = isH2Database(props.getProperty("dataSource.url", ""))
         val schemas = if (isH2Database) schemaService.internalSchemas() else schemaService.schemaOptions.keys
-        database.startHikariPool(props, configuration.database, schemas)
+        database.startHikariPool(props, configuration.database, schemas, metricRegistry)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -1060,9 +1084,9 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
 }
 
-fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>) {
+fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null) {
     try {
-        val dataSource = DataSourceFactory.createDataSource(hikariProperties)
+        val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
         val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
         val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig)
         schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L }, isH2Database(jdbcUrl))
