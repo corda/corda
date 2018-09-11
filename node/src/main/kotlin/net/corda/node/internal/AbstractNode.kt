@@ -726,7 +726,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     // Specific class so that MockNode can catch it.
-    class DatabaseConfigurationException(msg: String) : CordaException(msg)
+    class DatabaseConfigurationException(message: String) : CordaException(message)
 
     protected open fun startDatabase() {
         val props = configuration.dataSourceProperties

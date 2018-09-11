@@ -140,4 +140,4 @@ interface IdentityService {
     fun partiesFromName(query: String, exactMatch: Boolean): Set<Party>
 }
 
-class UnknownAnonymousPartyException(msg: String) : CordaException(msg)
+class UnknownAnonymousPartyException(message: String) : CordaException(message)
