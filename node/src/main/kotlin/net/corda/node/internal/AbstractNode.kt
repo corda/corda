@@ -718,15 +718,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private fun validateKeyStores(): X509Certificate {
         // Step 1. Check trustStore, sslKeyStore and identitiesKeyStore exist.
-        val certStores = getCertificateStores()
-        requireNotNull(certStores) {
+        val certStores = requireNotNull(getCertificateStores()) {
             "One or more keyStores (identity or TLS) or trustStore not found. " +
                     "Please either copy your existing keys and certificates from another node, " +
                     "or if you don't have one yet, fill out the config file and run corda.jar --initial-registration. " +
                     "Read more at: https://docs.corda.net/permissioning.html"
         }
         // Step 2. Check that trustStore contains the correct key-alias entry.
-        require(CORDA_ROOT_CA in certStores!!.trustStore) {
+        require(CORDA_ROOT_CA in certStores.trustStore) {
             "Alias for trustRoot key not found. Please ensure you have an updated trustStore file."
         }
         // Step 3. Check that tls keyStore contains the correct key-alias entry.
