@@ -213,22 +213,13 @@ object InteractiveShell {
     // TODO: This should become the default renderer rather than something used specifically by commands.
     private val outputMapper by lazy { createOutputMapper() }
 
-    @VisibleForTesting
-    lateinit var latch: CountDownLatch
-        private set
-
     /**
      * Called from the 'flow' shell command. Takes a name fragment and finds a matching flow, or prints out
      * the list of options if the request is ambiguous. Then parses [inputData] as constructor arguments using
      * the [runFlowFromString] method and starts the requested flow. Ctrl-C can be used to cancel.
      */
     @JvmStatic
-    fun runFlowByNameFragment(nameFragment: String,
-                              inputData: String,
-                              output: RenderPrintWriter,
-                              rpcOps: CordaRPCOps,
-                              ansiProgressRenderer: ANSIProgressRenderer,
-                              om: ObjectMapper = outputMapper) {
+    fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter, rpcOps: CordaRPCOps, ansiProgressRenderer: ANSIProgressRenderer) {
         val matches = try {
             rpcOps.registeredFlows().filter { nameFragment in it }
         } catch (e: PermissionException) {
@@ -251,7 +242,7 @@ object InteractiveShell {
             // Ctrl-C keypress.
             val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, clazz)
 
-            latch = CountDownLatch(1)
+            val latch = CountDownLatch(1)
             ansiProgressRenderer.render(stateObservable, latch::countDown)
             // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
             // the tracker is done with the screen.
