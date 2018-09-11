@@ -228,14 +228,15 @@ object InteractiveShell {
     // TODO: This should become the default renderer rather than something used specifically by commands.
     private val outputMapper by lazy { createOutputMapper() }
 
+    @VisibleForTesting
+    lateinit var latch: CountDownLatch
+        private set
+
     /**
      * Called from the 'flow' shell command. Takes a name fragment and finds a matching flow, or prints out
      * the list of options if the request is ambiguous. Then parses [inputData] as constructor arguments using
      * the [runFlowFromString] method and starts the requested flow. Ctrl-C can be used to cancel.
      */
-    @VisibleForTesting
-    lateinit var latch: CountDownLatch
-
     @JvmStatic
     fun runFlowByNameFragment(nameFragment: String,
                               inputData: String,

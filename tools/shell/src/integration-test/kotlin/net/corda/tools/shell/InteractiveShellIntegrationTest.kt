@@ -32,7 +32,6 @@ import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.util.io.Streams
-import org.crsh.text.Color
 import org.crsh.text.RenderPrintWriter
 import org.junit.Ignore
 import org.junit.Rule
