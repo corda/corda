@@ -82,18 +82,21 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
 
     private val commitLog = createMap()
 
-    private val requestQueue = LinkedBlockingQueue<CommitRequest>(100_000)
+    private val requestQueue = LinkedBlockingQueue<CommitRequest>(requestQueueSize)
 
     /** A request processor thread. */
     private val processorThread = thread(name = "Notary request queue processor", isDaemon = true) {
         try {
-            processRequests()
+            while (!Thread.interrupted()) {
+                processRequest(requestQueue.take())
+            }
         } catch (e: InterruptedException) {
         }
         log.debug { "Shutting down with ${requestQueue.size} in-flight requests unprocessed." }
     }
 
     companion object {
+        private const val requestQueueSize = 100_000
         private val log = contextLogger()
         fun createMap(): AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef> =
                 AppendOnlyPersistentMap(
@@ -210,12 +213,6 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             log.debug { "Successfully committed all input states: $states" }
         } else {
             throw NotaryInternalException(outsideTimeWindowError)
-        }
-    }
-
-    private fun processRequests() {
-        while (!Thread.interrupted()) {
-            processRequest(requestQueue.take())
         }
     }
 
