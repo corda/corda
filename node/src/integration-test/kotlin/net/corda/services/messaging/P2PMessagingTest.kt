@@ -38,7 +38,10 @@ class P2PMessagingTest {
     }
 
     private fun startDriverWithDistributedService(dsl: DriverDSL.(List<InProcess>) -> Unit) {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = listOf(NotarySpec(DISTRIBUTED_SERVICE_NAME, cluster = ClusterSpec.Raft(clusterSize = 2))))) {
+        driver(DriverParameters(
+                startNodesInProcess = true,
+                notarySpecs = listOf(NotarySpec(DISTRIBUTED_SERVICE_NAME, cluster = ClusterSpec.Raft(clusterSize = 2)))
+        )) {
             dsl(defaultNotaryHandle.nodeHandles.getOrThrow().map { (it as InProcess) })
         }
     }

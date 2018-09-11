@@ -2,9 +2,9 @@ package net.corda.node.services.network
 
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.node.services.NetworkMapCache
+import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
