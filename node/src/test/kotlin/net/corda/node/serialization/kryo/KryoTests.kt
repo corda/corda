@@ -35,9 +35,6 @@ import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.test.*
 
-//TODO: get rid of this.
-class TestScheme : AbstractKryoSerializationScheme()
-
 @RunWith(Parameterized::class)
 class KryoTests(private val compression: CordaSerializationEncoding?) {
     companion object {
@@ -52,7 +49,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
 
     @Before
     fun setup() {
-        factory = CheckpointSerializationFactoryImpl(TestScheme())
+        factory = CheckpointSerializationFactory(KryoServerSerializationScheme())
         context = CheckpointSerializationContextImpl(
                 javaClass.classLoader,
                 AllWhitelist,
@@ -277,7 +274,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
             }
         }
         Tmp()
-        val factory = CheckpointSerializationFactoryImpl(TestScheme())
+        val factory = CheckpointSerializationFactory(KryoServerSerializationScheme())
         val context = CheckpointSerializationContextImpl(
                 javaClass.classLoader,
                 AllWhitelist,

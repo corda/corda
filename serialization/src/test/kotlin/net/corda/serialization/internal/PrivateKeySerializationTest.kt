@@ -1,6 +1,7 @@
 package net.corda.serialization.internal
 
 import net.corda.core.crypto.Crypto
+import net.corda.core.serialization.CheckpointSerializationDefaults
 import net.corda.core.serialization.SerializationContext.UseCase.*
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.checkpointSerialize
@@ -34,7 +35,7 @@ class PrivateKeySerializationTest(private val privateKey: PrivateKey, private va
     @Test
     fun `passed with expected UseCases`() {
         assertTrue { privateKey.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes.isNotEmpty() }
-        assertTrue { privateKey.checkpointSerialize(context = SerializationDefaults.CHECKPOINT_CONTEXT).bytes.isNotEmpty() }
+        assertTrue { privateKey.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT).bytes.isNotEmpty() }
     }
 
     @Test

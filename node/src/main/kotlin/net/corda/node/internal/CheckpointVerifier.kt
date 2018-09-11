@@ -4,6 +4,7 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.CheckpointSerializationDefaults
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.checkpointDeserialize
 import net.corda.node.services.api.CheckpointStorage
@@ -19,8 +20,8 @@ object CheckpointVerifier {
      * @throws CheckpointIncompatibleException if any offending checkpoint is found.
      */
     fun verifyCheckpointsCompatible(checkpointStorage: CheckpointStorage, currentCordapps: List<Cordapp>, platformVersion: Int, serviceHub: ServiceHub, tokenizableServices: List<Any>) {
-        val checkpointSerializationContext = SerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
-                CheckpointSerializeAsTokenContextImpl(tokenizableServices, SerializationDefaults.CHECKPOINT_SERIALIZATION_FACTORY, SerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
+        val checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
+                CheckpointSerializeAsTokenContextImpl(tokenizableServices, SerializationDefaults.CHECKPOINT_SERIALIZATION_FACTORY, CheckpointSerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
         )
         checkpointStorage.getAllCheckpoints().forEach { (_, serializedCheckpoint) ->
 

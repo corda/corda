@@ -21,6 +21,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.CheckpointSerializationFactory
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
@@ -450,7 +451,7 @@ open class Node(configuration: NodeConfiguration,
                     registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps))
                     registerScheme(AMQPClientSerializationScheme(cordappLoader.cordapps))
                 },
-                checkpointSerializationFactory = CheckpointSerializationFactoryImpl(KryoServerSerializationScheme()),
+                checkpointSerializationFactory = CheckpointSerializationFactory(KryoServerSerializationScheme()),
                 p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                 rpcServerContext = AMQP_RPC_SERVER_CONTEXT.withClassLoader(classloader),
                 storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),

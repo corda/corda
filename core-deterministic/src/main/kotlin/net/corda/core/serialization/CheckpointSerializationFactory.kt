@@ -3,13 +3,19 @@ package net.corda.core.serialization
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.ByteSequence
+import java.io.NotSerializableException
 
 /**
  * A deterministic version of [CheckpointSerializationFactory] that does not use thread-locals to manage serialization
  * context.
  */
 @KeepForDJVM
-abstract class CheckpointSerializationFactory {
+class CheckpointSerializationFactory(
+        private val scheme: CheckpointSerializationScheme
+) {
+
+    private val creator: List<StackTraceElement> = Exception().stackTrace.asList()
+
     /**
      * Deserialize the bytes in to an object, using the prefixed bytes to determine the format.
      *
@@ -17,7 +23,10 @@ abstract class CheckpointSerializationFactory {
      * @param clazz The class or superclass or the object to be deserialized, or [Any] or [Object] if unknown.
      * @param context A context that configures various parameters to deserialization.
      */
-    abstract fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: CheckpointSerializationContext): T
+    @Throws(NotSerializableException::class)
+    fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: CheckpointSerializationContext): T {
+        return asCurrent { withCurrentContext(context) { scheme.deserialize(byteSequence, clazz, context) } }
+    }
 
     /**
      * Serialize an object to bytes using the preferred serialization format version from the context.
@@ -25,19 +34,19 @@ abstract class CheckpointSerializationFactory {
      * @param obj The object to be serialized.
      * @param context A context that configures various parameters to serialization, including the serialization format version.
      */
-    abstract fun <T : Any> serialize(obj: T, context: CheckpointSerializationContext): SerializedBytes<T>
+    fun <T : Any> serialize(obj: T, context: CheckpointSerializationContext): SerializedBytes<T> {
+        return asCurrent { withCurrentContext(context) { scheme.serialize(obj, context) } }
+    }
 
-    /**
-     * If there is a need to nest serialization/deserialization with a modified context during serialization or deserialization,
-     * this will return the current context used to start serialization/deserialization.
-     */
-    val currentContext: CheckpointSerializationContext? get() = _currentContext
+    override fun toString(): String {
+        return "${this.javaClass.name} scheme=$scheme ${creator.joinToString("\n")}"
+    }
 
-    /**
-     * A context to use as a default if you do not require a specially configured context.  It will be the current context
-     * if the use is somehow nested (see [currentContext]).
-     */
-    val defaultContext: CheckpointSerializationContext get() = currentContext ?: effectiveSerializationEnv.checkpointContext
+    override fun equals(other: Any?): Boolean {
+        return other is CheckpointSerializationFactory && other.scheme == this.scheme
+    }
+
+    override fun hashCode(): Int = scheme.hashCode()
 
     private var _currentContext: CheckpointSerializationContext? = null
 

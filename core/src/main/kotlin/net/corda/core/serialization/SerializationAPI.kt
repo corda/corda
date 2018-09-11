@@ -238,6 +238,13 @@ object SerializationDefaults {
     @DeleteForDJVM val RPC_SERVER_CONTEXT get() = effectiveSerializationEnv.rpcServerContext
     @DeleteForDJVM val RPC_CLIENT_CONTEXT get() = effectiveSerializationEnv.rpcClientContext
     @DeleteForDJVM val STORAGE_CONTEXT get() = effectiveSerializationEnv.storageContext
+    @Deprecated("Checkpoint context is no longer available from SerializationDefaults, but must be obtained from CheckpointSerializationDefaults instead.")
+    @DeleteForDJVM val CHECKPOINT_CONTEXT: SerializationContext get() =
+        throw UnsupportedOperationException("Checkpoint context is no longer available from SerializationDefaults, " +
+                "but must be obtained from CheckpointSerializationDefaults instead.")
+}
+
+object CheckpointSerializationDefaults {
     @DeleteForDJVM val CHECKPOINT_CONTEXT get() = effectiveSerializationEnv.checkpointContext
 }
 

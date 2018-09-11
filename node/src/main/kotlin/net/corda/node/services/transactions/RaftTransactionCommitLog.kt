@@ -197,7 +197,7 @@ class RaftTransactionCommitLog<E, EK>(
         }
 
         class CordaKryoSerializer<T : Any> : TypeSerializer<T> {
-            private val context = SerializationDefaults.CHECKPOINT_CONTEXT.withEncoding(CordaSerializationEncoding.SNAPPY)
+            private val context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withEncoding(CordaSerializationEncoding.SNAPPY)
             private val factory = CheckpointSerializationFactory.defaultFactory
 
             override fun write(obj: T, buffer: BufferOutput<*>, serializer: Serializer) {

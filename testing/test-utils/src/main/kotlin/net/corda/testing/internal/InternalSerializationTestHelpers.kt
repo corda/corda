@@ -4,6 +4,7 @@ import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.DoNotImplement
+import net.corda.core.serialization.CheckpointSerializationFactory
 import net.corda.core.serialization.internal.*
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
@@ -41,7 +42,7 @@ internal fun createTestSerializationEnv(label: String): SerializationEnvironment
             AMQP_RPC_CLIENT_CONTEXT,
             AMQP_STORAGE_CONTEXT,
             KRYO_CHECKPOINT_CONTEXT,
-            CheckpointSerializationFactoryImpl(KryoServerSerializationScheme())
+            CheckpointSerializationFactory(KryoServerSerializationScheme())
     ) {
         override fun toString() = "testSerializationEnv($label)"
     }

@@ -7,42 +7,6 @@ import net.corda.core.utilities.ByteSequence
 import java.io.NotSerializableException
 
 @KeepForDJVM
-open class CheckpointSerializationFactoryImpl(
-        private val scheme: CheckpointSerializationScheme
-) : CheckpointSerializationFactory() {
-
-    private val creator: List<StackTraceElement> = Exception().stackTrace.asList()
-
-    @Throws(NotSerializableException::class)
-    override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: CheckpointSerializationContext): T {
-        return asCurrent { withCurrentContext(context) { scheme.deserialize(byteSequence, clazz, context) } }
-    }
-
-    override fun <T : Any> serialize(obj: T, context: CheckpointSerializationContext): SerializedBytes<T> {
-        return asCurrent { withCurrentContext(context) { scheme.serialize(obj, context) } }
-    }
-
-    override fun toString(): String {
-        return "${this.javaClass.name} scheme=$scheme ${creator.joinToString("\n")}"
-    }
-
-    override fun equals(other: Any?): Boolean {
-        return other is CheckpointSerializationFactoryImpl && other.scheme == this.scheme
-    }
-
-    override fun hashCode(): Int = scheme.hashCode()
-}
-
-@KeepForDJVM
-interface CheckpointSerializationScheme {
-    @Throws(NotSerializableException::class)
-    fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: CheckpointSerializationContext): T
-
-    @Throws(NotSerializableException::class)
-    fun <T : Any> serialize(obj: T, context: CheckpointSerializationContext): SerializedBytes<T>
-}
-
-@KeepForDJVM
 data class CheckpointSerializationContextImpl @JvmOverloads constructor(
                                                               override val deserializationClassLoader: ClassLoader,
                                                               override val whitelist: ClassWhitelist,

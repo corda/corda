@@ -3,6 +3,7 @@ package net.corda.node.services.persistence
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.serialization.CheckpointSerializationDefaults
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.checkpointSerialize
@@ -189,9 +190,9 @@ class DBCheckpointStorageTests {
         val logic: FlowLogic<*> = object : FlowLogic<Unit>() {
             override fun call() {}
         }
-        val frozenLogic = logic.checkpointSerialize(context = SerializationDefaults.CHECKPOINT_CONTEXT)
+        val frozenLogic = logic.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
         val checkpoint = Checkpoint.create(InvocationContext.shell(), FlowStart.Explicit, logic.javaClass, frozenLogic, ALICE, SubFlowVersion.CoreFlow(version)).getOrThrow()
-        return id to checkpoint.checkpointSerialize(context = SerializationDefaults.CHECKPOINT_CONTEXT)
+        return id to checkpoint.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
     }
 
 }
