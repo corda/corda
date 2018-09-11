@@ -7,6 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* New overload for ``CordaRPCClient.start()`` method allowing to specify target legal identity to use for RPC call.
+
 * Case insensitive vault queries can be specified via a boolean on applicable SQL criteria builder operators. By default queries will be case sensitive.
 
 * Getter added to ``CordaRPCOps`` for the node's network parameters.
