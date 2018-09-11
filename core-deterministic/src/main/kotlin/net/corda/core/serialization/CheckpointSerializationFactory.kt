@@ -14,6 +14,8 @@ class CheckpointSerializationFactory(
         private val scheme: CheckpointSerializationScheme
 ) {
 
+    val defaultContext: CheckpointSerializationContext get() = _currentContext ?: effectiveSerializationEnv.checkpointContext
+
     private val creator: List<StackTraceElement> = Exception().stackTrace.asList()
 
     /**
@@ -25,7 +27,7 @@ class CheckpointSerializationFactory(
      */
     @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: CheckpointSerializationContext): T {
-        return asCurrent { withCurrentContext(context) { scheme.deserialize(byteSequence, clazz, context) } }
+        return withCurrentContext(context) { scheme.deserialize(byteSequence, clazz, context) }
     }
 
     /**
@@ -35,7 +37,7 @@ class CheckpointSerializationFactory(
      * @param context A context that configures various parameters to serialization, including the serialization format version.
      */
     fun <T : Any> serialize(obj: T, context: CheckpointSerializationContext): SerializedBytes<T> {
-        return asCurrent { withCurrentContext(context) { scheme.serialize(obj, context) } }
+        return withCurrentContext(context) { scheme.serialize(obj, context) }
     }
 
     override fun toString(): String {
@@ -63,32 +65,10 @@ class CheckpointSerializationFactory(
         }
     }
 
-    /**
-     * Allow subclasses to temporarily mark themselves as the current factory for the current thread during serialization/deserialization.
-     * Will restore the prior context on exiting the block.
-     */
-    fun <T> asCurrent(block: CheckpointSerializationFactory.() -> T): T {
-        val priorContext = _currentFactory
-        _currentFactory = this
-        try {
-            return this.block()
-        } finally {
-            _currentFactory = priorContext
-        }
-    }
-
     companion object {
-        private var _currentFactory: CheckpointSerializationFactory? = null
-
         /**
-         * A default factory for serialization/deserialization, taking into account the [currentFactory] if set.
+         * A default factory for serialization/deserialization.
          */
-        val defaultFactory: CheckpointSerializationFactory get() = currentFactory ?: effectiveSerializationEnv.checkpointSerializationFactory
-
-        /**
-         * If there is a need to nest serialization/deserialization with a modified context during serialization or deserialization,
-         * this will return the current factory used to start serialization/deserialization.
-         */
-        val currentFactory: CheckpointSerializationFactory? get() = _currentFactory
+        val defaultFactory: CheckpointSerializationFactory get() = effectiveSerializationEnv.checkpointSerializationFactory
     }
 }

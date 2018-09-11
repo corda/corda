@@ -27,7 +27,7 @@ class SerializationTokenTest {
     @Before
     fun setup() {
         factory = testSerialization.checkpointSerializationFactory
-        context = testSerialization.checkpointContext.withWhitelisted(SingletonSerializationToken::class.java)
+        context = factory.defaultContext.withWhitelisted(SingletonSerializationToken::class.java)
     }
 
     // Large tokenizable object so we can tell from the smaller number of serialized bytes it was actually tokenized
