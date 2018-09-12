@@ -8,7 +8,7 @@ import java.security.PublicKey
 
 /** A simple Notary service that does not perform transaction validation */
 class SimpleNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
-    override val uniquenessProvider = PersistentUniquenessProvider(services.clock)
+    override val uniquenessProvider = PersistentUniquenessProvider(services.clock, services.database)
 
     override fun createServiceFlow(otherPartySession: FlowSession): NotaryServiceFlow = NonValidatingNotaryFlow(otherPartySession, this)
 

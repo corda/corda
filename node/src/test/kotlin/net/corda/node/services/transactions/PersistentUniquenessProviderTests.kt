@@ -28,7 +28,7 @@ import kotlin.test.assertFailsWith
 class PersistentUniquenessProviderTests {
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule(inheritable = true)
     private val identity = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
     private val txID = SecureHash.randomSHA256()
     private val requestSignature = NotarisationRequestSignature(DigitalSignature.WithKey(NullKeys.NullPublicKey, ByteArray(32)), 0)
@@ -49,18 +49,15 @@ class PersistentUniquenessProviderTests {
 
     @Test
     fun `should commit a transaction with unused inputs without exception`() {
-        database.transaction {
-            val provider = PersistentUniquenessProvider(Clock.systemUTC())
+            val provider = PersistentUniquenessProvider(Clock.systemUTC(), database)
             val inputState = generateStateRef()
 
             provider.commit(listOf(inputState), txID, identity, requestSignature)
-        }
     }
 
     @Test
     fun `should report a conflict for a transaction with previously used inputs`() {
-        database.transaction {
-            val provider = PersistentUniquenessProvider(Clock.systemUTC())
+        val provider = PersistentUniquenessProvider(Clock.systemUTC(), database)
             val inputState = generateStateRef()
 
             val inputs = listOf(inputState)
@@ -76,5 +73,4 @@ class PersistentUniquenessProviderTests {
             val conflictCause = error.consumedStates[inputState]!!
             assertEquals(conflictCause.hashOfTransactionId, firstTxId.sha256())
         }
-    }
 }
