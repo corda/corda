@@ -172,6 +172,18 @@ class PropertyAccessorConstructor(
 }
 
 /**
+ * Implementation of [PropertyAccessor] representing a calculated property of an object that is serialized
+ * so that it can be used by the class carpenter, but ignored on deserialisation as there is no setter or
+ * constructor parameter to receive its value.
+ *
+ * This will only be created for calculated properties that are accessible via no-argument methods annotated
+ * with [SerializeForCarpenter].
+ */
+class CalculatedPropertyAccessor(override val serializer: PropertySerializer): PropertyAccessor(-1, serializer) {
+    override fun set(instance: Any, obj: Any?) = Unit // do nothing, as it's a calculated value
+}
+
+/**
  * Represents a collection of [PropertyAccessor]s that represent the serialized form
  * of an object.
  *
@@ -186,7 +198,7 @@ abstract class PropertySerializers(
         val serializationOrder: List<PropertyAccessor>) {
     companion object {
         fun make(serializationOrder: List<PropertyAccessor>) =
-                when (serializationOrder.firstOrNull()) {
+                when (serializationOrder.ignoringCalculatedProperties.firstOrNull()) {
                     is PropertyAccessorConstructor -> PropertySerializersConstructor(serializationOrder)
                     is PropertyAccessorGetterSetter -> PropertySerializersSetter(serializationOrder)
                     null -> PropertySerializersNoProperties()
@@ -198,7 +210,11 @@ abstract class PropertySerializers(
 
     val size get() = serializationOrder.size
     abstract val byConstructor: Boolean
+    val deserializableSize get() = serializationOrder.count { it !is CalculatedPropertyAccessor }
 }
+
+inline val List<PropertyAccessor>.ignoringCalculatedProperties: List<PropertyAccessor> get() =
+        filter { it !is CalculatedPropertyAccessor }
 
 class PropertySerializersNoProperties : PropertySerializers(emptyList()) {
     override val byConstructor get() = true

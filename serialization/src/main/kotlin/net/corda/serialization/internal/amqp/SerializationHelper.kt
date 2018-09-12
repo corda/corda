@@ -3,10 +3,7 @@ package net.corda.serialization.internal.amqp
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeToken
 import net.corda.core.internal.isConcreteClass
-import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.serialization.ConstructorForDeserialization
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.*
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.*
 import java.lang.reflect.Field
@@ -68,12 +65,29 @@ fun <T : Any> propertiesForSerialization(
         kotlinConstructor: KFunction<T>?,
         type: Type,
         factory: SerializerFactory): PropertySerializers = PropertySerializers.make(
+            addSerializeForCarpenter(factory, type,
             if (kotlinConstructor != null) {
                 propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
             } else {
                 propertiesForSerializationFromAbstract(type.asClass(), type, factory)
-            }.sortedWith(PropertyAccessor)
+            }).sortedWith(PropertyAccessor)
     )
+
+private fun addSerializeForCarpenter(factory: SerializerFactory, type: Type, realAccessors: List<PropertyAccessor>): List<PropertyAccessor> {
+    val annotatedMethods = generateSequence(type.asClass(), Class<*>::getSuperclass)
+            .flatMap { sequenceOf(it) + it.genericInterfaces.asSequence().map { it.asClass() } }
+            .flatMap { it.declaredMethods.asSequence() }
+            .distinct().mapNotNull {
+        if (!it.isAnnotationPresent(SerializeForCarpenter::class.java)) null
+        else makeCalculatedPropertyAccessor(it, factory)
+    }
+    return realAccessors + annotatedMethods
+}
+
+private fun makeCalculatedPropertyAccessor(method: Method, factory: SerializerFactory): PropertyAccessor {
+    val name = if (method.name.startsWith("get")) method.name.substring(3).decapitalize() else method.name
+    return CalculatedPropertyAccessor(PropertySerializer.make(name, PublicPropertyReader(method), method.genericReturnType, factory))
+}
 
 /**
  * From a constructor, determine which properties of a class are to be serialized.

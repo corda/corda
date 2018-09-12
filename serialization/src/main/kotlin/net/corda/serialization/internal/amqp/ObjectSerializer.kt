@@ -2,6 +2,7 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.core.internal.isConcreteClass
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.amqp.SerializerFactory.Companion.nameForType
@@ -61,7 +62,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             context: SerializationContext,
             debugIndent: Int) = ifThrowsAppend({ clazz.typeName }
     ) {
-        if (propertySerializers.size != javaConstructor?.parameterCount &&
+        if (propertySerializers.deserializableSize != javaConstructor?.parameterCount &&
                 javaConstructor?.parameterCount ?: 0 > 0
         ) {
             throw AMQPNotSerializableException(type, "Serialization constructor for class $type expects "
@@ -109,6 +110,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
 
         return construct(propertySerializers.serializationOrder
                 .zip(obj)
+                .filter { it.first !is CalculatedPropertyAccessor }
                 .map { Pair(it.first.initialPosition, it.first.serializer.readProperty(it.second, schemas, input, context)) }
                 .sortedWith(compareBy({ it.first }))
                 .map { it.second })

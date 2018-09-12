@@ -117,7 +117,7 @@ class DeserializationInput constructor(
             des {
                 val envelope = getEnvelope(bytes, context.encodingWhitelist)
 
-                logger.trace("deserialize blob scheme=\"${envelope.schema.toString()}\"")
+                logger.trace("deserialize blob scheme=\"${envelope.schema}\"")
 
                 clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema),
                         clazz, context))
