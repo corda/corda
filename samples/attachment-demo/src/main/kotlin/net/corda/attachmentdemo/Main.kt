@@ -4,8 +4,8 @@ import net.corda.core.internal.div
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.node.User
 import net.corda.testing.driver.driver
+import net.corda.testing.node.User
 
 /**
  * This file is exclusively for being able to run your nodes through an IDE (as opposed to running deployNodes)

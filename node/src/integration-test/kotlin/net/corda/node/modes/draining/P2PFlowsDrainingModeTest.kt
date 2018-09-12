@@ -6,8 +6,8 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.startFlow
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.testing.core.ALICE_NAME
@@ -29,16 +29,15 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.fail
 
 class P2PFlowsDrainingModeTest {
+    companion object {
+        private val logger = contextLogger()
+    }
 
     private val portAllocation = PortAllocation.Incremental(10000)
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val users = listOf(user)
 
     private var executor: ScheduledExecutorService? = null
-
-    companion object {
-        private val logger = loggerFor<P2PFlowsDrainingModeTest>()
-    }
 
     @Before
     fun setup() {

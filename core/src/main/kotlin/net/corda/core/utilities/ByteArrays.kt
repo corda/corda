@@ -33,9 +33,10 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
     fun open() = ByteArrayInputStream(_bytes, offset, size)
 
     /**
-     * Create a sub-sequence, that may be backed by a new byte array.
+     * Create a sub-sequence of this sequence. A copy of the underlying array may be made, if a subclass overrides
+     * [bytes] to do so, as [OpaqueBytes] does.
      *
-     * @param offset The offset within this sequence to start the new sequence.  Note: not the offset within the backing array.
+     * @param offset The offset within this sequence to start the new sequence. Note: not the offset within the backing array.
      * @param size The size of the intended sub sequence.
      */
     @Suppress("MemberVisibilityCanBePrivate")
@@ -43,7 +44,7 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
         require(offset >= 0)
         require(offset + size <= this.size)
         // Intentionally use bytes rather than _bytes, to mirror the copy-or-not behaviour of that property.
-        return if (offset == 0 && size == this.size) this else OpaqueBytesSubSequence(bytes, this.offset + offset, size)
+        return if (offset == 0 && size == this.size) this else of(bytes, this.offset + offset, size)
     }
 
     companion object {

@@ -30,7 +30,6 @@ class PersistentKeyManagementService(val identityService: PersistentIdentityServ
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
-
             @Id
             @Column(name = "public_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String,
@@ -51,8 +50,7 @@ class PersistentKeyManagementService(val identityService: PersistentIdentityServ
             return AppendOnlyPersistentMap(
                     "PersistentKeyManagementService_keys",
                     toPersistentEntityKey = { it.toStringShort() },
-                    fromPersistentEntity = { Pair(Crypto.decodePublicKey(it.publicKey), Crypto.decodePrivateKey(
-                            it.privateKey)) },
+                    fromPersistentEntity = { Pair(Crypto.decodePublicKey(it.publicKey), Crypto.decodePrivateKey(it.privateKey)) },
                     toPersistentEntity = { key: PublicKey, value: PrivateKey ->
                         PersistentKey(key, value)
                     },
