@@ -26,7 +26,7 @@ class CashIssueFlowTests {
     fun start() {
         mockNet = MockNetwork(
                 servicePeerAllocationStrategy = RoundRobin(),
-                cordappPackages = listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"))
+                cordappPackages = listOf("net.corda.finance.contracts", "net.corda.finance.schemas"))
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         bankOfCorda = bankOfCordaNode.info.identityFromX500Name(BOC_NAME)
         notary = mockNet.defaultNotaryIdentity

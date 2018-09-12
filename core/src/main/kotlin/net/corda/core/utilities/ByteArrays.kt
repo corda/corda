@@ -36,7 +36,7 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
      * Create a sub-sequence of this sequence.  A copy of the underlying array may be made, if a subclass overrides
      * [bytes] to do so, as [OpaqueBytes] does.
      *
-     * @param offset The offset within this sequence to start the new sequence.  Note: not the offset within the backing array.
+     * @param offset The offset within this sequence to start the new sequence. Note: not the offset within the backing array.
      * @param size The size of the intended sub sequence.
      */
     @Suppress("MemberVisibilityCanBePrivate")
