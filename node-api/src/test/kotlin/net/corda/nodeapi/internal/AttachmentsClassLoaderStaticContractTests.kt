@@ -111,7 +111,7 @@ class AttachmentsClassLoaderStaticContractTests {
         val cordapps = cordappsForPackages(packages)
         return testDirectory().let { directory ->
             cordapps.packageInDirectory(directory)
-            JarScanningCordappLoader.fromDirectories(listOf(directory), VersionInfo.UNKNOWN.copy(platformVersion = PLATFORM_VERSION))
+            JarScanningCordappLoader.fromDirectories(listOf(directory), VersionInfo.UNKNOWN)
         }
     }
 
