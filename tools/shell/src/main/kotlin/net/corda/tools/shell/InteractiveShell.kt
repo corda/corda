@@ -209,6 +209,10 @@ object InteractiveShell {
     // TODO: This should become the default renderer rather than something used specifically by commands.
     private val outputMapper by lazy { createOutputMapper() }
 
+    @VisibleForTesting
+    lateinit var latch: CountDownLatch
+        private set
+
     /**
      * Called from the 'flow' shell command. Takes a name fragment and finds a matching flow, or prints out
      * the list of options if the request is ambiguous. Then parses [inputData] as constructor arguments using
@@ -220,7 +224,7 @@ object InteractiveShell {
                               output: RenderPrintWriter,
                               rpcOps: CordaRPCOps,
                               ansiProgressRenderer: ANSIProgressRenderer,
-                              om: ObjectMapper) {
+                              om: ObjectMapper = outputMapper) {
         val matches = try {
             rpcOps.registeredFlows().filter { nameFragment in it }
         } catch (e: PermissionException) {
@@ -230,23 +234,24 @@ object InteractiveShell {
         if (matches.isEmpty()) {
             output.println("No matching flow found, run 'flow list' to see your options.", Color.red)
             return
-        } else if (matches.size > 1) {
+        } else if (matches.size > 1 && matches.find { it.endsWith(nameFragment)} == null) {
             output.println("Ambiguous name provided, please be more specific. Your options are:")
             matches.forEachIndexed { i, s -> output.println("${i + 1}. $s", Color.yellow) }
             return
         }
 
+        val flowName = matches.find { it.endsWith(nameFragment)} ?: matches.single()
         val flowClazz: Class<FlowLogic<*>> = if (classLoader != null) {
-            uncheckedCast(Class.forName(matches.single(), true, classLoader))
+            uncheckedCast(Class.forName(flowName, true, classLoader))
         } else {
-            uncheckedCast(Class.forName(matches.single()))
+            uncheckedCast(Class.forName(flowName))
         }
         try {
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
             val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, flowClazz, om)
 
-            val latch = CountDownLatch(1)
+            latch = CountDownLatch(1)
             ansiProgressRenderer.render(stateObservable, latch::countDown)
             // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
             // the tracker is done with the screen.

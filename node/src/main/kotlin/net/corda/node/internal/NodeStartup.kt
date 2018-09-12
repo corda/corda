@@ -68,13 +68,15 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
     override fun runProgram(): Int {
         val startTime = System.currentTimeMillis()
         if (!canNormalizeEmptyPath()) {
-            println("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.")
+            println("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest supported version.")
             println("Corda will now exit...")
             return ExitCodes.FAILURE
         }
 
         val registrationMode = checkRegistrationMode()
 
+        // TODO: Reconsider if automatic re-registration should be applied when something failed during initial registration.
+        //      There might be cases where the node user should investigate what went wrong before registering again.
         if (registrationMode && !cmdLineOptions.isRegistration) {
             println("Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.")
             // Pretend that the node was started with `--initial-registration` to help prevent user error.
