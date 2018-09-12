@@ -14,6 +14,7 @@ import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
+import java.security.SecureRandom
 import java.security.Security
 
 internal val cordaSecurityProvider = CordaSecurityProvider().also {
@@ -46,4 +47,4 @@ internal val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
 internal val providerMap = listOf(cordaBouncyCastleProvider, cordaSecurityProvider, bouncyCastlePQCProvider).map { it.name to it }.toMap()
 
 @DeleteForDJVM
-internal fun platformSecureRandomFactory() = platformSecureRandom() // To minimise diff of CryptoUtils against open-source.
+internal fun platformSecureRandomFactory(): SecureRandom = platformSecureRandom() // To minimise diff of CryptoUtils against open-source.
