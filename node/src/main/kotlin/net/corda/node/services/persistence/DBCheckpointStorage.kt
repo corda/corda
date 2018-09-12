@@ -65,7 +65,7 @@ class DBCheckpointStorage : CheckpointStorage {
 
     override fun getCheckpoint(id: StateMachineRunId): SerializedBytes<Checkpoint>? {
         val bytes = currentDBSession().get(DBCheckpoint::class.java, id.uuid.toString())?.checkpoint ?: return null
-        return SerializedBytes<Checkpoint>(bytes)
+        return SerializedBytes(bytes)
     }
 
     override fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, SerializedBytes<Checkpoint>>> {
@@ -79,7 +79,7 @@ class DBCheckpointStorage : CheckpointStorage {
     }
 
     override fun getCheckpointCount(connection: Connection): Long {
-        try {
+        return try {
             return connection.prepareStatement("select count(*) from node_checkpoints").use { ps ->
                 ps.executeQuery().use { rs ->
                     rs.next()

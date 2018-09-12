@@ -10,6 +10,8 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
@@ -77,7 +79,7 @@ class InitiatorFlow(private val sessionsCount: Int, private val iterationsCount:
 
         fun tracker() = ProgressTracker(FIRST_STEP)
 
-        val seen = Collections.synchronizedSet(HashSet<Visited>())
+        val seen: MutableSet<Visited> = Collections.synchronizedSet(HashSet<Visited>())
 
         fun visit(sessionNum: Int, iterationNum: Int, step: Step) {
             val visited = Visited(sessionNum, iterationNum, step)
@@ -128,7 +130,7 @@ class InitiatedFlow(val session: FlowSession) : FlowLogic<Any>() {
 
         fun tracker() = ProgressTracker(FIRST_STEP)
 
-        val seen = Collections.synchronizedSet(HashSet<Visited>())
+        val seen: MutableSet<Visited> = Collections.synchronizedSet(HashSet<Visited>())
 
         fun visit(sessionNum: Int, iterationNum: Int, step: Step) {
             val visited = Visited(sessionNum, iterationNum, step)

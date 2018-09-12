@@ -6,8 +6,8 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.startFlow
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.testing.core.*
@@ -37,7 +37,7 @@ class P2PFlowsDrainingModeTest : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_NOTARY_NAME)
                 .map { it.toDatabaseSchemaName() }.toTypedArray())
 
-        private val logger = loggerFor<P2PFlowsDrainingModeTest>()
+        private val logger = contextLogger()
     }
 
     private val portAllocation = PortAllocation.Incremental(10000)
