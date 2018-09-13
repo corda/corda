@@ -259,7 +259,7 @@ The network bootstrapper can be started with the following command-line options:
 * ``--dir=<dir>``: Root directory containing the node configuration files and CorDapp JARs that will form the test network.
   It may also contain existing node directories. Defaults to the current directory.
 * ``--no-copy``: Don't copy the CorDapp JARs into the nodes' "cordapps" directories.
-* ``--verbose``, ``--log-to-console``, ``-V``: If set, prints logging to the console as well as to a file.
+* ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
 * ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
 * ``--install-shell-extensions``: Install ``bootstrapper`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
 * ``--help``, ``-h``: Show this help message and exit.

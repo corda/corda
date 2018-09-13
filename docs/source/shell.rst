@@ -142,7 +142,7 @@ Where:
 * ``--truststore-password=<trustStorePassword>``: The password to unlock the TrustStore file.
 * ``--truststore-file=<trustStoreFile>``: The path to the TrustStore file.
 * ``--truststore-type=<trustStoreType>``: The type of the TrustStore (e.g. JKS).
-* ``--verbose``, ``--log-to-console``, ``-V``: If set, prints logging to the console as well as to a file.
+* ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
 * ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
 * ``--install-shell-extensions``: Install ``corda-shell`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
 * ``--help``, ``-h``: Show this help message and exit.

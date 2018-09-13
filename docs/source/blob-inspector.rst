@@ -107,7 +107,7 @@ The blob inspector can be started with the following command-line options:
   never normally need to specify this. Possible values [BINARY, HEX, BASE64]. Default: BINARY.
 * ``--full-parties``: Display the owningKey and certPath properties of Party and PartyAndReference objects respectively.
 * ``--schema``: Print the blob's schema first.
-* ``--verbose``, ``--log-to-console``, ``-V``: If set, prints logging to the console as well as to a file.
+* ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
 * ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
 * ``--install-shell-extensions``: Install ``blob-inspector`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
 * ``--help``, ``-h``: Show this help message and exit.
