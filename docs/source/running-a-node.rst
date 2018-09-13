@@ -53,22 +53,22 @@ The node can optionally be started with the following command-line options:
 * ``--clear-network-map-cache``, ``-c``: Clears local copy of network map, on node startup it will be restored from server or file system.
 * ``--config-file``, ``-f``: The path to the config file. Defaults to ``node.conf``.
 * ``--dev-mode``, ``-d``: Runs the node in developer mode. Unsafe in production. Defaults to true on MacOS and desktop versions of Windows. False otherwise.
-* ``--help``, ``-h``: Displays the help message and exits.
-* ``--initial-registration``: Start initial node registration with Corda network to obtain certificate from the permissioning 
+* ``--initial-registration``: Start initial node registration with Corda network to obtain certificate from the permissioning
   server.
-* ``--install-shell-extensions``: Installs an alias and auto-completion for users of ``bash`` or ``zsh``. See below for more information.
-* ``--just-generate-node-info``: Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then 
+* ``--just-generate-node-info``: Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then
   quit.
 * ``--just-generate-rpc-ssl-settings``: Generate the ssl keystore and truststore for a secure RPC connection.
-* ``--log-to-console``, ``--verbose``, ``-v``: If set, prints logging to the console as well as to a file.
-* ``--logging-level <[ERROR,WARN,INFO,DEBUG,TRACE]>``: Enable logging at this level and higher. Defaults to INFO.
 * ``--network-root-truststore``, ``-t``: Network root trust store obtained from network operator.
 * ``--network-root-truststore-password``, ``-p``: Network root trust store password obtained from network operator.
 * ``--no-local-shell``, ``-n``: Do not start the embedded shell locally.
 * ``--on-unknown-config-keys <[FAIL,WARN,INFO]>``: How to behave on unknown node configuration. Defaults to FAIL.
 * ``--sshd``: Enables SSH server for node administration.
 * ``--sshd-port``: Sets the port for the SSH server. If not supplied and SSH server is enabled, the port defaults to 2222.
-* ``--version``, ``-V``: Prints the version and exits.
+* ``--verbose``, ``--log-to-console``, ``-V``: If set, prints logging to the console as well as to a file.
+* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
+* ``--install-shell-extensions``: Install ``corda`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
+* ``--help``, ``-h``: Show this help message and exit.
+* ``--version``, ``-V``: Print version information and exit.
 
 .. _enabling-remote-debugging:
 

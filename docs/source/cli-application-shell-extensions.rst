@@ -1,6 +1,8 @@
 Shell extensions for CLI Applications
 =====================================
 
+.. _installing-shell-extensions:
+
 Installing shell extensions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -28,7 +30,7 @@ You will now be able to run the command line application from anywhere by runnin
 
    <alias> --<option>
 
-For example, for the corda node, install the shell extensions using
+For example, for the Corda node, install the shell extensions using
 
 .. code-block:: shell
 
@@ -45,30 +47,30 @@ Upgrading shell extensions
 
 Once the shell extensions have been installed, you can upgrade them in one of two ways.
 
-1) Overwrite the existing ``corda.jar`` with the newer version. The next time you run Corda, it will automatically update
+1) Overwrite the existing JAR with the newer version. The next time you run the application, it will automatically update
    the completion file. Either restart the shell or see :ref:`above<installing-shell-extensions>` for instructions
    on making the changes take effect immediately.
-2) If you wish to use a new ``corda.jar`` from a different directory, navigate to that directory and run:
+2) If you wish to use a new JAR from a different directory, navigate to that directory and run:
 
    .. code-block:: shell
 
-      java -jar corda.jar
+      java -jar <name-of-JAR>
 
-   Which will update the ``corda`` alias to point to the new location, and update command line completion functionality. Either
+   Which will update the alias to point to the new location, and update command line completion functionality. Either
    restart the shell or see :ref:`above<installing-shell-extensions>` for instructions on making the changes take effect immediately.
 
 List of existing CLI applications
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-+------------------------------------------------------+------------------------------------------------+--------------------------------+
-| Description                                          | JAR name                                       | Alias                          |
-+======================================================+================================================+================================+
-| :ref:`Corda node<starting-an-individual-corda-node>` | corda-<version>.jar                            | corda --<option>               |
-+------------------------------------------------------+------------------------------------------------+--------------------------------+
-| :doc:`Network bootstrapper<network-bootstrapper>`    | corda-tools-network-bootstrapper-<version>.jar | bootstrapper --<option>        |
-+------------------------------------------------------+------------------------------------------------+--------------------------------+
-| :ref:`Standalone shell<standalone-shell>`            | corda-tools-shell-cli-<version>.jar            | corda-shell --<option>         |
-+------------------------------------------------------+------------------------------------------------+--------------------------------+
-| :doc:`Blob inspector<blob-inspector>`                | corda-tools-blob-inspector-<version>.jar       | blob-inspector --<option>      |
-+------------------------------------------------------+------------------------------------------------+--------------------------------+
++------------------------------------------------------+----------------------------------------------------+--------------------------------+
+| Description                                          | JAR name                                           | Alias                          |
++======================================================+====================================================+================================+
+| :ref:`Corda node<starting-an-individual-corda-node>` | ``corda-<version>.jar``                            | ``corda --<option>``           |
++------------------------------------------------------+----------------------------------------------------+--------------------------------+
+| :doc:`Network bootstrapper<network-bootstrapper>`    | ``corda-tools-network-bootstrapper-<version>.jar`` | ``bootstrapper --<option>``    |
++------------------------------------------------------+----------------------------------------------------+--------------------------------+
+| :ref:`Standalone shell<standalone-shell>`            | ``corda-tools-shell-cli-<version>.jar``            | ``corda-shell --<option>``     |
++------------------------------------------------------+----------------------------------------------------+--------------------------------+
+| :doc:`Blob inspector<blob-inspector>`                | ``corda-tools-blob-inspector-<version>.jar``       | ``blob-inspector --<option>``  |
++------------------------------------------------------+----------------------------------------------------+--------------------------------+
 
