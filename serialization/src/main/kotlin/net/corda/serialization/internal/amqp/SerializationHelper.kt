@@ -65,28 +65,28 @@ fun <T : Any> propertiesForSerialization(
         kotlinConstructor: KFunction<T>?,
         type: Type,
         factory: SerializerFactory): PropertySerializers = PropertySerializers.make(
-            addSerializeForCarpenter(factory, type,
-            if (kotlinConstructor != null) {
-                propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
-            } else {
-                propertiesForSerializationFromAbstract(type.asClass(), type, factory)
-            }).sortedWith(PropertyAccessor)
-    )
+            getValueProperties(kotlinConstructor, type, factory)
+                .addCalculatedProperties(factory, type)
+                .sortedWith(PropertyAccessor))
 
-private fun addSerializeForCarpenter(factory: SerializerFactory, type: Type, realAccessors: List<PropertyAccessor>): List<PropertyAccessor> {
-    val annotatedMethods = generateSequence(type.asClass(), Class<*>::getSuperclass)
-            .flatMap { sequenceOf(it) + it.genericInterfaces.asSequence().map { it.asClass() } }
-            .flatMap { it.declaredMethods.asSequence() }
-            .distinct().mapNotNull {
-        if (!it.isAnnotationPresent(SerializeForCarpenter::class.java)) null
-        else makeCalculatedPropertyAccessor(it, factory)
+fun <T : Any> getValueProperties(kotlinConstructor: KFunction<T>?, type: Type, factory: SerializerFactory)
+        : List<PropertyAccessor> =
+    if (kotlinConstructor != null) {
+        propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
+    } else {
+        propertiesForSerializationFromAbstract(type.asClass(), type, factory)
     }
-    return realAccessors + annotatedMethods
-}
 
-private fun makeCalculatedPropertyAccessor(method: Method, factory: SerializerFactory): PropertyAccessor {
-    val name = if (method.name.startsWith("get")) method.name.substring(3).decapitalize() else method.name
-    return CalculatedPropertyAccessor(PropertySerializer.make(name, PublicPropertyReader(method), method.genericReturnType, factory))
+private fun List<PropertyAccessor>.addCalculatedProperties(factory: SerializerFactory, type: Type)
+        : List<PropertyAccessor> = this + type.asClass().calculatedPropertyDescriptors().map { (name, descriptor) ->
+    val calculatedPropertyMethod = descriptor.getter
+            ?: throw IllegalStateException("Property $name is not a calculated property")
+
+    CalculatedPropertyAccessor(PropertySerializer.make(
+            name,
+            PublicPropertyReader(calculatedPropertyMethod),
+            calculatedPropertyMethod.genericReturnType,
+            factory))
 }
 
 /**
@@ -159,7 +159,7 @@ fun propertiesForSerializationFromSetters(
         properties: Map<String, PropertyDescriptor>,
         type: Type,
         factory: SerializerFactory): List<PropertyAccessor> =
-        properties.asSequence().withIndex().map { (index, entry) ->
+        properties.asSequence().map { entry ->
             val (name, property) = entry
 
             val getter = property.getter
@@ -168,7 +168,6 @@ fun propertiesForSerializationFromSetters(
             if (getter == null || setter == null) return@map null
 
             PropertyAccessorGetterSetter(
-                    index,
                     PropertySerializer.make(
                             name,
                             PublicPropertyReader(getter),
@@ -205,9 +204,9 @@ private fun propertiesForSerializationFromAbstract(
         clazz: Class<*>,
         type: Type,
         factory: SerializerFactory): List<PropertyAccessor> =
-        clazz.propertyDescriptors().asSequence().withIndex().map { (index, entry) ->
+        clazz.propertyDescriptors().asSequence().withIndex().mapNotNull { (index, entry) ->
             val (name, property) = entry
-            if (property.getter == null || property.field == null) return@map null
+            if (property.getter == null || property.field == null) return@mapNotNull null
 
             val getter = property.getter
             val returnType = resolveTypeVariables(getter.genericReturnType, type)
@@ -215,7 +214,7 @@ private fun propertiesForSerializationFromAbstract(
             PropertyAccessorConstructor(
                     index,
                     PropertySerializer.make(name, PublicPropertyReader(getter), returnType, factory))
-        }.filterNotNull().toList()
+        }.toList()
 
 internal fun interfacesForSerialization(type: Type, serializerFactory: SerializerFactory): List<Type> =
         exploreType(type, serializerFactory).toList()

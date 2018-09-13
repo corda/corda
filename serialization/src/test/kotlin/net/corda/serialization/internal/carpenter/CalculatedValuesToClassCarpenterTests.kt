@@ -1,6 +1,6 @@
 package net.corda.serialization.internal.carpenter
 
-import net.corda.core.serialization.SerializeForCarpenter
+import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.CompositeType
 import net.corda.serialization.internal.amqp.DeserializationInput
@@ -12,14 +12,14 @@ import kotlin.test.assertEquals
 class CalculatedValuesToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
 
     interface Parent {
-        @SerializeForCarpenter
+        @SerializableCalculatedProperty
         fun getDoubled(): Int
     }
 
     @Test
     fun calculatedValues() {
         data class C(val i: Int): Parent {
-            @get:SerializeForCarpenter
+            @get:SerializableCalculatedProperty
             val squared = (i * i).toString()
 
             override fun getDoubled(): Int = i * 2
@@ -61,7 +61,7 @@ class CalculatedValuesToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(pinochio.getMethod("getI").invoke(p), amqpObj.i)
         assertEquals(pinochio.getMethod("getSquared").invoke(p), amqpObj.squared)
         assertEquals(pinochio.getMethod("getDoubled").invoke(p), amqpObj.getDoubled())
-        
+
         val upcast = p as Parent
         assertEquals(upcast.getDoubled(), amqpObj.getDoubled())
     }

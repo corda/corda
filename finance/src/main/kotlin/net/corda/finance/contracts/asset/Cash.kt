@@ -9,6 +9,7 @@ import net.corda.core.contracts.Amount.Companion.sumOrThrow
 import net.corda.core.crypto.NullKeys.NULL_PARTY
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
@@ -16,6 +17,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
+import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
@@ -59,6 +61,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: AbstractParty)
                 : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
+        @get:SerializableCalculatedProperty
         override val exitKeys = setOf(owner.owningKey, amount.token.issuer.party.owningKey)
         override val participants = listOf(owner)
 

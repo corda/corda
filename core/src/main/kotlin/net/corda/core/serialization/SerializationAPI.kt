@@ -18,7 +18,7 @@ import java.sql.Blob
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.FUNCTION)
-annotation class SerializeForCarpenter
+annotation class SerializableCalculatedProperty
 
 data class ObjectWithCompatibleContext<out T : Any>(val obj: T, val context: SerializationContext)
 

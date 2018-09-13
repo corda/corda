@@ -1,7 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.ConstructorForDeserialization
-import net.corda.core.serialization.SerializeForCarpenter
+import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
@@ -66,7 +66,7 @@ class RoundTripTests {
     @Test
     fun calculatedValues() {
         data class C(val i: Int) {
-            @get:SerializeForCarpenter
+            @get:SerializableCalculatedProperty
             val squared = i * i
         }
 
@@ -80,7 +80,7 @@ class RoundTripTests {
     fun calculatedFunction() {
         class C {
             var i: Int = 0
-            @SerializeForCarpenter
+            @SerializableCalculatedProperty
             fun getSquared() = i * i
         }
 
