@@ -220,26 +220,32 @@ object InteractiveShell {
      */
     @JvmStatic
     fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter, rpcOps: CordaRPCOps, ansiProgressRenderer: ANSIProgressRenderer) {
-        val matches =
+        val matches = try {
             rpcOps.registeredFlows().filter { nameFragment in it }
-
+        } catch (e: PermissionException) {
+            output.println(e.message ?: "Access denied", Color.red)
+            return
+        }
         if (matches.isEmpty()) {
             output.println("No matching flow found, run 'flow list' to see your options.", Color.red)
             return
-        } else if (matches.size > 1) {
+        } else if (matches.size > 1 && matches.find { it.endsWith(nameFragment)} == null) {
             output.println("Ambiguous name provided, please be more specific. Your options are:")
             matches.forEachIndexed { i, s -> output.println("${i + 1}. $s", Color.yellow) }
             return
         }
 
-        val clazz: Class<FlowLogic<*>> = uncheckedCast(Class.forName(matches.single()))
+        val flowName = matches.find { it.endsWith(nameFragment)} ?: matches.single()
+        val clazz: Class<FlowLogic<*>> = uncheckedCast(Class.forName(flowName))
         try {
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
             val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, clazz)
 
             val latch = CountDownLatch(1)
-            ansiProgressRenderer.render(stateObservable, { latch.countDown() })
+            ansiProgressRenderer.render(stateObservable, latch::countDown)
+            // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
+            // the tracker is done with the screen.
             while (!Thread.currentThread().isInterrupted) {
                 try {
                     latch.await()
