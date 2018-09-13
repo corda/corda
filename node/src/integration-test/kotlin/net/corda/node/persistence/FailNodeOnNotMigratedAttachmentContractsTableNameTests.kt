@@ -36,6 +36,9 @@ class FailNodeOnNotMigratedAttachmentContractsTableNameTests {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SendMessageFlow>(), Permissions.invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
         val baseDir: Path = driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
+            // Just start a node to make this test less flaky.
+            startNode(rpcUsers = listOf(user)).getOrThrow()
+
             val (nodeName, baseDir) = {
                 defaultNotaryNode.getOrThrow()
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
