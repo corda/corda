@@ -9,7 +9,6 @@ import net.corda.core.contracts.Amount.Companion.sumOrThrow
 import net.corda.core.crypto.NullKeys.NULL_PARTY
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
