@@ -110,15 +110,16 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
 
         return construct(propertySerializers.serializationOrder
                 .zip(obj)
-                .mapNotNull {
-                    val accessor = it.first
+                .mapNotNull { (accessor, obj) ->
                     // Ensure values get read out of input no matter what
-                    val value = accessor.serializer.readProperty(it.second, schemas, input, context)
+                    val value = accessor.serializer.readProperty(obj, schemas, input, context)
 
                     when(accessor) {
                         is PropertyAccessorConstructor -> accessor.initialPosition to value
                         is CalculatedPropertyAccessor -> null
-                        else -> throw IllegalStateException()
+                        else -> throw UnsupportedOperationException(
+                                "${accessor::class.simpleName} accessor not supported " +
+                                        "for constructor-based object building")
                     }
                 }
                 .sortedWith(compareBy { it.first })
