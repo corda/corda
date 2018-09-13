@@ -71,8 +71,11 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
     override fun stop() = synchronized(this) {
         started?.run {
             producer.close()
-            // Ensure any trailing messages are committed to the journal
-            session.commit()
+            // Since we are leaking the session outside of this class it may well be already closed.
+            if(!session.isClosed) {
+                // Ensure any trailing messages are committed to the journal
+                session.commit()
+            }
             // Closing the factory closes all the sessions it produced as well.
             sessionFactory.close()
             serverLocator.close()
