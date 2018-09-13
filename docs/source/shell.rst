@@ -125,7 +125,7 @@ Where:
 
 * ``config-file`` is the path to config file, used instead of providing the rest of command line options
 * ``cordpass-directory`` is the directory containing Cordapps jars, Cordapps are require when starting flows
-* ``commands-directory`` is the directory with additional CrAsH shell commands
+* ``commands-directory`` is the directory with additional CRaSH shell commands
 * ``host`` is the Corda node's host
 * ``port`` is the Corda node's port, specified in the ``node.conf`` file
 * ``user`` is the RPC username, if not provided it will be requested at startup
