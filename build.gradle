@@ -58,7 +58,6 @@ buildscript {
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.spring_jdbc_version ='5.0.0.RELEASE'
     ext.shiro_version = '1.4.0'
-    ext.shadow_version = '2.0.4'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
     ext.hikari_version = '2.5.1'
     ext.liquibase_version = '3.5.5'
@@ -122,6 +121,9 @@ plugins {
     // but the DSL has some restrictions e.g can't be used on the allprojects section. So we should revisit this if there are improvements in Gradle.
     // Version 1.0.2 of this plugin uses capsule:1.0.1
     id "us.kirchmeier.capsule" version "1.0.2"
+
+    // Add the shadow plugin to the plugins classpath for the entire project.
+    id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
 }
 
 ext {

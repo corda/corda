@@ -1,25 +1,23 @@
-buildscript {
-
-    ext.tornadofx_version = '1.7.15'
-    ext.controlsfx_version = '8.40.12'
-
-
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        jcenter()
-    }
-
-    dependencies {
-        classpath "com.github.jengelman.gradle.plugins:shadow:$shadow_version"
-    }
+ext {
+    tornadofx_version = '1.7.15'
+    controlsfx_version = '8.40.12'
 }
 
 apply plugin: 'kotlin'
 apply plugin: 'idea'
 apply plugin: 'java'
 apply plugin: 'application'
+// We need to set mainClassName before applying the shadow plugin.
+mainClassName = 'net.corda.bootstrapper.Main'
+
 apply plugin: 'com.github.johnrengelman.shadow'
+
+configurations {
+    compile {
+        exclude group: "log4j", module: "log4j"
+        exclude group: "org.apache.logging.log4j"
+    }
+}
 
 dependencies {
     compile "com.microsoft.azure:azure:1.8.0"
@@ -35,7 +33,7 @@ dependencies {
     compile "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
     compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
     compile "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
-    compile 'info.picocli:picocli:3.0.1'
+    compile "info.picocli:picocli:$picocli_version"
 
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
     compile "no.tornado:tornadofx:$tornadofx_version"
@@ -44,18 +42,19 @@ dependencies {
     compile "org.controlsfx:controlsfx:$controlsfx_version"
 }
 
+tasks.withType(JavaCompile) {
+    // Resolves a Gradle warning about not scanning for pre-processors.
+    options.compilerArgs << '-proc:none'
+}
+
+jar.enabled = false
+
 shadowJar {
     baseName = 'network-bootstrapper'
     classifier = null
     version = null
     zip64 true
-    mainClassName = 'net.corda.bootstrapper.Main'
 }
 
-task buildNetworkBootstrapper(dependsOn: shadowJar) {
-}
-
-configurations {
-    compile.exclude group: "log4j", module: "log4j"
-    compile.exclude group: "org.apache.logging.log4j"
-}
+task buildNetworkBootstrapper(dependsOn: shadowJar)
+assemble.dependsOn buildNetworkBootstrapper
