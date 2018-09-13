@@ -159,7 +159,7 @@ private fun getPropertyNamedMethod(method: Method): PropertyNamedMethod? {
     return propertyMethodRegex.find(method.name)?.let { result ->
         PropertyNamedMethod(
                 result.groups[2]!!.value,
-                valueOf(result.groups[1]!!.value.toUpperCase()),
+                MethodClassifier.valueOf(result.groups[1]!!.value.toUpperCase()),
                 method)
     }
 }
