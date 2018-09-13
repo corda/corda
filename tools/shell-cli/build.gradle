@@ -1,14 +1,5 @@
 description 'Corda Shell CLI'
 
-buildscript {
-    repositories {
-        gradlePluginPortal()
-    }
-    dependencies {
-        classpath "com.github.jengelman.gradle.plugins:shadow:$shadow_version"
-    }
-}
-
 apply plugin: 'application'
 // We need to set mainClassName before applying the shadow plugin.
 mainClassName = 'net.corda.tools.shell.StandaloneShellKt'
