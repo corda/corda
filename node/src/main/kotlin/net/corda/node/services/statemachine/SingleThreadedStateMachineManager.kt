@@ -134,6 +134,7 @@ class SingleThreadedStateMachineManager(
             (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
         }
         serviceHub.networkMapCache.nodeReady.then {
+            logger.info("Node ready, info: ${serviceHub.myInfo}")
             resumeRestoredFlows(fibers)
             flowMessaging.start { _, deduplicationHandler ->
                 executor.execute {
