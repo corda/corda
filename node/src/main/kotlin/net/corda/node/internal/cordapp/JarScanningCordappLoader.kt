@@ -34,7 +34,8 @@ import kotlin.streams.toList
  *
  * @property cordappJarPaths The classpath of cordapp JARs
  */
-class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>, versionInfo: VersionInfo = VersionInfo.UNKNOWN) : CordappLoaderTemplate() {
+class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>,
+                                                   versionInfo: VersionInfo = VersionInfo.UNKNOWN) : CordappLoaderTemplate() {
 
     override val cordapps: List<CordappImpl> by lazy { loadCordapps() + coreCordapp }
 

@@ -19,8 +19,7 @@ object CashSchema
  * at the time of writing.
  */
 @CordaSerializable
-object CashSchemaV1 : MappedSchema(
-        schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCashState::class.java)) {
+object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCashState::class.java)) {
 
     override val migrationResource = "cash.changelog-master"
 

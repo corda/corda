@@ -16,7 +16,7 @@ data class VersionInfo(
         /** The node vendor */
         val vendor: String) {
 
-        companion object {
-                val UNKNOWN = VersionInfo(1, "Unknown", "Unknown", "Unknown")
-        }
+    companion object {
+        val UNKNOWN = VersionInfo(1, "Unknown", "Unknown", "Unknown")
+    }
 }

@@ -14,11 +14,8 @@ import net.corda.finance.EUR
 import net.corda.finance.GBP
 import net.corda.finance.USD
 import net.corda.finance.flows.ConfigHolder.Companion.supportedCurrencies
-import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStream
-import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Files
 import java.nio.file.OpenOption
 import java.nio.file.Path
@@ -36,7 +33,6 @@ class ConfigHolder(services: AppServiceHub) : SingletonSerializeAsToken() {
         private operator fun Path.div(other: String): Path = resolve(other)
         private operator fun String.div(other: String): Path = Paths.get(this) / other
         private fun Path.inputStream(vararg options: OpenOption): InputStream = Files.newInputStream(this, *options)
-        private fun Path.reader(charset: Charset = UTF_8): BufferedReader = Files.newBufferedReader(this, charset)
         private inline fun <R> Path.read(vararg options: OpenOption, block: (InputStream) -> R): R = inputStream(*options).use(block)
     }
 

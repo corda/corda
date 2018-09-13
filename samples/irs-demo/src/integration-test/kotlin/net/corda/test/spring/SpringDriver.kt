@@ -14,7 +14,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.ConnectException
 import java.net.URL
-import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 fun <A> springDriver(

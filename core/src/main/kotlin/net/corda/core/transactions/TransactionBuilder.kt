@@ -17,8 +17,6 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.loggerFor
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -49,11 +47,6 @@ open class TransactionBuilder @JvmOverloads constructor(
         protected var privacySalt: PrivacySalt = PrivacySalt(),
         protected val references: MutableList<StateRef> = arrayListOf()
 ) {
-
-    private companion object {
-        val logger = loggerFor<TransactionBuilder>()
-    }
-
     private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
 

@@ -105,12 +105,10 @@ class BFTNotaryServiceTests {
                 networkParameters.install(mockNet.baseDirectory(node.id))
                 node.start()
             }.last()
+
             return Pair(notaryIdentity, node)
         }
     }
-
-
-
 
     @Test
     fun `detect double spend`() {

@@ -480,7 +480,7 @@ class RPCClientProxyHandler(
                 try {
                     Thread.sleep(retryInterval.toMillis())
                 } catch (e: InterruptedException) {}
-                // could not connect, try with next server transport
+                // Could not connect, try with next server transport.
                 reconnectAttempts--
                 retryInterval = minOf(maxRetryInterval, retryInterval.times(rpcConfiguration.connectionRetryIntervalMultiplier.toLong()))
                 continue

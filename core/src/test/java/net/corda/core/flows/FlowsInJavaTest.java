@@ -100,18 +100,6 @@ public class FlowsInJavaTest {
         }
     }
 
-    @InitiatedBy(PrimitiveReceiveFlow.class)
-    private static class PrimitiveSendFlow extends FlowLogic<Void> {
-        public PrimitiveSendFlow(FlowSession session) {
-        }
-
-        @Suspendable
-        @Override
-        public Void call() throws FlowException {
-            return null;
-        }
-    }
-
     @InitiatingFlow
     private static class PrimitiveReceiveFlow extends FlowLogic<Void> {
         private final Party otherParty;

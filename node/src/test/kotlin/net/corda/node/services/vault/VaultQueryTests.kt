@@ -18,11 +18,11 @@ import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.DealState
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
-import net.corda.finance.schemas.SampleCashSchemaV2
-import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
+import net.corda.finance.schemas.SampleCashSchemaV2
+import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig

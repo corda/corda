@@ -69,7 +69,6 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.JVMAgentRegistry
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.node.utilities.NodeBuildProperties
-import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.config.CertificateStore

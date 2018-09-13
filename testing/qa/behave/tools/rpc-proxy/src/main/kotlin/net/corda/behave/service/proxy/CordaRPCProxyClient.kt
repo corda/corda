@@ -24,6 +24,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.testing.common.internal.testNetworkParameters
 import java.io.InputStream
 import java.net.URL
@@ -75,6 +76,8 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
     override fun registeredFlows(): List<String> {
         return doGet(targetHostAndPort, "registered-flows")
     }
+
+    override val protocolVersion: Int get() = PLATFORM_VERSION
 
     override val networkParameters: NetworkParameters get() = testNetworkParameters()
 

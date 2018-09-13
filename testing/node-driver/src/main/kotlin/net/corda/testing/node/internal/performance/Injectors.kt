@@ -1,16 +1,13 @@
 package net.corda.testing.node.internal.performance
 
-
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.MetricRegistry
-import com.google.common.base.Stopwatch
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.internal.performance.Rate
 import net.corda.testing.node.internal.ShutdownManager
 import org.slf4j.LoggerFactory
 import java.time.Duration
-import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore

@@ -1,4 +1,5 @@
 @file:JvmName("AMQPSerializerFactories")
+
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.SerializationContext

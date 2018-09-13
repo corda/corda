@@ -25,7 +25,6 @@ class AttachmentDemoTest : IntegrationTest() {
     }
 
     // run with a 10,000,000 bytes in-memory zip file. In practice, a slightly bigger file will be used (~10,002,000 bytes).
-    // Force INFO logging to prevent printing 10MB arrays in logfiles
     @Test
     fun `attachment demo using a 10MB zip file`() {
         val numOfExpectedBytes = 10_000_000

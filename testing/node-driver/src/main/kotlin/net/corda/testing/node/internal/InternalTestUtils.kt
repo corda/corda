@@ -21,7 +21,6 @@ import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.configOf
 import net.corda.node.services.config.parseToDbSchemaFriendlyName
 import net.corda.node.services.messaging.Message
-import net.corda.node.services.messaging.MessagingService
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import net.corda.testing.database.DatabaseConstants
@@ -119,10 +118,6 @@ fun <T> StartedNodeServices.startFlow(logic: FlowLogic<T>): FlowStateMachine<T> 
 fun StartedNodeServices.newContext(): InvocationContext = testContext(myInfo.chooseIdentity().name)
 
 fun InMemoryMessagingNetwork.MessageTransfer.getMessage(): Message = message
-
-internal interface InternalMockMessagingService : MessagingService {
-    fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer?
-}
 
 /**
  * Make properties appropriate for creating a DataSource for unit tests.

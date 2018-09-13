@@ -132,9 +132,7 @@ open class Node(configuration: NodeConfiguration,
 
         private val sameVmNodeCounter = AtomicInteger()
 
-        @JvmStatic
-        protected fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
-
+        private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
             return JarScanningCordappLoader.fromDirectories(configuration.cordappDirectories, versionInfo)
         }
 

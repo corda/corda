@@ -1,6 +1,5 @@
 package net.corda.node.services.transactions
 
-import com.typesafe.config.ConfigFactory
 import io.atomix.catalyst.transport.Address
 import io.atomix.copycat.client.ConnectionStrategies
 import io.atomix.copycat.client.CopycatClient
@@ -24,7 +23,6 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.internal.makeInternalTestDataSourceProperties
 import org.hamcrest.Matchers.instanceOf
 import org.junit.After
 import org.junit.Assert.assertThat

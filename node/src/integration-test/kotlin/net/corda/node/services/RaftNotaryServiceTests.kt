@@ -16,8 +16,8 @@ import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
-import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
@@ -45,7 +45,7 @@ class RaftNotaryServiceTests : IntegrationTest() {
                 extraCordappPackagesToScan = listOf("net.corda.testing.contracts"),
                 notarySpecs = listOf(NotarySpec(notaryName, cluster = ClusterSpec.Raft(clusterSize = 3)))
         )) {
-            val bankA = startNode(providedName = DUMMY_BANK_A_NAME).map { (it as InProcessImpl) }.getOrThrow()
+            val bankA = startNode(providedName = DUMMY_BANK_A_NAME).map { (it as InProcess) }.getOrThrow()
             val inputState = issueState(bankA, defaultNotaryIdentity)
 
             val firstTxBuilder = TransactionBuilder(defaultNotaryIdentity)
@@ -78,15 +78,16 @@ class RaftNotaryServiceTests : IntegrationTest() {
                 extraCordappPackagesToScan = listOf("net.corda.testing.contracts"),
                 notarySpecs = listOf(NotarySpec(notaryName, cluster = ClusterSpec.Raft(clusterSize = 3)))
         )) {
-            val bankA = startNode(providedName = DUMMY_BANK_A_NAME).map { (it as InProcessImpl) }.getOrThrow()
+            val bankA = startNode(providedName = DUMMY_BANK_A_NAME).map { (it as InProcess) }.getOrThrow()
             val builder = DummyContract.generateInitial(Random().nextInt(), defaultNotaryIdentity, bankA.services.myInfo.singleIdentity().ref(0))
                     .setTimeWindow(bankA.services.clock.instant(), 30.seconds)
             val issueTx = bankA.services.signInitialTransaction(builder)
+
             bankA.startFlow(NotaryFlow.Client(issueTx)).getOrThrow()
         }
     }
 
-    private fun issueState(nodeHandle: InProcessImpl, notary: Party): StateAndRef<*> {
+    private fun issueState(nodeHandle: InProcess, notary: Party): StateAndRef<*> {
         val builder = DummyContract.generateInitial(Random().nextInt(), notary, nodeHandle.services.myInfo.singleIdentity().ref(0))
         val stx = nodeHandle.services.signInitialTransaction(builder)
         nodeHandle.services.recordTransactions(stx)

@@ -115,7 +115,7 @@ fun <A> rpcDriver(
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
         jmxPolicy: JmxPolicy = JmxPolicy(),
-        networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
+        networkParameters: NetworkParameters = testNetworkParameters(),
         notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         inMemoryDB: Boolean = true,
         cordappsForAllNodes: Set<TestCorDapp> = cordappsInCurrentAndAdditionalPackages(),

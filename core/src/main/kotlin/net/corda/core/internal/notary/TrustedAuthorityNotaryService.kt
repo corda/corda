@@ -50,7 +50,6 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
                 }
             } else throw e
         } catch (e: Exception) {
-            if (e is NotaryInternalException) throw  e
             log.error("Internal error", e)
             throw NotaryInternalException(NotaryError.General(Exception("Service unavailable, please try again later")))
         }

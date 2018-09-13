@@ -70,7 +70,9 @@ class CordaRpcWorkerOps(
     private val flowReplyStateMachineRunIdMap = ConcurrentHashMap<Trace.InvocationId, SettableFuture<StateMachineRunId>>()
     private val flowReplyResultMap = ConcurrentHashMap<Trace.InvocationId, OpenFuture<Any?>>()
 
-    override val networkParameters: NetworkParameters = services.networkParameters
+    override val protocolVersion: Int get() = services.myInfo.platformVersion
+
+    override val networkParameters: NetworkParameters get() = services.networkParameters
 
     fun start() {
         session = artemisClient.start().session

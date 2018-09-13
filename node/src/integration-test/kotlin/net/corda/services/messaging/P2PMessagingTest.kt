@@ -77,11 +77,11 @@ class P2PMessagingTest : IntegrationTest() {
     }
 
     private fun InProcess.respondWith(message: Any) {
-        internalServices.networkService.addMessageHandler("test.request") { netMessage, _, handle ->
+        internalServices.networkService.addMessageHandler("test.request") { netMessage, _, handler ->
             val request = netMessage.data.deserialize<TestRequest>()
             val response = internalServices.networkService.createMessage("test.response", message.serialize().bytes)
             internalServices.networkService.send(response, request.replyTo)
-            handle.afterDatabaseTransaction()
+            handler.afterDatabaseTransaction()
         }
     }
 
@@ -103,12 +103,12 @@ class P2PMessagingTest : IntegrationTest() {
      */
     inline fun MessagingService.runOnNextMessage(topic: String, crossinline callback: (ReceivedMessage) -> Unit) {
         val consumed = AtomicBoolean()
-        addMessageHandler(topic) { msg, reg, handle ->
+        addMessageHandler(topic) { msg, reg, handler ->
             removeMessageHandler(reg)
             check(!consumed.getAndSet(true)) { "Called more than once" }
             check(msg.topic == topic) { "Topic/session mismatch: ${msg.topic} vs $topic" }
             callback(msg)
-            handle.afterDatabaseTransaction()
+            handler.afterDatabaseTransaction()
         }
     }
 

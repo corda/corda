@@ -38,7 +38,7 @@ import kotlin.streams.toList
 import kotlin.test.assertEquals
 
 class DriverTests : IntegrationTest() {
-    companion object {
+    private companion object {
         val DUMMY_REGULATOR_NAME = CordaX500Name("Regulator A", "Paris", "FR")
         val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
@@ -103,7 +103,11 @@ class DriverTests : IntegrationTest() {
         // Make sure we're using the log4j2 config which writes to the log file
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
-        driver(DriverParameters(isDebug = true,notarySpecs = emptyList(), systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
+        driver(DriverParameters(
+                isDebug = true,
+                notarySpecs = emptyList(),
+                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())
+        )) {
             val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().baseDirectory
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
