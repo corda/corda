@@ -92,6 +92,8 @@ Windows
 
 Windows does not provide a built-in SSH tool. An alternative such as PuTTY should be used.
 
+.. _standalone-shell:
+
 The standalone shell
 --------------------
 The standalone shell is a standalone application interacting with a Corda node via RPC calls.

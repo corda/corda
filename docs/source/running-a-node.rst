@@ -70,53 +70,6 @@ The node can optionally be started with the following command-line options:
 * ``--sshd-port``: Sets the port for the SSH server. If not supplied and SSH server is enabled, the port defaults to 2222.
 * ``--version``, ``-V``: Prints the version and exits.
 
-.. _installing-shell-extensions:
-
-Installing shell extensions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Users of ``bash`` or ``zsh`` can install an alias and command line completion for Corda. Run:
-
-.. code-block:: shell
-
-   java -jar corda.jar --install-shell-extensions
-
-Then, either restart your shell, or for ``bash`` users run:
-
-.. code-block:: shell
-
-   . ~/.bashrc
-
-Or, for ``zsh`` run:
-
-.. code-block:: shell
-
-   . ~/.zshrc
-
-You will now be able to run a Corda node from anywhere by running the following:
-
-.. code-block:: shell
-
-   corda --<option>
-
-Upgrading shell extensions
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Once the shell extensions have been installed, you can upgrade them in one of two ways.
-
-1) Overwrite the existing ``corda.jar`` with the newer version. The next time you run Corda, it will automatically update
-   the completion file. Either restart the shell or see :ref:`above<installing-shell-extensions>` for instructions
-   on making the changes take effect immediately.
-2) If you wish to use a new ``corda.jar`` from a different directory, navigate to that directory and run:
-
-   .. code-block:: shell
-
-      java -jar corda.jar
-
-   Which will update the ``corda`` alias to point to the new location, and update command line completion functionality. Either
-   restart the shell or see :ref:`above<installing-shell-extensions>` for instructions on making the changes take effect immediately.
-
-
 .. _enabling-remote-debugging:
 
 Enabling remote debugging
