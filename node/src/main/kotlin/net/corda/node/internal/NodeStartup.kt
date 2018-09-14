@@ -354,6 +354,7 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
         logLoadedCorDapps(node.services.cordappProvider.cordapps)
 
         node.nodeReadyFuture.thenMatch({
+            // Elapsed time in seconds. We used 10 / 100.0 and not directly / 1000.0 to only keep two decimal digits.
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             val name = nodeInfo.legalIdentitiesAndCerts.first().name.organisation
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
