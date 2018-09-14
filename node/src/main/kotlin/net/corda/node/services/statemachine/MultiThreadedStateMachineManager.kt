@@ -147,6 +147,7 @@ class MultiThreadedStateMachineManager(
             (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
         }
         serviceHub.networkMapCache.nodeReady.then {
+            logger.info("Node ready, info: ${serviceHub.myInfo}")
             resumeRestoredFlows(fibers)
             flowMessaging.start { _, deduplicationHandler ->
                 lifeCycle.requireState(State.STARTED, StateMachineStoppedException("Flow cannot be started. State machine is stopped.")) {
@@ -154,6 +155,7 @@ class MultiThreadedStateMachineManager(
                 }
             }
         }
+        logger.info("Setting status to STARTED for node info: ${serviceHub.myInfo}")
         lifeCycle.transition(State.UNSTARTED, State.STARTED)
     }
 
