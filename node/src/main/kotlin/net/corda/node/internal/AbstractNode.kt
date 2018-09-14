@@ -38,6 +38,7 @@ import net.corda.node.internal.cordapp.CordappConfigFileProvider
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
+import net.corda.node.internal.rpc.proxies.ExceptionMaskingRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ExceptionSerialisingRpcOpsProxy
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
@@ -238,8 +239,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open fun makeRPCOps(): CordaRPCOps {
         val ops: CordaRPCOps = CordaRPCOpsImpl(services, smm, flowStarter) { shutdownExecutor.submit { stop() } }
+        val proxies = mutableListOf<(CordaRPCOps) -> CordaRPCOps>()
         // Mind that order is relevant here.
-        val proxies = listOf<(CordaRPCOps) -> CordaRPCOps>(::AuthenticatedRpcOpsProxy, { ExceptionSerialisingRpcOpsProxy(it, true) })
+        proxies += ::AuthenticatedRpcOpsProxy
+        if (!configuration.devMode) {
+            proxies += { it -> ExceptionMaskingRpcOpsProxy(it, true) }
+        }
+        proxies += { it -> ExceptionSerialisingRpcOpsProxy(it, configuration.devMode) }
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
 
