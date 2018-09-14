@@ -53,6 +53,7 @@ We look forward to seeing what you can do with Corda!
    aws-vm.rst
    loadtesting.rst
    building-container-images.rst
+   cli-application-shell-extensions.rst
 
 .. Documentation is not included in the pdf unless it is included in a toctree somewhere
 
