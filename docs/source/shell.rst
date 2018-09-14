@@ -94,6 +94,8 @@ Windows
 
 Windows does not provide a built-in SSH tool. An alternative such as PuTTY should be used.
 
+.. _standalone-shell:
+
 The standalone shell
 --------------------
 The standalone shell is a standalone application interacting with a Corda node via RPC calls.
@@ -119,26 +121,34 @@ Windows
 
 .. code:: bash
 
-    java -jar corda-tools-shell-cli-VERSION_NUMBER.jar [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
-             --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
-             --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
+    corda-shell [-hvV] [--install-shell-extensions]
+                [--logging-level=<loggingLevel>] [--password=<password>]
+                [--sshd-hostkey-directory=<sshdHostKeyDirectory>]
+                [--sshd-port=<sshdPort>] [--truststore-file=<trustStoreFile>]
+                [--truststore-password=<trustStorePassword>]
+                [--truststore-type=<trustStoreType>] [--user=<user>] [-a=<host>]
+                [-c=<cordappDirectory>] [-f=<configFile>] [-o=<commandsDirectory>]
+                [-p=<port>]
 
 Where:
 
-* ``config-file`` is the path to config file, used instead of providing the rest of command line options
-* ``cordpass-directory`` is the directory containing Cordapps jars, Cordapps are require when starting flows
-* ``commands-directory`` is the directory with additional CRaSH shell commands
-* ``host`` is the Corda node's host
-* ``port`` is the Corda node's port, specified in the ``node.conf`` file
-* ``user`` is the RPC username, if not provided it will be requested at startup
-* ``password`` is the RPC user password, if not provided it will be requested at startup
-* ``sshd-port`` instructs the standalone shell app to start SSH server on the given port, optional
-* ``sshd-hostkey-directory`` is the directory containing hostkey.pem file for SSH server
-* ``keystore-password`` the password to unlock the KeyStore file containing the standalone shell certificate and private key, optional, unencrypted RPC connection without SSL will be used if the option is not provided
-* ``keystore-file`` is the path to the KeyStore file
-* ``truststore-password`` the password to unlock the TrustStore file containing the Corda node certificate, optional, unencrypted RPC connection without SSL will be used if the option is not provided
-* ``truststore-file`` is the path to the TrustStore file
-* ``help`` prints Shell help
+* ``--config-file=<configFile>``, ``--f`` The path to the shell configuration file, used instead of providing the rest of the command line options.
+* ``--cordapp-directory=<cordappDirectory>``, ``-c`` The path to the directory containing CorDapp jars, CorDapps are required when starting flows.
+* ``--commands-directory=<commandsDirectory>``, ``-o`` The path to the directory containing additional CRaSH shell commands.
+* ``--host``, ``-a``: The host address of the Corda node.
+* ``--port``, ``-p``: The RPC port of the Corda node.
+* ``--user=<user>``: The RPC user name.
+* ``--password=<password>`` The RPC user password. If not provided it will be prompted for on startup.
+* ``--sshd-port=<sshdPort>`` Enables SSH server for shell.
+* ``--sshd-hostkey-directory=<sshHostKeyDirectory``: The directory containing the hostkey.pem file for the SSH server.
+* ``--truststore-password=<trustStorePassword>``: The password to unlock the TrustStore file.
+* ``--truststore-file=<trustStoreFile>``: The path to the TrustStore file.
+* ``--truststore-type=<trustStoreType>``: The type of the TrustStore (e.g. JKS).
+* ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
+* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
+* ``--install-shell-extensions``: Install ``corda-shell`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
+* ``--help``, ``-h``: Show this help message and exit.
+* ``--version``, ``-V``: Print version information and exit.
 
 The format of ``config-file``:
 

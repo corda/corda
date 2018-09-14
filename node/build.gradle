@@ -232,6 +232,8 @@ dependencies {
         exclude group: "io.netty", module: "netty-tcnative"
         exclude group: "ch.qos.logback", module: "logback-classic"
     }
+
+    testCompile(project(':test-cli'))
 }
 
 tasks.withType(JavaCompile) {
