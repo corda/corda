@@ -2,6 +2,7 @@ package net.corda.core.internal
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
@@ -14,6 +15,7 @@ import java.io.FileInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.security.PublicKey
 import java.util.jar.JarInputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -64,7 +66,7 @@ class JarSignatureCollectorTest {
         }
     }
 
-    private val List<Party>.names get() = map { it.name }
+    private val List<Party>.keys get() = map { it.owningKey }
 
     @After
     fun tearDown() {
@@ -96,33 +98,33 @@ class JarSignatureCollectorTest {
     @Test
     fun `one signer`() {
         createJar("_signable1", "_signable2")
-        signAsAlice()
-        assertEquals(listOf(ALICE_NAME), getJarSigners().names) // We only reused ALICE's distinguished name, so the keys will be different.
+        val key = signAsAlice()
+        assertEquals(listOf(key), getJarSigners())
 
         (dir / "my-dir").createDirectory()
         updateJar("my-dir")
-        assertEquals(listOf(ALICE_NAME), getJarSigners().names) // Unsigned directory is irrelevant.
+        assertEquals(listOf(key), getJarSigners()) // Unsigned directory is irrelevant.
     }
 
     @Test
     fun `two signers`() {
         createJar("_signable1", "_signable2")
-        signAsAlice()
-        signAsBob()
+        val key1 = signAsAlice()
+        val key2 = signAsBob()
 
-        assertEquals(listOf(ALICE_NAME, BOB_NAME), getJarSigners().names)
+        assertEquals(setOf(key1, key2), getJarSigners().toSet())
     }
 
     @Test
     fun `all files must be signed by the same set of signers`() {
         createJar("_signable1")
-        signAsAlice()
-        assertEquals(listOf(ALICE_NAME), getJarSigners().names)
+        val key1 = signAsAlice()
+        assertEquals(listOf(key1), getJarSigners())
 
         updateJar("_signable2")
         signAsBob()
         assertFailsWith<InvalidJarSignersException>(
-            """
+                """
             Mismatch between signers [O=Alice Corp, L=Madrid, C=ES, O=Bob Plc, L=Rome, C=IT] for file _signable1
             and signers [O=Bob Plc, L=Rome, C=IT] for file _signable2.
             See https://docs.corda.net/design/data-model-upgrades/signature-constraints.html for details of the
@@ -135,8 +137,8 @@ class JarSignatureCollectorTest {
     fun `bad signature is caught even if the party would not qualify as a signer`() {
         (dir / "volatile").writeLines(listOf("volatile"))
         createJar("volatile")
-        signAsAlice()
-        assertEquals(listOf(ALICE_NAME), getJarSigners().names)
+        val key1 = signAsAlice()
+        assertEquals(listOf(key1), getJarSigners())
 
         (dir / "volatile").writeLines(listOf("garbage"))
         updateJar("volatile", "_signable1") // ALICE's signature on volatile is now bad.
@@ -164,14 +166,17 @@ class JarSignatureCollectorTest {
     private fun updateJar(vararg contents: String) =
             execute(*(arrayOf("jar", "uvf", FILENAME) + contents))
 
-    private fun signJar(alias: String, password: String) =
-            execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", password, FILENAME, alias)
+    private fun signJar(alias: String, password: String): PublicKey {
+        execute("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", password, FILENAME, alias)
+        val ks = loadKeyStore(dir.resolve("_teststore"), "storepass")
+        return ks.getCertificate(alias).publicKey
+    }
 
     private fun signAsAlice() = signJar(ALICE, ALICE_PASS)
     private fun signAsBob() = signJar(BOB, BOB_PASS)
 
     private fun getJarSigners() =
-            JarInputStream(FileInputStream((dir / FILENAME).toFile())).use(JarSignatureCollector::collectSigningParties)
+            JarInputStream(FileInputStream((dir / FILENAME).toFile())).use(JarSignatureCollector::collectSigners)
     //endregion
 
 }
