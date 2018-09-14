@@ -6,6 +6,28 @@ Release notes
 Release 3.3
 -----------
 
+Corda 3.3 is primarily a consolidation of a large number of bug fixes accrued since the release of 3.1. Whereas the 3.2 targeted a few specific issues
+3.3 rolls up a great many improvements and polish to really make the Corda experience that much better. In addition, we've taken the opportunity
+to bring back community member contributions onto a released branch. Its been said many times before but that community and those members are the
+real life blood of Corda and anyone who takes the time to contribute is a star in our eyes. Brining that code into a shipping branch and giving them
+the opportunity to see it in action, and for us to say thank you, was a little over due.
+
+* **Serialization fixes**
+
+  Things "in the lab" always work so much better than they do in the messy, sticky, unpredictable wilds. The Serialization framework that allows
+  for Corda's wire stability guarantee was introduced in 3.0 and has subsequently been put to a rigorous test by our users. 3.3 consolidates a great
+  many fixes in that framework.
+
+* **Certificate Hierarchy**
+
+  After consultation, collaboration, and discussion with industry experts, R3 have decided to alter the default Certificate Hierarchy (PKI) utilised
+  by Corda and the Corda Network. To facilitate this, the nodes have had their certificate path verification logic made much more flexible. All existing
+  certificate hierarchy, certificates, and networks will remain valid. The possibility now exists for nodes to recognise a deeper certificate chain and
+  thus compatibility zone operators can deploy and adhere to the PKI standards they expect and are comfortable with.
+
+  Practically speaking, the old code assumed a 3 level hierarchy of root -> intermediate ca (doorman) -> node, and this was hard coded. From 3.3 onward
+  an arbitrary depth of certificate chain is supported.
+
 Special Thanks
 ~~~~~~~~~~~~~~
 
@@ -30,48 +52,82 @@ We're therefore happy to extend thanks to the following members of that communit
 Issues Fixed
 ~~~~~~~~~~~~
 
-* Allow Corda's shell to deserialise using generic type information [`CORDA-1907 <https://r3-cev.atlassian.net/browse/CORDA-1907>`_]
-* Add Servlet 3.1 implementation into the WebServer [`CORDA-1906 <https://r3-cev.atlassian.net/browse/CORDA-1906>`_]
-* Extend JSON deserialisation to handle Amount<T> for any T [`CORDA-1905 <https://r3-cev.atlassian.net/browse/CORDA-1905>`_]
-* It is not possible to run stateMachinesSnapshot from the shell [`CORDA-1681 <https://r3-cev.atlassian.net/browse/CORDA-1681>`_]
-* Reject nodes that have the same organisation name in driver tests [`CORDA-1837 <https://r3-cev.atlassian.net/browse/CORDA-1837>`_]
-* Remove duplicated doc section [`CORDA-1201 <https://r3-cev.atlassian.net/browse/CORDA-1201>`_]
-* Backport hibernate observer fix [`CORDA-1847 <https://r3-cev.atlassian.net/browse/CORDA-1847>`_]
-* Tidy up participate docs [`CORDA-1585 <https://r3-cev.atlassian.net/browse/CORDA-1585>`_]
-* Split Doorman / NM config - fix for CORDA-1510 [`CORDA-1789 <https://r3-cev.atlassian.net/browse/CORDA-1510>`_]
-* Make "rpc-client-sender" daemon [`CORDA-1686 <https://r3-cev.atlassian.net/browse/CORDA-1686>`_]
-* Corda node stops when detecting not migrated node_attachments_contracts table name [`CORDA-1804 <https://r3-cev.atlassian.net/browse/CORDA-1804>`_]
-* Refactor serialization test infrastructure backport [`CORDA-1808 <https://r3-cev.atlassian.net/browse/CORDA-1808>`_]
-* Corda Serialization Evolution breaksdown with Java classes [`CORDA-1662 <https://r3-cev.atlassian.net/browse/CORDA-1662 >`_]
-* Destroy child processes when parent exits. [`CORDA-1634 <https://r3-cev.atlassian.net/browse/CORDA-1634>`_]
-* Add an extra check in the attachment resolution flow to prevent duplicate attachment import if multiple transactions with the same attachment are being resolved at the same time. [`CORDA-1588 <https://r3-cev.atlassian.net/browse/CORDA-1588>`_]
-* Increase max restart count for notary client flows. [`CORDA-1628 <https://r3-cev.atlassian.net/browse/CORDA-162>`_]
-* Document more clearly the supported version of IntelliJ and the IntelliJ Kotlin Plugins. [`CORDA-1727 <https://r3-cev.atlassian.net/browse/CORDA-1727>`_]
-* Reverting DEV certificates keys [`CORDA-1661 <https://r3-cev.atlassian.net/browse/CORDA-1661>`_]
-* serialization multiple transform bug [`CORDA-1498 <https://r3-cev.atlassian.net/browse/CORDA-1498>`_]
-* Buggy CommodityContract issuance logic [`CORDA-1459 <https://r3-cev.atlassian.net/browse/CORDA-1459>`_]
+* Fix duplicate index declaration in Cash schema [`CORDA-1952 <https://r3-cev.atlassian.net/browse/CORDA-1952>`_]
+* Hello World Tutorial Page mismatch between code sample and explanatory text [`CORDA-1950 <https://r3-cev.atlassian.net/browse/CORDA-1950>`_]
+* Java Instructions to Invoke Hello World CordApp fail [`CORDA-1949 <https://r3-cev.atlassian.net/browse/CORDA-1949>`_]
+* ClassCarpenter fails when superclass has double-size primitive field (e.g. long, double) [`CORDA-1945 <https://r3-cev.atlassian.net/browse/CORDA-1945>`_]
+* Add VersionInfo to the NodeInfo submission request [`CORDA-1938 <https://r3-cev.atlassian.net/browse/CORDA-1938>`_]
+* Rename current INTERMEDIATE_CA certificate role to DOORMAN_CA certificate role [`CORDA-1934 <https://r3-cev.atlassian.net/browse/CORDA-1934>`_]
+* Make node network map verification agnostic to the certificate hierarchy. [`CORDA-1932 <https://r3-cev.atlassian.net/browse/CORDA-1932>`_]
+* Corda Shell incorrectly deserialises generic types as raw types [`CORDA-1907 <https://r3-cev.atlassian.net/browse/CORDA-1907>`_]
+* Corda WebServer does not support asynchronous servlets [`CORDA-1906 <https://r3-cev.atlassian.net/browse/CORDA-1906>`_]
+* Amount<T> is deserialised from JSON,YAML as Amount<Currency>, for all values of T [`CORDA-1905 <https://r3-cev.atlassian.net/browse/CORDA-1905>`_]
+* NodeVaultService.loadStates queries without a PageSpecification, leading to issues with large txs [`CORDA-1895 <https://r3-cev.atlassian.net/browse/CORDA-1895>`_]
+* If a node has two flows, where one's name is a longer version of the other's, they cannot be started [`CORDA-1892 <https://r3-cev.atlassian.net/browse/CORDA-1892>`_]
+* Vault Queries across LinearStates and FungibleState tables return incorrect results [`CORDA-1888 <https://r3-cev.atlassian.net/browse/CORDA-1888>`_]
+* Checking Version of `corda.jar` without `node.conf` Issue [`CORDA-1884 <https://r3-cev.atlassian.net/browse/CORDA-1884>`_]
+* RPC deadlocks after a node restart [`CORDA-1875 <https://r3-cev.atlassian.net/browse/CORDA-1875>`_]
+* Vault query fails to find a state if it extends from class [`CORDA-1858 <https://r3-cev.atlassian.net/browse/CORDA-1858>`_]
+* O(n+1) Transaction failing to store correctly in tables, after O(n) transaction SQL failure [`CORDA-1847 <https://r3-cev.atlassian.net/browse/CORDA-1847>`_]
+* Inconsistency in how a web path is written [`CORDA-1841 <https://r3-cev.atlassian.net/browse/CORDA-1841>`_]
+* Cannot use TestIdentities with same organization name in net.corda.testing.driver.Driver [`CORDA-1837 <https://r3-cev.atlassian.net/browse/CORDA-1837>`_]
+* Typo on the docs page that can be confusing [`CORDA-1834 <https://r3-cev.atlassian.net/browse/CORDA-1834>`_]
+* Backport Serialization testing framework changes [`CORDA-1808 <https://r3-cev.atlassian.net/browse/CORDA-1808>`_]
+* Cannot use --initial-registration with networkServices config option in place of compatibilityzone [`CORDA-1789 <https://r3-cev.atlassian.net/browse/CORDA-1789>`_]
+* Document more clearly the supported version of IntelliJ and the IntelliJ Kotlin Plugins [`CORDA-1727 <https://r3-cev.atlassian.net/browse/CORDA-1727>`_]
+* DemoBench's "Launch Explorer" button is not re-enabled when you close Node Explorer [`CORDA-1686 <https://r3-cev.atlassian.net/browse/CORDA-1686>`_]
+* It is not possible to run stateMachinesSnapshot from the shell  [`CORDA-1681 <https://r3-cev.atlassian.net/browse/CORDA-1681>`_]
+* Node won't start if cordapps generate states prior to deletion [`CORDA-1663 <https://r3-cev.atlassian.net/browse/CORDA-1663>`_]
+* Serializer Evolution breaks with Java classes adding nullable properties [`CORDA-1662 <https://r3-cev.atlassian.net/browse/CORDA-1662>`_]
+* Proxy serializer examples should also be in Java [`CORDA-1641 <https://r3-cev.atlassian.net/browse/CORDA-1641>`_]
+* Proxy serialiser documentation isn't clear on how to write a Proxy serializer [`CORDA-1640 <https://r3-cev.atlassian.net/browse/CORDA-1640>`_]
+* Node crashes in --initial-registration polling mode if doorman returns a transient HTTP error [`CORDA-1638 <https://r3-cev.atlassian.net/browse/CORDA-1638>`_]
+* Nodes started by gradle task are not stopped when the gradle task exits. [`CORDA-1634 <https://r3-cev.atlassian.net/browse/CORDA-1634>`_]
+* Notarisations time out if notary doesn't have up-to-date network map [`CORDA-1628 <https://r3-cev.atlassian.net/browse/CORDA-1628>`_]
+* Node explorer: Improve error handling when connection to nodes cannot be established [`CORDA-1617 <https://r3-cev.atlassian.net/browse/CORDA-1617>`_]
+* Validating notary fails to resolve an attachment [`CORDA-1588 <https://r3-cev.atlassian.net/browse/CORDA-1588>`_]
+* Tidy up Participate section on the doc site [`CORDA-1585 <https://r3-cev.atlassian.net/browse/CORDA-1585>`_]
 * Out of process nodes started by the driver do not log to file [`CORDA-1575 <https://r3-cev.atlassian.net/browse/CORDA-1575>`_]
-* Fix logfiles for out of process nodes,  Ensure API can be called concurrently wrt transactions. [`CORDA-1341 <https://r3-cev.atlassian.net/browse/CORDA-1341>`_]
-* When a cash output is identical only the fist output is saved. [`CORDA-1266 <https://r3-cev.atlassian.net/browse/CORDA-1266>`_]
-* OOM when using Demobench + Explorer (fix). [`CORDA-1356 <https://r3-cev.atlassian.net/browse/CORDA-1356>`_]
-* Columns in the Corda database schema should have correct NULL/NOT NULL constraints [`CORDA-1297 <https://r3-cev.atlassian.net/browse/CORDA-1297>`_]
-* Arrays of primitive byte arrays don't deserialize [`CORDA-1545 <https://r3-cev.atlassian.net/browse/CORDA-1545>`_]
-* Integration test for network parameter updates and improved logging [`CORDA-1405 <https://r3-cev.atlassian.net/browse/CORDA-1405>`_]
-* Error in process-id deletion process allows multiple instances of same node to be run (fix). [`CORDA-1455 <https://r3-cev.atlassian.net/browse/CORDA-1455>`_]
-* The shell doesn't print the return value of a started flow - fixed. [`CORDA-1342 <https://r3-cev.atlassian.net/browse/CORDA-1342>`_]
-* small doc correction [`CORDA-1315 <https://r3-cev.atlassian.net/browse/CORDA-1315>`_]
-* Updates withoutIssuer to not strip display token size. [`CORDA-1386 <https://r3-cev.atlassian.net/browse/CORDA-1386>`_]
-* Fixed incorrect exception handling in `NodeVaultService._query()` [`CORDA-1397 <https://r3-cev.atlassian.net/browse/CORDA-1397>`_]
-* Update the api-scanner to the most recent version + regenerate api [`CORDA-1280 <https://r3-cev.atlassian.net/browse/CORDA-1280>`_]
-* Fix query paging in scheduled flow tests [`CORDA-1344 <https://r3-cev.atlassian.net/browse/CORDA-1344>`_]
-* Add cert role to CSR and doorman issue cert according to the cert roleD (#2620) [`CORDA-1317 <https://r3-cev.atlassian.net/browse/CORDA-1317>`_]
-* node should continue with parameters from file when network map not available [`CORDA-1414 <https://r3-cev.atlassian.net/browse/CORDA-1414>`_]
-* split the simm valuation demo to reduce the size of the contract jar [`CORDA-1346 <https://r3-cev.atlassian.net/browse/CORDA-134>`_]
-* Ignore duplicate packages and sub-packages in driver extraCordappPackagesToScan [`CORDA-1385 <https://r3-cev.atlassian.net/browse/CORDA-1385>`_]
-* Generics serialization issue [`CORDA-1403 <https://r3-cev.atlassian.net/browse/CORDA-1403>`_]
-* Fix issue with setter-based serialisation [`CORDA-1229 <https://r3-cev.atlassian.net/browse/CORDA-1229>`_]
-* Delete the root nodes directory before initialising the nodes [`CORDA-1389 <https://r3-cev.atlassian.net/browse/CORDA-1389>`_]
-* Remove superfluous registerInitiatedFlow calls from tutorial and example tests [`CORDA-1304 <https://r3-cev.atlassian.net/browse/CORDA-1304>`_]
+* Once --initial-registration has been passed to a node, further restarts should assume that mode until a cert is collected [`CORDA-1572 <https://r3-cev.atlassian.net/browse/CORDA-1572>`_]
+* Array of Primitive byte array won't deserialize in virgin factory (i.e. one that didn't build the serializer  for serialization) [`CORDA-1545 <https://r3-cev.atlassian.net/browse/CORDA-1545>`_]
+* Ctrl-C in the shell no longer aborts the flow [`CORDA-1542 <https://r3-cev.atlassian.net/browse/CORDA-1542>`_]
+* One transaction with two identical cash outputs cannot be save in Vault [`CORDA-1535 <https://r3-cev.atlassian.net/browse/CORDA-1535>`_]
+* Cycle error with enum renames [`CORDA-1498 <https://r3-cev.atlassian.net/browse/CORDA-1498>`_]
+* Add in a safety check that catches flow checkpoints from older versions [`CORDA-1477 <https://r3-cev.atlassian.net/browse/CORDA-1477>`_]
+* Buggy CommodityContract issuance logic [`CORDA-1459 <https://r3-cev.atlassian.net/browse/CORDA-1459>`_]
+* Error in process-id deletion process allows multiple instances of same node to be run [`CORDA-1455 <https://r3-cev.atlassian.net/browse/CORDA-1455>`_]
+* Node crashes if network map returns HTTP 50X error [`CORDA-1414 <https://r3-cev.atlassian.net/browse/CORDA-1414>`_]
+* Delegate Property doesn't serialise - type mismatch error [`CORDA-1403 <https://r3-cev.atlassian.net/browse/CORDA-1403>`_]
+* If a vault query throws an exception, the stack trace is swallowed [`CORDA-1397 <https://r3-cev.atlassian.net/browse/CORDA-1397>`_]
+* Node can fail to fully start when a port conflict occurs, without a useful error message [`CORDA-1394 <https://r3-cev.atlassian.net/browse/CORDA-1394>`_]
+* Running deployNodes back to back without a clean doesn't work [`CORDA-1389 <https://r3-cev.atlassian.net/browse/CORDA-1389>`_]
+* Bug: Stripping issuer from Amount<Issued<T>> does not preserve displayTokenSize [`CORDA-1386 <https://r3-cev.atlassian.net/browse/CORDA-1386>`_]
+* CordaServices are instantiated multiple times per Party when using NodeDriver [`CORDA-1385 <https://r3-cev.atlassian.net/browse/CORDA-1385>`_]
+* OOM when using Demobench + Explorer [`CORDA-1356 <https://r3-cev.atlassian.net/browse/CORDA-1356>`_]
+* Reduce amount of classpath scanning during integration tests execution [`CORDA-1355 <https://r3-cev.atlassian.net/browse/CORDA-1355>`_]
+* SIMM demo - attachment too big [`CORDA-1346 <https://r3-cev.atlassian.net/browse/CORDA-1346>`_]
+* Fix vault query paging example in ScheduledFlowTests [`CORDA-1344 <https://r3-cev.atlassian.net/browse/CORDA-1344>`_]
+* The shell doesn't print the return value of a started flow [`CORDA-1342 <https://r3-cev.atlassian.net/browse/CORDA-1342>`_]
+* Provide access to database transactions for CorDapp developers [`CORDA-1341 <https://r3-cev.atlassian.net/browse/CORDA-1341>`_]
+* Error with VaultQuery for entity inheriting from CommonSchemaV1.FungibleState [`CORDA-1338 <https://r3-cev.atlassian.net/browse/CORDA-1338>`_]
+* --network-root-truststore command line option not defaulted [`CORDA-1317 <https://r3-cev.atlassian.net/browse/CORDA-1317>`_]
+* Java example in "Upgrading cordapps" documentation contains incorrect Java [`CORDA-1315 <https://r3-cev.atlassian.net/browse/CORDA-1315>`_]
+* Remove references to registerInitiatedFlow in testing documentation as it is not needed [`CORDA-1304 <https://r3-cev.atlassian.net/browse/CORDA-1304>`_]
+* Regression: Recording a duplicate transaction attempts second insert to vault. [`CORDA-1303 <https://r3-cev.atlassian.net/browse/CORDA-1303>`_]
+* Columns in the Corda database schema should have correct NULL/NOT NULL constraints. [`CORDA-1297 <https://r3-cev.atlassian.net/browse/CORDA-1297>`_]
+* MockNetwork/Node API needs a way to register @CordaService objects [`CORDA-1292 <https://r3-cev.atlassian.net/browse/CORDA-1292>`_]
+* Deleting node info from additional-node-infos directory should remove it from cache. [`CORDA-1093 <https://r3-cev.atlassian.net/browse/CORDA-1093>`_]
+* FailNodeOnNotMigratedAttachmentContractsTableNameTests is sometimes failing with db constraint "Notary" is null [`CORDA-1976 <https://r3-cev.atlassian.net/browse/CORDA-1976>`_]
+* Revert keys for DEV certificates [`CORDA-1661 <https://r3-cev.atlassian.net/browse/CORDA-1661>`_]
+* Node Info file watcher should block and load node info when node startup [`CORDA-1604 <https://r3-cev.atlassian.net/browse/CORDA-1604>`_]
+* Improved logging of network parameters update process [`CORDA-1405 <https://r3-cev.atlassian.net/browse/CORDA-1405>`_]
+* Fix API definition file on master and avoid people re-generating the file [`CORDA-1280 <https://r3-cev.atlassian.net/browse/CORDA-1280>`_]
+* Ensure all conditions in cash selection query are tested [`CORDA-1266 <https://r3-cev.atlassian.net/browse/CORDA-1266>`_]
+* Documentation Errors in Hello World tutorial [`CORDA-1201 <https://r3-cev.atlassian.net/browse/CORDA-1201>`_]
+* Corda Node doesn't re-select cluster from HA Notary
+* Time Horizon is not wire compatible with older network params objects
+* Notary unable to resolve Party after processing a flow from same Party
+* Misleading error message shown when node is restarted after the flag day
 
 .. _release_notes_v3_2:
 
@@ -137,7 +193,7 @@ map, the service to which the node will have published its Node Info, and throug
 set of NodeInfos currently present on the network. Membership of that list is a finite thing determined by
 the network operator.
 
-Periodically a node will republish its NodeInfo to the Nework Map service. The Network Map uses this as a
+Periodically a node will republish its NodeInfo to the Network Map service. The Network Map uses this as a
 heartbeat to determine the status of nodes registered with it. Those that don't "beep" within the
 determined interval are removed from the list of registered nodes. The ``Event Horizon`` network parameter
 sets the upper limit within which a node must respond or be considered inactive.
