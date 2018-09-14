@@ -41,7 +41,7 @@ class PluginRegistrationTest {
 
         // Install plugin Jars in node directory, then start the node and close it
         val consoleOutput = temporaryFolder.newFile("node-stdout.txt")
-        val nodeJvmArgs = arrayOf("-logging-level", "DEBUG", "-no-local-shell", "-log-to-console")
+        val nodeJvmArgs = arrayOf("--logging-level", "DEBUG", "--no-local-shell", "--log-to-console")
         NodeProcess.Factory(extraJvmArgs = nodeJvmArgs, redirectConsoleTo = consoleOutput)
                 .setupPlugins(config, listOf(pluginJarFile))
                 .create(config)
