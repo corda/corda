@@ -42,8 +42,8 @@ class AttachmentTest {
         attachment = object : Attachment {
             override val id: SecureHash
                 get() = SecureHash.allOnesHash
-            override val signers: List<Party>
-                get() = listOf(ALICE)
+            override val signers: List<PublicKey>
+                get() = listOf(ALICE_KEY)
             override val size: Int
                 get() = jarData.size
 
