@@ -17,13 +17,15 @@ dependencies {
     testCompile(project(':test-utils')) {
         exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
     }
+
+    testCompile(project(':test-cli'))
 }
 
 processResources {
     from file("$rootDir/config/dev/log4j2.xml")
 }
 
-shadowJar  {
+shadowJar {
     mergeServiceFiles()
 }
 
