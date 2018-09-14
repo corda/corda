@@ -53,8 +53,7 @@ The node can optionally be started with the following command-line options:
 * ``--clear-network-map-cache``, ``-c``: Clears local copy of network map, on node startup it will be restored from server or file system.
 * ``--config-file``, ``-f``: The path to the config file. Defaults to ``node.conf``.
 * ``--dev-mode``, ``-d``: Runs the node in developer mode. Unsafe in production. Defaults to true on MacOS and desktop versions of Windows. False otherwise.
-* ``--initial-registration``: Start initial node registration with Corda network to obtain certificate from the permissioning
-  server.
+* ``--initial-registration``: Start initial node registration with the compatibility zone to obtain a certificate from the Doorman.
 * ``--just-generate-node-info``: Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then
   quit.
 * ``--just-generate-rpc-ssl-settings``: Generate the ssl keystore and truststore for a secure RPC connection.

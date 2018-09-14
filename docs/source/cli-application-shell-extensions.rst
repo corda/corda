@@ -6,7 +6,7 @@ Shell extensions for CLI Applications
 Installing shell extensions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Users of ``bash`` or ``zsh`` can install an alias and command line completion for Corda applications that contain a command line interface. Run:
+Users of ``bash`` or ``zsh`` can install an alias and auto-completion for Corda applications that contain a command line interface. Run:
 
 .. code-block:: shell
 
