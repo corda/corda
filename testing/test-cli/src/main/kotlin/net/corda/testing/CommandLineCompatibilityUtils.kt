@@ -11,6 +11,11 @@ import kotlin.collections.ArrayList
 
 
 class CommandLineCompatibilityChecker {
+    companion object {
+        fun printCommandLineYAML(clazz: Class<*>) {
+            CommandLineCompatibilityChecker().printCommandDescription(CommandLine(clazz.newInstance()))
+        }
+    }
 
     fun topoSort(commandLine: CommandLine): List<CommandDescription> {
         val toVisit = Stack<CommandLine>()
@@ -62,6 +67,7 @@ class CommandLineCompatibilityChecker {
         return Iterable::class.java.isAssignableFrom(clazz) || Array<Any>::class.java.isAssignableFrom(clazz)
     }
 
+
     fun printCommandDescription(commandLine: CommandLine) {
         val objectMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
         val results = topoSort(commandLine)
@@ -109,7 +115,7 @@ class CommandLineCompatibilityChecker {
             throw IllegalArgumentException("Commands must match (${old.commandName} != ${new.commandName})")
         }
         val oldSet = old.positionalParams.sortedBy { it.parameterName }.toSet()
-        val newSet = new.positionalParams.sortedBy { it.parameterName}.toSet()
+        val newSet = new.positionalParams.sortedBy { it.parameterName }.toSet()
         val newIsSuperSetOfOld = newSet.containsAll(oldSet)
         return if (!newIsSuperSetOfOld) {
             oldSet.filterNot { newSet.contains(it) }.map {
@@ -150,7 +156,9 @@ class CommandLineCompatibilityChecker {
         val commandLineToCheckName = commandLineToCheck.canonicalName
         val instance = commandLineToCheck.newInstance()
         val resourceAsStream = this.javaClass.classLoader.getResourceAsStream("$commandLineToCheckName.yml")
-                ?: throw IllegalStateException("no Descriptor for $commandLineToCheckName found on classpath")
+                ?: throw IllegalStateException("$commandLineToCheckName.yml not found on classpath").also {
+                    printCommandLineYAML(commandLineToCheck)
+                }
         val old = readCommandDescription(resourceAsStream)
         val new = topoSort(CommandLine(instance))
         return checkCommandLineIsBackwardsCompatible(old, new)
@@ -158,8 +166,8 @@ class CommandLineCompatibilityChecker {
 
 
     fun checkBackwardsCompatibility(old: CommandLine, new: CommandLine): List<CliBackwardsCompatibilityValidationCheck> {
-        val topoSortOld= topoSort(old)
-        val topoSortNew= topoSort(new)
+        val topoSortOld = topoSort(old)
+        val topoSortNew = topoSort(new)
         return checkCommandLineIsBackwardsCompatible(topoSortOld, topoSortNew)
     }
 
