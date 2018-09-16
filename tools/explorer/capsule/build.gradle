@@ -19,6 +19,10 @@ configurations {
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
+capsule {
+    version capsule_version
+}
+
 task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').tasks.jar) {
     applicationClass 'net.corda.explorer.Main'
     archiveName "node-explorer-${corda_release_version}.jar"
