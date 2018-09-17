@@ -404,7 +404,7 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper, isSsh: Boolean = false): Any? {
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper): Any? {
         val cmd = input.joinToString(" ").trim { it <= ' ' }
         if (cmd.startsWith("startflow", ignoreCase = true)) {
             // The flow command provides better support and startFlow requires special handling anyway due to
@@ -413,7 +413,7 @@ object InteractiveShell {
             out.println("Please use the 'flow' command to interact with flows rather than the 'run' command.", Color.yellow)
             return null
         } else if (cmd.substringAfter(" ").trim().equals("gracefulShutdown", ignoreCase = true)) {
-            return InteractiveShell.gracefulShutdown(out, cordaRPCOps, isSsh)
+            return InteractiveShell.gracefulShutdown(out, cordaRPCOps)
         }
 
         var result: Any? = null
@@ -455,7 +455,7 @@ object InteractiveShell {
 
     // TODO sollecitom see if this works, including cancellation with CTRL + C.
     @JvmStatic
-    fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps, isSsh: Boolean = false) {
+    fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps) {
 
         fun display(statements: RenderPrintWriter.() -> Unit) {
             statements.invoke(userSessionOut)
@@ -464,37 +464,24 @@ object InteractiveShell {
 
         var isShuttingDown = false
         try {
-            display {
-                println("Orchestrating a clean shutdown, press CTRL+C to cancel...")
-            }
+            display { println("Orchestrating a clean shutdown, press CTRL+C to cancel...") }
             isShuttingDown = true
             display {
                 println("...enabling draining mode")
                 println("...waiting for in-flight flows to be completed")
             }
             cordaRPCOps.terminate(true)
-            cordaRPCOps.pendingFlowsCount().updates
-                    .doOnError { error ->
-                        log.error(error.message)
-                        throw error
-                    }
-                    .doOnNext { (first, second) ->
-                        display {
-                            println("...remaining: $first / $second")
-                        }
-                    }
-                    .doOnCompleted {
-                        connection.forceClose()
-                        display {
-                            println("...done, quitting the shell now.")
-                        }
-                        onExit.invoke()
-                    }.toBlocking().single()
+            cordaRPCOps.pendingFlowsCount().updates.doOnError { error ->
+                log.error(error.message)
+                throw error
+            }.doOnNext { (first, second) -> display { println("...remaining: $first / $second") } }.doOnCompleted {
+                connection.forceClose()
+                display { println("...done, quitting the shell now.") }
+                onExit.invoke()
+            }.toBlocking().single()
         } catch (e: InterruptedException) {
             cordaRPCOps.setFlowsDrainingModeEnabled(false)
-            display {
-                println("...cancelled clean shutdown.")
-            }
+            display { println("...cancelled clean shutdown.") }
             Thread.currentThread().interrupt()
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
             display {
@@ -503,9 +490,7 @@ object InteractiveShell {
             }
         } catch (e: Exception) {
             if (!isShuttingDown) {
-                display {
-                    println("RPC failed: ${e.rootCause}", Color.red)
-                }
+                display { println("RPC failed: ${e.rootCause}", Color.red) }
             }
         } finally {
             InputStreamSerializer.invokeContext = null
