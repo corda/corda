@@ -3,24 +3,18 @@ package net.corda.node.services.rpc
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.ClientRelevantException
 import net.corda.core.CordaRuntimeException
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.nodeapi.exceptions.InternalNodeException
-import net.corda.testing.core.*
-import net.corda.testing.driver.DriverDSL
-import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.NodeParameters
-import net.corda.testing.driver.driver
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.singleIdentity
+import net.corda.testing.driver.*
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
@@ -39,7 +33,6 @@ class RpcExceptionHandlingTest : IntegrationTest() {
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
-
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val users = listOf(user)
 

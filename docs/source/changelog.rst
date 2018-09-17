@@ -112,7 +112,8 @@ Unreleased
 * ``WireTransaction.Companion.createComponentGroups`` has been marked as ``@CordaInternal``. It was never intended to be
   public and was already internal for Kotlin code.
 
-* RPC server will now mask internal errors to RPC clients if not in devMode. ``Throwable``s implementing ``ClientRelevantError`` will continue to be propagated to clients.
+* RPC server will now mask internal errors to RPC clients if not in devMode. ``Throwable``s implementing ``ClientRelevantError``
+  will continue to be propagated to clients.
 
 * RPC Framework moved from Kryo to the Corda AMQP implementation [Corda-847]. This completes the removal
   of ``Kryo`` from general use within Corda, remaining only for use in flow checkpointing.
@@ -226,7 +227,7 @@ Version 3.1
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
   .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions
-     later than 2.12.3 (including 2.12.4) exhibit a different issue.
+later than 2.12.3 (including 2.12.4) exhibit a different issue.
 
 * Added `database.hibernateDialect` node configuration option
 
