@@ -452,8 +452,6 @@ object InteractiveShell {
         return result
     }
 
-
-    // TODO sollecitom see if this works, including cancellation with CTRL + C.
     @JvmStatic
     fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps) {
 
