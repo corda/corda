@@ -18,7 +18,7 @@ class NodeCmdLineOptions {
             names = ["-b", "--base-directory"],
             description = ["The node working directory where all the files are kept."]
     )
-    var baseDirectory: Path = Paths.get(".")
+    var baseDirectory: Path = Paths.get(".").toAbsolutePath().normalize()
 
     @Option(
             names = ["-f", "--config-file"],
@@ -57,7 +57,7 @@ class NodeCmdLineOptions {
             names = ["-t", "--network-root-truststore"],
             description = ["Network root trust store obtained from network operator."]
     )
-    var networkRootTrustStorePath = Paths.get("certificates") / "network-root-truststore.jks"
+    var networkRootTrustStorePath: Path = baseDirectory / "certificates" / "network-root-truststore.jks"
 
     @Option(
             names = ["-p", "--network-root-truststore-password"],
