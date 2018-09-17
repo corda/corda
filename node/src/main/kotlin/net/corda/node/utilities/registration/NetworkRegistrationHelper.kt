@@ -46,7 +46,7 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
                                      private val nextIdleDuration: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) {
 
     companion object {
-        const val SELF_SIGNED_PRIVATE_KEY = "Self Signed Private Key"
+        const val SELF_SIGNED_PRIVATE_KEY = "SelfSignedPrivateKey"
         val logger = contextLogger()
     }
 
