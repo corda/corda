@@ -323,7 +323,10 @@ internal class CordaRPCOpsImpl(
 
     private fun cancelDrainingShutdownHook() {
 
-        drainingShutdownHook.getAndSet(null)?.let(Subscription::unsubscribe)
+        drainingShutdownHook.getAndSet(null)?.let {
+            it.unsubscribe()
+            logger.info("Cancelled draining shutdown hook.")
+        }
     }
 
     private fun setPersistentDrainingModeProperty(enabled: Boolean, propagateChange: Boolean) = services.nodeProperties.flowsDrainingMode.setEnabled(enabled, propagateChange)

@@ -108,7 +108,6 @@ class P2PFlowsDrainingModeTest {
         }
     }
 
-    // TODO sollecitom come up with a nice way of showing that switching off draining mode cancels terminate(true) [obviously it could be tested with timeouts]
     @Test
     fun `terminate resets persistent draining mode property when waiting for pending flows`() {
 
@@ -132,6 +131,38 @@ class P2PFlowsDrainingModeTest {
             assertThat(successful).isTrue()
         }
     }
+
+    @Test
+    fun `disabling draining mode cancels draining shutdown`() {
+
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
+
+            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
+            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
+            var successful = false
+            val latch = CountDownLatch(1)
+
+            nodeB.rpc.setFlowsDrainingModeEnabled(true)
+            IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
+
+            nodeA.waitForShutdown().doOnError(Throwable::printStackTrace).doAfterTerminate { successful = false }.doAfterTerminate(latch::countDown).subscribe()
+
+            nodeA.rpc.terminate(true)
+            nodeA.rpc.hasCancelledDrainingShutdown().doOnError(Throwable::printStackTrace).doOnError { successful = false }.doOnCompleted { successful = true }.doAfterTerminate(latch::countDown).subscribe()
+
+            nodeA.rpc.setFlowsDrainingModeEnabled(false)
+            nodeB.rpc.setFlowsDrainingModeEnabled(false)
+
+            latch.await()
+
+            assertThat(successful).isTrue()
+        }
+    }
+}
+
+private fun CordaRPCOps.hasCancelledDrainingShutdown(interval: Long = 5, unit: TimeUnit = TimeUnit.SECONDS): Observable<Unit> {
+
+    return Observable.interval(interval, unit).map { isWaitingForShutdown() }.takeFirst { waiting -> waiting == false }.map { Unit }
 }
 
 // TODO sollecitom make it available to all driver-based tests, or even to NetworkMap based ones.
