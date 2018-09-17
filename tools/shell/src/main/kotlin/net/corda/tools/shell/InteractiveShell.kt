@@ -470,26 +470,39 @@ object InteractiveShell {
             }
             cordaRPCOps.terminate(true)
 
-            blockUnlessCancelled(onCancel = {
-                cordaRPCOps.setFlowsDrainingModeEnabled(false)
-                display { println("...cancelled clean shutdown.") }
-            }) { done ->
-                cordaRPCOps.pendingFlowsCount().updates.doAfterTerminate(done).subscribe(
-                        // For each update.
-                        { (first, second) -> display { println("...remaining: $first / $second") } },
-                        // On error.
-                        { error ->
-                            if (!isShuttingDown) {
-                                display { println("RPC failed: ${error.rootCause}", Color.red) }
-                            }
-                        },
-                        // When completed.
-                        {
-                            connection.forceClose()
-                            // This will only show up in the standalone Shell, because the embedded one is killed as part of a node's shutdown.
-                            display { println("...done, quitting the shell now.") }
-                            onExit.invoke()
-                        })
+            val latch = CountDownLatch(1)
+            cordaRPCOps.pendingFlowsCount().updates.doOnError { error ->
+                log.error(error.message)
+                throw error
+            }.doAfterTerminate(latch::countDown).subscribe(
+                    // For each update.
+                    { (first, second) -> display { println("...remaining: $first / $second") } },
+                    // On error.
+                    { error ->
+                        if (!isShuttingDown) {
+                            display { println("RPC failed: ${error.rootCause}", Color.red) }
+                        }
+                    },
+                    // When completed.
+                    {
+                        connection.forceClose()
+                        // This will only show up in the standalone Shell, because the embedded one is killed as part of a node's shutdown.
+                        display { println("...done, quitting the shell now.") }
+                        onExit.invoke()
+                    })
+            while (!Thread.currentThread().isInterrupted) {
+                try {
+                    latch.await()
+                    break
+                } catch (e: InterruptedException) {
+                    try {
+                        cordaRPCOps.setFlowsDrainingModeEnabled(false)
+                        display { println("...cancelled clean shutdown.") }
+                    } finally {
+                        Thread.currentThread().interrupt()
+                        break
+                    }
+                }
             }
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
             display {
@@ -503,25 +516,6 @@ object InteractiveShell {
         } finally {
             InputStreamSerializer.invokeContext = null
             InputStreamDeserializer.closeAll()
-        }
-    }
-
-    private fun blockUnlessCancelled(onCancel: () -> Unit = { }, action: (done: () -> Unit) -> Unit) {
-
-        val latch = CountDownLatch(1)
-        action.invoke(latch::countDown)
-        while (!Thread.currentThread().isInterrupted) {
-            try {
-                latch.await()
-                break
-            } catch (e: InterruptedException) {
-                try {
-                    onCancel.invoke()
-                } finally {
-                    Thread.currentThread().interrupt()
-                    break
-                }
-            }
         }
     }
 
