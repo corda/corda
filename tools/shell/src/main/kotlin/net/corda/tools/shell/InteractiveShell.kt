@@ -453,7 +453,7 @@ object InteractiveShell {
     }
 
 
-    // TODO sollecitom replace the implementation with a call to `terminate(true)`.
+    // TODO sollecitom see if this works, including cancellation with CTRL + C.
     @JvmStatic
     fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps, isSsh: Boolean = false) {
 
@@ -465,13 +465,14 @@ object InteractiveShell {
         var isShuttingDown = false
         try {
             display {
-                println("Orchestrating a clean shutdown...")
-                println("...enabling draining mode")
+                println("Orchestrating a clean shutdown, press CTRL+C to cancel...")
             }
-            cordaRPCOps.setFlowsDrainingModeEnabled(true)
+            isShuttingDown = true
             display {
+                println("...enabling draining mode")
                 println("...waiting for in-flight flows to be completed")
             }
+            cordaRPCOps.terminate(true)
             cordaRPCOps.pendingFlowsCount().updates
                     .doOnError { error ->
                         log.error(error.message)
@@ -479,25 +480,22 @@ object InteractiveShell {
                     }
                     .doOnNext { (first, second) ->
                         display {
-                            println("...remaining: $first/$second")
+                            println("...remaining: $first / $second")
                         }
                     }
                     .doOnCompleted {
-                        if (isSsh) {
-                            // print in the original Shell process
-                            System.out.println("Shutting down the node via remote SSH session (it may take a while)")
-                        }
-                        display {
-                            println("Shutting down the node (it may take a while)")
-                        }
-                        cordaRPCOps.shutdown()
-                        isShuttingDown = true
                         connection.forceClose()
                         display {
-                            println("...done, quitting standalone shell now.")
+                            println("...done, quitting the shell now.")
                         }
                         onExit.invoke()
                     }.toBlocking().single()
+        } catch (e: InterruptedException) {
+            cordaRPCOps.setFlowsDrainingModeEnabled(false)
+            display {
+                println("...cancelled clean shutdown.")
+            }
+            Thread.currentThread().interrupt()
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
             display {
                 println(e.message, Color.red)
