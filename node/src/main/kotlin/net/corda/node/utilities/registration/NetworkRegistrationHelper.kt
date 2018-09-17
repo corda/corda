@@ -46,7 +46,7 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
                                      private val nextIdleDuration: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) {
 
     companion object {
-        const val SELF_SIGNED_PRIVATE_KEY = "Self Signed Private Key"
+        const val SELF_SIGNED_PRIVATE_KEY = "SelfSignedPrivateKey"
         val logger = contextLogger()
     }
 
@@ -154,6 +154,8 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
         // Save private key and certificate chain to the key store.
         with(nodeKeystore.value) {
             setPrivateKey(keyAlias, keyPair.private, certificates, keyPassword = keyPassword)
+            // The key was temporarily stored as SELF_SIGNED_PRIVATE_KEY, but now that it's signed by the Doorman we
+            // can delete this old record.
             internal.deleteEntry(SELF_SIGNED_PRIVATE_KEY)
             save()
         }
@@ -164,6 +166,7 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
         // Create or load self signed keypair from the key store.
         // We use the self sign certificate to store the key temporarily in the keystore while waiting for the request approval.
         if (alias !in this) {
+            // NODE_CA should be TLS compatible due to the cert hierarchy structure.
             val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
             val selfSignCert = X509Utilities.createSelfSignedCACertificate(myLegalName.x500Principal, keyPair)
             // Save to the key store.

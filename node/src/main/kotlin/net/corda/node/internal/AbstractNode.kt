@@ -852,11 +852,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val privateKeyAlias = "$id-private-key"
 
         if (privateKeyAlias !in keyStore) {
-            singleName ?: throw IllegalArgumentException(
-                    "Unable to find in the key store the identity of the distributed notary the node is part of")
+            // We shouldn't have a distributed notary at this stage, so singleName should NOT be null.
+            requireNotNull(singleName) {
+                "Unable to find in the key store the identity of the distributed notary the node is part of"
+            }
             log.info("$privateKeyAlias not found in key store, generating fresh key!")
-            // TODO This check shouldn't be needed
-            check(singleName == configuration.myLegalName)
             keyStore.storeLegalIdentity(privateKeyAlias, generateKeyPair())
         }
 
@@ -865,7 +865,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
         val compositeKeyAlias = "$id-composite-key"
         val certificates = if (compositeKeyAlias in keyStore) {
-            // Use composite key instead if it exists
+            // Use composite key instead if it exists.
             val certificate = keyStore[compositeKeyAlias]
             // We have to create the certificate chain for the composite key manually, this is because we don't have a keystore
             // provider that understand compositeKey-privateKey combo. The cert chain is created using the composite key certificate +
