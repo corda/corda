@@ -154,7 +154,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // TODO Break cyclic dependency
         identityService.database = database
     }
-
     val networkMapCache = PersistentNetworkMapCache(metricRegistry, database, identityService).tokenize()
     val checkpointStorage = DBCheckpointStorage()
     @Suppress("LeakingThis")
@@ -899,13 +898,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun makeVaultService(keyManagementService: KeyManagementService,
                                         services: ServicesForResolution,
                                         database: CordaPersistence): VaultServiceInternal {
-        return NodeVaultService(
-                platformClock,
-                keyManagementService,
-                services,
-                database,
-                schemaService
-        )
+        return NodeVaultService(platformClock, keyManagementService, services, database, schemaService)
     }
 
     /** Load configured JVM agents */

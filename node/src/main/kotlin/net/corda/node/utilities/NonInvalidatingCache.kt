@@ -10,7 +10,7 @@ class NonInvalidatingCache<K, V> private constructor(
         val cache: LoadingCache<K, V>
 ) : LoadingCache<K, V> by cache {
 
-    constructor(metricRegistry: MetricRegistry, name: String, bound: Long, loadFunction: (K) -> V) :
+    constructor(metricRegistry: MetricRegistry, name: String, bound: Long = DEFAULT_BOUND, loadFunction: (K) -> V) :
             this(buildCache(metricRegistry, name, bound, loadFunction))
 
     private companion object {
@@ -18,6 +18,8 @@ class NonInvalidatingCache<K, V> private constructor(
             val builder = Caffeine.newBuilder().maximumSize(bound)
             return builder.buildNamed(metricRegistry, name, NonInvalidatingCacheLoader(loadFunction))
         }
+
+        var DEFAULT_BOUND = 1024L
     }
 
     // TODO look into overriding loadAll() if we ever use it

@@ -374,8 +374,8 @@ class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
         toPersistentEntity,
         persistentEntityClass) {
     override val cache = NonInvalidatingWeightBasedCache(
-            metricRegistry,
-            name,
+            metricRegistry = metricRegistry,
+            name = name,
             maxWeight = maxWeight,
             weigher = Weigher { key, value -> weighingFunc(key, value) },
             loadFunction = { key: K ->

@@ -126,9 +126,8 @@ open class PersistentNetworkMapCache(metricRegistry: MetricRegistry,
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> = nodesByKeyCache[identityKey]!!
 
     private val nodesByKeyCache = NonInvalidatingCache<PublicKey, List<NodeInfo>>(
-            metricRegistry,
-            "PersistentNetworkMap_nodesByKey",
-            1024) { key ->
+            metricRegistry = metricRegistry,
+            name = "PersistentNetworkMap_nodesByKey") { key ->
         database.transaction { queryByIdentityKey(session, key) }
     }
 
@@ -147,9 +146,8 @@ open class PersistentNetworkMapCache(metricRegistry: MetricRegistry,
     }
 
     private val identityByLegalNameCache = NonInvalidatingCache<CordaX500Name, Optional<PartyAndCertificate>>(
-            metricRegistry,
-            "PersistentNetworkMap_idByLegalName",
-            1024) { name ->
+            metricRegistry = metricRegistry,
+            name = "PersistentNetworkMap_idByLegalName") { name ->
         Optional.ofNullable(database.transaction { queryIdentityByLegalName(session, name) })
     }
 

@@ -229,11 +229,10 @@ class NodeAttachmentService(
     }
 
     private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
-            metrics,
-            "NodeAttachmentService_attachemnt",
-            attachmentCacheBound) { key ->
-        Optional.ofNullable(createAttachment(key))
-    }
+            metricRegistry = metrics,
+            name = "NodeAttachmentService_attachmentPresence",
+            bound = attachmentCacheBound,
+            loadFunction = { key -> Optional.ofNullable(createAttachment(key)) })
 
     private fun createAttachment(key: SecureHash): Attachment? {
         val content = attachmentContentCache.get(key)!!
