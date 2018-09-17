@@ -17,6 +17,7 @@ import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.unwrap
 import java.nio.file.FileAlreadyExistsException
 import java.util.*
@@ -75,7 +76,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         return if (toFetch.isEmpty()) {
             Result(fromDisk, emptyList())
         } else {
-            logger.info("Requesting ${toFetch.size} dependency(s) for verification from ${otherSideSession.counterparty.name}")
+            logger.debug { "Requesting ${toFetch.size} dependency(s) for verification from ${otherSideSession.counterparty.name}" }
 
             // TODO: Support "large message" response streaming so response sizes are not limited by RAM.
             // We can then switch to requesting items in large batches to minimise the latency penalty.
@@ -93,7 +94,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
             }
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
             val downloaded = validateFetchResponse(UntrustworthyData(maybeItems), toFetch)
-            logger.info("Fetched ${downloaded.size} elements from ${otherSideSession.counterparty.name}")
+            logger.debug { "Fetched ${downloaded.size} elements from ${otherSideSession.counterparty.name}" }
             maybeWriteToDisk(downloaded)
             Result(fromDisk, downloaded)
         }

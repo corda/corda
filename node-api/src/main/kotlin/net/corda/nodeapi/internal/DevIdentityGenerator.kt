@@ -12,6 +12,8 @@ import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities.DISTRIBUTED_NOTARY_ALIAS_PREFIX
+import net.corda.nodeapi.internal.crypto.X509Utilities.NODE_IDENTITY_ALIAS_PREFIX
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.security.KeyPair
@@ -24,11 +26,6 @@ import java.security.PublicKey
  */
 object DevIdentityGenerator {
     private val log = LoggerFactory.getLogger(javaClass)
-
-    // TODO These don't need to be prefixes but can be the full aliases
-    // TODO Move these constants out of here as the node needs access to them
-    const val NODE_IDENTITY_ALIAS_PREFIX = "identity"
-    const val DISTRIBUTED_NOTARY_ALIAS_PREFIX = "distributed-notary"
 
     /** Install a node key store for the given node directory using the given legal name. */
     fun installKeyStoreWithNodeIdentity(nodeDir: Path, legalName: CordaX500Name): Party {

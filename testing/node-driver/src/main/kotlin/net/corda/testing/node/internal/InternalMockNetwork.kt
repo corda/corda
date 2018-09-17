@@ -1,5 +1,6 @@
 package net.corda.testing.node.internal
 
+import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
@@ -404,8 +405,8 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             get() = _serializationWhitelists
         private var dbCloser: (() -> Any?)? = null
 
-        override fun startDatabase() {
-            super.startDatabase()
+        override fun startDatabase(metricRegistry: MetricRegistry?) {
+            super.startDatabase(metricRegistry)
             dbCloser = database::close
             runOnStop += dbCloser!!
         }

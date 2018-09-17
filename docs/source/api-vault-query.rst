@@ -166,6 +166,44 @@ An example of a custom query in Java is illustrated here:
    where an anonymous party does not resolve to an X500 name via the ``IdentityService``, no query results will ever be
    produced. For performance reasons, queries do not use ``PublicKey`` as search criteria.
 
+Custom queries can be either case sensitive or case insensitive. They are defined via a ``Boolean`` as one of the function parameters of each operator function. By default each operator is case sensitive.
+
+An example of a case sensitive custom query operator is illustrated here:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        val currencyIndex = PersistentCashState::currency.equal(USD.currencyCode, true)
+
+.. note:: The ``Boolean`` input of ``true`` in this example could be removed since the function will default to ``true`` when not provided.
+
+An example of a case insensitive custom query operator is illustrated here:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        val currencyIndex = PersistentCashState::currency.equal(USD.currencyCode, false)
+
+An example of a case sensitive custom query operator in Java is illustrated here:
+
+.. container:: codeset
+
+    .. sourcecode:: java
+
+        FieldInfo attributeCurrency = getField("currency", CashSchemaV1.PersistentCashState.class);
+        CriteriaExpression currencyIndex = Builder.equal(attributeCurrency, "USD", true);
+
+An example of a case insensitive custom query operator in Java is illustrated here:
+
+.. container:: codeset
+
+    .. sourcecode:: java
+
+        FieldInfo attributeCurrency = getField("currency", CashSchemaV1.PersistentCashState.class);
+        CriteriaExpression currencyIndex = Builder.equal(attributeCurrency, "USD", false);
+
 Pagination
 ----------
 The API provides support for paging where large numbers of results are expected (by default, a page size is set to 200

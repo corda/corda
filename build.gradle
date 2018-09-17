@@ -17,9 +17,9 @@ buildscript {
     ext.quasar_group = 'co.paralleluniverse'
     ext.quasar_version = '0.7.10'
 
-    // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1
-    // TODO: Upgrade gradle-capsule-plugin to a version with capsule:1.0.3
-    ext.capsule_version = '1.0.1'
+    // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1 by default.
+    // We must configure it manually to use the latest capsule version.
+    ext.capsule_version = '1.0.3'
 
     ext.asm_version = '5.0.4'
     ext.artemis_version = '2.6.2'
@@ -55,7 +55,6 @@ buildscript {
     ext.crash_version = 'cadb53544fbb3c0fb901445da614998a6a419488'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.0'
-    ext.shadow_version = '2.0.4'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
     ext.liquibase_version = '3.5.5'
     ext.artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
@@ -115,8 +114,11 @@ buildscript {
 plugins {
     // TODO The capsule plugin requires the newer DSL plugin block.It would be nice if we could unify all the plugins into one style,
     // but the DSL has some restrictions e.g can't be used on the allprojects section. So we should revisit this if there are improvements in Gradle.
-    // Version 1.0.2 of this plugin uses capsule:1.0.1
-    id "us.kirchmeier.capsule" version "1.0.2"
+    // Version 1.0.2 of this plugin uses capsule:1.0.1 by default.
+    id 'us.kirchmeier.capsule' version '1.0.2' apply false
+
+    // Add the shadow plugin to the plugins classpath for the entire project.
+    id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
 }
 
 ext {
@@ -331,6 +333,7 @@ bintrayConfig {
             'corda-rpc',
             'corda-core',
             'corda-core-deterministic',
+            'corda-deterministic-verifier',
             'corda-djvm',
             'corda',
             'corda-finance',
@@ -349,7 +352,8 @@ bintrayConfig {
             'corda-serialization-deterministic',
             'corda-tools-blob-inspector',
             'corda-tools-explorer',
-            'corda-tools-network-bootstrapper'
+            'corda-tools-network-bootstrapper',
+            'corda-tools-cliutils'
     ]
     license {
         name = 'Apache-2.0'
@@ -381,7 +385,7 @@ artifactory {
         contextUrl = artifactory_contextUrl
         repository {
             repoKey = 'corda-dev'
-            username = 'teamcity'
+            username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
             password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
         }
 
@@ -430,6 +434,6 @@ if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BU
 }
 
 wrapper {
-    gradleVersion = "4.10"
+    gradleVersion = "4.10.1"
     distributionType = Wrapper.DistributionType.ALL
 }

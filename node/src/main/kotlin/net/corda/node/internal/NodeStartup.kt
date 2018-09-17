@@ -10,6 +10,7 @@ import net.corda.cliutils.ExitCodes
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
@@ -66,60 +67,85 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
      */
     override fun runProgram(): Int {
         val startTime = System.currentTimeMillis()
-        if (!canNormalizeEmptyPath()) {
-            println("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.")
-            println("Corda will now exit...")
-            return ExitCodes.FAILURE
-        }
+        // Step 1. Check for supported Java version.
+        if (!isValidJavaVersion()) return ExitCodes.FAILURE
 
-        val registrationMode = checkRegistrationMode()
-
-        if (registrationMode && !cmdLineOptions.isRegistration) {
-            println("Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.")
-            // Pretend that the node was started with `--initial-registration` to help prevent user error.
-            cmdLineOptions.isRegistration = true
-        }
-
-        // We do the single node check before we initialise logging so that in case of a double-node start it
+        // Step 2. We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
         enforceSingleNodeIsRunning(cmdLineOptions.baseDirectory)
 
+        // Step 3. Initialise logging.
         initLogging()
-        // Register all cryptography [Provider]s.
+
+        // Step 4. Register all cryptography [Provider]s.
         // Required to install our [SecureRandom] before e.g., UUID asks for one.
         // This needs to go after initLogging(netty clashes with our logging).
         Crypto.registerProviders()
 
+        // Step 5. Print banner and basic node info.
         val versionInfo = getVersionInfo()
-
         drawBanner(versionInfo)
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
+        // Step 6. Load and validate node configuration.
         val configuration = (attempt { loadConfiguration() }.doOnException(handleConfigurationLoadingError(cmdLineOptions.configFile)) as? Try.Success)?.let(Try.Success<NodeConfiguration>::value) ?: return ExitCodes.FAILURE
-
         val errors = configuration.validate()
         if (errors.isNotEmpty()) {
             logger.error("Invalid node configuration. Errors were:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
             return ExitCodes.FAILURE
         }
 
+        // Step 7. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
         attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success ?: return ExitCodes.FAILURE
 
+        // Step 8. Any actions required before starting up the Corda network layer.
         attempt { preNetworkRegistration(configuration) }.doOnException(handleRegistrationError) as? Try.Success ?: return ExitCodes.FAILURE
 
-        cmdLineOptions.nodeRegistrationOption?.let {
-            // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
-            attempt { registerWithNetwork(configuration, versionInfo, it) }.doOnException(handleRegistrationError) as? Try.Success ?: return ExitCodes.FAILURE
-            // At this point the node registration was successful. We can delete the marker file.
-            deleteNodeRegistrationMarker(cmdLineOptions.baseDirectory)
-            return ExitCodes.SUCCESS
+        // Step 9. Check if in registration mode.
+        checkAndRunRegistrationMode(configuration, versionInfo)?.let {
+            return if (it) ExitCodes.SUCCESS
+            else ExitCodes.FAILURE
         }
 
+        // Step 10. Log startup info.
         logStartupInfo(versionInfo, configuration)
 
+        // Step 11. Start node: create the node, check for other command-line options, add extra logging etc.
         attempt { startNode(configuration, versionInfo, startTime) }.doOnSuccess { logger.info("Node exiting successfully") }.doOnException(handleStartError) as? Try.Success ?: return ExitCodes.FAILURE
 
         return ExitCodes.SUCCESS
+    }
+
+    private fun checkAndRunRegistrationMode(configuration: NodeConfiguration, versionInfo: VersionInfo): Boolean? {
+        checkUnfinishedRegistration()
+        cmdLineOptions.nodeRegistrationOption?.let {
+            // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
+            attempt { registerWithNetwork(configuration, versionInfo, it) }.doOnException(handleRegistrationError) as? Try.Success
+                    ?: return false
+            // At this point the node registration was successful. We can delete the marker file.
+            deleteNodeRegistrationMarker(cmdLineOptions.baseDirectory)
+            return true
+        }
+        return null
+    }
+
+    private fun isValidJavaVersion(): Boolean {
+        if (!canNormalizeEmptyPath()) {
+            println("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest supported version.")
+            println("Corda will now exit...")
+            return false
+        }
+        return true
+    }
+
+    // TODO: Reconsider if automatic re-registration should be applied when something failed during initial registration.
+    //      There might be cases where the node user should investigate what went wrong before registering again.
+    private fun checkUnfinishedRegistration() {
+        if (checkRegistrationMode() && !cmdLineOptions.isRegistration) {
+            println("Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.")
+            // Pretend that the node was started with `--initial-registration` to help prevent user error.
+            cmdLineOptions.isRegistration = true
+        }
     }
 
     private fun <RESULT> attempt(action: () -> RESULT): Try<RESULT> = Try.on(action)
@@ -253,66 +279,7 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
             return
         }
         if (cmdLineOptions.justGenerateRpcSslCerts) {
-            val (keyPair, cert) = createKeyPairAndSelfSignedTLSCertificate(conf.myLegalName.x500Principal)
-
-            val keyStorePath = conf.baseDirectory / "certificates" / "rpcsslkeystore.jks"
-            val trustStorePath = conf.baseDirectory / "certificates" / "export" / "rpcssltruststore.jks"
-
-            if (keyStorePath.exists() || trustStorePath.exists()) {
-                println("Found existing RPC SSL keystores. Command was already run. Exiting..")
-                exitProcess(0)
-            }
-
-            val console: Console? = System.console()
-
-            when (console) {
-            // In this case, the JVM is not connected to the console so we need to exit
-                null -> {
-                    println("Not connected to console. Exiting")
-                    exitProcess(1)
-                }
-            // Otherwise we can proceed normally
-                else -> {
-                    while (true) {
-                        val keystorePassword1 = console.readPassword("Enter the keystore password => ")
-                        val keystorePassword2 = console.readPassword("Re-enter the keystore password => ")
-                        if (!keystorePassword1.contentEquals(keystorePassword2)) {
-                            println("The keystore passwords don't match.")
-                            continue
-                        }
-                        saveToKeyStore(keyStorePath, keyPair, cert, String(keystorePassword1), "rpcssl")
-                        println("The keystore was saved to: $keyStorePath .")
-                        break
-                    }
-
-                    while (true) {
-                        val trustStorePassword1 = console.readPassword("Enter the truststore password => ")
-                        val trustStorePassword2 = console.readPassword("Re-enter the truststore password => ")
-                        if (!trustStorePassword1.contentEquals(trustStorePassword2)) {
-                            println("The truststore passwords don't match.")
-                            continue
-                        }
-
-                        saveToTrustStore(trustStorePath, cert, String(trustStorePassword1), "rpcssl")
-                        println("The truststore was saved to: $trustStorePath .")
-                        println("You need to distribute this file along with the password in a secure way to all RPC clients.")
-                        break
-                    }
-
-                    val dollar = '$'
-                    println("""
-                        |
-                        |The SSL certificates were generated successfully.
-                        |
-                        |Add this snippet to the "rpcSettings" section of your node.conf:
-                        |       useSsl=true
-                        |       ssl {
-                        |           keyStorePath=$dollar{baseDirectory}/certificates/rpcsslkeystore.jks
-                        |           keyStorePassword=the_above_password
-                        |       }
-                        |""".trimMargin())
-                }
-            }
+            generateRpcSslCertificates(conf)
             return
         }
 
@@ -325,8 +292,10 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
         }
 
         val nodeInfo = node.start()
-        Node.printBasicNodeInfo("Loaded CorDapps", node.services.cordappProvider.cordapps.joinToString { it.name })
+        logLoadedCorDapps(node.services.cordappProvider.cordapps)
+
         node.nodeReadyFuture.thenMatch({
+            // Elapsed time in seconds. We used 10 / 100.0 and not directly / 1000.0 to only keep two decimal digits.
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             val name = nodeInfo.legalIdentitiesAndCerts.first().name.organisation
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
@@ -349,6 +318,82 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
                     logger.error("Unexpected exception during registration", th)
                 })
         node.run()
+    }
+
+    private fun generateRpcSslCertificates(conf: NodeConfiguration) {
+        val (keyPair, cert) = createKeyPairAndSelfSignedTLSCertificate(conf.myLegalName.x500Principal)
+
+        val keyStorePath = conf.baseDirectory / "certificates" / "rpcsslkeystore.jks"
+        val trustStorePath = conf.baseDirectory / "certificates" / "export" / "rpcssltruststore.jks"
+
+        if (keyStorePath.exists() || trustStorePath.exists()) {
+            println("Found existing RPC SSL keystores. Command was already run. Exiting..")
+            exitProcess(0)
+        }
+
+        val console: Console? = System.console()
+
+        when (console) {
+        // In this case, the JVM is not connected to the console so we need to exit.
+            null -> {
+                println("Not connected to console. Exiting")
+                exitProcess(1)
+            }
+        // Otherwise we can proceed normally.
+            else -> {
+                while (true) {
+                    val keystorePassword1 = console.readPassword("Enter the RPC keystore password => ")
+                    // TODO: consider adding a password strength policy.
+                    if (keystorePassword1.isEmpty()) {
+                        println("The RPC keystore password cannot be an empty String.")
+                        continue
+                    }
+
+                    val keystorePassword2 = console.readPassword("Re-enter the RPC keystore password => ")
+                    if (!keystorePassword1.contentEquals(keystorePassword2)) {
+                        println("The RPC keystore passwords don't match.")
+                        continue
+                    }
+
+                    saveToKeyStore(keyStorePath, keyPair, cert, String(keystorePassword1), "rpcssl")
+                    println("The RPC keystore was saved to: $keyStorePath .")
+                    break
+                }
+
+                while (true) {
+                    val trustStorePassword1 = console.readPassword("Enter the RPC truststore password => ")
+                    // TODO: consider adding a password strength policy.
+                    if (trustStorePassword1.isEmpty()) {
+                        println("The RPC truststore password cannot be an empty String.")
+                        continue
+                    }
+
+                    val trustStorePassword2 = console.readPassword("Re-enter the RPC truststore password => ")
+                    if (!trustStorePassword1.contentEquals(trustStorePassword2)) {
+                        println("The RPC truststore passwords don't match.")
+                        continue
+                    }
+
+                    saveToTrustStore(trustStorePath, cert, String(trustStorePassword1), "rpcssl")
+                    println("The RPC truststore was saved to: $trustStorePath .")
+                    println("You need to distribute this file along with the password in a secure way to all RPC clients.")
+                    break
+                }
+
+                val dollar = '$'
+                println("""
+                            |
+                            |The SSL certificates for RPC were generated successfully.
+                            |
+                            |Add this snippet to the "rpcSettings" section of your node.conf:
+                            |       useSsl=true
+                            |       ssl {
+                            |           keyStorePath=$dollar{baseDirectory}/certificates/rpcsslkeystore.jks
+                            |           keyStorePassword=the_above_password
+                            |       }
+                            |""".trimMargin())
+            }
+        }
     }
 
     protected open fun logStartupInfo(versionInfo: VersionInfo, conf: NodeConfiguration) {
@@ -407,6 +452,17 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
         )
     }
 
+    protected open fun logLoadedCorDapps(corDapps: List<CordappImpl>) {
+        fun CordappImpl.Info.description() = "$shortName version $version by $vendor"
+
+        Node.printBasicNodeInfo("Loaded ${corDapps.size} CorDapp(s)", corDapps.map { it.info }.joinToString(", ", transform = CordappImpl.Info::description))
+        corDapps.map { it.info }.filter { it.hasUnknownFields() }.let { malformed ->
+            if (malformed.isNotEmpty()) {
+                logger.warn("Found ${malformed.size} CorDapp(s) with unknown information. They will be unable to run on Corda in the future.")
+            }
+        }
+    }
+
     private fun enforceSingleNodeIsRunning(baseDirectory: Path) {
         // Write out our process ID (which may or may not resemble a UNIX process id - to us it's just a string) to a
         // file that we'll do our best to delete on exit. But if we don't, it'll be overwritten next time. If it already
@@ -441,7 +497,7 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
     }
 
     override fun initLogging() {
-        val loggingLevel = loggingLevel.name().toLowerCase(Locale.ENGLISH)
+        val loggingLevel = loggingLevel.name.toLowerCase(Locale.ENGLISH)
         System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
         if (verbose) {
             System.setProperty("consoleLogLevel", loggingLevel)

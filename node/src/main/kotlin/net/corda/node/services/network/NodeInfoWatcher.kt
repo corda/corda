@@ -3,23 +3,16 @@ package net.corda.node.services.network
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
-import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.seconds
-import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.NodeInfoAndSigned
-import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
-import net.corda.serialization.internal.AMQP_P2P_CONTEXT
-import net.corda.serialization.internal.SerializationFactoryImpl
 import rx.Observable
 import rx.Scheduler
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.nio.file.attribute.FileTime
 import java.time.Duration
@@ -63,7 +56,7 @@ class NodeInfoWatcher(private val nodePath: Path,
         }
     }
 
-    internal data class NodeInfoFromFile(val nodeInfohash: SecureHash, val lastModified: FileTime)
+    private data class NodeInfoFromFile(val nodeInfohash: SecureHash, val lastModified: FileTime)
 
     private val nodeInfosDir = nodePath / NODE_INFO_DIRECTORY
     private val nodeInfoFilesMap = HashMap<Path, NodeInfoFromFile>()
@@ -75,20 +68,16 @@ class NodeInfoWatcher(private val nodePath: Path,
     }
 
     /**
-     * Read all the files contained in [nodePath] / [NODE_INFO_DIRECTORY] and keep watching
-     * the folder for further updates.
+     * Read all the files contained in [nodePath] / [NODE_INFO_DIRECTORY] and keep watching the folder for further updates.
      *
-     * We simply list the directory content every 5 seconds, the Java implementation of WatchService has been proven to
-     * be unreliable on MacOs and given the fairly simple use case we have, this simple implementation should do.
-     *
-     * @return an [Observable] returning [NodeInfoUpdate]s, at most one [NodeInfo] is returned for each processed file.
+     * @return an [Observable] that emits lists of [NodeInfoUpdate]s. Each emitted list is a poll event of the folder and
+     * may be empty if no changes were detected.
      */
-    fun nodeInfoUpdates(): Observable<NodeInfoUpdate> {
-        return Observable.interval(0, pollInterval.toMillis(), TimeUnit.MILLISECONDS, scheduler)
-                .flatMapIterable { loadFromDirectory() }
+    fun nodeInfoUpdates(): Observable<List<NodeInfoUpdate>> {
+        return Observable.interval(0, pollInterval.toMillis(), TimeUnit.MILLISECONDS, scheduler).map { pollDirectory() }
     }
 
-    private fun loadFromDirectory(): List<NodeInfoUpdate> {
+    private fun pollDirectory(): List<NodeInfoUpdate> {
         val processedPaths = HashSet<Path>()
         val result = nodeInfosDir.list { paths ->
             paths
@@ -121,15 +110,4 @@ class NodeInfoWatcher(private val nodePath: Path,
         logger.debug { "Number of removed NodeInfo files ${removedHashes.size}" }
         return result.map { NodeInfoUpdate.Add(it.nodeInfo) } + removedHashes
     }
-}
-
-// TODO Remove this once we have a tool that can read AMQP serialised files
-fun main(args: Array<String>) {
-    _contextSerializationEnv.set(SerializationEnvironmentImpl(
-            SerializationFactoryImpl().apply {
-                registerScheme(AMQPServerSerializationScheme())
-            },
-            AMQP_P2P_CONTEXT)
-    )
-    println(Paths.get(args[0]).readObject<SignedNodeInfo>().verified())
 }

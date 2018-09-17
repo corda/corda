@@ -48,20 +48,4 @@ interface Cordapp {
     val jarPath: URL
     val cordappClasses: List<String>
     val jarHash: SecureHash.SHA256
-
-    /**
-     * CorDapp's information, including vendor and version.
-     *
-     * @property shortName Cordapp's shortName
-     * @property vendor Cordapp's vendor
-     * @property version Cordapp's version
-     */
-    @DoNotImplement
-    interface Info {
-        val shortName: String
-        val vendor: String
-        val version: String
-
-        fun hasUnknownFields(): Boolean
-    }
 }

@@ -1,0 +1,43 @@
+- commandName: "<main class>"
+  positionalParams: []
+  params:
+  - parameterName: "--dir"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "--install-shell-extensions"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--log-to-console"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--logging-level"
+    parameterType: "org.slf4j.event.Level"
+    required: false
+    multiParam: false
+    acceptableValues:
+    - "ERROR"
+    - "WARN"
+    - "INFO"
+    - "DEBUG"
+    - "TRACE"
+  - parameterName: "--no-copy"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--verbose"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "-v"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []

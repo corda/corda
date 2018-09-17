@@ -4,10 +4,12 @@ import net.corda.core.internal.rootMessage
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
 
-import org.apache.logging.log4j.Level
 import org.fusesource.jansi.AnsiConsole
+import org.slf4j.event.Level
 import picocli.CommandLine
 import picocli.CommandLine.*
+import java.nio.file.Path
+import java.nio.file.Paths
 import kotlin.system.exitProcess
 import java.util.*
 import java.util.concurrent.Callable
@@ -44,22 +46,24 @@ interface Validated {
 
 /** This is generally covered by commons-lang. */
 object CordaSystemUtils {
-    const val OS_NAME = "os.name"
+    private const val OS_NAME = "os.name"
+    private const val MAC_PREFIX = "Mac"
+    private const val WIN_PREFIX = "Windows"
 
-    const val MAC_PREFIX = "Mac"
-    const val WIN_PREFIX = "Windows"
-
-    fun isOsMac() = getOsName().startsWith(MAC_PREFIX)
-    fun isOsWindows() = getOsName().startsWith(WIN_PREFIX)
-    fun getOsName() = System.getProperty(OS_NAME)
+    fun isOsMac(): Boolean = getOsName().startsWith(MAC_PREFIX)
+    fun isOsWindows(): Boolean = getOsName().startsWith(WIN_PREFIX)
+    fun getOsName(): String = System.getProperty(OS_NAME)
 }
 
 fun CordaCliWrapper.start(args: Array<String>) {
+    this.args = args
+
     // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
     AnsiConsole.systemInstall()
 
     val cmd = CommandLine(this)
-    this.args = args
+    // Make sure any provided paths are absolute. Relative paths have caused issues and are less clear in logs.
+    cmd.registerConverter(Path::class.java) { Paths.get(it).toAbsolutePath().normalize() }
     cmd.commandSpec.name(alias)
     cmd.commandSpec.usageMessage().description(description)
     try {
@@ -127,11 +131,12 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Cal
     // This needs to be called before loggers (See: NodeStartup.kt:51 logger called by lazy, initLogging happens before).
     // Node's logging is more rich. In corda configurations two properties, defaultLoggingLevel and consoleLogLevel, are usually used.
     open fun initLogging() {
-        val loggingLevel = loggingLevel.name().toLowerCase(Locale.ENGLISH)
+        val loggingLevel = loggingLevel.name.toLowerCase(Locale.ENGLISH)
         System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
         if (verbose) {
             System.setProperty("consoleLogLevel", loggingLevel)
         }
+        System.setProperty("log-path", Paths.get(".").toString())
     }
 
     // Override this function with the actual method to be run once all the arguments have been parsed. The return number
@@ -147,11 +152,11 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Cal
 }
 
 /**
- * Converter from String to log4j logging Level.
+ * Converter from String to slf4j logging Level.
  */
 class LoggingLevelConverter : ITypeConverter<Level> {
     override fun convert(value: String?): Level {
-        return value?.let { Level.getLevel(it) }
+        return value?.let { Level.valueOf(it.toUpperCase()) }
                 ?: throw TypeConversionException("Unknown option for --logging-level: $value")
     }
 

@@ -11,8 +11,8 @@ def javaHome = System.getProperty('java.home')
 def jarBaseName = "corda-${project.name}".toString()
 
 configurations {
-    runtimeLibraries
-    runtimeArtifacts.extendsFrom runtimeLibraries
+    deterministicLibraries
+    deterministicArtifacts.extendsFrom deterministicLibraries
 }
 
 dependencies {
@@ -20,10 +20,10 @@ dependencies {
 
     // Configure these by hand. It should be a minimal subset of dependencies,
     // and without any obviously non-deterministic ones such as Hibernate.
-    runtimeLibraries project(path: ':core-deterministic', configuration: 'runtimeArtifacts')
-    runtimeLibraries "org.apache.qpid:proton-j:$protonj_version"
-    runtimeLibraries "org.iq80.snappy:snappy:$snappy_version"
-    runtimeLibraries "com.google.guava:guava:$guava_version"
+    deterministicLibraries project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
+    deterministicLibraries "org.apache.qpid:proton-j:$protonj_version"
+    deterministicLibraries "org.iq80.snappy:snappy:$snappy_version"
+    deterministicLibraries "com.google.guava:guava:$guava_version"
 }
 
 jar {
@@ -108,7 +108,7 @@ task determinise(type: ProGuardTask) {
 
     libraryjars file("$javaHome/lib/rt.jar")
     libraryjars file("$javaHome/lib/jce.jar")
-    configurations.runtimeLibraries.forEach {
+    configurations.deterministicLibraries.forEach {
         libraryjars it, filter: '!META-INF/versions/**'
     }
 
@@ -142,7 +142,7 @@ task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
 
     libraryjars deterministic_rt_jar
 
-    configurations.runtimeLibraries.forEach {
+    configurations.deterministicLibraries.forEach {
         libraryjars it, filter: '!META-INF/versions/**'
     }
 
@@ -162,12 +162,12 @@ assemble.dependsOn checkDeterminism
 
 def deterministicJar = metafix.outputs.files.singleFile
 artifacts {
-    runtimeArtifacts file: deterministicJar, name: jarBaseName, type: 'jar', extension: 'jar', builtBy: metafix
+    deterministicArtifacts file: deterministicJar, name: jarBaseName, type: 'jar', extension: 'jar', builtBy: metafix
     publish file: deterministicJar, name: jarBaseName, type: 'jar', extension: 'jar', builtBy: metafix
 }
 
 publish {
-    dependenciesFrom configurations.runtimeArtifacts
+    dependenciesFrom configurations.deterministicArtifacts
     publishSources = false
     publishJavadoc = false
     name jarBaseName

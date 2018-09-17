@@ -6,6 +6,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
@@ -28,6 +29,8 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
+    override val nodeReady: OpenFuture<Void?>
+
     val allNodeHashes: List<SecureHash>
 
     fun getNodeByHash(nodeHash: SecureHash): NodeInfo?

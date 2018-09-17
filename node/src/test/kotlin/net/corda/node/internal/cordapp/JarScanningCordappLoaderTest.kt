@@ -46,7 +46,7 @@ class JarScanningCordappLoaderTest {
     fun `test that classes that aren't in cordapps aren't loaded`() {
         // Basedir will not be a corda node directory so the dummy flow shouldn't be recognised as a part of a cordapp
         val loader = JarScanningCordappLoader.fromDirectories(listOf(Paths.get(".")))
-        assertThat(loader.cordapps).containsOnly(JarScanningCordappLoader.coreCordapp)
+        assertThat(loader.cordapps).containsOnly(loader.coreCordapp)
     }
 
     @Test
@@ -57,7 +57,7 @@ class JarScanningCordappLoaderTest {
         val actual = loader.cordapps.toTypedArray()
         assertThat(actual).hasSize(2)
 
-        val actualCordapp = actual.single { it != JarScanningCordappLoader.coreCordapp }
+        val actualCordapp = actual.single { it != loader.coreCordapp }
         assertThat(actualCordapp.contractClassNames).isEqualTo(listOf(isolatedContractId))
         assertThat(actualCordapp.initiatedFlows.single().name).isEqualTo("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Acceptor")
         assertThat(actualCordapp.rpcFlows).isEmpty()
@@ -91,7 +91,7 @@ class JarScanningCordappLoaderTest {
 
     @Test
     fun `sub-packages are ignored`() {
-        val loader = cordappLoaderForPackages(listOf("net.corda", testScanPackage))
+        val loader = cordappLoaderForPackages(listOf("net.corda.core", testScanPackage))
         val cordapps = loader.cordapps.filter { LoaderTestFlow::class.java in it.initiatedFlows }
         assertThat(cordapps).hasSize(1)
     }
