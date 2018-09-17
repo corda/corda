@@ -8,6 +8,7 @@ import org.fusesource.jansi.AnsiConsole
 import org.slf4j.event.Level
 import picocli.CommandLine
 import picocli.CommandLine.*
+import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.system.exitProcess
 import java.util.*
@@ -45,22 +46,24 @@ interface Validated {
 
 /** This is generally covered by commons-lang. */
 object CordaSystemUtils {
-    const val OS_NAME = "os.name"
+    private const val OS_NAME = "os.name"
+    private const val MAC_PREFIX = "Mac"
+    private const val WIN_PREFIX = "Windows"
 
-    const val MAC_PREFIX = "Mac"
-    const val WIN_PREFIX = "Windows"
-
-    fun isOsMac() = getOsName().startsWith(MAC_PREFIX)
-    fun isOsWindows() = getOsName().startsWith(WIN_PREFIX)
-    fun getOsName() = System.getProperty(OS_NAME)
+    fun isOsMac(): Boolean = getOsName().startsWith(MAC_PREFIX)
+    fun isOsWindows(): Boolean = getOsName().startsWith(WIN_PREFIX)
+    fun getOsName(): String = System.getProperty(OS_NAME)
 }
 
 fun CordaCliWrapper.start(args: Array<String>) {
+    this.args = args
+
     // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
     AnsiConsole.systemInstall()
 
     val cmd = CommandLine(this)
-    this.args = args
+    // Make sure any provided paths are absolute. Relative paths have caused issues and are less clear in logs.
+    cmd.registerConverter(Path::class.java) { Paths.get(it).toAbsolutePath().normalize() }
     cmd.commandSpec.name(alias)
     cmd.commandSpec.usageMessage().description(description)
     try {
