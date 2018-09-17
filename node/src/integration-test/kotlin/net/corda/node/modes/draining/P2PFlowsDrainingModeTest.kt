@@ -14,6 +14,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
+import net.corda.nodeapi.internal.hasCancelledDrainingShutdown
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
@@ -160,11 +161,6 @@ class P2PFlowsDrainingModeTest {
             assertThat(successful).isTrue()
         }
     }
-}
-
-private fun CordaRPCOps.hasCancelledDrainingShutdown(interval: Long = 5, unit: TimeUnit = TimeUnit.SECONDS): Observable<Unit> {
-
-    return Observable.interval(interval, unit).map { isWaitingForShutdown() }.takeFirst { waiting -> waiting == false }.map { Unit }
 }
 
 @StartableByRPC

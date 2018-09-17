@@ -35,10 +35,9 @@ import net.corda.node.services.messaging.context
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
+import net.corda.nodeapi.internal.pendingFlowsCount
 import rx.Observable
 import rx.Subscription
-import rx.schedulers.Schedulers
-import rx.subjects.PublishSubject
 import java.io.InputStream
 import java.net.ConnectException
 import java.security.PublicKey
@@ -330,35 +329,6 @@ internal class CordaRPCOpsImpl(
     }
 
     private fun setPersistentDrainingModeProperty(enabled: Boolean, propagateChange: Boolean) = services.nodeProperties.flowsDrainingMode.setEnabled(enabled, propagateChange)
-
-    private fun pendingFlowsCount(): DataFeed<Int, Pair<Int, Int>> {
-
-        val updates = PublishSubject.create<Pair<Int, Int>>()
-        val initialPendingFlowsCount = stateMachinesFeed().let {
-            var completedFlowsCount = 0
-            var pendingFlowsCount = it.snapshot.size
-            it.updates.observeOn(Schedulers.io()).subscribe({ update ->
-                when (update) {
-                    is StateMachineUpdate.Added -> {
-                        pendingFlowsCount++
-                        updates.onNext(completedFlowsCount to pendingFlowsCount)
-                    }
-                    is StateMachineUpdate.Removed -> {
-                        completedFlowsCount++
-                        updates.onNext(completedFlowsCount to pendingFlowsCount)
-                        if (completedFlowsCount == pendingFlowsCount) {
-                            updates.onCompleted()
-                        }
-                    }
-                }
-            }, updates::onError)
-            if (pendingFlowsCount == 0) {
-                updates.onCompleted()
-            }
-            pendingFlowsCount
-        }
-        return DataFeed(initialPendingFlowsCount, updates)
-    }
 
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
         return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.context.toFlowInitiator(), flowLogic.track(), flowLogic.stateMachine.context)
