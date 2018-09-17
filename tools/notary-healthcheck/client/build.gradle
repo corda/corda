@@ -29,6 +29,10 @@ jar {
     }
 }
 
+capsule {
+    version capsule_version
+}
+
 task buildClientJar(type: FatCapsule) {
     applicationClass mainClassName
     baseName "notaryhealthcheck-client"

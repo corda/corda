@@ -64,6 +64,10 @@ jar {
     baseName 'corda-firewall'
 }
 
+capsule {
+    version capsule_version
+}
+
 task buildFirewallJar(type: FatCapsule, dependsOn: project(':bridge').jar) {
     applicationClass 'net.corda.bridge.Firewall'
     archiveName "corda-firewall-${corda_release_version}.jar"
