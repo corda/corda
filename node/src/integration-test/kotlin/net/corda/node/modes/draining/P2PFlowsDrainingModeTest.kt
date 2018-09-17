@@ -91,7 +91,7 @@ class P2PFlowsDrainingModeTest {
     @Test
     fun `terminate node waiting for pending flows`() {
 
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
+        driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
 
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
@@ -115,7 +115,7 @@ class P2PFlowsDrainingModeTest {
     @Test
     fun `terminate resets persistent draining mode property when waiting for pending flows`() {
 
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
+        driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
 
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             var successful = false
@@ -139,7 +139,7 @@ class P2PFlowsDrainingModeTest {
     @Test
     fun `disabling draining mode cancels draining shutdown`() {
 
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
+        driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
 
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
