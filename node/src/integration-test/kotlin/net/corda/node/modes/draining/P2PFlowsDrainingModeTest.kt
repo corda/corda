@@ -1,7 +1,6 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.client.rpc.ConnectionFailureException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
@@ -19,17 +18,16 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.waitForShutdown
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
-import rx.subjects.AsyncSubject
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -167,26 +165,6 @@ class P2PFlowsDrainingModeTest {
 private fun CordaRPCOps.hasCancelledDrainingShutdown(interval: Long = 5, unit: TimeUnit = TimeUnit.SECONDS): Observable<Unit> {
 
     return Observable.interval(interval, unit).map { isWaitingForShutdown() }.takeFirst { waiting -> waiting == false }.map { Unit }
-}
-
-// TODO sollecitom make it available to all driver-based tests, or even to NetworkMap based ones.
-private fun NodeHandle.waitForShutdown(): Observable<Unit> {
-
-    return rpc.waitForShutdown().doAfterTerminate(::stop)
-}
-
-// TODO sollecitom make it available to all driver-based tests, or even to NetworkMap based ones.
-private fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
-
-    val completable = AsyncSubject.create<Unit>()
-    stateMachinesFeed().updates.subscribe({ _ -> }, { error ->
-        if (error is ConnectionFailureException) {
-            completable.onCompleted()
-        } else {
-            completable.onError(error)
-        }
-    })
-    return completable
 }
 
 @StartableByRPC
