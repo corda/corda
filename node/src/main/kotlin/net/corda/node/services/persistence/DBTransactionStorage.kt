@@ -1,5 +1,6 @@
 package net.corda.node.services.persistence
 
+import com.codahale.metrics.MetricRegistry
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -31,7 +32,7 @@ typealias TxCacheValue = Pair<SerializedBytes<CoreTransaction>, List<Transaction
 fun TxCacheValue.toSignedTx() = SignedTransaction(this.first, this.second)
 fun SignedTransaction.toTxCacheValue() = TxCacheValue(this.txBits, this.sigs)
 
-class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPersistence) : WritableTransactionStorage, SingletonSerializeAsToken() {
+class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPersistence, metricRegistry: MetricRegistry = MetricRegistry()) : WritableTransactionStorage, SingletonSerializeAsToken() {
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}transactions")
@@ -49,9 +50,10 @@ class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPers
     )
 
     private companion object {
-        fun createTransactionsMap(maxSizeInBytes: Long)
+        fun createTransactionsMap(metricRegistry: MetricRegistry, maxSizeInBytes: Long)
                 : AppendOnlyPersistentMapBase<SecureHash, TxCacheValue, DBTransaction, String> {
             return WeightBasedAppendOnlyPersistentMap<SecureHash, TxCacheValue, DBTransaction, String>(
+                    metricRegistry = metricRegistry,
                     name = "DBTransactionStorage_transactions",
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = {
@@ -86,7 +88,7 @@ class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPers
         }
     }
 
-    private val txStorage = ThreadBox(createTransactionsMap(cacheSizeBytes))
+    private val txStorage = ThreadBox(createTransactionsMap(metricRegistry, cacheSizeBytes))
 
     override fun addTransaction(transaction: SignedTransaction): Boolean = database.transaction {
         txStorage.locked {

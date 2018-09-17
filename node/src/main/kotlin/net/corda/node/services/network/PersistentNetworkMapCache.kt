@@ -1,5 +1,6 @@
 package net.corda.node.services.network
 
+import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
@@ -36,7 +37,8 @@ import javax.annotation.concurrent.ThreadSafe
 
 /** Database-based network map cache. */
 @ThreadSafe
-open class PersistentNetworkMapCache(private val database: CordaPersistence,
+open class PersistentNetworkMapCache(metricRegistry: MetricRegistry,
+                                     private val database: CordaPersistence,
                                      private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken() {
     companion object {
         private val logger = contextLogger()
@@ -124,6 +126,7 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> = nodesByKeyCache[identityKey]!!
 
     private val nodesByKeyCache = NonInvalidatingCache<PublicKey, List<NodeInfo>>(
+            metricRegistry,
             "PersistentNetworkMap_nodesByKey",
             1024) { key ->
         database.transaction { queryByIdentityKey(session, key) }
@@ -144,6 +147,7 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
     }
 
     private val identityByLegalNameCache = NonInvalidatingCache<CordaX500Name, Optional<PartyAndCertificate>>(
+            metricRegistry,
             "PersistentNetworkMap_idByLegalName",
             1024) { name ->
         Optional.ofNullable(database.transaction { queryIdentityByLegalName(session, name) })

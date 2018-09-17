@@ -59,9 +59,9 @@ class RaftUniquenessProvider(
 ) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
-        fun createMap(): AppendOnlyPersistentMap<StateRef, Pair<Long, SecureHash>, CommittedState, PersistentStateRef> =
+        fun createMap(metricRegistry: MetricRegistry): AppendOnlyPersistentMap<StateRef, Pair<Long, SecureHash>, CommittedState, PersistentStateRef> =
                 AppendOnlyPersistentMap(
-                        "RaftUniquenessProvider_transactions",
+                        name = "RaftUniquenessProvider_transactions",
                         toPersistentEntityKey = { PersistentStateRef(it) },
                         fromPersistentEntity = {
                             val txId = it.id.txId
@@ -78,7 +78,8 @@ class RaftUniquenessProvider(
                                     first)
 
                         },
-                        persistentEntityClass = CommittedState::class.java
+                        persistentEntityClass = CommittedState::class.java,
+                        metricRegistry = metricRegistry
                 )
 
         fun StateRef.encoded() = "$txhash:$index"
@@ -109,7 +110,7 @@ class RaftUniquenessProvider(
     fun start() {
         log.info("Creating Copycat server, log stored in: ${storagePath.toAbsolutePath()}")
         val stateMachineFactory = {
-            RaftTransactionCommitLog(db, clock, RaftUniquenessProvider.Companion::createMap)
+            RaftTransactionCommitLog(db, clock, { createMap(metrics) })
         }
         val address = raftConfig.nodeAddress.let { Address(it.host, it.port) }
         val storage = buildStorage(storagePath)

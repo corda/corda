@@ -124,6 +124,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     @Suppress("LeakingThis")
     private var tokenizableServices: MutableList<Any>? = mutableListOf(platformClock, this)
+
+    val metricRegistry = MetricRegistry()
+    val monitoringService = MonitoringService(metricRegistry).tokenize()
+
     protected val runOnStop = ArrayList<() -> Any?>()
 
     init {
@@ -138,7 +142,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, configuration.notary != null).tokenize()
-    val identityService = PersistentIdentityService().tokenize()
+    val identityService = PersistentIdentityService(metricRegistry).tokenize()
     val database: CordaPersistence = createCordaPersistence(
             configuration.database,
             identityService::wellKnownPartyFromX500Name,
@@ -150,12 +154,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // TODO Break cyclic dependency
         identityService.database = database
     }
-    val networkMapCache = PersistentNetworkMapCache(database, identityService).tokenize()
+
+    val networkMapCache = PersistentNetworkMapCache(metricRegistry, database, identityService).tokenize()
     val checkpointStorage = DBCheckpointStorage()
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
-    private val metricRegistry = MetricRegistry()
     val attachments = NodeAttachmentService(metricRegistry, database, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound).tokenize()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(), attachments).tokenize()
     @Suppress("LeakingThis")
@@ -165,7 +169,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val vaultService = makeVaultService(keyManagementService, servicesForResolution, database).tokenize()
     val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database)
     val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
-    val monitoringService = MonitoringService(metricRegistry).tokenize()
     val networkMapUpdater = NetworkMapUpdater(
             networkMapCache,
             NodeInfoWatcher(
@@ -308,7 +311,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         servicesForResolution.start(netParams)
         networkMapCache.start(netParams.notaries)
 
-        startDatabase(metricRegistry)
+        startDatabase()
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
 
@@ -702,7 +705,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     protected open fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {
-        return DBTransactionStorage(transactionCacheSizeBytes, database)
+        return DBTransactionStorage(transactionCacheSizeBytes, database, metricRegistry)
     }
 
     @VisibleForTesting
@@ -762,7 +765,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     // Specific class so that MockNode can catch it.
     class DatabaseConfigurationException(message: String) : CordaException(message)
 
-    protected open fun startDatabase(metricRegistry: MetricRegistry? = null) {
+    protected open fun startDatabase() {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
         database.startHikariPool(props, configuration.database, schemaService.internalSchemas(), metricRegistry)
@@ -786,7 +789,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
-        return PersistentKeyManagementService(identityService, database)
+        return PersistentKeyManagementService(metricRegistry, identityService, database)
     }
 
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig, myNotaryIdentity: PartyAndCertificate?): NotaryService {
@@ -896,7 +899,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun makeVaultService(keyManagementService: KeyManagementService,
                                         services: ServicesForResolution,
                                         database: CordaPersistence): VaultServiceInternal {
-        return NodeVaultService(platformClock, keyManagementService, services, database, schemaService)
+        return NodeVaultService(
+                platformClock,
+                keyManagementService,
+                services,
+                database,
+                schemaService
+        )
     }
 
     /** Load configured JVM agents */

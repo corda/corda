@@ -1,5 +1,6 @@
 package net.corda.node.utilities
 
+import com.codahale.metrics.MetricRegistry
 import com.github.benmanes.caffeine.cache.LoadingCache
 import com.github.benmanes.caffeine.cache.Weigher
 import net.corda.core.utilities.contextLogger
@@ -314,14 +315,18 @@ open class AppendOnlyPersistentMap<K, V, E, out EK>(
         fromPersistentEntity: (E) -> Pair<K, V>,
         toPersistentEntity: (key: K, value: V) -> E,
         persistentEntityClass: Class<E>,
-        cacheBound: Long = 1024
+        cacheBound: Long = DEFAULT_BOUND,
+        metricRegistry: MetricRegistry = MetricRegistry()
 ) : AppendOnlyPersistentMapBase<K, V, E, EK>(
         toPersistentEntityKey,
         fromPersistentEntity,
         toPersistentEntity,
         persistentEntityClass) {
-    //TODO determine cacheBound based on entity class later or with node config allowing tuning, or using some heuristic based on heap size
+    companion object {
+        var DEFAULT_BOUND: Long = 1024
+    }
     override val cache = NonInvalidatingCache(
+            metricRegistry = metricRegistry,
             name = name,
             bound = cacheBound,
             loadFunction = { key: K ->
@@ -355,6 +360,7 @@ open class AppendOnlyPersistentMap<K, V, E, out EK>(
 
 // Same as above, but with weighted values (e.g. memory footprint sensitive).
 class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
+        metricRegistry: MetricRegistry = MetricRegistry(),
         name: String,
         toPersistentEntityKey: (K) -> EK,
         fromPersistentEntity: (E) -> Pair<K, V>,
@@ -368,6 +374,7 @@ class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
         toPersistentEntity,
         persistentEntityClass) {
     override val cache = NonInvalidatingWeightBasedCache(
+            metricRegistry,
             name,
             maxWeight = maxWeight,
             weigher = Weigher { key, value -> weighingFunc(key, value) },

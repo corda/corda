@@ -119,7 +119,8 @@ class BFTNonValidatingNotaryService(
                             consumingTxHash = id.toString()
                     )
                 },
-                persistentEntityClass = CommittedState::class.java
+                persistentEntityClass = CommittedState::class.java,
+                metricRegistry = services.monitoringService.metrics
         )
     }
 

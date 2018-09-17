@@ -1,5 +1,6 @@
 package net.corda.node.services.transactions
 
+import com.codahale.metrics.MetricRegistry
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -11,7 +12,10 @@ import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.notary.*
+import net.corda.core.internal.notary.AsyncUniquenessProvider
+import net.corda.core.internal.notary.NotaryInternalException
+import net.corda.core.internal.notary.isConsumedByTheSameTx
+import net.corda.core.internal.notary.validateTimeWindow
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -22,7 +26,6 @@ import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.serialization.internal.CordaSerializationEncoding
 import java.time.Clock
 import java.time.Instant
 import java.util.*
@@ -33,7 +36,7 @@ import kotlin.concurrent.thread
 
 /** A RDBMS backed Uniqueness provider */
 @ThreadSafe
-class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersistence) : AsyncUniquenessProvider, SingletonSerializeAsToken() {
+class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersistence, metricRegistry: MetricRegistry = MetricRegistry()) : AsyncUniquenessProvider, SingletonSerializeAsToken() {
 
     @MappedSuperclass
     class BaseComittedState(
@@ -80,7 +83,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_states")
     class CommittedState(id: PersistentStateRef, consumingTxHash: String) : BaseComittedState(id, consumingTxHash)
 
-    private val commitLog = createMap()
+    private val commitLog = createMap(metricRegistry)
 
     private val requestQueue = LinkedBlockingQueue<CommitRequest>(requestQueueSize)
 
@@ -98,9 +101,9 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     companion object {
         private const val requestQueueSize = 100_000
         private val log = contextLogger()
-        fun createMap(): AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef> =
+        fun createMap(metricRegistry: MetricRegistry): AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef> =
                 AppendOnlyPersistentMap(
-                        "PersistentUniquenessProvider_transactions",
+                        name = "PersistentUniquenessProvider_transactions",
                         toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
                         fromPersistentEntity = {
                             //TODO null check will become obsolete after making DB/JPA columns not nullable
@@ -118,7 +121,8 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
                                     consumingTxHash = id.toString()
                             )
                         },
-                        persistentEntityClass = CommittedState::class.java
+                        persistentEntityClass = CommittedState::class.java,
+                        metricRegistry = metricRegistry
                 )
     }
 

@@ -1,5 +1,6 @@
 package net.corda.node.services.keys
 
+import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.*
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -25,7 +26,7 @@ import javax.persistence.Lob
  *
  * This class needs database transactions to be in-flight during method calls and init.
  */
-class PersistentKeyManagementService(val identityService: PersistentIdentityService,
+class PersistentKeyManagementService(metricRegistry: MetricRegistry, val identityService: PersistentIdentityService,
                                      private val database: CordaPersistence) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
@@ -46,20 +47,24 @@ class PersistentKeyManagementService(val identityService: PersistentIdentityServ
     }
 
     private companion object {
-        fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
+        fun createKeyMap(metricRegistry: MetricRegistry): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
             return AppendOnlyPersistentMap(
-                    "PersistentKeyManagementService_keys",
+                    name = "PersistentKeyManagementService_keys",
                     toPersistentEntityKey = { it.toStringShort() },
-                    fromPersistentEntity = { Pair(Crypto.decodePublicKey(it.publicKey), Crypto.decodePrivateKey(it.privateKey)) },
+                    fromPersistentEntity = {
+                        Pair(Crypto.decodePublicKey(it.publicKey),
+                                Crypto.decodePrivateKey(it.privateKey))
+                    },
                     toPersistentEntity = { key: PublicKey, value: PrivateKey ->
                         PersistentKey(key, value)
                     },
-                    persistentEntityClass = PersistentKey::class.java
+                    persistentEntityClass = PersistentKey::class.java,
+                    metricRegistry = metricRegistry
             )
         }
     }
 
-    private val keysMap = createKeyMap()
+    private val keysMap = createKeyMap(metricRegistry)
 
     override fun start(initialKeyPairs: Set<KeyPair>) {
         initialKeyPairs.forEach { keysMap.addWithDuplicatesAllowed(it.public, it.private) }
