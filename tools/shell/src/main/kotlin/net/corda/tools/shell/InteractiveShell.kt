@@ -469,18 +469,41 @@ object InteractiveShell {
                 println("...waiting for in-flight flows to be completed")
             }
             cordaRPCOps.terminate(true)
+
+            val latch = CountDownLatch(1)
             cordaRPCOps.pendingFlowsCount().updates.doOnError { error ->
                 log.error(error.message)
                 throw error
-            }.doOnNext { (first, second) -> display { println("...remaining: $first / $second") } }.doOnCompleted {
-                connection.forceClose()
-                display { println("...done, quitting the shell now.") }
-                onExit.invoke()
-            }.toBlocking().single()
-        } catch (e: InterruptedException) {
-            cordaRPCOps.setFlowsDrainingModeEnabled(false)
-            display { println("...cancelled clean shutdown.") }
-            Thread.currentThread().interrupt()
+            }.doAfterTerminate(latch::countDown).subscribe(
+                    // For each update.
+                    { (first, second) -> display { println("...remaining: $first / $second") } },
+                    // On error.
+                    { error ->
+                        if (!isShuttingDown) {
+                            display { println("RPC failed: ${error.rootCause}", Color.red) }
+                        }
+                    },
+                    // When completed.
+                    {
+                        connection.forceClose()
+                        // This will only show up in the standalone Shell, because the embedded one is killed as part of a node's shutdown.
+                        display { println("...done, quitting the shell now.") }
+                        onExit.invoke()
+                    })
+            while (!Thread.currentThread().isInterrupted) {
+                try {
+                    latch.await()
+                    break
+                } catch (e: InterruptedException) {
+                    try {
+                        cordaRPCOps.setFlowsDrainingModeEnabled(false)
+                        display { println("...cancelled clean shutdown.") }
+                    } finally {
+                        Thread.currentThread().interrupt()
+                        break
+                    }
+                }
+            }
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
             display {
                 println(e.message, Color.red)
