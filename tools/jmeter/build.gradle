@@ -134,6 +134,10 @@ jar {
     zip64 = true
 }
 
+capsule {
+    version capsule_version
+}
+
 // For building a runnable jar with no other dependencies for remote JMeter slave server, that has Corda code on classpath.
 // Run with: java -jar jmeter-corda-<version>.jar
 // No additional args required but will be passed if specified.

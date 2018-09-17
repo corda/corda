@@ -28,6 +28,10 @@ targetCompatibility = 1.6
 
 jar.enabled = false
 
+capsule {
+    version capsule_version
+}
+
 task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     applicationClass 'net.corda.webserver.WebServer'
     archiveName "corda-webserver-${corda_release_version}.jar"

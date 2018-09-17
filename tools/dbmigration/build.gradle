@@ -39,6 +39,6 @@ jar {
 }
 
 publish {
-    name 'tools-database-manager'
     disableDefaultJar = true
+    name 'tools-database-manager'
 }
