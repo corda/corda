@@ -1,8 +1,12 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.client.rpc.RPCException
-import net.corda.core.flows.*
+import net.corda.client.rpc.ConnectionFailureException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.CordaRPCOps
@@ -176,8 +180,7 @@ private fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
 
     val completable = AsyncSubject.create<Unit>()
     stateMachinesFeed().updates.subscribe({ _ -> }, { error ->
-        // TODO sollecitom create an RPCException sub-type specific for connection failures. Then, replace the check with an `is` check.
-        if (error is RPCException && error.message == "Connection failure detected.") {
+        if (error is ConnectionFailureException) {
             completable.onCompleted()
         } else {
             completable.onError(error)
