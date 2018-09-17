@@ -409,6 +409,14 @@ interface CordaRPCOps : RPCOps {
      * @param drainPendingFlows whether the node will wait for pending flows to be completed before exiting. While draining, new flows from RPC will be rejected.
      */
     fun terminate(drainPendingFlows: Boolean = false)
+
+    /**
+     * Returns whether the node is waiting for pending flows to complete before shutting down.
+     * Disabling draining mode cancels this state.
+     *
+     * @return whether the node will shutdown when the pending flows count reaches zero.
+     */
+    fun isWaitingForShutdown(): Boolean
 }
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),

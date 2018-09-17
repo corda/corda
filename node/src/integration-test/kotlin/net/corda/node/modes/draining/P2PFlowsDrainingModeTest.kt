@@ -118,7 +118,7 @@ class P2PFlowsDrainingModeTest {
             var successful = false
             val latch = CountDownLatch(1)
 
-            // This is useless, as `terminate(true)` sets draining mode anyway, but it's here to ensure that it removes the persistent value anyway.
+            // This would not be needed, as `terminate(true)` sets draining mode anyway, but it's here to ensure that it removes the persistent value anyway.
             nodeA.rpc.setFlowsDrainingModeEnabled(true)
             nodeA.rpc.waitForShutdown().doOnError(Throwable::printStackTrace).doOnError { successful = false }.doOnCompleted(nodeA::stop).doOnCompleted {
                 val nodeARestarted = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
