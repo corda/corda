@@ -12,7 +12,7 @@ import java.security.cert.*
 
 // TODO: Rename this to DigitalSignature.WithCert once we're happy for it to be public API. The methods will need documentation
 // and the correct exceptions will be need to be annotated
-/** A digital signature with attached certificate of the public key. */
+/** A digital signature with attached certificate of the public key and (optionally) sthe remaining chain of the certificates from the certificate path. */
 class DigitalSignatureWithCert(val by: X509Certificate, val remainingChain: List<X509Certificate>, bytes: ByteArray) : DigitalSignature(bytes) {
     @DeprecatedConstructorForDeserialization(1)
     constructor(by: X509Certificate, bytes: ByteArray) : this(by, emptyList(), bytes)
