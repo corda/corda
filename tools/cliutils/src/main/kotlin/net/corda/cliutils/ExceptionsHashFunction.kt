@@ -6,12 +6,19 @@ import org.apache.logging.log4j.message.Message
 import org.apache.logging.log4j.message.SimpleMessage
 import java.util.*
 
+private var logEventFactory: LogEventFactory? = null
+private const val lock = "logEventFactory_lock"
+
 fun registerErrorCodesLoggerForThrowables() {
 
-    val loggerContext = LoggerContext.getContext(false)
-    for (logger in loggerContext.configuration.loggers.values) {
-        val existingFactory = logger.logEventFactory
-        logger.logEventFactory = LogEventFactory { loggerName, marker, fqcn, level, message, properties, error -> existingFactory.createEvent(loggerName, marker, fqcn, level, message?.withErrorCodeFor(error), properties, error) }
+    synchronized(lock) {
+        if (logEventFactory == null) {
+            val loggerContext = LoggerContext.getContext(false)
+            for (logger in loggerContext.configuration.loggers.values) {
+                val existingFactory = logger.logEventFactory
+                logger.logEventFactory = LogEventFactory { loggerName, marker, fqcn, level, message, properties, error -> existingFactory.createEvent(loggerName, marker, fqcn, level, message?.withErrorCodeFor(error), properties, error) }
+            }
+        }
     }
 }
 

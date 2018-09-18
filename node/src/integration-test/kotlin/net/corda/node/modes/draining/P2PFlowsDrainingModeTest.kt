@@ -8,7 +8,6 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
@@ -28,7 +27,6 @@ import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import rx.Observable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -137,8 +135,7 @@ class P2PFlowsDrainingModeTest {
     @Test
     fun `disabling draining mode cancels draining shutdown`() {
 
-        // TODO sollecitom revert in process to false
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
+        driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
 
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()

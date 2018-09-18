@@ -1,6 +1,7 @@
 package net.corda.testing.node.internal
 
 import com.typesafe.config.ConfigValueFactory
+import net.corda.cliutils.registerErrorCodesLoggerForThrowables
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
@@ -51,6 +52,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     private val portAllocation = PortAllocation.Incremental(10000)
 
     init {
+        registerErrorCodesLoggerForThrowables()
         System.setProperty("consoleLogLevel", Level.DEBUG.name().toLowerCase())
     }
 

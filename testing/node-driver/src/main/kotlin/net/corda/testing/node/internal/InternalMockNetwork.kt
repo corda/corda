@@ -152,6 +152,10 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                                val defaultFactory: (MockNodeArgs, CordappLoader?) -> MockNode = { args, cordappLoader -> cordappLoader?.let { MockNode(args, it) } ?: MockNode(args) },
                                val cordappsForAllNodes: Set<TestCorDapp> = emptySet(),
                                val autoVisibleNodes: Boolean = true) : AutoCloseable {
+    private companion object {
+        registerErrorCodesLoggerForThrowables()
+    }
+
     init {
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
         // This SFTP support loads BouncyCastle, which we want to avoid.
