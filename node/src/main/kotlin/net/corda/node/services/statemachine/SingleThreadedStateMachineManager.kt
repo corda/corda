@@ -19,6 +19,10 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.CheckpointSerializationDefaults
+import net.corda.core.serialization.internal.checkpointDeserialize
+import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
@@ -123,7 +127,7 @@ class SingleThreadedStateMachineManager(
     override fun start(tokenizableServices: List<Any>) {
         checkQuasarJavaAgentPresence()
         val checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
-                CheckpointSerializeAsTokenContextImpl(tokenizableServices, SerializationDefaults.CHECKPOINT_SERIALIZATION_FACTORY, CheckpointSerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
+                CheckpointSerializeAsTokenContextImpl(tokenizableServices, CheckpointSerializationDefaults.CHECKPOINT_SERIALIZATION_FACTORY, CheckpointSerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
         )
         this.checkpointSerializationContext = checkpointSerializationContext
         this.actionExecutor = makeActionExecutor(checkpointSerializationContext)

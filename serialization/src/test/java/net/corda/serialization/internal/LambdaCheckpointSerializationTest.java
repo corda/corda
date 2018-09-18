@@ -1,6 +1,8 @@
 package net.corda.serialization.internal;
 
 import net.corda.core.serialization.*;
+import net.corda.core.serialization.internal.CheckpointSerializationContext;
+import net.corda.core.serialization.internal.CheckpointSerializationFactory;
 import net.corda.node.serialization.kryo.CordaClosureSerializer;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import org.junit.Before;

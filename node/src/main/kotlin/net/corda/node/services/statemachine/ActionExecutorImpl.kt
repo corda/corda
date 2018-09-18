@@ -5,6 +5,8 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.*
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.CheckpointStorage

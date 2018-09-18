@@ -6,8 +6,6 @@ import net.corda.core.internal.InheritableThreadLocalToggleField
 import net.corda.core.internal.SimpleToggleField
 import net.corda.core.internal.ThreadLocalToggleField
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.serialization.CheckpointSerializationContext
-import net.corda.core.serialization.CheckpointSerializationFactory
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 

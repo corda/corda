@@ -21,6 +21,9 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.notary.isConsumedByTheSameTx
 import net.corda.core.internal.notary.validateTimeWindow
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.CheckpointSerializationDefaults
+import net.corda.core.serialization.internal.CheckpointSerializationFactory
+import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug

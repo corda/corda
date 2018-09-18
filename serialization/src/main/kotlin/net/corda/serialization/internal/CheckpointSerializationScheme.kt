@@ -3,8 +3,7 @@ package net.corda.serialization.internal
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.*
-import net.corda.core.utilities.ByteSequence
-import java.io.NotSerializableException
+import net.corda.core.serialization.internal.CheckpointSerializationContext
 
 @KeepForDJVM
 data class CheckpointSerializationContextImpl @JvmOverloads constructor(

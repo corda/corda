@@ -1,14 +1,14 @@
 package net.corda.core.flows;
 
-import net.corda.core.serialization.CheckpointSerializationDefaults;
-import net.corda.core.serialization.CheckpointSerializationFactory;
+import net.corda.core.serialization.internal.CheckpointSerializationDefaults;
+import net.corda.core.serialization.internal.CheckpointSerializationFactory;
 import net.corda.core.serialization.SerializationDefaults;
 import net.corda.core.serialization.SerializationFactory;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import org.junit.Rule;
 import org.junit.Test;
 
-import static net.corda.core.serialization.CheckpointSerializationAPIKt.checkpointSerialize;
+import static net.corda.core.serialization.internal.CheckpointSerializationAPIKt.checkpointSerialize;
 import static net.corda.core.serialization.SerializationAPIKt.serialize;
 import static org.junit.Assert.assertNull;
 
@@ -33,7 +33,7 @@ public class SerializationApiInJavaTest {
         SerializationFactory factory = defaults.getSERIALIZATION_FACTORY();
 
         CheckpointSerializationDefaults checkpointDefaults = CheckpointSerializationDefaults.INSTANCE;
-        CheckpointSerializationFactory checkpointSerializationFactory = defaults.getCHECKPOINT_SERIALIZATION_FACTORY();
+        CheckpointSerializationFactory checkpointSerializationFactory = checkpointDefaults.getCHECKPOINT_SERIALIZATION_FACTORY();
         serialize("hello", factory, defaults.getP2P_CONTEXT());
         serialize("hello", factory, defaults.getRPC_SERVER_CONTEXT());
         serialize("hello", factory, defaults.getRPC_CLIENT_CONTEXT());

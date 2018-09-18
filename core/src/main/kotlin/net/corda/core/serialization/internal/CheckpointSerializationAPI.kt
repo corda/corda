@@ -1,12 +1,20 @@
-package net.corda.core.serialization
+package net.corda.core.serialization.internal
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash
-import net.corda.core.serialization.internal.effectiveSerializationEnv
+import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.sequence
 import java.io.NotSerializableException
+
+
+object CheckpointSerializationDefaults {
+    @DeleteForDJVM
+    val CHECKPOINT_CONTEXT get() = effectiveSerializationEnv.checkpointContext
+    val CHECKPOINT_SERIALIZATION_FACTORY get() = effectiveSerializationEnv.checkpointSerializationFactory
+}
 
 /**
  * A class for serializing and deserializing objects at checkpoints, using Kryo serialization.

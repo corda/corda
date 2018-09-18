@@ -11,13 +11,11 @@ import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.serialization.CheckpointSerializationContext
+import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationContext
 import net.corda.node.serialization.kryo.CordaClassResolver
 import net.corda.node.serialization.kryo.CordaKryo
-import net.corda.node.serialization.kryo.kryoMagic
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Rule

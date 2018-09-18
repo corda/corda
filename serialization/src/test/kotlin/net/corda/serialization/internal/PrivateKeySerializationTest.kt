@@ -1,10 +1,10 @@
 package net.corda.serialization.internal
 
 import net.corda.core.crypto.Crypto
-import net.corda.core.serialization.CheckpointSerializationDefaults
 import net.corda.core.serialization.SerializationContext.UseCase.*
 import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.checkpointSerialize
+import net.corda.core.serialization.internal.CheckpointSerializationDefaults
+import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.serialization.serialize
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThatThrownBy

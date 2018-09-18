@@ -4,6 +4,10 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.io.Output
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.CheckpointSerializationFactory
+import net.corda.core.serialization.internal.checkpointDeserialize
+import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.serialization.kryo.CordaClassResolver
 import net.corda.node.serialization.kryo.CordaKryo

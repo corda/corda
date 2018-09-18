@@ -3,6 +3,8 @@ package net.corda.node.services.statemachine.interceptors
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.statemachine.ActionExecutor
 import net.corda.node.services.statemachine.Event

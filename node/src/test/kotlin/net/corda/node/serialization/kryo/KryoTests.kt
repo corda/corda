@@ -12,6 +12,10 @@ import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.*
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.CheckpointSerializationFactory
+import net.corda.core.serialization.internal.checkpointDeserialize
+import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.sequence
@@ -49,7 +53,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
 
     @Before
     fun setup() {
-        factory = CheckpointSerializationFactory(KryoServerSerializationScheme())
+        factory = CheckpointSerializationFactory(KryoSerializationScheme)
         context = CheckpointSerializationContextImpl(
                 javaClass.classLoader,
                 AllWhitelist,
@@ -274,7 +278,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
             }
         }
         Tmp()
-        val factory = CheckpointSerializationFactory(KryoServerSerializationScheme())
+        val factory = CheckpointSerializationFactory(KryoSerializationScheme)
         val context = CheckpointSerializationContextImpl(
                 javaClass.classLoader,
                 AllWhitelist,

@@ -3,10 +3,9 @@ package net.corda.node.services.persistence
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.serialization.CheckpointSerializationDefaults
-import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.checkpointSerialize
+import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.node.internal.CheckpointIncompatibleException
 import net.corda.node.internal.CheckpointVerifier
 import net.corda.node.internal.configureDatabase

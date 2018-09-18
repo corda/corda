@@ -12,14 +12,12 @@ import java.util.*
 
 object PrivateKeySerializer : CustomSerializer.Implements<PrivateKey>(PrivateKey::class.java) {
 
-    private val allowedUseCases = EnumSet.of(Storage)
-
     override val schemaForDocumentation = Schema(listOf(RestrictedType(type.toString(), "", listOf(type.toString()), SerializerFactory.primitiveTypeName(ByteArray::class.java)!!, descriptor, emptyList())))
 
     override fun writeDescribedObject(obj: PrivateKey, data: Data, type: Type, output: SerializationOutput,
                                       context: SerializationContext
     ) {
-        checkUseCase(allowedUseCases)
+        checkUseCase(Storage)
         output.writeObject(obj.encoded, data, clazz, context)
     }
 

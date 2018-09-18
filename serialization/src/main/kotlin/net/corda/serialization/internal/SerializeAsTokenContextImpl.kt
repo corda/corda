@@ -4,6 +4,8 @@ package net.corda.serialization.internal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.CheckpointSerializationFactory
 
 val serializationContextKey = SerializeAsTokenContext::class.java
 

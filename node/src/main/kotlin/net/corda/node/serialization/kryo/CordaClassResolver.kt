@@ -8,9 +8,8 @@ import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.internal.writer
-import net.corda.core.serialization.CheckpointSerializationContext
+import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.AttachmentsClassLoader
 import net.corda.serialization.internal.MutableClassWhitelist

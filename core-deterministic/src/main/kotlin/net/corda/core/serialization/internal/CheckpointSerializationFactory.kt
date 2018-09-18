@@ -1,7 +1,7 @@
-package net.corda.core.serialization
+package net.corda.core.serialization.internal
 
 import net.corda.core.KeepForDJVM
-import net.corda.core.serialization.internal.effectiveSerializationEnv
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
 import java.io.NotSerializableException
 

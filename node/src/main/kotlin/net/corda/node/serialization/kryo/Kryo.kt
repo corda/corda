@@ -18,6 +18,7 @@ import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.serialization.internal.checkUseCase
 import net.corda.serialization.internal.serializationContextKey
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -273,16 +274,11 @@ object SignedTransactionSerializer : Serializer<SignedTransaction>() {
     }
 }
 
-// Retained because it's part of a public API.
-sealed class UseCaseSerializer<T>(private val allowedUseCases: EnumSet<SerializationContext.UseCase>) : Serializer<T>() {
-    protected fun checkUseCase() {
-        // No longer checked.
-    }
-}
-
 @ThreadSafe
-object PrivateKeySerializer : UseCaseSerializer<PrivateKey>(EnumSet.noneOf(SerializationContext.UseCase::class.java)) {
+object PrivateKeySerializer : Serializer<PrivateKey>() {
     override fun write(kryo: Kryo, output: Output, obj: PrivateKey) {
+        // Don't allow private keys to be sent over RPC or P2P
+        checkUseCase(SerializationContext.UseCase.Storage)
         output.writeBytesWithLength(obj.encoded)
     }
 
