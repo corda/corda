@@ -71,7 +71,7 @@ open class MockServices private constructor(
 
     companion object {
 
-        private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN.copy(PLATFORM_VERSION)): CordappLoader {
+        private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): CordappLoader {
 
             val cordappPaths = TestCordappDirectories.forPackages(packages)
             return JarScanningCordappLoader.fromDirectories(cordappPaths, versionInfo)

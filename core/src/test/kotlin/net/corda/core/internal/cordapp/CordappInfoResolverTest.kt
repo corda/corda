@@ -6,8 +6,17 @@ import kotlin.test.assertEquals
 class CordappInfoResolverTest {
 
     @Test()
-    fun `The target version of the calling cordapp can be detected`() {
-        val expectedTargetVersion = 5000
+    fun `The correct cordapp resolver is used after calling withCordappResolution`() {
+        val defaultTargetVersion = 111
+        val default = object : CordappInfoResolver() {
+            override fun invoke(): CordappImpl.Info? {
+                return CordappImpl.Info("default", "default", "1", 2, defaultTargetVersion)
+            }
+        }
+        CordappInfoResolver.init(default)
+        assertEquals(returnCallingTargetVersion(), defaultTargetVersion)
+
+        val expectedTargetVersion = 555
         CordappInfoResolver.withCordappInfoResolution(object : CordappInfoResolver() {
             override fun invoke(): CordappImpl.Info? {
                 return CordappImpl.Info("foo", "bar", "1", 2, expectedTargetVersion)
@@ -16,6 +25,7 @@ class CordappInfoResolverTest {
             val actualTargetVersion = returnCallingTargetVersion()
             assertEquals(expectedTargetVersion, actualTargetVersion)
         }
+        assertEquals(returnCallingTargetVersion(), defaultTargetVersion)
     }
 
     private fun returnCallingTargetVersion(): Int {

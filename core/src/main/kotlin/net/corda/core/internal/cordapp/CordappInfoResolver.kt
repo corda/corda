@@ -2,18 +2,15 @@ package net.corda.core.internal.cordapp
 
 abstract class CordappInfoResolver : () -> CordappImpl.Info? {
     companion object {
-        private var defaultCordappInfoResolver: CordappInfoResolver = object : CordappInfoResolver() {
-            override fun invoke(): CordappImpl.Info? {
-                return null
-            }
+        private var cordappInfoResolver: CordappInfoResolver = object : CordappInfoResolver() {
+            override fun invoke(): CordappImpl.Info? = null
         }
-        private var cordappInfoResolver: CordappInfoResolver = defaultCordappInfoResolver
         private var initialized = false
 
         @Synchronized
         fun init(resolver: CordappInfoResolver) {
             if (!initialized) {
-                defaultCordappInfoResolver = resolver
+                cordappInfoResolver = resolver
                 initialized = true
             }
         }
@@ -22,9 +19,10 @@ abstract class CordappInfoResolver : () -> CordappImpl.Info? {
 
         @Synchronized
         fun withCordappInfoResolution(tempResolver: () -> CordappImpl.Info?, block: () -> Unit) {
+            val resolver = cordappInfoResolver
             cordappInfoResolver = tempResolver as CordappInfoResolver
             block()
-            cordappInfoResolver = defaultCordappInfoResolver
+            cordappInfoResolver = resolver
         }
     }
 }

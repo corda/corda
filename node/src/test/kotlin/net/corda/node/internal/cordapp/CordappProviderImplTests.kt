@@ -77,7 +77,7 @@ class CordappProviderImplTests {
     fun `test cordapp configuration`() {
         val configProvider = MockCordappConfigProvider()
         configProvider.cordappConfigs[isolatedCordappName] = validConfig
-        val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR), VersionInfo.UNKNOWN.copy(PLATFORM_VERSION))
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR), VersionInfo.UNKNOWN)
         val provider = CordappProviderImpl(loader, configProvider, attachmentStore).apply { start(whitelistedContractImplementations) }
 
         val expected = provider.getAppContext(provider.cordapps.first()).config
@@ -86,7 +86,7 @@ class CordappProviderImplTests {
     }
 
     private fun newCordappProvider(vararg urls: URL): CordappProviderImpl {
-        val loader = JarScanningCordappLoader.fromJarUrls(urls.toList(), VersionInfo.UNKNOWN.copy(PLATFORM_VERSION))
+        val loader = JarScanningCordappLoader.fromJarUrls(urls.toList(), VersionInfo.UNKNOWN)
         return CordappProviderImpl(loader, stubConfigProvider, attachmentStore).apply { start(whitelistedContractImplementations) }
     }
 }
