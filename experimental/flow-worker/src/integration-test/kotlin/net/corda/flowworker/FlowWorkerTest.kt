@@ -53,6 +53,7 @@ class FlowWorkerTest {
 
     private val portAllocation = PortAllocation.Incremental(10000)
 
+    // TODO: Convert to Signed Network Parameters and pass into FlowWorkerServiceHub constructor.
     private val networkParameters = NetworkParameters(
             minimumPlatformVersion = 1,
             notaries = listOf(),
@@ -227,7 +228,7 @@ class FlowWorkerTest {
     }
 
     private fun createFlowWorker(config: NodeConfiguration, myInfo: NodeInfo, networkParameters: NetworkParameters, ourKeyPair: KeyPair, trustRoot: X509Certificate, nodeCa: X509Certificate): Pair<FlowWorker, FlowWorkerServiceHub> {
-        val flowWorkerServiceHub = FlowWorkerServiceHub(config, myInfo, networkParameters, ourKeyPair, trustRoot, nodeCa)
+        val flowWorkerServiceHub = FlowWorkerServiceHub(config, myInfo, ourKeyPair, trustRoot, nodeCa, TODO())
         val flowWorker = FlowWorker(UUID.randomUUID().toString(), flowWorkerServiceHub)
         flowWorker.start()
         return Pair(flowWorker, flowWorkerServiceHub)

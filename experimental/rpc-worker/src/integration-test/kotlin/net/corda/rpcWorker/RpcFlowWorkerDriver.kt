@@ -16,7 +16,6 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.div
-import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
@@ -89,7 +88,7 @@ data class RpcFlowWorkerDriverDSL(private val driverDSL: DriverDSLImpl) : Intern
             val rpcWorkerBroker = createRpcWorkerBroker(rpcWorkerConfig, signedNetworkParameters.networkParameters.maxMessageSize)
 
             flowWorkerConfigs.map {
-                val (flowWorker, _) = createFlowWorker(it, myInfo, signedNetworkParameters.networkParameters, ourKeyPair, trustRoot, nodeCa)
+                val (flowWorker, _) = createFlowWorker(it, myInfo, ourKeyPair, trustRoot, nodeCa, signedNetworkParameters)
                 shutdownManager.registerShutdown { flowWorker.stop() }
             }
 
@@ -187,8 +186,8 @@ private fun createFlowWorkerBroker(config: NodeConfiguration, maxMessageSize: In
     return broker
 }
 
-private fun createFlowWorker(config: NodeConfiguration, myInfo: NodeInfo, networkParameters: NetworkParameters, ourKeyPair: KeyPair, trustRoot: X509Certificate, nodeCa: X509Certificate): Pair<FlowWorker, FlowWorkerServiceHub> {
-    val flowWorkerServiceHub = FlowWorkerServiceHub(config, myInfo, networkParameters, ourKeyPair, trustRoot, nodeCa)
+private fun createFlowWorker(config: NodeConfiguration, myInfo: NodeInfo, ourKeyPair: KeyPair, trustRoot: X509Certificate, nodeCa: X509Certificate, signedNetworkParameters: NetworkParametersReader.NetworkParametersAndSigned): Pair<FlowWorker, FlowWorkerServiceHub> {
+    val flowWorkerServiceHub = FlowWorkerServiceHub(config, myInfo, ourKeyPair, trustRoot, nodeCa, signedNetworkParameters)
     val flowWorker = FlowWorker(UUID.randomUUID().toString(), flowWorkerServiceHub)
     flowWorker.start()
     return Pair(flowWorker, flowWorkerServiceHub)
