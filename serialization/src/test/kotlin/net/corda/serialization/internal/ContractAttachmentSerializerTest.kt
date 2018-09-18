@@ -22,9 +22,6 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class ContractAttachmentSerializerTest {
-    @Rule
-    @JvmField
-    val testSerialization = SerializationEnvironmentRule()
 
     @Rule
     @JvmField

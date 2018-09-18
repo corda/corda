@@ -25,7 +25,7 @@ import java.util.concurrent.Executors
  *
  * @param inheritable whether new threads inherit the environment, use sparingly.
  */
-class SerializationEnvironmentRule(private val inheritable: Boolean = false) : TestRule {
+open class SerializationEnvironmentRule(private val inheritable: Boolean = false) : TestRule {
     companion object {
         init {
             // Can't turn it off, and it creates threads that do serialization, so hack it:
@@ -44,7 +44,7 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
         }
     }
 
-    internal lateinit var env: SerializationEnvironment
+    protected lateinit var env: SerializationEnvironment
     val serializationFactory get() = env.serializationFactory
 
     override fun apply(base: Statement, description: Description): Statement {

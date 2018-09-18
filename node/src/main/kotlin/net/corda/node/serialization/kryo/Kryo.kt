@@ -277,8 +277,6 @@ object SignedTransactionSerializer : Serializer<SignedTransaction>() {
 @ThreadSafe
 object PrivateKeySerializer : Serializer<PrivateKey>() {
     override fun write(kryo: Kryo, output: Output, obj: PrivateKey) {
-        // Don't allow private keys to be sent over RPC or P2P
-        checkUseCase(SerializationContext.UseCase.Storage)
         output.writeBytesWithLength(obj.encoded)
     }
 
