@@ -7,14 +7,14 @@ class CordappInfoResolverTest {
 
     @Test()
     fun `The correct cordapp resolver is used after calling withCordappResolution`() {
-        val defaultTargetVersion = 111
+        val defaultTargetVersion = CordappInfoResolver.getCorDappInfo()?.targetPlatformVersion ?: 111
         val default = object : CordappInfoResolver() {
             override fun invoke(): CordappImpl.Info? {
                 return CordappImpl.Info("default", "default", "1", 2, defaultTargetVersion)
             }
         }
         CordappInfoResolver.init(default)
-        assertEquals(returnCallingTargetVersion(), defaultTargetVersion)
+        assertEquals(defaultTargetVersion, returnCallingTargetVersion())
 
         val expectedTargetVersion = 555
         CordappInfoResolver.withCordappInfoResolution(object : CordappInfoResolver() {
@@ -25,7 +25,7 @@ class CordappInfoResolverTest {
             val actualTargetVersion = returnCallingTargetVersion()
             assertEquals(expectedTargetVersion, actualTargetVersion)
         }
-        assertEquals(returnCallingTargetVersion(), defaultTargetVersion)
+        assertEquals(defaultTargetVersion, returnCallingTargetVersion())
     }
 
     private fun returnCallingTargetVersion(): Int {
