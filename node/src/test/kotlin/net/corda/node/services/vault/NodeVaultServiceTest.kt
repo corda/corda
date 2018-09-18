@@ -48,7 +48,7 @@ import java.math.BigDecimal
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
-import javax.persistence.*
+import javax.persistence.PersistenceException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -759,13 +759,13 @@ class NodeVaultServiceTest {
 
         // Test two.
         // RelevancyStatus set to NOT_RELEVANT.
-        val criteriaTwo = VaultQueryCriteria(isRelevant = Vault.RelevancyStatus.NOT_RELEVANT)
+        val criteriaTwo = VaultQueryCriteria(relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT)
         val resultTwo = vaultService.queryBy<DummyState>(criteriaTwo).states.getNumbers()
         assertEquals(setOf(4, 5), resultTwo)
 
         // Test three.
         // RelevancyStatus set to ALL.
-        val criteriaThree = VaultQueryCriteria(isRelevant = Vault.RelevancyStatus.RELEVANT)
+        val criteriaThree = VaultQueryCriteria(relevancyStatus = Vault.RelevancyStatus.RELEVANT)
         val resultThree = vaultService.queryBy<DummyState>(criteriaThree).states.getNumbers()
         assertEquals(setOf(1, 3, 6), resultThree)
 

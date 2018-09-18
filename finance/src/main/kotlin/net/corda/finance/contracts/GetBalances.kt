@@ -22,7 +22,7 @@ private fun generateCashSumCriteria(currency: Currency): QueryCriteria {
 
     val ccyIndex = builder { CashSchemaV1.PersistentCashState::currency.equal(currency.currencyCode) }
     // This query should only return cash states the calling node is a participant of (meaning they can be modified/spent).
-    val ccyCriteria = QueryCriteria.VaultCustomQueryCriteria(ccyIndex, isRelevant = Vault.RelevancyStatus.RELEVANT)
+    val ccyCriteria = QueryCriteria.VaultCustomQueryCriteria(ccyIndex, relevancyStatus = Vault.RelevancyStatus.RELEVANT)
     return sumCriteria.and(ccyCriteria)
 }
 
@@ -32,7 +32,7 @@ private fun generateCashSumsCriteria(): QueryCriteria {
                 orderBy = Sort.Direction.DESC)
     }
     // This query should only return cash states the calling node is a participant of (meaning they can be modified/spent).
-    return QueryCriteria.VaultCustomQueryCriteria(sum, isRelevant = Vault.RelevancyStatus.RELEVANT)
+    return QueryCriteria.VaultCustomQueryCriteria(sum, relevancyStatus = Vault.RelevancyStatus.RELEVANT)
 }
 
 private fun rowsToAmount(currency: Currency, rows: Vault.Page<FungibleAsset<*>>): Amount<Currency> {

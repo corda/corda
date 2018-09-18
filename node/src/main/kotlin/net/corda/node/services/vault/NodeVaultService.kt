@@ -113,8 +113,9 @@ class NodeVaultService(
                 // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
                 // node. The behaviour is as follows:
                 //
-                // 1) All vault updates marked as RELEVANT will, of, course all have isRelevant = true.
-                // 2) For ALL_VISIBLE updates, those which are not relevant according to the relevancy rules will have isRelevant = false.
+                // 1) All vault updates marked as RELEVANT will, of, course all have relevancyStatus = true.
+                // 2) For ALL_VISIBLE updates, those which are not relevant according to the relevancy rules will have
+                // relevancyStatus = false.
                 //
                 // This is useful when it comes to querying for fungible states, when we do not want non-relevant states
                 // included in the result.
@@ -134,7 +135,7 @@ class NodeVaultService(
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
                         recordedTime = clock.instant(),
-                        isRelevant = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT
+                        relevancyStatus = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT
                 )
                 stateToAdd.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(stateToAdd)
@@ -402,7 +403,7 @@ class NodeVaultService(
         val enrichedCriteria = QueryCriteria.VaultQueryCriteria(
                 contractStateTypes = setOf(contractStateType),
                 softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)),
-                isRelevant = Vault.RelevancyStatus.RELEVANT
+                relevancyStatus = Vault.RelevancyStatus.RELEVANT
         )
         val results = queryBy(contractStateType, enrichedCriteria.and(eligibleStatesQuery), sorter)
 
@@ -510,7 +511,7 @@ class NodeVaultService(
                                     vaultState.notary,
                                     vaultState.lockId,
                                     vaultState.lockUpdateTime,
-                                    vaultState.isRelevant))
+                                    vaultState.relevancyStatus))
                         } else {
                             // TODO: improve typing of returned other results
                             log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }

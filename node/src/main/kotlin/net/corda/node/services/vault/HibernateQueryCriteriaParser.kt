@@ -533,16 +533,16 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         }
 
         // state relevance.
-        if (criteria.isRelevant != Vault.RelevancyStatus.ALL) {
-            val predicateID = Pair(VaultSchemaV1.VaultStates::isRelevant.name, EQUAL)
+        if (criteria.relevancyStatus != Vault.RelevancyStatus.ALL) {
+            val predicateID = Pair(VaultSchemaV1.VaultStates::relevancyStatus.name, EQUAL)
             if (commonPredicates.containsKey(predicateID)) {
                 val existingStatus = ((commonPredicates[predicateID] as ComparisonPredicate).rightHandOperand as LiteralExpression).literal
-                if (existingStatus != criteria.isRelevant) {
-                    log.warn("Overriding previous attribute [${VaultSchemaV1.VaultStates::isRelevant.name}] value $existingStatus with ${criteria.status}")
-                    commonPredicates.replace(predicateID, criteriaBuilder.equal(vaultStates.get<Vault.RelevancyStatus>(VaultSchemaV1.VaultStates::isRelevant.name), criteria.isRelevant))
+                if (existingStatus != criteria.relevancyStatus) {
+                    log.warn("Overriding previous attribute [${VaultSchemaV1.VaultStates::relevancyStatus.name}] value $existingStatus with ${criteria.status}")
+                    commonPredicates.replace(predicateID, criteriaBuilder.equal(vaultStates.get<Vault.RelevancyStatus>(VaultSchemaV1.VaultStates::relevancyStatus.name), criteria.relevancyStatus))
                 }
             } else {
-                commonPredicates[predicateID] = criteriaBuilder.equal(vaultStates.get<Vault.RelevancyStatus>(VaultSchemaV1.VaultStates::isRelevant.name), criteria.isRelevant)
+                commonPredicates[predicateID] = criteriaBuilder.equal(vaultStates.get<Vault.RelevancyStatus>(VaultSchemaV1.VaultStates::relevancyStatus.name), criteria.relevancyStatus)
             }
         }
 
