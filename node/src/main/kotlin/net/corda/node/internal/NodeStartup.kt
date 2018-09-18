@@ -7,24 +7,14 @@ import io.netty.channel.unix.Errors
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
-import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.Crypto
-import net.corda.core.internal.Emoji
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.cordapp.CordappImpl
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
-import net.corda.core.internal.exists
-import net.corda.core.internal.location
-import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
-import net.corda.node.NodeCmdLineOptions
-import net.corda.node.NodeRegistrationOption
-import net.corda.node.SerialFilter
-import net.corda.node.VersionInfo
-import net.corda.node.defaultSerialFilter
+import net.corda.node.*
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
@@ -51,7 +41,6 @@ import java.io.Console
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
-import java.lang.IllegalStateException
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Path
@@ -62,7 +51,7 @@ import java.util.*
 import kotlin.system.exitProcess
 
 /** This class is responsible for starting a Node from command line arguments. */
-open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
+open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
     companion object {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         const val LOGS_DIRECTORY_NAME = "logs"
@@ -71,7 +60,7 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
     }
 
     @Mixin
-    var cmdLineOptions = NodeCmdLineOptions()
+    val cmdLineOptions = NodeCmdLineOptions()
 
     /**
      * @return exit code based on the success of the node startup. This value is intended to be the exit code of the process.
@@ -221,15 +210,14 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
     }
 
     private fun checkRegistrationMode(): Boolean {
-        val baseDirectory = cmdLineOptions.baseDirectory.normalize().toAbsolutePath()
         // If the node was started with `--initial-registration`, create marker file.
         // We do this here to ensure the marker is created even if parsing the args with NodeArgsParser fails.
-        val marker = File((baseDirectory / INITIAL_REGISTRATION_MARKER).toUri())
+        val marker = cmdLineOptions.baseDirectory / INITIAL_REGISTRATION_MARKER
         if (!cmdLineOptions.isRegistration && !marker.exists()) {
             return false
         }
         try {
-            marker.createNewFile()
+            marker.createFile()
         } catch (e: Exception) {
             logger.warn("Could not create marker file for `--initial-registration`.", e)
         }
