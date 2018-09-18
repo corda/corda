@@ -19,10 +19,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 
 public final class ForbiddenLambdaSerializationTests {
-
-    @SuppressWarnings("deprecation")
+    
     private EnumSet<SerializationContext.UseCase> contexts = EnumSet.complementOf(
-            EnumSet.of(SerializationContext.UseCase.Checkpoint, SerializationContext.UseCase.Testing));
+            EnumSet.of(SerializationContext.UseCase.Testing));
 
     @Rule
     public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
