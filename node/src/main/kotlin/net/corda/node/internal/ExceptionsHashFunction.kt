@@ -40,7 +40,7 @@ private fun Throwable.defaultHashedFields(): Array<out Any?> {
 
 private fun StackTraceElement.defaultHashedFields(): Array<out Any?> {
 
-    return arrayOf(className, methodName, lineNumber)
+    return arrayOf(className, methodName)
 }
 
 // TODO sollecitom remove when done
