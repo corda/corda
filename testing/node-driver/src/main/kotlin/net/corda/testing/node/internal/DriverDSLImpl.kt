@@ -686,10 +686,9 @@ class DriverDSLImpl(
             // TODO sollecitom, remove and either use it in NodeStartup only, or in NodeStartup and DriverDSLImpl
             //        Configurator.setAllLevels("", Level.ERROR)
             val loggerContext = LoggerContext.getContext(false)
-            val config = loggerContext.configuration
-            for ((key, value) in config.loggers) {
-                val existingFactory = value.logEventFactory
-                value.logEventFactory = object : LogEventFactory {
+            for (config in loggerContext.configuration.loggers.values) {
+                val existingFactory = config.logEventFactory
+                config.logEventFactory = object : LogEventFactory {
                     override fun createEvent(loggerName: String?, marker: Marker?, fqcn: String?, level: Level?, data: Message?, properties: MutableList<Property>?, t: Throwable?): LogEvent {
 
                         return if (t != null) {
