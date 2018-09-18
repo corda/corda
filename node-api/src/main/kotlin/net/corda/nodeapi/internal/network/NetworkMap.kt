@@ -57,7 +57,7 @@ data class ParametersUpdate(
 /** Verify that a Network Map certificate path and its [CertRole] is correct. */
 fun <T : Any> SignedDataWithCert<T>.verifiedNetworkMapCert(rootCert: X509Certificate): T {
     require(CertRole.extract(sig.by) == CertRole.NETWORK_MAP) { "Incorrect cert role: ${CertRole.extract(sig.by)}" }
-    val path = if (this.sig.remainingChain.isEmpty()) {
+    val path = if (sig.parentCertsChain.isEmpty()) {
         listOf(sig.by, rootCert)
     } else {
         sig.fullCertChain
