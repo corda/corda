@@ -7,14 +7,24 @@ import io.netty.channel.unix.Errors
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
+import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.Crypto
-import net.corda.core.internal.*
+import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.cordapp.CordappImpl
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
+import net.corda.core.internal.exists
+import net.corda.core.internal.location
+import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
-import net.corda.node.*
+import net.corda.node.NodeCmdLineOptions
+import net.corda.node.NodeRegistrationOption
+import net.corda.node.SerialFilter
+import net.corda.node.VersionInfo
+import net.corda.node.defaultSerialFilter
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
@@ -41,6 +51,7 @@ import java.io.Console
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
+import java.lang.IllegalStateException
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Path
@@ -160,19 +171,6 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
 
     private fun Exception.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
 
-    private fun Exception.errorCode(): String {
-        val hash = staticLocationBasedHash()
-        return Integer.toOctalString(hash)
-    }
-
-    private fun Throwable.staticLocationBasedHash(visited: Set<Throwable> = setOf(this)): Int {
-        val cause = this.cause
-        return when {
-            cause != null && !visited.contains(cause) -> Objects.hash(this::class.java.name, stackTrace.customHashCode(), cause.staticLocationBasedHash(visited +  cause))
-            else -> Objects.hash(this::class.java.name, stackTrace.customHashCode())
-        }
-    }
-
     private val handleRegistrationError = { error: Exception ->
         when (error) {
             is NodeRegistrationException -> error.logAsExpected("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.")
@@ -196,19 +194,6 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
             is ConfigException.IO -> error.logAsExpected(configFileNotFoundMessage(configFile), ::println)
             else -> error.logAsUnexpected("Unexpected error whilst reading node configuration")
         }
-    }
-
-    private fun Array<StackTraceElement?>?.customHashCode(): Int {
-
-        if (this == null) {
-            return 0
-        }
-        return Arrays.hashCode(map { it?.customHashCode() ?: 0 }.toIntArray())
-    }
-
-    private fun StackTraceElement.customHashCode(): Int {
-
-        return Objects.hash(StackTraceElement::class.java.name, methodName, lineNumber)
     }
 
     private fun configFileNotFoundMessage(configFile: Path): String {
@@ -620,5 +605,4 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
         }
     }
 }
-
 
