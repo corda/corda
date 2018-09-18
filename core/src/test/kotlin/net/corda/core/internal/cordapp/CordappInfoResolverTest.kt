@@ -7,7 +7,7 @@ class CordappInfoResolverTest {
 
     @Test()
     fun `The correct cordapp resolver is used after calling withCordappResolution`() {
-        val defaultTargetVersion = CordappInfoResolver.getCorDappInfo()?.targetPlatformVersion ?: 111
+        val defaultTargetVersion = returnCallingTargetVersion()
         val default = object : CordappInfoResolver() {
             override fun invoke(): CordappImpl.Info? {
                 return CordappImpl.Info("default", "default", "1", 2, defaultTargetVersion)
