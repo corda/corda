@@ -6881,8 +6881,6 @@ public final class net.corda.testing.core.SerializationEnvironmentRule extends j
   @NotNull
   public org.junit.runners.model.Statement apply(org.junit.runners.model.Statement, org.junit.runner.Description)
   @NotNull
-  public final net.corda.core.serialization.SerializationContext getCheckpointContext()
-  @NotNull
   public final net.corda.core.serialization.SerializationFactory getSerializationFactory()
   public static final net.corda.testing.core.SerializationEnvironmentRule$Companion Companion
 ##
