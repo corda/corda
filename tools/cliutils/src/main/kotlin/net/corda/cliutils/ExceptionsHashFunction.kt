@@ -25,7 +25,6 @@ fun registerErrorCodesLoggerForThrowables() {
 
 private fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
 
-    // TODO sollecitom investigate whether you could use the MDC instead here (would be quite cleaner)
     return when {
         error != null && level.isInRange(Level.FATAL, Level.WARN) -> CompositeMessage("$formattedMessage [errorCode=${error.errorCode()}]", format, parameters, throwable)
         else -> this
