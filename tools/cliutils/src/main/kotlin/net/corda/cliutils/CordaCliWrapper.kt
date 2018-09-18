@@ -109,6 +109,10 @@ fun CordaCliWrapper.start(args: Array<String>) {
 abstract class CordaCliWrapper(val alias: String, val description: String) : Callable<Int> {
     companion object {
         private val logger by lazy { loggerFor<CordaCliWrapper>() }
+
+        init {
+            registerErrorCodesLoggerForThrowables()
+        }
     }
 
     // Raw args are provided for use in logging - this is a lateinit var rather than a constructor parameter as the class

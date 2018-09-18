@@ -4,11 +4,9 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
-import io.netty.util.internal.logging.Log4J2LoggerFactory
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
-import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
@@ -44,15 +42,6 @@ import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.tools.shell.InteractiveShell
-import org.apache.commons.logging.impl.SLF4JLogFactory
-import org.apache.logging.log4j.LogManager
-import org.apache.logging.log4j.core.Filter
-import org.apache.logging.log4j.core.LogEvent
-import org.apache.logging.log4j.core.LoggerContext
-import org.apache.logging.log4j.core.appender.rewrite.RewriteAppender
-import org.apache.logging.log4j.core.config.Configurator
-import org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilderFactory
-import org.apache.logging.slf4j.Log4jLoggerFactory
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
 import picocli.CommandLine.Mixin
@@ -61,7 +50,6 @@ import java.io.Console
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
-import java.lang.IllegalStateException
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Path
@@ -175,9 +163,9 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
 
     private val startNodeExpectedErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
 
-    private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print("$message [errorCode=${errorCode()}]")
+    private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print(message)
 
-    private fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" } ?: ""} [errorCode=${errorCode()}]", error)
+    private fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" } ?: ""}", error)
 
     private fun Exception.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
 
@@ -329,12 +317,12 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
         val console: Console? = System.console()
 
         when (console) {
-        // In this case, the JVM is not connected to the console so we need to exit.
+            // In this case, the JVM is not connected to the console so we need to exit.
             null -> {
                 println("Not connected to console. Exiting")
                 exitProcess(1)
             }
-        // Otherwise we can proceed normally.
+            // Otherwise we can proceed normally.
             else -> {
                 while (true) {
                     val keystorePassword1 = console.readPassword("Enter the RPC keystore password => ")
@@ -499,19 +487,8 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
             Node.renderBasicInfoToConsole = false
         }
         System.setProperty("log-path", (cmdLineOptions.baseDirectory / LOGS_DIRECTORY_NAME).toString())
-
         SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
         SLF4JBridgeHandler.install()
-
-        // TODO sollecitom here
-//        val ctx = LogManager.getContext(false) as LoggerContext
-//        val config = ctx.configuration
-//        config.appenders.values.forEach {
-//            val name = it.name
-//            val errorHandler = it.handler
-//            println()
-//        }
-//        ctx.addFilter()
     }
 
     private fun lookupMachineNameAndMaybeWarn(): String {
