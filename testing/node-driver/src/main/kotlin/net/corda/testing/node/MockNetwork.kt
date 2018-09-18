@@ -17,7 +17,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.internal.*
-import rx.Observable
 import java.math.BigInteger
 import java.nio.file.Path
 import java.util.concurrent.Future
@@ -156,7 +155,7 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
     fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = node.services.startFlow(logic, node.services.newContext()).getOrThrow().resultFuture
 
     /** Register a flow that is initiated by another flow .**/
-    fun <F : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<F>): Observable<F> = node.registerInitiatedFlow(initiatedFlowClass)
+    fun <F : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<F>) = node.registerInitiatedFlow(initiatedFlowClass)
 
     /** Stop the node. **/
     fun stop() = node.internals.stop()
@@ -206,11 +205,8 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
     fun <F : FlowLogic<*>> registerResponderFlow(initiatingFlowClass: Class<out FlowLogic<*>>,
                                                  flowFactory: ResponderFlowFactory<F>,
                                                  responderFlowClass: Class<F>): CordaFuture<F> =
-            node.registerFlowFactory(
-                    initiatingFlowClass,
-                    InitiatedFlowFactory.CorDapp(flowVersion = 0, appName = "", factory = flowFactory::invoke),
-                    responderFlowClass, true)
-                    .toFuture()
+
+            node.registerInitiatedFlow(initiatingFlowClass, responderFlowClass).toFuture()
 }
 
 /**
@@ -240,13 +236,12 @@ interface ResponderFlowFactory<F : FlowLogic<*>> {
  */
 inline fun <reified F : FlowLogic<*>> StartedMockNode.registerResponderFlow(
         initiatingFlowClass: Class<out FlowLogic<*>>,
-        noinline flowFactory: (FlowSession) -> F): Future<F> =
-        registerResponderFlow(
-                initiatingFlowClass,
-                object : ResponderFlowFactory<F> {
-                    override fun invoke(flowSession: FlowSession) = flowFactory(flowSession)
-                },
-                F::class.java)
+        noinline flowFactory: (FlowSession) -> F): Future<F> = registerResponderFlow(
+        initiatingFlowClass,
+        object : ResponderFlowFactory<F> {
+            override fun invoke(flowSession: FlowSession) = flowFactory(flowSession)
+        },
+        F::class.java)
 
 /**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
@@ -302,13 +297,13 @@ open class MockNetwork(
     constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(cordappPackages, defaultParameters = parameters)
 
     constructor(
-             cordappPackages: List<String>,
-             defaultParameters: MockNetworkParameters = MockNetworkParameters(),
-             networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
-             threadPerNode: Boolean = defaultParameters.threadPerNode,
-             servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
-             notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
-             networkParameters: NetworkParameters = defaultParameters.networkParameters
+            cordappPackages: List<String>,
+            defaultParameters: MockNetworkParameters = MockNetworkParameters(),
+            networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
+            threadPerNode: Boolean = defaultParameters.threadPerNode,
+            servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
+            notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
+            networkParameters: NetworkParameters = defaultParameters.networkParameters
     ) : this(emptyList(), defaultParameters, networkSendManuallyPumped, threadPerNode, servicePeerAllocationStrategy, notarySpecs, networkParameters, cordappsForAllNodes = cordappsForPackages(cordappPackages))
 
     private val internalMockNetwork: InternalMockNetwork = InternalMockNetwork(defaultParameters, networkSendManuallyPumped, threadPerNode, servicePeerAllocationStrategy, notarySpecs, networkParameters = networkParameters, cordappsForAllNodes = cordappsForAllNodes)

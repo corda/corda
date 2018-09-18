@@ -12,7 +12,6 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.StartedMockNode
-import org.assertj.core.api.Assertions.assertThatIllegalStateException
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -39,15 +38,15 @@ class FlowRegistrationTest {
     }
 
     @Test
-    fun `startup fails when two flows initiated by the same flow are registered`() {
+    fun `succeeds when a subclass of a flow initiated by the same flow is registered`() {
         // register the same flow twice to invoke the error without causing errors in other tests
-        responder.registerInitiatedFlow(Responder::class.java)
-        assertThatIllegalStateException().isThrownBy { responder.registerInitiatedFlow(Responder::class.java) }
+        responder.registerInitiatedFlow(Responder1::class.java)
+        responder.registerInitiatedFlow(Responder1Subclassed::class.java)
     }
 
     @Test
     fun `a single initiated flow can be registered without error`() {
-        responder.registerInitiatedFlow(Responder::class.java)
+        responder.registerInitiatedFlow(Responder1::class.java)
         val result = initiator.startFlow(Initiator(responder.info.singleIdentity()))
         mockNetwork.runNetwork()
         assertNotNull(result.get())
@@ -63,7 +62,38 @@ class Initiator(val party: Party) : FlowLogic<String>() {
 }
 
 @InitiatedBy(Initiator::class)
-private class Responder(val session: FlowSession) : FlowLogic<Unit>() {
+private open class Responder1(val session: FlowSession) : FlowLogic<Unit>() {
+    open fun getPayload(): String {
+        return "whats up"
+    }
+
+    @Suspendable
+    override fun call() {
+        session.receive<String>().unwrap { it }
+        session.send("What's up")
+    }
+}
+
+@InitiatedBy(Initiator::class)
+private open class Responder2(val session: FlowSession) : FlowLogic<Unit>() {
+    open fun getPayload(): String {
+        return "whats up"
+    }
+
+    @Suspendable
+    override fun call() {
+        session.receive<String>().unwrap { it }
+        session.send("What's up")
+    }
+}
+
+@InitiatedBy(Initiator::class)
+private class Responder1Subclassed(session: FlowSession) : Responder1(session) {
+
+    override fun getPayload(): String {
+        return "im subclassed! that's what's up!"
+    }
+
     @Suspendable
     override fun call() {
         session.receive<String>().unwrap { it }

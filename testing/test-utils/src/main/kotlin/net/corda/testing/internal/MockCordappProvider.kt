@@ -42,7 +42,8 @@ class MockCordappProvider(
     }
 
     override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? {
-        return cordappRegistry.find { it.first.contractClassNames.contains(contractClassName) }?.second ?: super.getContractAttachmentID(contractClassName)
+        return cordappRegistry.find { it.first.contractClassNames.contains(contractClassName) }?.second
+                ?: super.getContractAttachmentID(contractClassName)
     }
 
     private fun findOrImportAttachment(contractClassNames: List<ContractClassName>, data: ByteArray, attachments: MockAttachmentStorage): AttachmentId {

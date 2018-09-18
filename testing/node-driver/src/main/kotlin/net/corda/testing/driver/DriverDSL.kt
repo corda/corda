@@ -2,6 +2,7 @@ package net.corda.testing.driver
 
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
@@ -27,13 +28,14 @@ interface DriverDSL {
      * Returns the [NotaryHandle] for the single notary on the network. Throws if there are none or more than one.
      * @see notaryHandles
      */
-    val defaultNotaryHandle: NotaryHandle get() {
-        return when (notaryHandles.size) {
-            0 -> throw IllegalStateException("There are no notaries defined on the network")
-            1 -> notaryHandles[0]
-            else -> throw IllegalStateException("There is more than one notary defined on the network")
+    val defaultNotaryHandle: NotaryHandle
+        get() {
+            return when (notaryHandles.size) {
+                0 -> throw IllegalStateException("There are no notaries defined on the network")
+                1 -> notaryHandles[0]
+                else -> throw IllegalStateException("There is more than one notary defined on the network")
+            }
         }
-    }
 
     /**
      * Returns the identity of the single notary on the network. Throws if there are none or more than one.
@@ -47,11 +49,12 @@ interface DriverDSL {
      * @see defaultNotaryHandle
      * @see notaryHandles
      */
-    val defaultNotaryNode: CordaFuture<NodeHandle> get() {
-        return defaultNotaryHandle.nodeHandles.map {
-            it.singleOrNull() ?: throw IllegalStateException("Default notary is not a single node")
+    val defaultNotaryNode: CordaFuture<NodeHandle>
+        get() {
+            return defaultNotaryHandle.nodeHandles.map {
+                it.singleOrNull() ?: throw IllegalStateException("Default notary is not a single node")
+            }
         }
-    }
 
     /**
      * Start a node.
@@ -110,7 +113,8 @@ interface DriverDSL {
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
             maximumHeapSize: String = defaultParameters.maximumHeapSize,
             additionalCordapps: Collection<TestCordapp> = defaultParameters.additionalCordapps,
-            regenerateCordappsOnStart: Boolean = defaultParameters.regenerateCordappsOnStart
+            regenerateCordappsOnStart: Boolean = defaultParameters.regenerateCordappsOnStart,
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = defaultParameters.flowOverrides
     ): CordaFuture<NodeHandle>
 
     /**

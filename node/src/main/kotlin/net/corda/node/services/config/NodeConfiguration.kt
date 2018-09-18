@@ -11,12 +11,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
-import net.corda.nodeapi.internal.config.SslConfiguration
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
-import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
 import org.slf4j.Logger
@@ -73,7 +68,7 @@ interface NodeConfiguration {
     val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
     val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
     val crlCheckSoftFail: Boolean
-    val jmxReporterType : JmxReporterType? get() = defaultJmxReporterType
+    val jmxReporterType: JmxReporterType? get() = defaultJmxReporterType
 
     val baseDirectory: Path
     val certificatesDirectory: Path
@@ -81,6 +76,7 @@ interface NodeConfiguration {
     val p2pSslOptions: MutualSslConfiguration
 
     val cordappDirectories: List<Path>
+    val flowOverrides: FlowOverrideConfig?
 
     fun validate(): List<String>
 
@@ -101,6 +97,9 @@ interface NodeConfiguration {
         val defaultJmxReporterType = JmxReporterType.JOLOKIA
     }
 }
+
+data class FlowOverrideConfig(val overrides: List<FlowOverride> = listOf())
+data class FlowOverride(val initiator: String, val responder: String)
 
 /**
  * Currently registered JMX Reporters
@@ -164,7 +163,7 @@ data class BFTSMaRtConfiguration(
 data class NetworkServicesConfig(
         val doormanURL: URL,
         val networkMapURL: URL,
-        val inferred : Boolean = false
+        val inferred: Boolean = false
 )
 
 /**
@@ -230,7 +229,8 @@ data class NodeConfigurationImpl(
         override val flowMonitorPeriodMillis: Duration = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS,
         override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS,
         override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT),
-        override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA
+        override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA,
+        override val flowOverrides: FlowOverrideConfig?
 ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
@@ -353,7 +353,7 @@ data class NodeConfigurationImpl(
 
     override val effectiveH2Settings: NodeH2Settings?
         get() = when {
-            h2port != null -> NodeH2Settings(address = NetworkHostAndPort(host="localhost", port=h2port))
+            h2port != null -> NodeH2Settings(address = NetworkHostAndPort(host = "localhost", port = h2port))
             else -> h2Settings
         }
 
@@ -365,7 +365,7 @@ data class NodeConfigurationImpl(
             "Cannot specify both 'rpcUsers' and 'security' in configuration"
         }
         @Suppress("DEPRECATION")
-        if(certificateChainCheckPolicies.isNotEmpty()) {
+        if (certificateChainCheckPolicies.isNotEmpty()) {
             logger.warn("""You are configuring certificateChainCheckPolicies. This is a setting that is not used, and will be removed in a future version.
                 |Please contact the R3 team on the public slack to discuss your use case.
             """.trimMargin())
