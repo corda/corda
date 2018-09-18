@@ -115,7 +115,9 @@ class MessagingExecutor(
                             }
                         }
                         Job.Shutdown -> {
-                            session.commit()
+                            if(session.stillOpen()) {
+                                session.commit()
+                            }
                             break@eventLoop
                         }
                     }

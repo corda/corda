@@ -110,6 +110,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         var bridgeSession: ClientSession? = null
         var bridgeNotifyConsumer: ClientConsumer? = null
         var networkChangeSubscription: Subscription? = null
+        var sessionFactory: ClientSessionFactory? = null
 
         fun sendMessage(address: String, message: ClientMessage) = producer!!.send(address, message)
     }
@@ -133,7 +134,29 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private val handlers = ConcurrentHashMap<String, MessageHandler>()
 
     private val deduplicator = P2PMessageDeduplicator(database)
+    // Note: Public visibility for testing
     var messagingExecutor: MessagingExecutor? = null
+
+    private fun failoverCallback(event: FailoverEventType) {
+        when (event) {
+            FailoverEventType.FAILURE_DETECTED -> {
+                log.warn("Connection to the broker was lost. Starting ${config.enterpriseConfiguration.externalBrokerConnectionConfiguration.reconnectAttempts} reconnect attempts.")
+            }
+            FailoverEventType.FAILOVER_COMPLETED -> {
+                log.info("Connection to broker re-established.")
+            }
+            FailoverEventType.FAILOVER_FAILED -> state.locked {
+                if (running) {
+                    log.error("Could not reconnect to the broker after ${config.enterpriseConfiguration.externalBrokerConnectionConfiguration.reconnectAttempts} attempts. Node is shutting down.")
+                    Thread.sleep(config.enterpriseConfiguration.externalBrokerConnectionConfiguration.retryInterval.toMillis())
+                    Runtime.getRuntime().halt(1)
+                }
+            }
+            else -> {
+                log.warn("Cannot handle event $event.")
+            }
+        }
+    }
 
     /**
      * @param myIdentity The primary identity of the node, which defines the messaging address for externally received messages.
@@ -171,25 +194,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
                     initialConnectAttempts = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.initialConnectAttempts
                 }
             }
-            val sessionFactory = locator!!.createSessionFactory()
-            sessionFactory.addFailoverListener { event ->
-                when (event) {
-                    FailoverEventType.FAILURE_DETECTED -> {
-                        log.warn("Connection to the broker was lost. Starting ${config.enterpriseConfiguration.externalBrokerConnectionConfiguration.reconnectAttempts} reconnect attempts.")
-                    }
-                    FailoverEventType.FAILOVER_COMPLETED -> {
-                        log.info("Connection to broker re-established.")
-                    }
-                    FailoverEventType.FAILOVER_FAILED -> {
-                        log.error("Could not reconnect to the broker after ${config.enterpriseConfiguration.externalBrokerConnectionConfiguration.reconnectAttempts} attempts. Node is shutting down.")
-                        Thread.sleep(config.enterpriseConfiguration.externalBrokerConnectionConfiguration.retryInterval.toMillis())
-                        Runtime.getRuntime().halt(1)
-                    }
-                    else -> {
-                        log.warn("Cannot handle event $event.")
-                    }
-                }
-            }
+
+            sessionFactory = locator!!.createSessionFactory().addFailoverListener(::failoverCallback)
+
             // Login using the node username. The broker will authenticate us as its node (as opposed to another peer)
             // using our TLS certificate.
             // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
@@ -455,26 +462,37 @@ class P2PMessagingClient(val config: NodeConfiguration,
      * it returns immediately and shutdown is asynchronous.
      */
     fun stop() {
+        log.info("Stopping P2PMessagingClient for: $serverAddress")
         val running = state.locked {
             // We allow stop() to be called without a run() in between, but it must have at least been started.
             check(started)
             val prevRunning = running
             running = false
             networkChangeSubscription?.unsubscribe()
-            require(p2pConsumer != null, { "stop can't be called twice" })
-            require(producer != null, { "stop can't be called twice" })
+            require(p2pConsumer != null) { "stop can't be called twice" }
+            require(producer != null) { "stop can't be called twice" }
 
             close(p2pConsumer)
             p2pConsumer = null
 
             close(producer)
             producer = null
-            producerSession!!.commit()
+            producerSession?.let {
+                if (it.stillOpen()) {
+                    it.commit()
+                }
+            }
 
             close(bridgeNotifyConsumer)
             knownQueues.clear()
             eventsSubscription?.unsubscribe()
             eventsSubscription = null
+
+            // Clean-up sessionFactory
+            sessionFactory?.let {
+                it.removeFailoverListener(::failoverCallback)
+                it.close()
+            }
             prevRunning
         }
         if (running && !nodeExecutor.isOnThread) {
@@ -486,6 +504,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         state.locked {
             locator?.close()
         }
+        log.info("Stopped P2PMessagingClient for: $serverAddress")
     }
 
     private fun close(target: AutoCloseable?) {

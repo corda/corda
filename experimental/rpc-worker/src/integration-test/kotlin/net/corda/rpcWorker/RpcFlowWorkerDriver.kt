@@ -87,9 +87,9 @@ data class RpcFlowWorkerDriverDSL(private val driverDSL: DriverDSLImpl) : Intern
             val flowWorkerBroker = createFlowWorkerBroker(config, signedNetworkParameters.networkParameters.maxMessageSize)
             val rpcWorkerBroker = createRpcWorkerBroker(rpcWorkerConfig, signedNetworkParameters.networkParameters.maxMessageSize)
 
-            flowWorkerConfigs.map {
+            val flowWorkers = flowWorkerConfigs.map {
                 val (flowWorker, _) = createFlowWorker(it, myInfo, ourKeyPair, trustRoot, nodeCa, signedNetworkParameters)
-                shutdownManager.registerShutdown { flowWorker.stop() }
+                flowWorker
             }
 
             val (rpcWorker, rpcWorkerServiceHub) = createRpcWorker(rpcWorkerConfig, myInfo, signedNetworkParameters, ourKeyPair, trustRoot, nodeCa, rpcWorkerBroker.serverControl)
@@ -97,10 +97,12 @@ data class RpcFlowWorkerDriverDSL(private val driverDSL: DriverDSLImpl) : Intern
             val bridge = createBridge(bridgeConfig)
 
             shutdownManager.registerShutdown {
-                bridge.stop()
+                // Gracefully shutdown bottom-up, i.e.: FlowWorker, RPC Worker, Brokers, Bridge
+                flowWorkers.forEach { it.stop() }
                 rpcWorker.stop()
                 flowWorkerBroker.stop()
                 rpcWorkerBroker.stop()
+                bridge.stop()
             }
 
             visibilityHandle.listen(rpcWorkerServiceHub.rpcOps).map {
