@@ -1,5 +1,6 @@
 package net.corda.cliutils
 
+import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.core.LoggerContext
 import org.apache.logging.log4j.core.impl.LogEventFactory
 import org.apache.logging.log4j.message.Message
@@ -16,17 +17,19 @@ fun registerErrorCodesLoggerForThrowables() {
             val loggerContext = LoggerContext.getContext(false)
             for (logger in loggerContext.configuration.loggers.values) {
                 val existingFactory = logger.logEventFactory
-                // TODO sollecitom this applies to all exceptions logged, regardless of level. Maybe we should restrict it to warnings and errors?
-                logger.logEventFactory = LogEventFactory { loggerName, marker, fqcn, level, message, properties, error -> existingFactory.createEvent(loggerName, marker, fqcn, level, message?.withErrorCodeFor(error), properties, error) }
+                logger.logEventFactory = LogEventFactory { loggerName, marker, fqcn, level, message, properties, error -> existingFactory.createEvent(loggerName, marker, fqcn, level, message?.withErrorCodeFor(error, level), properties, error) }
             }
         }
     }
 }
 
-private fun Message.withErrorCodeFor(error: Throwable?): Message {
+private fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
 
     // TODO sollecitom investigate whether you could use the MDC instead here (would be quite cleaner)
-    return error?.let { CompositeMessage("$formattedMessage [errorCode=${it.errorCode()}]", format, parameters, throwable) } ?: this
+    return when {
+        error != null && level.isInRange(Level.FATAL, Level.WARN) -> CompositeMessage("$formattedMessage [errorCode=${error.errorCode()}]", format, parameters, throwable)
+        else -> this
+    }
 }
 
 private fun Throwable.errorCode(hashedFields: (Throwable) -> Array<out Any?> = Throwable::defaultHashedFields): String {
