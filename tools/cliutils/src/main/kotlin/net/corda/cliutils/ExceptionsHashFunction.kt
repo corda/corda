@@ -16,6 +16,7 @@ fun registerErrorCodesLoggerForThrowables() {
             val loggerContext = LoggerContext.getContext(false)
             for (logger in loggerContext.configuration.loggers.values) {
                 val existingFactory = logger.logEventFactory
+                // TODO sollecitom this applies to all exceptions logged, regardless of level. Maybe we should restrict it to warnings and errors?
                 logger.logEventFactory = LogEventFactory { loggerName, marker, fqcn, level, message, properties, error -> existingFactory.createEvent(loggerName, marker, fqcn, level, message?.withErrorCodeFor(error), properties, error) }
             }
         }
