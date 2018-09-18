@@ -163,9 +163,6 @@ abstract class AbstractAMQPSerializationScheme(
         return synchronized(serializerFactoriesForContexts) {
             serializerFactoriesForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
                 when (context.useCase) {
-                    @Suppress("DEPRECATION")
-                    SerializationContext.UseCase.Checkpoint ->
-                        throw IllegalStateException("AMQP should not be used for checkpoint serialization.")
                     SerializationContext.UseCase.RPCClient ->
                         rpcClientSerializerFactory(context)
                     SerializationContext.UseCase.RPCServer ->

@@ -212,7 +212,6 @@ interface SerializationContext {
         RPCServer,
         RPCClient,
         Storage,
-        @Deprecated("Checkpoint use case is no longer supported by the default SerializationContext. Use a CheckpointSerializationContext instead.") Checkpoint,
         Testing
     }
 }
