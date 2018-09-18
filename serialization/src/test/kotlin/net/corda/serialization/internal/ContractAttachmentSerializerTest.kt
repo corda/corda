@@ -9,6 +9,7 @@ import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
@@ -25,6 +26,10 @@ class ContractAttachmentSerializerTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
+    @Rule
+    @JvmField
+    val testCheckpointSerialization = CheckpointSerializationEnvironmentRule()
+
     private lateinit var factory: CheckpointSerializationFactory
     private lateinit var context: CheckpointSerializationContext
     private lateinit var contextWithToken: CheckpointSerializationContext
@@ -32,8 +37,8 @@ class ContractAttachmentSerializerTest {
 
     @Before
     fun setup() {
-        factory = testSerialization.checkpointSerializationFactory
-        context = factory.defaultContext
+        factory = testCheckpointSerialization.checkpointSerializationFactory
+        context = testCheckpointSerialization.checkpointSerializationContext
         contextWithToken = context.withTokenContext(CheckpointSerializeAsTokenContextImpl(Any(), factory, context, mockServices))
     }
 

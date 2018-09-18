@@ -15,6 +15,7 @@ import net.corda.node.serialization.kryo.DefaultKryoCustomizer
 import net.corda.node.serialization.kryo.kryoMagic
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
@@ -22,16 +23,18 @@ import org.junit.Test
 import java.io.ByteArrayOutputStream
 
 class SerializationTokenTest {
+
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testCheckpointSerialization = CheckpointSerializationEnvironmentRule()
+
     private lateinit var factory: CheckpointSerializationFactory
     private lateinit var context: CheckpointSerializationContext
 
     @Before
     fun setup() {
-        factory = testSerialization.checkpointSerializationFactory
-        context = factory.defaultContext.withWhitelisted(SingletonSerializationToken::class.java)
+        factory = testCheckpointSerialization.checkpointSerializationFactory
+        context = testCheckpointSerialization.checkpointSerializationContext.withWhitelisted(SingletonSerializationToken::class.java)
     }
 
     // Large tokenizable object so we can tell from the smaller number of serialized bytes it was actually tokenized

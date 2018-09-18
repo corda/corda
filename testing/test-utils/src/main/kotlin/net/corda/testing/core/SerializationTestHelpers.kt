@@ -44,13 +44,8 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
         }
     }
 
-    private lateinit var env: SerializationEnvironment
+    internal lateinit var env: SerializationEnvironment
     val serializationFactory get() = env.serializationFactory
-    val checkpointSerializationFactory get() = env.checkpointSerializationFactory
-
-    @Deprecated("Use checkpointSerializationFactory.defaultContext instead")
-    val checkpointContext: SerializationContext get() =
-        throw UnsupportedOperationException("Use checkpointSerializationFactory.defaultContext instead")
 
     override fun apply(base: Statement, description: Description): Statement {
         init(description.toString())
