@@ -137,7 +137,8 @@ class P2PFlowsDrainingModeTest {
     @Test
     fun `disabling draining mode cancels draining shutdown`() {
 
-        driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
+        // TODO sollecitom revert in process to false
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
 
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()

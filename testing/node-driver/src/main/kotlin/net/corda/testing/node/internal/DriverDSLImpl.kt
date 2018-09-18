@@ -54,6 +54,14 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.apache.logging.log4j.Level
+import org.apache.logging.log4j.Marker
+import org.apache.logging.log4j.core.LogEvent
+import org.apache.logging.log4j.core.LoggerContext
+import org.apache.logging.log4j.core.config.Property
+import org.apache.logging.log4j.core.impl.LogEventFactory
+import org.apache.logging.log4j.message.Message
+import org.apache.logging.log4j.message.SimpleMessage
 import rx.Observable
 import rx.Subscription
 import rx.schedulers.Schedulers
@@ -661,7 +669,45 @@ class DriverDSLImpl(
         }
     }
 
+    // TODO sollecitom move
+    class CompositeMessage(message: String?, private val formatArg: String?, private val parameters: Array<out Any?>?, private val error: Throwable?) : SimpleMessage(message) {
+
+        override fun getThrowable(): Throwable? = error
+
+        override fun getParameters(): Array<out Any?>? = parameters
+
+        override fun getFormat(): String? = formatArg
+    }
+
     companion object {
+
+        // TODO sollecitom move
+        private fun initLogging() {
+            // TODO sollecitom, remove and either use it in NodeStartup only, or in NodeStartup and DriverDSLImpl
+            //        Configurator.setAllLevels("", Level.ERROR)
+            val loggerContext = LoggerContext.getContext(false)
+            val config = loggerContext.configuration
+            for ((key, value) in config.loggers) {
+                val existingFactory = value.logEventFactory
+                value.logEventFactory = object : LogEventFactory {
+                    override fun createEvent(loggerName: String?, marker: Marker?, fqcn: String?, level: Level?, data: Message?, properties: MutableList<Property>?, t: Throwable?): LogEvent {
+
+                        return if (t != null) {
+                            existingFactory.createEvent(loggerName, marker, fqcn, level, data, properties, t)
+                        } else {
+                            // TODO sollecitom use above instead, and remove from here
+                            val newData = data?.let { CompositeMessage(it.formattedMessage + " MICHELE", it.format, it.parameters, it.throwable) }
+                            existingFactory.createEvent(loggerName, marker, fqcn, level, newData, properties, t)
+                        }
+                    }
+                }
+            }
+        }
+
+        init {
+            initLogging()
+        }
+
         internal val log = contextLogger()
 
         private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())
