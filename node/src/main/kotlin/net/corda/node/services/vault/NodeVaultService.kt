@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.containsAny
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServicesForResolution
@@ -433,7 +434,7 @@ class NodeVaultService(
             is OwnableState -> (state.participants.map { it.owningKey } + state.owner.owningKey).toSet()
             else -> state.participants.map { it.owningKey }
         }
-        return keysToCheck.any { it in myKeys }
+        return keysToCheck.any { it.containsAny(myKeys) }
     }
 
     @Throws(VaultQueryException::class)
