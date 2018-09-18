@@ -2,7 +2,7 @@
 FROM openjdk:8u151-jre-alpine
 
 RUN apk upgrade --update && \
-    apk add --update --no-cache bash iputils && \
+    apk add --update --no-cache bash iputils dos2unix && \
     rm -rf /var/cache/apk/* && \
     # Add user to run the app && \
     addgroup corda && \
@@ -26,6 +26,7 @@ ADD --chown=corda:corda node_info_watcher.sh    /opt/corda/
 COPY run-corda.sh /run-corda.sh
 
 RUN chmod +x /run-corda.sh && \
+    dos2unix /run-corda.sh && \
     chmod +x /opt/corda/node_info_watcher.sh && \
     sync && \
     chown -R corda:corda /opt/corda
