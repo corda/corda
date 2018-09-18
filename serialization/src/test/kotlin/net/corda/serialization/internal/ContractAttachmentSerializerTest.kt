@@ -24,6 +24,7 @@ class ContractAttachmentSerializerTest {
 
     @Rule
     @JvmField
+
     val testCheckpointSerialization = CheckpointSerializationEnvironmentRule()
 
     private lateinit var checkpointSerializer: CheckpointSerializer

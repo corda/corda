@@ -20,9 +20,9 @@ import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 public final class LambdaCheckpointSerializationTest {
 
     @Rule
-
     public final CheckpointSerializationEnvironmentRule testCheckpointSerialization =
             new CheckpointSerializationEnvironmentRule();
+
     private CheckpointSerializer checkpointSerializer;
     private CheckpointSerializationContext context;
 

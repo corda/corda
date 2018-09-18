@@ -20,6 +20,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
+
  * A test checkpoint serialization rule implementation for use in tests.
  *
  * @param inheritable whether new threads inherit the environment, use sparingly.
@@ -42,7 +43,6 @@ class CheckpointSerializationEnvironmentRule(private val inheritable: Boolean = 
             return CheckpointSerializationEnvironmentRule().apply { init(taskLabel) }.runTask(task)
         }
     }
-
 
     private lateinit var env: SerializationEnvironment
 
@@ -67,5 +67,4 @@ class CheckpointSerializationEnvironmentRule(private val inheritable: Boolean = 
 
     val checkpointSerializer get() = env.checkpointSerializer
     val checkpointSerializationContext get() = env.checkpointContext
-
 }

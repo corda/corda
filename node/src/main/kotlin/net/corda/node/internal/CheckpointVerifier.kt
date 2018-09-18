@@ -6,7 +6,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointDeserialize
-
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.SubFlow
 import net.corda.node.services.statemachine.SubFlowVersion
