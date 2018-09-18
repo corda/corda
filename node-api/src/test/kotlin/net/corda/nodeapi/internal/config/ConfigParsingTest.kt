@@ -8,16 +8,20 @@ import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.seconds
+import net.corda.node.services.config.*
+import net.corda.testing.core.DUMMY_BANK_A_NAME
 import org.assertj.core.api.Assertions.*
-import org.hibernate.exception.DataException
 import org.junit.Test
 import java.net.URL
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
 import javax.security.auth.x500.X500Principal
 import kotlin.reflect.full.primaryConstructor
+import kotlin.test.assertEquals
 
 class ConfigParsingTest {
     @Test
@@ -53,6 +57,7 @@ class ConfigParsingTest {
                 .isInstanceOf(ConfigException.WrongType::class.java)
                 .hasMessageContaining("hardcoded value: value has type STRING rather than BOOLEAN")
     }
+
     @Test
     fun Enum() {
         testPropertyType<EnumData, EnumListData, TestEnum>(TestEnum.Value2, TestEnum.Value1, valuesToString = true)
@@ -252,6 +257,27 @@ class ConfigParsingTest {
         val objects = configuration.parseAs<TestObjects>()
 
         assertThat(objects.values).containsExactly(TestObject.Type1("type 1 value"), TestObject.Type2("type 2 value"))
+    }
+
+    @Test
+    fun `parsing is reversible`() {
+        val sampleConfig = NodeConfigurationImpl(
+                baseDirectory = Paths.get("."),
+                myLegalName = DUMMY_BANK_A_NAME,
+                emailAddress = "",
+                keyStorePassword = "pass",
+                trustStorePassword = "pass",
+                crlCheckSoftFail = true,
+                dataSourceProperties = Properties(),
+                rpcUsers = listOf(),
+                verifierType = VerifierType.InMemory,
+                flowTimeout = FlowTimeoutConfiguration(5.seconds, 3, 1.0),
+                p2pAddress = NetworkHostAndPort("localhost", 1),
+                rpcSettings = NodeRpcSettings(NetworkHostAndPort("localhost", 1), null, ssl = null),
+                messagingServerAddress = null,
+                notary = null)
+
+        assertEquals(sampleConfig, sampleConfig.toConfig().parseAs(UnknownConfigKeysPolicy.WARN::handle))
     }
 
     class TestParser : ConfigParser<TestObject> {

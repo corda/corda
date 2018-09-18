@@ -40,7 +40,7 @@ annotation class OldConfig(val value: String)
  * the [parseAs] method will use the provided parser instead of data class constructs to parse the object.
  */
 @Target(AnnotationTarget.CLASS)
-annotation class CustomConfigParser(val parser:  KClass<out ConfigParser<*>>)
+annotation class CustomConfigParser(val parser: KClass<out ConfigParser<*>>)
 
 interface ConfigParser<T> {
     fun parse(config: Config): T
@@ -226,23 +226,18 @@ private fun Any.toConfigMap(): Map<String, Any> {
         if (field.isStatic || field.isSynthetic) continue
         field.isAccessible = true
         val value = field.get(this) ?: continue
-        val configValue = if (value is String || value is Boolean || value is Number) {
+        val configValue = when (value) {
             // These types are supported by Config as use as is
-            value
-        } else if (value is Temporal || value is NetworkHostAndPort || value is CordaX500Name || value is Path || value is URL || value is UUID || value is X500Principal) {
+            is String, is Boolean, is Number -> value
             // These types make sense to be represented as Strings and the exact inverse parsing function for use in parseAs
-            value.toString()
-        } else if (value is Enum<*>) {
-            // Expicitly use the Enum's name in case the toString is overridden, which would make parsing problematic.
-            value.name
-        } else if (value is Properties) {
+            is Temporal, is NetworkHostAndPort, is CordaX500Name, is Path, is URL, is UUID, is X500Principal -> value.toString()
+            is Enum<*> -> value.name
             // For Properties we treat keys with . as nested configs
-            ConfigFactory.parseMap(uncheckedCast(value)).root()
-        } else if (value is Iterable<*>) {
-            value.toConfigIterable(field)
-        } else {
+            is Properties -> ConfigFactory.parseMap(uncheckedCast(value)).root()
+            is Iterable<*> -> value.toConfigIterable(field)
+            is Duration -> value.toMillis()
             // Else this is a custom object recursed over
-            value.toConfigMap()
+            else -> value.toConfigMap()
         }
         values[field.name] = configValue
     }
@@ -253,7 +248,7 @@ private fun Any.toConfigMap(): Map<String, Any> {
 private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
     val elementType = (field.genericType as ParameterizedType).actualTypeArguments[0] as Class<*>
     return when (elementType) {
-    // For the types already supported by Config we can use the Iterable as is
+        // For the types already supported by Config we can use the Iterable as is
         String::class.java -> this
         Integer::class.java -> this
         java.lang.Long::class.java -> this
@@ -280,7 +275,7 @@ private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
 fun Config.getBooleanCaseInsensitive(path: String): Boolean {
     try {
         return getBoolean(path)
-    } catch(e:Exception) {
+    } catch (e: Exception) {
         val stringVal = getString(path).toLowerCase()
         if (stringVal == "true" || stringVal == "false") {
             return stringVal.toBoolean()
