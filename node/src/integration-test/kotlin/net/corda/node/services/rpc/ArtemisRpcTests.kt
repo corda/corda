@@ -113,7 +113,7 @@ class ArtemisRpcTests {
         }
         artemisBroker.use { broker ->
             broker.start()
-            InternalRPCMessagingClient(nodeSSlconfig, adminAddress, maxMessageSize, CordaX500Name("MegaCorp", "London", "GB"), RPCServerConfiguration.DEFAULT).use { server ->
+            InternalRPCMessagingClient<TestRpcOps>(nodeSSlconfig, adminAddress, maxMessageSize, CordaX500Name("MegaCorp", "London", "GB"), RPCServerConfiguration.DEFAULT).use { server ->
                 server.start(TestRpcOpsImpl(), securityManager, broker.serverControl)
 
                 val client = RPCClient<TestRpcOps>(rpcConnectorTcpTransport(broker.addresses.primary, clientSslOptions))
@@ -126,7 +126,7 @@ class ArtemisRpcTests {
         }
     }
 
-    private fun <OPS : RPCOps> InternalRPCMessagingClient.start(ops: OPS, securityManager: RPCSecurityManager, brokerControl: ActiveMQServerControl) {
+    private fun <OPS : RPCOps> InternalRPCMessagingClient<OPS>.start(ops: OPS, securityManager: RPCSecurityManager, brokerControl: ActiveMQServerControl) {
         apply {
             init(ops, securityManager)
             start(brokerControl)

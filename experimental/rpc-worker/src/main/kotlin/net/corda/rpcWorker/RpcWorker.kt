@@ -12,6 +12,7 @@ import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.messaging.InternalRPCMessagingClient
+import net.corda.node.services.messaging.RPCOpsRouting
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.nodeapi.internal.config.User
@@ -111,31 +112,40 @@ class Main : Runnable {
 
     private fun createRpcWorker(config: NodeConfiguration, myInfo: NodeInfo, signedNetworkParameters: NetworkParametersReader.NetworkParametersAndSigned, ourKeyPair: KeyPair, trustRoot: X509Certificate, nodeCa: X509Certificate, serverControl: ActiveMQServerControl): Pair<RpcWorker, RpcWorkerServiceHub> {
         val rpcWorkerServiceHub = RpcWorkerServiceHub(config, myInfo, signedNetworkParameters, ourKeyPair, trustRoot, nodeCa)
-        val rpcWorker = RpcWorker(rpcWorkerServiceHub, serverControl)
+        val rpcWorker = RpcWorker(serverControl, TODO(), rpcWorkerServiceHub)
         rpcWorker.start()
         return Pair(rpcWorker, rpcWorkerServiceHub)
     }
 }
 
-class RpcWorker(private val rpcWorkerServiceHub: RpcWorkerServiceHub, private val serverControl: ActiveMQServerControl) {
+class RpcWorker(private val serverControl: ActiveMQServerControl, private val rpcWorkerConfig: NodeConfiguration, private vararg val rpcWorkerServiceHubs: RpcWorkerServiceHub) {
 
     private val runOnStop = ArrayList<() -> Any?>()
 
-    fun start() {
-        val rpcServerConfiguration = RPCServerConfiguration.DEFAULT.copy(
-                rpcThreadPoolSize = rpcWorkerServiceHub.configuration.enterpriseConfiguration.tuning.rpcThreadPoolSize
-        )
-        val securityManager = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(rpcWorkerServiceHub.configuration.rpcUsers))
-        val nodeName = CordaX500Name.build(rpcWorkerServiceHub.configuration.p2pSslOptions.keyStore.get().query { getCertificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal })
+    fun start(): RpcWorker {
 
-        val internalRpcMessagingClient = InternalRPCMessagingClient(rpcWorkerServiceHub.configuration.p2pSslOptions, rpcWorkerServiceHub.configuration.rpcOptions.adminAddress, Node.MAX_RPC_MESSAGE_SIZE, nodeName, rpcServerConfiguration)
-        internalRpcMessagingClient.init(rpcWorkerServiceHub.rpcOps, securityManager)
+        val rpcServerConfiguration = RPCServerConfiguration.DEFAULT.copy(
+                rpcThreadPoolSize = rpcWorkerConfig.enterpriseConfiguration.tuning.rpcThreadPoolSize
+        )
+        val securityManager = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(rpcWorkerConfig.rpcUsers))
+        val nodeName =
+                if(rpcWorkerServiceHubs.size == 1) {
+                    rpcWorkerServiceHubs.single().configuration.myLegalName
+                }
+                else {
+                    CordaX500Name.build(rpcWorkerConfig.p2pSslOptions.keyStore.get().query { getCertificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal })
+                }
+
+        val internalRpcMessagingClient = InternalRPCMessagingClient<CordaRpcWorkerOps>(rpcWorkerConfig.p2pSslOptions, rpcWorkerConfig.rpcOptions.adminAddress, Node.MAX_RPC_MESSAGE_SIZE, nodeName, rpcServerConfiguration)
+
+        val rpcOpsMap = rpcWorkerServiceHubs.map { Pair(it.myInfo.legalIdentities.single().name, it.rpcOps) }.toMap()
+
+        internalRpcMessagingClient.init(RPCOpsRouting(rpcOpsMap), securityManager)
         internalRpcMessagingClient.start(serverControl)
 
-        runOnStop += { rpcWorkerServiceHub.stop() }
-        rpcWorkerServiceHub.start()
-
         runOnStop += { internalRpcMessagingClient.stop() }
+
+        return this
     }
 
     fun stop() {

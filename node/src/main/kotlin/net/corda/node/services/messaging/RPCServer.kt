@@ -49,12 +49,7 @@ import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.time.Duration
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import kotlin.concurrent.thread
 
 private typealias ObservableSubscriptionMap = Cache<InvocationId, ObservableSubscription>
@@ -84,8 +79,8 @@ data class RPCServerConfiguration(
  *
  * The way this is done is similar to that in [RPCClient], we use Kryo and add a context to stores the subscription map.
  */
-class RPCServer(
-        private val ops: RPCOps,
+class RPCServer<OPS : RPCOps>(
+        private val opsRouting: RPCOpsRouting<OPS>,
         private val rpcServerUsername: String,
         private val rpcServerPassword: String,
         private val serverLocator: ServerLocator,
@@ -95,6 +90,28 @@ class RPCServer(
 ) {
     private companion object {
         private val log = contextLogger()
+
+        /*
+         * We construct an observable context on each RPC request. If subsequently a nested Observable is encountered this
+         * same context is propagated by serialization context. This way all observations rooted in a single RPC will be
+         * muxed correctly. Note that the context construction itself is quite cheap.
+         */
+        class ObservableContext(
+                override val observableMap: ObservableSubscriptionMap,
+                override val clientAddressToObservables: ConcurrentHashMap<SimpleString, HashSet<InvocationId>>,
+                override val deduplicationIdentity: String,
+                override val clientAddress: SimpleString,
+                private val sendJobQueue: BlockingQueue<RpcSendJob>
+        ) : ObservableContextInterface {
+            private val serializationContextWithObservableContext = RpcServerObservableSerializer.createContext(
+                    observableContext = this,
+                    serializationContext = SerializationDefaults.RPC_SERVER_CONTEXT)
+
+            override fun sendMessage(serverToClient: RPCApi.ServerToClient) {
+                sendJobQueue.put(RpcSendJob.Send(contextDatabaseOrNull, clientAddress,
+                        serializationContextWithObservableContext, serverToClient))
+            }
+        }
     }
 
     private enum class State {
@@ -139,7 +156,20 @@ class RPCServer(
     private val deduplicationChecker = DeduplicationChecker(rpcConfiguration.deduplicationCacheExpiry)
     private var deduplicationIdentity: String? = null
 
+    constructor(
+            ops: OPS,
+            rpcServerUsername: String,
+            rpcServerPassword: String,
+            serverLocator: ServerLocator,
+            securityManager: RPCSecurityManager,
+            nodeLegalName: CordaX500Name,
+            rpcConfiguration: RPCServerConfiguration
+    ) : this(RPCOpsRouting.singleton(nodeLegalName, ops), rpcServerUsername, rpcServerPassword, serverLocator, securityManager, nodeLegalName, rpcConfiguration)
+
     init {
+        // It is assumed that all the identities have the same type of RPCOps associated with them.
+        val ops = opsRouting[opsRouting.names().first()]
+
         val groupedMethods = ops.javaClass.declaredMethods.groupBy { it.name }
         groupedMethods.forEach { name, methods ->
             if (methods.size > 1) {
@@ -360,16 +390,17 @@ class RPCServer(
 
     private fun invokeRpc(context: RpcAuthContext, methodName: String, arguments: List<Any?>): Try<Any> {
         return Try.on {
+            val targetLegalName = context.invocation.actor?.owningLegalIdentity ?: nodeLegalName
             try {
                 CURRENT_RPC_CONTEXT.set(context)
-                log.trace { "Calling $methodName" }
-                val method = methodTable[methodName] ?:
-                        throw RPCException("Received RPC for unknown method $methodName - possible client/server version skew?")
-                method.invoke(ops, *arguments.toTypedArray())
+                log.trace { "Calling $methodName for legalName: '$targetLegalName'" }
+                val method = methodTable[methodName]
+                        ?: throw RPCException("Received RPC for unknown method $methodName - possible client/server version skew?")
+                method.invoke(opsRouting[targetLegalName], *arguments.toTypedArray())
             } catch (e: InvocationTargetException) {
                 throw e.cause ?: RPCException("Caught InvocationTargetException without cause")
             } catch (e: Exception) {
-                log.warn("Caught exception attempting to invoke RPC $methodName", e)
+                log.warn("Caught exception attempting to invoke RPC $methodName for legalName: '$targetLegalName'", e)
                 throw e
             } finally {
                 CURRENT_RPC_CONTEXT.remove()
@@ -387,7 +418,8 @@ class RPCServer(
                 observableMap,
                 clientAddressToObservables,
                 deduplicationIdentity!!,
-                clientAddress
+                clientAddress,
+                sendJobQueue
         )
 
         val buffered = bufferIfQueueNotBound(clientAddress, reply, observableContext)
@@ -434,26 +466,7 @@ class RPCServer(
         return Pair(Actor(Id(validatedUser), securityManager.id, targetLegalIdentity), securityManager.buildSubject(validatedUser))
     }
 
-    /*
-     * We construct an observable context on each RPC request. If subsequently a nested Observable is encountered this
-     * same context is propagated by serialization context. This way all observations rooted in a single RPC will be
-     * muxed correctly. Note that the context construction itself is quite cheap.
-     */
-    inner class ObservableContext(
-            override val observableMap: ObservableSubscriptionMap,
-            override val clientAddressToObservables: ConcurrentHashMap<SimpleString, HashSet<InvocationId>>,
-            override val deduplicationIdentity: String,
-            override val clientAddress: SimpleString
-    ) : ObservableContextInterface {
-        private val serializationContextWithObservableContext = RpcServerObservableSerializer.createContext(
-                observableContext = this,
-                serializationContext = SerializationDefaults.RPC_SERVER_CONTEXT)
 
-        override fun sendMessage(serverToClient: RPCApi.ServerToClient) {
-            sendJobQueue.put(RpcSendJob.Send(contextDatabaseOrNull, clientAddress,
-                    serializationContextWithObservableContext, serverToClient))
-        }
-    }
 
     private sealed class RpcSendJob {
         data class Send(

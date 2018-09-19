@@ -137,6 +137,9 @@ class CordaRpcWorkerOps(
                                                   sorting: Sort,
                                                   contractStateType: Class<out T>): Vault.Page<T> {
         contractStateType.checkIsA<ContractState>()
+        // TODO hack, fix the way we populate contractStateTypeMappings, or else query like `net.corda.finance.contracts.GetBalances.getCashBalances(net.corda.core.messaging.CordaRPCOps)`
+        // are not going to work
+        (services.vaultService as NodeVaultService).bootstrapContractStateTypes()
         return services.vaultService._queryBy(criteria, paging, sorting, contractStateType)
     }
 

@@ -91,9 +91,9 @@ data class RpcBrokerHandle(
         val serverControl: ActiveMQServerControl
 )
 
-data class RpcServerHandle(
+data class RpcServerHandle<I : RPCOps>(
         val broker: RpcBrokerHandle,
-        val rpcServer: RPCServer
+        val rpcServer: RPCServer<I>
 )
 
 val rpcTestUser = User("user1", "test", permissions = emptySet())
@@ -247,7 +247,7 @@ data class RPCDriverDSL(
             configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,
             ops: I,
             queueDrainTimeout: Duration = 5.seconds
-    ): CordaFuture<RpcServerHandle> {
+    ): CordaFuture<RpcServerHandle<I>> {
         return startInVmRpcBroker(rpcUser, maxFileSize, maxBufferedBytesPerClient).map { broker ->
             startRpcServerWithBrokerRunning(rpcUser, nodeLegalName, configuration, ops, broker, queueDrainTimeout)
         }
@@ -316,7 +316,7 @@ data class RPCDriverDSL(
             configuration: RPCServerConfiguration = RPCServerConfiguration.DEFAULT,
             customPort: NetworkHostAndPort? = null,
             ops: I
-    ): CordaFuture<RpcServerHandle> {
+    ): CordaFuture<RpcServerHandle<I>> {
         return startRpcBroker(serverName, rpcUser, maxFileSize, maxBufferedBytesPerClient, customPort).map { broker ->
             startRpcServerWithBrokerRunning(rpcUser, nodeLegalName, configuration, ops, broker)
         }
@@ -472,7 +472,7 @@ data class RPCDriverDSL(
             ops: I,
             brokerHandle: RpcBrokerHandle,
             queueDrainTimeout: Duration = 5.seconds
-    ): RpcServerHandle {
+    ): RpcServerHandle<I> {
         val locator = ActiveMQClient.createServerLocatorWithoutHA(brokerHandle.clientTransportConfiguration).apply {
             minLargeMessageSize = MAX_MESSAGE_SIZE
             isUseGlobalPools = false

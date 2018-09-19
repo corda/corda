@@ -606,7 +606,7 @@ class RPCStabilityTests {
     }
 }
 
-fun RPCDriverDSL.pollUntilClientNumber(server: RpcServerHandle, expected: Int) {
+fun <OPS : RPCOps> RPCDriverDSL.pollUntilClientNumber(server: RpcServerHandle<OPS>, expected: Int) {
     pollUntilTrue("number of RPC clients to become $expected") {
         val clientAddresses = server.broker.serverControl.addressNames.filter { it.startsWith(RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX) }
         clientAddresses.size == expected

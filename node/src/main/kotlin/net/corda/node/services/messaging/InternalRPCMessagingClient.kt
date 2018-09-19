@@ -16,11 +16,15 @@ import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 /**
  * Used by the Node to communicate with the RPC broker.
  */
-class InternalRPCMessagingClient(val sslConfig: MutualSslConfiguration, val serverAddress: NetworkHostAndPort, val maxMessageSize: Int, val nodeName: CordaX500Name, val rpcServerConfiguration: RPCServerConfiguration) : SingletonSerializeAsToken(), AutoCloseable {
+class InternalRPCMessagingClient<OPS : RPCOps>(val sslConfig: MutualSslConfiguration, val serverAddress: NetworkHostAndPort, val maxMessageSize: Int, val nodeName: CordaX500Name, val rpcServerConfiguration: RPCServerConfiguration) : SingletonSerializeAsToken(), AutoCloseable {
     private var locator: ServerLocator? = null
-    private var rpcServer: RPCServer? = null
+    private var rpcServer: RPCServer<OPS>? = null
 
-    fun init(rpcOps: RPCOps, securityManager: RPCSecurityManager) = synchronized(this) {
+    fun init(rpcOps: OPS, securityManager: RPCSecurityManager) {
+        init(RPCOpsRouting.singleton(nodeName, rpcOps), securityManager)
+    }
+
+    fun init(rpcOpsRouting: RPCOpsRouting<OPS>, securityManager: RPCSecurityManager) = synchronized(this) {
 
         val tcpTransport = ArtemisTcpTransport.rpcInternalClientTcpTransport(serverAddress, sslConfig)
         locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
@@ -32,7 +36,7 @@ class InternalRPCMessagingClient(val sslConfig: MutualSslConfiguration, val serv
             isUseGlobalPools = nodeSerializationEnv != null
         }
 
-        rpcServer = RPCServer(rpcOps, NODE_RPC_USER, NODE_RPC_USER, locator!!, securityManager, nodeName, rpcServerConfiguration)
+        rpcServer = RPCServer(rpcOpsRouting, NODE_RPC_USER, NODE_RPC_USER, locator!!, securityManager, nodeName, rpcServerConfiguration)
     }
 
     fun start(serverControl: ActiveMQServerControl) = synchronized(this) {

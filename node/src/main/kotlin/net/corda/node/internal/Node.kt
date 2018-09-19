@@ -143,7 +143,7 @@ open class Node(configuration: NodeConfiguration,
     override val log: Logger get() = staticLog
     override val transactionVerifierWorkerCount: Int get() = 4
 
-    private var internalRpcMessagingClient: InternalRPCMessagingClient? = null
+    private var internalRpcMessagingClient: InternalRPCMessagingClient<RPCOps>? = null
     private var rpcBroker: ArtemisBroker? = null
 
     private var shutdownHook: ShutdownHook? = null
