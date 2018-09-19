@@ -140,7 +140,7 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
     }
 
     private fun hasMinimumJavaVersion(): Boolean {
-        // when the ext.java8_minUpdateVersion gradle constant changes, so much this check and vise-versa
+        // when the ext.java8_minUpdateVersion gradle constant changes, so much this check
         val major = SystemUtils.JAVA_VERSION_FLOAT
         val update = SystemUtils.JAVA_VERSION.substringAfter("_").toLong()
         return major == 1.8F && update >= 171
