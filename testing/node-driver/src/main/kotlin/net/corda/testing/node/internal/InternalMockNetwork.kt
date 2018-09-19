@@ -5,7 +5,6 @@ import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.cliutils.registerErrorCodesLoggerForThrowables
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -153,12 +152,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                                val defaultFactory: (MockNodeArgs, CordappLoader?) -> MockNode = { args, cordappLoader -> cordappLoader?.let { MockNode(args, it) } ?: MockNode(args) },
                                val cordappsForAllNodes: Set<TestCorDapp> = emptySet(),
                                val autoVisibleNodes: Boolean = true) : AutoCloseable {
-    private companion object {
-        init {
-            registerErrorCodesLoggerForThrowables()
-        }
-    }
-
     init {
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
         // This SFTP support loads BouncyCastle, which we want to avoid.

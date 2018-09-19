@@ -1,32 +1,9 @@
 package net.corda.cliutils
 
 import org.apache.logging.log4j.Level
-import org.apache.logging.log4j.LogManager
-import org.apache.logging.log4j.core.LoggerContext
-import org.apache.logging.log4j.core.impl.LogEventFactory
 import org.apache.logging.log4j.message.Message
 import org.apache.logging.log4j.message.SimpleMessage
 import java.util.*
-
-private var initialised: Boolean = false
-private const val lock = "logEventFactory_lock"
-
-fun registerErrorCodesLoggerForThrowables() {
-
-//    System.setProperty("log4j.configurationFactory", ErrorCodeLog4j2ConfigFactory::class.java.name)
-//    synchronized(lock) {
-//        if (!initialised) {
-//            val loggerContext = LoggerContext.getContext(false)
-//            val config = loggerContext.configuration
-//            for (logger in config.loggers.values) {
-//                val existingFactory = logger.logEventFactory
-//                logger.logEventFactory = LogEventFactory { loggerName, marker, fqcn, level, message, properties, error -> existingFactory.createEvent(loggerName, marker, fqcn, level, message?.withErrorCodeFor(error, level), properties, error) }
-//            }
-//            loggerContext.updateLoggers()
-//            initialised = true
-//        }
-//    }
-}
 
 internal fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
 

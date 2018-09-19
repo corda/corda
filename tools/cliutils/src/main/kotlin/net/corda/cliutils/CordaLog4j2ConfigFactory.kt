@@ -9,9 +9,9 @@ import org.apache.logging.log4j.core.config.plugins.Plugin
 import org.apache.logging.log4j.core.config.xml.XmlConfiguration
 import org.apache.logging.log4j.core.impl.LogEventFactory
 
-@Plugin(name = "ErrorCodeLog4j2ConfigFactory", category = "ConfigurationFactory")
+@Plugin(name = "CordaLog4j2ConfigFactory", category = "ConfigurationFactory")
 @Order(10)
-class ErrorCodeLog4j2ConfigFactory : ConfigurationFactory() {
+class CordaLog4j2ConfigFactory : ConfigurationFactory() {
 
     private companion object {
         private val SUPPORTED_TYPES = arrayOf(".xml", "*")

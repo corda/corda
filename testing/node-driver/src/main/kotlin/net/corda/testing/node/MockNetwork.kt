@@ -1,7 +1,6 @@
 package net.corda.testing.node
 
 import com.google.common.jimfs.Jimfs
-import net.corda.cliutils.registerErrorCodesLoggerForThrowables
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowLogic
@@ -44,12 +43,6 @@ data class MockNodeParameters constructor(
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
         val configOverrides: (NodeConfiguration) -> Any? = {},
         val additionalCordapps: Set<TestCorDapp>) {
-
-    private companion object {
-        init {
-            registerErrorCodesLoggerForThrowables()
-        }
-    }
 
     @JvmOverloads
     constructor(

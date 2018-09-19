@@ -6,23 +6,11 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
-import net.corda.cliutils.registerErrorCodesLoggerForThrowables
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.concurrent.doneFuture
-import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.concurrent.fork
-import net.corda.core.internal.concurrent.map
-import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
-import net.corda.core.internal.list
-import net.corda.core.internal.readObject
-import net.corda.core.internal.toPath
-import net.corda.core.internal.writeText
+import net.corda.core.internal.*
+import net.corda.core.internal.concurrent.*
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
@@ -37,18 +25,11 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.internal.clientSslOptionsCompatibleWith
 import net.corda.node.services.Permissions
-import net.corda.node.services.config.ConfigHelper
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.config.RaftConfig
-import net.corda.node.services.config.configOf
-import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.node.services.config.parseAsNodeConfiguration
-import net.corda.node.services.config.plus
+import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
-import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.PLATFORM_VERSION
+import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.toConfig
@@ -60,16 +41,8 @@ import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.driver.DriverDSL
-import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.JmxPolicy
-import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.NodeParameters
-import net.corda.testing.driver.NotaryHandle
-import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.TestCorDapp
+import net.corda.testing.driver.*
 import net.corda.testing.driver.VerifierType
-import net.corda.testing.driver.WebserverHandle
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
@@ -81,8 +54,10 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import rx.Observable
 import rx.Subscription
 import rx.schedulers.Schedulers
+import rx.subjects.AsyncSubject
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL
@@ -687,11 +662,6 @@ class DriverDSLImpl(
     }
 
     companion object {
-
-        init {
-            registerErrorCodesLoggerForThrowables()
-        }
-
         internal val log = contextLogger()
 
         private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())
