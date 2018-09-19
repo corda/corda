@@ -45,7 +45,6 @@ class CalculatedValuesToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals("squared", concrete.fields[2].name)
         assertEquals("string", concrete.fields[2].type)
 
-
         val l1 = serSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
         assertEquals(0, l1.size)
         val mangleSchema = serSchema.mangleNames(listOf(classTestName("C")))

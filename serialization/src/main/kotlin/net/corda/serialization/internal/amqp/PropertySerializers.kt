@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.KeepForDJVM
+import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.core.utilities.loggerFor
 import java.io.NotSerializableException
 import java.lang.reflect.Field
@@ -180,7 +181,7 @@ class PropertyAccessorConstructor(
  * constructor parameter to receive its value.
  *
  * This will only be created for calculated properties that are accessible via no-argument methods annotated
- * with [SerializeForCarpenter].
+ * with [SerializableCalculatedProperty].
  */
 class CalculatedPropertyAccessor(override val serializer: PropertySerializer): PropertyAccessor(serializer) {
     override val isCalculated: Boolean
@@ -204,7 +205,7 @@ abstract class PropertySerializers(
         val serializationOrder: List<PropertyAccessor>) {
     companion object {
         fun make(serializationOrder: List<PropertyAccessor>) =
-                when (serializationOrder.ignoringCalculatedProperties.firstOrNull()) {
+                when (serializationOrder.find { !it.isCalculated }) {
                     is PropertyAccessorConstructor -> PropertySerializersConstructor(serializationOrder)
                     is PropertyAccessorGetterSetter -> PropertySerializersSetter(serializationOrder)
                     null -> PropertySerializersNoProperties()
@@ -216,11 +217,8 @@ abstract class PropertySerializers(
 
     val size get() = serializationOrder.size
     abstract val byConstructor: Boolean
-    val deserializableSize get() = serializationOrder.count { !it.isCalculated }
+    val deserializableSize = serializationOrder.count { !it.isCalculated }
 }
-
-inline val List<PropertyAccessor>.ignoringCalculatedProperties: List<PropertyAccessor> get() =
-        filter { !it.isCalculated }
 
 class PropertySerializersNoProperties : PropertySerializers(emptyList()) {
     override val byConstructor get() = true

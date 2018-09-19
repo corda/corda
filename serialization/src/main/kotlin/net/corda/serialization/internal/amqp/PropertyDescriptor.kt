@@ -85,7 +85,7 @@ private val propertyMethodRegex = Regex("(?<type>get|set|is)(?<var>\\p{Lu}.*)")
  * take a single parameter of a type compatible with exampleProperty and isExampleProperty must
  * return a boolean
  */
-fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
+internal fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
     val fieldProperties = superclassChain().declaredFields().byFieldName()
 
     return superclassChain().declaredMethods()
@@ -101,7 +101,7 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
  * Obtain [PropertyDescriptor]s for those calculated properties of a class which are annotated with
  * [SerializableCalculatedProperty]
  */
-fun Class<out Any?>.calculatedPropertyDescriptors(): Map<String, PropertyDescriptor> =
+internal fun Class<out Any?>.calculatedPropertyDescriptors(): Map<String, PropertyDescriptor> =
         superclassChain().withInterfaces().declaredMethods()
                 .thatArePublic()
                 .thatAreCalculated()
@@ -111,8 +111,7 @@ fun Class<out Any?>.calculatedPropertyDescriptors(): Map<String, PropertyDescrip
 private fun Class<*>.superclassChain() = generateSequence(this, Class<*>::getSuperclass)
 
 private fun Sequence<Class<*>>.withInterfaces() = flatMap {
-    sequenceOf(it) +
-            it.genericInterfaces.asSequence().map { it.asClass() }
+    sequenceOf(it) + it.genericInterfaces.asSequence().map { it.asClass() }
 }
 
 // Obtain the fields declared by all classes in this sequence of classes.
