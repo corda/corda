@@ -87,8 +87,9 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             input: DeserializationInput,
             context: SerializationContext): Any = ifThrowsAppend({ clazz.typeName }) {
         if (obj is List<*>) {
-            if (obj.size > propertySerializers.size) {
-                throw AMQPNotSerializableException(type, "Too many properties in described type $typeName")
+            if (obj.size != propertySerializers.size) {
+                throw AMQPNotSerializableException(type, "${obj.size} objects to deserialize, but " +
+                        "${propertySerializers.size} properties in described type $typeName")
             }
 
             return if (propertySerializers.byConstructor) {
