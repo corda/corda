@@ -113,11 +113,12 @@ class NodeVaultService(
                 // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
                 // node. The behaviour is as follows:
                 //
-                // 1) All vault updates marked as RELEVANT will, of, course all have relevancyStatus = true.
+                // 1) All vault updates marked as RELEVANT will, of course, all have relevancy_status = 1 in the
+                //    "vault_states" table.
                 // 2) For ALL_VISIBLE updates, those which are not relevant according to the relevancy rules will have
-                // relevancyStatus = false.
+                //    relevancy_status = 0 in the "vault_states" table.
                 //
-                // This is useful when it comes to querying for fungible states, when we do not want non-relevant states
+                // This is useful when it comes to querying for fungible states, when we do not want irrelevant states
                 // included in the result.
                 //
                 // The same functionality could be obtained by passing in a list of participants to the vault query,
