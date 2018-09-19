@@ -92,7 +92,7 @@ interface InProcess : NodeHandle {
  * @property listenAddress The [NetworkHostAndPort] for communicating with this webserver.
  * @property process The [Process] in which the websever is running
  * */
-@Deprecated("The webserver is for testing purposes only and will be removed soon")
+@Deprecated("The server is for testing purposes only and will be removed soon")
 data class WebserverHandle(
         val listenAddress: NetworkHostAndPort,
         val process: Process

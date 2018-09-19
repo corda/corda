@@ -1,4 +1,4 @@
-package net.corda.tools.error.codes.webserver
+package net.corda.tools.error.codes.server
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

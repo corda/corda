@@ -775,7 +775,7 @@ class DriverDSLImpl(
         }
 
         private fun startWebserver(handle: NodeHandleInternal, debugPort: Int?, maximumHeapSize: String): Process {
-            val className = "net.corda.webserver.WebServer"
+            val className = "net.corda.server.WebServer"
             writeConfig(handle.baseDirectory, "web-server.conf", handle.toWebServerConfig())
             return ProcessUtilities.startJavaProcess(
                     className = className, // cannot directly get class for this, so just use string

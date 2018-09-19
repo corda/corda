@@ -1,4 +1,4 @@
-package net.corda.tools.error.codes.webserver
+package net.corda.tools.error.codes.server
 
 import org.springframework.boot.Banner
 import org.springframework.boot.SpringApplication
