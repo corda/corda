@@ -40,7 +40,7 @@ class CashSelectionH2Impl : AbstractCashSelection() {
                     FROM vault_states AS vs, contract_cash_states AS ccs
                     WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
                     AND vs.state_status = 0
-                    AND vs.is_relevant = 0
+                    AND vs.relevancy_status = 0
                     AND ccs.ccy_code = ? and @t < ?
                     AND (vs.lock_id = ? OR vs.lock_id is null)
                     """ +
