@@ -4,30 +4,25 @@ import net.corda.djvm.code.EmitterModule
 import net.corda.djvm.code.Instruction
 import net.corda.djvm.code.instructions.*
 import net.corda.djvm.messages.Message
-import net.corda.djvm.references.ClassReference
-import net.corda.djvm.references.ClassRepresentation
-import net.corda.djvm.references.Member
-import net.corda.djvm.references.MemberReference
-import net.corda.djvm.source.SourceClassLoader
+import net.corda.djvm.references.*
 import org.objectweb.asm.*
 import java.io.InputStream
 
 /**
  * Functionality for traversing a class and its members.
  *
- * @property classVisitor Class visitor to use when traversing the structure of classes.
  * @property configuration The configuration to use for the analysis
+ * @property classVisitor Class visitor to use when traversing the structure of classes.
  */
 open class ClassAndMemberVisitor(
-        private val classVisitor: ClassVisitor? = null,
-        private val configuration: AnalysisConfiguration = AnalysisConfiguration()
+        private val configuration: AnalysisConfiguration,
+        private val classVisitor: ClassVisitor?
 ) {
 
     /**
      * Holds a reference to the currently used analysis context.
      */
-    protected var analysisContext: AnalysisContext =
-            AnalysisContext.fromConfiguration(configuration, emptyList())
+    protected var analysisContext: AnalysisContext = AnalysisContext.fromConfiguration(configuration)
 
     /**
      * Holds a link to the class currently being traversed.
@@ -45,12 +40,6 @@ open class ClassAndMemberVisitor(
     private var sourceLocation = SourceLocation()
 
     /**
-     * The class loader used to find classes on the extended class path.
-     */
-    private val supportingClassLoader =
-            SourceClassLoader(configuration.classPath, configuration.classResolver)
-
-    /**
      * Analyze class by using the provided qualified name of the class.
      */
     inline fun <reified T> analyze(context: AnalysisContext) = analyze(T::class.java.name, context)
@@ -63,7 +52,7 @@ open class ClassAndMemberVisitor(
      * @param origin The originating class for the analysis.
      */
     fun analyze(className: String, context: AnalysisContext, origin: String? = null) {
-        supportingClassLoader.classReader(className, context, origin).apply {
+        configuration.supportingClassLoader.classReader(className, context, origin).apply {
             analyze(this, context)
         }
     }
@@ -167,7 +156,8 @@ open class ClassAndMemberVisitor(
     }
 
     /**
-     * Run action with a guard that populates [messages] based on the output.
+     * Run action with a guard that populates [AnalysisRuntimeContext.messages]
+     * based on the output.
      */
     private inline fun captureExceptions(action: () -> Unit): Boolean {
         return try {
@@ -229,9 +219,7 @@ open class ClassAndMemberVisitor(
             ClassRepresentation(version, access, name, superClassName, interfaceNames, genericsDetails = signature ?: "").also {
                 currentClass = it
                 currentMember = null
-                sourceLocation = SourceLocation(
-                        className = name
-                )
+                sourceLocation = SourceLocation(className = name)
             }
             captureExceptions {
                 currentClass = visitClass(currentClass!!)
@@ -251,7 +239,7 @@ open class ClassAndMemberVisitor(
         override fun visitEnd() {
             configuration.classModule
                     .getClassReferencesFromClass(currentClass!!, configuration.analyzeAnnotations)
-                    .forEach { recordTypeReference(it) }
+                    .forEach(::recordTypeReference)
             captureExceptions {
                 visitClassEnd(currentClass!!)
             }
@@ -306,14 +294,15 @@ open class ClassAndMemberVisitor(
             configuration.memberModule.addToClass(clazz, visitedMember ?: member)
             return if (processMember) {
                 val derivedMember = visitedMember ?: member
-                val targetVisitor = super.visitMethod(
-                        derivedMember.access,
-                        derivedMember.memberName,
-                        derivedMember.signature,
-                        signature,
-                        derivedMember.exceptions.toTypedArray()
-                )
-                MethodVisitorImpl(targetVisitor)
+                super.visitMethod(
+                    derivedMember.access,
+                    derivedMember.memberName,
+                    derivedMember.signature,
+                    signature,
+                    derivedMember.exceptions.toTypedArray()
+                )?.let { targetVisitor ->
+                    MethodVisitorImpl(targetVisitor, derivedMember.body)
+                }
             } else {
                 null
             }
@@ -340,14 +329,15 @@ open class ClassAndMemberVisitor(
             configuration.memberModule.addToClass(clazz, visitedMember ?: member)
             return if (processMember) {
                 val derivedMember = visitedMember ?: member
-                val targetVisitor = super.visitField(
-                        derivedMember.access,
-                        derivedMember.memberName,
-                        derivedMember.signature,
-                        signature,
-                        derivedMember.value
-                )
-                FieldVisitorImpl(targetVisitor)
+                super.visitField(
+                    derivedMember.access,
+                    derivedMember.memberName,
+                    derivedMember.signature,
+                    signature,
+                    derivedMember.value
+                )?.let { targetVisitor ->
+                    FieldVisitorImpl(targetVisitor)
+                }
             } else {
                 null
             }
@@ -359,7 +349,8 @@ open class ClassAndMemberVisitor(
      * Visitor used to traverse and analyze a method.
      */
     private inner class MethodVisitorImpl(
-            targetVisitor: MethodVisitor?
+            targetVisitor: MethodVisitor,
+            private val bodies: List<MethodBody>
     ) : MethodVisitor(API_VERSION, targetVisitor) {
 
         /**
@@ -385,6 +376,16 @@ open class ClassAndMemberVisitor(
         override fun visitAnnotation(desc: String, visible: Boolean): AnnotationVisitor? {
             visitMemberAnnotation(desc)
             return super.visitAnnotation(desc, visible)
+        }
+
+        /**
+         * Write any new method body code, assuming the definition providers
+         * have provided any. This handler will not be visited if this method
+         * has no existing code.
+         */
+        override fun visitCode() {
+            super.visitCode()
+            tryReplaceMethodBody()
         }
 
         /**
@@ -494,6 +495,27 @@ open class ClassAndMemberVisitor(
         }
 
         /**
+         * Finish visiting this method, writing any new method body byte-code
+         * if we haven't written it already. This would (presumably) only happen
+         * for methods that previously had no body, e.g. native methods.
+         */
+        override fun visitEnd() {
+            tryReplaceMethodBody()
+            super.visitEnd()
+        }
+
+        private fun tryReplaceMethodBody() {
+            if (bodies.isNotEmpty() && (mv != null)) {
+                for (body in bodies) {
+                    body(mv)
+                }
+                mv.visitMaxs(-1, -1)
+                mv.visitEnd()
+                mv = null
+            }
+        }
+
+        /**
          * Helper function used to streamline the access to an instruction and to catch any related processing errors.
          */
         private inline fun visit(instruction: Instruction, defaultFirst: Boolean = false, defaultAction: () -> Unit) {
@@ -517,7 +539,7 @@ open class ClassAndMemberVisitor(
      * Visitor used to traverse and analyze a field.
      */
     private inner class FieldVisitorImpl(
-            targetVisitor: FieldVisitor?
+            targetVisitor: FieldVisitor
     ) : FieldVisitor(API_VERSION, targetVisitor) {
 
         /**

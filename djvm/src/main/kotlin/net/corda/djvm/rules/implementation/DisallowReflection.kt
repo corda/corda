@@ -1,30 +1,38 @@
 package net.corda.djvm.rules.implementation
 
+import net.corda.djvm.code.Emitter
+import net.corda.djvm.code.EmitterContext
 import net.corda.djvm.code.Instruction
 import net.corda.djvm.code.instructions.MemberAccessInstruction
 import net.corda.djvm.formatting.MemberFormatter
-import net.corda.djvm.rules.InstructionRule
-import net.corda.djvm.validation.RuleContext
+import org.objectweb.asm.Opcodes.*
+import sandbox.net.corda.djvm.rules.RuleViolationError
 
 /**
- * Rule that checks for illegal references to reflection APIs.
+ * Some reflection APIs belong to pinned classes and so cannot be stubbed out.
+ * Replace their invocations with exceptions instead.
  */
-class DisallowReflection : InstructionRule() {
+class DisallowReflection : Emitter {
 
-    override fun validate(context: RuleContext, instruction: Instruction) = context.validate {
-        // TODO Enable controlled use of reflection APIs
-        if (instruction is MemberAccessInstruction) {
-            invalidReflectionUsage(instruction) given
-                    ("java/lang/Class" in instruction.owner && instruction.memberName == "newInstance")
-            invalidReflectionUsage(instruction) given (instruction.owner.startsWith("java/lang/reflect/"))
-            invalidReflectionUsage(instruction) given (instruction.owner.startsWith("java/lang/invoke/"))
-            invalidReflectionUsage(instruction) given (instruction.owner.startsWith("sun/"))
+    override fun emit(context: EmitterContext, instruction: Instruction) = context.emit {
+        if (instruction is MemberAccessInstruction && isReflection(instruction)) {
+            when (instruction.operation) {
+                INVOKEVIRTUAL -> {
+                    throwException<RuleViolationError>("Disallowed reference to reflection API; ${memberFormatter.format(instruction.member)}")
+                    preventDefault()
+                }
+            }
         }
     }
 
-    private fun RuleContext.invalidReflectionUsage(instruction: MemberAccessInstruction) =
-            this.fail("Disallowed reference to reflection API; ${memberFormatter.format(instruction.member)}")
+    private fun isClassReflection(instruction: MemberAccessInstruction) : Boolean =
+        (instruction.owner == "java/lang/Class") && (
+            ((instruction.memberName == "newInstance" && instruction.signature == "()Ljava/lang/Object;")
+              || instruction.signature.contains("Ljava/lang/reflect/"))
+        )
+
+    private fun isReflection(instruction: MemberAccessInstruction): Boolean
+                  = instruction.isMethod && isClassReflection(instruction)
 
     private val memberFormatter = MemberFormatter()
-
 }

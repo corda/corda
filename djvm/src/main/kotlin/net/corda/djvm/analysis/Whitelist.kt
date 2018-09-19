@@ -117,7 +117,8 @@ open class Whitelist private constructor(
                 "^java/lang/Throwable(\\..*)?$".toRegex(),
                 "^java/lang/Void(\\..*)?$".toRegex(),
                 "^java/lang/.*Error(\\..*)?$".toRegex(),
-                "^java/lang/.*Exception(\\..*)?$".toRegex()
+                "^java/lang/.*Exception(\\..*)?$".toRegex(),
+                "^java/lang/reflect/Array(\\..*)?$".toRegex()
         )
 
         /**

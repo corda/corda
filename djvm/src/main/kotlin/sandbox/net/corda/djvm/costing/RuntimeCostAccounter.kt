@@ -2,7 +2,7 @@ package sandbox.net.corda.djvm.costing
 
 import net.corda.djvm.SandboxRuntimeContext
 import net.corda.djvm.costing.RuntimeCostSummary
-import net.corda.djvm.costing.ThresholdViolationException
+import org.objectweb.asm.Type
 
 /**
  * Class for keeping a tally on various runtime metrics, like number of jumps, allocations, invocations, etc. The
@@ -24,7 +24,8 @@ object RuntimeCostAccounter {
     /**
      * The type name of the [RuntimeCostAccounter] class; referenced from instrumentors.
      */
-    const val TYPE_NAME: String = "sandbox/net/corda/djvm/costing/RuntimeCostAccounter"
+    @JvmField
+    val TYPE_NAME: String = Type.getInternalName(this::class.java)
 
     /**
      * Known / estimated allocation costs.
@@ -35,14 +36,12 @@ object RuntimeCostAccounter {
     )
 
     /**
-     * Re-throw exception if it is of type [ThreadDeath] or [ThresholdViolationException].
+     * Re-throw exception if it is of type [ThreadDeath] or [VirtualMachineError].
      */
     @JvmStatic
     fun checkCatch(exception: Throwable) {
-        if (exception is ThreadDeath) {
-            throw exception
-        } else if (exception is ThresholdViolationException) {
-            throw exception
+        when (exception) {
+            is ThreadDeath, is VirtualMachineError -> throw exception
         }
     }
 

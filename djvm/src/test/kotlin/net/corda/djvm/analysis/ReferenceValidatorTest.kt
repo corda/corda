@@ -1,25 +1,27 @@
 package net.corda.djvm.analysis
 
 import net.corda.djvm.TestBase
-import net.corda.djvm.execution.SandboxedRunnable
 import net.corda.djvm.validation.ReferenceValidator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import java.util.function.Function
 
 class ReferenceValidatorTest : TestBase() {
 
     private fun validator(whitelist: Whitelist = Whitelist.MINIMAL) =
-            ReferenceValidator(AnalysisConfiguration(whitelist))
+            ReferenceValidator(AnalysisConfiguration(whitelist = whitelist, bootstrapJar = DETERMINISTIC_RT))
 
     @Test
     fun `can validate when there are no references`() = analyze { context ->
         analyze<EmptyRunnable>(context)
         val (_, messages) = validator().validate(context, this)
-        assertThat(messages.count).isEqualTo(0)
+        assertThat(messages.count)
+            .`as`("Actually contains [%s]", messages.sorted().joinToString("\n"))
+            .isEqualTo(0)
     }
 
-    private class EmptyRunnable : SandboxedRunnable<Int, Int> {
-        override fun run(input: Int): Int? {
+    private class EmptyRunnable : Function<Int, Int?> {
+        override fun apply(input: Int): Int? {
             return null
         }
     }
@@ -29,11 +31,13 @@ class ReferenceValidatorTest : TestBase() {
         analyze<RunnableWithReferences>(context)
         analyze<TestRandom>(context)
         val (_, messages) = validator().validate(context, this)
-        assertThat(messages.count).isEqualTo(0)
+        assertThat(messages.count)
+            .`as`("Actually contains [%s]", messages.sorted().joinToString("\n"))
+            .isEqualTo(0)
     }
 
-    private class RunnableWithReferences : SandboxedRunnable<Int, Int> {
-        override fun run(input: Int): Int? {
+    private class RunnableWithReferences : Function<Int, Int> {
+        override fun apply(input: Int): Int {
             return TestRandom().nextInt()
         }
     }
@@ -48,11 +52,13 @@ class ReferenceValidatorTest : TestBase() {
         analyze<ReferencedClass>(context)
         analyze<TestRandom>(context)
         val (_, messages) = validator().validate(context, this)
-        assertThat(messages.count).isEqualTo(0)
+        assertThat(messages.count)
+            .`as`("Actually contains [%s]", messages.sorted().joinToString("\n"))
+            .isEqualTo(0)
     }
 
-    private class RunnableWithTransientReferences : SandboxedRunnable<Int, Int> {
-        override fun run(input: Int): Int? {
+    private class RunnableWithTransientReferences : Function<Int, Int> {
+        override fun apply(input: Int): Int {
             return ReferencedClass().test()
         }
     }

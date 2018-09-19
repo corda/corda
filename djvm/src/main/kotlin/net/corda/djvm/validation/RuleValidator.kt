@@ -21,9 +21,9 @@ import org.objectweb.asm.ClassVisitor
  */
 class RuleValidator(
         private val rules: List<Rule> = emptyList(),
-        configuration: AnalysisConfiguration = AnalysisConfiguration(),
+        configuration: AnalysisConfiguration,
         classVisitor: ClassVisitor? = null
-) : ClassAndMemberVisitor(classVisitor, configuration = configuration) {
+) : ClassAndMemberVisitor(configuration, classVisitor) {
 
     /**
      * Apply the set of rules to the traversed class and record any violations.

@@ -33,14 +33,14 @@ class MemberModule : AnnotationModule() {
      * Check if member is a field.
      */
     fun isField(member: MemberInformation): Boolean {
-        return !member.signature.startsWith("(")
+        return !member.signature.startsWith('(')
     }
 
     /**
      * Check if member is a method.
      */
     fun isMethod(member: MemberInformation): Boolean {
-        return member.signature.startsWith("(")
+        return member.signature.startsWith('(')
     }
 
     /**

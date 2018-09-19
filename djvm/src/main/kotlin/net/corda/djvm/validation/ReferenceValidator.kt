@@ -3,7 +3,7 @@ package net.corda.djvm.validation
 import net.corda.djvm.analysis.AnalysisConfiguration
 import net.corda.djvm.analysis.AnalysisContext
 import net.corda.djvm.analysis.ClassAndMemberVisitor
-import net.corda.djvm.execution.SandboxedRunnable
+import net.corda.djvm.analysis.SourceLocation
 import net.corda.djvm.formatting.MemberFormatter
 import net.corda.djvm.messages.Message
 import net.corda.djvm.messages.Severity
@@ -12,7 +12,7 @@ import net.corda.djvm.rewiring.SandboxClassLoadingException
 import net.corda.djvm.utilities.loggerFor
 
 /**
- * Module used to validate all traversable references before instantiating and executing a [SandboxedRunnable].
+ * Module used to validate all traversable references before instantiating and executing a [java.util.function.Function].
  *
  * @param configuration The analysis configuration to use for the validation.
  * @property memberFormatter Module with functionality for formatting class members.
@@ -42,11 +42,11 @@ class ReferenceValidator(
      */
     fun validate(context: AnalysisContext, analyzer: ClassAndMemberVisitor): ReferenceValidationSummary =
             State(context, analyzer).let { state ->
-                logger.trace("Validating {} references across {} class(es)...",
-                        context.references.size, context.classes.size)
+                logger.debug("Validating {} references across {} class(es)...",
+                        context.references.numberOfReferences, context.classes.size)
                 context.references.process { validateReference(state, it) }
-                logger.trace("Reference validation completed; {} class(es) and {} message(s)",
-                        context.references.size, context.classes.size)
+                logger.debug("Reference validation completed; {} class(es) and {} message(s)",
+                        context.references.numberOfReferences, context.classes.size)
                 ReferenceValidationSummary(state.context.classes, state.context.messages, state.context.classOrigins)
             }
 
@@ -85,21 +85,21 @@ class ReferenceValidator(
         }
         when (reference) {
             is ClassReference -> {
-                logger.trace("Validating class reference {}", reference)
+                logger.debug("Validating class reference {}", reference)
                 val clazz = getClass(state, reference.className)
                 val reason = when (clazz) {
                     null -> Reason(Reason.Code.NON_EXISTENT_CLASS)
                     else -> getReasonFromEntity(clazz)
                 }
                 if (reason != null) {
-                    logger.trace("Recorded invalid class reference to {}; reason = {}", reference, reason)
+                    logger.debug("Recorded invalid class reference to {}; reason = {}", reference, reason)
                     state.context.messages.addAll(state.context.references.locationsFromReference(reference).map {
                         referenceToMessage(ReferenceWithLocation(it, reference, reason.description))
                     })
                 }
             }
             is MemberReference -> {
-                logger.trace("Validating member reference {}", reference)
+                logger.debug("Validating member reference {}", reference)
                 // Ensure that the dependent class is loaded and analyzed
                 val clazz = getClass(state, reference.className)
                 val member = state.context.classes.getMember(
@@ -111,7 +111,7 @@ class ReferenceValidator(
                     else -> getReasonFromEntity(state, member)
                 }
                 if (reason != null) {
-                    logger.trace("Recorded invalid member reference to {}; reason = {}", reference, reason)
+                    logger.debug("Recorded invalid member reference to {}; reason = {}", reference, reason)
                     state.context.messages.addAll(state.context.references.locationsFromReference(reference).map {
                         referenceToMessage(ReferenceWithLocation(it, reference, reason.description))
                     })
@@ -138,7 +138,7 @@ class ReferenceValidator(
             logger.trace("Loading and analyzing referenced class {}...", name)
             val origin = state.context.references
                     .locationsFromReference(ClassReference(name))
-                    .map { it.className }
+                    .map(SourceLocation::className)
                     .firstOrNull() ?: originClass
             state.analyzer.analyze(name, state.context, origin)
             clazz = state.context.classes[name]

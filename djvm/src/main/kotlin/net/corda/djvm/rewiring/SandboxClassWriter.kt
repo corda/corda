@@ -1,5 +1,6 @@
 package net.corda.djvm.rewiring
 
+import net.corda.djvm.code.asPackagePath
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.ClassWriter.COMPUTE_FRAMES
@@ -35,12 +36,12 @@ open class SandboxClassWriter(
             type2 == OBJECT_NAME -> return type2
         }
         val class1 = try {
-            classLoader.loadClass(type1.replace('/', '.'))
+            classLoader.loadClass(type1.asPackagePath)
         } catch (exception: Exception) {
             throw TypeNotPresentException(type1, exception)
         }
         val class2 = try {
-            classLoader.loadClass(type2.replace('/', '.'))
+            classLoader.loadClass(type2.asPackagePath)
         } catch (exception: Exception) {
             throw TypeNotPresentException(type2, exception)
         }

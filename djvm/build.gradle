@@ -3,6 +3,7 @@ plugins {
 }
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'idea'
 
 description 'Corda deterministic JVM sandbox'
 
@@ -11,8 +12,17 @@ ext {
     asm_version = '6.1.1'
 }
 
+repositories {
+    maven {
+        url "$artifactory_contextUrl/corda-dev"
+    }
+}
+
 configurations {
     testCompile.extendsFrom shadow
+    jdkRt.resolutionStrategy {
+        cacheChangingModulesFor 0, 'seconds'
+    }
 }
 
 dependencies {
@@ -32,6 +42,7 @@ dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    jdkRt "net.corda:deterministic-rt:latest.integration"
 }
 
 jar.enabled = false
@@ -43,6 +54,10 @@ shadowJar {
 }
 assemble.dependsOn shadowJar
 
+tasks.withType(Test) {
+    systemProperty 'deterministic-rt.path', configurations.jdkRt.asPath
+}
+
 artifacts {
     publish shadowJar
 }
@@ -50,4 +65,11 @@ artifacts {
 publish {
     dependenciesFrom configurations.shadow
     name shadowJar.baseName
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+    }
 }

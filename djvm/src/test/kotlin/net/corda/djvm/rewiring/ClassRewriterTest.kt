@@ -6,10 +6,11 @@ import foo.bar.sandbox.Empty
 import foo.bar.sandbox.StrictFloat
 import net.corda.djvm.TestBase
 import net.corda.djvm.assertions.AssertionExtensions.assertThat
-import net.corda.djvm.costing.ThresholdViolationException
 import net.corda.djvm.execution.ExecutionProfile
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
+import sandbox.net.corda.djvm.costing.ThresholdViolationError
+import java.nio.file.Paths
 
 class ClassRewriterTest : TestBase() {
 
@@ -45,7 +46,7 @@ class ClassRewriterTest : TestBase() {
         val callable = newCallable<B>()
         assertThat(callable).hasBeenModified()
         assertThat(callable).isSandboxed()
-        assertThatExceptionOfType(ThresholdViolationException::class.java).isThrownBy {
+        assertThatExceptionOfType(ThresholdViolationError::class.java).isThrownBy {
             callable.createAndInvoke()
         }.withMessageContaining("terminated due to excessive use of looping")
         assertThat(runtimeCosts)
@@ -61,4 +62,44 @@ class ClassRewriterTest : TestBase() {
         callable.createAndInvoke()
     }
 
+    @Test
+    fun `can load a Java API that still exists in Java runtime`() = sandbox(DEFAULT) {
+        assertThat(loadClass<MutableList<*>>())
+                .hasClassName("sandbox.java.util.List")
+                .hasBeenModified()
+    }
+
+    @Test
+    fun `cannot load a Java API that was deleted from Java runtime`() = sandbox(DEFAULT) {
+        assertThatExceptionOfType(SandboxClassLoadingException::class.java)
+                .isThrownBy { loadClass<Paths>() }
+                .withMessageContaining("Class file not found; java/nio/file/Paths.class")
+    }
+
+    @Test
+    fun `load internal Sun class that still exists in Java runtime`() = sandbox(DEFAULT) {
+        assertThat(loadClass<sun.misc.Unsafe>())
+                .hasClassName("sandbox.sun.misc.Unsafe")
+                .hasBeenModified()
+    }
+
+    @Test
+    fun `cannot load internal Sun class that was deleted from Java runtime`() = sandbox(DEFAULT) {
+        assertThatExceptionOfType(SandboxClassLoadingException::class.java)
+                .isThrownBy { loadClass<sun.misc.Timer>() }
+                .withMessageContaining("Class file not found; sun/misc/Timer.class")
+    }
+
+    @Test
+    fun `can load local class`() = sandbox(DEFAULT) {
+        assertThat(loadClass<Example>())
+                .hasClassName("sandbox.net.corda.djvm.rewiring.ClassRewriterTest\$Example")
+                .hasBeenModified()
+    }
+
+    class Example : java.util.function.Function<Int, Int> {
+        override fun apply(input: Int): Int {
+            return input
+        }
+    }
 }

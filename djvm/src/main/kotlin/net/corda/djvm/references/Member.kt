@@ -1,5 +1,7 @@
 package net.corda.djvm.references
 
+import org.objectweb.asm.MethodVisitor
+
 /**
  * Representation of a class member.
  *
@@ -12,6 +14,8 @@ package net.corda.djvm.references
  * @property exceptions The names of the exceptions that the member can throw.
  * @property value The default value of a field.
  */
+typealias MethodBody = (MethodVisitor) -> Unit
+
 data class Member(
         override val access: Int,
         override val className: String,
@@ -20,5 +24,6 @@ data class Member(
         val genericsDetails: String,
         val annotations: MutableSet<String> = mutableSetOf(),
         val exceptions: MutableSet<String> = mutableSetOf(),
-        val value: Any? = null
+        val value: Any? = null,
+        val body: List<MethodBody> = emptyList()
 ) : MemberInformation, EntityWithAccessFlag

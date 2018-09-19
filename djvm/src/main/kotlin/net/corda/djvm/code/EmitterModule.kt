@@ -2,6 +2,7 @@ package net.corda.djvm.code
 
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Type
 import sandbox.net.corda.djvm.costing.RuntimeCostAccounter
 
 /**
@@ -38,7 +39,7 @@ class EmitterModule(
      * Emit instruction for creating a new object of type [T].
      */
     inline fun <reified T> new() {
-        new(T::class.java.name)
+        new(Type.getInternalName(T::class.java))
     }
 
     /**
@@ -77,7 +78,7 @@ class EmitterModule(
      * Emit instruction for invoking a special method on class [T], e.g. a constructor or a method on a super-type.
      */
     inline fun <reified T> invokeSpecial(name: String, descriptor: String, isInterface: Boolean = false) {
-        invokeSpecial(T::class.java.name, name, descriptor, isInterface)
+        invokeSpecial(Type.getInternalName(T::class.java), name, descriptor, isInterface)
     }
 
     /**
@@ -99,14 +100,17 @@ class EmitterModule(
     /**
      * Emit a sequence of instructions for instantiating and throwing an exception based on the provided message.
      */
-    fun throwError(message: String) {
+    fun <T : Throwable> throwException(exceptionType: Class<T>, message: String) {
         hasEmittedCustomCode = true
-        new<java.lang.Exception>()
+        val exceptionName = Type.getInternalName(exceptionType)
+        new(exceptionName)
         methodVisitor.visitInsn(Opcodes.DUP)
         methodVisitor.visitLdcInsn(message)
-        invokeSpecial<java.lang.Exception>("<init>", "(Ljava/lang/String;)V")
+        invokeSpecial(exceptionName, "<init>", "(Ljava/lang/String;)V")
         methodVisitor.visitInsn(Opcodes.ATHROW)
     }
+
+    inline fun <reified T : Throwable> throwException(message: String) = throwException(T::class.java, message)
 
     /**
      * Tell the code writer not to emit the default instruction.
