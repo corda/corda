@@ -19,6 +19,7 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NonEmptySet
 import rx.Observable
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
@@ -125,6 +126,44 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         RELEVANT, NOT_RELEVANT, ALL
     }
 
+    /**
+     *  Contract constraint information associated with a [ContractState].
+     *  See [AttachmentConstraint]
+     */
+    @CordaSerializable
+    data class ConstraintInfo(val constraint: AttachmentConstraint) {
+        enum class Type {
+            ALWAYS_ACCEPT, HASH, CZ_WHITELISTED, SIGNATURE
+        }
+        fun type(): Type {
+            return when (constraint::class.java) {
+                AlwaysAcceptAttachmentConstraint::class.java -> Type.ALWAYS_ACCEPT
+                AutomaticHashConstraint::class.java,
+                HashAttachmentConstraint::class.java -> Type.HASH
+                WhitelistedByZoneAttachmentConstraint::class.java -> Type.CZ_WHITELISTED
+                SignatureAttachmentConstraint::class.java -> Type.SIGNATURE
+                else -> throw IllegalArgumentException("Invalid constraint type: $constraint")
+            }
+        }
+        fun data(): Any? {
+            return when (type()) {
+                Type.HASH -> (constraint as HashAttachmentConstraint).attachmentId
+                Type.SIGNATURE -> (constraint as SignatureAttachmentConstraint).key
+                else -> null
+            }
+        }
+        companion object {
+            fun constraintInfo(type: Type, data: Any?): ConstraintInfo {
+                return when (type) {
+                    Type.ALWAYS_ACCEPT -> ConstraintInfo(AlwaysAcceptAttachmentConstraint)
+                    Type.HASH -> ConstraintInfo(HashAttachmentConstraint(data as SecureHash))
+                    Type.CZ_WHITELISTED -> ConstraintInfo(WhitelistedByZoneAttachmentConstraint)
+                    Type.SIGNATURE -> ConstraintInfo(SignatureAttachmentConstraint(data as PublicKey))
+                }
+            }
+        }
+    }
+
     @CordaSerializable
     enum class UpdateType {
         GENERAL, NOTARY_CHANGE, CONTRACT_UPGRADE
@@ -160,7 +199,8 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             val notary: AbstractParty?,
             val lockId: String?,
             val lockUpdateTime: Instant?,
-            val relevancyStatus: Vault.RelevancyStatus?
+            val relevancyStatus: Vault.RelevancyStatus?,
+            val constraintInfo: ConstraintInfo
     ) {
         constructor(ref: StateRef,
                     contractStateClassName: String,
@@ -184,6 +224,30 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         ): StateMetadata {
             return StateMetadata(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, null)
         }
+        constructor(ref: StateRef,
+                    contractStateClassName: String,
+                    recordedTime: Instant,
+                    consumedTime: Instant?,
+                    status: Vault.StateStatus,
+                    notary: AbstractParty?,
+                    lockId: String?,
+                    lockUpdateTime: Instant?,
+                    relevancyStatus: Vault.RelevancyStatus?
+        ) : this(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, relevancyStatus, ConstraintInfo(AlwaysAcceptAttachmentConstraint))
+
+        fun copy(
+                ref: StateRef = this.ref,
+                contractStateClassName: String = this.contractStateClassName,
+                recordedTime: Instant = this.recordedTime,
+                consumedTime: Instant? = this.consumedTime,
+                status: Vault.StateStatus = this.status,
+                notary: AbstractParty? = this.notary,
+                lockId: String? = this.lockId,
+                lockUpdateTime: Instant? = this.lockUpdateTime,
+                relevancyStatus: Vault.RelevancyStatus?
+        ): StateMetadata {
+            return StateMetadata(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, relevancyStatus, ConstraintInfo(AlwaysAcceptAttachmentConstraint))
+        }
     }
 
     companion object {
@@ -193,6 +257,11 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         val NoNotaryUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.NOTARY_CHANGE)
     }
 }
+
+/**
+ * The maximum permissible size of contract constraint type data (for storage in vault states database table).
+ */
+const val MAX_CONSTRAINT_DATA_SIZE = 1024
 
 /**
  * A [VaultService] is responsible for securely and safely persisting the current state of a vault to storage. The
