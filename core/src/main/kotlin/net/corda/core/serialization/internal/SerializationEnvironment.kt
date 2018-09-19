@@ -6,12 +6,8 @@ import net.corda.core.internal.InheritableThreadLocalToggleField
 import net.corda.core.internal.SimpleToggleField
 import net.corda.core.internal.ThreadLocalToggleField
 import net.corda.core.internal.VisibleForTesting
-<<<<<<< HEAD
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
-=======
-import net.corda.core.serialization.*
->>>>>>> Eliminate CheckpointSerializationFactory
 
 @KeepForDJVM
 interface SerializationEnvironment {

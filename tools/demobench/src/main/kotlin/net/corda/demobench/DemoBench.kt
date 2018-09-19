@@ -2,13 +2,9 @@ package net.corda.demobench
 
 import javafx.scene.image.Image
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.core.serialization.CheckpointSerializationContext
-import net.corda.core.serialization.CheckpointSerializer
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.AMQPSerializationEnvironment
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
-import net.corda.core.utilities.ByteSequence
 import net.corda.demobench.views.DemoBenchView
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.SerializationFactoryImpl
