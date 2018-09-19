@@ -449,6 +449,4 @@ class X509UtilitiesTest {
         assertEquals(childKey.public, pubKey)
         assertEquals(childKey.private, privateKey)
     }
-
-
 }
