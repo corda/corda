@@ -1,13 +1,26 @@
-package net.corda.node.internal
+package net.corda.cliutils
 
+import org.apache.logging.log4j.Level
+import org.apache.logging.log4j.message.Message
+import org.apache.logging.log4j.message.SimpleMessage
 import java.util.*
 
-fun Exception.errorCode(hashedFields: (Throwable) -> Array<out Any?> = Throwable::defaultHashedFields): String {
+internal fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
+
+    return when {
+        error != null && level.isInRange(Level.FATAL, Level.WARN) -> CompositeMessage("$formattedMessage [errorCode=${error.errorCode()}]", format, parameters, throwable)
+        else -> this
+    }
+}
+
+private fun Throwable.errorCode(hashedFields: (Throwable) -> Array<out Any?> = Throwable::defaultHashedFields): String {
+
     val hash = staticLocationBasedHash(hashedFields)
     return hash.toBase(36)
 }
 
 private fun Throwable.staticLocationBasedHash(hashedFields: (Throwable) -> Array<out Any?>, visited: Set<Throwable> = setOf(this)): Int {
+
     val cause = this.cause
     val fields = hashedFields.invoke(this)
     return when {
@@ -36,4 +49,13 @@ private fun Throwable.defaultHashedFields(): Array<out Any?> {
 private fun StackTraceElement.defaultHashedFields(): Array<out Any?> {
 
     return arrayOf(className, methodName)
+}
+
+private class CompositeMessage(message: String?, private val formatArg: String?, private val parameters: Array<out Any?>?, private val error: Throwable?) : SimpleMessage(message) {
+
+    override fun getThrowable(): Throwable? = error
+
+    override fun getParameters(): Array<out Any?>? = parameters
+
+    override fun getFormat(): String? = formatArg
 }

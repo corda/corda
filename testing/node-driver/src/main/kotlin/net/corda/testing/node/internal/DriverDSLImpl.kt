@@ -735,9 +735,11 @@ class DriverDSLImpl(
 
             val systemProperties = mutableMapOf(
                     "name" to config.corda.myLegalName,
-                    "visualvm.display.name" to "corda-${config.corda.myLegalName}",
-                    "log4j2.debug" to if (debugPort != null) "true" else "false"
+                    "visualvm.display.name" to "corda-${config.corda.myLegalName}"
             )
+            debugPort?.let {
+                systemProperties += "log4j2.debug" to "true"
+            }
 
             systemProperties += inheritFromParentProcess()
             systemProperties += overriddenSystemProperties
