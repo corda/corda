@@ -161,6 +161,6 @@ fun KeyManagerFactory.init(keyStore: CertificateStore) = init(keyStore.value.int
 fun TrustManagerFactory.init(trustStore: CertificateStore) = init(trustStore.value.internal)
 
 internal fun x500toHostName(x500Name: CordaX500Name): String {
-    val secureHash = SecureHash.SHA256(x500Name.toString().toByteArray())
-    return "$secureHash.corda.net"
+    val secureHash = SecureHash.sha256(x500Name.toString())
+    return "${secureHash.toString().substring(0..32)}.corda.net"
 }
