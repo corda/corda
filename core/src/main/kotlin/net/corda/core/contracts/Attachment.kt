@@ -7,6 +7,7 @@ import net.corda.core.serialization.CordaSerializable
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.OutputStream
+import java.security.PublicKey
 import java.util.jar.JarInputStream
 
 /**
@@ -51,10 +52,10 @@ interface Attachment : NamedByHash {
     fun extractFile(path: String, outputTo: OutputStream) = openAsJAR().use { it.extractFile(path, outputTo) }
 
     /**
-     * The parties that have correctly signed the whole attachment.
+     * The keys that have correctly signed the whole attachment.
      * Can be empty, for example non-contract attachments won't be necessarily be signed.
      */
-    val signers: List<Party>
+    val signers: List<PublicKey>
 
     /**
      * Attachment size in bytes.

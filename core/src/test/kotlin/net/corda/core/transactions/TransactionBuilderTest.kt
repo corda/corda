@@ -23,6 +23,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.security.PublicKey
 
 class TransactionBuilderTest {
     @Rule
@@ -119,12 +120,12 @@ class TransactionBuilderTest {
     private val unsignedAttachment = object : AbstractAttachment({ byteArrayOf() }) {
         override val id: SecureHash get() = throw UnsupportedOperationException()
 
-        override val signers: List<Party> get() = emptyList()
+        override val signers: List<PublicKey> get() = emptyList()
     }
 
     private fun signedAttachment(vararg parties: Party) = object : AbstractAttachment({ byteArrayOf() }) {
         override val id: SecureHash get() = throw UnsupportedOperationException()
 
-        override val signers: List<Party> get() = parties.toList()
+        override val signers: List<PublicKey> get() = parties.map { it.owningKey }
     }
 }
