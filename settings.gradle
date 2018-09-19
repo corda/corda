@@ -60,6 +60,9 @@ include 'samples:cordapp-configuration'
 include 'samples:network-verifier'
 include 'serialization'
 
+include ':error-codes-server'
+project(':error-codes-server').projectDir = new File('./tools/error-codes-server')
+
 if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
     include 'core-deterministic'
     include 'core-deterministic:testing'
