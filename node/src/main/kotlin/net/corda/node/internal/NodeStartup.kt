@@ -142,7 +142,7 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
     private fun hasMinimumJavaVersion(): Boolean {
         val major = SystemUtils.JAVA_VERSION_FLOAT
         val update = SystemUtils.JAVA_VERSION.substringAfter("_").toLong()
-        return major > 1.8 || (major == 1.8F && update >= 171)
+        return major == 1.8F && update >= 171
     }
 
     // TODO: Reconsider if automatic re-registration should be applied when something failed during initial registration.
