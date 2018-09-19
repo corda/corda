@@ -1,0 +1,312 @@
+#!/usr/bin/env python
+
+# {{{ Dependencies
+from __future__ import print_function
+import sys
+from args import Program
+from login_manager import login, confirm
+from jira_manager import Jira
+# }}}
+
+# {{{ Dependencies for printing coloured content to the console
+try:
+    from termcolor import colored
+    def blue(message): return colored(message, 'blue')
+    def green(message): return colored(message, 'green')
+    def red(message): return colored(message, 'red')
+    def yellow(message): return colored(message, 'yellow')
+    def faint(message): return colored(message, 'white', attrs=['dark'])
+    def on_green(message): return colored(message, 'white', 'on_green')
+    def on_red(message): return colored(message, 'white', 'on_red')
+    def blue_on_white(message): return colored(message, 'blue', 'on_white')
+    def yellow_on_white(message): return colored(message, 'yellow', 'on_white')
+except:
+    def blue(message): return u'[{}]'.format(message)
+    def green(message): return message
+    def red(message): return message
+    def yellow(message): return message
+    def faint(message): return message
+    def on_green(message): return message
+    def on_red(message): return message
+    def blue_on_white(message): return message
+    def yellow_on_white(message): return message
+# }}}
+
+# {{{ Mapping from product code to product name
+product_map = {
+    'OS'   : 'Corda',
+    'ENT'  : 'Corda Enterprise',
+    'NS'   : 'Corda Network Services',
+    'TEST' : 'Corda', # for demo and test purposes
+}
+# }}}
+
+# {{{ JIRA queries
+QUERY_LIST_TEST_CASES = \
+    u'project = R3T AND type = "Platform Test Template" AND status = Active AND labels = "{}" ORDER BY key'
+QUERY_LIST_TEST_INSTANCES = \
+    u'project = R3T AND type = "Platform Test" AND labels = "{}" AND "Target Version/s" = "{}" ORDER BY key'
+QUERY_LIST_TEST_INSTANCE_FOR_TICKET = \
+    u'project = R3T AND type = "Platform Test" AND labels = "{}" AND "Target Version/s" = "{}" AND issue IN linkedIssues({})'
+QUERY_LIST_ALL_TEST_RUNS_FOR_TICKET = \
+    u'project = R3T AND type = "Platform Test Run" AND labels = "{}" AND parent = {} ORDER BY "Target Version/S"'
+QUERY_LIST_TEST_RUN_FOR_TICKET = \
+    u'project = R3T AND type = "Platform Test Run" AND labels = "{}" AND "Target Version/s" = "{}" AND parent = {}'
+QUERY_LIST_BLOCKING_TEST_CASES = \
+    u'project = R3T AND type = "Platform Test Template" AND labels = "{}" AND issue IN linkedIssues({}, "Blocks")'
+# }}}
+
+# {{{ list_test_cases() - List active test cases for a specific product
+def list_test_cases(args):
+    user, password = login('jira', args.user)
+    if not user or not password: sys.exit(1)
+    jira = Jira().login(user, password)
+    print(u'List of active test cases for {}:'.format(yellow(product_map[args.PRODUCT])))
+    if args.verbose:
+        print(faint('[{}]'.format(QUERY_LIST_TEST_CASES.format(args.PRODUCT))))
+    print()
+    has_tests = False
+    for issue in jira.search(QUERY_LIST_TEST_CASES, args.PRODUCT):
+        print(u' - {} {}'.format(blue(issue.key), issue.fields.summary))
+        has_tests = True
+    if not has_tests:
+        print(u' - No active test cases found')
+    print()
+# }}}
+
+# {{{ show_status() - Show the status of all test runs for a specific release or release candidate
+def show_status(args):
+    user, password = login('jira', args.user)
+    if not user or not password: sys.exit(1)
+    jira = Jira().login(user, password)
+    version = '{} {}'.format(product_map[args.PRODUCT], args.VERSION).replace('.0', '')
+    candidate = '{} RC{:02d}'.format(version, args.CANDIDATE) if args.CANDIDATE else version
+    if args.CANDIDATE:
+        print(u'Status of test runs for {} version {} release candidate {}:'.format(yellow(product_map[args.PRODUCT]), yellow(args.VERSION), yellow('RC{:02d}'.format(args.CANDIDATE))))
+    else:
+        print(u'Status of test runs for {} version {}:'.format(yellow(product_map[args.PRODUCT]), yellow(args.VERSION)))
+    if args.verbose:
+        print(faint('[{}]'.format(QUERY_LIST_TEST_INSTANCES.format(args.PRODUCT, version))))
+    print()
+    has_tests = False
+    for issue in jira.search(QUERY_LIST_TEST_INSTANCES, args.PRODUCT, version):
+        status = issue.fields.status['name'].lower()
+        if status == 'pass':
+            status = on_green('Pass')
+        elif status == 'fail':
+            status = on_red('Fail')
+        elif status == 'descope':
+            status = on_green('Descoped')
+        else:
+            status = ''
+        print(u' - {} {} {}'.format(blue(issue.key), issue.fields.summary, status))
+        has_test_runs = False
+        if args.CANDIDATE:
+            if args.verbose:
+                print(faint('   [{}]'.format(QUERY_LIST_TEST_RUN_FOR_TICKET.format(args.PRODUCT, candidate, issue.key))))
+            run_list = jira.search(QUERY_LIST_TEST_RUN_FOR_TICKET, args.PRODUCT, candidate, issue.key)
+        else:
+            if args.verbose:
+                print(faint('   [{}]'.format(QUERY_LIST_ALL_TEST_RUNS_FOR_TICKET.format(args.PRODUCT, issue.key))))
+            run_list = jira.search(QUERY_LIST_ALL_TEST_RUNS_FOR_TICKET, args.PRODUCT, issue.key)
+        for run in run_list:
+            has_test_runs = True
+            print()
+            status = run.fields.status['name'].lower()
+            if status == 'pass':
+                status = on_green('Pass    ')
+            elif status == 'fail':
+                status = on_red('Fail    ')
+            elif status == 'descope':
+                status = on_green('Descoped')
+            elif status == 'in progress':
+                status = yellow_on_white('Active  ')
+            else:
+                status = blue_on_white('Open    ')
+            print(u'    {} {} ({})'.format(status, faint(run.fields[jira.custom_fields_by_name['Target Version/s']][0]['name']), blue(run.key)))
+        if not has_test_runs:
+            print()
+            print(u'    - No release candidate tests found')
+        print()
+        has_tests = True
+    if not has_tests:
+        print(u' - No test cases found for the specified release')
+    print()
+# }}}
+
+# {{{ create_version() - Create a new JIRA version
+def create_version(args):
+    user, password = login('jira', args.user)
+    if not user or not password: sys.exit(1)
+    jira = Jira().login(user, password)
+    version = '{} {}'.format(product_map[args.PRODUCT], args.VERSION).replace('.0', '')
+    version = '{} RC{:02d}'.format(version, args.CANDIDATE) if args.CANDIDATE else version
+    confirm(u'Create new version {}?'.format(yellow(version)), auto_yes=args.yes or args.dry_run)
+    print()
+    if not args.dry_run:
+        for project in ['CORDA', 'ENT', 'ENM', 'R3T', 'CID']:
+            print(u' - Creating version {} for project {} ...'.format(yellow(version), blue(project)))
+            try:
+                jira.jira.create_version(name=version, project=project, description=version)
+                print(u'   {} - Created version for project {}'.format(green('SUCCESS'), blue(project)))
+            except Exception as error:
+                print(u'   {} - Failed to version: {}'.format(red('FAIL'), error))
+            print()
+
+
+# }}}
+
+# {{{ create_release() - Create test cases for a specific version of a product
+def create_release(args):
+    user, password = login('jira', args.user)
+    if not user or not password: sys.exit(1)
+    jira = Jira().login(user, password)
+    version = '{} {}'.format(product_map[args.PRODUCT], args.VERSION).replace('.0', '')
+    confirm(u'Create test cases for {} version {}?'.format(yellow(product_map[args.PRODUCT]), yellow(args.VERSION)), auto_yes=args.yes or args.dry_run)
+    if args.verbose:
+        print(faint('[{}]'.format(QUERY_LIST_TEST_CASES.format(args.PRODUCT))))
+    print()
+    has_tests = False
+    for issue in jira.search(QUERY_LIST_TEST_CASES, args.PRODUCT):
+        print(u' - {} {}'.format(blue(issue.key), issue.fields.summary))
+        print()
+        has_tests = True
+        print(u'    - Creating test case for version {} ...'.format(yellow(args.VERSION)))
+        if args.verbose:
+            print(faint(u'      [{}]'.format(QUERY_LIST_TEST_INSTANCE_FOR_TICKET.format(args.PRODUCT, version, issue.key))))
+        has_test_case_for_version = len(list(jira.search(QUERY_LIST_TEST_INSTANCE_FOR_TICKET.format(args.PRODUCT, version, issue.key))))
+        if has_test_case_for_version:
+            print(u'      {} - Test case for version already exists'.format(yellow('SKIPPED')))
+        else:
+            try:
+                test_case = issue.clone(issuetype='Platform Test', version=version, dry_run=args.dry_run)
+                print(u'      {} - Created ticket {}'.format(green('SUCCESS'), blue(test_case.key)))
+            except Exception as error:
+                print(u'      {} - Failed to create ticket: {}'.format(red('FAIL'), error))
+            print()
+            print(u'    - Linking test case to template ...')
+            try:
+                jira.link(issue.key, test_case.key, dry_run=args.dry_run)
+                print(u'      {} - Linked {} to {}'.format(green('SUCCESS'), blue(issue.key), blue(test_case.key)))
+            except Exception as error:
+                print(u'      {} - Failed to link tickets: {}'.format(red('FAIL'), error))
+        print()
+    print(u'Copying links from test templates for {} version {}?'.format(yellow(product_map[args.PRODUCT]), yellow(args.VERSION)))
+    print()
+    for issue in jira.search(QUERY_LIST_TEST_CASES, args.PRODUCT):
+        print(u' - {} {}'.format(blue(issue.key), issue.fields.summary))
+        print()
+        print(u'    - Copying links for test case {} ...'.format(blue(issue.key)))
+        has_links = False
+        if args.verbose:
+            print(faint(u'      [{}]'.format(QUERY_LIST_BLOCKING_TEST_CASES.format(args.PRODUCT, issue.key))))
+        for blocking_issue in jira.search(QUERY_LIST_BLOCKING_TEST_CASES, args.PRODUCT, issue.key):
+            from_ticket = list(jira.search(QUERY_LIST_TEST_INSTANCE_FOR_TICKET.format(args.PRODUCT, version, issue.key)))
+            to_ticket = list(jira.search(QUERY_LIST_TEST_INSTANCE_FOR_TICKET.format(args.PRODUCT, version, blocking_issue.key)))
+            if len(from_ticket) == 0 or len(to_ticket) == 0:
+                continue
+            has_links = True
+            from_key = from_ticket[0].key
+            to_key = to_ticket[0].key
+            try:
+                jira.link(from_key, to_key, Jira.BLOCKS, dry_run=args.dry_run)
+                print(u'      {} - Linked {} to {}'.format(green('SUCCESS'), blue(from_key), blue(to_key)))
+            except Exception as error:
+                print(u'      {} - Failed to link tickets {} and {}: {}'.format(red('FAIL'), blue(from_key), blue(to_key), error))
+        if not has_links:
+            print(u'      {} - No relevant links found for ticket {}'.format(yellow('SKIPPED'), blue(issue.key)))
+        print()
+    if not has_tests:
+        print(u' - No active test cases found')
+        print()
+# }}}
+
+# {{{ create_release_candidate() - Create test run tickets for a specific release candidate of a product
+def create_release_candidate(args):
+    user, password = login('jira', args.user)
+    if not user or not password: sys.exit(1)
+    jira = Jira().login(user, password)
+    version = '{} {}'.format(product_map[args.PRODUCT], args.VERSION).replace('.0', '')
+    CANDIDATE = args.CANDIDATE[0]
+    candidate = '{} RC{:02d}'.format(version, CANDIDATE)
+    confirm(u'Create test run tickets for {} version {} release candidate {}?'.format(yellow(product_map[args.PRODUCT]), yellow(args.VERSION), yellow('RC{:02d}'.format(CANDIDATE))), auto_yes=args.yes or args.dry_run)
+    if args.verbose:
+        print(faint('[{}]'.format(QUERY_LIST_TEST_INSTANCES.format(args.PRODUCT, version))))
+    print()
+    has_tests = False
+    for issue in jira.search(QUERY_LIST_TEST_INSTANCES, args.PRODUCT, version):
+        print(u' - {} {}'.format(blue(issue.key), issue.fields.summary))
+        epic_field = jira.custom_fields_by_name['Epic Link']
+        epic = issue.fields[epic_field] if epic_field in issue.fields.to_dict() else ''
+        labels = issue.fields.labels + [epic]
+        print()
+        has_tests = True
+        print(u'    - Creating test run ticket for release candidate {} ...'.format(yellow('RC{:02d}'.format(CANDIDATE))))
+        if args.verbose:
+            print(faint(u'      [{}]'.format(QUERY_LIST_TEST_RUN_FOR_TICKET.format(args.PRODUCT, candidate, issue.key))))
+        has_test_instance_for_version = len(list(jira.search(QUERY_LIST_TEST_RUN_FOR_TICKET.format(args.PRODUCT, candidate, issue.key))))
+        if has_test_instance_for_version:
+            print(u'      {} - Ticket for release candidate already exists'.format(yellow('SKIPPED')))
+        else:
+            try:
+                test_case = issue.clone(issuetype='Platform Test Run', version=candidate, parent=issue.key, labels=labels, dry_run=args.dry_run)
+                print(u'      {} - Created ticket {}'.format(green('SUCCESS'), blue(test_case.key)))
+            except Exception as error:
+                print(u'      {} - Failed to create ticket: {}'.format(red('FAIL'), error))
+        print()
+    if not has_tests:
+        print(u' - No active test cases found')
+        print()
+# }}}
+
+# {{{ main() - Entry point
+def main():
+    with Program(description='tool for managing test cases and test runs in JIRA') as program:
+
+        PRODUCTS = ['OS', 'ENT', 'NS', 'TEST']
+
+        program.add('--verbose', '-v', help='turn on verbose logging', action='store_true')
+        program.add('--yes', '-y', help='automatically answer "yes" to all prompts', action='store_true')
+        program.add('--user', '-u', help='the user name or email address used to log in to JIRA', type=str, metavar='USER')
+        program.add('--no-keyring', help='do not retrieve passwords persisted in the keyring', action='store_true')
+
+        def mixin_dry_run(command):
+            command.add('--dry-run', '-d', help='run action without applying any changes to JIRA', action='store_true')
+
+        def mixin_product(command):
+            command.add('PRODUCT', help='the product under test (OS, ENT, NS)', choices=PRODUCTS, metavar='PRODUCT')
+
+        def mixin_version_and_product(command):
+            mixin_product(command)
+            command.add('VERSION', help='the target version of the release, e.g., 4.0', type=float)
+
+        def mixin_candidate(command, optional=False):
+            if optional:
+                nargs = '?'
+            else:
+                nargs = 1
+            command.add('CANDIDATE', help='the number of the release candidate, e.g., 1 for RC01', type=int, nargs=nargs)
+
+        with program.command('list-tests', 'list test cases applicable to the provided specification', list_test_cases) as command:
+            mixin_product(command)
+
+        with program.command('status', 'show the status of all test runs for a specific release or release candidate', show_status) as command:
+            mixin_version_and_product(command)
+            mixin_candidate(command, True)
+
+        with program.command('create-version', 'create a new version in JIRA', create_version) as command:
+            mixin_dry_run(command)
+            mixin_version_and_product(command)
+            mixin_candidate(command, True)
+
+        with program.command('create-release-tests', 'create test cases for a new release in JIRA', create_release) as command:
+            mixin_dry_run(command)
+            mixin_version_and_product(command)
+
+        with program.command('create-release-candidate-tests', 'create test runs for a new release candidate in JIRA', create_release_candidate) as command:
+            mixin_dry_run(command)
+            mixin_version_and_product(command)
+            mixin_candidate(command)
+# }}}
+
+if __name__ == '__main__': main()
