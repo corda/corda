@@ -91,6 +91,7 @@ see changes to this list.
 * Ivan Schasny (R3)
 * James Brown (R3)
 * James Carlyle (R3)
+* Janis Olekss (Accenture)
 * Jared Harwayne-Gidansky (BNY Mellon)
 * Jayavaradhan Sambedu (Société Générale)
 * Joel Dudley (R3)
