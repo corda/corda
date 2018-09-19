@@ -40,8 +40,8 @@ data class CheckpointSerializationEnvironment (
 
 @KeepForDJVM
 open class SerializationEnvironmentImpl(
-        private val amqp: AMQPSerializationEnvironment? = null,
-        private val checkpoint: CheckpointSerializationEnvironment? = null) : SerializationEnvironment {
+    private val amqp: AMQPSerializationEnvironment? = null,
+    private val checkpoint: CheckpointSerializationEnvironment? = null) : SerializationEnvironment {
 
     private val amqpIfSupported get() = amqp ?:
         throw UnsupportedOperationException("AMQP serialization not supported in this environment")

@@ -32,7 +32,6 @@ data class SerializationContextImpl @JvmOverloads constructor(override val deser
                                                               override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist,
                                                               override val lenientCarpenterEnabled: Boolean = false) : SerializationContext {
 
-
     override val preferredSerializationVersion: SerializationMagic
         get() = throw UnsupportedOperationException()
 
@@ -161,7 +160,6 @@ open class SerializationFactoryImpl(
 
     override fun hashCode(): Int = registeredSchemes.hashCode()
 }
-
 
 @KeepForDJVM
 interface SerializationScheme {
