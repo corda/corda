@@ -21,7 +21,6 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
-
 import net.corda.core.serialization.internal.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger

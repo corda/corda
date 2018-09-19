@@ -54,8 +54,10 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import rx.Observable
 import rx.Subscription
 import rx.schedulers.Schedulers
+import rx.subjects.AsyncSubject
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL
@@ -733,9 +735,11 @@ class DriverDSLImpl(
 
             val systemProperties = mutableMapOf(
                     "name" to config.corda.myLegalName,
-                    "visualvm.display.name" to "corda-${config.corda.myLegalName}",
-                    "log4j2.debug" to if (debugPort != null) "true" else "false"
+                    "visualvm.display.name" to "corda-${config.corda.myLegalName}"
             )
+            debugPort?.let {
+                systemProperties += "log4j2.debug" to "true"
+            }
 
             systemProperties += inheritFromParentProcess()
             systemProperties += overriddenSystemProperties

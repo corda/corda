@@ -49,12 +49,12 @@ class SerializationTokenTest {
     }
 
     private fun serializeAsTokenContext(toBeTokenized: Any) = CheckpointSerializeAsTokenContextImpl(toBeTokenized, checkpointSerializer, context, rigorousMock())
+
     @Test
     fun `write token and read tokenizable`() {
         val tokenizableBefore = LargeTokenizable()
         val context = serializeAsTokenContext(tokenizableBefore)
         val testContext = this.context.withTokenContext(context)
-
         val serializedBytes = tokenizableBefore.checkpointSerialize(testContext)
         assertThat(serializedBytes.size).isLessThan(tokenizableBefore.numBytes)
         val tokenizableAfter = serializedBytes.checkpointDeserialize(testContext)

@@ -4,7 +4,7 @@ import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.DoNotImplement
-
+import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
 import net.corda.core.serialization.internal.*
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT

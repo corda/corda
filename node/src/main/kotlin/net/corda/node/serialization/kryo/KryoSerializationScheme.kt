@@ -12,6 +12,7 @@ import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
 import net.corda.core.serialization.internal.CheckpointSerializationContext
+
 import net.corda.core.serialization.internal.CheckpointSerializer
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.*

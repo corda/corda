@@ -238,7 +238,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open fun makeRPCOps(): CordaRPCOps {
-        val ops: CordaRPCOps = CordaRPCOpsImpl(services, smm, flowStarter) { shutdownExecutor.submit { stop() } }
+        val ops: CordaRPCOps = CordaRPCOpsImpl(services, smm, flowStarter) { shutdownExecutor.submit { stop() } }.also { it.closeOnStop() }
         val proxies = mutableListOf<(CordaRPCOps) -> CordaRPCOps>()
         // Mind that order is relevant here.
         proxies += ::AuthenticatedRpcOpsProxy

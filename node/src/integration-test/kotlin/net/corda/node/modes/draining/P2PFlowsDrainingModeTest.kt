@@ -1,8 +1,11 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.client.rpc.internal.drainAndShutdown
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.startFlow
@@ -10,6 +13,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
+import net.corda.nodeapi.internal.hasCancelledDrainingShutdown
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
@@ -18,6 +22,7 @@ import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.waitForShutdown
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
@@ -80,24 +85,74 @@ class P2PFlowsDrainingModeTest {
     }
 
     @Test
-    fun `clean shutdown by draining`() {
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, notarySpecs = emptyList())) {
+    fun `terminate node waiting for pending flows`() {
+
+        driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
+
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
             var successful = false
             val latch = CountDownLatch(1)
+
             nodeB.rpc.setFlowsDrainingModeEnabled(true)
             IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
 
-            nodeA.rpc.drainAndShutdown()
-                    .doOnError { error ->
-                        error.printStackTrace()
-                        successful = false
-                    }
-                    .doOnCompleted { successful = true }
-                    .doAfterTerminate { latch.countDown() }
-                    .subscribe()
+            nodeA.waitForShutdown().doOnError(Throwable::printStackTrace).doOnError { successful = false }.doOnCompleted { successful = true }.doAfterTerminate(latch::countDown).subscribe()
+
+            nodeA.rpc.terminate(true)
             nodeB.rpc.setFlowsDrainingModeEnabled(false)
+
+            latch.await()
+
+            assertThat(successful).isTrue()
+        }
+    }
+
+    @Test
+    fun `terminate resets persistent draining mode property when waiting for pending flows`() {
+
+        driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
+
+            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
+            var successful = false
+            val latch = CountDownLatch(1)
+
+            // This would not be needed, as `terminate(true)` sets draining mode anyway, but it's here to ensure that it removes the persistent value anyway.
+            nodeA.rpc.setFlowsDrainingModeEnabled(true)
+            nodeA.rpc.waitForShutdown().doOnError(Throwable::printStackTrace).doOnError { successful = false }.doOnCompleted(nodeA::stop).doOnCompleted {
+                val nodeARestarted = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
+                successful = !nodeARestarted.rpc.isFlowsDrainingModeEnabled()
+            }.doAfterTerminate(latch::countDown).subscribe()
+
+            nodeA.rpc.terminate(true)
+
+            latch.await()
+
+            assertThat(successful).isTrue()
+        }
+    }
+
+    @Test
+    fun `disabling draining mode cancels draining shutdown`() {
+
+        driver(DriverParameters(portAllocation = portAllocation, notarySpecs = emptyList())) {
+
+            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
+            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
+            var successful = false
+            val latch = CountDownLatch(1)
+
+            nodeB.rpc.setFlowsDrainingModeEnabled(true)
+            IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
+
+            nodeA.waitForShutdown().doOnError(Throwable::printStackTrace).doAfterTerminate { successful = false }.doAfterTerminate(latch::countDown).subscribe()
+
+            nodeA.rpc.terminate(true)
+            nodeA.rpc.hasCancelledDrainingShutdown().doOnError(Throwable::printStackTrace).doOnError { successful = false }.doOnCompleted { successful = true }.doAfterTerminate(latch::countDown).subscribe()
+
+            nodeA.rpc.setFlowsDrainingModeEnabled(false)
+            nodeB.rpc.setFlowsDrainingModeEnabled(false)
+
             latch.await()
 
             assertThat(successful).isTrue()

@@ -1,5 +1,6 @@
 package net.corda.testing.node.internal
 
+import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
@@ -8,17 +9,21 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.times
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.Message
+import net.corda.testing.driver.NodeHandle
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.User
 import net.corda.testing.node.testContext
 import org.slf4j.LoggerFactory
+import rx.Observable
+import rx.subjects.AsyncSubject
 import java.net.Socket
 import java.net.SocketException
 import java.time.Duration
@@ -109,3 +114,21 @@ fun StartedNodeServices.newContext(): InvocationContext = testContext(myInfo.cho
 fun InMemoryMessagingNetwork.MessageTransfer.getMessage(): Message = message
 
 fun CordaRPCClient.start(user: User) = start(user.username, user.password)
+
+fun NodeHandle.waitForShutdown(): Observable<Unit> {
+
+    return rpc.waitForShutdown().doAfterTerminate(::stop)
+}
+
+fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
+
+    val completable = AsyncSubject.create<Unit>()
+    stateMachinesFeed().updates.subscribe({ _ -> }, { error ->
+        if (error is ConnectionFailureException) {
+            completable.onCompleted()
+        } else {
+            completable.onError(error)
+        }
+    })
+    return completable
+}

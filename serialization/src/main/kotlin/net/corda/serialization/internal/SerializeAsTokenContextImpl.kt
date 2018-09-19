@@ -23,9 +23,6 @@ fun CheckpointSerializationContext.withTokenContext(serializationContext: Serial
  */
 @DeleteForDJVM
 class SerializeAsTokenContextImpl(override val serviceHub: ServiceHub, init: SerializeAsTokenContext.() -> Unit) : SerializeAsTokenContext {
-    constructor(toBeTokenized: Any, serializationFactory: SerializationFactory, context: SerializationContext, serviceHub: ServiceHub) : this(serviceHub, {
-        serializationFactory.serialize(toBeTokenized, context.withTokenContext(this))
-    })
 
     private val classNameToSingleton = mutableMapOf<String, SerializeAsToken>()
     private var readOnly = false

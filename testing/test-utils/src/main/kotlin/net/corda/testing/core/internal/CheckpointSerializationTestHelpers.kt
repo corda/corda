@@ -20,7 +20,6 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
-
  * A test checkpoint serialization rule implementation for use in tests.
  *
  * @param inheritable whether new threads inherit the environment, use sparingly.

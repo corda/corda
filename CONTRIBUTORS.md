@@ -91,6 +91,7 @@ see changes to this list.
 * Ivan Schasny (R3)
 * James Brown (R3)
 * James Carlyle (R3)
+* Janis Olekss (Accenture)
 * Jared Harwayne-Gidansky (BNY Mellon)
 * Jayavaradhan Sambedu (Société Générale)
 * Joel Dudley (R3)
@@ -137,6 +138,7 @@ see changes to this list.
 * Mike Hearn (R3)
 * Mike Ward (R3)
 * Mike Reichelt (US Bank)
+* Milen Dobrinov (Industria)
 * Mohamed Amine LEGHERABA
 * Mustafa Ozturk (Natixis)
 * Nick Skinner (Northern Trust)
@@ -145,6 +147,7 @@ see changes to this list.
 * Nuam Athaweth (MUFG)
 * Oscar Zibordi de Paiva (Scopus Soluções em TI)
 * OP Financial
+* Parnika Sharma (BCS Technology)
 * Patrick Kuo (R3)
 * Pekka Kaipio (OP Financial)
 * Phillip Griffin
@@ -176,6 +179,7 @@ see changes to this list.
 * Scott James
 * Sean Zhang (Wells Fargo)
 * Shams Asari (R3)
+* Shivan Sawant (Persistent Systems Limited)
 * Siddhartha Sengupta (Tradewind Markets)
 * Simon Taylor (Barclays)
 * Sofus Mortensen (Digital Asset Holdings)
