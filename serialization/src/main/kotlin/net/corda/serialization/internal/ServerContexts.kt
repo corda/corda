@@ -19,7 +19,6 @@ import net.corda.serialization.internal.amqp.amqpMagic
 
 
 val AMQP_STORAGE_CONTEXT = SerializationContextImpl(
-        amqpMagic,
         SerializationDefaults.javaClass.classLoader,
         AllButBlacklisted,
         emptyMap(),
@@ -30,7 +29,6 @@ val AMQP_STORAGE_CONTEXT = SerializationContextImpl(
 )
 
 val AMQP_RPC_SERVER_CONTEXT = SerializationContextImpl(
-        amqpMagic,
         SerializationDefaults.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),

@@ -35,7 +35,7 @@ public final class ForbiddenLambdaSerializationTests {
     @Test
     public final void serialization_fails_for_serializable_java_lambdas() {
         contexts.forEach(ctx -> {
-            SerializationContext context = new SerializationContextImpl(SchemaKt.getAmqpMagic(),
+            SerializationContext context = new SerializationContextImpl(
                     this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, ctx, null);
             String value = "Hey";
             Callable<String> target = (Callable<String> & Serializable) () -> value;
@@ -53,7 +53,7 @@ public final class ForbiddenLambdaSerializationTests {
     @SuppressWarnings("unchecked")
     public final void serialization_fails_for_not_serializable_java_lambdas() {
         contexts.forEach(ctx -> {
-            SerializationContext context = new SerializationContextImpl(SchemaKt.getAmqpMagic(),
+            SerializationContext context = new SerializationContextImpl(
                     this.getClass().getClassLoader(), AllWhitelist.INSTANCE, Maps.newHashMap(), true, ctx, null);
             String value = "Hey";
             Callable<String> target = () -> value;

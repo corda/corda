@@ -3,14 +3,13 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.BuiltInExceptionsWhitelist
-import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.GlobalTransientClassWhiteList
 import net.corda.serialization.internal.SerializationContextImpl
 import org.junit.Test
 import kotlin.test.assertEquals
 
 // Make sure all serialization calls in this test don't get stomped on by anything else
-val TESTING_CONTEXT = SerializationContextImpl(amqpMagic,
+val TESTING_CONTEXT = SerializationContextImpl(
         SerializationDefaults.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
@@ -55,7 +54,7 @@ class AMQPTestSerializationScheme : AbstractAMQPSerializationScheme(emptySet(), 
         throw UnsupportedOperationException()
     }
 
-    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase) = true
+    override fun canDeserializeVersion(target: SerializationContext.UseCase) = true
 }
 
 // Test SerializationFactory that wraps a serialization scheme that just allows us to call <OBJ>.serialize.

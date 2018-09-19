@@ -4,12 +4,10 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
-import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.RxNotificationSerializer
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * When set as the serialization scheme, defines the RPC Server serialization scheme as using the Corda
@@ -35,10 +33,9 @@ class AMQPServerSerializationScheme(
         }
     }
 
-    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
-        return canDeserializeVersion(magic) &&
-                (   target == SerializationContext.UseCase.P2P
+    override fun canDeserializeVersion(target: SerializationContext.UseCase): Boolean {
+        return target == SerializationContext.UseCase.P2P
                  || target == SerializationContext.UseCase.Storage
-                 || target == SerializationContext.UseCase.RPCServer)
+                 || target == SerializationContext.UseCase.RPCServer
     }
 }

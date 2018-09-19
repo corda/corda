@@ -11,9 +11,8 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.AMQPSerializationEnvironment
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.days
@@ -23,7 +22,6 @@ import net.corda.nodeapi.internal.*
 import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
-import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.amqpMagic
@@ -383,19 +381,19 @@ internal constructor(private val initSerEnv: Boolean,
     // We need to to set serialization env, because generation of parameters is run from Cordform.
     private fun initialiseSerialization() {
         _contextSerializationEnv.set(SerializationEnvironmentImpl(
-                SerializationFactoryImpl().apply {
-                    registerScheme(AMQPParametersSerializationScheme)
-                },
-                AMQP_P2P_CONTEXT)
-        )
+                amqp = AMQPSerializationEnvironment(
+                    SerializationFactoryImpl().apply {
+                        registerScheme(AMQPParametersSerializationScheme)
+                    },
+                    p2pContext = AMQP_P2P_CONTEXT)))
     }
 
     private object AMQPParametersSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
         override fun rpcClientSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
         override fun rpcServerSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
 
-        override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
-            return magic == amqpMagic && target == SerializationContext.UseCase.P2P
+        override fun canDeserializeVersion(target: SerializationContext.UseCase): Boolean {
+            return target == SerializationContext.UseCase.P2P
         }
     }
 }

@@ -65,31 +65,24 @@ abstract class SerializationFactory {
     }
 
     /**
-     * Allow subclasses to temporarily mark themselves as the current factory for the current thread during serialization/deserialization.
-     * Will restore the prior context on exiting the block.
+     * Was intended to allow subclasses to temporarily mark themselves as the current factory for the current thread
+     * during serialization/deserialization, restoring the prior context on exiting the block.
+     *
+     * There is no internal use case for this, and the method now simply runs the provided block.
      */
-    fun <T> asCurrent(block: SerializationFactory.() -> T): T {
-        val priorContext = _currentFactory
-        _currentFactory= this
-        try {
-            return this.block()
-        } finally {
-            _currentFactory = priorContext
-        }
-    }
+    @Deprecated("Has no effect, as 'current' factory is now always default factory")
+    fun <T> asCurrent(block: SerializationFactory.() -> T): T = block()
 
     companion object {
-        private var _currentFactory: SerializationFactory? = null
-
         /**
          * A default factory for serialization/deserialization, taking into account the [currentFactory] if set.
          */
-        val defaultFactory: SerializationFactory get() = currentFactory ?: effectiveSerializationEnv.serializationFactory
+        val defaultFactory: SerializationFactory get() = effectiveSerializationEnv.serializationFactory
 
         /**
-         * If there is a need to nest serialization/deserialization with a modified context during serialization or deserialization,
-         * this will return the current factory used to start serialization/deserialization.
+         * Always just the default factory.
          */
-        val currentFactory: SerializationFactory? get() = _currentFactory
+        @Deprecated("Has no meaning distinct from defaultFactory, which should be used instead")
+        val currentFactory: SerializationFactory? get() = defaultFactory
     }
 }

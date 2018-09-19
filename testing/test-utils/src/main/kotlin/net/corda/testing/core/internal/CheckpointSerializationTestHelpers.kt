@@ -43,7 +43,6 @@ class CheckpointSerializationEnvironmentRule(private val inheritable: Boolean = 
         }
     }
 
-
     private lateinit var env: SerializationEnvironment
 
     override fun apply(base: Statement, description: Description): Statement {
@@ -65,7 +64,6 @@ class CheckpointSerializationEnvironmentRule(private val inheritable: Boolean = 
         }
     }
 
-    val checkpointSerializationFactory get() = env.checkpointSerializationFactory
+    val checkpointSerializer get() = env.checkpointSerializer
     val checkpointSerializationContext get() = env.checkpointContext
-
 }

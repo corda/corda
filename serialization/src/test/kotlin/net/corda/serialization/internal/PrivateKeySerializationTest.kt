@@ -1,6 +1,7 @@
 package net.corda.serialization.internal
 
 import net.corda.core.crypto.Crypto
+
 import net.corda.core.serialization.SerializationContext.UseCase.*
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults

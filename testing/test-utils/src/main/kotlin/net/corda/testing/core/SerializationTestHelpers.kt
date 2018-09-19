@@ -3,7 +3,6 @@ package net.corda.testing.core
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.DoNotImplement
 import net.corda.core.internal.staticField
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.SerializationEnvironment

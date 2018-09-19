@@ -5,7 +5,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.*
 import net.corda.core.serialization.internal.CheckpointSerializationContext
-import net.corda.core.serialization.internal.CheckpointSerializationFactory
+import net.corda.core.serialization.internal.CheckpointSerializer
 
 val serializationContextKey = SerializeAsTokenContext::class.java
 
@@ -23,9 +23,6 @@ fun CheckpointSerializationContext.withTokenContext(serializationContext: Serial
  */
 @DeleteForDJVM
 class SerializeAsTokenContextImpl(override val serviceHub: ServiceHub, init: SerializeAsTokenContext.() -> Unit) : SerializeAsTokenContext {
-    constructor(toBeTokenized: Any, serializationFactory: SerializationFactory, context: SerializationContext, serviceHub: ServiceHub) : this(serviceHub, {
-        serializationFactory.serialize(toBeTokenized, context.withTokenContext(this))
-    })
 
     private val classNameToSingleton = mutableMapOf<String, SerializeAsToken>()
     private var readOnly = false
@@ -70,8 +67,8 @@ class SerializeAsTokenContextImpl(override val serviceHub: ServiceHub, init: Ser
  */
 @DeleteForDJVM
 class CheckpointSerializeAsTokenContextImpl(override val serviceHub: ServiceHub, init: SerializeAsTokenContext.() -> Unit) : SerializeAsTokenContext {
-    constructor(toBeTokenized: Any, serializationFactory: CheckpointSerializationFactory, context: CheckpointSerializationContext, serviceHub: ServiceHub) : this(serviceHub, {
-        serializationFactory.serialize(toBeTokenized, context.withTokenContext(this))
+    constructor(toBeTokenized: Any, checkpointSerializer: CheckpointSerializer, context: CheckpointSerializationContext, serviceHub: ServiceHub) : this(serviceHub, {
+        checkpointSerializer.serialize(toBeTokenized, context.withTokenContext(this))
     })
 
     private val classNameToSingleton = mutableMapOf<String, SerializeAsToken>()
