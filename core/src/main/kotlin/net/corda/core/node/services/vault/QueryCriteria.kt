@@ -73,7 +73,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
 
     abstract class CommonQueryCriteria : QueryCriteria() {
         abstract val status: Vault.StateStatus
-        abstract val relevancyStatus: Vault.RelevancyStatus
+        open val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
         abstract val contractStateTypes: Set<Class<out ContractState>>?
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
