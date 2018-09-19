@@ -138,6 +138,7 @@ see changes to this list.
 * Mike Hearn (R3)
 * Mike Ward (R3)
 * Mike Reichelt (US Bank)
+* Milen Dobrinov (Industria)
 * Mohamed Amine LEGHERABA
 * Mustafa Ozturk (Natixis)
 * Nick Skinner (Northern Trust)
