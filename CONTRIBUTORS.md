@@ -147,6 +147,7 @@ see changes to this list.
 * Nuam Athaweth (MUFG)
 * Oscar Zibordi de Paiva (Scopus Soluções em TI)
 * OP Financial
+* Parnika Sharma (BCS Technology)
 * Patrick Kuo (R3)
 * Pekka Kaipio (OP Financial)
 * Phillip Griffin
