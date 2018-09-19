@@ -317,12 +317,12 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
         val console: Console? = System.console()
 
         when (console) {
-            // In this case, the JVM is not connected to the console so we need to exit.
+        // In this case, the JVM is not connected to the console so we need to exit.
             null -> {
                 println("Not connected to console. Exiting")
                 exitProcess(1)
             }
-            // Otherwise we can proceed normally.
+        // Otherwise we can proceed normally.
             else -> {
                 while (true) {
                     val keystorePassword1 = console.readPassword("Enter the RPC keystore password => ")
