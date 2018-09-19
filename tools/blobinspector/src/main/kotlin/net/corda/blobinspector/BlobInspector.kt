@@ -17,10 +17,7 @@ import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.base64ToByteArray
 import net.corda.core.utilities.hexToByteArray
 import net.corda.core.utilities.sequence
-import net.corda.serialization.internal.AMQP_P2P_CONTEXT
-import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
-import net.corda.serialization.internal.CordaSerializationMagic
-import net.corda.serialization.internal.SerializationFactoryImpl
+import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.amqpMagic

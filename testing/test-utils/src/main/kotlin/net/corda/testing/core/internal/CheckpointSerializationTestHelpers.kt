@@ -1,14 +1,13 @@
-package net.corda.testing.core
+package net.corda.testing.core.internal
 
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.DoNotImplement
 import net.corda.core.internal.staticField
-import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.testing.common.internal.asContextEnv
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.createTestSerializationEnv
 import net.corda.testing.internal.inVMExecutors
 import net.corda.testing.internal.rigorousMock
@@ -21,11 +20,11 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * A test serialization rule implementation for use in tests
+ * A test checkpoint serialization rule implementation for use in tests.
  *
  * @param inheritable whether new threads inherit the environment, use sparingly.
  */
-class SerializationEnvironmentRule(private val inheritable: Boolean = false) : TestRule {
+class CheckpointSerializationEnvironmentRule(private val inheritable: Boolean = false) : TestRule {
     companion object {
         init {
             // Can't turn it off, and it creates threads that do serialization, so hack it:
@@ -40,12 +39,12 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
 
         /** Do not call, instead use [SerializationEnvironmentRule] as a [org.junit.Rule]. */
         fun <T> run(taskLabel: String, task: (SerializationEnvironment) -> T): T {
-            return SerializationEnvironmentRule().apply { init(taskLabel) }.runTask(task)
+            return CheckpointSerializationEnvironmentRule().apply { init(taskLabel) }.runTask(task)
         }
     }
 
+
     private lateinit var env: SerializationEnvironment
-    val serializationFactory get() = env.serializationFactory
 
     override fun apply(base: Statement, description: Description): Statement {
         init(description.toString())
@@ -65,4 +64,8 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
             inVMExecutors.remove(env)
         }
     }
+
+    val checkpointSerializationFactory get() = env.checkpointSerializationFactory
+    val checkpointSerializationContext get() = env.checkpointContext
+
 }

@@ -4446,8 +4446,6 @@ public interface net.corda.core.serialization.SerializationCustomSerializer
 ##
 public final class net.corda.core.serialization.SerializationDefaults extends java.lang.Object
   @NotNull
-  public final net.corda.core.serialization.SerializationContext getCHECKPOINT_CONTEXT()
-  @NotNull
   public final net.corda.core.serialization.SerializationContext getP2P_CONTEXT()
   @NotNull
   public final net.corda.core.serialization.SerializationContext getRPC_CLIENT_CONTEXT()
@@ -6882,8 +6880,6 @@ public final class net.corda.testing.core.SerializationEnvironmentRule extends j
   public <init>(boolean)
   @NotNull
   public org.junit.runners.model.Statement apply(org.junit.runners.model.Statement, org.junit.runner.Description)
-  @NotNull
-  public final net.corda.core.serialization.SerializationContext getCheckpointContext()
   @NotNull
   public final net.corda.core.serialization.SerializationFactory getSerializationFactory()
   public static final net.corda.testing.core.SerializationEnvironmentRule$Companion Companion

@@ -4,9 +4,9 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.*
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.CheckpointStorage
@@ -27,7 +27,7 @@ class ActionExecutorImpl(
         private val checkpointStorage: CheckpointStorage,
         private val flowMessaging: FlowMessaging,
         private val stateMachineManager: StateMachineManagerInternal,
-        private val checkpointSerializationContext: SerializationContext,
+        private val checkpointSerializationContext: CheckpointSerializationContext,
         metrics: MetricRegistry
 ) : ActionExecutor {
 
@@ -237,7 +237,7 @@ class ActionExecutorImpl(
     }
 
     private fun serializeCheckpoint(checkpoint: Checkpoint): SerializedBytes<Checkpoint> {
-        return checkpoint.serialize(context = checkpointSerializationContext)
+        return checkpoint.checkpointSerialize(context = checkpointSerializationContext)
     }
 
     private fun cancelFlowTimeout(action: Action.CancelFlowTimeout) {
