@@ -1,5 +1,6 @@
 package net.corda.node.services.network
 
+import com.codahale.metrics.MetricRegistry
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.configureDatabase
@@ -27,7 +28,7 @@ class PersistentNetworkMapCacheTest {
 
     private var portCounter = 1000
     private val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
-    private val charlieNetMapCache = PersistentNetworkMapCache(database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
+    private val charlieNetMapCache = PersistentNetworkMapCache(MetricRegistry(), database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
 
     @After
     fun cleanUp() {

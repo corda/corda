@@ -1,5 +1,6 @@
 package net.corda.node.services.transactions
 
+import com.codahale.metrics.MetricRegistry
 import io.atomix.catalyst.transport.Address
 import io.atomix.copycat.client.ConnectionStrategies
 import io.atomix.copycat.client.CopycatClient
@@ -155,7 +156,7 @@ class RaftTransactionCommitLogTests {
         val address = Address(myAddress.host, myAddress.port)
         val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(includeNotarySchemas = true))
         databases.add(database)
-        val stateMachineFactory = { RaftTransactionCommitLog(database, Clock.systemUTC(), RaftUniquenessProvider.Companion::createMap) }
+        val stateMachineFactory = { RaftTransactionCommitLog(database, Clock.systemUTC(), { RaftUniquenessProvider.createMap(MetricRegistry()) }) }
 
         val server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)
