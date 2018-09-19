@@ -240,18 +240,6 @@ allprojects {
         maven { url "$artifactory_contextUrl/corda-dependencies" }
         maven { url 'https://jitpack.io' }
         maven { url "$artifactory_contextUrl/corda-releases" } // cordform-common
-        if (project.hasProperty("mavenOracleUsername") && project.hasProperty("mavenOraclePassword")) {
-            maven {
-                // For integrationTest task when running against Oracle database the JDBC driver is in Oracle Maven repository with login access only,
-                // setup an account on https://login.oracle.com/oaam_server/login.do
-                // provide credentials to Gradle task by -PmavenOracleUsername=... -PmavenOraclePassword=...
-                url "https://www.oracle.com/content/secure/maven/content"
-                credentials {
-                    username = project.property("mavenOracleUsername")
-                    password = project.property("mavenOraclePassword")
-                }
-            }
-        }
     }
 
     configurations {

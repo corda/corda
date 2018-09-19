@@ -202,15 +202,7 @@ dependencies {
             runtime "com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre8"
             break
         case "integration-oracle" :
-            runtime ("com.oracle.jdbc:ojdbc8:12.2.0.1") { //exclude unnecessary or conflicting libraries
-                exclude group: "com.oracle.jdbc", module: "ucp"
-                exclude group: "com.oracle.jdbc", module: "ons"
-                exclude group: "com.oracle.jdbc", module: "xmlparserv2"
-                exclude group: "com.oracle.jdbc", module: "xdb6"
-                exclude group: "com.oracle.jdbc", module: "oraclepki"
-                exclude group: "com.oracle.jdbc", module: "osdt_cert"
-                exclude group: "com.oracle.jdbc", module: "osdt_core"
-            }
+            runtime files("lib/ojdbc8.jar")
             break
         case "integration-oracle-11" :
             runtime files("lib/ojdbc6.jar")
