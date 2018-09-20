@@ -16,7 +16,7 @@ fun startReporter(shutdownManager: ShutdownManager, metricRegistry: MetricRegist
             val component = name.substringBefore('.').substringAfterLast('/', "")
             val subName = name.substringAfter('.', "")
             if (subName == "")
-                ObjectName("$domain:name=$category")
+                ObjectName("$domain:name=$category${if (component.isNotEmpty()) ",component=$component," else ""}")
             else
                 ObjectName("$domain:type=$category,${if (component.isNotEmpty()) "component=$component," else ""}name=$subName")
 
