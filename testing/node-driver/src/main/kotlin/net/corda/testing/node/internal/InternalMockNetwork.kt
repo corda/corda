@@ -43,8 +43,6 @@ import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.transactions.BFTNonValidatingNotaryService
-import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.nodeapi.internal.DevIdentityGenerator
@@ -69,7 +67,6 @@ import java.math.BigInteger
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
-import java.security.PublicKey
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -424,20 +421,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         var acceptableLiveFiberCountOnStop: Int = 0
 
         override fun acceptableLiveFiberCountOnStop(): Int = acceptableLiveFiberCountOnStop
-
-        override fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSMaRtConfiguration): BFTSMaRt.Cluster {
-            return object : BFTSMaRt.Cluster {
-                override fun waitUntilAllReplicasHaveInitialized() {
-                    val clusterNodes = mockNet.nodes.map { it.started!! }.filter { notaryKey in it.info.legalIdentities.map { it.owningKey } }
-                    if (clusterNodes.size != bftSMaRtConfig.clusterAddresses.size) {
-                        throw IllegalStateException("Unable to enumerate all nodes in BFT cluster.")
-                    }
-                    clusterNodes.forEach {
-                        (it.notaryService as BFTNonValidatingNotaryService).waitUntilReplicaHasInitialized()
-                    }
-                }
-            }
-        }
     }
 
     fun createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters()): MockNode {
