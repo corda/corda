@@ -1,7 +1,9 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
 import io.netty.handler.ssl.SslHandler
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHex
@@ -15,6 +17,8 @@ import java.net.Socket
 import java.security.cert.*
 import java.util.*
 import javax.net.ssl.*
+
+private const val HOSTNAME_FORMAT = "%s.corda.net"
 
 internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager) : X509ExtendedTrustManager() {
     companion object {
@@ -102,6 +106,7 @@ internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager)
 }
 
 internal fun createClientSslHelper(target: NetworkHostAndPort,
+                                   expectedRemoteLegalNames: Set<CordaX500Name>,
                                    keyManagerFactory: KeyManagerFactory,
                                    trustManagerFactory: TrustManagerFactory): SslHandler {
     val sslContext = SSLContext.getInstance("TLS")
@@ -113,6 +118,11 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
     sslEngine.enabledProtocols = ArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
     sslEngine.enabledCipherSuites = ArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
     sslEngine.enableSessionCreation = true
+    if (expectedRemoteLegalNames.size == 1) {
+        val sslParameters = sslEngine.sslParameters
+        sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.single())))
+        sslEngine.sslParameters = sslParameters
+    }
     return SslHandler(sslEngine)
 }
 
@@ -152,3 +162,10 @@ internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateSto
 fun KeyManagerFactory.init(keyStore: CertificateStore) = init(keyStore.value.internal, keyStore.password.toCharArray())
 
 fun TrustManagerFactory.init(trustStore: CertificateStore) = init(trustStore.value.internal)
+
+internal fun x500toHostName(x500Name: CordaX500Name): String {
+    val secureHash = SecureHash.sha256(x500Name.toString())
+    // RFC 1035 specifies a limit 255 bytes for hostnames with each label being 63 bytes or less. Due to this, the string
+    // representation of the SHA256 hash is truncated to 32 characters.
+    return String.format(HOSTNAME_FORMAT, secureHash.toString().substring(0..32).toLowerCase())
+}
