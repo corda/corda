@@ -202,7 +202,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     fun DigitalSignatureWithCert() {
         val digitalSignature = DigitalSignatureWithCert(MINI_CORP.identity.certificate, secureRandomBytes(128))
         val json = mapper.valueToTree<ObjectNode>(digitalSignature)
-        val (by, bytes) = json.assertHasOnlyFields("by", "bytes")
+        val (by, bytes) = json.assertHasOnlyFields("by", "bytes", "parentCertsChain")
         assertThat(by.valueAs<X509Certificate>(mapper)).isEqualTo(MINI_CORP.identity.certificate)
         assertThat(bytes.binaryValue()).isEqualTo(digitalSignature.bytes)
         assertThat(mapper.convertValue<DigitalSignatureWithCert>(json)).isEqualTo(digitalSignature)

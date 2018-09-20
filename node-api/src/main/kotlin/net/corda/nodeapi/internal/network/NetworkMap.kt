@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.network
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.CertRole
-import net.corda.core.internal.DigitalSignatureWithCertPath
 import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
@@ -57,9 +56,10 @@ data class ParametersUpdate(
 /** Verify that a Network Map certificate path and its [CertRole] is correct. */
 fun <T : Any> SignedDataWithCert<T>.verifiedNetworkMapCert(rootCert: X509Certificate): T {
     require(CertRole.extract(sig.by) == CertRole.NETWORK_MAP) { "Incorrect cert role: ${CertRole.extract(sig.by)}" }
-    val path = when (this.sig) {
-        is DigitalSignatureWithCertPath -> (sig as DigitalSignatureWithCertPath).path
-        else -> listOf(sig.by, rootCert)
+    val path = if (sig.parentCertsChain.isEmpty()) {
+        listOf(sig.by, rootCert)
+    } else {
+        sig.fullCertChain()
     }
     X509Utilities.validateCertificateChain(rootCert, path)
     return verified()
