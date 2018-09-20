@@ -132,6 +132,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      */
     @CordaSerializable
     data class ConstraintInfo(val constraint: AttachmentConstraint) {
+        @CordaSerializable
         enum class Type {
             ALWAYS_ACCEPT, HASH, CZ_WHITELISTED, SIGNATURE
         }
