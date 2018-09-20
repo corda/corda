@@ -4,7 +4,7 @@ buildscript {
     ext.javax_annotation_api_version = '1.3.2'
     ext.javax_inject_version = '1'
     ext.reactor_version = '3.2.0.RELEASE'
-    ext.konfig_version = '1.6.10.0'
+    ext.konf_version = '0.11'
     ext.juud_version = '3.1.5'
     ext.junit_version = '5.3.1'
 }
@@ -56,7 +56,7 @@ dependencies {
 
     compile group: 'io.projectreactor', name: 'reactor-core', version: reactor_version
 
-    compile group: 'com.natpryce', name: 'konfig', version: konfig_version
+    compile group: 'com.uchuhimo', name: 'konf', version: konf_version
 
     compile group: 'com.fasterxml.uuid', name: 'java-uuid-generator', version: juud_version
 

@@ -1,0 +1,4 @@
+config:
+  web:
+    server:
+      port: 8080

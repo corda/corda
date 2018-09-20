@@ -11,15 +11,12 @@ import javax.inject.Inject
 import javax.inject.Named
 
 @Named
-internal class WebServer @Inject constructor(private val vertxSupplier: () -> Vertx) : AutoCloseable {
+internal class WebServer @Inject constructor(val options: WebServer.Options, vertxSupplier: () -> Vertx) : AutoCloseable {
 
     private companion object {
 
         private val logger = loggerFor<WebServer>()
     }
-
-    // TODO sollecitom inject a domain one instead instead
-    private val options = HttpServerOptions().setPort(8080)
 
     val server: HttpServer
 
@@ -27,14 +24,14 @@ internal class WebServer @Inject constructor(private val vertxSupplier: () -> Ve
         val vertx = vertxSupplier.invoke()
         val router = Router.router(vertx)
 
-        server = vertx.createHttpServer(options).requestHandler(router::accept)
+        server = vertx.createHttpServer(options.toVertx()).requestHandler(router::accept)
     }
 
     @PostConstruct
     fun start() {
 
         server.listen()
-        logger.info("Started")
+        logger.info("Started on port ${server.actualPort()}.")
     }
 
     @PreDestroy
@@ -43,4 +40,11 @@ internal class WebServer @Inject constructor(private val vertxSupplier: () -> Ve
         server.close()
         logger.info("Closed.")
     }
+
+    interface Options {
+
+        val port: Port
+    }
+
+    private fun WebServer.Options.toVertx(): HttpServerOptions = HttpServerOptions().setPort(port.value)
 }
