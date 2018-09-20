@@ -125,6 +125,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseabl
     }
 
     private fun atomicCopy(source: Path, destination: Path) {
+        log.warn("Copy $source -> $destination")
         val tempDestination = try {
             Files.createTempFile(destination.parent, "", null)
         } catch (exception: IOException) {

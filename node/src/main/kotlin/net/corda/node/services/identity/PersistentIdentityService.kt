@@ -9,7 +9,6 @@ import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.debug
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -134,11 +133,12 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
             verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
         }
 
-        log.debug { "Registering identity $identity" }
+        log.warn ("Registering identity $identity" )
         val key = mapToKey(identity)
         keyToParties.addWithDuplicatesAllowed(key, identity)
         // Always keep the first party we registered, as that's the well known identity
-        principalToParties.addWithDuplicatesAllowed(identity.name, key, false)
+        val res = principalToParties.addWithDuplicatesAllowed(identity.name, key, true)
+        log.warn("principalToParties = $res : ${identity.name} to $key")
         val parentId = mapToKey(identityCertChain[1].publicKey)
         return keyToParties[parentId]
     }
@@ -146,6 +146,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToParties[mapToKey(owningKey)]
     private fun certificateFromCordaX500Name(name: CordaX500Name): PartyAndCertificate? {
         val partyId = principalToParties[name]
+        log.warn("partyId: $partyId")
         return if (partyId != null) {
             keyToParties[partyId]
         } else null
@@ -161,9 +162,12 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
         // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
         // into a party, and from there figure out the well known party.
         val candidate = partyFromKey(party.owningKey)
+        log.warn("candidate: $candidate")
         // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
         return if (candidate != null) {
-            wellKnownPartyFromX500Name(candidate.name)
+            val party =wellKnownPartyFromX500Name(candidate.name)
+            log.warn("party: $party")
+            party
         } else {
             null
         }
