@@ -21,7 +21,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
-import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationException
@@ -409,6 +408,15 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
 
     protected open fun banJavaSerialisation(conf: NodeConfiguration) {
         SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
+    }
+
+    /** This filter is required for BFT-Smart to work as it only supports Java serialization. */
+    private fun bftSMaRtSerialFilter(clazz: Class<*>): Boolean = clazz.name.let {
+        it.startsWith("bftsmart.")
+                || it.startsWith("java.security.")
+                || it.startsWith("java.util.")
+                || it.startsWith("java.lang.")
+                || it.startsWith("java.net.")
     }
 
     protected open fun getVersionInfo(): VersionInfo {
