@@ -3,14 +3,14 @@ package net.corda.tools.error.codes.server.web.endpoints
 import com.uchuhimo.konf.Config
 import com.uchuhimo.konf.ConfigSpec
 
-interface EndpointConfiguration {
+internal interface EndpointConfiguration {
 
     val name: String
     val path: String
     val enabled: Boolean
 }
 
-abstract class EndpointConfigProvider(sectionPath: String, applyConfigStandards: (Config) -> Config) : EndpointConfiguration {
+internal abstract class EndpointConfigProvider(sectionPath: String, applyConfigStandards: (Config) -> Config) : EndpointConfiguration {
 
     private val spec = EndpointConfSpec(sectionPath)
 

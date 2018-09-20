@@ -35,6 +35,7 @@ internal class HealthCheckEndpoint @Inject constructor(configuration: HealthChec
     // TODO sollecitom move to supertype
     private fun handleFailure(ctx: RoutingContext) {
 
+
         // TODO sollecitom publish event and log
         val json = JsonObject()
         json["error"] = "An unexpected error occurred."
