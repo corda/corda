@@ -12,7 +12,7 @@
 	    </update>
 	    <addNotNullConstraint tableName="vault_states" columnName="constraint_type" columnDataType="INT" />
         <addColumn tableName="vault_states">
-            <column name="constraint_data" type="NVARCHAR(255)">
+            <column name="constraint_data" type="NVARCHAR(1074)">
                 <constraints nullable="true"/>
             </column>
         </addColumn>

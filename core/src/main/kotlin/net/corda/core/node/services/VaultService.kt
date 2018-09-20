@@ -261,7 +261,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
 /**
  * The maximum permissible size of contract constraint type data (for storage in vault states database table).
  */
-const val MAX_CONSTRAINT_DATA_SIZE = 1024
+const val MAX_CONSTRAINT_DATA_SIZE = 1074
 
 /**
  * A [VaultService] is responsible for securely and safely persisting the current state of a vault to storage. The

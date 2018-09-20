@@ -74,6 +74,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     abstract class CommonQueryCriteria : QueryCriteria() {
         abstract val status: Vault.StateStatus
         open val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+        open val constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet()
         abstract val contractStateTypes: Set<Class<out ContractState>>?
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
@@ -90,7 +91,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val notary: List<AbstractParty>? = null,
             val softLockingCondition: SoftLockingCondition? = null,
             val timeCondition: TimeCondition? = null,
-            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL,
+            override val constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet()
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)

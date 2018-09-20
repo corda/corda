@@ -144,7 +144,7 @@ class NodeVaultService(
                         recordedTime = clock.instant(),
                         relevancyStatus = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT,
                         constraintType = constraintInfo.type(),
-                        constraintData = constraintInfo.data()?.serialize(context = STORAGE_CONTEXT)!!.bytes
+                        constraintData = constraintInfo.data()?.serialize(context = STORAGE_CONTEXT)?.bytes
                 )
                 stateToAdd.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(stateToAdd)
