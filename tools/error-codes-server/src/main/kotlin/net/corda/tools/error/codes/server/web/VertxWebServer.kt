@@ -11,6 +11,7 @@ import net.corda.tools.error.codes.server.commons.events.PublishingEventSource
 import net.corda.tools.error.codes.server.commons.lifecycle.WithLifeCycle
 import net.corda.tools.error.codes.server.commons.web.Port
 import net.corda.tools.error.codes.server.context.loggerFor
+import org.apache.commons.lang3.builder.ToStringBuilder
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 import javax.inject.Inject
@@ -32,7 +33,14 @@ sealed class WebServerEvent(id: EventId = EventId.newInstance()) : Event(id) {
 
     sealed class Initialisation(id: EventId = EventId.newInstance()) : WebServerEvent(id) {
 
-        class Completed(id: EventId = EventId.newInstance()) : Initialisation(id)
+        class Completed(val port: Port, id: EventId = EventId.newInstance()) : Initialisation(id) {
+
+            override fun appendToStringElements(toString: ToStringBuilder) {
+
+                super.appendToStringElements(toString)
+                toString["port"] = port.value
+            }
+        }
     }
 }
 
@@ -57,7 +65,7 @@ internal class VertxWebServer @Inject constructor(override val options: WebServe
     override fun start() {
 
         server.listen()
-        logger.info("Started on port ${server.actualPort()}.")
+        source.publish(WebServerEvent.Initialisation.Completed(Port(server.actualPort())))
     }
 
     @PreDestroy
