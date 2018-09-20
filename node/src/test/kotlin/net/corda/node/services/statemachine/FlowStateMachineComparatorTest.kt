@@ -14,9 +14,9 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.internal.CheckpointSerializationDefaults
+import net.corda.core.serialization.internal.checkpointDeserialize
+import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.node.TestClock
 import org.junit.Assert
@@ -70,7 +70,7 @@ class FlowStateMachineComparatorTest {
         val sm1 = FlowStateMachineImpl<Unit>(StateMachineRunId(UUID.randomUUID()),
                 scheduler = scheduler,
                 logic = EmptyFlow, creationTime = clock.millis())
-        val sm2 = sm1.serialize(context = SerializationDefaults.CHECKPOINT_CONTEXT).deserialize(context = SerializationDefaults.CHECKPOINT_CONTEXT)
+        val sm2 = sm1.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT).checkpointDeserialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT)
         Fiber.unparkDeserialized(sm2, scheduler)
 
         val comparator = FlowStateMachineComparator()
