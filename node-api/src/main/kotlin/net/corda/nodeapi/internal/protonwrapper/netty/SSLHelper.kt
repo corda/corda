@@ -121,6 +121,7 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
     if (expectedRemoteLegalNames.size == 1) {
         val sslParameters = sslEngine.sslParameters
         sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.single())))
+        sslEngine.sslParameters = sslParameters
     }
     return SslHandler(sslEngine)
 }
