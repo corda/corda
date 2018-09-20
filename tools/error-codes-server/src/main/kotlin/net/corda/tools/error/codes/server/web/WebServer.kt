@@ -16,12 +16,12 @@ internal class WebServer : AutoCloseable {
     @PostConstruct
     fun start() {
 
-        logger.info("Web server starting.")
+        logger.info("Starting.")
     }
 
     @PreDestroy
     override fun close() {
 
-        logger.info("Web server stopping.")
+        logger.info("Stopping.")
     }
 }
