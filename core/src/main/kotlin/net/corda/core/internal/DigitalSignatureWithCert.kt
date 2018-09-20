@@ -17,6 +17,10 @@ class DigitalSignatureWithCert(val by: X509Certificate, val parentCertsChain: Li
     @DeprecatedConstructorForDeserialization(1)
     constructor(by: X509Certificate, bytes: ByteArray) : this(by, emptyList(), bytes)
 
+    /* The difference between this and the master branch with respect to the implementation of the following two properties
+     * is due to the missing changes in the JSON/YAML serialization framework. In the master branch the following are
+     * expressed as properties instead of functions.
+     */
     fun fullCertChain(): List<X509Certificate> = listOf(by) + parentCertsChain
     fun fullCertPath(): CertPath = CertificateFactory.getInstance("X.509").generateCertPath(fullCertChain())
 
