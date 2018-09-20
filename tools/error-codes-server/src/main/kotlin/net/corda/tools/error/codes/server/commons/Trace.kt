@@ -1,6 +1,7 @@
 package net.corda.tools.error.codes.server.commons
 
 import net.corda.tools.error.codes.server.commons.identity.Id
+import net.corda.tools.error.codes.server.commons.identity.UuidGenerator
 import java.time.Instant
 
 data class Trace(val invocationId: InvocationId, val sessionId: SessionId) {

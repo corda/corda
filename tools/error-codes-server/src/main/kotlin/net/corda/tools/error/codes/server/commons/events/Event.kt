@@ -1,6 +1,6 @@
 package net.corda.tools.error.codes.server.commons.events
 
-import net.corda.tools.error.codes.server.commons.UuidGenerator
+import net.corda.tools.error.codes.server.commons.identity.UuidGenerator
 import net.corda.tools.error.codes.server.commons.identity.Entity
 import net.corda.tools.error.codes.server.commons.identity.Id
 import java.time.Instant
