@@ -1,4 +1,4 @@
-package net.corda.tools.error.codes.server.utils
+package net.corda.tools.error.codes.server.commons.logging
 
 import org.slf4j.LoggerFactory
 import kotlin.reflect.KClass

@@ -1,4 +1,4 @@
-package net.corda.tools.error.codes.server.utils
+package net.corda.tools.error.codes.server.commons.logging
 
 internal class Slf4jLoggerAdapter<CONTEXT : LoggingContext> private constructor(private val logger: org.slf4j.Logger) : Logger<CONTEXT> {
 
