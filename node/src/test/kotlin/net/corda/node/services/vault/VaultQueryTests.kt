@@ -2269,11 +2269,11 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             vaultFiller.fillWithSomeTestLinearStates(1, constraint = AlwaysAcceptAttachmentConstraint)
 
             // Base criteria
-            val baseCriteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
+            val baseCriteria = VaultQueryCriteria(constraintTypes = setOf(ALWAYS_ACCEPT))
 
             // Enrich and override QueryCriteria with additional default attributes (contract constraints)
-            val enrichedCriteria = VaultQueryCriteria(constraintTypes = setOf(SIGNATURE, HASH, ALWAYS_ACCEPT), // enrich
-                    status = Vault.StateStatus.UNCONSUMED)  // override
+            val enrichedCriteria = VaultQueryCriteria(constraintTypes = setOf(SIGNATURE, HASH, ALWAYS_ACCEPT)) // enrich
+
             // Sorting
             val sortAttribute = SortAttribute.Standard(Sort.VaultStateAttribute.CONSTRAINT_TYPE)
             val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))

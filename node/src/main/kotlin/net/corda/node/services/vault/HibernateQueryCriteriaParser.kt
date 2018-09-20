@@ -553,7 +553,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 val existingTypes = (commonPredicates[predicateID]!!.expressions[0] as InPredicate<*>).values.map { (it as LiteralExpression).literal }.toSet()
                 if (existingTypes != criteria.constraintTypes) {
                     log.warn("Enriching previous attribute [${VaultSchemaV1.VaultStates::constraintType.name}] values [$existingTypes] with [${criteria.constraintTypes}]")
-                    commonPredicates.replace(predicateID, criteriaBuilder.and(vaultStates.get<Vault.ConstraintInfo.Type>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(criteria.constraintTypes.plus(existingTypes))))
+                    commonPredicates.replace(predicateID, criteriaBuilder.and(vaultStates.get<Vault.ConstraintInfo.Type>(VaultSchemaV1.VaultStates::constraintType.name).`in`(criteria.constraintTypes.plus(existingTypes))))
                 }
             } else {
                 commonPredicates[predicateID] = criteriaBuilder.and(vaultStates.get<Vault.ConstraintInfo.Type>(VaultSchemaV1.VaultStates::constraintType.name).`in`(criteria.constraintTypes))
