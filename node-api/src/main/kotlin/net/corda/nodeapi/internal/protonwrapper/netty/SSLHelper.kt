@@ -18,6 +18,8 @@ import java.security.cert.*
 import java.util.*
 import javax.net.ssl.*
 
+private const val HOSTNAME_FORMAT = "%s.corda.net"
+
 internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager) : X509ExtendedTrustManager() {
     companion object {
         val log = contextLogger()
@@ -162,5 +164,7 @@ fun TrustManagerFactory.init(trustStore: CertificateStore) = init(trustStore.val
 
 internal fun x500toHostName(x500Name: CordaX500Name): String {
     val secureHash = SecureHash.sha256(x500Name.toString())
-    return "${secureHash.toString().substring(0..32).toLowerCase()}.corda.net"
+    // RFC 1035 specifies a limit 255 bytes for hostnames with each label being 63 bytes or less. Due to this, the string
+    // representation of the SHA256 hash is truncated to 32 characters.
+    return String.format(HOSTNAME_FORMAT, secureHash.toString().substring(0..32).toLowerCase())
 }
