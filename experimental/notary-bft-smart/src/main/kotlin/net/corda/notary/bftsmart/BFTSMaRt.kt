@@ -1,4 +1,4 @@
-package net.corda.node.services.transactions
+package net.corda.notary.bftsmart
 
 import bftsmart.communication.ServerCommunicationSystem
 import bftsmart.communication.client.netty.NettyClientServerCommunicationSystemClientSide
@@ -34,10 +34,11 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.transactions.BFTSMaRt.Client
-import net.corda.node.services.transactions.BFTSMaRt.Replica
+import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.notary.bftsmart.BFTSMaRt.Client
+import net.corda.notary.bftsmart.BFTSMaRt.Replica
 import java.nio.file.Path
 import java.security.PublicKey
 import java.util.*
@@ -78,7 +79,7 @@ object BFTSMaRt {
         fun waitUntilAllReplicasHaveInitialized()
     }
 
-    class Client(config: BFTSMaRtConfig, private val clientId: Int, private val cluster: Cluster, private val notaryService: BFTNonValidatingNotaryService) : SingletonSerializeAsToken() {
+    class Client(config: BFTSMaRtConfig, private val clientId: Int, private val cluster: Cluster, private val notaryService: BftSmartNotaryService) : SingletonSerializeAsToken() {
         companion object {
             private val log = contextLogger()
         }
@@ -178,7 +179,7 @@ object BFTSMaRt {
     abstract class Replica(config: BFTSMaRtConfig,
                            replicaId: Int,
                            createMap: () -> AppendOnlyPersistentMap<StateRef, SecureHash,
-                                   BFTNonValidatingNotaryService.CommittedState, PersistentStateRef>,
+                                   BftSmartNotaryService.CommittedState, PersistentStateRef>,
                            protected val services: ServiceHubInternal,
                            protected val notaryIdentityKey: PublicKey) : DefaultRecoverable() {
         companion object {

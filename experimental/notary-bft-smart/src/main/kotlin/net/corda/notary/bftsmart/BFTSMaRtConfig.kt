@@ -1,10 +1,11 @@
-package net.corda.node.services.transactions
+package net.corda.notary.bftsmart
 
 import net.corda.core.internal.div
 import net.corda.core.internal.writer
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.services.transactions.PathManager
 import java.io.PrintWriter
 import java.net.InetAddress
 import java.net.Socket

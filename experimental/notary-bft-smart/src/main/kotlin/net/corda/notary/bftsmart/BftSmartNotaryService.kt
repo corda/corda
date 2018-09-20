@@ -1,4 +1,4 @@
-package net.corda.node.services.transactions
+package net.corda.notary.bftsmart
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
@@ -10,6 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.notary.verifySignature
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -21,6 +22,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.BFTSMaRtConfiguration
+import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.security.PublicKey
@@ -33,14 +35,32 @@ import kotlin.concurrent.thread
  *
  * A transaction is notarised when the consensus is reached by the cluster on its uniqueness, and time-window validity.
  */
-class BFTNonValidatingNotaryService(
+class BftSmartNotaryService(
         override val services: ServiceHubInternal,
-        override val notaryIdentityKey: PublicKey,
-        private val bftSMaRtConfig: BFTSMaRtConfiguration,
-        cluster: BFTSMaRt.Cluster
+        override val notaryIdentityKey: PublicKey
 ) : NotaryService() {
     companion object {
         private val log = contextLogger()
+        @JvmStatic
+        val schemas: List<MappedSchema>
+            get() = listOf(BftSmartNotaryV1)
+    }
+
+    private val notaryConfig = services.configuration.notary
+            ?: throw IllegalArgumentException("Failed to register ${this::class.java}: notary configuration not present")
+
+    private val bftSMaRtConfig = notaryConfig.bftSMaRt
+            ?: throw IllegalArgumentException("Failed to register ${this::class.java}: raft configuration not present")
+
+    private val cluster: BFTSMaRt.Cluster = makeBFTCluster(notaryIdentityKey, bftSMaRtConfig)
+
+
+    protected open fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSMaRtConfiguration): BFTSMaRt.Cluster {
+        return object : BFTSMaRt.Cluster {
+            override fun waitUntilAllReplicasHaveInitialized() {
+                log.warn("A BFT replica may still be initializing, in which case the upcoming consensus change may cause it to spin.")
+            }
+        }
     }
 
     private val client: BFTSMaRt.Client
@@ -71,7 +91,7 @@ class BFTNonValidatingNotaryService(
 
     override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = ServiceFlow(otherPartySession, this)
 
-    private class ServiceFlow(val otherSideSession: FlowSession, val service: BFTNonValidatingNotaryService) : FlowLogic<Void?>() {
+    private class ServiceFlow(val otherSideSession: FlowSession, val service: BftSmartNotaryService) : FlowLogic<Void?>() {
         @Suspendable
         override fun call(): Void? {
             val payload = otherSideSession.receive<NotarisationPayload>().unwrap { it }

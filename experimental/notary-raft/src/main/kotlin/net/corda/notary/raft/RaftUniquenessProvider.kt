@@ -1,4 +1,4 @@
-package net.corda.node.services.transactions
+package net.corda.notary.raft
 
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.MetricRegistry
@@ -26,12 +26,12 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.config.RaftConfig
-import net.corda.node.services.transactions.RaftTransactionCommitLog.Commands.CommitTransaction
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.node.utilities.NamedCacheFactory
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.notary.raft.RaftTransactionCommitLog.Commands.CommitTransaction
 import java.nio.file.Path
 import java.time.Clock
 import java.util.concurrent.CompletableFuture

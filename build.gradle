@@ -361,7 +361,9 @@ bintrayConfig {
             'corda-tools-blob-inspector',
             'corda-tools-explorer',
             'corda-tools-network-bootstrapper',
-            'corda-tools-cliutils'
+            'corda-tools-cliutils',
+            'corda-notary-raft',
+            'corda-notary-bft-smart'
     ]
     license {
         name = 'Apache-2.0'
