@@ -11,7 +11,7 @@ import javax.inject.Inject
 import javax.inject.Named
 
 @Named
-internal class HealthCheckEndpoint @Inject constructor(private val configuration: HealthCheckEndpoint.Configuration) : Endpoint {
+internal class HealthCheckEndpoint @Inject constructor(configuration: HealthCheckEndpoint.Configuration) : Endpoint {
 
     // TODO sollecitom introduce a map-based functional Endpoint template
     override fun install(router: Router) {
