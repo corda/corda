@@ -2,10 +2,10 @@ package net.corda.tools.error.codes.server.commons.events
 
 import reactor.core.publisher.EmitterProcessor
 import reactor.core.publisher.Flux
-import java.io.Closeable
 import java.time.Duration
+import javax.annotation.PreDestroy
 
-abstract class PublishingEventSource<EVENT : Event> : EventSource<EVENT>, EventSink<EVENT>, Closeable {
+abstract class PublishingEventSource<EVENT : Event> : EventSource<EVENT>, EventSink<EVENT>, AutoCloseable {
 
     private companion object {
         private val EVENTS_LOG_TTL = Duration.ofSeconds(5)
@@ -18,6 +18,7 @@ abstract class PublishingEventSource<EVENT : Event> : EventSource<EVENT>, EventS
 
     override fun publish(event: EVENT) = processor.onNext(event)
 
+    @PreDestroy
     override fun close() {
 
         processor.onComplete()

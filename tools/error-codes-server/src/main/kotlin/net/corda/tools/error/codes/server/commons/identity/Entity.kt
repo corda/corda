@@ -5,7 +5,9 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import java.time.Instant
 
-abstract class Entity<ID : Id<*>>(val id: ID, val createdAt: Instant = Instant.now()) {
+abstract class Entity<ID : Id<*>>(val id: ID) {
+
+    val createdAt: Instant = id.timestamp
 
     final override fun equals(other: Any?): Boolean {
 

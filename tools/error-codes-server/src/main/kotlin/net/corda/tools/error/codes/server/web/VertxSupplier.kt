@@ -24,7 +24,7 @@ internal class VertxSupplier : () -> Vertx, AutoCloseable {
         instance.apply {
             deploymentIDs().forEach(::undeploy)
         }
-        logger.info("Closed.")
+        logger.info("Closed")
     }
 
     private fun options(): VertxOptions {
