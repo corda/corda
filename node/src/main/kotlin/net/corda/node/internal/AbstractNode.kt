@@ -20,8 +20,6 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.cordapp.CordappInfoResolver
-import net.corda.core.internal.cordapp.CordappInfoResolverImpl
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
@@ -137,7 +135,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 MoreExecutors.shutdownAndAwaitTermination(it, 50, SECONDS)
             }
         }
-        CordappInfoResolver.init(CordappInfoResolverImpl(cordappLoader.cordapps))
     }
 
     val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, configuration.notary != null).tokenize()

@@ -8,6 +8,7 @@ import net.corda.core.crypto.sha256
 import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
+import net.corda.core.internal.cordapp.CordappInfoResolver
 import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -111,7 +112,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     )
 
     private fun loadCordapps(): List<CordappImpl> {
-        return cordappJarPaths.map { scanCordapp(it).toCordapp(it) }
+        val cordapps = cordappJarPaths.map { scanCordapp(it).toCordapp(it) }
                 .filter {
                     if (it.info.minimumPlatformVersion > versionInfo.platformVersion) {
                         logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it requires minimum platform version ${it.info.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
@@ -120,6 +121,8 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                         true
                     }
                 }
+        cordapps.forEach { CordappInfoResolver.register(it.cordappClasses, it.info) }
+        return cordapps
     }
 
     private fun RestrictedScanResult.toCordapp(url: RestrictedURL): CordappImpl {
