@@ -6,3 +6,4 @@ configuration:
         healthcheck:
           name: Healthcheck
           path: /health
+          enabled: true

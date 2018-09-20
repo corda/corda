@@ -24,9 +24,10 @@ internal class HealthCheckEndpoint @Inject constructor(configuration: HealthChec
         router.get(path).failureHandler(::handleFailure).handler { ctx -> ctx.response().setStatusCode(HttpResponseStatus.OK.code()).end() }
     }
 
+    // TODO move to supertype
     override val path = configuration.path
-
     override val name = configuration.name
+    override val enabled = configuration.enabled
 
     override val methods: Set<HttpMethod> = setOf(HttpMethod.GET)
 
@@ -35,6 +36,7 @@ internal class HealthCheckEndpoint @Inject constructor(configuration: HealthChec
 
         val name: String
         val path: String
+        val enabled: Boolean
     }
 
     // TODO sollecitom move to supertype
@@ -69,6 +71,7 @@ internal class HealthCheckEndpoint @Inject constructor(configuration: HealthChec
 
                 val name by Spec.required<String>()
                 val path by Spec.required<String>()
+                val enabled by Spec.optional(true)
             }
         }
 
@@ -77,5 +80,6 @@ internal class HealthCheckEndpoint @Inject constructor(configuration: HealthChec
         // TODO sollecitom add validation
         override val name: String = config[Spec.name]
         override val path: String = config[Spec.path]
+        override val enabled: Boolean = config[Spec.enabled]
     }
 }

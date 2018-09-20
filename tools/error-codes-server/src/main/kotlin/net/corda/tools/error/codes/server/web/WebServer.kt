@@ -59,7 +59,7 @@ internal class VertxWebServer @Inject constructor(override val options: WebServe
     init {
         val vertx = vertxSupplier.invoke()
         val router = Router.router(vertx)
-        endpoints.forEach { it.install(router) }
+        endpoints.filter(Endpoint::enabled).forEach { it.install(router) }
         servers = (1..optimalNumberOfEventLoops()).map { vertx.createHttpServer(options.toVertx()).requestHandler(router::accept) }
     }
 
@@ -86,4 +86,4 @@ internal class VertxWebServer @Inject constructor(override val options: WebServe
     private class EventSourceBean : PublishingEventSource<WebServerEvent>()
 }
 
-private fun Endpoint.description(): String = "\"$name\" on path \"$path\" ${methods.joinToString(", ", "[", "]", transform = HttpMethod::name)}"
+private fun Endpoint.description(): String = "\"$name\"${if (enabled) "" else " (DISABLED)"} on path \"$path\" ${methods.joinToString(", ", "[", "]", transform = HttpMethod::name)}"

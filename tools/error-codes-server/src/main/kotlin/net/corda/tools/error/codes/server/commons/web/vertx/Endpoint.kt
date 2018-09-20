@@ -9,5 +9,6 @@ interface Endpoint {
 
     val path: String
     val name: String
+    val enabled: Boolean
     val methods: Set<HttpMethod>
 }
