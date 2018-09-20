@@ -1,6 +1,7 @@
 package net.corda.tools.error.codes.server.web
 
 import io.vertx.core.Vertx
+import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.HttpServer
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.Router
@@ -10,6 +11,7 @@ import net.corda.tools.error.codes.server.commons.events.EventPublisher
 import net.corda.tools.error.codes.server.commons.events.PublishingEventSource
 import net.corda.tools.error.codes.server.commons.lifecycle.WithLifeCycle
 import net.corda.tools.error.codes.server.commons.web.Port
+import net.corda.tools.error.codes.server.commons.web.vertx.Endpoint
 import net.corda.tools.error.codes.server.context.loggerFor
 import org.apache.commons.lang3.builder.ToStringBuilder
 import javax.annotation.PostConstruct
@@ -44,7 +46,7 @@ sealed class WebServerEvent(id: EventId = EventId.newInstance()) : Event(id) {
 }
 
 @Named
-internal class VertxWebServer @Inject constructor(override val options: WebServer.Options, @Named(eventSourceQualifier) override val source: PublishingEventSource<WebServerEvent> = EventSourceBean(), vertxSupplier: () -> Vertx) : WebServer {
+internal class VertxWebServer @Inject constructor(override val options: WebServer.Options, val endpoints: Set<Endpoint>, @Named(eventSourceQualifier) override val source: PublishingEventSource<WebServerEvent> = EventSourceBean(), vertxSupplier: () -> Vertx) : WebServer {
 
     private companion object {
 
@@ -57,7 +59,7 @@ internal class VertxWebServer @Inject constructor(override val options: WebServe
     init {
         val vertx = vertxSupplier.invoke()
         val router = Router.router(vertx)
-
+        endpoints.forEach { it.install(router) }
         servers = (1..optimalNumberOfEventLoops()).map { vertx.createHttpServer(options.toVertx()).requestHandler(router::accept) }
     }
 
@@ -65,6 +67,7 @@ internal class VertxWebServer @Inject constructor(override val options: WebServe
     override fun start() {
 
         servers.forEach { it.listen() }
+        logger.info("Endpoints are:${System.lineSeparator()}${endpoints.asSequence().sortedBy(Endpoint::path).joinToString(System.lineSeparator(), transform = { "\t- ${it.description()}" })}")
         source.publish(WebServerEvent.Initialisation.Completed(Port(servers.first().actualPort())))
     }
 
@@ -82,3 +85,5 @@ internal class VertxWebServer @Inject constructor(override val options: WebServe
     @Named(eventSourceQualifier)
     private class EventSourceBean : PublishingEventSource<WebServerEvent>()
 }
+
+private fun Endpoint.description(): String = "\"$name\" on path \"$path\" ${methods.joinToString(", ", "[", "]", transform = HttpMethod::name)}"

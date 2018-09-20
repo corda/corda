@@ -2,3 +2,7 @@ configuration:
   web:
     server:
       port: 8080
+      endpoints:
+        healthcheck:
+          name: Healthcheck
+          path: /health
