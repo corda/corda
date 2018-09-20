@@ -171,7 +171,7 @@ private fun Config.getCollectionValue(path: String, type: KType, onUnknownKeys: 
             Double::class -> getDoubleList(path)
             Boolean::class -> getBooleanList(path)
             LocalDate::class -> getStringList(path).map(LocalDate::parse)
-            Duration::class -> getLongList(path).map { Duration.ofMillis(it) }
+            Duration::class -> getDurationList(path)
             Instant::class -> getStringList(path).map(Instant::parse)
             NetworkHostAndPort::class -> getStringList(path).map(NetworkHostAndPort.Companion::parse)
             Path::class -> getStringList(path).map { Paths.get(it) }
@@ -229,14 +229,13 @@ private fun Any.toConfigMap(): Map<String, Any> {
         val value = field.get(this) ?: continue
         val configValue = when (value) {
             // These types are supported by Config as use as is
-            is String, is Boolean, is Number -> value
+            is String, is Boolean, is Number, is Duration -> value
             // These types make sense to be represented as Strings and the exact inverse parsing function for use in parseAs
             is Temporal, is NetworkHostAndPort, is CordaX500Name, is Path, is URL, is UUID, is X500Principal -> value.toString()
             is Enum<*> -> value.name
             // For Properties we treat keys with . as nested configs
             is Properties -> ConfigFactory.parseMap(uncheckedCast(value)).root()
             is Iterable<*> -> value.toConfigIterable(field)
-            is Duration -> value.toMillis()
             // Else this is a custom object recursed over
             else -> value.toConfigMap()
         }
@@ -255,6 +254,7 @@ private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
         java.lang.Long::class.java -> this
         java.lang.Double::class.java -> this
         java.lang.Boolean::class.java -> this
+        Duration::class.java -> this
         LocalDate::class.java -> map(Any?::toString)
         Instant::class.java -> map(Any?::toString)
         NetworkHostAndPort::class.java -> map(Any?::toString)
@@ -263,7 +263,6 @@ private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
         X500Principal::class.java -> map(Any?::toString)
         UUID::class.java -> map(Any?::toString)
         CordaX500Name::class.java -> map(Any?::toString)
-        Duration::class.java -> map { (it as? Duration)?.toMillis() }
         Properties::class.java -> map { ConfigFactory.parseMap(uncheckedCast(it)).root() }
         else -> if (elementType.isEnum) {
             map { (it as Enum<*>).name }
