@@ -1,4 +1,4 @@
-package net.corda.tools.error.codes.server.web
+package net.corda.tools.error.codes.server.commons.web
 
 data class Port(val value: Int) {
 

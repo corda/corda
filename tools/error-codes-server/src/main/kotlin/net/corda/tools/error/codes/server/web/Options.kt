@@ -2,6 +2,7 @@ package net.corda.tools.error.codes.server.web
 
 import com.uchuhimo.konf.Config
 import com.uchuhimo.konf.ConfigSpec
+import net.corda.tools.error.codes.server.commons.web.Port
 import javax.inject.Inject
 import javax.inject.Named
 

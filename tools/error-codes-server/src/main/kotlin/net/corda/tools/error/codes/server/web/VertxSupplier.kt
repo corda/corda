@@ -1,4 +1,4 @@
-package net.corda.tools.error.codes.server
+package net.corda.tools.error.codes.server.web
 
 import io.vertx.core.Vertx
 import io.vertx.core.VertxOptions
