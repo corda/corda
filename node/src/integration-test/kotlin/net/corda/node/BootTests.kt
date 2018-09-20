@@ -14,6 +14,7 @@ import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.exceptions.InternalNodeException
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.NodeParameters
@@ -29,6 +30,7 @@ class BootTests {
     @Test
     fun `java deserialization is disabled`() {
         val user = User("u", "p", setOf(startFlow<ObjectInputStreamFlow>()))
+        val devParams = NodeParameters(providedName = BOB_NAME, rpcUsers = listOf(user))
         val params = NodeParameters(rpcUsers = listOf(user))
 
         fun NodeHandle.attemptJavaDeserialization() {
@@ -38,7 +40,7 @@ class BootTests {
             }
         }
         driver {
-            val devModeNode = startNode(params).getOrThrow()
+            val devModeNode = startNode(devParams).getOrThrow()
             val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
 
             assertThatThrownBy { devModeNode.attemptJavaDeserialization() }.isInstanceOf(CordaRuntimeException::class.java)
