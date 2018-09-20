@@ -1,6 +1,6 @@
 package net.corda.tools.error.codes.server.context
 
-import net.corda.tools.error.codes.server.commons.Trace
+import net.corda.tools.error.codes.server.commons.logging.Trace
 import net.corda.tools.error.codes.server.commons.logging.Logger
 import net.corda.tools.error.codes.server.commons.logging.LoggingContext
 

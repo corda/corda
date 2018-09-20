@@ -1,4 +1,4 @@
-package net.corda.tools.error.codes.server.commons
+package net.corda.tools.error.codes.server.commons.logging
 
 import net.corda.tools.error.codes.server.commons.identity.Id
 import net.corda.tools.error.codes.server.commons.identity.UuidGenerator
