@@ -1,7 +1,6 @@
 package net.corda.tools.error.codes.server.web.endpoints
 
 import com.uchuhimo.konf.Config
-import com.uchuhimo.konf.ConfigSpec
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpResponseStatus
@@ -31,13 +30,7 @@ internal class HealthCheckEndpoint @Inject constructor(configuration: HealthChec
 
     override val methods: Set<HttpMethod> = setOf(HttpMethod.GET)
 
-    // TODO sollecitom extend common
-    interface Configuration {
-
-        val name: String
-        val path: String
-        val enabled: Boolean
-    }
+    interface Configuration : EndpointConfiguration
 
     // TODO sollecitom move to supertype
     private fun handleFailure(ctx: RoutingContext) {
@@ -61,25 +54,12 @@ internal class HealthCheckEndpoint @Inject constructor(configuration: HealthChec
     private fun HttpServerResponse.end(json: JsonArray) = putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON).end(json.toBuffer())
 
     @Named
-    internal class ConfigProvider @Inject constructor(applyConfigStandards: (Config) -> Config) : HealthCheckEndpoint.Configuration {
+    internal class HealthCheckConfigProvider @Inject constructor(applyConfigStandards: (Config) -> Config) : HealthCheckEndpoint.Configuration, EndpointConfigProvider(CONFIGURATION_SECTION_PATH, applyConfigStandards) {
 
         private companion object {
 
             private const val CONFIGURATION_SECTION_PATH = "configuration.web.server.endpoints.healthcheck"
-
-            private object Spec : ConfigSpec(CONFIGURATION_SECTION_PATH) {
-
-                val name by Spec.required<String>()
-                val path by Spec.required<String>()
-                val enabled by Spec.optional(true)
-            }
         }
-
-        private val config = applyConfigStandards.invoke(Config { addSpec(Spec) })
-
-        // TODO sollecitom add validation
-        override val name: String = config[Spec.name]
-        override val path: String = config[Spec.path]
-        override val enabled: Boolean = config[Spec.enabled]
     }
 }
+
