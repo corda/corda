@@ -14,6 +14,7 @@ import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
+import net.corda.node.utilities.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
@@ -89,7 +90,7 @@ class ArtemisMessagingTest {
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
-        networkMapCache = PersistentNetworkMapCache(MetricRegistry(), database, rigorousMock()).apply { start(emptyList()) }
+        networkMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, rigorousMock()).apply { start(emptyList()) }
     }
 
     @After
@@ -225,6 +226,7 @@ class ArtemisMessagingTest {
                     database,
                     networkMapCache,
                     MetricRegistry(),
+                    TestingNamedCacheFactory(),
                     isDrainingModeOn = { false },
                     drainingModeWasChangedEvents = PublishSubject.create<Pair<Boolean, Boolean>>()).apply {
                 config.configureWithDevSSLCertificate()

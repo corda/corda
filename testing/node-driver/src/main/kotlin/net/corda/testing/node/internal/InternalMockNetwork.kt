@@ -46,6 +46,7 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
+import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -278,6 +279,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     open class MockNode(args: MockNodeArgs, cordappLoader: CordappLoader = JarScanningCordappLoader.fromDirectories(args.config.cordappDirectories)) : AbstractNode<TestStartedNode>(
             args.config,
             TestClock(Clock.systemUTC()),
+            DefaultNamedCacheFactory(),
             args.version,
             cordappLoader,
             args.network.getServerThread(args.id),

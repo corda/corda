@@ -1,10 +1,10 @@
 package net.corda.node.services.messaging
 
-import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.NamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.time.Instant
@@ -16,16 +16,17 @@ import javax.persistence.Id
 /**
  * Encapsulate the de-duplication logic.
  */
-class P2PMessageDeduplicator(metricRegistry: MetricRegistry, private val database: CordaPersistence) {
+class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val database: CordaPersistence) {
     // A temporary in-memory set of deduplication IDs and associated high water mark details.
     // When we receive a message we don't persist the ID immediately,
     // so we store the ID here in the meantime (until the persisting db tx has committed). This is because Artemis may
     // redeliver messages to the same consumer if they weren't ACKed.
     private val beingProcessedMessages = ConcurrentHashMap<DeduplicationId, MessageMeta>()
-    private val processedMessages = createProcessedMessages(metricRegistry)
+    private val processedMessages = createProcessedMessages(cacheFactory)
 
-    private fun createProcessedMessages(metricRegistry: MetricRegistry): AppendOnlyPersistentMap<DeduplicationId, MessageMeta, ProcessedMessage, String> {
+    private fun createProcessedMessages(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<DeduplicationId, MessageMeta, ProcessedMessage, String> {
         return AppendOnlyPersistentMap(
+                cacheFactory = cacheFactory,
                 name = "P2PMessageDeduplicator_processedMessages",
                 toPersistentEntityKey = { it.toString },
                 fromPersistentEntity = { Pair(DeduplicationId(it.id), MessageMeta(it.insertionTime, it.hash, it.seqNo)) },
@@ -37,8 +38,7 @@ class P2PMessageDeduplicator(metricRegistry: MetricRegistry, private val databas
                         seqNo = value.senderSeqNo
                     }
                 },
-                persistentEntityClass = ProcessedMessage::class.java,
-                metricRegistry = metricRegistry
+                persistentEntityClass = ProcessedMessage::class.java
         )
     }
 

@@ -1,6 +1,5 @@
 package net.corda.node.services.network
 
-import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
@@ -24,6 +23,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.utilities.NamedCacheFactory
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
@@ -37,7 +37,7 @@ import javax.annotation.concurrent.ThreadSafe
 
 /** Database-based network map cache. */
 @ThreadSafe
-open class PersistentNetworkMapCache(metricRegistry: MetricRegistry,
+open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                                      private val database: CordaPersistence,
                                      private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken() {
     companion object {
@@ -126,7 +126,7 @@ open class PersistentNetworkMapCache(metricRegistry: MetricRegistry,
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> = nodesByKeyCache[identityKey]!!
 
     private val nodesByKeyCache = NonInvalidatingCache<PublicKey, List<NodeInfo>>(
-            metricRegistry = metricRegistry,
+            cacheFactory = cacheFactory,
             name = "PersistentNetworkMap_nodesByKey") { key ->
         database.transaction { queryByIdentityKey(session, key) }
     }
@@ -146,7 +146,7 @@ open class PersistentNetworkMapCache(metricRegistry: MetricRegistry,
     }
 
     private val identityByLegalNameCache = NonInvalidatingCache<CordaX500Name, Optional<PartyAndCertificate>>(
-            metricRegistry = metricRegistry,
+            cacheFactory = cacheFactory,
             name = "PersistentNetworkMap_idByLegalName") { name ->
         Optional.ofNullable(database.transaction { queryIdentityByLegalName(session, name) })
     }

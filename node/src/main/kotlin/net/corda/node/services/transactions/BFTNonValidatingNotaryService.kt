@@ -102,7 +102,8 @@ class BFTNonValidatingNotaryService(
 
     private fun createMap(): AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef> {
         return AppendOnlyPersistentMap(
-                "BFTNonValidatingNotaryService_transactions",
+                cacheFactory = services.cacheFactory,
+                name = "BFTNonValidatingNotaryService_transactions",
                 toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
                 fromPersistentEntity = {
                     //TODO null check will become obsolete after making DB/JPA columns not nullable
@@ -119,8 +120,7 @@ class BFTNonValidatingNotaryService(
                             consumingTxHash = id.toString()
                     )
                 },
-                persistentEntityClass = CommittedState::class.java,
-                metricRegistry = services.monitoringService.metrics
+                persistentEntityClass = CommittedState::class.java
         )
     }
 

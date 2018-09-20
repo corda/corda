@@ -28,6 +28,7 @@ import net.corda.core.utilities.debug
 import net.corda.node.services.config.RaftConfig
 import net.corda.node.services.transactions.RaftTransactionCommitLog.Commands.CommitTransaction
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.NamedCacheFactory
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -55,12 +56,14 @@ class RaftUniquenessProvider(
         private val db: CordaPersistence,
         private val clock: Clock,
         private val metrics: MetricRegistry,
+        private val cacheFactory: NamedCacheFactory,
         private val raftConfig: RaftConfig
 ) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
-        fun createMap(metricRegistry: MetricRegistry): AppendOnlyPersistentMap<StateRef, Pair<Long, SecureHash>, CommittedState, PersistentStateRef> =
+        fun createMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<StateRef, Pair<Long, SecureHash>, CommittedState, PersistentStateRef> =
                 AppendOnlyPersistentMap(
+                        cacheFactory = cacheFactory,
                         name = "RaftUniquenessProvider_transactions",
                         toPersistentEntityKey = { PersistentStateRef(it) },
                         fromPersistentEntity = {
@@ -78,8 +81,7 @@ class RaftUniquenessProvider(
                                     first)
 
                         },
-                        persistentEntityClass = CommittedState::class.java,
-                        metricRegistry = metricRegistry
+                        persistentEntityClass = CommittedState::class.java
                 )
 
         fun StateRef.encoded() = "$txhash:$index"
@@ -110,7 +112,7 @@ class RaftUniquenessProvider(
     fun start() {
         log.info("Creating Copycat server, log stored in: ${storagePath.toAbsolutePath()}")
         val stateMachineFactory = {
-            RaftTransactionCommitLog(db, clock, { createMap(metrics) })
+            RaftTransactionCommitLog(db, clock, { createMap(cacheFactory) })
         }
         val address = raftConfig.nodeAddress.let { Address(it.host, it.port) }
         val storage = buildStorage(storagePath)

@@ -27,7 +27,7 @@ import java.security.SignatureException
 // START 1
 @CordaService
 class MyCustomValidatingNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
-    override val uniquenessProvider = PersistentUniquenessProvider(services.clock, services.database, services.monitoringService.metrics)
+    override val uniquenessProvider = PersistentUniquenessProvider(services.clock, services.database, services.cacheFactory)
 
     override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = MyValidatingNotaryFlow(otherPartySession, this)
 

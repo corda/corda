@@ -1,6 +1,5 @@
 package net.corda.node.services.persistence
 
-import com.codahale.metrics.MetricRegistry
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -16,6 +15,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.AppendOnlyPersistentMapBase
+import net.corda.node.utilities.NamedCacheFactory
 import net.corda.node.utilities.WeightBasedAppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -32,7 +32,7 @@ typealias TxCacheValue = Pair<SerializedBytes<CoreTransaction>, List<Transaction
 fun TxCacheValue.toSignedTx() = SignedTransaction(this.first, this.second)
 fun SignedTransaction.toTxCacheValue() = TxCacheValue(this.txBits, this.sigs)
 
-class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPersistence, metricRegistry: MetricRegistry = MetricRegistry()) : WritableTransactionStorage, SingletonSerializeAsToken() {
+class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory) : WritableTransactionStorage, SingletonSerializeAsToken() {
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}transactions")
@@ -50,10 +50,10 @@ class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPers
     )
 
     private companion object {
-        fun createTransactionsMap(metricRegistry: MetricRegistry, maxSizeInBytes: Long)
+        fun createTransactionsMap(cacheFactory: NamedCacheFactory)
                 : AppendOnlyPersistentMapBase<SecureHash, TxCacheValue, DBTransaction, String> {
             return WeightBasedAppendOnlyPersistentMap<SecureHash, TxCacheValue, DBTransaction, String>(
-                    metricRegistry = metricRegistry,
+                    cacheFactory = cacheFactory,
                     name = "DBTransactionStorage_transactions",
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = {
@@ -69,7 +69,6 @@ class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPers
                         }
                     },
                     persistentEntityClass = DBTransaction::class.java,
-                    maxWeight = maxSizeInBytes,
                     weighingFunc = { hash, tx -> hash.size + weighTx(tx) }
             )
         }
@@ -88,7 +87,7 @@ class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPers
         }
     }
 
-    private val txStorage = ThreadBox(createTransactionsMap(metricRegistry, cacheSizeBytes))
+    private val txStorage = ThreadBox(createTransactionsMap(cacheFactory))
 
     override fun addTransaction(transaction: SignedTransaction): Boolean = database.transaction {
         txStorage.locked {

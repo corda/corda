@@ -18,8 +18,8 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
+import net.corda.node.utilities.NamedCacheFactory
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
@@ -43,9 +43,8 @@ import javax.persistence.*
 @ThreadSafe
 class NodeAttachmentService(
         metrics: MetricRegistry,
-        private val database: CordaPersistence,
-        attachmentContentCacheSize: Long = NodeConfiguration.defaultAttachmentContentCacheSize,
-        attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
+        cacheFactory: NamedCacheFactory,
+        private val database: CordaPersistence
 ) : AttachmentStorageInternal, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
@@ -206,9 +205,8 @@ class NodeAttachmentService(
     // a problem somewhere else or this needs to be revisited.
 
     private val attachmentContentCache = NonInvalidatingWeightBasedCache(
-            metricRegistry = metrics,
+            cacheFactory = cacheFactory,
             name = "NodeAttachmentService_attachmentContent",
-            maxWeight = attachmentContentCacheSize,
             weigher = Weigher<SecureHash, Optional<Pair<Attachment, ByteArray>>> { key, value -> key.size + if (value.isPresent) value.get().second.size else 0 },
             loadFunction = { Optional.ofNullable(loadAttachmentContent(it)) }
     )
@@ -229,9 +227,8 @@ class NodeAttachmentService(
     }
 
     private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
-            metricRegistry = metrics,
+            cacheFactory = cacheFactory,
             name = "NodeAttachmentService_attachmentPresence",
-            bound = attachmentCacheBound,
             loadFunction = { key -> Optional.ofNullable(createAttachment(key)) })
 
     private fun createAttachment(key: SecureHash): Attachment? {

@@ -47,6 +47,7 @@ import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.node.utilities.DemoClock
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_SHELL_USER
 import net.corda.nodeapi.internal.ShutdownHook
@@ -92,6 +93,7 @@ open class Node(configuration: NodeConfiguration,
 ) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
+        DefaultNamedCacheFactory(),
         versionInfo,
         cordappLoader,
         // Under normal (non-test execution) it will always be "1"
@@ -195,7 +197,8 @@ open class Node(configuration: NodeConfiguration,
                 networkMap = networkMapCache,
                 isDrainingModeOn = nodeProperties.flowsDrainingMode::isEnabled,
                 drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values,
-                metricRegistry = metricRegistry
+                metricRegistry = metricRegistry,
+                cacheFactory = cacheFactory
         )
     }
 

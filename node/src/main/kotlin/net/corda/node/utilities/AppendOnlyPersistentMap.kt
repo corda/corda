@@ -1,6 +1,5 @@
 package net.corda.node.utilities
 
-import com.codahale.metrics.MetricRegistry
 import com.github.benmanes.caffeine.cache.LoadingCache
 import com.github.benmanes.caffeine.cache.Weigher
 import net.corda.core.utilities.contextLogger
@@ -310,25 +309,20 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
 
 // Open for tests to override
 open class AppendOnlyPersistentMap<K, V, E, out EK>(
+        cacheFactory: NamedCacheFactory,
         name: String,
         toPersistentEntityKey: (K) -> EK,
         fromPersistentEntity: (E) -> Pair<K, V>,
         toPersistentEntity: (key: K, value: V) -> E,
-        persistentEntityClass: Class<E>,
-        cacheBound: Long = DEFAULT_BOUND,
-        metricRegistry: MetricRegistry = MetricRegistry()
+        persistentEntityClass: Class<E>
 ) : AppendOnlyPersistentMapBase<K, V, E, EK>(
         toPersistentEntityKey,
         fromPersistentEntity,
         toPersistentEntity,
         persistentEntityClass) {
-    companion object {
-        var DEFAULT_BOUND: Long = 1024
-    }
     override val cache = NonInvalidatingCache(
-            metricRegistry = metricRegistry,
+            cacheFactory = cacheFactory,
             name = name,
-            bound = cacheBound,
             loadFunction = { key: K ->
                 // This gets called if a value is read and the cache has no Transactional for this key yet.
                 val value: V? = loadValue(key)
@@ -360,13 +354,12 @@ open class AppendOnlyPersistentMap<K, V, E, out EK>(
 
 // Same as above, but with weighted values (e.g. memory footprint sensitive).
 class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
-        metricRegistry: MetricRegistry = MetricRegistry(),
+        cacheFactory: NamedCacheFactory,
         name: String,
         toPersistentEntityKey: (K) -> EK,
         fromPersistentEntity: (E) -> Pair<K, V>,
         toPersistentEntity: (key: K, value: V) -> E,
         persistentEntityClass: Class<E>,
-        maxWeight: Long,
         weighingFunc: (K, Transactional<V>) -> Int
 ) : AppendOnlyPersistentMapBase<K, V, E, EK>(
         toPersistentEntityKey,
@@ -374,9 +367,8 @@ class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
         toPersistentEntity,
         persistentEntityClass) {
     override val cache = NonInvalidatingWeightBasedCache(
-            metricRegistry = metricRegistry,
+            cacheFactory = cacheFactory,
             name = name,
-            maxWeight = maxWeight,
             weigher = Weigher { key, value -> weighingFunc(key, value) },
             loadFunction = { key: K ->
                 val value: V? = loadValue(key)

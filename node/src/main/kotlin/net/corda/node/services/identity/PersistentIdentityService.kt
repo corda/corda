@@ -1,6 +1,5 @@
 package net.corda.node.services.identity
 
-import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.*
 import net.corda.core.internal.hash
@@ -11,6 +10,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.NamedCacheFactory
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -30,12 +30,13 @@ import javax.persistence.Lob
  * cached for efficient lookup.
  */
 @ThreadSafe
-class PersistentIdentityService(metricRegistry: MetricRegistry = MetricRegistry()) : SingletonSerializeAsToken(), IdentityServiceInternal {
+class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), IdentityServiceInternal {
     companion object {
         private val log = contextLogger()
 
-        fun createPKMap(metricRegistry: MetricRegistry): AppendOnlyPersistentMap<SecureHash, PartyAndCertificate, PersistentIdentity, String> {
+        fun createPKMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<SecureHash, PartyAndCertificate, PersistentIdentity, String> {
             return AppendOnlyPersistentMap(
+                    cacheFactory = cacheFactory,
                     name = "PersistentIdentityService_partyByKey",
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = {
@@ -47,21 +48,20 @@ class PersistentIdentityService(metricRegistry: MetricRegistry = MetricRegistry(
                     toPersistentEntity = { key: SecureHash, value: PartyAndCertificate ->
                         PersistentIdentity(key.toString(), value.certPath.encoded)
                     },
-                    persistentEntityClass = PersistentIdentity::class.java,
-                    metricRegistry = metricRegistry
+                    persistentEntityClass = PersistentIdentity::class.java
             )
         }
 
-        fun createX500Map(metricRegistry: MetricRegistry): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentIdentityNames, String> {
+        fun createX500Map(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentIdentityNames, String> {
             return AppendOnlyPersistentMap(
+                    cacheFactory = cacheFactory,
                     name = "PersistentIdentityService_partyByName",
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = { Pair(CordaX500Name.parse(it.name), SecureHash.parse(it.publicKeyHash)) },
                     toPersistentEntity = { key: CordaX500Name, value: SecureHash ->
                         PersistentIdentityNames(key.toString(), value.toString())
                     },
-                    persistentEntityClass = PersistentIdentityNames::class.java,
-                    metricRegistry = metricRegistry
+                    persistentEntityClass = PersistentIdentityNames::class.java
             )
         }
 
@@ -104,8 +104,8 @@ class PersistentIdentityService(metricRegistry: MetricRegistry = MetricRegistry(
     // CordaPersistence is not a c'tor parameter to work around the cyclic dependency
     lateinit var database: CordaPersistence
 
-    private val keyToParties = createPKMap(metricRegistry)
-    private val principalToParties = createX500Map(metricRegistry)
+    private val keyToParties = createPKMap(cacheFactory)
+    private val principalToParties = createX500Map(cacheFactory)
 
     fun start(trustRoot: X509Certificate, caCertificates: List<X509Certificate> = emptyList()) {
         _trustRoot = trustRoot

@@ -1,6 +1,5 @@
 package net.corda.node.utilities
 
-import com.codahale.metrics.MetricRegistry
 import com.github.benmanes.caffeine.cache.CacheLoader
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
@@ -10,16 +9,14 @@ class NonInvalidatingCache<K, V> private constructor(
         val cache: LoadingCache<K, V>
 ) : LoadingCache<K, V> by cache {
 
-    constructor(metricRegistry: MetricRegistry, name: String, bound: Long = DEFAULT_BOUND, loadFunction: (K) -> V) :
-            this(buildCache(metricRegistry, name, bound, loadFunction))
+    constructor(cacheFactory: NamedCacheFactory, name: String, loadFunction: (K) -> V) :
+            this(buildCache(cacheFactory, name, loadFunction))
 
     private companion object {
-        private fun <K, V> buildCache(metricRegistry: MetricRegistry, name: String, bound: Long, loadFunction: (K) -> V): LoadingCache<K, V> {
-            val builder = Caffeine.newBuilder().maximumSize(bound)
-            return builder.buildNamed(metricRegistry, name, NonInvalidatingCacheLoader(loadFunction))
+        private fun <K, V> buildCache(cacheFactory: NamedCacheFactory, name: String, loadFunction: (K) -> V): LoadingCache<K, V> {
+            val builder = Caffeine.newBuilder()
+            return cacheFactory.buildNamed(builder, name, NonInvalidatingCacheLoader(loadFunction))
         }
-
-        var DEFAULT_BOUND = 1024L
     }
 
     // TODO look into overriding loadAll() if we ever use it
@@ -35,13 +32,13 @@ class NonInvalidatingCache<K, V> private constructor(
 class NonInvalidatingWeightBasedCache<K, V> private constructor(
         val cache: LoadingCache<K, V>
 ) : LoadingCache<K, V> by cache {
-    constructor (metricRegistry: MetricRegistry, name: String, maxWeight: Long, weigher: Weigher<K, V>, loadFunction: (K) -> V) :
-            this(buildCache(metricRegistry, name, maxWeight, weigher, loadFunction))
+    constructor (cacheFactory: NamedCacheFactory, name: String, weigher: Weigher<K, V>, loadFunction: (K) -> V) :
+            this(buildCache(cacheFactory, name, weigher, loadFunction))
 
     private companion object {
-        private fun <K, V> buildCache(metricRegistry: MetricRegistry, name: String, maxWeight: Long, weigher: Weigher<K, V>, loadFunction: (K) -> V): LoadingCache<K, V> {
-            val builder = Caffeine.newBuilder().maximumWeight(maxWeight).weigher(weigher)
-            return builder.buildNamed(metricRegistry, name, NonInvalidatingCache.NonInvalidatingCacheLoader(loadFunction))
+        private fun <K, V> buildCache(cacheFactory: NamedCacheFactory, name: String, weigher: Weigher<K, V>, loadFunction: (K) -> V): LoadingCache<K, V> {
+            val builder = Caffeine.newBuilder().weigher(weigher)
+            return cacheFactory.buildNamed(builder, name, NonInvalidatingCache.NonInvalidatingCacheLoader(loadFunction))
         }
     }
 }

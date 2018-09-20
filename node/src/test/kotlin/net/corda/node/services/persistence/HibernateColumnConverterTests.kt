@@ -9,6 +9,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
+import net.corda.node.utilities.TestingNamedCacheFactory
 import net.corda.testing.core.BOC_NAME
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
@@ -47,7 +48,7 @@ class HibernateColumnConverterTests {
         val ref = OpaqueBytes.of(0x01)
 
         // Create parallel set of key and identity services so that the values are not cached, forcing the node caches to do a lookup.
-        val identityService = PersistentIdentityService()
+        val identityService = PersistentIdentityService(TestingNamedCacheFactory())
         val originalIdentityService: PersistentIdentityService = bankOfCordaNode.services.identityService as PersistentIdentityService
         identityService.database = originalIdentityService.database
         identityService.start(originalIdentityService.trustRoot)
