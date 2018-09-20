@@ -118,7 +118,7 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
     sslEngine.enableSessionCreation = true
     if (expectedRemoteLegalNames.size == 1) {
         val sslParameters = sslEngine.sslParameters
-        sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.first())))
+        sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.single())))
     }
     return SslHandler(sslEngine)
 }
@@ -162,5 +162,5 @@ fun TrustManagerFactory.init(trustStore: CertificateStore) = init(trustStore.val
 
 internal fun x500toHostName(x500Name: CordaX500Name): String {
     val secureHash = SecureHash.sha256(x500Name.toString())
-    return "${secureHash.toString().toLowerCase().substring(0..32)}.corda.net"
+    return "${secureHash.toString().substring(0..32).toLowerCase()}.corda.net"
 }
