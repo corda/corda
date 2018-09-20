@@ -18,7 +18,7 @@ internal class WebServer @Inject constructor(val options: WebServer.Options, ver
         private val logger = loggerFor<WebServer>()
     }
 
-    val server: HttpServer
+    private val server: HttpServer
 
     init {
         val vertx = vertxSupplier.invoke()
