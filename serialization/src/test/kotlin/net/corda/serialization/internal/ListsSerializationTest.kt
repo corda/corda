@@ -3,7 +3,7 @@ package net.corda.serialization.internal
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import net.corda.core.serialization.*
-import net.corda.node.serialization.kryo.kryoMagic
+import net.corda.node.serialization.kryo.KryoCheckpointSerializer
 import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.Envelope
@@ -68,7 +68,7 @@ class ListsSerializationTest {
         val nameID = 0
         val serializedForm = emptyList<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
-            kryoMagic.writeTo(this)
+            KryoCheckpointSerializer.kryoMagic.writeTo(this)
             SectionId.ALT_DATA_AND_STOP.writeTo(this)
             write(DefaultClassResolver.NAME + 2)
             write(nameID)

@@ -12,7 +12,7 @@ import net.corda.core.serialization.SerializationFactory
 @KeepForDJVM
 interface SerializationEnvironment {
     val serializationFactory: SerializationFactory
-    val checkpointSerializationFactory: CheckpointSerializationFactory
+    val checkpointSerializer: CheckpointSerializer
     val p2pContext: SerializationContext
     val rpcServerContext: SerializationContext
     val rpcClientContext: SerializationContext
@@ -28,20 +28,20 @@ open class SerializationEnvironmentImpl(
         rpcClientContext: SerializationContext? = null,
         storageContext: SerializationContext? = null,
         checkpointContext: CheckpointSerializationContext? = null,
-        checkpointSerializationFactory: CheckpointSerializationFactory? = null) : SerializationEnvironment {
+        checkpointSerializer: CheckpointSerializer? = null) : SerializationEnvironment {
     // Those that are passed in as null are never inited:
     override lateinit var rpcServerContext: SerializationContext
     override lateinit var rpcClientContext: SerializationContext
     override lateinit var storageContext: SerializationContext
     override lateinit var checkpointContext: CheckpointSerializationContext
-    override lateinit var checkpointSerializationFactory: CheckpointSerializationFactory
+    override lateinit var checkpointSerializer: CheckpointSerializer
 
     init {
         rpcServerContext?.let { this.rpcServerContext = it }
         rpcClientContext?.let { this.rpcClientContext = it }
         storageContext?.let { this.storageContext = it }
         checkpointContext?.let { this.checkpointContext = it }
-        checkpointSerializationFactory?.let { this.checkpointSerializationFactory = it  }
+        checkpointSerializer?.let { this.checkpointSerializer = it }
     }
 }
 

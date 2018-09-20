@@ -4,7 +4,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.node.serialization.kryo.kryoMagic
+import net.corda.node.serialization.kryo.KryoCheckpointSerializer
 import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.kryoSpecific
@@ -55,7 +55,7 @@ class SetsSerializationTest {
         val nameID = 0
         val serializedForm = emptySet<Int>().serialize()
         val output = ByteArrayOutputStream().apply {
-            kryoMagic.writeTo(this)
+            KryoCheckpointSerializer.kryoMagic.writeTo(this)
             SectionId.ALT_DATA_AND_STOP.writeTo(this)
             write(DefaultClassResolver.NAME + 2)
             write(nameID)
