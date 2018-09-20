@@ -16,7 +16,5 @@ fun main(args: Array<String>) {
     application.setBannerMode(Banner.Mode.OFF)
     application.webApplicationType = WebApplicationType.NONE
 
-    application.run(*args).use {
-        // To ensure it gets closed.
-    }
+    application.run(*args)
 }
