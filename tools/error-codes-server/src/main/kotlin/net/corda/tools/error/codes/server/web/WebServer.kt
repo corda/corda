@@ -1,6 +1,6 @@
 package net.corda.tools.error.codes.server.web
 
-import net.corda.tools.error.codes.server.utils.loggerFor
+import net.corda.tools.error.codes.server.context.loggerFor
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 import javax.inject.Named

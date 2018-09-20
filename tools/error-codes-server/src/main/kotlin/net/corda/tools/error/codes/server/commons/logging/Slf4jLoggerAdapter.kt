@@ -61,5 +61,5 @@ internal class Slf4jLoggerAdapter<CONTEXT : LoggingContext> private constructor(
         }
     }
 
-    private fun CONTEXT.applyTo(message: String) = "$message {$description}"
+    private fun CONTEXT.applyTo(message: String) = "$message $description"
 }
