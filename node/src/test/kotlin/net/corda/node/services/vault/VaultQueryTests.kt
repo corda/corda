@@ -501,9 +501,13 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             assertThat(constraintResults2.states).hasSize(2)
 
             // search for states with [Vault.ConstraintInfo.Type] either HASH or CZ_WHITELISED
-            val constraintTypeCriteria3 = VaultQueryCriteria(constraintTypes = setOf(HASH, CZ_WHITELISTED))
-            val constraintResults3 = vaultService.queryBy<LinearState>(constraintTypeCriteria3)
-            assertThat(constraintResults3.states).hasSize(3)
+            // DOCSTART VaultQueryExample30
+            val constraintTypeCriteria = VaultQueryCriteria(constraintTypes = setOf(HASH, CZ_WHITELISTED))
+            val sortAttribute = SortAttribute.Standard(Sort.VaultStateAttribute.CONSTRAINT_TYPE)
+            val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
+            val constraintResults = vaultService.queryBy<LinearState>(constraintTypeCriteria, sorter)
+            // DOCEND VaultQueryExample30
+            assertThat(constraintResults.states).hasSize(3)
 
             // search for states with [Vault.ConstraintInfo.Type] = SIGNATURE
             val constraintTypeCriteria4 = VaultQueryCriteria(constraintTypes = setOf(SIGNATURE))

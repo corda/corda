@@ -78,7 +78,8 @@ and/or composition and a rich set of operators to include:
 There are four implementations of this interface which can be chained together to define advanced filters.
 
 1. ``VaultQueryCriteria`` provides filterable criteria on attributes within the Vault states table: status (UNCONSUMED,
-   CONSUMED), state reference(s), contract state type(s), notaries, soft locked states, timestamps (RECORDED, CONSUMED).
+   CONSUMED), state reference(s), contract state type(s), notaries, soft locked states, timestamps (RECORDED, CONSUMED),
+   state constraint data by type (see :ref:`Constraint Types <implicit_constraint_types>`).
 
 	.. note:: Sensible defaults are defined for frequently used attributes (status = UNCONSUMED, always include soft
 	   locked states).
@@ -258,6 +259,14 @@ Query for unconsumed states for several contract state types:
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample3
     :end-before: DOCEND VaultQueryExample3
+    :dedent: 12
+
+Query for unconsumed states for specified contract state constraint types and sorted in ascending alphabetical order:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExample30
+    :end-before: DOCEND VaultQueryExample30
     :dedent: 12
 
 Query for unconsumed states for a given notary:
