@@ -171,6 +171,7 @@ private fun Config.getCollectionValue(path: String, type: KType, onUnknownKeys: 
             Double::class -> getDoubleList(path)
             Boolean::class -> getBooleanList(path)
             LocalDate::class -> getStringList(path).map(LocalDate::parse)
+            Duration::class -> getLongList(path).map { Duration.ofMillis(it) }
             Instant::class -> getStringList(path).map(Instant::parse)
             NetworkHostAndPort::class -> getStringList(path).map(NetworkHostAndPort.Companion::parse)
             Path::class -> getStringList(path).map { Paths.get(it) }
@@ -262,6 +263,7 @@ private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
         X500Principal::class.java -> map(Any?::toString)
         UUID::class.java -> map(Any?::toString)
         CordaX500Name::class.java -> map(Any?::toString)
+        Duration::class.java -> map { (it as? Duration)?.toMillis() }
         Properties::class.java -> map { ConfigFactory.parseMap(uncheckedCast(it)).root() }
         else -> if (elementType.isEnum) {
             map { (it as Enum<*>).name }

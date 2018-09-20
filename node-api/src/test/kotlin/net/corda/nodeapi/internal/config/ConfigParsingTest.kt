@@ -8,6 +8,7 @@ import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.*
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -16,6 +17,7 @@ import org.junit.Test
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
@@ -121,6 +123,11 @@ class ConfigParsingTest {
         // Test with config object.
         val config = config("value" to mapOf("organisation" to "Mock Party", "locality" to "London", "country" to "GB"))
         assertThat(config.parseAs<CordaX500NameData>().value).isEqualTo(name1)
+    }
+
+    @Test
+    fun Duration() {
+        testPropertyType<DurationData, DurationListData, Duration>(1.seconds, 2.minutes)
     }
 
     @Test
@@ -374,6 +381,8 @@ class ConfigParsingTest {
     data class CordaX500NameListData(override val values: List<CordaX500Name>) : ListData<CordaX500Name>
     data class PropertiesData(override val value: Properties) : SingleData<Properties>
     data class PropertiesListData(override val values: List<Properties>) : ListData<Properties>
+    data class DurationData(override val value: Duration) : SingleData<Duration>
+    data class DurationListData(override val values: List<Duration>) : ListData<Duration>
     data class MultiPropertyData(val i: Int, val b: Boolean, val l: List<String>)
     data class NestedData(val first: StringData)
     data class DataListData(val list: List<StringData>)
