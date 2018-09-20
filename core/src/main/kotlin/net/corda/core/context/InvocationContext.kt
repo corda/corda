@@ -21,7 +21,7 @@ import java.security.Principal
 data class InvocationContext(val origin: InvocationOrigin, val trace: Trace, val actor: Actor?, val externalTrace: Trace? = null, val impersonatedActor: Actor? = null) {
     companion object {
         /**
-         * Creates an [InvocationContext] wiCONTEXTth a [Trace] that defaults to a [java.util.UUID] as value and [java.time.Instant.now] timestamp.
+         * Creates an [InvocationContext] with a [Trace] that defaults to a [java.util.UUID] as value and [java.time.Instant.now] timestamp.
          */
         @DeleteForDJVM
         @JvmStatic
