@@ -28,6 +28,7 @@ import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.exceptions.StateMachineStoppedException
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
@@ -35,11 +36,14 @@ import net.corda.node.services.messaging.context
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
+import net.corda.nodeapi.internal.pendingFlowsCount
 import rx.Observable
+import rx.Subscription
 import java.io.InputStream
 import java.net.ConnectException
 import java.security.PublicKey
 import java.time.Instant
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
@@ -50,7 +54,24 @@ internal class CordaRPCOpsImpl(
         private val smm: StateMachineManager,
         private val flowStarter: FlowStarter,
         private val shutdownNode: () -> Unit
-) : CordaRPCOps {
+) : CordaRPCOps, AutoCloseable {
+
+    private companion object {
+        private val logger = loggerFor<CordaRPCOpsImpl>()
+    }
+
+    private val drainingShutdownHook = AtomicReference<Subscription?>()
+
+    init {
+        services.nodeProperties.flowsDrainingMode.values.filter { it.isDisabled() }.subscribe({
+            cancelDrainingShutdownHook()
+        }, {
+            // Nothing to do in case of errors here.
+        })
+    }
+
+    private fun Pair<Boolean, Boolean>.isDisabled(): Boolean = first && !second
+
     /**
      * Returns the RPC protocol version, which is the same the node's platform Version. Exists since version 1 so guaranteed
      * to be present.
@@ -227,7 +248,7 @@ internal class CordaRPCOpsImpl(
         return services.networkMapCache.getNodeByLegalIdentity(party)
     }
 
-    override fun registeredFlows(): List<String> = services.rpcFlows.map { it.name }.sorted()
+    override fun registeredFlows(): List<String> = services.rpcFlows.asSequence().map(Class<*>::getName).sorted().toList()
 
     override fun clearNetworkMapCache() {
         services.networkMapCache.clearNetworkMapCache()
@@ -276,17 +297,45 @@ internal class CordaRPCOpsImpl(
         return vaultTrackBy(criteria, PageSpecification(), sorting, contractStateType)
     }
 
-    override fun setFlowsDrainingModeEnabled(enabled: Boolean) {
-        services.nodeProperties.flowsDrainingMode.setEnabled(enabled)
+    override fun setFlowsDrainingModeEnabled(enabled: Boolean) = setPersistentDrainingModeProperty(enabled, propagateChange = true)
+
+    override fun isFlowsDrainingModeEnabled() = services.nodeProperties.flowsDrainingMode.isEnabled()
+
+    override fun shutdown() = terminate(false)
+
+    override fun terminate(drainPendingFlows: Boolean) {
+
+        if (drainPendingFlows) {
+            logger.info("Waiting for pending flows to complete before shutting down.")
+            setFlowsDrainingModeEnabled(true)
+            drainingShutdownHook.set(pendingFlowsCount().updates.doOnNext {(completed, total) ->
+                logger.info("Pending flows progress before shutdown: $completed / $total.")
+            }.doOnCompleted { setPersistentDrainingModeProperty(false, false) }.doOnCompleted(::cancelDrainingShutdownHook).doOnCompleted { logger.info("No more pending flows to drain. Shutting down.") }.doOnCompleted(shutdownNode::invoke).subscribe({
+                // Nothing to do on each update here, only completion matters.
+            }, { error ->
+                logger.error("Error while waiting for pending flows to drain in preparation for shutdown. Cause was: ${error.message}", error)
+            }))
+        } else {
+            shutdownNode.invoke()
+        }
     }
 
-    override fun isFlowsDrainingModeEnabled(): Boolean {
-        return services.nodeProperties.flowsDrainingMode.isEnabled()
+    override fun isWaitingForShutdown() = drainingShutdownHook.get() != null
+
+    override fun close() {
+
+        cancelDrainingShutdownHook()
     }
 
-    override fun shutdown() {
-        shutdownNode.invoke()
+    private fun cancelDrainingShutdownHook() {
+
+        drainingShutdownHook.getAndSet(null)?.let {
+            it.unsubscribe()
+            logger.info("Cancelled draining shutdown hook.")
+        }
     }
+
+    private fun setPersistentDrainingModeProperty(enabled: Boolean, propagateChange: Boolean) = services.nodeProperties.flowsDrainingMode.setEnabled(enabled, propagateChange)
 
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
         return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.context.toFlowInitiator(), flowLogic.track(), flowLogic.stateMachine.context)

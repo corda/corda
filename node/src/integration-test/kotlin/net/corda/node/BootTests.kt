@@ -43,6 +43,7 @@ class BootTests : IntegrationTest() {
     @Test
     fun `java deserialization is disabled`() {
         val user = User("u", "p", setOf(startFlow<ObjectInputStreamFlow>()))
+        val devParams = NodeParameters(providedName = BOB_NAME, rpcUsers = listOf(user))
         val params = NodeParameters(rpcUsers = listOf(user))
 
         fun NodeHandle.attemptJavaDeserialization() {
@@ -52,7 +53,7 @@ class BootTests : IntegrationTest() {
             }
         }
         driver {
-            val devModeNode = startNode(params).getOrThrow()
+            val devModeNode = startNode(devParams).getOrThrow()
             val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
 
             assertThatThrownBy { devModeNode.attemptJavaDeserialization() }.isInstanceOf(CordaRuntimeException::class.java)

@@ -82,6 +82,7 @@ buildscript {
 
     // Update 121 is required for ObjectInputFilter.
     // Updates [131, 161] also have zip compression bugs on MacOS (High Sierra).
+    // when the java version in NodeStartup.hasMinimumJavaVersion() changes, so must this check
     ext.java8_minUpdateVersion = '171'
 
     repositories {

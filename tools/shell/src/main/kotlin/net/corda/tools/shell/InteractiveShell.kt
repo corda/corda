@@ -18,6 +18,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
+import net.corda.nodeapi.internal.pendingFlowsCount
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -408,7 +409,7 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper, isSsh: Boolean = false): Any? {
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper): Any? {
         val cmd = input.joinToString(" ").trim { it <= ' ' }
         if (cmd.startsWith("startflow", ignoreCase = true)) {
             // The flow command provides better support and startFlow requires special handling anyway due to
@@ -417,7 +418,7 @@ object InteractiveShell {
             out.println("Please use the 'flow' command to interact with flows rather than the 'run' command.", Color.yellow)
             return null
         } else if (cmd.substringAfter(" ").trim().equals("gracefulShutdown", ignoreCase = true)) {
-            return InteractiveShell.gracefulShutdown(out, cordaRPCOps, isSsh)
+            return InteractiveShell.gracefulShutdown(out, cordaRPCOps)
         }
 
         var result: Any? = null
@@ -456,9 +457,8 @@ object InteractiveShell {
         return result
     }
 
-
     @JvmStatic
-    fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps, isSsh: Boolean = false) {
+    fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps) {
 
         fun display(statements: RenderPrintWriter.() -> Unit) {
             statements.invoke(userSessionOut)
@@ -467,40 +467,48 @@ object InteractiveShell {
 
         var isShuttingDown = false
         try {
+            display { println("Orchestrating a clean shutdown, press CTRL+C to cancel...") }
+            isShuttingDown = true
             display {
-                println("Orchestrating a clean shutdown...")
                 println("...enabling draining mode")
-            }
-            cordaRPCOps.setFlowsDrainingModeEnabled(true)
-            display {
                 println("...waiting for in-flight flows to be completed")
             }
-            cordaRPCOps.pendingFlowsCount().updates
-                    .doOnError { error ->
-                        log.error(error.message)
-                        throw error
-                    }
-                    .doOnNext { (first, second) ->
-                        display {
-                            println("...remaining: ${first}/${second}")
+            cordaRPCOps.terminate(true)
+
+            val latch = CountDownLatch(1)
+            cordaRPCOps.pendingFlowsCount().updates.doOnError { error ->
+                log.error(error.message)
+                throw error
+            }.doAfterTerminate(latch::countDown).subscribe(
+                    // For each update.
+                    { (first, second) -> display { println("...remaining: $first / $second") } },
+                    // On error.
+                    { error ->
+                        if (!isShuttingDown) {
+                            display { println("RPC failed: ${error.rootCause}", Color.red) }
                         }
-                    }
-                    .doOnCompleted {
-                        if (isSsh) {
-                            // print in the original Shell process
-                            System.out.println("Shutting down the node via remote SSH session (it may take a while)")
-                        }
-                        display {
-                            println("Shutting down the node (it may take a while)")
-                        }
-                        cordaRPCOps.shutdown()
-                        isShuttingDown = true
+                    },
+                    // When completed.
+                    {
                         connection.forceClose()
-                        display {
-                            println("...done, quitting standalone shell now.")
-                        }
+                        // This will only show up in the standalone Shell, because the embedded one is killed as part of a node's shutdown.
+                        display { println("...done, quitting the shell now.") }
                         onExit.invoke()
-                    }.toBlocking().single()
+                    })
+            while (!Thread.currentThread().isInterrupted) {
+                try {
+                    latch.await()
+                    break
+                } catch (e: InterruptedException) {
+                    try {
+                        cordaRPCOps.setFlowsDrainingModeEnabled(false)
+                        display { println("...cancelled clean shutdown.") }
+                    } finally {
+                        Thread.currentThread().interrupt()
+                        break
+                    }
+                }
+            }
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
             display {
                 println(e.message, Color.red)
@@ -508,9 +516,7 @@ object InteractiveShell {
             }
         } catch (e: Exception) {
             if (!isShuttingDown) {
-                display {
-                    println("RPC failed: ${e.rootCause}", Color.red)
-                }
+                display { println("RPC failed: ${e.rootCause}", Color.red) }
             }
         } finally {
             InputStreamSerializer.invokeContext = null

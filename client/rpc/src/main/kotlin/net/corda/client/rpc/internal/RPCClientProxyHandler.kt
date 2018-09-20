@@ -7,6 +7,7 @@ import com.github.benmanes.caffeine.cache.RemovalCause
 import com.github.benmanes.caffeine.cache.RemovalListener
 import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
@@ -552,7 +553,7 @@ class RPCClientProxyHandler(
         m.keys.forEach { k ->
             observationExecutorPool.run(k) {
                 try {
-                    m[k]?.onError(RPCException("Connection failure detected."))
+                    m[k]?.onError(ConnectionFailureException())
                 } catch (th: Throwable) {
                     log.error("Unexpected exception when RPC connection failure handling", th)
                 }
@@ -561,7 +562,7 @@ class RPCClientProxyHandler(
         observableContext.observableMap.invalidateAll()
 
         rpcReplyMap.forEach { _, replyFuture ->
-            replyFuture.setException(RPCException("Connection failure detected."))
+            replyFuture.setException(ConnectionFailureException())
         }
 
         rpcReplyMap.clear()
