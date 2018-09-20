@@ -29,6 +29,7 @@ interface WebServer : EventPublisher<WebServerEvent>, WithLifeCycle {
     }
 }
 
+// TODO sollecitom add an Event type that's aware of InvocationContext, and use that for things like RequestReceivedEvent, etc.
 sealed class WebServerEvent(id: EventId = EventId.newInstance()) : Event(id) {
 
     sealed class Initialisation(id: EventId = EventId.newInstance()) : WebServerEvent(id) {
