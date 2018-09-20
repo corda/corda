@@ -17,8 +17,6 @@ import javax.annotation.PreDestroy
 import javax.inject.Inject
 import javax.inject.Named
 
-private const val eventSourceQualifier = "WebServer_PublishingEventSource"
-
 interface WebServer : EventPublisher<WebServerEvent>, WithLifeCycle {
 
     val options: WebServer.Options
@@ -50,6 +48,7 @@ internal class VertxWebServer @Inject constructor(override val options: WebServe
 
     private companion object {
 
+        private const val eventSourceQualifier = "VertxWebServer_PublishingEventSource"
         private val logger = loggerFor<VertxWebServer>()
     }
 
