@@ -66,16 +66,17 @@ class X509UtilitiesTest {
                 "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
                 "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
         )
+        // We ensure that all of the algorithms are both used (at least once) as first and second in the following [Pair]s.
+        // We also add [DEFAULT_TLS_SIGNATURE_SCHEME] and [DEFAULT_IDENTITY_SIGNATURE_SCHEME] combinations for consistency.
         val schemeCombinationList = listOf(
                 Pair(DEFAULT_TLS_SIGNATURE_SCHEME, DEFAULT_TLS_SIGNATURE_SCHEME),
                 Pair(DEFAULT_IDENTITY_SIGNATURE_SCHEME, DEFAULT_IDENTITY_SIGNATURE_SCHEME),
                 Pair(DEFAULT_TLS_SIGNATURE_SCHEME, DEFAULT_IDENTITY_SIGNATURE_SCHEME),
-                Pair(ECDSA_SECP256R1_SHA256, EDDSA_ED25519_SHA512),
-                Pair(ECDSA_SECP256R1_SHA256, RSA_SHA256),
-                Pair(ECDSA_SECP256K1_SHA256, SPHINCS256_SHA256),
-                Pair(SPHINCS256_SHA256, ECDSA_SECP256R1_SHA256),
+                Pair(ECDSA_SECP256R1_SHA256, SPHINCS256_SHA256),
+                Pair(ECDSA_SECP256K1_SHA256, RSA_SHA256),
                 Pair(EDDSA_ED25519_SHA512, ECDSA_SECP256K1_SHA256),
-                Pair(RSA_SHA256, EDDSA_ED25519_SHA512)
+                Pair(RSA_SHA256, EDDSA_ED25519_SHA512),
+                Pair(SPHINCS256_SHA256, ECDSA_SECP256R1_SHA256)
         )
     }
 
@@ -431,7 +432,7 @@ class X509UtilitiesTest {
         val childKey = generateKeyPair(signatureSchemeChild)
         val childCert = X509Utilities.createCertificate(CertificateType.TLS, rootCert, rootKey, BOB.name.x500Principal, childKey.public)
 
-        // Save the EdDSA private key with cert chains.
+        // Save the child private key with cert chains.
         val keyStore = loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
         keyStore.setKeyEntry("Key", childKey.private, "password".toCharArray(), arrayOf(rootCert, childCert))
         keyStore.save(tmpKeyStore, "keystorepass")
