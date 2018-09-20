@@ -11,7 +11,7 @@ internal class Options : WebServer.Options {
 
         private const val CONFIGURATION_FILE_NAME = "configuration.yml"
 
-        private object Spec : ConfigSpec("config.web.server") {
+        private object Spec : ConfigSpec("configuration.web.server") {
 
             val port by required<Int>()
         }
