@@ -52,30 +52,32 @@ internal class VertxWebServer @Inject constructor(override val options: WebServe
         private val logger = loggerFor<VertxWebServer>()
     }
 
-    private val server: HttpServer
+    private val servers: Collection<HttpServer>
 
     init {
         val vertx = vertxSupplier.invoke()
         val router = Router.router(vertx)
 
-        server = vertx.createHttpServer(options.toVertx()).requestHandler(router::accept)
+        servers = (1..optimalNumberOfEventLoops()).map { vertx.createHttpServer(options.toVertx()).requestHandler(router::accept) }
     }
 
     @PostConstruct
     override fun start() {
 
-        server.listen()
-        source.publish(WebServerEvent.Initialisation.Completed(Port(server.actualPort())))
+        servers.forEach { it.listen() }
+        source.publish(WebServerEvent.Initialisation.Completed(Port(servers.first().actualPort())))
     }
 
     @PreDestroy
     override fun close() {
 
-        server.close()
+        servers.forEach { it.close() }
         logger.info("Closed")
     }
 
     private fun WebServer.Options.toVertx(): HttpServerOptions = HttpServerOptions().setPort(port.value)
+
+    private fun optimalNumberOfEventLoops(): Int = Runtime.getRuntime().availableProcessors() * 2
 
     @Named(eventSourceQualifier)
     private class EventSourceBean : PublishingEventSource<WebServerEvent>()
