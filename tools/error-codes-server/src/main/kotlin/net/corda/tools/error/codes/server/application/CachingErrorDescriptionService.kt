@@ -10,8 +10,9 @@ import java.util.*
 import javax.inject.Inject
 import javax.inject.Named
 
+// TODO sollecitom make internal again and check wht Intellij complains in tests if not.
 @Named
-internal class CachingErrorDescriptionService @Inject constructor(@FunctionQualifier("Repository") private val lookup: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>, private val retrieveCached: (ErrorCode) -> Mono<Optional<out ErrorDescriptionLocation>>, private val addToCache: (ErrorCode, ErrorDescriptionLocation) -> Mono<Unit>) : ErrorDescriptionService {
+class CachingErrorDescriptionService @Inject constructor(@FunctionQualifier("Repository") private val lookup: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>, private val retrieveCached: (ErrorCode) -> Mono<Optional<out ErrorDescriptionLocation>>, private val addToCache: (ErrorCode, ErrorDescriptionLocation) -> Mono<Unit>) : ErrorDescriptionService {
 
     override fun descriptionLocationFor(errorCode: ErrorCode, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
 
