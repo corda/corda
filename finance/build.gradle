@@ -83,35 +83,22 @@ jar {
     }
 }
 
-// pass system properties via ./gradlew finance:signJar -DkeystoreFile="/path/to/keystore.jks" -Dkeystorepass="password" -Dkeyalias="alias"
-task signJar( dependsOn: 'jar', description: 'to Sign JAR.', group: 'Build'){
-    doLast{
-        def keystoreFile = System.getProperty('keystoreFile')
-        def keystorepass = System.getProperty('keystorepass')
-        def keyalias = System.getProperty('keyalias')
-        //checks to give meaningful error message
-        if (keystoreFile == null) throw new GradleException("Missing 'keystoreFile' property.")
-        if (keystorepass == null) throw new GradleException("Missing 'keystorepass' property.")
-        if (keyalias == null) throw new GradleException("Missing 'keyalias' property.")
-        ant.signjar(
-                jar: "${jar.archivePath}",
-                alias: keyalias,
-                storetype: "jks",
-                keystore: "${new File(keystoreFile).absolutePath}",
-                storepass: keystorepass,
-                verbose: true,
-                preservelastmodified: "true"
-        )
-    }
-}
-//enable this to produce signed JAR for 'build' task
-//build.dependsOn signJar
-
 cordapp {
     info {
         name "net/corda/finance"
         vendor "Corda Open Source"
     }
+// signing DSL entry is not yet available in Cordapp plugin
+//    signing {
+//        // Pass system properties via ./gradlew finance:signJar -DjarSignerKeystoreFile="/path/to/keystore.jks"
+//        // -DjarSignerKeystorepass="password" -DjarSignerKeyalias="alias"
+//        enabled false
+//        options {
+//            keystore System.getProperty('jarSignerKeystoreFile','')
+//            storepass System.getProperty('jarSignerKeystorepass', '')
+//            alias System.getProperty('jarSignerKeyalias','')
+//        }
+//    }    
 }
 
 publish {
