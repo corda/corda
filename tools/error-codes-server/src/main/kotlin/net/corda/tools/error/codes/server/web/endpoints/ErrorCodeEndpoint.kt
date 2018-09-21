@@ -12,11 +12,12 @@ import net.corda.tools.error.codes.server.domain.InvocationContext
 import net.corda.tools.error.codes.server.web.endpoints.template.ConfigurableEndpoint
 import net.corda.tools.error.codes.server.web.endpoints.template.EndpointConfigProvider
 import reactor.core.publisher.Mono
+import java.util.*
 import javax.inject.Inject
 import javax.inject.Named
 
 @Named
-internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEndpoint.Configuration, private val locateDescription: (ErrorCode, InvocationContext) -> Mono<ErrorDescriptionLocation>) : ConfigurableEndpoint(configuration, setOf(HttpMethod.GET)) {
+internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEndpoint.Configuration, private val locateDescription: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>) : ConfigurableEndpoint(configuration, setOf(HttpMethod.GET)) {
 
     private companion object {
 
@@ -29,7 +30,7 @@ internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEnd
 
             withPathParam(ERROR_CODE, ErrorCode.Valid::create, context) { errorCode ->
 
-                locateDescription(errorCode, context).andThen(response()) { location -> response().end(location) }
+                locateDescription(errorCode, context).thenIfPresent(response()) { location -> response().end(location) }
             }
         }
     }

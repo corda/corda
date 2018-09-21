@@ -10,7 +10,6 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Route
 import io.vertx.ext.web.RoutingContext
 import net.corda.tools.error.codes.server.commons.domain.validation.ValidationResult
-import net.corda.tools.error.codes.server.commons.reactive.subscribeOptional
 import net.corda.tools.error.codes.server.commons.web.vertx.Endpoint
 import net.corda.tools.error.codes.server.commons.web.vertx.VertxEndpoint
 import net.corda.tools.error.codes.server.domain.InvocationContext
@@ -19,6 +18,7 @@ import net.corda.tools.error.codes.server.domain.loggerFor
 import reactor.core.Disposable
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.*
 
 internal abstract class ConfigurableEndpoint(configuration: Configuration, override val methods: Set<HttpMethod>) : VertxEndpoint(), Endpoint {
 
@@ -48,16 +48,16 @@ internal abstract class ConfigurableEndpoint(configuration: Configuration, overr
 
     protected open fun handleFailure(ctx: RoutingContext) = reportError(ctx.failure(), ctx.response())
 
-    protected fun <ELEMENT : Any> Mono<ELEMENT>.andThen(response: HttpServerResponse, action: (ELEMENT) -> Unit): Disposable {
+    protected fun <ELEMENT : Any> Mono<Optional<out ELEMENT>>.thenIfPresent(response: HttpServerResponse, action: (ELEMENT) -> Unit): Disposable {
 
-        val callback = { result: ELEMENT? ->
-            if (result == null) {
+        return doOnSuccess { result: Optional<out ELEMENT>? ->
+
+            if (result == null || !result.isPresent) {
                 response.endWithNotFound()
             } else {
-                action(result)
+                action.invoke(result.get())
             }
-        }
-        return subscribeOptional({ error -> reportError(error, response) }, callback)
+        }.subscribe({}, { error: Throwable -> reportError(error, response) })
     }
 
     protected fun <ELEMENT> Flux<ELEMENT>.subscribeWith(response: HttpServerResponse, onComplete: () -> Unit = {}, onEach: (ELEMENT) -> Unit): Disposable {
