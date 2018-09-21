@@ -4,7 +4,6 @@ import com.uchuhimo.konf.Config
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.http.HttpMethod
 import io.vertx.ext.web.Router
-import io.vertx.ext.web.RoutingContext
 import javax.inject.Inject
 import javax.inject.Named
 
@@ -14,12 +13,6 @@ internal class HealthCheckEndpoint @Inject constructor(configuration: HealthChec
     override fun install(router: Router) {
 
         router.get(path).withDefaults().handler { ctx -> ctx.response().setStatusCode(HttpResponseStatus.OK.code()).end() }
-    }
-
-    override fun handleFailure(ctx: RoutingContext) {
-
-        super.handleFailure(ctx)
-        // TODO sollecitom publish event and log
     }
 
     interface Configuration : ConfigurableEndpoint.Configuration

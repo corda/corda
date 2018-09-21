@@ -40,101 +40,101 @@ interface Logger<CONTEXT : LoggingContext> {
 
     fun name(): String = javaClass.name
 
-    fun log(context: CONTEXT?, level: Level, message: String, vararg argSuppliers: () -> Any?)
+    fun log(context: CONTEXT?, level: Level, message: String?, vararg argSuppliers: () -> Any?)
 
-    fun log(context: CONTEXT?, level: Level, message: String, vararg args: Any?) = log(context, level, message, argSuppliers = *args.map { argument -> { argument } }.toTypedArray())
+    fun log(context: CONTEXT?, level: Level, message: String?, vararg args: Any?) = log(context, level, message, argSuppliers = *args.map { argument -> { argument } }.toTypedArray())
 
-    fun log(context: CONTEXT?, level: Level, message: String) = log(context, level, message, args = *emptyArray())
+    fun log(context: CONTEXT?, level: Level, message: String?) = log(context, level, message, args = *emptyArray())
 
-    fun log(context: CONTEXT?, level: Level, message: String, throwable: Throwable) = log(context, level, message, arrayOf(throwable))
+    fun log(context: CONTEXT?, level: Level, message: String?, throwable: Throwable) = log(context, level, message, arrayOf(throwable))
 
-    fun log(level: Level, message: String, vararg argSuppliers: () -> Any?) = log(null, level, message, *argSuppliers)
+    fun log(level: Level, message: String?, vararg argSuppliers: () -> Any?) = log(null, level, message, *argSuppliers)
 
-    fun log(level: Level, message: String, vararg args: Any?) = log(level, message, *args.map { argument -> { argument } }.toTypedArray())
+    fun log(level: Level, message: String?, vararg args: Any?) = log(level, message, *args.map { argument -> { argument } }.toTypedArray())
 
-    fun log(level: Level, message: String) = log(level, message, args = *emptyArray())
+    fun log(level: Level, message: String?) = log(level, message, args = *emptyArray())
 
-    fun log(level: Level, message: String, throwable: Throwable) = log(level, message, arrayOf(throwable))
+    fun log(level: Level, message: String?, throwable: Throwable) = log(level, message, arrayOf(throwable))
 
-    fun trace(context: CONTEXT?, message: String, vararg argSuppliers: () -> Any?) = log(context, Level.TRACE, message, argSuppliers = *argSuppliers)
+    fun trace(context: CONTEXT?, message: String?, vararg argSuppliers: () -> Any?) = log(context, Level.TRACE, message, argSuppliers = *argSuppliers)
 
-    fun trace(context: CONTEXT?, message: String, vararg args: Any?) = log(context, Level.TRACE, message, *args)
+    fun trace(context: CONTEXT?, message: String?, vararg args: Any?) = log(context, Level.TRACE, message, *args)
 
-    fun trace(context: CONTEXT?, message: String) = log(context, Level.TRACE, message, args = *emptyArray())
+    fun trace(context: CONTEXT?, message: String?) = log(context, Level.TRACE, message, args = *emptyArray())
 
-    fun trace(context: CONTEXT?, message: String, throwable: Throwable) = log(context, Level.TRACE, message, throwable)
+    fun trace(context: CONTEXT?, message: String?, throwable: Throwable) = log(context, Level.TRACE, message, throwable)
 
-    fun trace(message: String, vararg argSuppliers: () -> Any?) = log(Level.TRACE, message, argSuppliers = *argSuppliers)
+    fun trace(message: String?, vararg argSuppliers: () -> Any?) = log(Level.TRACE, message, argSuppliers = *argSuppliers)
 
-    fun trace(message: String, vararg args: Any?) = log(Level.TRACE, message, *args)
+    fun trace(message: String?, vararg args: Any?) = log(Level.TRACE, message, *args)
 
-    fun trace(message: String) = log(Level.TRACE, message, args = *emptyArray())
+    fun trace(message: String?) = log(Level.TRACE, message, args = *emptyArray())
 
-    fun trace(message: String, throwable: Throwable) = log(Level.TRACE, message, throwable)
+    fun trace(message: String?, throwable: Throwable) = log(Level.TRACE, message, throwable)
 
-    fun debug(context: CONTEXT?, message: String, vararg argSuppliers: () -> Any?) = log(context, Level.DEBUG, message, argSuppliers = *argSuppliers)
+    fun debug(context: CONTEXT?, message: String?, vararg argSuppliers: () -> Any?) = log(context, Level.DEBUG, message, argSuppliers = *argSuppliers)
 
-    fun debug(context: CONTEXT?, message: String, vararg args: Any?) = log(context, Level.DEBUG, message, *args)
+    fun debug(context: CONTEXT?, message: String?, vararg args: Any?) = log(context, Level.DEBUG, message, *args)
 
-    fun debug(context: CONTEXT?, message: String) = log(context, Level.DEBUG, message, args = *emptyArray())
+    fun debug(context: CONTEXT?, message: String?) = log(context, Level.DEBUG, message, args = *emptyArray())
 
-    fun debug(context: CONTEXT?, message: String, throwable: Throwable) = log(context, Level.DEBUG, message, throwable)
+    fun debug(context: CONTEXT?, message: String?, throwable: Throwable) = log(context, Level.DEBUG, message, throwable)
 
-    fun debug(message: String, vararg argSuppliers: () -> Any?) = log(Level.DEBUG, message, argSuppliers = *argSuppliers)
+    fun debug(message: String?, vararg argSuppliers: () -> Any?) = log(Level.DEBUG, message, argSuppliers = *argSuppliers)
 
-    fun debug(message: String, vararg args: Any?) = log(Level.DEBUG, message, *args)
+    fun debug(message: String?, vararg args: Any?) = log(Level.DEBUG, message, *args)
 
-    fun debug(message: String) = log(Level.DEBUG, message, args = *emptyArray())
+    fun debug(message: String?) = log(Level.DEBUG, message, args = *emptyArray())
 
-    fun debug(message: String, throwable: Throwable) = log(Level.DEBUG, message, throwable)
+    fun debug(message: String?, throwable: Throwable) = log(Level.DEBUG, message, throwable)
 
-    fun info(context: CONTEXT?, message: String, throwable: Throwable) = log(context, Level.INFO, message, throwable)
+    fun info(context: CONTEXT?, message: String?, throwable: Throwable) = log(context, Level.INFO, message, throwable)
 
-    fun info(context: CONTEXT?, message: String, vararg argSuppliers: () -> Any?) = log(context, Level.INFO, message, argSuppliers = *argSuppliers)
+    fun info(context: CONTEXT?, message: String?, vararg argSuppliers: () -> Any?) = log(context, Level.INFO, message, argSuppliers = *argSuppliers)
 
-    fun info(context: CONTEXT?, message: String) = log(context, Level.INFO, message, args = *emptyArray())
+    fun info(context: CONTEXT?, message: String?) = log(context, Level.INFO, message, args = *emptyArray())
 
-    fun info(context: CONTEXT?, message: String, vararg args: Any?) = log(context, Level.INFO, message, *args)
+    fun info(context: CONTEXT?, message: String?, vararg args: Any?) = log(context, Level.INFO, message, *args)
 
-    fun info(message: String, throwable: Throwable) = log(Level.INFO, message, throwable)
+    fun info(message: String?, throwable: Throwable) = log(Level.INFO, message, throwable)
 
-    fun info(message: String, vararg argSuppliers: () -> Any?) = log(Level.INFO, message, argSuppliers = *argSuppliers)
+    fun info(message: String?, vararg argSuppliers: () -> Any?) = log(Level.INFO, message, argSuppliers = *argSuppliers)
 
-    fun info(message: String, vararg args: Any?) = log(Level.INFO, message, *args)
+    fun info(message: String?, vararg args: Any?) = log(Level.INFO, message, *args)
 
-    fun info(message: String) = log(Level.INFO, message, args = *emptyArray())
+    fun info(message: String?) = log(Level.INFO, message, args = *emptyArray())
 
-    fun warn(context: CONTEXT?, message: String, vararg argSuppliers: () -> Any?) = log(context, Level.WARN, message, argSuppliers = *argSuppliers)
+    fun warn(context: CONTEXT?, message: String?, vararg argSuppliers: () -> Any?) = log(context, Level.WARN, message, argSuppliers = *argSuppliers)
 
-    fun warn(context: CONTEXT?, message: String, vararg args: Any?) = log(context, Level.WARN, message, *args)
+    fun warn(context: CONTEXT?, message: String?, vararg args: Any?) = log(context, Level.WARN, message, *args)
 
-    fun warn(context: CONTEXT?, message: String) = log(context, Level.WARN, message, args = *emptyArray())
+    fun warn(context: CONTEXT?, message: String?) = log(context, Level.WARN, message, args = *emptyArray())
 
-    fun warn(context: CONTEXT?, message: String, throwable: Throwable) = log(context, Level.WARN, message, throwable)
+    fun warn(context: CONTEXT?, message: String?, throwable: Throwable) = log(context, Level.WARN, message, throwable)
 
-    fun warn(message: String, vararg argSuppliers: () -> Any?) = log(Level.WARN, message, argSuppliers = *argSuppliers)
+    fun warn(message: String?, vararg argSuppliers: () -> Any?) = log(Level.WARN, message, argSuppliers = *argSuppliers)
 
-    fun warn(message: String, vararg args: Any?) = log(Level.WARN, message, *args)
+    fun warn(message: String?, vararg args: Any?) = log(Level.WARN, message, *args)
 
-    fun warn(message: String) = log(Level.WARN, message, args = *emptyArray())
+    fun warn(message: String?) = log(Level.WARN, message, args = *emptyArray())
 
-    fun warn(message: String, throwable: Throwable) = log(Level.WARN, message, throwable)
+    fun warn(message: String?, throwable: Throwable) = log(Level.WARN, message, throwable)
 
-    fun error(context: CONTEXT?, message: String, vararg argSuppliers: () -> Any?) = log(context, Level.ERROR, message, argSuppliers = *argSuppliers)
+    fun error(context: CONTEXT?, message: String?, vararg argSuppliers: () -> Any?) = log(context, Level.ERROR, message, argSuppliers = *argSuppliers)
 
-    fun error(context: CONTEXT?, message: String, vararg args: Any?) = log(context, Level.ERROR, message, *args)
+    fun error(context: CONTEXT?, message: String?, vararg args: Any?) = log(context, Level.ERROR, message, *args)
 
-    fun error(context: CONTEXT?, message: String) = log(context, Level.ERROR, message, args = *emptyArray())
+    fun error(context: CONTEXT?, message: String?) = log(context, Level.ERROR, message, args = *emptyArray())
 
-    fun error(context: CONTEXT?, message: String, throwable: Throwable) = log(context, Level.ERROR, message, throwable)
+    fun error(context: CONTEXT?, message: String?, throwable: Throwable) = log(context, Level.ERROR, message, throwable)
 
-    fun error(message: String, vararg argSuppliers: () -> Any?) = log(Level.ERROR, message, argSuppliers = *argSuppliers)
+    fun error(message: String?, vararg argSuppliers: () -> Any?) = log(Level.ERROR, message, argSuppliers = *argSuppliers)
 
-    fun error(message: String, vararg args: Any?) = log(Level.ERROR, message, *args)
+    fun error(message: String?, vararg args: Any?) = log(Level.ERROR, message, *args)
 
-    fun error(message: String) = log(Level.ERROR, message, args = *emptyArray())
+    fun error(message: String?) = log(Level.ERROR, message, args = *emptyArray())
 
-    fun error(message: String, throwable: Throwable) = log(Level.ERROR, message, throwable)
+    fun error(message: String?, throwable: Throwable) = log(Level.ERROR, message, throwable)
 
     fun isTraceEnabled() = isEnabled(Level.TRACE)
 

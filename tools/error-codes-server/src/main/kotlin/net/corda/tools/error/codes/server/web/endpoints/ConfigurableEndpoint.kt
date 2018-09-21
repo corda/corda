@@ -9,8 +9,15 @@ import io.vertx.ext.web.Route
 import io.vertx.ext.web.RoutingContext
 import net.corda.tools.error.codes.server.commons.web.vertx.Endpoint
 import net.corda.tools.error.codes.server.commons.web.vertx.VertxEndpoint
+import net.corda.tools.error.codes.server.context.InvocationContext
+import net.corda.tools.error.codes.server.context.loggerFor
 
 internal abstract class ConfigurableEndpoint(configuration: ConfigurableEndpoint.Configuration, override val methods: Set<HttpMethod>) : VertxEndpoint(), Endpoint {
+
+    private companion object {
+
+        private val logger = loggerFor<ConfigurableEndpoint>()
+    }
 
     final override val path = configuration.path
     final override val name = configuration.name
@@ -26,7 +33,10 @@ internal abstract class ConfigurableEndpoint(configuration: ConfigurableEndpoint
         val json = JsonObject()
         json["error"] = "An unexpected error occurred."
         ctx.response().setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()).end(json)
+        logger.error(ctx.failure().message, ctx.failure())
     }
+
+    protected fun RoutingContext.invocation(): InvocationContext = InvocationContext.newInstance()
 
     internal interface Configuration {
 

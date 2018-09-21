@@ -8,7 +8,7 @@ interface InvocationContext : LoggingContext {
 
     companion object {
 
-        fun of(trace: Trace, externalTrace: Trace? = null): InvocationContext = InvocationContextImpl(trace, externalTrace)
+        fun newInstance(trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContextImpl(trace, externalTrace)
     }
 }
 
