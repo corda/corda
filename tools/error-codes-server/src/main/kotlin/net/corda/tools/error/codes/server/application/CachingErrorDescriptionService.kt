@@ -16,6 +16,7 @@ class CachingErrorDescriptionService @Inject constructor(@FunctionQualifier("Rep
 
     override fun descriptionLocationFor(errorCode: ErrorCode, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
 
+        // TODO sollecitom create intermediate functions with better names.
         return retrieveCached(errorCode).filter(Optional<*>::isPresent).switchIfEmpty(defer { lookup(errorCode, invocationContext).doOnNext { location -> location.ifPresent { addToCache(errorCode, it) } } })
     }
 }
