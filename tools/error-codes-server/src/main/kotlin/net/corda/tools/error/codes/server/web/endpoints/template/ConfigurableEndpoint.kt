@@ -34,33 +34,33 @@ internal abstract class ConfigurableEndpoint(configuration: Configuration, overr
         return failureHandler(::handleFailure)
     }
 
-    protected open fun reportError(error: Throwable, ctx: RoutingContext) {
+    protected open fun reportError(error: Throwable, response: HttpServerResponse) {
 
         if (error is RequestValidationException) {
-            ctx.response().endBecauseUnprocessable(error.errors)
+            response.endBecauseUnprocessable(error.errors)
         } else {
             logger.error(error.message, error)
-            ctx.response().endWithInternalError()
+            response.endWithInternalError()
         }
     }
 
-    protected open fun handleFailure(ctx: RoutingContext) = reportError(ctx.failure(), ctx)
+    protected open fun handleFailure(ctx: RoutingContext) = reportError(ctx.failure(), ctx.response())
 
-    protected fun <ELEMENT : Any> Mono<ELEMENT>.andThen(ctx: RoutingContext, action: (ELEMENT) -> Unit): Disposable {
+    protected fun <ELEMENT : Any> Mono<ELEMENT>.andThen(response: HttpServerResponse, action: (ELEMENT) -> Unit): Disposable {
 
         val callback = { result: ELEMENT? ->
             if (result == null) {
-                ctx.response().endWithNotFound()
+                response.endWithNotFound()
             } else {
                 action(result)
             }
         }
-        return subscribeOptional({ error -> reportError(error, ctx) }, callback)
+        return subscribeOptional({ error -> reportError(error, response) }, callback)
     }
 
-    protected fun <ELEMENT> Flux<ELEMENT>.subscribeWith(ctx: RoutingContext, onComplete: () -> Unit = {}, onEach: (ELEMENT) -> Unit): Disposable {
+    protected fun <ELEMENT> Flux<ELEMENT>.subscribeWith(response: HttpServerResponse, onComplete: () -> Unit = {}, onEach: (ELEMENT) -> Unit): Disposable {
 
-        return subscribe(onEach, { error -> reportError(error, ctx) }, onComplete)
+        return subscribe(onEach, { error -> reportError(error, response) }, onComplete)
     }
 
     protected fun HttpServerResponse.endWithNotFound() {
@@ -87,6 +87,11 @@ internal abstract class ConfigurableEndpoint(configuration: Configuration, overr
     protected fun HttpServerResponse.endWithInternalError() {
 
         endWithErrorMessage("An unexpected error occurred.", HttpResponseStatus.INTERNAL_SERVER_ERROR)
+    }
+
+    protected fun serve(route: Route, action: RoutingContext.(InvocationContext) -> Unit) {
+
+        route.withDefaults().handler { ctx -> action.invoke(ctx, ctx.invocationContext()) }
     }
 
     protected fun RoutingContext.invocationContext(): InvocationContext = InvocationContext.newInstance()

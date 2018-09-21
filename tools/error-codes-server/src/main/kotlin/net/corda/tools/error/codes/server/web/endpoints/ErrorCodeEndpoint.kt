@@ -26,14 +26,13 @@ internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEnd
 
     override fun install(router: Router) {
 
-        // TODO sollecitom add a function in the supertype to better do this.
-        router.get(path).withDefaults().handler {
+        serve(router.get(path)) { invocationContext ->
 
-            val invocationContext = it.invocationContext()
-            val specifiedErrorCode = it.pathParam(ERROR_CODE)?.let(ErrorCode.Valid::create) ?: throw RequestValidationException("Unspecified error code", invocationContext)
+            // TODO sollecitom create a function to handle this better
+            val specifiedErrorCode = pathParam(ERROR_CODE)?.let(ErrorCode.Valid::create) ?: throw RequestValidationException("Unspecified error code", invocationContext)
             val errorCode = specifiedErrorCode.validValue { errors -> RequestValidationException(errors, invocationContext) }
 
-            lookupErrorDescriptionLocation(errorCode).andThen(it) { location -> it.response().end(location) }
+            lookupErrorDescriptionLocation(errorCode).andThen(response()) { location -> response().end(location) }
         }
     }
 
