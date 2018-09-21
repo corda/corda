@@ -4,7 +4,7 @@ import com.uchuhimo.konf.Config
 import javax.inject.Named
 
 @Named
-internal class ConfigStandardsDecorator : (Config) -> Config {
+internal class ConfigsDecorator : (Config) -> Config {
 
     private companion object {
 

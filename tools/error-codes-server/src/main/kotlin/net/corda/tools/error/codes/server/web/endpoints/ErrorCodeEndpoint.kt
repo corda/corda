@@ -9,6 +9,8 @@ import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.web.endpoints.template.ConfigurableEndpoint
 import net.corda.tools.error.codes.server.web.endpoints.template.EndpointConfigProvider
+import net.corda.tools.error.codes.server.web.endpoints.template.RequestValidationException
+import reactor.core.publisher.Mono
 import java.net.URI
 import javax.inject.Inject
 import javax.inject.Named
@@ -23,21 +25,25 @@ internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEnd
 
     override fun install(router: Router) {
 
-        router.get(path).withDefaults().handler { ctx ->
+        // TODO sollecitom add a function in the supertype to better do this.
+        router.get(path).withDefaults().handler {
 
-            // TODO sollecitom add validation e.g., Valid<ErrorCode> with a `fun <RAW, PARSED> validate(RAW, (RAW) -> Valid(PARSED))`.
-            val errorCode = ctx.pathParam(ERROR_CODE)?.let(::ErrorCode)
-            // TODO sollecitom, remove the second clause after making ErrorCode self-validating.
-            if (errorCode == null) {
-                ctx.response().writeErrorMessage("An unexpected error occurred.", HttpResponseStatus.BAD_REQUEST)
-                return@handler
-            }
-            // TODO sollecitom use a Service instead - with reactive semantics
-            val location: ErrorDescriptionLocation = ErrorDescriptionLocation.External(URI.create("https://stackoverflow.com/questions/3591291/spring-jackson-and-customization-e-g-customdeserializer"), errorCode)
-            when (location) {
-                is ErrorDescriptionLocation.External -> ctx.response().putHeader(HttpHeaderNames.LOCATION, location.uri.toASCIIString()).setStatusCode(HttpResponseStatus.TEMPORARY_REDIRECT.code()).end()
+            val invocationContext = it.invocationContext()
+            val specifiedErrorCode = it.pathParam(ERROR_CODE)?.let(ErrorCode.Valid::create) ?: throw RequestValidationException("Unspecified error code", invocationContext)
+            val errorCode = specifiedErrorCode.validValue { errors -> RequestValidationException(errors, invocationContext) }
+
+            lookupErrorDescriptionLocation(errorCode).subscribeWith(it) { location ->
+                when (location) {
+                    is ErrorDescriptionLocation.External -> it.response().putHeader(HttpHeaderNames.LOCATION, location.uri.toASCIIString()).setStatusCode(HttpResponseStatus.TEMPORARY_REDIRECT.code()).end()
+                }
             }
         }
+    }
+
+    // TODO sollecitom use a Service instead
+    private fun lookupErrorDescriptionLocation(errorCode: ErrorCode): Mono<ErrorDescriptionLocation> {
+
+        return Mono.just(ErrorDescriptionLocation.External(URI.create("https://stackoverflow.com/questions/3591291/spring-jackson-and-customization-e-g-customdeserializer"), errorCode))
     }
 
     interface Configuration : ConfigurableEndpoint.Configuration

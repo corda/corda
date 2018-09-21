@@ -54,7 +54,7 @@ interface Logger<CONTEXT : LoggingContext> {
 
     fun log(level: Level, message: String?) = log(level, message, args = *emptyArray())
 
-    fun log(level: Level, message: String?, throwable: Throwable) = log(level, message, arrayOf(throwable))
+    fun log(level: Level, message: String?, throwable: Throwable) = log(level, message, throwable as Any)
 
     fun trace(context: CONTEXT?, message: String?, vararg argSuppliers: () -> Any?) = log(context, Level.TRACE, message, argSuppliers = *argSuppliers)
 
