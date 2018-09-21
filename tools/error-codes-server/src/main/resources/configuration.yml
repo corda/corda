@@ -7,3 +7,7 @@ configuration:
           name: Healthcheck
           path: /health
           enabled: true
+        error_code:
+          name: Error code
+          path: /errors/:error_code
+          enabled: true

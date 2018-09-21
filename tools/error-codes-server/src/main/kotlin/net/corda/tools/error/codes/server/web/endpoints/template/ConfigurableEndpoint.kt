@@ -1,9 +1,10 @@
-package net.corda.tools.error.codes.server.web.endpoints
+package net.corda.tools.error.codes.server.web.endpoints.template
 
 import com.uchuhimo.konf.Config
 import com.uchuhimo.konf.ConfigSpec
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.http.HttpMethod
+import io.vertx.core.http.HttpServerResponse
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Route
 import io.vertx.ext.web.RoutingContext
@@ -12,7 +13,7 @@ import net.corda.tools.error.codes.server.commons.web.vertx.VertxEndpoint
 import net.corda.tools.error.codes.server.context.InvocationContext
 import net.corda.tools.error.codes.server.context.loggerFor
 
-internal abstract class ConfigurableEndpoint(configuration: ConfigurableEndpoint.Configuration, override val methods: Set<HttpMethod>) : VertxEndpoint(), Endpoint {
+internal abstract class ConfigurableEndpoint(configuration: Configuration, override val methods: Set<HttpMethod>) : VertxEndpoint(), Endpoint {
 
     private companion object {
 
@@ -30,10 +31,15 @@ internal abstract class ConfigurableEndpoint(configuration: ConfigurableEndpoint
 
     protected open fun handleFailure(ctx: RoutingContext) {
 
-        val json = JsonObject()
-        json["error"] = "An unexpected error occurred."
-        ctx.response().setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()).end(json)
+        ctx.response().writeErrorMessage("An unexpected error occurred.", HttpResponseStatus.INTERNAL_SERVER_ERROR)
         logger.error(ctx.failure().message, ctx.failure())
+    }
+
+    protected fun HttpServerResponse.writeErrorMessage(message: String, responseStatus: HttpResponseStatus) {
+
+        val json = JsonObject()
+        json["error"] = message
+        setStatusCode(responseStatus.code()).end(json)
     }
 
     protected fun RoutingContext.invocation(): InvocationContext = InvocationContext.newInstance()

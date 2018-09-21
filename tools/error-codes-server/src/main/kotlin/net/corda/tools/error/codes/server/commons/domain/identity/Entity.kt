@@ -1,4 +1,4 @@
-package net.corda.tools.error.codes.server.commons.identity
+package net.corda.tools.error.codes.server.commons.domain.identity
 
 import net.corda.tools.error.codes.server.commons.events.Event
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -41,10 +41,5 @@ abstract class Entity<ID : Id<*>>(val id: ID) {
 
         toString["id"] = id.value
         toString["createdAt"] = createdAt
-    }
-
-    protected operator fun ToStringBuilder.set(key: String, value: Any?) {
-
-        append(key, value)
     }
 }

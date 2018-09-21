@@ -4,6 +4,8 @@ import com.uchuhimo.konf.Config
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.http.HttpMethod
 import io.vertx.ext.web.Router
+import net.corda.tools.error.codes.server.web.endpoints.template.ConfigurableEndpoint
+import net.corda.tools.error.codes.server.web.endpoints.template.EndpointConfigProvider
 import javax.inject.Inject
 import javax.inject.Named
 

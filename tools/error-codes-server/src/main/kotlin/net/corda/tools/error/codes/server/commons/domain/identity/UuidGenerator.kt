@@ -1,4 +1,4 @@
-package net.corda.tools.error.codes.server.commons.identity
+package net.corda.tools.error.codes.server.commons.domain.identity
 
 import com.fasterxml.uuid.Generators
 import java.util.*
