@@ -79,8 +79,11 @@ class HibernateConfiguration(
         val metadataSources = MetadataSources(serviceRegistry)
 
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
-                .setProperty("hibernate.hbm2ddl.auto", if (isH2Database(jdbcUrl)) "update" else "validate")
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
+        if (isH2Database(jdbcUrl))
+            config.setProperty("hibernate.hbm2ddl.auto","update")
+        else if (!isNonStopSqlMxDatabase(jdbcUrl)) //Enterprise only NonStop database - NonStop Hibernate dialect doesn't support validation
+            config.setProperty("hibernate.hbm2ddl.auto","validate")
 
         databaseConfig.schema?.apply {
             //preserving case-sensitive schema name for PostgreSQL by wrapping in double quotes, schema without double quotes would be treated as case-insensitive (lower cases)
@@ -221,6 +224,9 @@ class HibernateConfiguration(
             return "corda-blob"
         }
     }
+
+    //Enterprise only check
+    private fun isNonStopSqlMxDatabase(jdbcUrl: String) = jdbcUrl.contains(":t4sqlmx:") || jdbcUrl.contains(":sqlmx:")
 }
 
 /** Allow Oracle database drivers ojdbc7.jar and ojdbc8.jar to deserialize classes from oracle.sql.converter package. */
