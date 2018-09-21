@@ -11,7 +11,6 @@ import javax.inject.Named
 @Named
 internal class HealthCheckEndpoint @Inject constructor(configuration: HealthCheckEndpoint.Configuration) : ConfigurableEndpoint(configuration, setOf(HttpMethod.GET)) {
 
-    // TODO sollecitom introduce a map-based functional Endpoint template
     override fun install(router: Router) {
 
         router.get(path).withDefaults().handler { ctx -> ctx.response().setStatusCode(HttpResponseStatus.OK.code()).end() }
@@ -34,4 +33,3 @@ internal class HealthCheckEndpoint @Inject constructor(configuration: HealthChec
         }
     }
 }
-
