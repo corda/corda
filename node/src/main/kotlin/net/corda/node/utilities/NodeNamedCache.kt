@@ -37,7 +37,7 @@ class DefaultNamedCacheFactory private constructor(private val metricRegistry: M
     override fun <K, V> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V> {
         checkNotNull(metricRegistry)
         checkNotNull(nodeConfiguration)
-        return caffeine.buildNamed<K, V>(name)
+        return caffeine.maximumSize(1024).buildNamed<K, V>(name)
     }
 
     override fun <K, V> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
