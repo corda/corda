@@ -21,8 +21,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
-import net.corda.core.serialization.internal.nodeSerializationEnv
+import net.corda.core.serialization.internal.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.node.CordaClock
@@ -445,17 +444,25 @@ open class Node(configuration: NodeConfiguration,
     private fun initialiseSerialization() {
         if (!initialiseSerialization) return
         val classloader = cordappLoader.appClassLoader
-        nodeSerializationEnv = SerializationEnvironmentImpl(
-                SerializationFactoryImpl().apply {
-                    registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps))
-                    registerScheme(AMQPClientSerializationScheme(cordappLoader.cordapps))
-                },
-                checkpointSerializer = KryoCheckpointSerializer,
-                p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
-                rpcServerContext = AMQP_RPC_SERVER_CONTEXT.withClassLoader(classloader),
-                storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
-                checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader),
-                rpcClientContext = if (configuration.shouldInitCrashShell()) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classloader) else null) //even Shell embeded in the node connects via RPC to the node
+        nodeSerializationEnv = SerializationEnvironment.with(
+                nonCheckpoint = NonCheckpointEnvironment(
+                        factory = serializationFactory(
+                                AMQPServerSerializationScheme(cordappLoader.cordapps),
+                                AMQPClientSerializationScheme(cordappLoader.cordapps)),
+                        contexts = SerializationContexts(
+                                p2p = AMQP_P2P_CONTEXT.withClassLoader(classloader),
+                                storage = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
+                                rpc = RPCSerializationContexts(
+                                        client = if (configuration.shouldInitCrashShell())
+                                            AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classloader)
+                                        else null,  //even Shell embeded in the node connects via RPC to the node
+                                        server = AMQP_RPC_SERVER_CONTEXT.withClassLoader(classloader)
+                                )
+                        )),
+                checkpoint = CheckpointEnvironment(
+                        context = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader),
+                        serializer = KryoCheckpointSerializer
+                ))
     }
 
     /** Starts a blocking event loop for message dispatch. */

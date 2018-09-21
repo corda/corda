@@ -13,6 +13,8 @@ import java.io.NotSerializableException
 object CheckpointSerializationDefaults {
     @DeleteForDJVM
     val CHECKPOINT_CONTEXT get() = effectiveSerializationEnv.checkpointContext
+    @DeleteForDJVM
+    val CHECKPOINT_SERIALIZER get() = effectiveSerializationEnv.checkpointSerializer
 }
 
 

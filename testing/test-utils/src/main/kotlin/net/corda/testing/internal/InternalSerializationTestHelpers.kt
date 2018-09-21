@@ -29,23 +29,22 @@ fun <T> withoutTestSerialization(callable: () -> T): T { // TODO: Delete this, s
     }
 }
 
-internal fun createTestSerializationEnv(label: String): SerializationEnvironmentImpl {
-    val factory = SerializationFactoryImpl().apply {
-        registerScheme(AMQPClientSerializationScheme(emptyList()))
-        registerScheme(AMQPServerSerializationScheme(emptyList()))
-    }
-    return object : SerializationEnvironmentImpl(
-            factory,
-            AMQP_P2P_CONTEXT,
-            AMQP_RPC_SERVER_CONTEXT,
-            AMQP_RPC_CLIENT_CONTEXT,
-            AMQP_STORAGE_CONTEXT,
-            KRYO_CHECKPOINT_CONTEXT,
-            KryoCheckpointSerializer
-    ) {
-        override fun toString() = "testSerializationEnv($label)"
-    }
-}
+internal fun createTestSerializationEnv(label: String): SerializationEnvironment =
+    SerializationEnvironment.with(
+            nonCheckpoint = NonCheckpointEnvironment(
+                    factory = serializationFactory(
+                            AMQPClientSerializationScheme(emptyList()),
+                            AMQPServerSerializationScheme(emptyList())),
+                    contexts = SerializationContexts(
+                            p2p = AMQP_P2P_CONTEXT,
+                            storage = AMQP_STORAGE_CONTEXT,
+                            rpc = RPCSerializationContexts(
+                                server = AMQP_RPC_SERVER_CONTEXT,
+                                client = AMQP_RPC_CLIENT_CONTEXT
+                            ))),
+            checkpoint = CheckpointEnvironment(
+            context = KRYO_CHECKPOINT_CONTEXT,
+            serializer = KryoCheckpointSerializer))
 
 /**
  * Should only be used by Driver and MockNode.

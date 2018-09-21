@@ -6,16 +6,18 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.common.internal.checkNotOnClasspath
+import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import org.apache.commons.io.output.WriterOutputStream
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Rule
 import org.junit.Test
 import java.io.PrintStream
 import java.io.StringWriter
 import java.nio.charset.StandardCharsets.UTF_8
 
 class BlobInspectorTest {
+    
     private val blobInspector = BlobInspector()
-
     @Test
     fun `network-parameters file`() {
         val output = run("network-parameters")

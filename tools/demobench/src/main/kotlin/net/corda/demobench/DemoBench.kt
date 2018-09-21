@@ -2,11 +2,13 @@ package net.corda.demobench
 
 import javafx.scene.image.Image
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.NonCheckpointEnvironment
+import net.corda.core.serialization.internal.SerializationContexts
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.demobench.views.DemoBenchView
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
-import net.corda.serialization.internal.SerializationFactoryImpl
+import net.corda.serialization.internal.serializationFactory
 import tornadofx.*
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets.UTF_8
@@ -56,11 +58,11 @@ class DemoBench : App(DemoBenchView::class) {
     }
 
     private fun initialiseSerialization() {
-        nodeSerializationEnv = SerializationEnvironmentImpl(
-                SerializationFactoryImpl().apply {
-                    registerScheme(AMQPClientSerializationScheme(emptyList()))
-                },
-                AMQP_P2P_CONTEXT)
+        nodeSerializationEnv = SerializationEnvironment.with(
+                nonCheckpoint = NonCheckpointEnvironment(
+                        factory = serializationFactory(AMQPClientSerializationScheme(emptyList())),
+                        contexts = SerializationContexts(
+                                p2p = AMQP_P2P_CONTEXT)))
     }
 }
 

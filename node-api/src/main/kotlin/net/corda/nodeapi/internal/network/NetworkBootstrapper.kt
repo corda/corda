@@ -14,7 +14,9 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.NonCheckpointEnvironment
+import net.corda.core.serialization.internal.SerializationContexts
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
@@ -24,9 +26,9 @@ import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.CordaSerializationMagic
-import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.serializationFactory
 import java.io.InputStream
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -382,12 +384,11 @@ internal constructor(private val initSerEnv: Boolean,
 
     // We need to to set serialization env, because generation of parameters is run from Cordform.
     private fun initialiseSerialization() {
-        _contextSerializationEnv.set(SerializationEnvironmentImpl(
-                SerializationFactoryImpl().apply {
-                    registerScheme(AMQPParametersSerializationScheme)
-                },
-                AMQP_P2P_CONTEXT)
-        )
+        _contextSerializationEnv.set(SerializationEnvironment.with(
+                nonCheckpoint = NonCheckpointEnvironment(
+                        factory = serializationFactory(AMQPParametersSerializationScheme),
+                        contexts = SerializationContexts(
+                                p2p = AMQP_P2P_CONTEXT))))
     }
 
     private object AMQPParametersSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
