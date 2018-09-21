@@ -21,6 +21,7 @@ internal class CachingErrorDescriptionService : ErrorDescriptionService {
     }
 }
 
+// This avoids having to inject the entire ErrorDescriptionService inside the endpoint. Kotlin does not support implementing the same interface with different arguments, so this allows a functional style.
 @Named
 internal class ErrorDescriptionLocator @Inject constructor(private val service: ErrorDescriptionService) : (ErrorCode, InvocationContext) -> Mono<ErrorDescriptionLocation> {
 
