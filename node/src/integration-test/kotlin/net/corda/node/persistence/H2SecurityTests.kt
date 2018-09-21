@@ -11,7 +11,9 @@ import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.node.User
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.net.InetAddress
 import java.sql.DriverManager
@@ -29,6 +31,7 @@ class H2SecurityTests {
 
     @Test
     fun `h2 server starts when h2Settings are set`() {
+        assumeTrue(!IntegrationTest.isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
             val port = getFreePort()
             startNode(customOverrides = mapOf(h2AddressKey to "localhost:$port")).getOrThrow()
@@ -40,6 +43,7 @@ class H2SecurityTests {
 
     @Test
     fun `h2 server on the host name requires non-default database password`() {
+        assumeTrue(!IntegrationTest.isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
             assertFailsWith(CouldNotCreateDataSourceException::class) {
                 startNode(customOverrides = mapOf(h2AddressKey to "${InetAddress.getLocalHost().hostName}:${getFreePort()}")).getOrThrow()
@@ -48,7 +52,8 @@ class H2SecurityTests {
     }
 
     @Test
-    fun `h2 server on the external host IP requires non-default database password`() {
+    fun `h2 server on the external host IP requires non-default database password`(){
+        assumeTrue(!IntegrationTest.isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
             assertFailsWith(CouldNotCreateDataSourceException::class) {
                 startNode(customOverrides = mapOf(h2AddressKey to "${InetAddress.getLocalHost().hostAddress}:${getFreePort()}")).getOrThrow()
@@ -58,6 +63,7 @@ class H2SecurityTests {
 
     @Test
     fun `h2 server on host name requires non-blank database password`() {
+        assumeTrue(!IntegrationTest.isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
             assertFailsWith(CouldNotCreateDataSourceException::class) {
                 startNode(customOverrides = mapOf(h2AddressKey to "${InetAddress.getLocalHost().hostName}:${getFreePort()}",
@@ -68,6 +74,7 @@ class H2SecurityTests {
 
     @Test
     fun `h2 server on external host IP requires non-blank database password`() {
+        assumeTrue(!IntegrationTest.isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
             assertFailsWith(CouldNotCreateDataSourceException::class) {
                 startNode(customOverrides = mapOf(h2AddressKey to "${InetAddress.getLocalHost().hostAddress}:${getFreePort()}",
@@ -78,6 +85,7 @@ class H2SecurityTests {
 
     @Test
     fun `h2 server on localhost runs with the default database password`() {
+        assumeTrue(!IntegrationTest.isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = false, notarySpecs = emptyList())) {
             startNode(customOverrides = mapOf(h2AddressKey to "localhost:${getFreePort()}")).getOrThrow()
         }
@@ -85,6 +93,7 @@ class H2SecurityTests {
 
     @Test
     fun `h2 server to loopback IP runs with the default database password`() {
+        assumeTrue(!IntegrationTest.isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), notarySpecs = emptyList())) {
             startNode(customOverrides = mapOf(h2AddressKey to "127.0.0.1:${getFreePort()}")).getOrThrow()
         }
@@ -92,6 +101,7 @@ class H2SecurityTests {
 
     @Test
     fun `remote code execution via h2 server is disabled`() {
+        assumeTrue(!IntegrationTest.isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = false, notarySpecs = emptyList())) {
             val port = getFreePort()
             startNode(customOverrides = mapOf(h2AddressKey to "localhost:$port", dbPasswordKey to "x")).getOrThrow()
@@ -107,6 +117,7 @@ class H2SecurityTests {
 
     @Test
     fun `malicious flow tries to enable remote code execution via h2 server`() {
+        assumeTrue(!IntegrationTest.isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database
         val user = User("mark", "dadada", setOf(Permissions.startFlow<MaliciousFlow>()))
         driver(DriverParameters(inMemoryDB = false, startNodesInProcess = false, notarySpecs = emptyList())) {
             val port = getFreePort()

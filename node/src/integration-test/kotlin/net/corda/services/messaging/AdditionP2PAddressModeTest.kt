@@ -12,18 +12,26 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.node.services.Permissions.Companion.all
-import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.DUMMY_BANK_B_NAME
-import net.corda.testing.core.expect
-import net.corda.testing.core.expectEvents
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
+import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
 
-class AdditionP2PAddressModeTest {
+class AdditionP2PAddressModeTest : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName(),
+                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+    }
+
     private val portAllocation = PortAllocation.Incremental(27182)
     @Test
     fun `runs nodes with one configured to use additionalP2PAddresses`() {

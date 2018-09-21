@@ -65,7 +65,7 @@ object DbScriptRunner {
             if (schemas.isEmpty()) scripts else schemas.map { merge(scripts, it) }.flatten()
 }
 
-//rewritten version of org.springframework.jdbc.datasource.init.ResourceDatabasePopulator
+// Rewritten version of org.springframework.jdbc.datasource.init.ResourceDatabasePopulator
 class ListPopulator(private val continueOnError: Boolean,
                     private val ignoreFailedDrops: Boolean,
                     private val statements: List<String>) : DatabasePopulator {
@@ -94,9 +94,11 @@ class ListPopulator(private val continueOnError: Boolean,
                         }
                     } catch (ex: SQLException) {
                         val dropStatement = StringUtils.startsWithIgnoreCase(statement.trim { it <= ' ' }, "drop")
-                        if ((continueOnError || dropStatement && ignoreFailedDrops)) {
+                        // Ignore exception on Oracle db, as the user from the previous test maybe still logged in, and cannot be dropped
+                        val createUser =  StringUtils.startsWithIgnoreCase(statement.trim { it <= ' ' },"CREATE USER")
+                        if ((continueOnError || dropStatement && ignoreFailedDrops) || createUser) {
                             val dropUserStatement = StringUtils.startsWithIgnoreCase(statement.trim { it <= ' ' }, "drop user ")
-                            if (dropUserStatement) { // log to help spotting a node still logged on database after test has finished (happens on Oracle db)
+                            if (dropUserStatement || createUser) { // log to help spotting a node still logged on database after test has finished (happens on Oracle db)
                                 logger.warn("SQLException for $statement: SQL state '" + ex.sqlState +
                                         "', error code '" + ex.errorCode +
                                         "', message [" + ex.message + "]")

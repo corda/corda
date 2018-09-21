@@ -16,6 +16,7 @@ import net.corda.nodeapi.exceptions.InternalNodeException
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.NodeParameters
@@ -38,7 +39,8 @@ class BootTests : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_BANK_A_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
+                DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
     @Test
     fun `java deserialization is disabled`() {

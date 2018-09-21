@@ -11,14 +11,18 @@ import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.config.ExternalBrokerConnectionConfiguration
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
+import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -28,6 +32,11 @@ import kotlin.test.assertEquals
 import kotlin.test.fail
 
 class ExternalBrokertests : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+    }
 
     @Rule
     @JvmField

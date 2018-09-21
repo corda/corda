@@ -10,13 +10,23 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import org.assertj.core.api.Assertions
+import org.junit.ClassRule
 import org.junit.Test
 
-class VaultRestartTest {
+class VaultRestartTest : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+    }
 
     @Test
     fun `restart and query vault after adding some cash states`() {

@@ -27,6 +27,7 @@ import net.corda.testing.node.internal.addressMustNotBeBound
 import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
+import org.junit.Assume.assumeTrue
 import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
@@ -156,6 +157,7 @@ class DriverTests : IntegrationTest() {
 
     @Test
     fun `driver rejects multiple nodes with the same organisation name`() {
+        assumeTrue(!IntegrationTest.isRemoteDatabaseMode()) // Enterprise only - disable test, Liquibase doesn't quote schema name with all uppercase or lowercase letters
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             newNode(CordaX500Name(commonName = "Notary", organisation = "R3CEV", locality = "New York", country = "US"))().getOrThrow()
             assertThatIllegalArgumentException().isThrownBy {
