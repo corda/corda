@@ -9,32 +9,15 @@ import reactor.core.publisher.Mono.empty
 import reactor.core.publisher.Mono.just
 import java.net.URI
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
 import javax.inject.Inject
 import javax.inject.Named
 
 @Named
-internal class CachingErrorDescriptionService : ErrorDescriptionService {
-
-    // TODO sollecitom inject a cache instead - or better, 2 functions
-    private val cache: ConcurrentMap<ErrorCode, ErrorDescriptionLocation> = ConcurrentHashMap()
+internal class CachingErrorDescriptionService @Inject constructor(private val retrieveCached: (ErrorCode) -> Mono<Optional<out ErrorDescriptionLocation>>, private val addToCache: (ErrorCode, ErrorDescriptionLocation) -> Mono<Unit>) : ErrorDescriptionService {
 
     override fun descriptionLocationFor(errorCode: ErrorCode, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
 
-        return cached(errorCode).filter(Optional<*>::isPresent).switchIfEmpty(defer { lookup(errorCode, invocationContext).doOnNext { location -> location.ifPresent { cache(errorCode, it) } } })
-    }
-
-    private fun cached(errorCode: ErrorCode): Mono<Optional<out ErrorDescriptionLocation>> {
-
-        val cached = Optional.ofNullable(cache[errorCode])
-        return just(cached)
-    }
-
-    private fun cache(errorCode: ErrorCode, location: ErrorDescriptionLocation): Mono<Unit> {
-
-        cache[errorCode] = location
-        return empty()
+        return retrieveCached(errorCode).filter(Optional<*>::isPresent).switchIfEmpty(defer { lookup(errorCode, invocationContext).doOnNext { location -> location.ifPresent { addToCache(errorCode, it) } } })
     }
 
     // TODO sollecitom push to repository
@@ -49,7 +32,7 @@ internal class CachingErrorDescriptionService : ErrorDescriptionService {
     }
 }
 
-// This avoids having to inject the entire ErrorDescriptionService inside the endpoint. Kotlin does not support implementing the same interface with different arguments, so this allows a functional style.
+// This allows injecting functions instead of types.
 @Named
 internal class ErrorDescriptionLocator @Inject constructor(private val service: ErrorDescriptionService) : (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>> {
 
