@@ -6,6 +6,7 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.HttpServerResponse
 import io.vertx.ext.web.Router
+import net.corda.tools.error.codes.server.context.InvocationContext
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.web.endpoints.template.ConfigurableEndpoint
@@ -32,7 +33,7 @@ internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEnd
             val specifiedErrorCode = pathParam(ERROR_CODE)?.let(ErrorCode.Valid::create) ?: throw RequestValidationException("Unspecified error code", invocationContext)
             val errorCode = specifiedErrorCode.validValue { errors -> RequestValidationException(errors, invocationContext) }
 
-            lookupErrorDescriptionLocation(errorCode).andThen(response()) { location -> response().end(location) }
+            lookupErrorDescriptionLocation(errorCode, invocationContext).andThen(response()) { location -> response().end(location) }
         }
     }
 
@@ -49,7 +50,7 @@ internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEnd
     }
 
     // TODO sollecitom use a Service instead
-    private fun lookupErrorDescriptionLocation(errorCode: ErrorCode): Mono<ErrorDescriptionLocation> {
+    private fun lookupErrorDescriptionLocation(errorCode: ErrorCode, invocationContext: InvocationContext): Mono<ErrorDescriptionLocation> {
 
         return Mono.just(ErrorDescriptionLocation.External(URI.create("https://stackoverflow.com/questions/3591291/spring-jackson-and-customization-e-g-customdeserializer"), errorCode))
     }
