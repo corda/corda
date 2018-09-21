@@ -19,6 +19,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.toHexString
 import rx.Observable
 import java.time.Instant
 import java.util.*
@@ -157,7 +158,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             fun constraintInfo(type: Type, data: ByteArray?): ConstraintInfo {
                 return when (type) {
                     Type.ALWAYS_ACCEPT -> ConstraintInfo(AlwaysAcceptAttachmentConstraint)
-                    Type.HASH -> ConstraintInfo(HashAttachmentConstraint(SecureHash.sha256(data!!)))
+                    Type.HASH -> ConstraintInfo(HashAttachmentConstraint(SecureHash.parse(data!!.toHexString())))
                     Type.CZ_WHITELISTED -> ConstraintInfo(WhitelistedByZoneAttachmentConstraint)
                     Type.SIGNATURE -> ConstraintInfo(SignatureAttachmentConstraint(Crypto.decodePublicKey(data!!)))
                 }
@@ -261,8 +262,9 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
 
 /**
  * The maximum permissible size of contract constraint type data (for storage in vault states database table).
+ * Maximum value equates to a CompositeKey with 10 EDDSA_ED25519_SHA512 keys stored in.
  */
-const val MAX_CONSTRAINT_DATA_SIZE = 1074
+const val MAX_CONSTRAINT_DATA_SIZE = 563
 
 /**
  * A [VaultService] is responsible for securely and safely persisting the current state of a vault to storage. The
