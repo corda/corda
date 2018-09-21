@@ -4,6 +4,7 @@ import com.uchuhimo.konf.Config
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.http.HttpMethod
+import io.vertx.core.http.HttpServerResponse
 import io.vertx.ext.web.Router
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
@@ -32,12 +33,20 @@ internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEnd
             val specifiedErrorCode = it.pathParam(ERROR_CODE)?.let(ErrorCode.Valid::create) ?: throw RequestValidationException("Unspecified error code", invocationContext)
             val errorCode = specifiedErrorCode.validValue { errors -> RequestValidationException(errors, invocationContext) }
 
-            lookupErrorDescriptionLocation(errorCode).subscribeWith(it) { location ->
-                when (location) {
-                    is ErrorDescriptionLocation.External -> it.response().putHeader(HttpHeaderNames.LOCATION, location.uri.toASCIIString()).setStatusCode(HttpResponseStatus.TEMPORARY_REDIRECT.code()).end()
-                }
-            }
+            lookupErrorDescriptionLocation(errorCode).andThen(it) { location -> it.response().end(location) }
         }
+    }
+
+    private fun HttpServerResponse.end(location: ErrorDescriptionLocation) {
+
+        when (location) {
+            is ErrorDescriptionLocation.External -> location.writeTo(this).end()
+        }
+    }
+
+    private fun ErrorDescriptionLocation.External.writeTo(response: HttpServerResponse): HttpServerResponse {
+
+        return response.putHeader(HttpHeaderNames.LOCATION, uri.toASCIIString()).setStatusCode(HttpResponseStatus.TEMPORARY_REDIRECT.code())
     }
 
     // TODO sollecitom use a Service instead

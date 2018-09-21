@@ -46,7 +46,7 @@ internal abstract class ConfigurableEndpoint(configuration: Configuration, overr
 
     protected open fun handleFailure(ctx: RoutingContext) = reportError(ctx.failure(), ctx)
 
-    protected fun <ELEMENT : Any> Mono<ELEMENT>.subscribeWith(ctx: RoutingContext, action: (ELEMENT) -> Unit): Disposable {
+    protected fun <ELEMENT : Any> Mono<ELEMENT>.andThen(ctx: RoutingContext, action: (ELEMENT) -> Unit): Disposable {
 
         val callback = { result: ELEMENT? ->
             if (result == null) {
