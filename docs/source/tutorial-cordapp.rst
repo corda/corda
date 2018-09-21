@@ -396,7 +396,7 @@ please follow the instructions in :doc:`node-database`.
 
 Using the example RPC client
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-``/src/main/kotlin-source/com/example/client/ExampleClientRPC.kt`` defines a simple RPC client that connects to a node,
+``/src/main/kotlin/com/example/client/ExampleClientRPC.kt`` defines a simple RPC client that connects to a node,
 logs any existing IOUs and listens for any future IOUs. If you haven't created
 any IOUs when you first connect to one of the nodes, the client will simply log any future IOUs that are agreed.
 
