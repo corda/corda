@@ -9,6 +9,7 @@ import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Route
 import io.vertx.ext.web.RoutingContext
+import net.corda.tools.error.codes.server.commons.domain.validation.ValidationResult
 import net.corda.tools.error.codes.server.commons.reactive.subscribeOptional
 import net.corda.tools.error.codes.server.commons.web.vertx.Endpoint
 import net.corda.tools.error.codes.server.commons.web.vertx.VertxEndpoint
@@ -92,6 +93,13 @@ internal abstract class ConfigurableEndpoint(configuration: Configuration, overr
     protected fun serve(route: Route, action: RoutingContext.(InvocationContext) -> Unit) {
 
         route.withDefaults().handler { ctx -> action.invoke(ctx, ctx.invocationContext()) }
+    }
+
+    protected fun <PARAM : Any> RoutingContext.withPathParam(paramName: String, convert: (String) -> ValidationResult<PARAM>, invocationContext: InvocationContext, action: (PARAM) -> Unit) {
+
+        val specifiedErrorCode = pathParam(paramName)?.let(convert) ?: throw RequestValidationException("Unspecified path param $paramName.", invocationContext)
+        val value = specifiedErrorCode.validValue { errors -> RequestValidationException(errors, invocationContext) }
+        action.invoke(value)
     }
 
     protected fun RoutingContext.invocationContext(): InvocationContext = InvocationContext.newInstance()
