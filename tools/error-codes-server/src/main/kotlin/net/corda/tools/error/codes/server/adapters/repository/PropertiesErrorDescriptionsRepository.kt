@@ -6,6 +6,8 @@ import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionsRepository
 import net.corda.tools.error.codes.server.domain.InvocationContext
 import reactor.core.publisher.Mono
+import reactor.core.publisher.Mono.empty
+import reactor.core.publisher.Mono.just
 import java.net.URI
 import java.util.*
 import javax.inject.Inject
@@ -18,10 +20,10 @@ internal class PropertiesErrorDescriptionsRepository : ErrorDescriptionsReposito
 
         // TODO sollecitom change to read from a properties file
         if (errorCode.value.length % 2 == 0) {
-            return Mono.empty()
+            return empty()
         }
         val location = ErrorDescriptionLocation.External(URI.create("https://stackoverflow.com/questions/3591291/spring-jackson-and-customization-e-g-customdeserializer"), errorCode)
-        return Mono.just(Optional.of(location))
+        return just(Optional.of(location))
     }
 }
 
