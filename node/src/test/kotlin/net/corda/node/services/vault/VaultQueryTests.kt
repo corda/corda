@@ -479,8 +479,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             // insert states with different constraint types
             vaultFiller.fillWithSomeTestLinearStates(1)
             vaultFiller.fillWithSomeTestLinearStates(1, constraint = AlwaysAcceptAttachmentConstraint)
-            val contractAttachmentId = SecureHash.randomSHA256()
-            vaultFiller.fillWithSomeTestLinearStates(1, constraint = HashAttachmentConstraint(contractAttachmentId))
+            vaultFiller.fillWithSomeTestLinearStates(1, constraint = HashAttachmentConstraint(SecureHash.randomSHA256()))
             vaultFiller.fillWithSomeTestLinearStates(1, constraint = WhitelistedByZoneAttachmentConstraint)
             vaultFiller.fillWithSomeTestLinearStates(1, constraint = SignatureAttachmentConstraint(alice.publicKey))
             val compositeKey = CompositeKey.Builder().addKeys(alice.publicKey,  bob.publicKey).build()

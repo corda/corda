@@ -5,6 +5,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
@@ -19,7 +20,6 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NonEmptySet
 import rx.Observable
-import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
@@ -146,20 +146,20 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                 else -> throw IllegalArgumentException("Invalid constraint type: $constraint")
             }
         }
-        fun data(): Any? {
+        fun data(): ByteArray? {
             return when (type()) {
-                Type.HASH -> (constraint as HashAttachmentConstraint).attachmentId
-                Type.SIGNATURE -> (constraint as SignatureAttachmentConstraint).key
+                Type.HASH -> (constraint as HashAttachmentConstraint).attachmentId.bytes
+                Type.SIGNATURE -> (constraint as SignatureAttachmentConstraint).key.encoded
                 else -> null
             }
         }
         companion object {
-            fun constraintInfo(type: Type, data: Any?): ConstraintInfo {
+            fun constraintInfo(type: Type, data: ByteArray?): ConstraintInfo {
                 return when (type) {
                     Type.ALWAYS_ACCEPT -> ConstraintInfo(AlwaysAcceptAttachmentConstraint)
-                    Type.HASH -> ConstraintInfo(HashAttachmentConstraint(data as SecureHash))
+                    Type.HASH -> ConstraintInfo(HashAttachmentConstraint(SecureHash.sha256(data!!)))
                     Type.CZ_WHITELISTED -> ConstraintInfo(WhitelistedByZoneAttachmentConstraint)
-                    Type.SIGNATURE -> ConstraintInfo(SignatureAttachmentConstraint(data as PublicKey))
+                    Type.SIGNATURE -> ConstraintInfo(SignatureAttachmentConstraint(Crypto.decodePublicKey(data!!)))
                 }
             }
         }
