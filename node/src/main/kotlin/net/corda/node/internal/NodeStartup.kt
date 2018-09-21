@@ -36,6 +36,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.nodeapi.internal.persistence.DatabaseMigrationException
 import net.corda.nodeapi.internal.persistence.oracleJdbcDriverSerialFilter
 import net.corda.tools.shell.InteractiveShell
+import org.apache.commons.lang.SystemUtils
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
 import picocli.CommandLine.Mixin
@@ -54,7 +55,7 @@ import java.util.*
 import kotlin.system.exitProcess
 
 /** This class is responsible for starting a Node from command line arguments. */
-open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
+open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
     companion object {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         const val LOGS_DIRECTORY_NAME = "logs"
@@ -63,7 +64,7 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
     }
 
     @Mixin
-    var cmdLineOptions = NodeCmdLineOptions()
+    val cmdLineOptions = NodeCmdLineOptions()
 
     /**
      * @return exit code based on the success of the node startup. This value is intended to be the exit code of the process.
@@ -133,12 +134,19 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
     }
 
     private fun isValidJavaVersion(): Boolean {
-        if (!canNormalizeEmptyPath()) {
-            println("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest supported version.")
+        if (!hasMinimumJavaVersion()) {
+            println("You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8.")
             println("Corda will now exit...")
             return false
         }
         return true
+    }
+
+    private fun hasMinimumJavaVersion(): Boolean {
+        // when the ext.java8_minUpdateVersion gradle constant changes, so must this check
+        val major = SystemUtils.JAVA_VERSION_FLOAT
+        val update = SystemUtils.JAVA_VERSION.substringAfter("_").toLong()
+        return major == 1.8F && update >= 171
     }
 
     // TODO: Reconsider if automatic re-registration should be applied when something failed during initial registration.
@@ -157,24 +165,11 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
 
     private val startNodeExpectedErrors = setOf(DatabaseMigrationException::class, MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
 
-    private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print("$message [errorCode=${errorCode()}]")
+    private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print(message)
 
-    private fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" } ?: ""} [errorCode=${errorCode()}]", error)
+    private fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" } ?: ""}", error)
 
     private fun Exception.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
-
-    private fun Exception.errorCode(): String {
-        val hash = staticLocationBasedHash()
-        return Integer.toOctalString(hash)
-    }
-
-    private fun Throwable.staticLocationBasedHash(visited: Set<Throwable> = setOf(this)): Int {
-        val cause = this.cause
-        return when {
-            cause != null && !visited.contains(cause) -> Objects.hash(this::class.java.name, stackTrace.customHashCode(), cause.staticLocationBasedHash(visited +  cause))
-            else -> Objects.hash(this::class.java.name, stackTrace.customHashCode())
-        }
-    }
 
     private val handleRegistrationError = { error: Exception ->
         when (error) {
@@ -199,19 +194,6 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
             is ConfigException.IO -> error.logAsExpected(configFileNotFoundMessage(configFile), ::println)
             else -> error.logAsUnexpected("Unexpected error whilst reading node configuration")
         }
-    }
-
-    private fun Array<StackTraceElement?>?.customHashCode(): Int {
-
-        if (this == null) {
-            return 0
-        }
-        return Arrays.hashCode(map { it?.customHashCode() ?: 0 }.toIntArray())
-    }
-
-    private fun StackTraceElement.customHashCode(): Int {
-
-        return Objects.hash(StackTraceElement::class.java.name, methodName, lineNumber)
     }
 
     private fun configFileNotFoundMessage(configFile: Path): String {
@@ -239,15 +221,14 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
     }
 
     private fun checkRegistrationMode(): Boolean {
-        val baseDirectory = cmdLineOptions.baseDirectory.normalize().toAbsolutePath()
         // If the node was started with `--initial-registration`, create marker file.
         // We do this here to ensure the marker is created even if parsing the args with NodeArgsParser fails.
-        val marker = File((baseDirectory / INITIAL_REGISTRATION_MARKER).toUri())
+        val marker = cmdLineOptions.baseDirectory / INITIAL_REGISTRATION_MARKER
         if (!cmdLineOptions.isRegistration && !marker.exists()) {
             return false
         }
         try {
-            marker.createNewFile()
+            marker.createFile()
         } catch (e: Exception) {
             logger.warn("Could not create marker file for `--initial-registration`.", e)
         }
@@ -548,16 +529,6 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
         return hostName
     }
 
-    private fun canNormalizeEmptyPath(): Boolean {
-        // Check we're not running a version of Java with a known bug: https://github.com/corda/corda/issues/83
-        return try {
-            Paths.get("").normalize()
-            true
-        } catch (e: ArrayIndexOutOfBoundsException) {
-            false
-        }
-    }
-
     open fun drawBanner(versionInfo: VersionInfo) {
         Emoji.renderIfSupported {
             val messages = arrayListOf(
@@ -635,5 +606,4 @@ open class NodeStartup: CordaCliWrapper("corda", "Runs a Corda Node") {
         }
     }
 }
-
 

@@ -5,6 +5,7 @@ import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.DoNotImplement
 import net.corda.core.internal.staticField
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.testing.common.internal.asContextEnv
@@ -45,7 +46,6 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
 
     private lateinit var env: SerializationEnvironment
     val serializationFactory get() = env.serializationFactory
-    val checkpointContext get() = env.checkpointContext
 
     override fun apply(base: Statement, description: Description): Statement {
         init(description.toString())

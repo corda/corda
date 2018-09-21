@@ -13,3 +13,11 @@ fun checkUseCase(allowedUseCases: EnumSet<SerializationContext.UseCase>) {
         throw IllegalStateException("UseCase '${currentContext.useCase}' is not within '$allowedUseCases'")
     }
 }
+
+fun checkUseCase(allowedUseCase: SerializationContext.UseCase) {
+    val currentContext: SerializationContext = SerializationFactory.currentFactory?.currentContext
+            ?: throw IllegalStateException("Current context is not set")
+    if (allowedUseCase != currentContext.useCase) {
+        throw IllegalStateException("UseCase '${currentContext.useCase}' is not '$allowedUseCase'")
+    }
+}

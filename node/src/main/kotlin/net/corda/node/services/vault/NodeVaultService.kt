@@ -5,6 +5,7 @@ import co.paralleluniverse.strands.Strand
 import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.containsAny
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServicesForResolution
@@ -133,10 +134,12 @@ class NodeVaultService(
                 // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
                 // node. The behaviour is as follows:
                 //
-                // 1) All vault updates marked as RELEVANT will, of, course all have isRelevant = true.
-                // 2) For ALL_VISIBLE updates, those which are not relevant according to the relevancy rules will have isRelevant = false.
+                // 1) All vault updates marked as RELEVANT will, of course, all have relevancy_status = 1 in the
+                //    "vault_states" table.
+                // 2) For ALL_VISIBLE updates, those which are not relevant according to the relevancy rules will have
+                //    relevancy_status = 0 in the "vault_states" table.
                 //
-                // This is useful when it comes to querying for fungible states, when we do not want non-relevant states
+                // This is useful when it comes to querying for fungible states, when we do not want irrelevant states
                 // included in the result.
                 //
                 // The same functionality could be obtained by passing in a list of participants to the vault query,
@@ -156,7 +159,7 @@ class NodeVaultService(
                         lockId = uuid,
                         lockUpdateTime = if (uuid == null) null else now,
                         recordedTime = clock.instant(),
-                        isRelevant = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT
+                        relevancyStatus = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT
                 )
                 stateToAdd.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(stateToAdd)
@@ -454,7 +457,7 @@ class NodeVaultService(
         val enrichedCriteria = QueryCriteria.VaultQueryCriteria(
                 contractStateTypes = setOf(contractStateType),
                 softLockingCondition = QueryCriteria.SoftLockingCondition(QueryCriteria.SoftLockingType.UNLOCKED_AND_SPECIFIED, listOf(lockId)),
-                isRelevant = Vault.RelevancyStatus.RELEVANT
+                relevancyStatus = Vault.RelevancyStatus.RELEVANT
         )
         val results = queryBy(contractStateType, enrichedCriteria.and(eligibleStatesQuery), sorter)
 
@@ -485,7 +488,7 @@ class NodeVaultService(
             is OwnableState -> (state.participants.map { it.owningKey } + state.owner.owningKey).toSet()
             else -> state.participants.map { it.owningKey }
         }
-        return keysToCheck.any { it in myKeys }
+        return keysToCheck.any { it.containsAny(myKeys) }
     }
 
     @Throws(VaultQueryException::class)
@@ -561,7 +564,7 @@ class NodeVaultService(
                                     vaultState.notary,
                                     vaultState.lockId,
                                     vaultState.lockUpdateTime,
-                                    vaultState.isRelevant))
+                                    vaultState.relevancyStatus))
                         } else {
                             // TODO: improve typing of returned other results
                             log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }

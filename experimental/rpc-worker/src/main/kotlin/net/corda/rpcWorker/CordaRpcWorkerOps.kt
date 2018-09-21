@@ -338,6 +338,14 @@ class CordaRpcWorkerOps(
         shutdownNode.invoke()
     }
 
+    override fun terminate(drainPendingFlows: Boolean) {
+        TODO("not implemented")
+    }
+
+    override fun isWaitingForShutdown(): Boolean {
+        TODO("not implemented")
+    }
+
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
         return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.context.toFlowInitiator(), flowLogic.track(), flowLogic.stateMachine.context)
     }

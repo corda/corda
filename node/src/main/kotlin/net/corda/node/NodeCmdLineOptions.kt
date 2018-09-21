@@ -24,10 +24,8 @@ class NodeCmdLineOptions {
             names = ["-f", "--config-file"],
             description = ["The path to the config file. By default this is node.conf in the base directory."]
     )
-    var configFileArgument: Path? = null
-
-    val configFile : Path
-        get() = configFileArgument ?: (baseDirectory / "node.conf")
+    private var _configFile: Path? = null
+    val configFile: Path get() = _configFile ?: (baseDirectory / "node.conf")
 
     @Option(
             names = ["--sshd"],
@@ -57,7 +55,8 @@ class NodeCmdLineOptions {
             names = ["-t", "--network-root-truststore"],
             description = ["Network root trust store obtained from network operator."]
     )
-    var networkRootTrustStorePath: Path = baseDirectory / "certificates" / "network-root-truststore.jks"
+    private var _networkRootTrustStorePath: Path? = null
+    val networkRootTrustStorePath: Path get() = _networkRootTrustStorePath ?: baseDirectory / "certificates" / "network-root-truststore.jks"
 
     @Option(
             names = ["-p", "--network-root-truststore-password"],
@@ -101,7 +100,7 @@ class NodeCmdLineOptions {
     )
     var clearNetworkMapCache: Boolean = false
 
-    val nodeRegistrationOption : NodeRegistrationOption? by lazy {
+    val nodeRegistrationOption: NodeRegistrationOption? by lazy {
         if (isRegistration) {
             requireNotNull(networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
             require(networkRootTrustStorePath.exists()) { "Network root trust store path: '$networkRootTrustStorePath' doesn't exist" }

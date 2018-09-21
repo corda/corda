@@ -9,6 +9,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.testing.core.*
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.TestCorDapp
 import net.corda.testing.driver.driver
@@ -58,8 +59,8 @@ class AsymmetricCorDappsTests : IntegrationTest() {
 
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = emptySet())) {
 
-            val nodeA = startNode(additionalCordapps = setOf(TestCorDapp.Factory.create("Szymon CorDapp", "1.0", classes = setOf(Ping::class.java)))).getOrThrow()
-            val nodeB = startNode(additionalCordapps = setOf(TestCorDapp.Factory.create("Szymon CorDapp", "1.0", classes = setOf(Ping::class.java, Pong::class.java)))).getOrThrow()
+            val nodeA = startNode(providedName = ALICE_NAME, additionalCordapps = setOf(TestCorDapp.Factory.create("Szymon CorDapp", "1.0", classes = setOf(Ping::class.java)))).getOrThrow()
+            val nodeB = startNode(providedName = BOB_NAME, additionalCordapps = setOf(TestCorDapp.Factory.create("Szymon CorDapp", "1.0", classes = setOf(Ping::class.java, Pong::class.java)))).getOrThrow()
             nodeA.rpc.startFlow(::Ping, nodeB.nodeInfo.singleIdentity(), 1).returnValue.getOrThrow()
         }
     }
@@ -73,7 +74,7 @@ class AsymmetricCorDappsTests : IntegrationTest() {
         val cordappForNodeB = TestCorDapp.Factory.create("nodeB_only", "1.0", classes = setOf(Pong::class.java))
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = setOf(sharedCordapp))) {
 
-            val (nodeA, nodeB) = listOf(startNode(), startNode(additionalCordapps = setOf(cordappForNodeB))).transpose().getOrThrow()
+            val (nodeA, nodeB) = listOf(startNode(providedName = ALICE_NAME), startNode(providedName = BOB_NAME, additionalCordapps = setOf(cordappForNodeB))).transpose().getOrThrow()
             nodeA.rpc.startFlow(::Ping, nodeB.nodeInfo.singleIdentity(), 1).returnValue.getOrThrow()
         }
     }
@@ -87,7 +88,7 @@ class AsymmetricCorDappsTests : IntegrationTest() {
         val cordappForNodeB = TestCorDapp.Factory.create("nodeB_only", "1.0", classes = setOf(Pong::class.java))
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = setOf(sharedCordapp))) {
 
-            val (nodeA, nodeB) = listOf(startNode(), startNode(additionalCordapps = setOf(cordappForNodeB))).transpose().getOrThrow()
+            val (nodeA, nodeB) = listOf(startNode(providedName = ALICE_NAME), startNode(providedName = BOB_NAME, additionalCordapps = setOf(cordappForNodeB))).transpose().getOrThrow()
             nodeA.rpc.startFlow(::Ping, nodeB.nodeInfo.singleIdentity(), 1).returnValue.getOrThrow()
         }
     }
