@@ -1,12 +1,22 @@
 package net.corda.tools.error.codes.server.web.endpoints.template
 
 import net.corda.tools.error.codes.server.context.InvocationContext
+import net.corda.tools.error.codes.server.context.WithInvocationContext
 
-internal class RequestValidationException(val errors: Set<String>, val invocationContext: InvocationContext) : Exception() {
+internal class RequestValidationException private constructor(message: String, val errors: Set<String>, override val invocationContext: InvocationContext) : Exception(message), WithInvocationContext {
 
-    constructor(error: String, invocationContext: InvocationContext) : this(setOf(error), invocationContext)
+    companion object {
 
-    init {
-        require(errors.isNotEmpty())
+        private fun format(message: String, errors: Set<String>): String {
+
+            require(errors.isNotEmpty())
+            return "$message (errors: ${errors.joinToString(", ", "[", "]")})"
+        }
+
+        @JvmStatic
+        fun withError(error: String, invocationContext: InvocationContext): RequestValidationException = RequestValidationException(error, setOf(error), invocationContext)
+
+        @JvmStatic
+        fun withErrors(message: String, errors: Set<String>, invocationContext: InvocationContext): RequestValidationException = RequestValidationException(format(message, errors), errors, invocationContext)
     }
 }

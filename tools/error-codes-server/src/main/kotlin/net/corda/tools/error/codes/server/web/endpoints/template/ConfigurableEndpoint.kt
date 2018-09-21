@@ -14,6 +14,7 @@ import net.corda.tools.error.codes.server.commons.reactive.subscribeOptional
 import net.corda.tools.error.codes.server.commons.web.vertx.Endpoint
 import net.corda.tools.error.codes.server.commons.web.vertx.VertxEndpoint
 import net.corda.tools.error.codes.server.context.InvocationContext
+import net.corda.tools.error.codes.server.context.WithInvocationContext
 import net.corda.tools.error.codes.server.context.loggerFor
 import reactor.core.Disposable
 import reactor.core.publisher.Flux
@@ -40,7 +41,7 @@ internal abstract class ConfigurableEndpoint(configuration: Configuration, overr
         if (error is RequestValidationException) {
             response.endBecauseUnprocessable(error.errors)
         } else {
-            logger.error(error.message, error)
+            logger.error((error as? WithInvocationContext)?.invocationContext, error.message, error)
             response.endWithInternalError()
         }
     }
@@ -97,8 +98,8 @@ internal abstract class ConfigurableEndpoint(configuration: Configuration, overr
 
     protected fun <PARAM : Any> RoutingContext.withPathParam(paramName: String, convert: (String) -> ValidationResult<PARAM>, invocationContext: InvocationContext, action: (PARAM) -> Unit) {
 
-        val specifiedErrorCode = pathParam(paramName)?.let(convert) ?: throw RequestValidationException("Unspecified path param $paramName.", invocationContext)
-        val value = specifiedErrorCode.validValue { errors -> RequestValidationException(errors, invocationContext) }
+        val specifiedErrorCode = pathParam(paramName)?.let(convert) ?: throw RequestValidationException.withError("Unspecified path param \"$paramName\".", invocationContext)
+        val value = specifiedErrorCode.validValue { errors -> RequestValidationException.withErrors("Invalid path param \"$paramName\".", errors, invocationContext) }
         action.invoke(value)
     }
 
