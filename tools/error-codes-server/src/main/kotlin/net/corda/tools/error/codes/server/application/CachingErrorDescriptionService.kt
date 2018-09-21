@@ -37,6 +37,7 @@ internal class CachingErrorDescriptionService : ErrorDescriptionService {
     // TODO sollecitom push to repository
     private fun lookup(errorCode: ErrorCode, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
 
+        // TODO sollecitom change to read from a properties file
         if (errorCode.value.length % 2 == 0) {
             return Mono.empty()
         }
