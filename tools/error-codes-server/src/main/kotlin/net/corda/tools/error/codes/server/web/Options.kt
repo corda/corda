@@ -21,6 +21,5 @@ internal class Options @Inject constructor(applyConfigStandards: (Config) -> Con
 
     private val config = applyConfigStandards.invoke(Config { addSpec(Spec) })
 
-    // TODO sollecitom add validation
     override val port: Port = Port(config[Spec.port])
 }

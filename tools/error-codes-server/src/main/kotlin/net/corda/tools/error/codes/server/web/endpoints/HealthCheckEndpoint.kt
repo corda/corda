@@ -14,6 +14,7 @@ internal class HealthCheckEndpoint @Inject constructor(configuration: HealthChec
 
     override fun install(router: Router) {
 
+        // TODO sollecitom use a function to find out whether the application is healthy or not. If not, provide a message to explain why not.
         router.get(path).withDefaults().handler { ctx -> ctx.response().setStatusCode(HttpResponseStatus.OK.code()).end() }
     }
 
