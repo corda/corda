@@ -13,9 +13,9 @@ import net.corda.tools.error.codes.server.commons.domain.validation.ValidationRe
 import net.corda.tools.error.codes.server.commons.reactive.subscribeOptional
 import net.corda.tools.error.codes.server.commons.web.vertx.Endpoint
 import net.corda.tools.error.codes.server.commons.web.vertx.VertxEndpoint
-import net.corda.tools.error.codes.server.context.InvocationContext
-import net.corda.tools.error.codes.server.context.WithInvocationContext
-import net.corda.tools.error.codes.server.context.loggerFor
+import net.corda.tools.error.codes.server.domain.InvocationContext
+import net.corda.tools.error.codes.server.domain.WithInvocationContext
+import net.corda.tools.error.codes.server.domain.loggerFor
 import reactor.core.Disposable
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono

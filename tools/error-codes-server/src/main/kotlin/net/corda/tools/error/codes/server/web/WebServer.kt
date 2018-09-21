@@ -13,7 +13,7 @@ import net.corda.tools.error.codes.server.commons.events.PublishingEventSource
 import net.corda.tools.error.codes.server.commons.lifecycle.WithLifeCycle
 import net.corda.tools.error.codes.server.commons.web.Port
 import net.corda.tools.error.codes.server.commons.web.vertx.Endpoint
-import net.corda.tools.error.codes.server.context.loggerFor
+import net.corda.tools.error.codes.server.domain.loggerFor
 import org.apache.commons.lang3.builder.ToStringBuilder
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy

@@ -6,18 +6,17 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.HttpServerResponse
 import io.vertx.ext.web.Router
-import net.corda.tools.error.codes.server.context.InvocationContext
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
+import net.corda.tools.error.codes.server.domain.InvocationContext
 import net.corda.tools.error.codes.server.web.endpoints.template.ConfigurableEndpoint
 import net.corda.tools.error.codes.server.web.endpoints.template.EndpointConfigProvider
 import reactor.core.publisher.Mono
-import java.net.URI
 import javax.inject.Inject
 import javax.inject.Named
 
 @Named
-internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEndpoint.Configuration) : ConfigurableEndpoint(configuration, setOf(HttpMethod.GET)) {
+internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEndpoint.Configuration, private val locateDescription: (ErrorCode, InvocationContext) -> Mono<ErrorDescriptionLocation>) : ConfigurableEndpoint(configuration, setOf(HttpMethod.GET)) {
 
     private companion object {
 
@@ -30,7 +29,7 @@ internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEnd
 
             withPathParam(ERROR_CODE, ErrorCode.Valid::create, context) { errorCode ->
 
-                lookupErrorDescriptionLocation(errorCode, context).andThen(response()) { location -> response().end(location) }
+                locateDescription(errorCode, context).andThen(response()) { location -> response().end(location) }
             }
         }
     }
@@ -45,12 +44,6 @@ internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEnd
     private fun ErrorDescriptionLocation.External.writeTo(response: HttpServerResponse): HttpServerResponse {
 
         return response.putHeader(HttpHeaderNames.LOCATION, uri.toASCIIString()).setStatusCode(HttpResponseStatus.TEMPORARY_REDIRECT.code())
-    }
-
-    // TODO sollecitom use a Service instead
-    private fun lookupErrorDescriptionLocation(errorCode: ErrorCode, invocationContext: InvocationContext): Mono<ErrorDescriptionLocation> {
-
-        return Mono.just(ErrorDescriptionLocation.External(URI.create("https://stackoverflow.com/questions/3591291/spring-jackson-and-customization-e-g-customdeserializer"), errorCode))
     }
 
     interface Configuration : ConfigurableEndpoint.Configuration

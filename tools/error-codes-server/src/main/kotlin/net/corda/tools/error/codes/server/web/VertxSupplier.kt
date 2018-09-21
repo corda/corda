@@ -2,7 +2,7 @@ package net.corda.tools.error.codes.server.web
 
 import io.vertx.core.Vertx
 import io.vertx.core.VertxOptions
-import net.corda.tools.error.codes.server.context.loggerFor
+import net.corda.tools.error.codes.server.domain.loggerFor
 import javax.annotation.PreDestroy
 import javax.inject.Named
 

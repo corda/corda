@@ -1,7 +1,7 @@
 package net.corda.tools.error.codes.server.web.endpoints.template
 
-import net.corda.tools.error.codes.server.context.InvocationContext
-import net.corda.tools.error.codes.server.context.WithInvocationContext
+import net.corda.tools.error.codes.server.domain.InvocationContext
+import net.corda.tools.error.codes.server.domain.WithInvocationContext
 
 internal class RequestValidationException private constructor(message: String, val errors: Set<String>, override val invocationContext: InvocationContext) : Exception(message), WithInvocationContext {
 

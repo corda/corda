@@ -2,7 +2,7 @@ package net.corda.tools.error.codes.server
 
 import net.corda.tools.error.codes.server.commons.events.EventStream
 import net.corda.tools.error.codes.server.commons.reactive.only
-import net.corda.tools.error.codes.server.context.loggerFor
+import net.corda.tools.error.codes.server.domain.loggerFor
 import net.corda.tools.error.codes.server.web.WebServerEvent
 import java.time.LocalDateTime
 import java.time.ZoneId

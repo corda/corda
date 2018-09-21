@@ -1,4 +1,4 @@
-package net.corda.tools.error.codes.server.context
+package net.corda.tools.error.codes.server.domain
 
 import net.corda.tools.error.codes.server.commons.logging.Logger
 import net.corda.tools.error.codes.server.commons.logging.LoggingContext

@@ -1,6 +1,6 @@
 package net.corda.tools.error.codes.server.commons.events
 
-import net.corda.tools.error.codes.server.context.loggerFor
+import net.corda.tools.error.codes.server.domain.loggerFor
 import reactor.core.publisher.EmitterProcessor
 import reactor.core.publisher.Flux
 import reactor.core.scheduler.Schedulers
