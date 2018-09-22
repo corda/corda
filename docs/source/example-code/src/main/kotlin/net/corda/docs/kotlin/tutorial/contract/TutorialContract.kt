@@ -1,4 +1,4 @@
-package net.corda.docs.tutorial.contract
+package net.corda.docs.kotlin.tutorial.contract
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys

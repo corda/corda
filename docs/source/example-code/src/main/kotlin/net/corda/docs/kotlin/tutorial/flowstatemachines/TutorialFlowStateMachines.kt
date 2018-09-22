@@ -1,4 +1,6 @@
-package net.corda.docs.tutorial.flowstatemachines
+@file:Suppress("unused", "MemberVisibilityCanBePrivate")
+
+package net.corda.docs.kotlin.tutorial.flowstatemachines
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount

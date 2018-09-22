@@ -1,12 +1,12 @@
-package net.corda.docs.tutorial.twoparty
+package net.corda.docs.kotlin.tutorial.twoparty
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.SignTransactionFlow
-import net.corda.docs.tutorial.helloworld.IOUFlow
-import net.corda.docs.tutorial.helloworld.IOUState
+import net.corda.docs.kotlin.tutorial.helloworld.IOUFlow
+import net.corda.docs.kotlin.tutorial.helloworld.IOUState
 
 // DOCSTART 01
 // Add these imports:

@@ -315,13 +315,13 @@ You can create dummy identities to use in test transactions using the ``TestIden
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 14
         :end-before: DOCEND 14
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 14
         :end-before: DOCEND 14
@@ -368,13 +368,13 @@ construct and check transactions.
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 11
         :end-before: DOCEND 11
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 11
         :end-before: DOCEND 11
@@ -388,13 +388,13 @@ for you, using all the given identities.
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 12
         :end-before: DOCEND 12
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 12
         :end-before: DOCEND 12
@@ -411,13 +411,13 @@ transaction has been executed, and any ``attachments``, as shown in this example
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 13
         :end-before: DOCEND 13
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 13
         :end-before: DOCEND 13
@@ -434,13 +434,13 @@ verifying the message, there is also a ``fails`` method.
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 4
         :end-before: DOCEND 4
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 4
         :end-before: DOCEND 4
@@ -459,13 +459,13 @@ add the relevant output state and check that the contract verifies successfully,
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 5
         :end-before: DOCEND 5
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 5
         :end-before: DOCEND 5
@@ -476,13 +476,13 @@ and then return to the original, unmodified transaction. As in the following exa
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 7
         :end-before: DOCEND 7
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 7
         :end-before: DOCEND 7
@@ -500,13 +500,13 @@ be verified separately by placing a ``verifies`` or ``fails`` statement  within 
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 9
         :end-before: DOCEND 9
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 9
         :end-before: DOCEND 9

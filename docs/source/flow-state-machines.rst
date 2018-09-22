@@ -108,7 +108,7 @@ each side.
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/flowstatemachines/TutorialFlowStateMachines.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/flowstatemachines/TutorialFlowStateMachines.kt
         :language: kotlin
         :start-after: DOCSTART 1
         :end-before: DOCEND 1

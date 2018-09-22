@@ -1,4 +1,6 @@
-package net.corda.docs
+@file:Suppress("unused", "MemberVisibilityCanBePrivate")
+
+package net.corda.docs.kotlin
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
