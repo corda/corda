@@ -19,12 +19,12 @@ class CachingErrorDescriptionService @Inject constructor(@FunctionQualifier("Rep
         return retrieveCached(errorCode).orIfAbsent { lookup(errorCode, invocationContext).andIfPresent { addToCache(errorCode, it) } }
     }
 
-    private fun Mono<Optional<out ErrorDescriptionLocation>>.andIfPresent(action: (ErrorDescriptionLocation) -> Mono<Unit>): Mono<Optional<out ErrorDescriptionLocation>> {
+    private fun <ELEMENT : Any> Mono<Optional<out ELEMENT>>.andIfPresent(action: (ELEMENT) -> Mono<Unit>): Mono<Optional<out ELEMENT>> {
 
         return doOnNext { location -> location.ifPresent { action(it) } }
     }
 
-    private fun Mono<Optional<out ErrorDescriptionLocation>>.orIfAbsent(action: () -> Mono<Optional<out ErrorDescriptionLocation>>): Mono<Optional<out ErrorDescriptionLocation>> {
+    private fun <ELEMENT : Any> Mono<Optional<out ELEMENT>>.orIfAbsent(action: () -> Mono<Optional<out ELEMENT>>): Mono<Optional<out ELEMENT>> {
 
         return filter(Optional<*>::isPresent).switchIfEmpty(defer(action))
     }
