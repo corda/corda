@@ -46,7 +46,7 @@ class CalculatedValuesToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
 
         val l1 = serSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
         assertEquals(0, l1.size)
-        val mangleSchema = serSchema.mangleNames(listOf(("C")))
+        val mangleSchema = serSchema.mangleNames(listOf((classTestName("C"))))
         val l2 = mangleSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
         val aName = mangleName(classTestName("C"))
 
