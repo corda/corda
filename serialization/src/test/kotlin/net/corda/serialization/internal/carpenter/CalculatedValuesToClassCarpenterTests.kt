@@ -27,8 +27,7 @@ class CalculatedValuesToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
 
         val factory = testDefaultFactoryNoEvolution()
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(C(2)))
-
-        val amqpObj = obj.obj as C
+        val amqpObj = obj.obj
         val serSchema = obj.envelope.schema
 
         assertEquals(2, amqpObj.i)
@@ -47,7 +46,7 @@ class CalculatedValuesToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
 
         val l1 = serSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
         assertEquals(0, l1.size)
-        val mangleSchema = serSchema.mangleNames(listOf(classTestName("C")))
+        val mangleSchema = serSchema.mangleNames(listOf(("C")))
         val l2 = mangleSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
         val aName = mangleName(classTestName("C"))
 
