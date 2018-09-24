@@ -6,7 +6,7 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.HttpServerResponse
 import io.vertx.ext.web.Router
-import net.corda.tools.error.codes.server.commons.di.FunctionQualifier
+import net.corda.tools.error.codes.server.application.Application
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.InvocationContext
@@ -18,7 +18,7 @@ import javax.inject.Inject
 import javax.inject.Named
 
 @Named
-internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEndpoint.Configuration, @FunctionQualifier("Service") private val locateDescription: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>) : ConfigurableEndpoint(configuration, setOf(HttpMethod.GET)) {
+internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEndpoint.Configuration, @Application private val locateDescription: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>) : ConfigurableEndpoint(configuration, setOf(HttpMethod.GET)) {
 
     private companion object {
 

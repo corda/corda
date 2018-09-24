@@ -1,6 +1,6 @@
 package net.corda.tools.error.codes.server.application
 
-import net.corda.tools.error.codes.server.commons.di.FunctionQualifier
+import net.corda.tools.error.codes.server.adapters.repository.Adapter
 import net.corda.tools.error.codes.server.commons.events.PublishingEventSource
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
@@ -13,8 +13,9 @@ import javax.annotation.PreDestroy
 import javax.inject.Inject
 import javax.inject.Named
 
+@Application
 @Named
-internal class CachingErrorDescriptionService @Inject constructor(@FunctionQualifier("Repository") private val lookup: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>, private val retrieveCached: (ErrorCode) -> Mono<Optional<out ErrorDescriptionLocation>>, private val addToCache: (ErrorCode, ErrorDescriptionLocation) -> Mono<Unit>, @Named(CachingErrorDescriptionService.eventSourceQualifier) override val source: PublishingEventSource<ErrorDescriptionService.Event> = CachingErrorDescriptionService.EventSourceBean()) : ErrorDescriptionService {
+internal class CachingErrorDescriptionService @Inject constructor(@Adapter private val lookup: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>, private val retrieveCached: (ErrorCode) -> Mono<Optional<out ErrorDescriptionLocation>>, private val addToCache: (ErrorCode, ErrorDescriptionLocation) -> Mono<Unit>, @Named(CachingErrorDescriptionService.eventSourceQualifier) override val source: PublishingEventSource<ErrorDescriptionService.Event> = CachingErrorDescriptionService.EventSourceBean()) : ErrorDescriptionService {
 
     private companion object {
 
@@ -59,8 +60,8 @@ internal class CachingErrorDescriptionService @Inject constructor(@FunctionQuali
 }
 
 // This allows injecting functions instead of types.
+@Application
 @Named
-@FunctionQualifier("Service")
 internal class ErrorDescriptionLocator @Inject constructor(private val service: ErrorDescriptionService) : (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>> {
 
     override fun invoke(errorCode: ErrorCode, invocationContext: InvocationContext) = service.descriptionLocationFor(errorCode, invocationContext)

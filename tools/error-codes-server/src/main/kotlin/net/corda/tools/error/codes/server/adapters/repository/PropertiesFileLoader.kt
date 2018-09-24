@@ -1,12 +1,12 @@
 package net.corda.tools.error.codes.server.adapters.repository
 
-import net.corda.tools.error.codes.server.commons.di.FunctionQualifier
 import net.corda.tools.error.codes.server.domain.loggerFor
 import java.io.File
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Named
 
+@Adapter
 @Named
 internal class PropertiesFileLoader @Inject constructor(private val configuration: PropertiesFileLoader.Configuration) {
 
@@ -32,8 +32,8 @@ internal class PropertiesFileLoader @Inject constructor(private val configuratio
 }
 
 // This allows injecting functions instead of types.
+@Adapter
 @Named
-@FunctionQualifier("Repository")
 internal class LoadedProperties @Inject constructor(private val loader: PropertiesFileLoader) : () -> Properties {
 
     override fun invoke() = loader.load()

@@ -1,6 +1,5 @@
 package net.corda.tools.error.codes.server.adapters.repository
 
-import net.corda.tools.error.codes.server.commons.di.FunctionQualifier
 import net.corda.tools.error.codes.server.commons.lifecycle.Startable
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
@@ -15,8 +14,9 @@ import javax.annotation.PostConstruct
 import javax.inject.Inject
 import javax.inject.Named
 
+@Adapter
 @Named
-internal class PropertiesErrorDescriptionsRepository @Inject constructor(@FunctionQualifier("Repository") private val loadProperties: () -> Properties) : ErrorDescriptionsRepository, Startable {
+internal class PropertiesErrorDescriptionsRepository @Inject constructor(@Adapter private val loadProperties: () -> Properties) : ErrorDescriptionsRepository, Startable {
 
     private var properties = Properties()
 
@@ -33,9 +33,8 @@ internal class PropertiesErrorDescriptionsRepository @Inject constructor(@Functi
 }
 
 // This allows injecting functions instead of types.
+@Adapter
 @Named
-// TODO sollecitom create typed Repository and Service @FunctionalQualifiers.
-@FunctionQualifier("Repository")
 internal class RetrieveErrorDescription @Inject constructor(private val service: ErrorDescriptionsRepository) : (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>> {
 
     override fun invoke(errorCode: ErrorCode, invocationContext: InvocationContext) = service[errorCode, invocationContext]

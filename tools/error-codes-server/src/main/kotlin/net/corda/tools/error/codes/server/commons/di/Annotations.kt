@@ -6,4 +6,4 @@ import javax.inject.Qualifier
 @MustBeDocumented
 @Target(AnnotationTarget.CLASS, AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class FunctionQualifier(val origin: String)
+annotation class InjectionOrigin(val origin: String)
