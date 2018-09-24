@@ -18,9 +18,9 @@ internal class CachingErrorDescriptionServiceTest {
 
         var lookupCalled = false
         val code = ErrorCode("1jwqa1d")
-        val retrieveCached: (ErrorCode) -> Mono<Optional<out ErrorDescriptionLocation>> = { errorCode -> locationForCode(errorCode).also { assertThat(errorCode).isEqualTo(code) } }
-        val lookup: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>> = { errorCode, _ -> locationForCode(errorCode).also { lookupCalled = true } }
-        val addToCache: (ErrorCode, ErrorDescriptionLocation) -> Mono<Unit> = { _, _ -> Mono.empty() }
+        val retrieveCached = { errorCode: ErrorCode -> locationForCode(errorCode).also { assertThat(errorCode).isEqualTo(code) } }
+        val lookup = { errorCode: ErrorCode, _: InvocationContext -> locationForCode(errorCode).also { lookupCalled = true } }
+        val addToCache = { _: ErrorCode, _: ErrorDescriptionLocation -> Mono.empty<Unit>() }
 
         val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
 
@@ -34,9 +34,9 @@ internal class CachingErrorDescriptionServiceTest {
 
         var lookupCalled = false
         val code = ErrorCode("2kawqa1d")
-        val retrieveCached: (ErrorCode) -> Mono<Optional<out ErrorDescriptionLocation>> = { _ -> Mono.empty() }
-        val lookup: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>> = { errorCode, _ -> locationForCode(errorCode).also { lookupCalled = true }.also { assertThat(errorCode).isEqualTo(code) } }
-        val addToCache: (ErrorCode, ErrorDescriptionLocation) -> Mono<Unit> = { _, _ -> Mono.empty() }
+        val retrieveCached = { _: ErrorCode -> Mono.empty<Optional<out ErrorDescriptionLocation>>() }
+        val lookup = { errorCode: ErrorCode, _: InvocationContext -> locationForCode(errorCode).also { lookupCalled = true }.also { assertThat(errorCode).isEqualTo(code) } }
+        val addToCache = { _: ErrorCode, _: ErrorDescriptionLocation -> Mono.empty<Unit>() }
 
         val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
 
@@ -52,15 +52,9 @@ internal class CachingErrorDescriptionServiceTest {
         val errorCode = ErrorCode("1jwqa")
         var lookedUpLocation: ErrorDescriptionLocation? = null
 
-        val retrieveCached: (ErrorCode) -> Mono<Optional<out ErrorDescriptionLocation>> = { _ -> just(Optional.empty()) }
-        val lookup: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>> = { code, _ -> locationForCode(code).doOnNext { location -> location.ifPresent { lookedUpLocation = it } } }
-        val addToCache: (ErrorCode, ErrorDescriptionLocation) -> Mono<Unit> = { code, location ->
-            Mono.empty<Unit>().also { addToCacheCalled = true }.also {
-
-                assertThat(code).isEqualTo(errorCode)
-                assertThat(location).isEqualTo(lookedUpLocation)
-            }
-        }
+        val retrieveCached = { _: ErrorCode -> just<Optional<out ErrorDescriptionLocation>>(Optional.empty()) }
+        val lookup = { code: ErrorCode, _: InvocationContext -> locationForCode(code).doOnNext { location -> location.ifPresent { lookedUpLocation = it } } }
+        val addToCache = { code: ErrorCode, location: ErrorDescriptionLocation -> Mono.empty<Unit>().also { addToCacheCalled = true }.also { assertThat(code).isEqualTo(errorCode) }.also { assertThat(location).isEqualTo(lookedUpLocation) } }
 
         val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
 
