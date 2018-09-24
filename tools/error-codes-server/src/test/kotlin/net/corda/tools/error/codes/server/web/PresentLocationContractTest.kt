@@ -45,6 +45,7 @@ internal class PresentLocationContractTest {
         @Bean
         open fun webServerOptions(): WebServer.Options {
 
+            // TODO sollecitom try port 0
             return ServerSocket().use {
                 it.reuseAddress = true
                 it.bind(InetSocketAddress(0))
@@ -70,9 +71,6 @@ internal class PresentLocationContractTest {
 
     @Test
     fun found_location_is_returned_as_temporary_redirect() {
-
-        val errorCode = ErrorCode("123jdazz")
-        val location = ErrorDescriptionLocation.External(URI.create("https://thisisatest/boom"), errorCode)
 
         // TODO sollecitom refactor not to create one instance for each test
         val vertx = Vertx.vertx()
