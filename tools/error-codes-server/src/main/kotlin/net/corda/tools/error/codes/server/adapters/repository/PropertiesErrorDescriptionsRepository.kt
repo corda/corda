@@ -1,6 +1,7 @@
 package net.corda.tools.error.codes.server.adapters.repository
 
 import net.corda.tools.error.codes.server.commons.lifecycle.Startable
+import net.corda.tools.error.codes.server.domain.annotations.Adapter
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionsRepository

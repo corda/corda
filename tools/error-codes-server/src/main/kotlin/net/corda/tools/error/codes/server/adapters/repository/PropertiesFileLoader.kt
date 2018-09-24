@@ -1,5 +1,6 @@
 package net.corda.tools.error.codes.server.adapters.repository
 
+import net.corda.tools.error.codes.server.domain.annotations.Adapter
 import net.corda.tools.error.codes.server.domain.loggerFor
 import java.io.File
 import java.util.*

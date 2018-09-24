@@ -1,4 +1,4 @@
-package net.corda.tools.error.codes.server.application
+package net.corda.tools.error.codes.server.application.annotations
 
 import net.corda.tools.error.codes.server.commons.di.InjectionOrigin
 

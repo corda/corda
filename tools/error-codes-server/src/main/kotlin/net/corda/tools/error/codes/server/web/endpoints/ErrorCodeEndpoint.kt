@@ -6,7 +6,7 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.HttpServerResponse
 import io.vertx.ext.web.Router
-import net.corda.tools.error.codes.server.application.Application
+import net.corda.tools.error.codes.server.application.annotations.Application
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.InvocationContext

@@ -1,6 +1,7 @@
 package net.corda.tools.error.codes.server.application
 
-import net.corda.tools.error.codes.server.adapters.repository.Adapter
+import net.corda.tools.error.codes.server.application.annotations.Application
+import net.corda.tools.error.codes.server.domain.annotations.Adapter
 import net.corda.tools.error.codes.server.commons.events.PublishingEventSource
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
