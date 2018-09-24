@@ -13,7 +13,6 @@ buildscript {
 
 apply plugin: 'kotlin'
 apply plugin: 'java'
-apply plugin: 'idea'
 
 description 'Corda error codes web-server'
 
@@ -69,4 +68,8 @@ dependencies {
     testRuntime group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: junit_version
 
     testCompile group: 'org.assertj', name: 'assertj-core', version: assertj_version
+}
+
+test {
+    useJUnitPlatform()
 }
