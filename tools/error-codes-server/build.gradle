@@ -11,7 +11,6 @@ buildscript {
     ext.junit_version = '5.3.1'
     ext.assertj_version = '3.11.1'
     ext.spring_test_junit5_version = '1.2.0'
-    ext.mockito_version = '1.10.19'
 }
 
 apply plugin: 'kotlin'
@@ -75,8 +74,6 @@ dependencies {
     testCompile group: 'org.assertj', name: 'assertj-core', version: assertj_version
 
     testCompile group: 'com.github.sbrannen', name: 'spring-test-junit5', version: spring_test_junit5_version
-
-    testCompile group: 'org.mockito', name: 'mockito-all', version: mockito_version
 
     testCompile group: 'io.vertx', name: 'vertx-web-client', version: vertx_version
 }
