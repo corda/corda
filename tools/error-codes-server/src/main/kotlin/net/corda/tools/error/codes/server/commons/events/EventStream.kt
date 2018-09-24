@@ -4,5 +4,5 @@ import reactor.core.publisher.Flux
 
 interface EventStream {
 
-    val events: Flux<out Event>
+    val events: Flux<out AbstractEvent>
 }

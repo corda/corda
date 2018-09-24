@@ -8,7 +8,7 @@ import java.io.Closeable
 import java.time.Duration
 import javax.annotation.PreDestroy
 
-abstract class MultiplexingEventStream constructor(sources: List<EventSource<Event>>) : EventStream, Closeable {
+abstract class MultiplexingEventStream constructor(sources: List<EventSource<AbstractEvent>>) : EventStream, Closeable {
 
     private companion object {
 
@@ -16,14 +16,14 @@ abstract class MultiplexingEventStream constructor(sources: List<EventSource<Eve
         private val logger = loggerFor<MultiplexingEventStream>()
     }
 
-    private val processor = EmitterProcessor.create<Event>()
+    private val processor = EmitterProcessor.create<AbstractEvent>()
 
     // This is to ensure a subscriber receives events that were published up to 5 seconds before. It helps during initialisation.
     // The trailing `publishOn(Schedulers.parallel())` is to force subscribers to run on a thread pool, to avoid deadlocks.
-    final override val events: Flux<Event> = processor.cache(EVENTS_LOG_TTL).publishOn(Schedulers.parallel())
+    final override val events: Flux<AbstractEvent> = processor.cache(EVENTS_LOG_TTL).publishOn(Schedulers.parallel())
 
     init {
-        val stream = sources.map(EventSource<Event>::events).foldRight<Flux<out Event>, Flux<Event>>(Flux.empty()) { current, accumulator -> accumulator.mergeWith(current) }
+        val stream = sources.map(EventSource<AbstractEvent>::events).foldRight<Flux<out AbstractEvent>, Flux<AbstractEvent>>(Flux.empty()) { current, accumulator -> accumulator.mergeWith(current) }
         stream.subscribe { event -> processor.onNext(event) }
     }
 

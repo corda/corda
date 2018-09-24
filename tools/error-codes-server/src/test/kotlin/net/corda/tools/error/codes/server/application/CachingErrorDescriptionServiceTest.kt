@@ -17,6 +17,8 @@ internal class CachingErrorDescriptionServiceTest {
     @Nested
     internal inner class DescriptionLocationFor {
 
+        // TODO sollecitom add tests for events
+
         @Test
         fun cache_hit_does_not_cause_a_lookup() {
 

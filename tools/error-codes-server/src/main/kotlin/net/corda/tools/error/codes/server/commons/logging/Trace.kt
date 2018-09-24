@@ -1,6 +1,6 @@
 package net.corda.tools.error.codes.server.commons.logging
 
-import net.corda.tools.error.codes.server.commons.domain.identity.Id
+import net.corda.tools.error.codes.server.commons.domain.identity.AbstractId
 import net.corda.tools.error.codes.server.commons.domain.identity.UuidGenerator
 import java.time.Instant
 
@@ -12,7 +12,7 @@ data class Trace(val invocationId: InvocationId, val sessionId: SessionId) {
         fun newInstance(invocationId: InvocationId = InvocationId.newInstance(), sessionId: SessionId = SessionId(invocationId.value, invocationId.timestamp)) = Trace(invocationId, sessionId)
     }
 
-    class InvocationId(value: String, timestamp: Instant) : Id<String>(value, TYPE, timestamp) {
+    class InvocationId(value: String, timestamp: Instant) : AbstractId<String>(value, TYPE, timestamp) {
 
         companion object {
             private const val TYPE = "Invocation"
@@ -22,7 +22,7 @@ data class Trace(val invocationId: InvocationId, val sessionId: SessionId) {
         }
     }
 
-    class SessionId(value: String, timestamp: Instant) : Id<String>(value, TYPE, timestamp) {
+    class SessionId(value: String, timestamp: Instant) : AbstractId<String>(value, TYPE, timestamp) {
 
         companion object {
             private const val TYPE = "Session"

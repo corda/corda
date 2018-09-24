@@ -1,13 +1,13 @@
 package net.corda.tools.error.codes.server.commons.events
 
 import net.corda.tools.error.codes.server.commons.domain.identity.Entity
-import net.corda.tools.error.codes.server.commons.domain.identity.Id
+import net.corda.tools.error.codes.server.commons.domain.identity.AbstractId
 import net.corda.tools.error.codes.server.commons.domain.identity.UuidGenerator
 import java.time.Instant
 
-abstract class Event(id: EventId = EventId.newInstance()) : Entity<EventId>(id)
+abstract class AbstractEvent(id: EventId = EventId.newInstance()) : Entity<EventId>(id)
 
-class EventId(value: String, timestamp: Instant) : Id<String>(value, TYPE, timestamp) {
+class EventId(value: String, timestamp: Instant) : AbstractId<String>(value, TYPE, timestamp) {
 
     companion object {
         private const val TYPE = "Event"

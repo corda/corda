@@ -1,22 +1,15 @@
 package net.corda.tools.error.codes.server.commons.domain.identity
 
 import java.time.Instant
-import java.time.Instant.now
 
-open class Id<out VALUE : Any>(val value: VALUE, val entityType: String?, val timestamp: Instant) {
-
-    companion object {
-
-        @JvmStatic
-        fun <V : Any> newInstance(value: V, entityType: String? = null, timestamp: Instant = now()) = Id(value, entityType, timestamp)
-    }
+abstract class AbstractId<out VALUE : Any>(val value: VALUE, val entityType: String?, val timestamp: Instant) {
 
     final override fun equals(other: Any?): Boolean {
 
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as Id<*>
+        other as AbstractId<*>
 
         if (value != other.value) return false
         if (entityType != other.entityType) return false

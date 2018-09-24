@@ -5,16 +5,11 @@ import reactor.core.publisher.Flux
 import java.time.Duration
 import javax.annotation.PreDestroy
 
-abstract class PublishingEventSource<EVENT : Event> : EventSource<EVENT>, EventSink<EVENT>, AutoCloseable {
-
-    private companion object {
-        private val EVENTS_LOG_TTL = Duration.ofSeconds(5)
-    }
+abstract class PublishingEventSource<EVENT : AbstractEvent> : EventSource<EVENT>, EventSink<EVENT>, AutoCloseable {
 
     private val processor = EmitterProcessor.create<EVENT>()
 
-    // This is to ensure a subscriber receives events that were published up to 5 seconds before. It helps during initialisation.
-    override val events: Flux<EVENT> = processor.cache(EVENTS_LOG_TTL)
+    override val events: Flux<EVENT> = processor
 
     override fun publish(event: EVENT) = processor.onNext(event)
 

@@ -1,6 +1,6 @@
 package net.corda.tools.error.codes.server.commons.events
 
-interface EventPublisher<EVENT : Event> {
+interface EventPublisher<EVENT : AbstractEvent> {
 
     val source: EventSource<EVENT>
 

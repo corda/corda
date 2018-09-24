@@ -6,7 +6,7 @@ import io.vertx.core.http.HttpServer
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.Router
 import net.corda.tools.error.codes.server.commons.domain.identity.set
-import net.corda.tools.error.codes.server.commons.events.Event
+import net.corda.tools.error.codes.server.commons.events.AbstractEvent
 import net.corda.tools.error.codes.server.commons.events.EventId
 import net.corda.tools.error.codes.server.commons.events.EventPublisher
 import net.corda.tools.error.codes.server.commons.events.PublishingEventSource
@@ -20,7 +20,7 @@ import javax.annotation.PreDestroy
 import javax.inject.Inject
 import javax.inject.Named
 
-interface WebServer : EventPublisher<WebServerEvent>, WithLifeCycle {
+interface WebServer : EventPublisher<WebServer.Event>, WithLifeCycle {
 
     val options: WebServer.Options
 
@@ -28,26 +28,25 @@ interface WebServer : EventPublisher<WebServerEvent>, WithLifeCycle {
 
         val port: Port
     }
-}
 
-// TODO sollecitom add an Event type that's aware of InvocationContext, and use that for things like RequestReceivedEvent, etc.
-sealed class WebServerEvent(id: EventId = EventId.newInstance()) : Event(id) {
+    sealed class Event(id: EventId = EventId.newInstance()) : AbstractEvent(id) {
 
-    sealed class Initialisation(id: EventId = EventId.newInstance()) : WebServerEvent(id) {
+        sealed class Initialisation(id: EventId = EventId.newInstance()) : WebServer.Event(id) {
 
-        class Completed(val port: Port, id: EventId = EventId.newInstance()) : Initialisation(id) {
+            class Completed(val port: Port, id: EventId = EventId.newInstance()) : WebServer.Event.Initialisation(id) {
 
-            override fun appendToStringElements(toString: ToStringBuilder) {
+                override fun appendToStringElements(toString: ToStringBuilder) {
 
-                super.appendToStringElements(toString)
-                toString["port"] = port.value
+                    super.appendToStringElements(toString)
+                    toString["port"] = port.value
+                }
             }
         }
     }
 }
 
 @Named
-internal class VertxWebServer @Inject constructor(override val options: WebServer.Options, val endpoints: Set<Endpoint>, @Named(eventSourceQualifier) override val source: PublishingEventSource<WebServerEvent> = EventSourceBean(), vertxSupplier: () -> Vertx) : WebServer {
+internal class VertxWebServer @Inject constructor(override val options: WebServer.Options, val endpoints: Set<Endpoint>, @Named(eventSourceQualifier) override val source: PublishingEventSource<WebServer.Event> = EventSourceBean(), vertxSupplier: () -> Vertx) : WebServer {
 
     private companion object {
 
@@ -69,7 +68,7 @@ internal class VertxWebServer @Inject constructor(override val options: WebServe
 
         servers.forEach { it.listen() }
         logger.info("Endpoints are:${System.lineSeparator()}${endpoints.asSequence().sortedBy(Endpoint::path).joinToString(System.lineSeparator(), transform = { "\t- ${it.description()}" })}")
-        source.publish(WebServerEvent.Initialisation.Completed(Port(servers.first().actualPort())))
+        source.publish(WebServer.Event.Initialisation.Completed(Port(servers.first().actualPort())))
     }
 
     @PreDestroy
@@ -84,7 +83,7 @@ internal class VertxWebServer @Inject constructor(override val options: WebServe
     private fun optimalNumberOfEventLoops(): Int = Runtime.getRuntime().availableProcessors() * 2
 
     @Named(eventSourceQualifier)
-    private class EventSourceBean : PublishingEventSource<WebServerEvent>()
+    private class EventSourceBean : PublishingEventSource<WebServer.Event>()
 }
 
 private fun Endpoint.description(): String = "\"$name\"${if (enabled) "" else " (DISABLED)"} on path \"$path\" ${methods.joinToString(", ", "[", "]", transform = HttpMethod::name)}"

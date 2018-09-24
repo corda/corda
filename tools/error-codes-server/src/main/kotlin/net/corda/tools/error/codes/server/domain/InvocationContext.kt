@@ -12,11 +12,6 @@ interface InvocationContext : LoggingContext {
     }
 }
 
-interface WithInvocationContext {
-
-    val invocationContext: InvocationContext
-}
-
 private data class InvocationContextImpl(override val trace: Trace, override val externalTrace: Trace?) : InvocationContext {
 
     override val description: String
