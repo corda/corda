@@ -20,7 +20,7 @@ internal class CachingErrorDescriptionServiceTest {
         val code = ErrorCode("1jwqa1d")
         val retrieveCached = { errorCode: ErrorCode -> locationForCode(errorCode).also { assertThat(errorCode).isEqualTo(code) } }
         val lookup = { errorCode: ErrorCode, _: InvocationContext -> locationForCode(errorCode).also { lookupCalled = true } }
-        val addToCache = { _: ErrorCode, _: ErrorDescriptionLocation -> Mono.empty<Unit>() }
+        val addToCache = { _: ErrorCode, _: ErrorDescriptionLocation -> empty<Unit>() }
 
         val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
 
@@ -34,9 +34,9 @@ internal class CachingErrorDescriptionServiceTest {
 
         var lookupCalled = false
         val code = ErrorCode("2kawqa1d")
-        val retrieveCached = { _: ErrorCode -> Mono.empty<Optional<out ErrorDescriptionLocation>>() }
+        val retrieveCached = { _: ErrorCode -> empty<Optional<out ErrorDescriptionLocation>>() }
         val lookup = { errorCode: ErrorCode, _: InvocationContext -> locationForCode(errorCode).also { lookupCalled = true }.also { assertThat(errorCode).isEqualTo(code) } }
-        val addToCache = { _: ErrorCode, _: ErrorDescriptionLocation -> Mono.empty<Unit>() }
+        val addToCache = { _: ErrorCode, _: ErrorDescriptionLocation -> empty<Unit>() }
 
         val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
 
@@ -54,7 +54,7 @@ internal class CachingErrorDescriptionServiceTest {
 
         val retrieveCached = { _: ErrorCode -> just<Optional<out ErrorDescriptionLocation>>(Optional.empty()) }
         val lookup = { code: ErrorCode, _: InvocationContext -> locationForCode(code).doOnNext { location -> location.ifPresent { lookedUpLocation = it } } }
-        val addToCache = { code: ErrorCode, location: ErrorDescriptionLocation -> Mono.empty<Unit>().also { addToCacheCalled = true }.also { assertThat(code).isEqualTo(errorCode) }.also { assertThat(location).isEqualTo(lookedUpLocation) } }
+        val addToCache = { code: ErrorCode, location: ErrorDescriptionLocation -> empty<Unit>().also { addToCacheCalled = true }.also { assertThat(code).isEqualTo(errorCode) }.also { assertThat(location).isEqualTo(lookedUpLocation) } }
 
         val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
 
