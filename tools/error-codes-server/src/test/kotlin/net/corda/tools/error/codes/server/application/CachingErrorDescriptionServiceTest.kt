@@ -74,7 +74,6 @@ internal class CachingErrorDescriptionServiceTest {
         @Test
         fun unmapped_description_produces_event() {
 
-            var eventProduced = false
             val errorCode = ErrorCode("1jwqa")
             val invocationContext = InvocationContext.newInstance()
 
@@ -84,17 +83,15 @@ internal class CachingErrorDescriptionServiceTest {
 
             val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
 
+            // Here `single()` transforms a Flux in a Mono, failing if there are 0 or more than 1 events.
             service.events.ofType<ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor.WithoutDescriptionLocation>().single().doOnNext { event ->
 
                 assertThat(event.errorCode).isEqualTo(errorCode)
                 assertThat(event.invocationContext).isEqualTo(invocationContext)
                 assertThat(event.location).isNull()
-                eventProduced = true
             }.subscribe()
 
             service.use { it.descriptionLocationFor(errorCode, invocationContext).block() }
-
-            assertThat(eventProduced).isTrue()
         }
     }
 
