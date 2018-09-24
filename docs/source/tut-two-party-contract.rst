@@ -81,7 +81,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/contract.kt
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/twoparty/IOUContract.kt
         :language: kotlin
         :start-after: DOCSTART 01
         :end-before: DOCEND 01

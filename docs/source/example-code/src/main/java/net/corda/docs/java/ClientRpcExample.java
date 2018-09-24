@@ -1,20 +1,17 @@
-package net.corda.docs;
+package net.corda.docs.java;
 
 // START 1
 import net.corda.client.rpc.CordaRPCClient;
 import net.corda.client.rpc.CordaRPCConnection;
 import net.corda.core.messaging.CordaRPCOps;
 import net.corda.core.utilities.NetworkHostAndPort;
-import org.apache.activemq.artemis.api.core.ActiveMQException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ExecutionException;
+class ClientRpcExample {
+    private static final Logger logger = LoggerFactory.getLogger(ClientRpcExample.class);
 
-class ExampleRpcClientJava {
-    private static final Logger logger = LoggerFactory.getLogger(ExampleRpcClient.class);
-
-    public static void main(String[] args) throws ActiveMQException, InterruptedException, ExecutionException {
+    public static void main(String[] args) {
         if (args.length != 3) {
             throw new IllegalArgumentException("Usage: TemplateClient <node address> <username> <password>");
         }

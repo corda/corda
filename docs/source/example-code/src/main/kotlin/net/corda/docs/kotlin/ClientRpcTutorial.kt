@@ -1,6 +1,6 @@
 @file:Suppress("unused")
 
-package net.corda.docs
+package net.corda.docs.kotlin
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Amount

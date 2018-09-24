@@ -1,4 +1,4 @@
-package net.corda.docs.tutorial.twoparty
+package net.corda.docs.kotlin.tutorial.twoparty
 
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract

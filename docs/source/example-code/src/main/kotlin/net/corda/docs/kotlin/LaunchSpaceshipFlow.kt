@@ -1,6 +1,6 @@
-@file:Suppress("DEPRECATION")
+@file:Suppress("DEPRECATION", "MemberVisibilityCanBePrivate", "unused")
 
-package net.corda.docs
+package net.corda.docs.kotlin
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
