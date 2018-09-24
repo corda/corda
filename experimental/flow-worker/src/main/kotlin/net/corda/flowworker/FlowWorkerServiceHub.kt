@@ -62,6 +62,7 @@ import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.isH2Database
@@ -116,8 +117,11 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
         }
     }
 
+    private val metricRegistry = MetricRegistry()
+    override val cacheFactory = DefaultNamedCacheFactory().bindWithConfig(configuration).bindWithMetrics(metricRegistry).tokenize()
+
     override val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, false).tokenize()
-    override val identityService = PersistentIdentityService().tokenize()
+    override val identityService = PersistentIdentityService(cacheFactory).tokenize()
     override val database: CordaPersistence = createCordaPersistence(
             configuration.database,
             identityService::wellKnownPartyFromX500Name,
@@ -130,15 +134,14 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
         identityService.database = database
     }
 
-    override val networkMapCache = PersistentNetworkMapCache(database, identityService)
+    override val networkMapCache = PersistentNetworkMapCache(cacheFactory, database, identityService)
     private val checkpointStorage = DBCheckpointStorage()
     @Suppress("LeakingThis")
-    override val validatedTransactions: WritableTransactionStorage = DBTransactionStorage(configuration.transactionCacheSizeBytes, database).tokenize()
-    private val metricRegistry = MetricRegistry()
-    override val attachments = NodeAttachmentService(metricRegistry, database, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound).tokenize()
+    override val validatedTransactions: WritableTransactionStorage = DBTransactionStorage(database, cacheFactory).tokenize()
+    override val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database).tokenize()
     override val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(), attachments).tokenize()
     @Suppress("LeakingThis")
-    override val keyManagementService = PersistentKeyManagementService(identityService, database).tokenize()
+    override val keyManagementService = PersistentKeyManagementService(cacheFactory, identityService, database).tokenize()
     private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, validatedTransactions)
     @Suppress("LeakingThis")
     override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService).tokenize()
@@ -259,9 +262,10 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
                 nodeExecutor = serverThread,
                 database = database,
                 networkMap = networkMapCache,
-                metricRegistry = metricRegistry,
                 isDrainingModeOn = nodeProperties.flowsDrainingMode::isEnabled,
-                drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values
+                drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values,
+                metricRegistry = metricRegistry,
+                cacheFactory = cacheFactory
         )
     }
 
