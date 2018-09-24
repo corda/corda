@@ -23,6 +23,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.utilities.NamedCacheFactory
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
@@ -36,7 +37,8 @@ import javax.annotation.concurrent.ThreadSafe
 
 /** Database-based network map cache. */
 @ThreadSafe
-open class PersistentNetworkMapCache(private val database: CordaPersistence,
+open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
+                                     private val database: CordaPersistence,
                                      private val identityService: IdentityService) : NetworkMapCacheInternal, SingletonSerializeAsToken() {
     companion object {
         private val logger = contextLogger()
@@ -124,8 +126,8 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
     override fun getNodesByLegalIdentityKey(identityKey: PublicKey): List<NodeInfo> = nodesByKeyCache[identityKey]!!
 
     private val nodesByKeyCache = NonInvalidatingCache<PublicKey, List<NodeInfo>>(
-            "PersistentNetworkMap_nodesByKey",
-            1024) { key ->
+            cacheFactory = cacheFactory,
+            name = "PersistentNetworkMap_nodesByKey") { key ->
         database.transaction { queryByIdentityKey(session, key) }
     }
 
@@ -144,8 +146,8 @@ open class PersistentNetworkMapCache(private val database: CordaPersistence,
     }
 
     private val identityByLegalNameCache = NonInvalidatingCache<CordaX500Name, Optional<PartyAndCertificate>>(
-            "PersistentNetworkMap_idByLegalName",
-            1024) { name ->
+            cacheFactory = cacheFactory,
+            name = "PersistentNetworkMap_idByLegalName") { name ->
         Optional.ofNullable(database.transaction { queryIdentityByLegalName(session, name) })
     }
 

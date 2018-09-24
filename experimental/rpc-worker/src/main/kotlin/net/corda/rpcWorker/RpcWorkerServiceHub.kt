@@ -47,6 +47,7 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.NodePropertiesPersistentStore
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.NodeVaultService
+import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.isH2Database
@@ -74,8 +75,11 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration, overrid
 
     private val runOnStop = ArrayList<() -> Any?>()
 
+    private val metricRegistry = MetricRegistry()
+    override val cacheFactory = DefaultNamedCacheFactory().bindWithConfig(configuration).bindWithMetrics(metricRegistry)
+
     override val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, false)
-    override val identityService = PersistentIdentityService()
+    override val identityService = PersistentIdentityService(cacheFactory)
     override val database: CordaPersistence = createCordaPersistence(
             configuration.database,
             identityService::wellKnownPartyFromX500Name,
@@ -88,17 +92,16 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration, overrid
         identityService.database = database
     }
 
-    override val networkMapCache = PersistentNetworkMapCache(database, identityService)
+    override val networkMapCache = PersistentNetworkMapCache(cacheFactory, database, identityService)
     @Suppress("LeakingThis")
-    override val validatedTransactions: WritableTransactionStorage = DBTransactionStorage(configuration.transactionCacheSizeBytes, database)
+    override val validatedTransactions: WritableTransactionStorage = DBTransactionStorage(database, cacheFactory)
     private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
-    private val metricRegistry = MetricRegistry()
-    override val attachments = NodeAttachmentService(metricRegistry, database, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound)
+    override val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database)
 
     override val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(), attachments)
 
     @Suppress("LeakingThis")
-    override val keyManagementService = PersistentKeyManagementService(identityService, database)
+    override val keyManagementService = PersistentKeyManagementService(cacheFactory, identityService, database)
     private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, validatedTransactions)
     @Suppress("LeakingThis")
     override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService)

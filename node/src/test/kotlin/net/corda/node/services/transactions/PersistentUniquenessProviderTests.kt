@@ -10,6 +10,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.utilities.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -49,7 +50,7 @@ class PersistentUniquenessProviderTests {
 
     @Test
     fun `should commit a transaction with unused inputs without exception`() {
-            val provider = PersistentUniquenessProvider(Clock.systemUTC(), database)
+        val provider = PersistentUniquenessProvider(Clock.systemUTC(), database, TestingNamedCacheFactory())
             val inputState = generateStateRef()
 
             provider.commit(listOf(inputState), txID, identity, requestSignature)
@@ -57,7 +58,7 @@ class PersistentUniquenessProviderTests {
 
     @Test
     fun `should report a conflict for a transaction with previously used inputs`() {
-        val provider = PersistentUniquenessProvider(Clock.systemUTC(), database)
+        val provider = PersistentUniquenessProvider(Clock.systemUTC(), database, TestingNamedCacheFactory())
             val inputState = generateStateRef()
 
             val inputs = listOf(inputState)

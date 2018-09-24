@@ -5,6 +5,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.utilities.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -36,14 +37,14 @@ class PersistentNetworkMapCacheTest : IntegrationTest() {
 
     //Enterprise only - objects created in the setup method, below initialized with dummy values to avoid need for nullable type declaration
     private var database = CordaPersistence(DatabaseConfig(), emptySet())
-    private var charlieNetMapCache = PersistentNetworkMapCache(database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
+    private var charlieNetMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
 
     @Before()
     fun setup() {
         //Enterprise only - for test in database mode ensure the remote database is setup before creating CordaPersistence
         super.setUp()
         database = configureDatabase(makeTestDataSourceProperties(CHARLIE_NAME.toDatabaseSchemaName()), makeTestDatabaseProperties(CHARLIE_NAME.toDatabaseSchemaName()), { null }, { null })
-        charlieNetMapCache = PersistentNetworkMapCache(database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
+        charlieNetMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
     }
 
     @After

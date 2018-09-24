@@ -48,6 +48,7 @@ import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.node.utilities.DemoClock
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_SHELL_USER
@@ -94,6 +95,7 @@ open class Node(configuration: NodeConfiguration,
 ) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
+        DefaultNamedCacheFactory(),
         versionInfo,
         cordappLoader,
         // Under normal (non-test execution) it will always be "1"
@@ -195,9 +197,10 @@ open class Node(configuration: NodeConfiguration,
                 nodeExecutor = serverThread,
                 database = database,
                 networkMap = networkMapCache,
-                metricRegistry = metricRegistry,
                 isDrainingModeOn = nodeProperties.flowsDrainingMode::isEnabled,
-                drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values
+                drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values,
+                metricRegistry = metricRegistry,
+                cacheFactory = cacheFactory
         )
     }
 
@@ -356,7 +359,7 @@ open class Node(configuration: NodeConfiguration,
      * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
      * on H2 URLs and configuration see: http://www.h2database.com/html/features.html#database_url
      */
-    override fun startDatabase(metricRegistry: MetricRegistry?) {
+    override fun startDatabase() {
         val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
         val h2Prefix = "jdbc:h2:file:"
 
@@ -395,7 +398,7 @@ open class Node(configuration: NodeConfiguration,
             printBasicNodeInfo("Database connection url is", databaseUrl)
         }
 
-        super.startDatabase(metricRegistry)
+        super.startDatabase()
         database.closeOnStop()
     }
 
@@ -444,12 +447,13 @@ open class Node(configuration: NodeConfiguration,
         // https://jolokia.org/agent/jvm.html
         JmxReporter.forRegistry(registry).inDomain("net.corda").createsObjectNamesWith { _, domain, name ->
             // Make the JMX hierarchy a bit better organised.
-            val category = name.substringBefore('.')
+            val category = name.substringBefore('.').substringBeforeLast('/')
+            val component = name.substringBefore('.').substringAfterLast('/', "")
             val subName = name.substringAfter('.', "")
-            if (subName == "")
-                ObjectName("$domain:name=$category")
+            (if (subName == "")
+                ObjectName("$domain:name=$category${if (component.isNotEmpty()) ",component=$component," else ""}")
             else
-                ObjectName("$domain:type=$category,name=$subName")
+                ObjectName("$domain:type=$category,${if (component.isNotEmpty()) "component=$component," else ""}name=$subName"))
         }.build().start()
     }
 

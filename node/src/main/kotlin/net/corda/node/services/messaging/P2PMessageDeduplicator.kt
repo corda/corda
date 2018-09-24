@@ -5,6 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.NamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.time.Instant
@@ -19,20 +20,21 @@ typealias SenderHashToSeqNo = Pair<String, Long?>
 /**
  * Encapsulate the de-duplication logic.
  */
-class P2PMessageDeduplicator(private val database: CordaPersistence) {
+class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val database: CordaPersistence) {
     // A temporary in-memory set of deduplication IDs and associated high water mark details.
     // When we receive a message we don't persist the ID immediately,
     // so we store the ID here in the meantime (until the persisting db tx has committed). This is because Artemis may
     // redeliver messages to the same consumer if they weren't ACKed.
     private val beingProcessedMessages = ConcurrentHashMap<DeduplicationId, MessageMeta>()
-    private val processedMessages = createProcessedMessages()
+    private val processedMessages = createProcessedMessages(cacheFactory)
     // We add the peer to the key, so other peers cannot attempt malicious meddling with sequence numbers.
     // Expire after 7 days since we last touched an entry, to avoid infinite growth.
     private val senderUUIDSeqNoHWM: MutableMap<SenderKey, SenderHashToSeqNo> = Caffeine.newBuilder().expireAfterAccess(7, TimeUnit.DAYS).build<SenderKey, SenderHashToSeqNo>().asMap()
 
-    private fun createProcessedMessages(): AppendOnlyPersistentMap<DeduplicationId, MessageMeta, ProcessedMessage, String> {
+    private fun createProcessedMessages(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<DeduplicationId, MessageMeta, ProcessedMessage, String> {
         return AppendOnlyPersistentMap(
-                "P2PMessageDeduplicator_processedMessages",
+                cacheFactory = cacheFactory,
+                name = "P2PMessageDeduplicator_processedMessages",
                 toPersistentEntityKey = { it.toString },
                 fromPersistentEntity = { Pair(DeduplicationId(it.id), MessageMeta(it.insertionTime, it.hash, it.seqNo)) },
                 toPersistentEntity = { key: DeduplicationId, value: MessageMeta ->
