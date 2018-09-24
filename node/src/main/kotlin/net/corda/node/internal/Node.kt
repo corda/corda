@@ -46,10 +46,7 @@ import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.*
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
-import net.corda.node.utilities.AddressUtils
-import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.DefaultNamedCacheFactory
-import net.corda.node.utilities.DemoClock
+import net.corda.node.utilities.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_SHELL_USER
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
@@ -90,11 +87,12 @@ class NodeWithInfo(val node: Node, val info: NodeInfo) {
 open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 private val initialiseSerialization: Boolean = true,
-                cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo)
+                cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo),
+                cacheFactoryPrototype: NamedCacheFactory = DefaultNamedCacheFactory()
 ) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
-        DefaultNamedCacheFactory(),
+        cacheFactoryPrototype,
         versionInfo,
         cordappLoader,
         // Under normal (non-test execution) it will always be "1"
