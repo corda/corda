@@ -1,4 +1,4 @@
-package net.corda.docs;
+package net.corda.docs.java;
 
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.collect.ImmutableList;
@@ -38,7 +38,7 @@ import static net.corda.core.contracts.ContractsDSL.requireThat;
 import static net.corda.core.crypto.Crypto.generateKeyPair;
 
 @SuppressWarnings("unused")
-public class FlowCookbookJava {
+public class FlowCookbook {
     // ``InitiatorFlow`` is our first flow, and will communicate with
     // ``ResponderFlow``, below.
     // We mark ``InitiatorFlow`` as an ``InitiatingFlow``, allowing it to be

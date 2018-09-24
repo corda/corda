@@ -117,7 +117,7 @@ see changes to this list.
 * Lars Stage Thomsen (Danske Bank)
 * Lee Braine (Barclays)
 * Lucas Salmen (Itau)
-* Lulu Ren (S-Labs)
+* Lulu Ren (Monad-Labs)
 * Maksymilian Pawlak (R3)
 * Marek Scocovsky (ABSA)
 * marekdapps

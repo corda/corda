@@ -1,6 +1,6 @@
 @file:Suppress("unused")
 
-package net.corda.docs
+package net.corda.docs.kotlin
 
 // START 1
 import net.corda.client.rpc.CordaRPCClient
@@ -8,9 +8,9 @@ import net.corda.core.utilities.NetworkHostAndPort.Companion.parse
 import net.corda.core.utilities.loggerFor
 import org.slf4j.Logger
 
-class ExampleRpcClient {
+class ClientRpcExample {
     companion object {
-        val logger: Logger = loggerFor<ExampleRpcClient>()
+        val logger: Logger = loggerFor<ClientRpcExample>()
     }
 
     fun main(args: Array<String>) {

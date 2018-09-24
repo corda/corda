@@ -3,7 +3,7 @@ package net.corda.docs
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
-import net.corda.docs.tutorial.flowstatemachines.ExampleSummingFlow
+import net.corda.docs.kotlin.tutorial.flowstatemachines.ExampleSummingFlow
 import net.corda.node.services.Permissions
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME

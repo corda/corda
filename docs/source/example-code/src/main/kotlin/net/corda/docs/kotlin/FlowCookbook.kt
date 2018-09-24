@@ -1,6 +1,6 @@
 @file:Suppress("UNUSED_VARIABLE", "unused", "DEPRECATION")
 
-package net.corda.docs
+package net.corda.docs.kotlin
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*

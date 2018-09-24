@@ -1,6 +1,6 @@
 @file:Suppress("UNUSED_VARIABLE")
 
-package net.corda.docs.tutorial.tearoffs
+package net.corda.docs.kotlin.tutorial.tearoffs
 
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateRef
