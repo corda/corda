@@ -14,6 +14,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
@@ -205,6 +206,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun run() {
+        logic.progressTracker?.currentStep = ProgressTracker.UNSTARTED
         logic.stateMachine = this
 
         setLoggingContext()
@@ -215,6 +217,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val startTime = System.nanoTime()
         val resultOrError = try {
             val result = logic.call()
+            logic.progressTracker?.currentStep = ProgressTracker.DONE
             suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = true)
             Try.Success(result)
         } catch (throwable: Throwable) {
