@@ -10,6 +10,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.NamedCacheFactory
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -29,13 +30,14 @@ import javax.persistence.Lob
  * cached for efficient lookup.
  */
 @ThreadSafe
-class PersistentIdentityService : SingletonSerializeAsToken(), IdentityServiceInternal {
+class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), IdentityServiceInternal {
     companion object {
         private val log = contextLogger()
 
-        fun createPKMap(): AppendOnlyPersistentMap<SecureHash, PartyAndCertificate, PersistentIdentity, String> {
+        fun createPKMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<SecureHash, PartyAndCertificate, PersistentIdentity, String> {
             return AppendOnlyPersistentMap(
-                    "PersistentIdentityService_partyByKey",
+                    cacheFactory = cacheFactory,
+                    name = "PersistentIdentityService_partyByKey",
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = {
                         Pair(
@@ -50,9 +52,10 @@ class PersistentIdentityService : SingletonSerializeAsToken(), IdentityServiceIn
             )
         }
 
-        fun createX500Map(): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentIdentityNames, String> {
+        fun createX500Map(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<CordaX500Name, SecureHash, PersistentIdentityNames, String> {
             return AppendOnlyPersistentMap(
-                    "PersistentIdentityService_partyByName",
+                    cacheFactory = cacheFactory,
+                    name = "PersistentIdentityService_partyByName",
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = { Pair(CordaX500Name.parse(it.name), SecureHash.parse(it.publicKeyHash)) },
                     toPersistentEntity = { key: CordaX500Name, value: SecureHash ->
@@ -101,8 +104,8 @@ class PersistentIdentityService : SingletonSerializeAsToken(), IdentityServiceIn
     // CordaPersistence is not a c'tor parameter to work around the cyclic dependency
     lateinit var database: CordaPersistence
 
-    private val keyToParties = createPKMap()
-    private val principalToParties = createX500Map()
+    private val keyToParties = createPKMap(cacheFactory)
+    private val principalToParties = createX500Map(cacheFactory)
 
     fun start(trustRoot: X509Certificate, caCertificates: List<X509Certificate> = emptyList()) {
         _trustRoot = trustRoot

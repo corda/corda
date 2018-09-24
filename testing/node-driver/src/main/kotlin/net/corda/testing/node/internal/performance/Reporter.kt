@@ -12,12 +12,14 @@ fun startReporter(shutdownManager: ShutdownManager, metricRegistry: MetricRegist
     val jmxReporter = thread {
         JmxReporter.forRegistry(metricRegistry).inDomain("net.corda").createsObjectNamesWith { _, domain, name ->
             // Make the JMX hierarchy a bit better organised.
-            val category = name.substringBefore('.')
+            val category = name.substringBefore('.').substringBeforeLast('/')
+            val component = name.substringBefore('.').substringAfterLast('/', "")
             val subName = name.substringAfter('.', "")
             if (subName == "")
-                ObjectName("$domain:name=$category")
+                ObjectName("$domain:name=$category${if (component.isNotEmpty()) ",component=$component," else ""}")
             else
-                ObjectName("$domain:type=$category,name=$subName")
+                ObjectName("$domain:type=$category,${if (component.isNotEmpty()) "component=$component," else ""}name=$subName")
+
         }.build().start()
     }
     shutdownManager.registerShutdown { jmxReporter.interrupt() }

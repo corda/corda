@@ -28,12 +28,6 @@ fun <K, V> Caffeine<in K, in V>.buildNamed(name: String): Cache<K, V> {
     return wrap(this.build<K, V>(), name)
 }
 
-fun <K, V> Caffeine<in K, in V>.buildNamed(name: String, loadFunc: (K) -> V): LoadingCache<K, V> {
-    checkCacheName(name)
-    return wrap(this.build<K, V>(loadFunc), name)
-}
-
-
 fun <K, V> Caffeine<in K, in V>.buildNamed(name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
     checkCacheName(name)
     return wrap(this.build<K, V>(loader), name)

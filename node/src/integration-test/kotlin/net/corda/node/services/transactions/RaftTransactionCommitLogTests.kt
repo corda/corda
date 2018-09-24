@@ -17,6 +17,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.utilities.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
@@ -157,7 +158,7 @@ class RaftTransactionCommitLogTests {
         // Enterprise - OS difference: below configureDatabase parameters differs with OS intentionally to be able run test in remote database
         val database = configureDatabase(makeInternalTestDataSourceProperties( configSupplier = { ConfigFactory.empty() }), DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(includeNotarySchemas = true))
         databases.add(database)
-        val stateMachineFactory = { RaftTransactionCommitLog(database, Clock.systemUTC(), RaftUniquenessProvider.Companion::createMap) }
+        val stateMachineFactory = { RaftTransactionCommitLog(database, Clock.systemUTC(), { RaftUniquenessProvider.createMap(TestingNamedCacheFactory()) }) }
 
         val server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)
