@@ -21,7 +21,7 @@ class CachingErrorDescriptionService @Inject constructor(@FunctionQualifier("Rep
 
     private fun <ELEMENT : Any> Mono<Optional<out ELEMENT>>.andIfPresent(action: (ELEMENT) -> Mono<Unit>): Mono<Optional<out ELEMENT>> {
 
-        return doOnNext { location -> location.ifPresent { action(it) } }
+        return doOnNext { result -> result.ifPresent { action(it) } }
     }
 
     private fun <ELEMENT : Any> Mono<Optional<out ELEMENT>>.orIfAbsent(action: () -> Mono<Optional<out ELEMENT>>): Mono<Optional<out ELEMENT>> {
