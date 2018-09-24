@@ -8,6 +8,7 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.node.internal.configureDatabase
+import net.corda.node.utilities.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
@@ -46,7 +47,7 @@ class PersistentIdentityServiceTests {
 
     @Before
     fun setup() {
-        identityService = PersistentIdentityService()
+        identityService = PersistentIdentityService(TestingNamedCacheFactory())
         database = configureDatabase(
                 makeTestDataSourceProperties(),
                 DatabaseConfig(),
@@ -218,7 +219,7 @@ class PersistentIdentityServiceTests {
         identityService.verifyAndRegisterIdentity(anonymousBob)
 
         // Create new identity service mounted onto same DB
-        val newPersistentIdentityService = PersistentIdentityService().also {
+        val newPersistentIdentityService = PersistentIdentityService(TestingNamedCacheFactory()).also {
             it.database = database
             it.start(DEV_ROOT_CA.certificate)
         }

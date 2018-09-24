@@ -6,6 +6,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.NamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
@@ -25,7 +26,7 @@ import javax.persistence.Lob
  *
  * This class needs database transactions to be in-flight during method calls and init.
  */
-class PersistentKeyManagementService(val identityService: PersistentIdentityService,
+class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identityService: PersistentIdentityService,
                                      private val database: CordaPersistence) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
@@ -46,11 +47,15 @@ class PersistentKeyManagementService(val identityService: PersistentIdentityServ
     }
 
     private companion object {
-        fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
+        fun createKeyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
             return AppendOnlyPersistentMap(
-                    "PersistentKeyManagementService_keys",
+                    cacheFactory = cacheFactory,
+                    name = "PersistentKeyManagementService_keys",
                     toPersistentEntityKey = { it.toStringShort() },
-                    fromPersistentEntity = { Pair(Crypto.decodePublicKey(it.publicKey), Crypto.decodePrivateKey(it.privateKey)) },
+                    fromPersistentEntity = {
+                        Pair(Crypto.decodePublicKey(it.publicKey),
+                                Crypto.decodePrivateKey(it.privateKey))
+                    },
                     toPersistentEntity = { key: PublicKey, value: PrivateKey ->
                         PersistentKey(key, value)
                     },
@@ -59,7 +64,7 @@ class PersistentKeyManagementService(val identityService: PersistentIdentityServ
         }
     }
 
-    private val keysMap = createKeyMap()
+    private val keysMap = createKeyMap(cacheFactory)
 
     override fun start(initialKeyPairs: Set<KeyPair>) {
         initialKeyPairs.forEach { keysMap.addWithDuplicatesAllowed(it.public, it.private) }

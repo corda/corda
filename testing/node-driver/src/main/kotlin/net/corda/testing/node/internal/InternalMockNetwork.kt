@@ -1,6 +1,5 @@
 package net.corda.testing.node.internal
 
-import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
@@ -47,6 +46,7 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
+import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -54,9 +54,9 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.TestCorDapp
-import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.setGlobalSerialization
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -279,6 +279,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     open class MockNode(args: MockNodeArgs, cordappLoader: CordappLoader = JarScanningCordappLoader.fromDirectories(args.config.cordappDirectories)) : AbstractNode<TestStartedNode>(
             args.config,
             TestClock(Clock.systemUTC()),
+            DefaultNamedCacheFactory(),
             args.version,
             cordappLoader,
             args.network.getServerThread(args.id),
@@ -405,8 +406,8 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             get() = _serializationWhitelists
         private var dbCloser: (() -> Any?)? = null
 
-        override fun startDatabase(metricRegistry: MetricRegistry?) {
-            super.startDatabase(metricRegistry)
+        override fun startDatabase() {
+            super.startDatabase()
             dbCloser = database::close
             runOnStop += dbCloser!!
         }

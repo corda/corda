@@ -25,6 +25,7 @@ import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.node.utilities.NamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.security.PublicKey
 
@@ -132,6 +133,7 @@ interface ServiceHubInternal : ServiceHub {
     }
 
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
+    val cacheFactory: NamedCacheFactory
 }
 
 interface FlowStarter {
