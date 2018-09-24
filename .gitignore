@@ -29,6 +29,7 @@ lib/quasar.jar
 
 ## Directory-based project format:
 .idea/*.xml
+.idea/**/*.xml
 .idea/.name
 .idea/copyright
 .idea/inspectionProfiles
