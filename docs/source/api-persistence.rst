@@ -137,14 +137,14 @@ JDBC sessions can be used in Flows and Service Plugins (see ":doc:`flow-state-ma
 
 The following example illustrates the creation of a custom corda service using a jdbcSession:
 
-.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/CustomVaultQuery.kt
+.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/CustomVaultQuery.kt
   :language: kotlin
   :start-after: DOCSTART CustomVaultQuery
   :end-before: DOCEND CustomVaultQuery
 
 which is then referenced within a custom flow:
 
-.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/CustomVaultQuery.kt
+.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/CustomVaultQuery.kt
   :language: kotlin
   :start-after: DOCSTART TopupIssuer
   :end-before: DOCEND TopupIssuer

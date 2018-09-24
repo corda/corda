@@ -219,13 +219,13 @@ There are several ways to retrieve a notary from the network map:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
@@ -237,13 +237,13 @@ We can also use the network map to retrieve a specific counterparty:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 02
         :end-before: DOCEND 02
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 02
         :end-before: DOCEND 02
@@ -281,13 +281,13 @@ InitiateFlow
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART initiateFlow
         :end-before: DOCEND initiateFlow
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART initiateFlow
         :end-before: DOCEND initiateFlow
@@ -306,13 +306,13 @@ Once we have a ``FlowSession`` object we can send arbitrary data to a counterpar
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 04
         :end-before: DOCEND 04
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 04
         :end-before: DOCEND 04
@@ -338,13 +338,13 @@ be what it appears to be! We must unwrap the ``UntrustworthyData`` using a lambd
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 05
         :end-before: DOCEND 05
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 05
         :end-before: DOCEND 05
@@ -355,13 +355,13 @@ as it likes, and each party can invoke a different response flow:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 06
         :end-before: DOCEND 06
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 06
         :end-before: DOCEND 06
@@ -380,13 +380,13 @@ type of data sent doesn't need to match the type of the data received back:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 07
         :end-before: DOCEND 07
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 07
         :end-before: DOCEND 07
@@ -405,13 +405,13 @@ Our side of the flow must mirror these calls. We could do this as follows:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 08
         :end-before: DOCEND 08
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 08
         :end-before: DOCEND 08
@@ -488,13 +488,13 @@ the transaction's states:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 09
         :end-before: DOCEND 09
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 09
         :end-before: DOCEND 09
@@ -504,13 +504,13 @@ We can also choose to send the transaction to additional parties who aren't one 
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 10
         :end-before: DOCEND 10
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 10
         :end-before: DOCEND 10
@@ -539,13 +539,13 @@ transaction ourselves, we can automatically gather the signatures of the other r
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 15
         :end-before: DOCEND 15
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 15
         :end-before: DOCEND 15
@@ -556,13 +556,13 @@ transaction (by implementing the ``checkTransaction`` method) and provide their 
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 16
         :end-before: DOCEND 16
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 16
         :end-before: DOCEND 16
@@ -585,13 +585,13 @@ transaction data vending requests as the receiver walks the dependency chain usi
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 12
         :end-before: DOCEND 12
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 12
         :end-before: DOCEND 12
@@ -602,13 +602,13 @@ dependencies and verify the transaction:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 13
         :end-before: DOCEND 13
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 13
         :end-before: DOCEND 13
@@ -618,13 +618,13 @@ We can also send and receive a ``StateAndRef`` dependency chain and automaticall
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 14
         :end-before: DOCEND 14
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 14
         :end-before: DOCEND 14
@@ -676,13 +676,13 @@ To provide a progress tracker, we have to override ``FlowLogic.progressTracker``
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 17
         :end-before: DOCEND 17
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 17
         :end-before: DOCEND 17
@@ -692,13 +692,13 @@ We then update the progress tracker's current step as we progress through the fl
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 18
         :end-before: DOCEND 18
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 18
         :end-before: DOCEND 18

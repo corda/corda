@@ -45,7 +45,7 @@ template (``Initiator`` and ``Responder``), and replace them with the following:
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/helloworld/flow.kt
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/helloworld/IOUFlow.kt
         :language: kotlin
         :start-after: DOCSTART 01
         :end-before: DOCEND 01

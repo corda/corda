@@ -1,4 +1,4 @@
-package net.corda.docs.tutorial.flowstatemachines
+package net.corda.docs.kotlin.tutorial.flowstatemachines
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture

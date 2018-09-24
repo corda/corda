@@ -31,12 +31,12 @@ Here is an example of using `CordaRPCClient`_ to connect to a node and log the c
 
 .. container:: codeset
 
-   .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcExample.kt
+   .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/ClientRpcExample.kt
       :language: kotlin
       :start-after: START 1
       :end-before: END 1
 
-   .. literalinclude:: example-code/src/main/java/net/corda/docs/ClientRpcExampleJava.java
+   .. literalinclude:: example-code/src/main/java/net/corda/docs/java/ClientRpcExample.java
       :language: java
       :start-after: START 1
       :end-before: END 1
