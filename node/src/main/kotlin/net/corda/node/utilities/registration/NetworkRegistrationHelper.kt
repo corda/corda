@@ -51,7 +51,7 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
     }
 
     private val requestIdStore = certificatesDirectory / "certificate-request-id.txt"
-    private val rootTrustStore: X509KeyStore
+    protected val rootTrustStore: X509KeyStore
     protected val rootCert: X509Certificate
 
     init {
@@ -297,6 +297,12 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
             println("Generating trust store for corda node.")
             // Assumes certificate chain always starts with client certificate and end with root certificate.
             setCertificate(CORDA_ROOT_CA, rootCertificate)
+            // Copy remaining certificates from the network-trust-store
+            rootTrustStore.aliases().asSequence().filter { it != CORDA_ROOT_CA }.forEach {
+                val certificate = rootTrustStore.getCertificate(it)
+                logger.debug("Copying trusted certificate to the node's trust store: Alias: $it, Certificate: $certificate")
+                setCertificate(it, certificate)
+            }
         }
         println("Node trust store stored in ${config.p2pSslOptions.trustStore.path}.")
     }
