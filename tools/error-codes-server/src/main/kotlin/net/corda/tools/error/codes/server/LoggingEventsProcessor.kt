@@ -2,9 +2,9 @@ package net.corda.tools.error.codes.server
 
 import net.corda.tools.error.codes.server.application.ErrorDescriptionService
 import net.corda.tools.error.codes.server.commons.events.EventStream
-import net.corda.tools.error.codes.server.commons.reactive.only
 import net.corda.tools.error.codes.server.domain.loggerFor
 import net.corda.tools.error.codes.server.web.WebServer
+import reactor.core.publisher.ofType
 import reactor.core.scheduler.Schedulers
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -21,8 +21,8 @@ internal class LoggingEventsProcessors @Inject internal constructor(stream: Even
 
     init {
         with(stream.events.publishOn(Schedulers.elastic())) {
-            only<WebServer.Event.Initialisation.Completed>().doOnNext(::logWebServerInitialisation).subscribe()
-            only<ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor.WithoutDescriptionLocation>().doOnNext(::warnAboutUnmappedErrorCode).subscribe()
+            ofType<WebServer.Event.Initialisation.Completed>().doOnNext(::logWebServerInitialisation).subscribe()
+            ofType<ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor.WithoutDescriptionLocation>().doOnNext(::warnAboutUnmappedErrorCode).subscribe()
         }
     }
 

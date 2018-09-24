@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test
 import reactor.core.publisher.Mono
 import reactor.core.publisher.Mono.empty
 import reactor.core.publisher.Mono.just
+import reactor.core.publisher.ofType
 import java.net.URI
 import java.util.*
 
@@ -17,20 +18,19 @@ internal class CachingErrorDescriptionServiceTest {
     @Nested
     internal inner class DescriptionLocationFor {
 
-        // TODO sollecitom add tests for events
-
         @Test
         fun cache_hit_does_not_cause_a_lookup() {
 
             var lookupCalled = false
             val code = ErrorCode("1jwqa1d")
+            val invocationContext = InvocationContext.newInstance()
             val retrieveCached = { errorCode: ErrorCode -> locationForCode(errorCode).also { assertThat(errorCode).isEqualTo(code) } }
             val lookup = { errorCode: ErrorCode, _: InvocationContext -> locationForCode(errorCode).also { lookupCalled = true } }
             val addToCache = { _: ErrorCode, _: ErrorDescriptionLocation -> empty<Unit>() }
 
             val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
 
-            service.descriptionLocationFor(code, InvocationContext.newInstance()).block()
+            service.use { it.descriptionLocationFor(code, invocationContext).block() }
 
             assertThat(lookupCalled).isFalse()
         }
@@ -40,13 +40,14 @@ internal class CachingErrorDescriptionServiceTest {
 
             var lookupCalled = false
             val code = ErrorCode("2kawqa1d")
+            val invocationContext = InvocationContext.newInstance()
             val retrieveCached = { _: ErrorCode -> empty<Optional<out ErrorDescriptionLocation>>() }
             val lookup = { errorCode: ErrorCode, _: InvocationContext -> locationForCode(errorCode).also { lookupCalled = true }.also { assertThat(errorCode).isEqualTo(code) } }
             val addToCache = { _: ErrorCode, _: ErrorDescriptionLocation -> empty<Unit>() }
 
             val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
 
-            service.descriptionLocationFor(code, InvocationContext.newInstance()).block()
+            service.use { it.descriptionLocationFor(code, invocationContext).block() }
 
             assertThat(lookupCalled).isTrue()
         }
@@ -56,6 +57,7 @@ internal class CachingErrorDescriptionServiceTest {
 
             var addToCacheCalled = false
             val errorCode = ErrorCode("1jwqa")
+            val invocationContext = InvocationContext.newInstance()
             var lookedUpLocation: ErrorDescriptionLocation? = null
 
             val retrieveCached = { _: ErrorCode -> just<Optional<out ErrorDescriptionLocation>>(Optional.empty()) }
@@ -64,9 +66,35 @@ internal class CachingErrorDescriptionServiceTest {
 
             val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
 
-            service.descriptionLocationFor(errorCode, InvocationContext.newInstance()).block()
+            service.use { it.descriptionLocationFor(errorCode, invocationContext).block() }
 
             assertThat(addToCacheCalled).isTrue()
+        }
+
+        @Test
+        fun unmapped_description_produces_event() {
+
+            var eventProduced = false
+            val errorCode = ErrorCode("1jwqa")
+            val invocationContext = InvocationContext.newInstance()
+
+            val retrieveCached = { _: ErrorCode -> empty<Optional<out ErrorDescriptionLocation>>() }
+            val lookup = { _: ErrorCode, _: InvocationContext -> empty<Optional<out ErrorDescriptionLocation>>() }
+            val addToCache = { _: ErrorCode, _: ErrorDescriptionLocation -> empty<Unit>() }
+
+            val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
+
+            service.events.ofType<ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor.WithoutDescriptionLocation>().single().doOnNext { event ->
+
+                assertThat(event.errorCode).isEqualTo(errorCode)
+                assertThat(event.invocationContext).isEqualTo(invocationContext)
+                assertThat(event.location).isNull()
+                eventProduced = true
+            }.subscribe()
+
+            service.use { it.descriptionLocationFor(errorCode, invocationContext).block() }
+
+            assertThat(eventProduced).isTrue()
         }
     }
 

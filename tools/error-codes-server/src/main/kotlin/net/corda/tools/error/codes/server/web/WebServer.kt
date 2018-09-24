@@ -75,6 +75,7 @@ internal class VertxWebServer @Inject constructor(override val options: WebServe
     override fun close() {
 
         servers.forEach { it.close() }
+        source.close()
         logger.info("Closed")
     }
 

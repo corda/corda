@@ -11,7 +11,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import reactor.core.publisher.Mono
 import java.util.*
 
-interface ErrorDescriptionService : EventPublisher<ErrorDescriptionService.Event> {
+interface ErrorDescriptionService : EventPublisher<ErrorDescriptionService.Event>, AutoCloseable {
 
     fun descriptionLocationFor(errorCode: ErrorCode, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>>
 

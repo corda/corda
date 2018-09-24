@@ -5,9 +5,11 @@ import net.corda.tools.error.codes.server.commons.events.PublishingEventSource
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.InvocationContext
+import net.corda.tools.error.codes.server.domain.loggerFor
 import reactor.core.publisher.Mono
 import reactor.core.publisher.Mono.defer
 import java.util.*
+import javax.annotation.PreDestroy
 import javax.inject.Inject
 import javax.inject.Named
 
@@ -17,11 +19,19 @@ internal class CachingErrorDescriptionService @Inject constructor(@FunctionQuali
     private companion object {
 
         private const val eventSourceQualifier = "CachingErrorDescriptionService_PublishingEventSource"
+        private val logger = loggerFor<CachingErrorDescriptionService>()
     }
 
     override fun descriptionLocationFor(errorCode: ErrorCode, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
 
         return retrieveCached(errorCode).orIfAbsent { lookup(errorCode, invocationContext).andIfPresent { addToCache(errorCode, it) } }.thenPublish(errorCode, invocationContext)
+    }
+
+    @PreDestroy
+    override fun close() {
+
+        source.close()
+        logger.info("Closed")
     }
 
     private fun <ELEMENT : Any> Mono<Optional<out ELEMENT>>.andIfPresent(action: (ELEMENT) -> Mono<Unit>): Mono<Optional<out ELEMENT>> {
