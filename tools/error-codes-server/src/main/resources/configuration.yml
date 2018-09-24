@@ -11,3 +11,9 @@ configuration:
           name: Error code
           path: /errors/:error_code
           enabled: true
+  adapters:
+    repositories:
+      properties:
+        file_based:
+#          properties_file_path: /home/michele/Projects/corda-open-source/tools/error-codes-server/src/main/resources/error_code.properties
+          properties_file_resource_name: error_code.properties
