@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 // TODO sollecitom refactor the module to use sub-modules instead of packages.
 // This is the default, but it's better explicit.
 @SpringBootApplication(scanBasePackageClasses = [ErrorCodesWebApplication::class])
-private open class ErrorCodesWebApplication
+internal open class ErrorCodesWebApplication
 
 fun main(args: Array<String>) {
 

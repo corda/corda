@@ -4,7 +4,7 @@ import net.corda.tools.error.codes.server.commons.lifecycle.Startable
 import net.corda.tools.error.codes.server.domain.annotations.Adapter
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
-import net.corda.tools.error.codes.server.domain.ErrorDescriptionsRepository
+import net.corda.tools.error.codes.server.domain.repository.descriptions.ErrorDescriptionsRepository
 import net.corda.tools.error.codes.server.domain.InvocationContext
 import reactor.core.publisher.Mono
 import reactor.core.publisher.Mono.empty
@@ -36,7 +36,7 @@ internal class PropertiesErrorDescriptionsRepository @Inject constructor(@Adapte
 // This allows injecting functions instead of types.
 @Adapter
 @Named
-internal class RetrieveErrorDescription @Inject constructor(private val service: ErrorDescriptionsRepository) : (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>> {
+internal class RetrieveErrorDescription @Inject constructor(@Adapter private val service: ErrorDescriptionsRepository) : (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>> {
 
     override fun invoke(errorCode: ErrorCode, invocationContext: InvocationContext) = service[errorCode, invocationContext]
 }
