@@ -7,6 +7,7 @@ buildscript {
     ext.konf_version = '0.11'
     ext.juud_version = '3.1.5'
     ext.apache_commons_version = '3.8'
+    ext.caffeine_version = '2.6.2'
     ext.junit_version = '5.3.1'
     ext.assertj_version = '3.11.1'
 }
@@ -63,6 +64,8 @@ dependencies {
     compile group: 'com.fasterxml.uuid', name: 'java-uuid-generator', version: juud_version
 
     compile group: 'org.apache.commons', name: 'commons-lang3', version: apache_commons_version
+
+    compile group: 'com.github.ben-manes.caffeine', name: 'caffeine', version: caffeine_version
 
     testCompile group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: junit_version
     testRuntime group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: junit_version

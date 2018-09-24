@@ -11,6 +11,10 @@ configuration:
           name: Error code
           path: /errors/:error_code
           enabled: true
+  application:
+    service:
+      cache:
+        max_size: 1000
   adapters:
     repositories:
       properties:
