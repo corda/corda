@@ -13,10 +13,8 @@ import net.corda.tools.error.codes.server.commons.domain.validation.ValidationRe
 import net.corda.tools.error.codes.server.commons.web.vertx.Endpoint
 import net.corda.tools.error.codes.server.commons.web.vertx.VertxEndpoint
 import net.corda.tools.error.codes.server.domain.InvocationContext
-import net.corda.tools.error.codes.server.domain.WithInvocationContext
 import net.corda.tools.error.codes.server.domain.loggerFor
 import reactor.core.Disposable
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.util.*
 
@@ -36,33 +34,28 @@ internal abstract class ConfigurableEndpoint(configuration: Configuration, overr
         return failureHandler(::handleFailure)
     }
 
-    protected open fun reportError(error: Throwable, response: HttpServerResponse) {
+    protected open fun reportError(error: Throwable, response: HttpServerResponse, invocationContext: InvocationContext?) {
 
         if (error is RequestValidationException) {
             response.endBecauseUnprocessable(error.errors)
         } else {
-            logger.error((error as? WithInvocationContext)?.invocationContext, error.message, error)
+            logger.error(invocationContext, error.message, error)
             response.endWithInternalError()
         }
     }
 
-    protected open fun handleFailure(ctx: RoutingContext) = reportError(ctx.failure(), ctx.response())
+    protected open fun handleFailure(ctx: RoutingContext) = reportError(ctx.failure(), ctx.response(), ctx[InvocationContext::class.java.name])
 
-    protected fun <ELEMENT : Any> Mono<Optional<out ELEMENT>>.thenIfPresent(response: HttpServerResponse, action: (ELEMENT) -> Unit): Disposable {
+    protected fun <ELEMENT : Any> Mono<Optional<out ELEMENT>>.thenIfPresent(ctx: RoutingContext, action: (ELEMENT) -> Unit): Disposable {
 
         return doOnSuccess { result: Optional<out ELEMENT>? ->
 
             if (result == null || !result.isPresent) {
-                response.endWithNotFound()
+                ctx.response().endWithNotFound()
             } else {
                 action.invoke(result.get())
             }
-        }.subscribe({}, { error: Throwable -> reportError(error, response) })
-    }
-
-    protected fun <ELEMENT> Flux<ELEMENT>.subscribeWith(response: HttpServerResponse, onComplete: () -> Unit = {}, onEach: (ELEMENT) -> Unit): Disposable {
-
-        return subscribe(onEach, { error -> reportError(error, response) }, onComplete)
+        }.subscribe({}, { error: Throwable -> reportError(error, ctx.response(), ctx[InvocationContext::class.java.name]) })
     }
 
     protected fun HttpServerResponse.endWithNotFound() {
@@ -93,17 +86,21 @@ internal abstract class ConfigurableEndpoint(configuration: Configuration, overr
 
     protected fun serve(route: Route, action: RoutingContext.(InvocationContext) -> Unit) {
 
-        route.withDefaults().handler { ctx -> action.invoke(ctx, ctx.invocationContext()) }
+        route.withDefaults().handler { ctx ->
+            val invocationContext = ctx.deriveInvocationContext()
+            ctx.put(InvocationContext::class.java.name, invocationContext)
+            action.invoke(ctx, invocationContext)
+        }
     }
 
-    protected fun <PARAM : Any> RoutingContext.withPathParam(paramName: String, convert: (String) -> ValidationResult<PARAM>, invocationContext: InvocationContext, action: (PARAM) -> Unit) {
+    protected fun <PARAM : Any> RoutingContext.withPathParam(paramName: String, convert: (String) -> ValidationResult<PARAM>, action: (PARAM) -> Unit) {
 
-        val specifiedErrorCode = pathParam(paramName)?.let(convert) ?: throw RequestValidationException.withError("Unspecified path param \"$paramName\".", invocationContext)
-        val value = specifiedErrorCode.validValue { errors -> RequestValidationException.withErrors("Invalid path param \"$paramName\".", errors, invocationContext) }
+        val specifiedErrorCode = pathParam(paramName)?.let(convert) ?: throw RequestValidationException.withError("Unspecified path param \"$paramName\".")
+        val value = specifiedErrorCode.validValue { errors -> RequestValidationException.withErrors("Invalid path param \"$paramName\".", errors) }
         action.invoke(value)
     }
 
-    protected fun RoutingContext.invocationContext(): InvocationContext = InvocationContext.newInstance()
+    private fun RoutingContext.deriveInvocationContext(): InvocationContext = InvocationContext.newInstance()
 
     internal interface Configuration {
 

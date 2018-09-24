@@ -1,9 +1,6 @@
 package net.corda.tools.error.codes.server.web.endpoints.template
 
-import net.corda.tools.error.codes.server.domain.InvocationContext
-import net.corda.tools.error.codes.server.domain.WithInvocationContext
-
-internal class RequestValidationException private constructor(message: String, val errors: Set<String>, override val invocationContext: InvocationContext) : Exception(message), WithInvocationContext {
+internal class RequestValidationException private constructor(message: String, val errors: Set<String>) : Exception(message) {
 
     companion object {
 
@@ -14,9 +11,9 @@ internal class RequestValidationException private constructor(message: String, v
         }
 
         @JvmStatic
-        fun withError(error: String, invocationContext: InvocationContext): RequestValidationException = RequestValidationException(error, setOf(error), invocationContext)
+        fun withError(error: String): RequestValidationException = RequestValidationException(error, setOf(error))
 
         @JvmStatic
-        fun withErrors(message: String, errors: Set<String>, invocationContext: InvocationContext): RequestValidationException = RequestValidationException(format(message, errors), errors, invocationContext)
+        fun withErrors(message: String, errors: Set<String>): RequestValidationException = RequestValidationException(format(message, errors), errors)
     }
 }

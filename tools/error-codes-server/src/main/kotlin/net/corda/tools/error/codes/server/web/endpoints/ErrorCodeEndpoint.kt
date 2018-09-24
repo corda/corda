@@ -29,9 +29,9 @@ internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEnd
 
         serve(router.get(path)) { context ->
 
-            withPathParam(ERROR_CODE, ErrorCode.Valid::create, context) { errorCode ->
+            withPathParam(ERROR_CODE, ErrorCode.Valid::create) { errorCode ->
 
-                locateDescription(errorCode, context).thenIfPresent(response()) { location -> response().end(location) }
+                locateDescription(errorCode, context).thenIfPresent(this) { location -> response().end(location) }
             }
         }
     }
