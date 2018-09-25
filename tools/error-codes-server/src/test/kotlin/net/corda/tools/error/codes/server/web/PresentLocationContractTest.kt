@@ -3,6 +3,8 @@ package net.corda.tools.error.codes.server.web
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.vertx.core.Vertx
+import io.vertx.core.buffer.Buffer
+import io.vertx.ext.web.client.HttpResponse
 import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
 import net.corda.tools.error.codes.server.ErrorCodesWebApplication
@@ -40,6 +42,59 @@ internal class PresentLocationContractTest {
         private var location: Mono<Optional<out ErrorDescriptionLocation>>? = null
     }
 
+    @Test
+    @DirtiesContext
+    fun found_location_is_returned_as_temporary_redirect() {
+
+        val errorCode = ErrorCode("123jdazz")
+        val location = ErrorDescriptionLocation.External(URI.create("https://thisisatest/boom"), errorCode)
+        checkContract(errorCode, Mono.just(Optional.of(location))) { response ->
+
+            assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TEMPORARY_REDIRECT.code())
+            assertThat(response.headers()[HttpHeaderNames.LOCATION]).isEqualTo(location.uri.toASCIIString())
+        }
+    }
+
+    @Test
+    @DirtiesContext
+    fun absent_location_results_in_not_found() {
+
+        val errorCode = ErrorCode("123jdazz")
+        checkContract(errorCode, Mono.empty()) { response ->
+
+            assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code())
+            assertThat(response.headers()[HttpHeaderNames.LOCATION]).isNull()
+        }
+    }
+
+    private fun checkContract(errorCodeForServer: ErrorCode, locationReturned: Mono<Optional<out ErrorDescriptionLocation>>, assertResponse: (HttpResponse<Buffer>) -> Unit) {
+
+        val vertx = Vertx.vertx()
+        val latch = CountDownLatch(1)
+        errorCode = errorCodeForServer
+        location = locationReturned
+        try {
+            // TODO sollecitom perhaps consider a blocking web client...
+            val client = WebClient.create(vertx, WebClientOptions().setDefaultHost("localhost").setDefaultPort(webServer.options.port.value))
+            client.get("/errors/${errorCodeForServer.value}").followRedirects(false).send { call ->
+                if (call.succeeded()) {
+                    val response = call.result()
+                    assertResponse.invoke(response)
+                    latch.countDown()
+                } else {
+                    // TODO sollecitom check this.
+                    throw call.cause()
+                }
+            }
+            latch.await()
+            // TODO sollecitom use `use()` here
+            client.close()
+        } finally {
+            latch.countDown()
+            vertx.close()
+        }
+    }
+
     @ComponentScan(basePackageClasses = [ErrorCodesWebApplication::class], excludeFilters = [ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [ErrorCodesWebApplication::class]), ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [WebServer.Options::class]), ComponentScan.Filter(type = FilterType.ANNOTATION, classes = [Adapter::class])])
     @SpringBootApplication
     internal open class Configuration {
@@ -69,68 +124,6 @@ internal class PresentLocationContractTest {
                     return location!!
                 }
             }
-        }
-    }
-
-    @Test
-    @DirtiesContext
-    fun found_location_is_returned_as_temporary_redirect() {
-
-        // TODO sollecitom refactor not to create one instance for each test
-        val vertx = Vertx.vertx()
-        val latch = CountDownLatch(1)
-        val errorCode = ErrorCode("123jdazz").also { errorCode = it }
-        val location = ErrorDescriptionLocation.External(URI.create("https://thisisatest/boom"), errorCode).also { location = Mono.just(Optional.of(it)) }
-        try {
-            // TODO sollecitom perhaps consider a blocking web client...
-            val client = WebClient.create(vertx, WebClientOptions().setDefaultHost("localhost").setDefaultPort(webServer.options.port.value))
-            client.get("/errors/${errorCode.value}").followRedirects(false).send { call ->
-                if (call.succeeded()) {
-                    val response = call.result()
-                    assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TEMPORARY_REDIRECT.code())
-                    assertThat(response.headers()[HttpHeaderNames.LOCATION]).isEqualTo(location.uri.toASCIIString())
-                    latch.countDown()
-                } else {
-                    throw call.cause()
-                }
-            }
-            latch.await()
-            // TODO sollecitom use `use()` here
-            client.close()
-        } finally {
-            latch.countDown()
-            vertx.close()
-        }
-    }
-
-    @Test
-    @DirtiesContext
-    fun absent_location_results_in_not_found() {
-
-        // TODO sollecitom refactor not to create one instance for each test
-        val vertx = Vertx.vertx()
-        val latch = CountDownLatch(1)
-        val errorCode = ErrorCode("123jdazz").also { errorCode = it }
-        location = Mono.empty()
-        try {
-            // TODO sollecitom perhaps consider a blocking web client...
-            val client = WebClient.create(vertx, WebClientOptions().setDefaultHost("localhost").setDefaultPort(webServer.options.port.value))
-            client.get("/errors/${errorCode.value}").followRedirects(false).send { call ->
-                if (call.succeeded()) {
-                    val response = call.result()
-                    assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code())
-                    assertThat(response.headers()[HttpHeaderNames.LOCATION]).isNull()
-                    latch.countDown()
-                } else {
-                    throw call.cause()
-                }
-            }
-            latch.await()
-            // TODO sollecitom use `use()` here
-            client.close()
-        } finally {
-            latch.countDown()
-            vertx.close()
         }
     }
 }
