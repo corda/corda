@@ -89,6 +89,8 @@ internal class PresentLocationContractTest {
                 }
             }
             latch.await()
+            // TODO sollecitom use `use()`
+            client.close()
         } finally {
             latch.countDown()
             vertx.close()
