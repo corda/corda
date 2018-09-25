@@ -14,8 +14,7 @@ apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
     compile project(':node')
-    // JOpt: for command line flags.
-    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+    compile project(':tools:cliutils')
 }
 
 import de.sebastianboegl.gradle.plugins.shadow.transformers.Log4j2PluginsFileTransformer
