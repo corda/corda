@@ -22,13 +22,21 @@ A Corda node has the following structure:
     ├── persistence.mv.db       // The node's database
     └── shell-commands          // Custom shell commands defined by the node owner
 
-The node is configured by editing its ``node.conf`` file (see :doc:`corda-configuration-file`). You install CorDapps on
-the node by dropping CorDapp JARs into the ``cordapps`` folder.
+You install CorDapps on the node by placing CorDapp JARs in the ``cordapps`` folder.
 
-In development mode (i.e. when ``devMode = true``, see :doc:`corda-configuration-file`), the ``certificates``
-directory is filled with pre-configured keystores if the required keystores do not exist. This ensures that developers
-can get the nodes working as quickly as possible. However, these pre-configured keystores are not secure, to learn more
-see :doc:`permissioning`.
+In development mode (i.e. when ``devMode = true``), the ``certificates`` directory is filled with pre-configured
+keystores if they do not already exist to ensure that developers can get the nodes working as quickly as
+possible. Note that these pre-configured keystores are not secure.
+
+The keystores store the key pairs and certificates under the following aliases:
+
+* ``nodekeystore.jks`` uses the aliases ``cordaclientca`` and ``identity-private-key``
+* ``sslkeystore.jks`` uses the alias ``cordaclienttls``
+
+All the keystores use the password provided in the node's configuration file using the ``keyStorePassword`` attribute.
+If no password is configured, it defaults to ``cordacadevpass``.
+
+To learn more, see :doc:`permissioning`.
 
 .. _node_naming:
 
