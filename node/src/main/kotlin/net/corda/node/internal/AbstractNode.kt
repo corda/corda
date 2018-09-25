@@ -115,7 +115,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                val platformClock: CordaClock,
                                cacheFactoryPrototype: NamedCacheFactory,
                                protected val versionInfo: VersionInfo,
-                               protected val cordappLoader: CordappLoader,
                                protected val serverThread: AffinityExecutor.ServiceAffinityExecutor,
                                private val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
 
@@ -141,6 +140,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
+    protected val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo)
     val schemaService = NodeSchemaService(cordappLoader.cordappSchemas).tokenize()
     val identityService = PersistentIdentityService(cacheFactory).tokenize()
     val database: CordaPersistence = createCordaPersistence(
@@ -498,6 +498,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         )
     }
 
+    private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
+        val generatedCordapps = mutableListOf(VirtualCordapp.generateCoreCordapp(versionInfo))
+        if (configuration.notary != null) generatedCordapps += VirtualCordapp.generateSimpleNotaryCordapp(versionInfo)
+        return JarScanningCordappLoader.fromDirectories(
+                configuration.cordappDirectories,
+                versionInfo,
+                extraCordapps = generatedCordapps
+        )
+    }
+
     private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
 
     private fun installCordaServices(myNotaryIdentity: PartyAndCertificate?) {
@@ -780,11 +790,15 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     private fun makeNotaryService(myNotaryIdentity: PartyAndCertificate?): NotaryService? {
-        return configuration.notary?.let {
+        return configuration.notary?.let { notaryConfig ->
             val notaryKey = myNotaryIdentity?.owningKey
                     ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
 
-            val serviceClass = Class.forName(it.className)
+            val loadedImplementations = cordappLoader.cordapps.mapNotNull { it.notaryService }
+            log.info("Notary service implementations found: ${loadedImplementations.joinToString(", ")}")
+            val serviceClass = loadedImplementations.firstOrNull { it.name == notaryConfig.className }
+                    ?: throw IllegalArgumentException("The notary service implementation specified in the configuration: ${notaryConfig.className} is not found. Available implementations: ${loadedImplementations.joinToString(", ")}}")
+
             val constructor = serviceClass.getDeclaredConstructor(ServiceHubInternal::class.java, PublicKey::class.java).apply { isAccessible = true }
             val service = constructor.newInstance(services, notaryKey) as NotaryService
 

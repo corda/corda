@@ -3,7 +3,6 @@ package net.corda.notary.raft
 import net.corda.core.flows.FlowSession
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.TrustedAuthorityNotaryService
-import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.node.services.transactions.ValidatingNotaryFlow
@@ -14,12 +13,6 @@ class RaftNotaryService(
         override val services: ServiceHubInternal,
         override val notaryIdentityKey: PublicKey
 ) : TrustedAuthorityNotaryService() {
-    companion object {
-        @JvmStatic
-        val schemas: List<MappedSchema>
-            get() = listOf(RaftNotaryV1)
-    }
-
     private val notaryConfig = services.configuration.notary
             ?: throw IllegalArgumentException("Failed to register ${this::class.java}: notary configuration not present")
 

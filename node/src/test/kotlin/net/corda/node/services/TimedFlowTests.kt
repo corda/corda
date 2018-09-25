@@ -22,6 +22,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.seconds
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
@@ -90,6 +91,7 @@ class TimedFlowTests {
                 whenever(it.custom).thenReturn(true)
                 whenever(it.isClusterConfig).thenReturn(true)
                 whenever(it.validating).thenReturn(true)
+                whenever(it.className).thenReturn(TestNotaryService::class.java.name)
             }
 
             val notaryNodes = (0 until CLUSTER_SIZE).map {
@@ -176,8 +178,7 @@ class TimedFlowTests {
         }.bufferUntilSubscribed().toBlocking().toFuture()
     }
 
-    @CordaService
-    private class TestNotaryService(override val services: AppServiceHub, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
+    private class TestNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
         override val uniquenessProvider = mock<UniquenessProvider>()
         override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = TestNotaryFlow(otherPartySession, this)
         override fun start() {}

@@ -81,6 +81,7 @@ task deployNodesCustom(type: Cordform, dependsOn: 'jar') {
 }
 
 task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
+    def className = "net.corda.notary.raft.RaftNotaryService"
     directory file("$buildDir/nodes/nodesRaft")
     nodeDefaults {
         extraConfig = [h2Settings: [address: "localhost:0"]]
@@ -108,7 +109,7 @@ task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
                 raft: [
                         nodeAddress: "localhost:10008"
                 ],
-                className: "net.corda.notary.raft.RaftNotaryService"
+                className: className
         ]
     }
     node {
@@ -125,7 +126,7 @@ task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
                         nodeAddress: "localhost:10012",
                         clusterAddresses: ["localhost:10008"]
                 ],
-                className: "net.corda.notary.raft.RaftNotaryService"
+                className: className
         ]
     }
     node {
@@ -142,13 +143,14 @@ task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
                         nodeAddress: "localhost:10016",
                         clusterAddresses: ["localhost:10008"]
                 ],
-                className: "net.corda.notary.raft.RaftNotaryService"
+                className: className
         ]
     }
 }
 
 task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
     def clusterAddresses = ["localhost:11000", "localhost:11010", "localhost:11020", "localhost:11030"]
+    def className = "net.corda.notary.bftsmart.BftSmartNotaryService"
     directory file("$buildDir/nodes/nodesBFT")
     nodeDefaults {
         extraConfig = [h2Settings: [address: "localhost:0"]]
@@ -177,7 +179,7 @@ task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
                         replicaId: 0,
                         clusterAddresses: clusterAddresses
                 ],
-                className: "net.corda.notary.bftsmart.BftSmartNotaryService"
+                className: className
         ]
     }
     node {
@@ -194,7 +196,7 @@ task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
                         replicaId: 1,
                         clusterAddresses: clusterAddresses
                 ],
-                className: "net.corda.notary.bftsmart.BftSmartNotaryService"
+                className: className
         ]
     }
     node {
@@ -211,7 +213,7 @@ task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
                         replicaId: 2,
                         clusterAddresses: clusterAddresses
                 ],
-                className: "net.corda.notary.bftsmart.BftSmartNotaryService"
+                className: className
         ]
     }
     node {
@@ -228,7 +230,7 @@ task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
                         replicaId: 3,
                         clusterAddresses: clusterAddresses
                 ],
-                className: "net.corda.notary.bftsmart.BftSmartNotaryService"
+                className: className
         ]
     }
 }

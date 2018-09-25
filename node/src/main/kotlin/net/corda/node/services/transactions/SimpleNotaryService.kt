@@ -24,3 +24,14 @@ class SimpleNotaryService(override val services: ServiceHubInternal, override va
     override fun start() {}
     override fun stop() {}
 }
+
+// Entities used by a Notary
+object NodeNotary
+
+object NodeNotaryV1 : MappedSchema(schemaFamily = NodeNotary.javaClass, version = 1,
+        mappedTypes = listOf(PersistentUniquenessProvider.BaseComittedState::class.java,
+                PersistentUniquenessProvider.Request::class.java,
+                PersistentUniquenessProvider.CommittedState::class.java
+        )) {
+    override val migrationResource = "node-notary.changelog-master"
+}

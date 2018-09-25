@@ -82,7 +82,7 @@ class VaultSoftLockManagerTest {
     private val mockVault = rigorousMock<VaultServiceInternal>().also {
         doNothing().whenever(it).softLockRelease(any(), anyOrNull())
     }
-    private val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(ContractImpl::class.packageName), defaultFactory = { args, _ ->
+    private val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(ContractImpl::class.packageName), defaultFactory = { args ->
         object : InternalMockNetwork.MockNode(args) {
             override fun makeVaultService(keyManagementService: KeyManagementService, services: ServicesForResolution, database: CordaPersistence): VaultServiceInternal {
                 val node = this

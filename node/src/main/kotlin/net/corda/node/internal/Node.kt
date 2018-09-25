@@ -28,10 +28,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.CordaClock
 import net.corda.node.SimpleClock
 import net.corda.node.VersionInfo
-import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
-import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
@@ -87,14 +85,12 @@ class NodeWithInfo(val node: Node, val info: NodeInfo) {
 open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 private val initialiseSerialization: Boolean = true,
-                cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo),
                 cacheFactoryPrototype: NamedCacheFactory = DefaultNamedCacheFactory()
 ) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
         cacheFactoryPrototype,
         versionInfo,
-        cordappLoader,
         // Under normal (non-test execution) it will always be "1"
         AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1)
 ) {
@@ -131,10 +127,6 @@ open class Node(configuration: NodeConfiguration,
         }
 
         private val sameVmNodeCounter = AtomicInteger()
-
-        private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
-            return JarScanningCordappLoader.fromDirectories(configuration.cordappDirectories, versionInfo)
-        }
 
         // TODO: make this configurable.
         const val MAX_RPC_MESSAGE_SIZE = 10485760

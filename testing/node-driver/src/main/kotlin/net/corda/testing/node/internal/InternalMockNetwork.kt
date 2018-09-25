@@ -28,14 +28,15 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.hours
 import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
-import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.InitiatedFlowFactory
-import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.node.services.config.*
+import net.corda.node.services.config.FlowTimeoutConfiguration
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
+import net.corda.node.services.config.VerifierType
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
@@ -146,7 +147,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                                val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
                                val testDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
                                val networkParameters: NetworkParameters = testNetworkParameters(),
-                               val defaultFactory: (MockNodeArgs, CordappLoader?) -> MockNode = { args, cordappLoader -> cordappLoader?.let { MockNode(args, it) } ?: MockNode(args) },
+                               val defaultFactory: (MockNodeArgs) -> MockNode = { args -> MockNode(args) },
                                val cordappsForAllNodes: Set<TestCorDapp> = emptySet(),
                                val autoVisibleNodes: Boolean = true) : AutoCloseable {
     init {
@@ -273,12 +274,11 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         }
     }
 
-    open class MockNode(args: MockNodeArgs, cordappLoader: CordappLoader = JarScanningCordappLoader.fromDirectories(args.config.cordappDirectories, args.version)) : AbstractNode<TestStartedNode>(
+    open class MockNode(args: MockNodeArgs) : AbstractNode<TestStartedNode>(
             args.config,
             TestClock(Clock.systemUTC()),
             DefaultNamedCacheFactory(),
             args.version,
-            cordappLoader,
             args.network.getServerThread(args.id),
             args.network.busyLatch
     ) {
@@ -427,7 +427,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         return createUnstartedNode(parameters, defaultFactory)
     }
 
-    fun createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs, CordappLoader?) -> MockNode): MockNode {
+    fun createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs) -> MockNode): MockNode {
         return createNodeImpl(parameters, nodeFactory, false)
     }
 
@@ -436,11 +436,11 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     }
 
     /** Like the other [createNode] but takes a [nodeFactory] and propagates its [MockNode] subtype. */
-    fun createNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs, CordappLoader?) -> MockNode): TestStartedNode {
+    fun createNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs) -> MockNode): TestStartedNode {
         return uncheckedCast(createNodeImpl(parameters, nodeFactory, true).started)!!
     }
 
-    private fun createNodeImpl(parameters: InternalMockNodeParameters, nodeFactory: (MockNodeArgs, CordappLoader?) -> MockNode, start: Boolean): MockNode {
+    private fun createNodeImpl(parameters: InternalMockNodeParameters, nodeFactory: (MockNodeArgs) -> MockNode, start: Boolean): MockNode {
         val id = parameters.forcedID ?: nextNodeId++
         val baseDirectory = baseDirectory(id)
         val certificatesDirectory = baseDirectory / "certificates"
@@ -457,7 +457,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         val cordappDirectories = sharedCorDappsDirectories + TestCordappDirectories.cached(cordapps)
         doReturn(cordappDirectories).whenever(config).cordappDirectories
 
-        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version), JarScanningCordappLoader.fromDirectories(cordappDirectories, parameters.version))
+        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version))
         _nodes += node
         if (start) {
             node.start()
@@ -465,7 +465,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         return node
     }
 
-    fun restartNode(node: TestStartedNode, nodeFactory: (MockNodeArgs, CordappLoader?) -> MockNode): TestStartedNode {
+    fun restartNode(node: TestStartedNode, nodeFactory: (MockNodeArgs) -> MockNode): TestStartedNode {
         node.internals.disableDBCloseOnStop()
         node.dispose()
         return createNode(

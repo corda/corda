@@ -41,9 +41,6 @@ class BftSmartNotaryService(
 ) : NotaryService() {
     companion object {
         private val log = contextLogger()
-        @JvmStatic
-        val schemas: List<MappedSchema>
-            get() = listOf(BftSmartNotaryV1)
     }
 
     private val notaryConfig = services.configuration.notary
@@ -53,7 +50,6 @@ class BftSmartNotaryService(
             ?: throw IllegalArgumentException("Failed to register ${this::class.java}: raft configuration not present")
 
     private val cluster: BFTSMaRt.Cluster = makeBFTCluster(notaryIdentityKey, bftSMaRtConfig)
-
 
     protected open fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSMaRtConfiguration): BFTSMaRt.Cluster {
         return object : BFTSMaRt.Cluster {
