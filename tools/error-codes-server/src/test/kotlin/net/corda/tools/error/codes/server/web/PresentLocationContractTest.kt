@@ -17,6 +17,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.FilterType
+import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.junit.jupiter.SpringJUnitJupiterConfig
 import reactor.core.publisher.Mono
 import java.net.InetSocketAddress
@@ -32,10 +33,10 @@ internal class PresentLocationContractTest {
     @Inject
     private lateinit var webServer: WebServer
 
-    companion object {
+    private companion object {
 
-        val errorCode = ErrorCode("123jdazz")
-        val location = ErrorDescriptionLocation.External(URI.create("https://thisisatest/boom"), errorCode)
+        private var errorCode: ErrorCode? = null
+        private var location: Mono<Optional<out ErrorDescriptionLocation>>? = null
     }
 
     @ComponentScan(basePackageClasses = [ErrorCodesWebApplication::class], excludeFilters = [ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [ErrorCodesWebApplication::class]), ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [WebServer.Options::class]), ComponentScan.Filter(type = FilterType.ANNOTATION, classes = [Adapter::class])])
@@ -45,11 +46,12 @@ internal class PresentLocationContractTest {
         @Bean
         open fun webServerOptions(): WebServer.Options {
 
-            // TODO sollecitom try port 0
             return ServerSocket().use {
+
                 it.reuseAddress = true
                 it.bind(InetSocketAddress(0))
                 object : WebServer.Options {
+
                     override val port = Port(it.localPort)
                 }
             }
@@ -63,18 +65,21 @@ internal class PresentLocationContractTest {
 
                 override fun invoke(p1: ErrorCode, p2: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
 
-                    return Mono.just(Optional.of(location))
+                    return location!!
                 }
             }
         }
     }
 
     @Test
+    @DirtiesContext
     fun found_location_is_returned_as_temporary_redirect() {
 
         // TODO sollecitom refactor not to create one instance for each test
         val vertx = Vertx.vertx()
         val latch = CountDownLatch(1)
+        val errorCode = ErrorCode("123jdazz").also { errorCode = it }
+        val location = ErrorDescriptionLocation.External(URI.create("https://thisisatest/boom"), errorCode).also { location = Mono.just(Optional.of(it)) }
         try {
             // TODO sollecitom perhaps consider a blocking web client...
             val client = WebClient.create(vertx, WebClientOptions().setDefaultHost("localhost").setDefaultPort(webServer.options.port.value))
@@ -89,7 +94,38 @@ internal class PresentLocationContractTest {
                 }
             }
             latch.await()
-            // TODO sollecitom use `use()`
+            // TODO sollecitom use `use()` here
+            client.close()
+        } finally {
+            latch.countDown()
+            vertx.close()
+        }
+    }
+
+    @Test
+    @DirtiesContext
+    fun absent_location_results_in_not_found() {
+
+        // TODO sollecitom refactor not to create one instance for each test
+        val vertx = Vertx.vertx()
+        val latch = CountDownLatch(1)
+        val errorCode = ErrorCode("123jdazz").also { errorCode = it }
+        location = Mono.empty()
+        try {
+            // TODO sollecitom perhaps consider a blocking web client...
+            val client = WebClient.create(vertx, WebClientOptions().setDefaultHost("localhost").setDefaultPort(webServer.options.port.value))
+            client.get("/errors/${errorCode.value}").followRedirects(false).send { call ->
+                if (call.succeeded()) {
+                    val response = call.result()
+                    assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code())
+                    assertThat(response.headers()[HttpHeaderNames.LOCATION]).isNull()
+                    latch.countDown()
+                } else {
+                    throw call.cause()
+                }
+            }
+            latch.await()
+            // TODO sollecitom use `use()` here
             client.close()
         } finally {
             latch.countDown()
