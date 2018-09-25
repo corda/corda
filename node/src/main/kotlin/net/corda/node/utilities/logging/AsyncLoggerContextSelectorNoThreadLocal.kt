@@ -34,5 +34,4 @@ class AsyncLoggerContextSelectorNoThreadLocal : ClassLoaderContextSelector() {
     override fun defaultContextName(): String {
         return "DefaultAsyncContextNoThreadLocal@" + Thread.currentThread().name
     }
-
 }
