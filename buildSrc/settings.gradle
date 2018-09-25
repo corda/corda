@@ -1,4 +1,4 @@
 rootProject.name = 'buildSrc'
 include 'canonicalizer'
 
-apply from: new File(settingsDir, '../buildCacheSettings.gradle')
+apply from: '../buildCacheSettings.gradle'

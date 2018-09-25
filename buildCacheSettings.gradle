@@ -1,7 +1,8 @@
 // Gradle Build Cache configuration recommendation: https://docs.gradle.org/current/userguide/build_cache.html
-
-ext.isCiServer = System.getenv().containsKey("CI")
-ext.gradleBuildCacheURL = System.getenv().containsKey("GRADLE_BUILD_CACHE_URL") ? System.getenv().get("GRADLE_BUILD_CACHE_URL") : 'http://localhost:5071/cache/'
+ext {
+    isCiServer = System.getenv().containsKey("CI")
+    gradleBuildCacheURL = System.getenv().containsKey("GRADLE_BUILD_CACHE_URL") ? System.getenv().get("GRADLE_BUILD_CACHE_URL") : 'http://localhost:5071/cache/'
+}
 
 buildCache {
     local {
