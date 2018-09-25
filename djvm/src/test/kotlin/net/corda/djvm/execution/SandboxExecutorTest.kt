@@ -356,7 +356,7 @@ class SandboxExecutorTest : TestBase() {
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestReflection>(0) }
                 .withCauseInstanceOf(RuleViolationError::class.java)
-                .withMessageContaining("Disallowed reference to reflection API")
+                .withMessageContaining("Disallowed reference to API;")
                 .withMessageContaining("java.lang.Class.newInstance()")
     }
 
@@ -366,6 +366,95 @@ class SandboxExecutorTest : TestBase() {
             val obj = clazz.newInstance()
             val result = clazz.methods.first().invoke(obj)
             return obj.hashCode() + result.hashCode()
+        }
+    }
+
+    @Test
+    fun `can load and execute code that uses notify()`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<Int, String>(configuration)
+        assertThatExceptionOfType(SandboxException::class.java)
+                .isThrownBy { contractExecutor.run<TestMonitors>(1) }
+                .withCauseInstanceOf(RuleViolationError::class.java)
+                .withMessageContaining("Disallowed reference to API;")
+                .withMessageContaining("java.lang.Object.notify()")
+    }
+
+    @Test
+    fun `can load and execute code that uses notifyAll()`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<Int, String>(configuration)
+        assertThatExceptionOfType(SandboxException::class.java)
+                .isThrownBy { contractExecutor.run<TestMonitors>(2) }
+                .withCauseInstanceOf(RuleViolationError::class.java)
+                .withMessageContaining("Disallowed reference to API;")
+                .withMessageContaining("java.lang.Object.notifyAll()")
+    }
+
+    @Test
+    fun `can load and execute code that uses wait()`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<Int, String>(configuration)
+        assertThatExceptionOfType(SandboxException::class.java)
+                .isThrownBy { contractExecutor.run<TestMonitors>(3) }
+                .withCauseInstanceOf(RuleViolationError::class.java)
+                .withMessageContaining("Disallowed reference to API;")
+                .withMessageContaining("java.lang.Object.wait()")
+    }
+
+    @Test
+    fun `can load and execute code that uses wait(long)`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<Int, String>(configuration)
+        assertThatExceptionOfType(SandboxException::class.java)
+                .isThrownBy { contractExecutor.run<TestMonitors>(4) }
+                .withCauseInstanceOf(RuleViolationError::class.java)
+                .withMessageContaining("Disallowed reference to API;")
+                .withMessageContaining("java.lang.Object.wait(Long)")
+    }
+
+    @Test
+    fun `can load and execute code that uses wait(long,int)`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<Int, String>(configuration)
+        assertThatExceptionOfType(SandboxException::class.java)
+                .isThrownBy { contractExecutor.run<TestMonitors>(5) }
+                .withCauseInstanceOf(RuleViolationError::class.java)
+                .withMessageContaining("Disallowed reference to API;")
+                .withMessageContaining("java.lang.Object.wait(Long, Integer)")
+    }
+
+    @Test
+    fun `code after forbidden APIs is intact`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<Int, String>(configuration)
+        assertThat(contractExecutor.run<TestMonitors>(0).result)
+                .isEqualTo("unknown")
+    }
+
+    class TestMonitors : Function<Int, String> {
+        override fun apply(input: Int): String {
+            return synchronized(this) {
+                @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+                val javaObject = this as java.lang.Object
+                when(input) {
+                    1 -> {
+                        javaObject.notify()
+                        "notify"
+                    }
+                    2 -> {
+                        javaObject.notifyAll()
+                        "notifyAll"
+                    }
+                    3 -> {
+                        javaObject.wait()
+                        "wait"
+                    }
+                    4 -> {
+                        javaObject.wait(100)
+                        "wait(100)"
+                    }
+                    5 -> {
+                        javaObject.wait(100, 10)
+                        "wait(100, 10)"
+                    }
+                    else -> "unknown"
+                }
+            }
         }
     }
 
