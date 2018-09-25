@@ -59,7 +59,7 @@ private enum class Mode {
 private class DbManagementToolOptions {
     @Option(
             names = ["--mode"],
-            description = ["The operating mode."]
+            description = ["The operating mode. \${COMPLETION-CANDIDATES}"]
     )
     var mode: Mode = Mode.NODE
 
