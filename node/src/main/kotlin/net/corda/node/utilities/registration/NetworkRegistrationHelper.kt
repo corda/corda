@@ -158,8 +158,16 @@ class NetworkRegistrationHelper(private val config: SSLConfiguration,
         // Save root certificates to trust store.
         config.loadTrustStore(createNew = true).update {
             println("Generating trust store for corda node.")
+            if (this.aliases().hasNext()) {
+                println("The node's trust store already exists. The following certificates will be overridden: ${this.aliases().asSequence()}")
+            }
             // Assumes certificate chain always starts with client certificate and end with root certificate.
             setCertificate(CORDA_ROOT_CA, certificates.last())
+            rootTrustStore.aliases().asSequence().filter { it != CORDA_ROOT_CA }.forEach {
+                val certificate = rootTrustStore.getCertificate(it)
+                println("Copying trusted certificate to the node's trust store: Alias: $it, Certificate: $certificate")
+                setCertificate(it, certificate)
+            }
         }
         println("Node trust store stored in ${config.trustStoreFile}.")
         // All done, clean up temp files.
