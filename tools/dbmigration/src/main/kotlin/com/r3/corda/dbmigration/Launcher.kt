@@ -13,6 +13,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.node.internal.DataSourceFactory.createDatasourceFromDriverJarFolders
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.config.ConfigHelper
+import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.configOf
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.node.services.persistence.DBCheckpointStorage
@@ -149,7 +150,7 @@ private class DbManagementTool : CordaCliWrapper("database-manager", "The Corda 
                 if (!config.exists()) {
                     error("Not a valid node folder. Could not find the config file: '$config'.")
                 }
-                val nodeConfig = ConfigHelper.loadConfig(baseDirectory, config).parseAsNodeConfiguration()
+                val nodeConfig = ConfigHelper.loadConfig(baseDirectory, config).parseAs<NodeConfigurationImpl>(UnknownConfigKeysPolicy.IGNORE::handle)
                 val cordappLoader = JarScanningCordappLoader.fromDirectories(setOf(baseDirectory, baseDirectory / "cordapps"))
 
                 val schemaService = NodeSchemaService(extraSchemas = cordappLoader.cordappSchemas, includeNotarySchemas = nodeConfig.notary != null)
@@ -191,7 +192,7 @@ private class DbManagementTool : CordaCliWrapper("database-manager", "The Corda 
         }
 
         when {
-            cmdLineOptions.releaseLock -> runWithDataSource(ConfigFactory.parseFile(configFile.toFile()).resolve( ).parseAs(Configuration::class, UnknownConfigKeysPolicy.IGNORE::handle), baseDirectory, classLoader) {
+            cmdLineOptions.releaseLock -> runWithDataSource(ConfigFactory.parseFile(configFile.toFile()).resolve().parseAs(Configuration::class, UnknownConfigKeysPolicy.IGNORE::handle), baseDirectory, classLoader) {
                 SchemaMigration(emptySet(), it, config.database, Thread.currentThread().contextClassLoader).forceReleaseMigrationLock()
             }
             cmdLineOptions.dryRun != null -> {
