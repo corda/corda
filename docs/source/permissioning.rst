@@ -9,43 +9,37 @@ Network permissioning
 
 .. contents::
 
-Every Corda node is a part of a network (also called a zone), and networks are *permissioned*. To connect to a
-zone, a node needs a signed X.509 certificate from the network operator. Production deployments require a secure certificate authority.
-The issued certificates take the form of three keystores in a node's ``<workspace>/certificates/`` folder:
+Every Corda node is part of a network (also called a zone) that is *permissioned*. To connect to a zone, a node needs a 
+signed X.509 certificate from the network operator. Production deployments require a secure certificate authority. Most 
+users will join an existing network such as the main Corda network or the Corda TestNet. You can also build your
+own networks.
 
-* ``network-root-truststore.jks``, the network/zone operator's public keys and certificates as provided by them with a standard password. Can be deleted after initial registration
-* ``truststore.jks``, the network/zone operator's public keys and certificates in keystore with a locally configurable password as protection against certain attacks
-* ``nodekeystore.jks``, which stores the node’s identity keypairs and certificates
-* ``sslkeystore.jks``, which stores the node’s TLS keypairs and certificates
-
-Most users will join an existing network such as the main Corda network or the Corda TestNet. You can also build your
-own networks. During development, no network is required because you can use the included tools to pre-create
-and pre-distribute the certificates and map files that would normally be provided dynamically by the network. Effectively
-the :doc:`bootstrapper tool <network-bootstrapper>` creates a private semi-static network for you.
+During development, no network is required because you can use the :doc:`bootstrapper tool <network-bootstrapper>` to 
+pre-create and pre-distribute the certificates and map files that would normally be provided dynamically by the network, 
+effectively creating a private, semi-static personal network.
 
 Certificate hierarchy
 ---------------------
 
 A Corda network has three types of certificate authorities (CAs):
 
-* The **root network CA**, that defines the extent of a compatibility zone.
-* The **doorman CA**. The doorman CA is used instead of the root network CA for day-to-day key signing to reduce the
-  risk of the root network CA's private key being compromised. This is equivalent to an intermediate certificate
-  in the web PKI.
-* Each node also serves as its own CA in issuing the child certificates that it uses to sign its identity keys and TLS
-  certificates.
+* The **root network CA** that defines the extent of a compatibility zone
+* The **doorman CA** that is used instead of the root network CA for day-to-day key signing to reduce the risk of the root 
+  network CA's private key being compromised. This is equivalent to an intermediate certificate in the web PKI
+* Each node also serves as its own CA, issuing the child certificates that it uses to sign its identity keys and TLS
+  certificates
 
-Each certificate has an X.509 extension in it that defines the certificate/key's role in the system (see below for details).
-They also use X.509 name constraints to ensure that the X.500 names that encode a human meaningful identity are propagated
+Each certificate contains an X.509 extension that defines the certificate/key's role in the system (see below for details).
+It also uses X.509 name constraints to ensure that the X.500 names that encode human meaningful identities are propagated
 to all the child certificates properly. The following constraints are imposed:
 
-* Doorman certificates are issued by a network root. Network root certs do not contain a role extension.
-* Node certificates are signed by a doorman certificate (as defined by the extension).
-* Legal identity/TLS certificates are issued by a certificate marked as node CA.
-* Confidential identity certificates are issued by a certificate marked as well known legal identity.
-* Party certificates are marked as either a well known identity or a confidential identity.
+* Doorman certificates are issued by a network root. Network root certs do not contain a role extension
+* Node certificates are signed by a doorman certificate (as defined by the extension)
+* Legal identity/TLS certificates are issued by a certificate marked as node CA
+* Confidential identity certificates are issued by a certificate marked as well known legal identity
+* Party certificates are marked as either a well known identity or a confidential identity
 
-The structure of certificates above Doorman/Network map is intentionally left untouched, as they are not relevant to
+The structure of certificates above the doorman/network map is intentionally left untouched, as they are not relevant to
 the identity service and therefore there is no advantage in enforcing a specific structure on those certificates. The
 certificate hierarchy consistency checks are required because nodes can issue their own certificates and can set
 their own role flags on certificates, and it's important to verify that these are set consistently with the
@@ -61,19 +55,49 @@ We can visualise the permissioning structure as follows:
 Keypair and certificate formats
 -------------------------------
 
-You can use any standard key tools to create the required public/private keypairs and certificates. The keypairs and
-certificates must obey the following restrictions:
+The required keypairs and certificates take the form of the following Java-style keystores (this may change in future to 
+support PKCS#12 keystores) in the node's ``<workspace>/certificates/`` folder:
+
+* ``network-root-truststore.jks``, the network/zone operator's public keys and certificates as provided by them with a standard password. Can be deleted after initial registration
+* ``truststore.jks``, the network/zone operator's public keys and certificates in keystore with a locally configurable password as protection against certain attacks
+* ``nodekeystore.jks``, which stores the node’s identity keypairs and certificates
+* ``sslkeystore.jks``, which stores the node’s TLS keypairs and certificates
+
+The keypairs and certificates must obey the following restrictions:
 
 1. The certificates must follow the `X.509v3 standard <https://tools.ietf.org/html/rfc5280>`__
 2. The TLS certificates must follow the `TLS v1.2 standard <https://tools.ietf.org/html/rfc5246>`__
 3. The root network CA, doorman CA, and node CA keys, as well as the node TLS keys, must follow one of the following schemes:
+
     * ECDSA using the NIST P-256 curve (secp256r1)
     * ECDSA using the Koblitz k1 curve (secp256k1)
     * RSA with 3072-bit key size or higher.
 
-The required identity and TLS keys/certificates will be automatically generated for you by the node on first run.
-However, you can also generate them manually for more control. The ``X509Utilities`` class shows how to generate the
-required public/private keypairs and certificates using Bouncy Castle. You can find it in the `Corda repository
+The required identity and TLS keys/certificates will be automatically generated for you by the node on first run. However, 
+you can also generate them manually for more control. You can use any standard key tools to create the required 
+public/private keypairs and certificates.
+
+Manually creating the node keys
+-------------------------------
+
+For the ``nodekeystore.jks`` keystore:
+
+* The private key and certificate must have the alias ``cordaclientca``
+* The certificate must be signed by the doorman CA for your network
+* The certificate's basic constraints extension must be set to true
+
+For the ``sslkeystore.jks`` keystore:
+
+* The private key and certificate must have the alias ``cordaclienttls``
+* The certificate's basic constraints extension must be set to false
+
+For both keystores:
+
+* The password must match the one provided in the node's configuration file using the ``keyStorePassword`` attribute
+  * If no password is configured, it defaults to ``cordacadevpass``
+
+The ``X509Utilities`` class shows how to generate the required public/private keypairs and certificates using Bouncy Castle. 
+You can find it in the `Corda repository
 <https://github.com/corda/corda/blob/master/node-api/src/main/kotlin/net/corda/nodeapi/internal/crypto/X509Utilities.kt>`__.
 
 Certificate role extension
@@ -97,20 +121,6 @@ it is important to recognise these extensions and the constraints noted above.
 
 Certificate path validation is extended so that a certificate must contain the extension if the extension was present
 in the certificate of the issuer.
-
-
-Manually creating the node keys
--------------------------------
-
-The node expects a Java-style key store (this may change in future to support PKCS#12 keystores) called ``nodekeystore.jks``,
-with the private key and certificate having an alias of "cordaclientca". This certificate should be signed by the
-doorman CA for your network. The basic constraints extension must be set to true.
-
-For the TLS keys, the basic constraints extension must be set to false. The keystore name is ``sslkeystore.jks`` and
-the key alias must be ``cordaclienttls``.
-
-These two files should be in the node's certificate directory (``<workspace>/certificates/``), along with the network's
-own root certificates in a ``network-root-truststore.jks`` file.
 
 Connecting to a compatibility zone
 ----------------------------------
