@@ -140,7 +140,6 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         fun type(): Type {
             return when (constraint::class.java) {
                 AlwaysAcceptAttachmentConstraint::class.java -> Type.ALWAYS_ACCEPT
-                AutomaticHashConstraint::class.java,
                 HashAttachmentConstraint::class.java -> Type.HASH
                 WhitelistedByZoneAttachmentConstraint::class.java -> Type.CZ_WHITELISTED
                 SignatureAttachmentConstraint::class.java -> Type.SIGNATURE
