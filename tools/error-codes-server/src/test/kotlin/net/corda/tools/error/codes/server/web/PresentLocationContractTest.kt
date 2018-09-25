@@ -33,6 +33,7 @@ internal class PresentLocationContractTest {
     @Inject
     private lateinit var webServer: WebServer
 
+    // TODO sollecitom try to see whether creating the application context manually, including starting it and stopping it, removes the need for static variables and `@DirtiesContext` annotations.
     private companion object {
 
         private var errorCode: ErrorCode? = null
