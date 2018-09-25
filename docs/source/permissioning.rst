@@ -15,7 +15,7 @@ users will join an existing network such as the main Corda network or the Corda 
 own networks.
 
 During development, no network is required because you can use the :doc:`bootstrapper tool <network-bootstrapper>` to 
-pre-create and pre-distribute the certificates and map files that would normally be provided dynamically by the network, 
+pre-create and pre-distribute the certificates and key files that would normally be provided dynamically by the network, 
 effectively creating a private, semi-static personal network.
 
 Certificate hierarchy
@@ -52,18 +52,18 @@ We can visualise the permissioning structure as follows:
    :scale: 55%
    :align: center
 
-Keypair and certificate formats
--------------------------------
+Key pair and certificate formats
+--------------------------------
 
-The required keypairs and certificates take the form of the following Java-style keystores (this may change in future to 
+The required key pairs and certificates take the form of the following Java-style keystores (this may change in future to 
 support PKCS#12 keystores) in the node's ``<workspace>/certificates/`` folder:
 
-* ``network-root-truststore.jks``, the network/zone operator's public keys and certificates as provided by them with a standard password. Can be deleted after initial registration
-* ``truststore.jks``, the network/zone operator's public keys and certificates in keystore with a locally configurable password as protection against certain attacks
-* ``nodekeystore.jks``, which stores the node’s identity keypairs and certificates
-* ``sslkeystore.jks``, which stores the node’s TLS keypairs and certificates
+* ``network-root-truststore.jks``, the network/zone operator's root certificate as provided by them with a standard password. Can be deleted after initial registration
+* ``truststore.jks``, the network/zone operator's root certificate in keystore with a locally configurable password as protection against certain attacks
+* ``nodekeystore.jks``, which stores the node’s identity key pairs and certificates  
+* ``sslkeystore.jks``, which stores the node’s TLS key pair and certificate
 
-The keypairs and certificates must obey the following restrictions:
+The key pairs and certificates must obey the following restrictions:
 
 1. The certificates must follow the `X.509v3 standard <https://tools.ietf.org/html/rfc5280>`__
 2. The TLS certificates must follow the `TLS v1.2 standard <https://tools.ietf.org/html/rfc5246>`__
@@ -71,34 +71,10 @@ The keypairs and certificates must obey the following restrictions:
 
     * ECDSA using the NIST P-256 curve (secp256r1)
     * ECDSA using the Koblitz k1 curve (secp256k1)
-    * RSA with 3072-bit key size or higher.
+    * RSA with 3072-bit key size or higher
 
-The required identity and TLS keys/certificates will be automatically generated for you by the node on first run. However, 
-you can also generate them manually for more control. You can use any standard key tools to create the required 
-public/private keypairs and certificates.
-
-Manually creating the node keys
--------------------------------
-
-For the ``nodekeystore.jks`` keystore:
-
-* The private key and certificate must have the alias ``cordaclientca``
-* The certificate must be signed by the doorman CA for your network
-* The certificate's basic constraints extension must be set to true
-
-For the ``sslkeystore.jks`` keystore:
-
-* The private key and certificate must have the alias ``cordaclienttls``
-* The certificate's basic constraints extension must be set to false
-
-For both keystores:
-
-* The password must match the one provided in the node's configuration file using the ``keyStorePassword`` attribute
-  * If no password is configured, it defaults to ``cordacadevpass``
-
-The ``X509Utilities`` class shows how to generate the required public/private keypairs and certificates using Bouncy Castle. 
-You can find it in the `Corda repository
-<https://github.com/corda/corda/blob/master/node-api/src/main/kotlin/net/corda/nodeapi/internal/crypto/X509Utilities.kt>`__.
+4. The node CA certificates must have the basic constraints extension set to true
+5. The TLS certificates must have the basic constraints extension set to false
 
 Certificate role extension
 --------------------------
@@ -269,17 +245,22 @@ The protocol is:
 
 * If $URL = ``https://some.server.com/some/path``
 * Node submits a PKCS#10 certificate signing request using HTTP POST to ``$URL/certificate``. It will have a MIME
-  type of ``application/octet-stream``. The ``Platform-Version`` header is set to be "1.0" and the ``Client-Version`` header to reflect the node software version.
-* The server returns an opaque string that references this request (let's call it ``$requestid``, or an HTTP error if something went wrong.
+  type of ``application/octet-stream``. The ``Platform-Version`` header is set to be "1.0" and the ``Client-Version`` header to reflect the node software version
+* The server returns an opaque string that references this request (let's call it ``$requestid``, or an HTTP error if something went wrong
 * The returned request ID should be persisted to disk, to handle zones where approval may take a long time due to manual
-  intervention being required.
+  intervention being required
 * The node starts polling ``$URL/$requestid`` using HTTP GET. The poll interval can be controlled by the server returning
-  a response with a ``Cache-Control`` header.
+  a response with a ``Cache-Control`` header
 * If the request is answered with a ``200 OK`` response, the body is expected to be a zip file. Each file is expected to
-  be a binary X.509 certificate, and the certs are expected to be in order.
-* If the request is answered with a ``204 No Content`` response, the node will try again later.
-* If the request is answered with a ``403 Not Authorized`` response, the node will treat that as request rejection and give up.
-* Other response codes will cause the node to abort with an exception.
+  be a binary X.509 certificate, and the certs are expected to be in order
+* If the request is answered with a ``204 No Content`` response, the node will try again later
+* If the request is answered with a ``403 Not Authorized`` response, the node will treat that as request rejection and give up
+* Other response codes will cause the node to abort with an exception
+
+You can use any standard key tools to create the required key pairs and certificates. The ``X509Utilities`` class in the 
+`Corda repository
+<https://github.com/corda/corda/blob/master/node-api/src/main/kotlin/net/corda/nodeapi/internal/crypto/X509Utilities.kt>`__ 
+shows how to generate the required key pairs and certificates using Bouncy Castle.
 
 Setting zone parameters
 ^^^^^^^^^^^^^^^^^^^^^^^
