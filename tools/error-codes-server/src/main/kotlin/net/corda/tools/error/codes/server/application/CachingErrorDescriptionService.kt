@@ -5,6 +5,7 @@ import net.corda.tools.error.codes.server.commons.events.PublishingEventSource
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.InvocationContext
+import net.corda.tools.error.codes.server.domain.PlatformEdition
 import net.corda.tools.error.codes.server.domain.ReleaseVersion
 import net.corda.tools.error.codes.server.domain.annotations.Adapter
 import net.corda.tools.error.codes.server.domain.loggerFor
@@ -25,13 +26,13 @@ internal class CachingErrorDescriptionService @Inject constructor(@Adapter priva
         private val logger = loggerFor<CachingErrorDescriptionService>()
     }
 
-    override fun descriptionLocationFor(errorCode: ErrorCode, releaseVersion: ReleaseVersion, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
+    override fun descriptionLocationFor(errorCode: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
 
         // TODO sollecitom create application level coordinates, including edition, version and error code, and use those coordinates for caching.
         // TODO sollecitom remove errorCode from ErrorDescriptionLocation.
         // TODO sollecitom add ErrorDescription with ErrorDescriptionLocation field, plus ErrorCode, ReleaseVersion and PlatformEdition.
         // TODO sollecitom return multiple ErrorDescription from `lookup`, as a Flux, and use the "closest" in terms of ReleaseVersion and PlatformEdition here.
-        return retrieveCached(errorCode).orIfAbsent { lookup(errorCode, invocationContext).andIfPresent { addToCache(errorCode, it) } }.thenPublish(errorCode, releaseVersion, invocationContext)
+        return retrieveCached(errorCode).orIfAbsent { lookup(errorCode, invocationContext).andIfPresent { addToCache(errorCode, it) } }.thenPublish(errorCode, releaseVersion, platformEdition, invocationContext)
     }
 
     @PreDestroy
@@ -51,14 +52,14 @@ internal class CachingErrorDescriptionService @Inject constructor(@Adapter priva
         return filter(Optional<*>::isPresent).switchIfEmpty(defer(action))
     }
 
-    private fun Mono<Optional<out ErrorDescriptionLocation>>.thenPublish(errorCode: ErrorCode, releaseVersion: ReleaseVersion, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
+    private fun Mono<Optional<out ErrorDescriptionLocation>>.thenPublish(errorCode: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
 
-        return doOnSuccess { location -> completed(location?.orElse(null), errorCode, releaseVersion, invocationContext)?.let(source::publish) }
+        return doOnSuccess { location -> completed(location?.orElse(null), errorCode, releaseVersion, platformEdition, invocationContext)?.let(source::publish) }
     }
 
-    private fun completed(location: ErrorDescriptionLocation?, errorCode: ErrorCode, releaseVersion: ReleaseVersion, invocationContext: InvocationContext): ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor? {
+    private fun completed(location: ErrorDescriptionLocation?, errorCode: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition, invocationContext: InvocationContext): ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor? {
 
-        return if (location == null) ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor.WithoutDescriptionLocation(errorCode, releaseVersion, invocationContext) else null
+        return if (location == null) ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor.WithoutDescriptionLocation(errorCode, releaseVersion, platformEdition, invocationContext) else null
     }
 
     @Named(eventSourceQualifier)
@@ -68,7 +69,7 @@ internal class CachingErrorDescriptionService @Inject constructor(@Adapter priva
 // This allows injecting functions instead of types.
 @Application
 @Named
-internal class ErrorDescriptionLocator @Inject constructor(private val service: ErrorDescriptionService) : (ErrorCode, ReleaseVersion, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>> {
+internal class ErrorDescriptionLocator @Inject constructor(private val service: ErrorDescriptionService) : (ErrorCode, ReleaseVersion, PlatformEdition, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>> {
 
-    override fun invoke(errorCode: ErrorCode, releaseVersion: ReleaseVersion, invocationContext: InvocationContext) = service.descriptionLocationFor(errorCode, releaseVersion, invocationContext)
+    override fun invoke(errorCode: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition, invocationContext: InvocationContext) = service.descriptionLocationFor(errorCode, releaseVersion, platformEdition, invocationContext)
 }

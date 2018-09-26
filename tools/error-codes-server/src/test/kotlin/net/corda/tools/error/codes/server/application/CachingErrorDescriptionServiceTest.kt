@@ -3,6 +3,7 @@ package net.corda.tools.error.codes.server.application
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.InvocationContext
+import net.corda.tools.error.codes.server.domain.PlatformEdition
 import net.corda.tools.error.codes.server.domain.ReleaseVersion
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
@@ -25,6 +26,7 @@ internal class CachingErrorDescriptionServiceTest {
             var lookupCalled = false
             val code = ErrorCode("1jwqa1d")
             val releaseVersion = ReleaseVersion(4, 3, 1)
+            val platformEdition = PlatformEdition.OpenSource
             val invocationContext = InvocationContext.newInstance()
             val retrieveCached = { errorCode: ErrorCode -> locationForCode(errorCode).also { assertThat(errorCode).isEqualTo(code) } }
             val lookup = { errorCode: ErrorCode, _: InvocationContext -> locationForCode(errorCode).also { lookupCalled = true } }
@@ -32,7 +34,7 @@ internal class CachingErrorDescriptionServiceTest {
 
             val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
 
-            service.use { it.descriptionLocationFor(code, releaseVersion, invocationContext).block() }
+            service.use { it.descriptionLocationFor(code, releaseVersion, platformEdition, invocationContext).block() }
 
             assertThat(lookupCalled).isFalse()
         }
@@ -43,6 +45,7 @@ internal class CachingErrorDescriptionServiceTest {
             var lookupCalled = false
             val code = ErrorCode("2kawqa1d")
             val releaseVersion = ReleaseVersion(4, 3, 1)
+            val platformEdition = PlatformEdition.Enterprise
             val invocationContext = InvocationContext.newInstance()
             val retrieveCached = { _: ErrorCode -> empty<Optional<out ErrorDescriptionLocation>>() }
             val lookup = { errorCode: ErrorCode, _: InvocationContext -> locationForCode(errorCode).also { lookupCalled = true }.also { assertThat(errorCode).isEqualTo(code) } }
@@ -50,7 +53,7 @@ internal class CachingErrorDescriptionServiceTest {
 
             val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
 
-            service.use { it.descriptionLocationFor(code, releaseVersion, invocationContext).block() }
+            service.use { it.descriptionLocationFor(code, releaseVersion, platformEdition, invocationContext).block() }
 
             assertThat(lookupCalled).isTrue()
         }
@@ -61,6 +64,7 @@ internal class CachingErrorDescriptionServiceTest {
             var addToCacheCalled = false
             val errorCode = ErrorCode("1jwqa")
             val releaseVersion = ReleaseVersion(4, 3, 1)
+            val platformEdition = PlatformEdition.Enterprise
             val invocationContext = InvocationContext.newInstance()
             var lookedUpLocation: ErrorDescriptionLocation? = null
 
@@ -70,7 +74,7 @@ internal class CachingErrorDescriptionServiceTest {
 
             val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
 
-            service.use { it.descriptionLocationFor(errorCode, releaseVersion, invocationContext).block() }
+            service.use { it.descriptionLocationFor(errorCode, releaseVersion, platformEdition, invocationContext).block() }
 
             assertThat(addToCacheCalled).isTrue()
         }
@@ -80,6 +84,7 @@ internal class CachingErrorDescriptionServiceTest {
 
             val errorCode = ErrorCode("1jwqa")
             val releaseVersion = ReleaseVersion(4, 3, 1)
+            val platformEdition = PlatformEdition.OpenSource
             val invocationContext = InvocationContext.newInstance()
 
             val retrieveCached = { _: ErrorCode -> empty<Optional<out ErrorDescriptionLocation>>() }
@@ -96,7 +101,7 @@ internal class CachingErrorDescriptionServiceTest {
                 assertThat(event.location).isNull()
             }.subscribe()
 
-            service.use { it.descriptionLocationFor(errorCode, releaseVersion, invocationContext).block() }
+            service.use { it.descriptionLocationFor(errorCode, releaseVersion, platformEdition, invocationContext).block() }
         }
     }
 

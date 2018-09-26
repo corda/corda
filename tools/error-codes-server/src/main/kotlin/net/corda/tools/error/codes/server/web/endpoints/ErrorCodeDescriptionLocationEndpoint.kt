@@ -11,6 +11,7 @@ import net.corda.tools.error.codes.server.commons.domain.validation.ValidationRe
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.InvocationContext
+import net.corda.tools.error.codes.server.domain.PlatformEdition
 import net.corda.tools.error.codes.server.domain.ReleaseVersion
 import net.corda.tools.error.codes.server.web.endpoints.template.ConfigurableEndpoint
 import net.corda.tools.error.codes.server.web.endpoints.template.EndpointConfigProvider
@@ -20,10 +21,11 @@ import javax.inject.Inject
 import javax.inject.Named
 
 @Named
-internal class ErrorCodeDescriptionLocationEndpoint @Inject constructor(configuration: ErrorCodeDescriptionLocationEndpoint.Configuration, @Application private val locateDescription: (ErrorCode, ReleaseVersion, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>) : ConfigurableEndpoint(configuration, setOf(HttpMethod.GET)) {
+internal class ErrorCodeDescriptionLocationEndpoint @Inject constructor(configuration: ErrorCodeDescriptionLocationEndpoint.Configuration, @Application private val locateDescription: (ErrorCode, ReleaseVersion, PlatformEdition, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>) : ConfigurableEndpoint(configuration, setOf(HttpMethod.GET)) {
 
     private companion object {
 
+        private const val PLATFORM_EDITION = "platform_edition"
         private const val RELEASE_VERSION = "release_version"
         private const val ERROR_CODE = "error_code"
     }
@@ -32,11 +34,14 @@ internal class ErrorCodeDescriptionLocationEndpoint @Inject constructor(configur
 
         serve(router.get(path)) { context ->
 
-            withPathParam(RELEASE_VERSION, ::parseReleaseVersion) { releaseVersion ->
+            withPathParam(PLATFORM_EDITION, ::platformEdition) { platformEdition ->
 
-                withPathParam(ERROR_CODE, ErrorCode.Valid::create) { errorCode ->
+                withPathParam(RELEASE_VERSION, ::releaseVersion) { releaseVersion ->
 
-                    locateDescription(errorCode, releaseVersion, context).thenIfPresent(this) { location -> response().end(location) }
+                    withPathParam(ERROR_CODE, ErrorCode.Valid::create) { errorCode ->
+
+                        locateDescription(errorCode, releaseVersion, platformEdition, context).thenIfPresent(this) { location -> response().end(location) }
+                    }
                 }
             }
         }
@@ -54,7 +59,7 @@ internal class ErrorCodeDescriptionLocationEndpoint @Inject constructor(configur
         return response.putHeader(HttpHeaderNames.LOCATION, uri.toASCIIString()).setStatusCode(HttpResponseStatus.TEMPORARY_REDIRECT.code())
     }
 
-    private fun parseReleaseVersion(rawValue: String): ValidationResult<ReleaseVersion> {
+    private fun releaseVersion(rawValue: String): ValidationResult<ReleaseVersion> {
 
         val rawParts = rawValue.split(ReleaseVersion.SEPARATOR)
         if (rawParts.size < 2 || rawParts.size > 3) {
@@ -65,6 +70,15 @@ internal class ErrorCodeDescriptionLocationEndpoint @Inject constructor(configur
         val patch = (if (rawParts.size == 3) rawParts[2] else "0").toIntOrNull() ?: return ValidationResult.invalid(setOf("Patch release version part should be a non-negative integer."))
 
         return ReleaseVersion.Valid.create(major, minor, patch)
+    }
+
+    private fun platformEdition(rawValue: String): ValidationResult<PlatformEdition> {
+
+        return when (rawValue) {
+            "OS" -> ValidationResult.valid(PlatformEdition.OpenSource)
+            "ENT" -> ValidationResult.valid(PlatformEdition.Enterprise)
+            else -> ValidationResult.invalid(setOf("Invalid platform edition path parameter. Valid values are [\"OS\", \"ENT\"]."))
+        }
     }
 
     interface Configuration : ConfigurableEndpoint.Configuration
