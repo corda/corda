@@ -21,6 +21,13 @@ class CordappInfoResolverTest {
         assertEquals(defaultTargetVersion, returnCallingTargetVersion())
     }
 
+    @Test()
+    fun `When more than one cordapp is registered for the same class, the resolver returns null`() {
+        CordappInfoResolver.register(listOf(javaClass.name), CordappImpl.Info("test", "test", "2", 3, 222))
+        CordappInfoResolver.register(listOf(javaClass.name), CordappImpl.Info("test1", "test1", "1", 2, 456))
+        assertEquals(0, returnCallingTargetVersion())
+
+    }
     private fun returnCallingTargetVersion(): Int {
         return CordappInfoResolver.getCorDappInfo()?.targetPlatformVersion ?: 0
     }
