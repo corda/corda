@@ -70,24 +70,22 @@ internal class ErrorCodeDescriptionLocationContractTest {
 
     private fun performRequestWithStubbedValue(errorCodeForServer: ErrorCode, locationReturned: Mono<Optional<out ErrorDescriptionLocation>>): Mono<HttpResponse<Buffer>> {
 
-        val vertx = Vertx.vertx()
         errorCode = errorCodeForServer
         location = locationReturned
+
+        val vertx = Vertx.vertx()
+        val client = WebClient.create(vertx, WebClientOptions().setDefaultHost("localhost").setDefaultPort(webServer.options.port.value))
+
         val promise = MonoProcessor.create<HttpResponse<Buffer>>()
 
-        val client = WebClient.create(vertx, WebClientOptions().setDefaultHost("localhost").setDefaultPort(webServer.options.port.value))
         client.get("/errors/${errorCodeForServer.value}").followRedirects(false).send { call ->
             if (call.succeeded()) {
                 promise.onNext(call.result())
-                // TODO sollecitom use `use()` here
-                client.close()
-                vertx.close()
             } else {
                 promise.onError(call.cause())
-                // TODO sollecitom use `use()` here
-                client.close()
-                vertx.close()
             }
+            client.close()
+            vertx.close()
         }
         return promise
     }
