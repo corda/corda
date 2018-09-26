@@ -20,6 +20,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.User
+import org.apache.commons.lang.SystemUtils
 import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Before
@@ -145,6 +146,11 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 }
 
 class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo) : Node(configuration, versionInfo, false) {
+
+    override fun start() : NodeInfo {
+        check(isValidJavaVersion()) { "You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8." }
+        return super.start()
+    }
 
     override val rxIoScheduler get() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
 }
