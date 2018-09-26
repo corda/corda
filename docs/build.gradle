@@ -21,7 +21,7 @@ def internalPackagePrefixes(sourceDirs) {
 ext {
     // TODO: Add '../client/jfx/src/main/kotlin' and '../client/mock/src/main/kotlin' if we decide to make them into public API
     dokkaSourceDirs = files('../core/src/main/kotlin', '../client/rpc/src/main/kotlin', '../finance/src/main/kotlin', '../client/jackson/src/main/kotlin',
-                            '../testing/test-utils/src/main/kotlin', '../testing/node-driver/src/main/kotlin')
+            '../testing/test-utils/src/main/kotlin', '../testing/node-driver/src/main/kotlin')
     internalPackagePrefixes = internalPackagePrefixes(dokkaSourceDirs)
 }
 
@@ -62,10 +62,16 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
 task buildDocs(dependsOn: ['apidocs', 'makeDocs'])
 task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
 
-task makeDocs(type: Exec, dependsOn: ['installDocsiteRequirements']) {
-    // TODO: Non-msys Windows script
-    commandLine 'cmd', '/c', 'bash make-docsite.sh' // Windows
-    commandLine 'bash', './make-docsite.sh' // Linux
+task makeDocs(dependsOn: ['installDocsiteRequirements', 'makeHtmlDocs', 'makePdfDocs'])
+
+task makeHtmlDocs(type: Exec, dependsOn: ['installDocsiteRequirements']) {
+    commandLine 'cmd', '/c', 'bash make-docsite-html.sh' // Windows
+    commandLine 'bash', './make-docsite-html.sh' // Linux
+}
+
+task makePdfDocs(type: Exec, dependsOn: ['installDocsiteRequirements']) {
+    commandLine 'cmd', '/c', 'bash make-docsite-pdf.sh' // Windows
+    commandLine 'bash', './make-docsite-pdf.sh' // Linux
 }
 
 task installDocsiteRequirements(type: Exec) {
