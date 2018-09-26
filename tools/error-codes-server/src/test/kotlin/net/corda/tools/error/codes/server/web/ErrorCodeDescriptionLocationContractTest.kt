@@ -79,6 +79,7 @@ internal class ErrorCodeDescriptionLocationContractTest {
         val promise = MonoProcessor.create<HttpResponse<Buffer>>()
 
         client.get(errorCodeForServer.toPath()).followRedirects(false).send { call ->
+
             if (call.succeeded()) {
                 promise.onNext(call.result())
             } else {
