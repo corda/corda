@@ -33,6 +33,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         private val fileWatcher: NodeInfoWatcher,
                         private val networkMapClient: NetworkMapClient?,
                         private val currentParametersHash: SecureHash,
+                        private val ourNodeInfoHash: SecureHash?,
                         private val baseDirectory: Path
 ) : AutoCloseable {
     companion object {
@@ -66,8 +67,10 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                     networkMapCache.addNode(it.nodeInfo)
                 }
                 is NodeInfoUpdate.Remove -> {
-                    val nodeInfo = networkMapCache.getNodeByHash(it.hash)
-                    nodeInfo?.let { networkMapCache.removeNode(it) }
+                    if (it.hash != ourNodeInfoHash) {
+                        val nodeInfo = networkMapCache.getNodeByHash(it.hash)
+                        nodeInfo?.let { networkMapCache.removeNode(it) }
+                    }
                 }
             }
         }
@@ -100,6 +103,13 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 
         val currentNodeHashes = networkMapCache.allNodeHashes
         val hashesFromNetworkMap = networkMap.nodeInfoHashes
+        (currentNodeHashes - hashesFromNetworkMap - fileWatcher.processedNodeInfoHashes)
+                .mapNotNull {
+                    if (it != ourNodeInfoHash) {
+                        networkMapCache.getNodeByHash(it)
+                    } else null
+                }.forEach(networkMapCache::removeNode)
+
         (hashesFromNetworkMap - currentNodeHashes).mapNotNull {
             // Download new node info from network map
             try {
@@ -113,11 +123,6 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             // Add new node info to the network map cache, these could be new node info or modification of node info for existing nodes.
             networkMapCache.addNode(it)
         }
-
-        // Remove node info from network map.
-        (currentNodeHashes - hashesFromNetworkMap - fileWatcher.processedNodeInfoHashes)
-                .mapNotNull(networkMapCache::getNodeByHash)
-                .forEach(networkMapCache::removeNode)
 
         return cacheTimeout
     }

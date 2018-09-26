@@ -24,6 +24,7 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.node.CordaClock
@@ -266,6 +267,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
                 networkMapClient,
                 networkParameteresReader.hash,
+                services.myInfo.serialize().hash,
                 configuration.baseDirectory)
         runOnStop += networkMapUpdater::close
 
