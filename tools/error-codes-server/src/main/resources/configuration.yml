@@ -9,7 +9,7 @@ configuration:
           enabled: true
         error_code:
           name: Error code description location
-          path: /errors/:error_code
+          path: /releases/:release_version/errors/:error_code
           enabled: true
   application:
     service:

@@ -12,6 +12,7 @@ import net.corda.tools.error.codes.server.commons.web.Port
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.InvocationContext
+import net.corda.tools.error.codes.server.domain.ReleaseVersion
 import net.corda.tools.error.codes.server.domain.annotations.Adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -43,14 +44,17 @@ internal class ErrorCodeDescriptionLocationContractTest {
         private var location: Mono<Optional<out ErrorDescriptionLocation>>? = null
     }
 
+    // TODO sollecitom add tests to cover for "closest" result.
+
     @Test
     @DirtiesContext
     fun found_location_is_returned_as_temporary_redirect() {
 
         val errorCode = ErrorCode("123jdazz")
+        val releaseVersion = ReleaseVersion(4, 3, 1)
         val location = ErrorDescriptionLocation.External(URI.create("https://thisisatest/boom"), errorCode)
 
-        val response = performRequestWithStubbedValue(errorCode, just(Optional.of(location))).block()!!
+        val response = performRequestWithStubbedValue(errorCode, releaseVersion, just(Optional.of(location))).block()!!
 
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TEMPORARY_REDIRECT.code())
         assertThat(response.headers()[HttpHeaderNames.LOCATION]).isEqualTo(location.uri.toASCIIString())
@@ -61,14 +65,15 @@ internal class ErrorCodeDescriptionLocationContractTest {
     fun absent_location_results_in_not_found() {
 
         val errorCode = ErrorCode("123jdazz")
+        val releaseVersion = ReleaseVersion(4, 3, 1)
 
-        val response = performRequestWithStubbedValue(errorCode, empty()).block()!!
+        val response = performRequestWithStubbedValue(errorCode, releaseVersion, empty()).block()!!
 
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code())
         assertThat(response.headers()[HttpHeaderNames.LOCATION]).isNull()
     }
 
-    private fun performRequestWithStubbedValue(errorCodeForServer: ErrorCode, locationReturned: Mono<Optional<out ErrorDescriptionLocation>>): Mono<HttpResponse<Buffer>> {
+    private fun performRequestWithStubbedValue(errorCodeForServer: ErrorCode, releaseVersion: ReleaseVersion, locationReturned: Mono<Optional<out ErrorDescriptionLocation>>): Mono<HttpResponse<Buffer>> {
 
         errorCode = errorCodeForServer
         location = locationReturned
@@ -78,7 +83,7 @@ internal class ErrorCodeDescriptionLocationContractTest {
 
         val promise = MonoProcessor.create<HttpResponse<Buffer>>()
 
-        client.get(errorCodeForServer.toPath()).followRedirects(false).send { call ->
+        client.get(path(errorCodeForServer, releaseVersion)).followRedirects(false).send { call ->
 
             if (call.succeeded()) {
                 promise.onNext(call.result())
@@ -92,7 +97,7 @@ internal class ErrorCodeDescriptionLocationContractTest {
     }
 
     // This should stay hard-coded, rather than read from the actual configuration, to avoid breaking the contract without breaking the test.
-    private fun ErrorCode.toPath(): String = "/errors/$value"
+    private fun path(errorCode: ErrorCode, releaseVersion: ReleaseVersion): String = "/releases/${releaseVersion.description()}/errors/${errorCode.value}"
 
     private fun WebServer.client(vertx: Vertx): WebClient = WebClient.create(vertx, WebClientOptions().setDefaultHost("localhost").setDefaultPort(options.port.value))
 
