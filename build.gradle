@@ -120,6 +120,7 @@ plugins {
 
     // Add the shadow plugin to the plugins classpath for the entire project.
     id 'com.github.johnrengelman.shadow' version '2.0.4' apply false
+    id "com.gradle.build-scan" version "1.16"
 }
 
 ext {
@@ -203,6 +204,12 @@ allprojects {
 
         if (project.path.startsWith(':experimental') && System.getProperty("experimental.test.enable") == null) {
             enabled = false
+        }
+
+        // Required to use Gradle build cache (until Gradle 5.0 is released with default value of "append" set to false)
+        // See https://github.com/gradle/gradle/issues/5269 and https://github.com/gradle/gradle/pull/6419
+        extensions.configure(TypeOf.typeOf(JacocoTaskExtension)) { ex ->
+            ex.append = false
         }
     }
 
@@ -437,4 +444,9 @@ if (file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BU
 wrapper {
     gradleVersion = "4.10.1"
     distributionType = Wrapper.DistributionType.ALL
+}
+
+buildScan {
+    termsOfServiceUrl = 'https://gradle.com/terms-of-service'
+    termsOfServiceAgree = 'yes'
 }
