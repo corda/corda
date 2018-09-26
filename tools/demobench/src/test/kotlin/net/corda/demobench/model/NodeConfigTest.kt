@@ -4,7 +4,6 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.config.NodeRpcSettings
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
@@ -91,8 +90,7 @@ class NodeConfigTest {
                 p2pAddress = localPort(p2pPort),
                 rpcSettings = NodeRpcSettings(
                         address = localPort(rpcPort),
-                        adminAddress = localPort(rpcAdminPort),
-                        ssl = null
+                        adminAddress = localPort(rpcAdminPort)
                 ),
                 webAddress = localPort(webPort),
                 h2port = h2port,
