@@ -74,7 +74,7 @@ internal class ErrorCodeDescriptionLocationContractTest {
         location = locationReturned
 
         val vertx = Vertx.vertx()
-        val client = WebClient.create(vertx, WebClientOptions().setDefaultHost("localhost").setDefaultPort(webServer.options.port.value))
+        val client = webServer.client(vertx)
 
         val promise = MonoProcessor.create<HttpResponse<Buffer>>()
 
@@ -92,6 +92,8 @@ internal class ErrorCodeDescriptionLocationContractTest {
 
     // This should stay hard-coded, rather than read from the actual configuration, to avoid breaking the contract without breaking the test.
     private fun ErrorCode.toPath(): String = "/errors/$value"
+
+    private fun WebServer.client(vertx: Vertx): WebClient = WebClient.create(vertx, WebClientOptions().setDefaultHost("localhost").setDefaultPort(options.port.value))
 
     @ComponentScan(basePackageClasses = [ErrorCodesWebApplication::class], excludeFilters = [ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [ErrorCodesWebApplication::class]), ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [WebServer.Options::class]), ComponentScan.Filter(type = FilterType.ANNOTATION, classes = [Adapter::class])])
     @SpringBootApplication
