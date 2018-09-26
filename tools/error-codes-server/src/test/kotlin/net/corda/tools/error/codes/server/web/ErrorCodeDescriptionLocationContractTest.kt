@@ -45,8 +45,6 @@ internal class ErrorCodeDescriptionLocationContractTest {
         private var location: Mono<Optional<out ErrorDescriptionLocation>>? = null
     }
 
-    // TODO sollecitom add tests to cover for "closest" result.
-
     @Test
     @DirtiesContext
     fun found_location_is_returned_as_temporary_redirect() {

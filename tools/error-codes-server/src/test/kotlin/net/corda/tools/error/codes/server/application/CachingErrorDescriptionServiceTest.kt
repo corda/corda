@@ -17,6 +17,8 @@ import java.util.*
 
 internal class CachingErrorDescriptionServiceTest {
 
+    // TODO sollecitom add tests to cover for "closest" result.
+
     @Nested
     internal inner class DescriptionLocationFor {
 
