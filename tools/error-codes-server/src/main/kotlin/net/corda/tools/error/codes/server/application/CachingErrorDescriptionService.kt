@@ -26,6 +26,7 @@ internal class CachingErrorDescriptionService @Inject constructor(@Adapter priva
         private val logger = loggerFor<CachingErrorDescriptionService>()
     }
 
+    // TODO sollecitom perhaps return a StackOverflow search query URL instead of not found on absent.
     override fun descriptionLocationFor(errorCode: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
 
         // TODO sollecitom create application level coordinates, including edition, version and error code, and use those coordinates for caching.
