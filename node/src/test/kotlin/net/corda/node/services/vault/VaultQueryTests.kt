@@ -529,6 +529,70 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     @Test
+    fun `query by contract states constraint type and data`() {
+        database.transaction {
+            // insert states with different constraint types
+            vaultFiller.fillWithSomeTestLinearStates(1).states.first().state.constraint
+            val alwaysAcceptConstraint = vaultFiller.fillWithSomeTestLinearStates(1, constraint = AlwaysAcceptAttachmentConstraint).states.first().state.constraint
+            vaultFiller.fillWithSomeTestLinearStates(1, constraint = WhitelistedByZoneAttachmentConstraint)
+            // hash constraint
+            val linearStateHash = vaultFiller.fillWithSomeTestLinearStates(1, constraint = HashAttachmentConstraint(SecureHash.randomSHA256()))
+            val constraintHash = linearStateHash.states.first().state.constraint as HashAttachmentConstraint
+            // signature constraint (single key)
+            val linearStateSignature = vaultFiller.fillWithSomeTestLinearStates(1, constraint = SignatureAttachmentConstraint(alice.publicKey))
+            val constraintSignature = linearStateSignature.states.first().state.constraint as SignatureAttachmentConstraint
+            // signature constraint (composite key)
+            val compositeKey = CompositeKey.Builder().addKeys(alice.publicKey, bob.publicKey, charlie.publicKey, bankOfCorda.publicKey, bigCorp.publicKey, megaCorp.publicKey, miniCorp.publicKey, cashNotary.publicKey, dummyNotary.publicKey, dummyCashIssuer.publicKey).build()
+            val linearStateSignatureCompositeKey = vaultFiller.fillWithSomeTestLinearStates(1, constraint = SignatureAttachmentConstraint(compositeKey))
+            val constraintSignatureCompositeKey = linearStateSignatureCompositeKey.states.first().state.constraint as SignatureAttachmentConstraint
+
+            // default Constraint Type is ALL
+            val results = vaultService.queryBy<LinearState>()
+            assertThat(results.states).hasSize(6)
+
+            // search for states with AlwaysAcceptAttachmentConstraint
+            val constraintCriteria1 = VaultQueryCriteria(constraints = setOf(Vault.ConstraintInfo(AlwaysAcceptAttachmentConstraint)))
+            val constraintResults1 = vaultService.queryBy<LinearState>(constraintCriteria1)
+            assertThat(constraintResults1.states).hasSize(1)
+            assertThat(constraintResults1.states.first().state.constraint).isEqualTo(alwaysAcceptConstraint)
+
+            // search for states for a specific HashAttachmentConstraint
+            val constraintsCriteria2 = VaultQueryCriteria(constraints = setOf(Vault.ConstraintInfo(constraintHash)))
+            val constraintResults2 = vaultService.queryBy<LinearState>(constraintsCriteria2)
+            assertThat(constraintResults2.states).hasSize(1)
+            assertThat(constraintResults2.states.first().state.constraint).isEqualTo(constraintHash)
+
+            // search for states with a specific SignatureAttachmentConstraint constraint
+            val constraintCriteria3 = VaultQueryCriteria(constraints = setOf(Vault.ConstraintInfo(constraintSignatureCompositeKey)))
+            val constraintResults3 = vaultService.queryBy<LinearState>(constraintCriteria3)
+            assertThat(constraintResults3.states).hasSize(1)
+            assertThat(constraintResults3.states.first().state.constraint).isEqualTo(constraintSignatureCompositeKey)
+
+            // search for states for given set of mixed constraint types
+            // DOCSTART VaultQueryExample31
+            val constraintCriteria = VaultQueryCriteria(constraints = setOf(Vault.ConstraintInfo(constraintSignature),
+                    Vault.ConstraintInfo(constraintSignatureCompositeKey), Vault.ConstraintInfo(constraintHash)))
+            val constraintResults = vaultService.queryBy<LinearState>(constraintCriteria)
+            // DOCEND VaultQueryExample31
+            assertThat(constraintResults.states).hasSize(3)
+            assertThat(constraintResults.states.map { it.state.constraint }).containsAll(listOf(constraintHash, constraintSignature, constraintSignatureCompositeKey))
+
+            // exercise enriched query
+
+            // Base criteria
+            val baseCriteria = VaultQueryCriteria(constraints = setOf(Vault.ConstraintInfo(AlwaysAcceptAttachmentConstraint)))
+
+            // Enrich and override QueryCriteria with additional default attributes
+            val enrichedCriteria = VaultQueryCriteria(constraints = setOf(Vault.ConstraintInfo(constraintSignature)))
+
+            // Execute query
+            val enrichedResults = services.vaultService.queryBy<LinearState>(baseCriteria and enrichedCriteria).states
+            assertThat(enrichedResults).hasSize(2)
+            assertThat(enrichedResults.map { it.state.constraint }).containsAll(listOf(constraintSignature, alwaysAcceptConstraint))
+        }
+    }
+
+    @Test
     fun `consumed states`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)

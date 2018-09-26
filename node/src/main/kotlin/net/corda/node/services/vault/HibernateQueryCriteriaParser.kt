@@ -225,6 +225,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
     private val rootEntities = mutableMapOf<Class<out PersistentState>, Root<*>>(Pair(VaultSchemaV1.VaultStates::class.java, vaultStates))
     private val aggregateExpressions = mutableListOf<Expression<*>>()
     private val commonPredicates = mutableMapOf<Pair<String, Operator>, Predicate>()   // schema attribute Name, operator -> predicate
+    private val constraintPredicates = mutableSetOf<Predicate>()
 
     var stateTypes: Vault.StateStatus = Vault.StateStatus.UNCONSUMED
 
@@ -508,7 +509,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 else
                     aggregateExpressions
         criteriaQuery.multiselect(selections)
-        val combinedPredicates = commonPredicates.values.plus(predicateSet)
+        val combinedPredicates = commonPredicates.values.plus(predicateSet).plus(constraintPredicates)
         criteriaQuery.where(*combinedPredicates.toTypedArray())
 
         return predicateSet
@@ -546,7 +547,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             }
         }
 
-        // contract constraint information
+        // contract constraint types
         if (criteria.constraintTypes.isNotEmpty()) {
             val predicateID = Pair(VaultSchemaV1.VaultStates::constraintType.name, IN)
             if (commonPredicates.containsKey(predicateID)) {
@@ -560,18 +561,21 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             }
         }
 
-        // contract state types
-        val contractStateTypes = deriveContractStateTypes(criteria.contractStateTypes)
-        if (contractStateTypes.isNotEmpty()) {
-            val predicateID = Pair(VaultSchemaV1.VaultStates::contractStateClassName.name, IN)
-            if (commonPredicates.containsKey(predicateID)) {
-                val existingTypes = (commonPredicates[predicateID]!!.expressions[0] as InPredicate<*>).values.map { (it as LiteralExpression).literal }.toSet()
-                if (existingTypes != contractStateTypes) {
-                    log.warn("Enriching previous attribute [${VaultSchemaV1.VaultStates::contractStateClassName.name}] values [$existingTypes] with [$contractStateTypes]")
-                    commonPredicates.replace(predicateID, criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractStateTypes.plus(existingTypes))))
+        // contract constraint information (type and data)
+        if (criteria.constraints.isNotEmpty()) {
+            criteria.constraints.forEach { constraint ->
+                val predicateConstraintType = criteriaBuilder.equal(vaultStates.get<Vault.ConstraintInfo>(VaultSchemaV1.VaultStates::constraintType.name), constraint.type())
+                if (constraint.data() != null) {
+                    val predicateConstraintData = criteriaBuilder.equal(vaultStates.get<Vault.ConstraintInfo>(VaultSchemaV1.VaultStates::constraintData.name), constraint.data())
+                    val compositePredicate = criteriaBuilder.and(predicateConstraintType, predicateConstraintData)
+                    if (constraintPredicates.isNotEmpty()) {
+                        val previousPredicate = constraintPredicates.last()
+                        constraintPredicates.clear()
+                        constraintPredicates.add(criteriaBuilder.or(previousPredicate, compositePredicate))
+                    }
+                    else constraintPredicates.add(compositePredicate)
                 }
-            } else {
-                commonPredicates[predicateID] = criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractStateTypes))
+                else constraintPredicates.add(criteriaBuilder.or(predicateConstraintType))
             }
         }
 
