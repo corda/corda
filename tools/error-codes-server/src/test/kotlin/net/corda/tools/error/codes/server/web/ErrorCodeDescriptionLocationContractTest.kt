@@ -22,15 +22,17 @@ import org.springframework.context.annotation.FilterType
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.junit.jupiter.SpringJUnitJupiterConfig
 import reactor.core.publisher.Mono
+import reactor.core.publisher.Mono.empty
+import reactor.core.publisher.Mono.just
+import reactor.core.publisher.MonoProcessor
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.URI
 import java.util.*
-import java.util.concurrent.CountDownLatch
 import javax.inject.Inject
 
-@SpringJUnitJupiterConfig(PresentLocationContractTest.Configuration::class)
-internal class PresentLocationContractTest {
+@SpringJUnitJupiterConfig(ErrorCodeDescriptionLocationContractTest.Configuration::class)
+internal class ErrorCodeDescriptionLocationContractTest {
 
     @Inject
     private lateinit var webServer: WebServer
@@ -47,11 +49,11 @@ internal class PresentLocationContractTest {
 
         val errorCode = ErrorCode("123jdazz")
         val location = ErrorDescriptionLocation.External(URI.create("https://thisisatest/boom"), errorCode)
-        checkContract(errorCode, Mono.just(Optional.of(location))) { response ->
 
-            assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TEMPORARY_REDIRECT.code())
-            assertThat(response.headers()[HttpHeaderNames.LOCATION]).isEqualTo(location.uri.toASCIIString())
-        }
+        val response = performRequestWithStubbedValue(errorCode, just(Optional.of(location))).block()!!
+
+        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TEMPORARY_REDIRECT.code())
+        assertThat(response.headers()[HttpHeaderNames.LOCATION]).isEqualTo(location.uri.toASCIIString())
     }
 
     @Test
@@ -59,39 +61,35 @@ internal class PresentLocationContractTest {
     fun absent_location_results_in_not_found() {
 
         val errorCode = ErrorCode("123jdazz")
-        checkContract(errorCode, Mono.empty()) { response ->
 
-            assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code())
-            assertThat(response.headers()[HttpHeaderNames.LOCATION]).isNull()
-        }
+        val response = performRequestWithStubbedValue(errorCode, empty()).block()!!
+
+        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code())
+        assertThat(response.headers()[HttpHeaderNames.LOCATION]).isNull()
     }
 
-    private fun checkContract(errorCodeForServer: ErrorCode, locationReturned: Mono<Optional<out ErrorDescriptionLocation>>, assertResponse: (HttpResponse<Buffer>) -> Unit) {
+    private fun performRequestWithStubbedValue(errorCodeForServer: ErrorCode, locationReturned: Mono<Optional<out ErrorDescriptionLocation>>): Mono<HttpResponse<Buffer>> {
 
         val vertx = Vertx.vertx()
-        val latch = CountDownLatch(1)
         errorCode = errorCodeForServer
         location = locationReturned
-        try {
-            // TODO sollecitom perhaps consider a blocking web client...
-            val client = WebClient.create(vertx, WebClientOptions().setDefaultHost("localhost").setDefaultPort(webServer.options.port.value))
-            client.get("/errors/${errorCodeForServer.value}").followRedirects(false).send { call ->
-                if (call.succeeded()) {
-                    val response = call.result()
-                    assertResponse.invoke(response)
-                    latch.countDown()
-                } else {
-                    // TODO sollecitom check this.
-                    throw call.cause()
-                }
+        val promise = MonoProcessor.create<HttpResponse<Buffer>>()
+
+        val client = WebClient.create(vertx, WebClientOptions().setDefaultHost("localhost").setDefaultPort(webServer.options.port.value))
+        client.get("/errors/${errorCodeForServer.value}").followRedirects(false).send { call ->
+            if (call.succeeded()) {
+                promise.onNext(call.result())
+                // TODO sollecitom use `use()` here
+                client.close()
+                vertx.close()
+            } else {
+                promise.onError(call.cause())
+                // TODO sollecitom use `use()` here
+                client.close()
+                vertx.close()
             }
-            latch.await()
-            // TODO sollecitom use `use()` here
-            client.close()
-        } finally {
-            latch.countDown()
-            vertx.close()
         }
+        return promise
     }
 
     @ComponentScan(basePackageClasses = [ErrorCodesWebApplication::class], excludeFilters = [ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [ErrorCodesWebApplication::class]), ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [WebServer.Options::class]), ComponentScan.Filter(type = FilterType.ANNOTATION, classes = [Adapter::class])])

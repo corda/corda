@@ -8,7 +8,7 @@ configuration:
           path: /health
           enabled: true
         error_code:
-          name: Error code
+          name: Error code description location
           path: /errors/:error_code
           enabled: true
   application:

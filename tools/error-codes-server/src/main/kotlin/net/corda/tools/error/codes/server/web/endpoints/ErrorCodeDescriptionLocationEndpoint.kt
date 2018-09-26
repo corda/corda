@@ -18,7 +18,7 @@ import javax.inject.Inject
 import javax.inject.Named
 
 @Named
-internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEndpoint.Configuration, @Application private val locateDescription: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>) : ConfigurableEndpoint(configuration, setOf(HttpMethod.GET)) {
+internal class ErrorCodeDescriptionLocationEndpoint @Inject constructor(configuration: ErrorCodeDescriptionLocationEndpoint.Configuration, @Application private val locateDescription: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>) : ConfigurableEndpoint(configuration, setOf(HttpMethod.GET)) {
 
     private companion object {
 
@@ -51,7 +51,7 @@ internal class ErrorCodeEndpoint @Inject constructor(configuration: ErrorCodeEnd
     interface Configuration : ConfigurableEndpoint.Configuration
 
     @Named
-    internal class ErrorCodeConfigProvider @Inject constructor(applyConfigStandards: (Config) -> Config) : ErrorCodeEndpoint.Configuration, EndpointConfigProvider(CONFIGURATION_SECTION_PATH, applyConfigStandards) {
+    internal class ErrorCodeConfigProvider @Inject constructor(applyConfigStandards: (Config) -> Config) : ErrorCodeDescriptionLocationEndpoint.Configuration, EndpointConfigProvider(CONFIGURATION_SECTION_PATH, applyConfigStandards) {
 
         private companion object {
 
