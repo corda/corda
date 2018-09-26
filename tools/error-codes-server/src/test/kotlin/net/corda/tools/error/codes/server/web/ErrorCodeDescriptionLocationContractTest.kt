@@ -8,6 +8,7 @@ import io.vertx.ext.web.client.HttpResponse
 import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
 import net.corda.tools.error.codes.server.ErrorCodesWebApplication
+import net.corda.tools.error.codes.server.application.ErrorCoordinates
 import net.corda.tools.error.codes.server.commons.web.Port
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
@@ -41,7 +42,7 @@ internal class ErrorCodeDescriptionLocationContractTest {
 
     private companion object {
 
-        private var errorCode: ErrorCode? = null
+        private var errorCoordinates: ErrorCoordinates? = null
         private var location: Mono<Optional<out ErrorDescriptionLocation>>? = null
     }
 
@@ -49,13 +50,11 @@ internal class ErrorCodeDescriptionLocationContractTest {
     @DirtiesContext
     fun found_location_is_returned_as_temporary_redirect() {
 
-        val errorCode = ErrorCode("123jdazz")
-        val releaseVersion = ReleaseVersion(4, 3, 1)
-        val platformEdition = PlatformEdition.OpenSource
+        val errorCoordinates = ErrorCoordinates(ErrorCode("123jdazz"), ReleaseVersion(4, 3, 1), PlatformEdition.OpenSource)
 
-        val location = ErrorDescriptionLocation.External(URI.create("https://thisisatest/boom"), errorCode)
+        val location = ErrorDescriptionLocation.External(URI.create("https://thisisatest/boom"), errorCoordinates.code)
 
-        val response = performRequestWithStubbedValue(errorCode, releaseVersion, platformEdition, just(Optional.of(location))).block()!!
+        val response = performRequestWithStubbedValue(errorCoordinates, just(Optional.of(location))).block()!!
 
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TEMPORARY_REDIRECT.code())
         assertThat(response.headers()[HttpHeaderNames.LOCATION]).isEqualTo(location.uri.toASCIIString())
@@ -65,19 +64,17 @@ internal class ErrorCodeDescriptionLocationContractTest {
     @DirtiesContext
     fun absent_location_results_in_not_found() {
 
-        val errorCode = ErrorCode("123jdazz")
-        val releaseVersion = ReleaseVersion(4, 3, 1)
-        val platformEdition = PlatformEdition.Enterprise
+        val errorCoordinates = ErrorCoordinates(ErrorCode("123jdazz"), ReleaseVersion(4, 3, 1), PlatformEdition.Enterprise)
 
-        val response = performRequestWithStubbedValue(errorCode, releaseVersion, platformEdition, empty()).block()!!
+        val response = performRequestWithStubbedValue(errorCoordinates, empty()).block()!!
 
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code())
         assertThat(response.headers()[HttpHeaderNames.LOCATION]).isNull()
     }
 
-    private fun performRequestWithStubbedValue(errorCodeForServer: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition, locationReturned: Mono<Optional<out ErrorDescriptionLocation>>): Mono<HttpResponse<Buffer>> {
+    private fun performRequestWithStubbedValue(errorCoordinatesForServer: ErrorCoordinates, locationReturned: Mono<Optional<out ErrorDescriptionLocation>>): Mono<HttpResponse<Buffer>> {
 
-        errorCode = errorCodeForServer
+        errorCoordinates = errorCoordinatesForServer
         location = locationReturned
 
         val vertx = Vertx.vertx()
@@ -85,7 +82,7 @@ internal class ErrorCodeDescriptionLocationContractTest {
 
         val promise = MonoProcessor.create<HttpResponse<Buffer>>()
 
-        client.get(path(errorCodeForServer, releaseVersion, platformEdition)).followRedirects(false).send { call ->
+        client.get(path(errorCoordinatesForServer)).followRedirects(false).send { call ->
 
             if (call.succeeded()) {
                 promise.onNext(call.result())
@@ -99,7 +96,7 @@ internal class ErrorCodeDescriptionLocationContractTest {
     }
 
     // This should stay hard-coded, rather than read from the actual configuration, to avoid breaking the contract without breaking the test.
-    private fun path(errorCode: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition): String = "/editions/${platformEdition.description}/releases/${releaseVersion.description()}/errors/${errorCode.value}"
+    private fun path(coords: ErrorCoordinates): String = "/editions/${coords.platformEdition.description}/releases/${coords.releaseVersion.description()}/errors/${coords.code.value}"
 
     private fun WebServer.client(vertx: Vertx): WebClient = WebClient.create(vertx, WebClientOptions().setDefaultHost("localhost").setDefaultPort(options.port.value))
 

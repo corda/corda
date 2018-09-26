@@ -18,7 +18,7 @@ import javax.inject.Named
 
 @Application
 @Named
-internal class CachingErrorDescriptionService @Inject constructor(@Adapter private val lookup: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>, private val retrieveCached: (ErrorCode) -> Mono<Optional<out ErrorDescriptionLocation>>, private val addToCache: (ErrorCode, ErrorDescriptionLocation) -> Mono<Unit>, @Named(CachingErrorDescriptionService.eventSourceQualifier) override val source: PublishingEventSource<ErrorDescriptionService.Event> = CachingErrorDescriptionService.EventSourceBean()) : ErrorDescriptionService {
+internal class CachingErrorDescriptionService @Inject constructor(@Adapter private val lookup: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>, private val retrieveCached: (ErrorCoordinates) -> Mono<Optional<out ErrorDescriptionLocation>>, private val addToCache: (ErrorCoordinates, ErrorDescriptionLocation) -> Mono<Unit>, @Named(CachingErrorDescriptionService.eventSourceQualifier) override val source: PublishingEventSource<ErrorDescriptionService.Event> = CachingErrorDescriptionService.EventSourceBean()) : ErrorDescriptionService {
 
     private companion object {
 
@@ -29,11 +29,12 @@ internal class CachingErrorDescriptionService @Inject constructor(@Adapter priva
     // TODO sollecitom perhaps return a StackOverflow search query URL instead of not found on absent.
     override fun descriptionLocationFor(errorCode: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
 
-        // TODO sollecitom create application level coordinates, including edition, version and error code, and use those coordinates for caching.
         // TODO sollecitom remove errorCode from ErrorDescriptionLocation.
         // TODO sollecitom add ErrorDescription with ErrorDescriptionLocation field, plus ErrorCode, ReleaseVersion and PlatformEdition.
         // TODO sollecitom return multiple ErrorDescription from `lookup`, as a Flux, and use the "closest" in terms of ReleaseVersion and PlatformEdition here.
-        return retrieveCached(errorCode).orIfAbsent { lookup(errorCode, invocationContext).andIfPresent { addToCache(errorCode, it) } }.thenPublish(errorCode, releaseVersion, platformEdition, invocationContext)
+        val coordinates = ErrorCoordinates(errorCode, releaseVersion, platformEdition)
+
+        return coordinates.let(retrieveCached).orIfAbsent { lookup(coordinates.code, invocationContext).andIfPresent { addToCache(coordinates, it) } }.thenPublish(coordinates, invocationContext)
     }
 
     @PreDestroy
@@ -53,9 +54,9 @@ internal class CachingErrorDescriptionService @Inject constructor(@Adapter priva
         return filter(Optional<*>::isPresent).switchIfEmpty(defer(action))
     }
 
-    private fun Mono<Optional<out ErrorDescriptionLocation>>.thenPublish(errorCode: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
+    private fun Mono<Optional<out ErrorDescriptionLocation>>.thenPublish(coordinates: ErrorCoordinates, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
 
-        return doOnSuccess { location -> completed(location?.orElse(null), errorCode, releaseVersion, platformEdition, invocationContext)?.let(source::publish) }
+        return doOnSuccess { location -> completed(location?.orElse(null), coordinates.code, coordinates.releaseVersion, coordinates.platformEdition, invocationContext)?.let(source::publish) }
     }
 
     private fun completed(location: ErrorDescriptionLocation?, errorCode: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition, invocationContext: InvocationContext): ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor? {
