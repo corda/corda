@@ -78,7 +78,7 @@ internal class ErrorCodeDescriptionLocationContractTest {
 
         val promise = MonoProcessor.create<HttpResponse<Buffer>>()
 
-        client.get("/errors/${errorCodeForServer.value}").followRedirects(false).send { call ->
+        client.get(errorCodeForServer.toPath()).followRedirects(false).send { call ->
             if (call.succeeded()) {
                 promise.onNext(call.result())
             } else {
@@ -89,6 +89,9 @@ internal class ErrorCodeDescriptionLocationContractTest {
         }
         return promise
     }
+
+    // This should stay hard-coded, rather than read from the actual configuration, to avoid breaking the contract without breaking the test.
+    private fun ErrorCode.toPath(): String = "/errors/$value"
 
     @ComponentScan(basePackageClasses = [ErrorCodesWebApplication::class], excludeFilters = [ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [ErrorCodesWebApplication::class]), ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [WebServer.Options::class]), ComponentScan.Filter(type = FilterType.ANNOTATION, classes = [Adapter::class])])
     @SpringBootApplication
