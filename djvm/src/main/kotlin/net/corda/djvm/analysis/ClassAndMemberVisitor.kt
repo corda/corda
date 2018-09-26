@@ -301,7 +301,7 @@ open class ClassAndMemberVisitor(
                     signature,
                     derivedMember.exceptions.toTypedArray()
                 )?.let { targetVisitor ->
-                    MethodVisitorImpl(targetVisitor, derivedMember.body)
+                    MethodVisitorImpl(targetVisitor, derivedMember)
                 }
             } else {
                 null
@@ -350,7 +350,7 @@ open class ClassAndMemberVisitor(
      */
     private inner class MethodVisitorImpl(
             targetVisitor: MethodVisitor,
-            private val bodies: List<MethodBody>
+            private val method: Member
     ) : MethodVisitor(API_VERSION, targetVisitor) {
 
         /**
@@ -384,8 +384,8 @@ open class ClassAndMemberVisitor(
          * has no existing code.
          */
         override fun visitCode() {
-            super.visitCode()
             tryReplaceMethodBody()
+            super.visitCode()
         }
 
         /**
@@ -505,8 +505,8 @@ open class ClassAndMemberVisitor(
         }
 
         private fun tryReplaceMethodBody() {
-            if (bodies.isNotEmpty() && (mv != null)) {
-                for (body in bodies) {
+            if (method.body.isNotEmpty() && (mv != null)) {
+                for (body in method.body) {
                     body(mv)
                 }
                 mv.visitMaxs(-1, -1)
