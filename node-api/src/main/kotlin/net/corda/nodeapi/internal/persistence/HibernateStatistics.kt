@@ -1,13 +1,7 @@
 package net.corda.nodeapi.internal.persistence
 
+import org.hibernate.stat.*
 import javax.management.MXBean
-
-import org.hibernate.stat.Statistics
-import org.hibernate.stat.SecondLevelCacheStatistics
-import org.hibernate.stat.QueryStatistics
-import org.hibernate.stat.NaturalIdCacheStatistics
-import org.hibernate.stat.EntityStatistics
-import org.hibernate.stat.CollectionStatistics
 
 /**
  * Exposes Hibernate [Statistics] contract as JMX resource.
@@ -20,6 +14,25 @@ interface StatisticsService : Statistics
  * session factory.
  */
 class DelegatingStatisticsService(private val delegate: Statistics) : StatisticsService {
+    override fun getNaturalIdStatistics(entityName: String?): NaturalIdStatistics {
+        return delegate.getNaturalIdStatistics(entityName)
+    }
+
+    override fun getDomainDataRegionStatistics(regionName: String?): CacheRegionStatistics {
+        return delegate.getDomainDataRegionStatistics(regionName)
+    }
+
+    override fun getQueryRegionStatistics(regionName: String?): CacheRegionStatistics {
+        return delegate.getQueryRegionStatistics(regionName)
+    }
+
+    override fun getNaturalIdQueryExecutionMaxTimeEntity(): String {
+        return delegate.getNaturalIdQueryExecutionMaxTimeEntity()
+    }
+
+    override fun getCacheRegionStatistics(regionName: String?): CacheRegionStatistics {
+        return delegate.getCacheRegionStatistics(regionName)
+    }
 
     override fun clear() {
         delegate.clear()
