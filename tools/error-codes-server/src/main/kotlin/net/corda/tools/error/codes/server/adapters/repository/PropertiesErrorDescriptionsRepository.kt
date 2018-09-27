@@ -15,6 +15,7 @@ import javax.annotation.PostConstruct
 import javax.inject.Inject
 import javax.inject.Named
 
+// TODO sollecitom create an integration test for this class, fetching the bean from Spring context, and testing it through its interface.
 @Adapter
 @Named
 internal class PropertiesErrorDescriptionsRepository @Inject constructor(@Adapter private val loadProperties: () -> Properties) : ErrorDescriptionsRepository, Startable {
