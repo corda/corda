@@ -76,7 +76,7 @@ internal class CachingErrorDescriptionService @Inject constructor(@Adapter priva
 
     private fun Mono<ErrorDescriptionLocation>.thenPublish(coordinates: ErrorCoordinates, invocationContext: InvocationContext): Mono<ErrorDescriptionLocation> {
 
-        return doOnSuccess { location: ErrorDescriptionLocation? -> completed(location, coordinates, invocationContext)?.let(source::publish) }
+        return doOnSuccess { location -> completed(location, coordinates, invocationContext)?.let(source::publish) }
     }
 
     private fun completed(location: ErrorDescriptionLocation?, coordinates: ErrorCoordinates, invocationContext: InvocationContext): ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor? {
