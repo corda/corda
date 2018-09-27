@@ -51,7 +51,7 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
                 // Setting the JMX reporter type.
                 jmxReporterType: 'JOLOKIA',
                 // Setting the H2 address.
-                'h2Settings.address': 'localhost:10030'
+                h2Settings: [ address: 'localhost:10030' ]
             ]
         }
         node {
