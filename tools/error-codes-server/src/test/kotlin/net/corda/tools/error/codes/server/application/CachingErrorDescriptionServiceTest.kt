@@ -98,7 +98,7 @@ internal class CachingErrorDescriptionServiceTest {
             // Here `single()` transforms a Flux in a Mono, failing if there are 0 or more than 1 events.
             service.events.ofType<ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor.WithoutDescriptionLocation>().single().doOnNext { event ->
 
-                assertThat(event.errorCode).isEqualTo(errorCoordinates.code)
+                assertThat(event.errorCoordinates).isEqualTo(errorCoordinates)
                 assertThat(event.invocationContext).isEqualTo(invocationContext)
                 assertThat(event.location).isNull()
             }.subscribe()

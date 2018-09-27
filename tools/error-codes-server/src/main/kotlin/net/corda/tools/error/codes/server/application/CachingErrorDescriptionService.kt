@@ -77,12 +77,12 @@ internal class CachingErrorDescriptionService @Inject constructor(@Adapter priva
 
     private fun Mono<ErrorDescriptionLocation>.thenPublish(coordinates: ErrorCoordinates, invocationContext: InvocationContext): Mono<ErrorDescriptionLocation> {
 
-        return doOnSuccess { location: ErrorDescriptionLocation? -> completed(location, coordinates.code, coordinates.releaseVersion, coordinates.platformEdition, invocationContext)?.let(source::publish) }
+        return doOnSuccess { location: ErrorDescriptionLocation? -> completed(location, coordinates, invocationContext)?.let(source::publish) }
     }
 
-    private fun completed(location: ErrorDescriptionLocation?, errorCode: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition, invocationContext: InvocationContext): ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor? {
+    private fun completed(location: ErrorDescriptionLocation?, coordinates: ErrorCoordinates, invocationContext: InvocationContext): ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor? {
 
-        return if (location == null) ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor.WithoutDescriptionLocation(errorCode, releaseVersion, platformEdition, invocationContext) else null
+        return if (location == null) ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor.WithoutDescriptionLocation(coordinates, invocationContext) else null
     }
 
     @Named(eventSourceQualifier)

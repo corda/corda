@@ -34,6 +34,6 @@ internal class LoggingEventsProcessors @Inject internal constructor(stream: Even
     private fun warnAboutUnmappedErrorCode(event: ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor.WithoutDescriptionLocation) {
 
         // Here we could let ourselves know that an error code has no description, so that we can then go and add it to the mappings.
-        logger.warn(event.invocationContext, "No description location known for error code \"${event.errorCode.value}\" at ${LocalDateTime.ofInstant(event.createdAt, ZoneId.systemDefault())}. Event ID is '${event.id.value}'.")
+        logger.warn(event.invocationContext, "No description location known for error code \"${event.errorCoordinates.code.value}\" at ${LocalDateTime.ofInstant(event.createdAt, ZoneId.systemDefault())}. Event ID is '${event.id.value}'.")
     }
 }

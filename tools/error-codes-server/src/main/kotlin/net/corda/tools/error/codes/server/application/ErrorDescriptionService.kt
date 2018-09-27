@@ -5,6 +5,7 @@ import net.corda.tools.error.codes.server.commons.events.AbstractEvent
 import net.corda.tools.error.codes.server.commons.events.EventId
 import net.corda.tools.error.codes.server.commons.events.EventPublisher
 import net.corda.tools.error.codes.server.domain.ErrorCode
+import net.corda.tools.error.codes.server.domain.ErrorCoordinates
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.InvocationContext
 import net.corda.tools.error.codes.server.domain.PlatformEdition
@@ -28,16 +29,16 @@ interface ErrorDescriptionService : EventPublisher<ErrorDescriptionService.Event
 
             sealed class Completed(invocationContext: InvocationContext, id: EventId = EventId.newInstance()) : ErrorDescriptionService.Event.Invocation(invocationContext, id) {
 
-                sealed class DescriptionLocationFor(val errorCode: ErrorCode, val releaseVersion: ReleaseVersion, val platformEdition: PlatformEdition, val location: ErrorDescriptionLocation?, invocationContext: InvocationContext, id: EventId = EventId.newInstance()) : ErrorDescriptionService.Event.Invocation.Completed(invocationContext, id) {
+                sealed class DescriptionLocationFor(val errorCoordinates: ErrorCoordinates, val location: ErrorDescriptionLocation?, invocationContext: InvocationContext, id: EventId = EventId.newInstance()) : ErrorDescriptionService.Event.Invocation.Completed(invocationContext, id) {
 
-                    class WithoutDescriptionLocation(errorCode: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition, invocationContext: InvocationContext, id: EventId = EventId.newInstance()) : ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor(errorCode, releaseVersion, platformEdition, null, invocationContext, id)
+                    class WithoutDescriptionLocation(errorCoordinates: ErrorCoordinates, invocationContext: InvocationContext, id: EventId = EventId.newInstance()) : ErrorDescriptionService.Event.Invocation.Completed.DescriptionLocationFor(errorCoordinates, null, invocationContext, id)
 
                     override fun appendToStringElements(toString: ToStringBuilder) {
 
                         super.appendToStringElements(toString)
-                        toString["errorCode"] = errorCode.value
-                        toString["releaseVersion"] = releaseVersion.description()
-                        toString["platformEdition"] = platformEdition.description
+                        toString["errorCode"] = errorCoordinates.code.value
+                        toString["releaseVersion"] = errorCoordinates.releaseVersion.description()
+                        toString["platformEdition"] = errorCoordinates.platformEdition.description
                         toString["location"] = when (location) {
                             is ErrorDescriptionLocation.External -> location.uri
                             null -> "<null>"
