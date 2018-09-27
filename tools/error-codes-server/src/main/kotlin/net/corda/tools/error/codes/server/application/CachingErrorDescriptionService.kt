@@ -47,25 +47,27 @@ internal class CachingErrorDescriptionService @Inject constructor(@Adapter priva
     private fun lookupClosestTo(coordinates: ErrorCoordinates, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
 
         // TODO sollecitom try and get rid of java.util.Optional here.
-        return lookup(coordinates.code, invocationContext).sort(closestTo(coordinates)).take(1).singleOrEmpty().map(ErrorDescription::location).map { Optional.ofNullable(it) }
+        return lookup(coordinates.code, invocationContext).sort(closestTo(coordinates.releaseVersion).thenComparing(closestTo(coordinates.platformEdition))).take(1).singleOrEmpty().map(ErrorDescription::location).map { Optional.ofNullable(it) }
     }
 
-    private fun closestTo(coordinates: ErrorCoordinates): Comparator<ErrorDescription> {
+    private fun closestTo(releaseVersion: ReleaseVersion): Comparator<ErrorDescription> {
 
-        val specifiedReleaseVersion = coordinates.releaseVersion
+        return Comparator { first, second ->
 
-        // TODO sollecitom create a type.
-        return Comparator<ErrorDescription> { first, second ->
-
-            val firstDistance: ReleaseVersion = first?.coordinates?.releaseVersion?.distanceFrom(specifiedReleaseVersion) ?: ReleaseVersion(Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
-            val secondDistance: ReleaseVersion = second?.coordinates?.releaseVersion?.distanceFrom(specifiedReleaseVersion) ?: ReleaseVersion(Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
+            val firstDistance: ReleaseVersion = first?.coordinates?.releaseVersion?.distanceFrom(releaseVersion) ?: ReleaseVersion(Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
+            val secondDistance: ReleaseVersion = second?.coordinates?.releaseVersion?.distanceFrom(releaseVersion) ?: ReleaseVersion(Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
             firstDistance.compareTo(secondDistance)
-        }.thenComparator { first: ErrorDescription?, second: ErrorDescription? ->
+        }
+    }
+
+    private fun closestTo(platformEdition: PlatformEdition): Comparator<ErrorDescription> {
+
+        return Comparator { first, second ->
 
             when {
                 first?.coordinates?.platformEdition == second?.coordinates?.platformEdition -> 0
-                first?.coordinates?.platformEdition == coordinates.platformEdition -> -1
-                second?.coordinates?.platformEdition == coordinates.platformEdition -> 1
+                first?.coordinates?.platformEdition == platformEdition -> -1
+                second?.coordinates?.platformEdition == platformEdition -> 1
                 else -> 0
             }
         }
