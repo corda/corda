@@ -84,6 +84,7 @@ see changes to this list.
 * Giulio Katis (Westpac)
 * Giuseppe Cardone (Intesa Sanpaolo)
 * Guy Hochstetler (R3)
+* Hristo Gatsinski (Industria)
 * Ian Cusden (UBS)
 * Ian Grigg (R3)
 * Igor Nitto (R3)
