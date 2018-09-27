@@ -1,36 +1,16 @@
 package net.corda.djvm.rules.implementation
 
-import net.corda.djvm.code.Emitter
-import net.corda.djvm.code.EmitterContext
-import net.corda.djvm.code.Instruction
+import net.corda.djvm.code.*
 import net.corda.djvm.code.instructions.CodeLabel
 import net.corda.djvm.code.instructions.TryCatchBlock
-import net.corda.djvm.costing.ThresholdViolationException
-import net.corda.djvm.rules.InstructionRule
-import net.corda.djvm.validation.RuleContext
 import org.objectweb.asm.Label
+import sandbox.net.corda.djvm.costing.ThresholdViolationError
 
 /**
- * Rule that checks for attempted catches of [ThreadDeath], [ThresholdViolationException], [StackOverflowError],
- * [OutOfMemoryError], [Error] or [Throwable].
+ * Rule that checks for attempted catches of [ThreadDeath], [ThresholdViolationError],
+ * [StackOverflowError], [OutOfMemoryError], [Error] or [Throwable].
  */
-class DisallowCatchingBlacklistedExceptions : InstructionRule(), Emitter {
-
-    override fun validate(context: RuleContext, instruction: Instruction) = context.validate {
-        if (instruction is TryCatchBlock) {
-            val typeName = context.classModule.getFormattedClassName(instruction.typeName)
-            warn("Injected runtime check for catch-block for type $typeName") given
-                    (instruction.typeName in disallowedExceptionTypes)
-            fail("Disallowed catch of ThreadDeath exception") given
-                    (instruction.typeName == threadDeathException)
-            fail("Disallowed catch of stack overflow exception") given
-                    (instruction.typeName == stackOverflowException)
-            fail("Disallowed catch of out of memory exception") given
-                    (instruction.typeName == outOfMemoryException)
-            fail("Disallowed catch of threshold violation exception") given
-                    (instruction.typeName.endsWith(ThresholdViolationException::class.java.simpleName))
-        }
-    }
+class DisallowCatchingBlacklistedExceptions : Emitter {
 
     override fun emit(context: EmitterContext, instruction: Instruction) = context.emit {
         if (instruction is TryCatchBlock && instruction.typeName in disallowedExceptionTypes) {
@@ -46,13 +26,27 @@ class DisallowCatchingBlacklistedExceptions : InstructionRule(), Emitter {
     private fun isExceptionHandler(label: Label) = label in handlers
 
     companion object {
-
-        private const val threadDeathException = "java/lang/ThreadDeath"
-        private const val stackOverflowException = "java/lang/StackOverflowError"
-        private const val outOfMemoryException = "java/lang/OutOfMemoryError"
-
-        // Any of [ThreadDeath]'s throwable super-classes need explicit checking.
         private val disallowedExceptionTypes = setOf(
+                ruleViolationError,
+                thresholdViolationError,
+
+                /**
+                 * These errors indicate that the JVM is failing,
+                 * so don't allow these to be caught either.
+                 */
+                "java/lang/StackOverflowError",
+                "java/lang/OutOfMemoryError",
+
+                /**
+                 * These are immediate super-classes for our explicit errors.
+                 */
+                "java/lang/VirtualMachineError",
+                "java/lang/ThreadDeath",
+
+                /**
+                 * Any of [ThreadDeath] and [VirtualMachineError]'s throwable
+                 * super-classes also need explicit checking.
+                 */
                 "java/lang/Throwable",
                 "java/lang/Error"
         )

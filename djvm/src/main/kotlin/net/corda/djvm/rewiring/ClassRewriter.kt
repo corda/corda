@@ -27,7 +27,7 @@ open class ClassRewriter(
      * @param context The context in which the class is being analyzed and processed.
      */
     fun rewrite(reader: ClassReader, context: AnalysisContext): ByteCode {
-        logger.trace("Rewriting class {}...", reader.className)
+        logger.debug("Rewriting class {}...", reader.className)
         val writer = SandboxClassWriter(reader, classLoader)
         val classRemapper = ClassRemapper(writer, remapper)
         val visitor = ClassMutator(

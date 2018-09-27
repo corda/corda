@@ -7,6 +7,7 @@ import org.junit.Test
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.NEW
+import org.objectweb.asm.Type
 
 class EmitterModuleTest : TestBase() {
 
@@ -14,15 +15,15 @@ class EmitterModuleTest : TestBase() {
     fun `can emit code to method body`() {
         var hasEmittedTypeInstruction = false
         val methodVisitor = object : MethodVisitor(ClassAndMemberVisitor.API_VERSION) {
-            override fun visitTypeInsn(opcode: Int, type: String?) {
-                if (opcode == NEW && type == java.lang.String::class.java.name) {
+            override fun visitTypeInsn(opcode: Int, type: String) {
+                if (opcode == NEW && type == Type.getInternalName(java.lang.String::class.java)) {
                     hasEmittedTypeInstruction = true
                 }
             }
         }
         val visitor = object : ClassVisitor(ClassAndMemberVisitor.API_VERSION) {
             override fun visitMethod(
-                    access: Int, name: String?, descriptor: String?, signature: String?, exceptions: Array<out String>?
+                    access: Int, name: String, descriptor: String, signature: String?, exceptions: Array<out String>?
             ): MethodVisitor {
                 return methodVisitor
             }

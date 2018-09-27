@@ -18,7 +18,7 @@ abstract class MemberRule : Rule {
      */
     abstract fun validate(context: RuleContext, member: Member)
 
-    override fun validate(context: RuleContext, clazz: ClassRepresentation?, member: Member?, instruction: Instruction?) {
+    final override fun validate(context: RuleContext, clazz: ClassRepresentation?, member: Member?, instruction: Instruction?) {
         // Only run validation step if applied to the class member itself.
         if (clazz != null && member != null && instruction == null) {
             validate(context, member)

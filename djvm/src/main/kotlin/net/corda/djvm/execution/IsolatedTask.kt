@@ -2,7 +2,6 @@ package net.corda.djvm.execution
 
 import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.SandboxRuntimeContext
-import net.corda.djvm.analysis.AnalysisContext
 import net.corda.djvm.messages.MessageCollection
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.rewiring.SandboxClassLoadingException
@@ -16,8 +15,7 @@ import kotlin.concurrent.thread
  */
 class IsolatedTask(
         private val identifier: String,
-        private val configuration: SandboxConfiguration,
-        private val context: AnalysisContext
+        private val configuration: SandboxConfiguration
 ) {
 
     /**
@@ -32,12 +30,12 @@ class IsolatedTask(
         var exception: Throwable? = null
         thread(name = threadName, isDaemon = true) {
             logger.trace("Entering isolated runtime environment...")
-            SandboxRuntimeContext(configuration, context.inputClasses).use {
+            SandboxRuntimeContext(configuration).use {
                 output = try {
                     action(runnable)
                 } catch (ex: Throwable) {
                     logger.error("Exception caught in isolated runtime environment", ex)
-                    exception = ex
+                    exception = (ex as? LinkageError)?.cause ?: ex
                     null
                 }
                 costs = CostSummary(
@@ -84,7 +82,7 @@ class IsolatedTask(
     )
 
     /**
-     * The class loader to use for loading the [SandboxedRunnable] and any referenced code in [SandboxExecutor.run].
+     * The class loader to use for loading the [java.util.function.Function] and any referenced code in [SandboxExecutor.run].
      */
     val classLoader: SandboxClassLoader
         get() = SandboxRuntimeContext.instance.classLoader

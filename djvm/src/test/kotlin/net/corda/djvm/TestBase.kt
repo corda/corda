@@ -16,10 +16,16 @@ import net.corda.djvm.rules.Rule
 import net.corda.djvm.source.ClassSource
 import net.corda.djvm.utilities.Discovery
 import net.corda.djvm.validation.RuleValidator
+import org.junit.After
+import org.junit.Assert.assertEquals
 import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Type
 import java.lang.reflect.InvocationTargetException
+import java.nio.file.Path
+import java.nio.file.Paths
+import kotlin.concurrent.thread
+import kotlin.reflect.jvm.jvmName
 
 abstract class TestBase {
 
@@ -33,8 +39,10 @@ abstract class TestBase {
 
         val BLANK = emptySet<Any>()
 
-        val DEFAULT = (ALL_RULES + ALL_EMITTERS + ALL_DEFINITION_PROVIDERS)
-                .toSet().distinctBy { it.javaClass }
+        val DEFAULT = (ALL_RULES + ALL_EMITTERS + ALL_DEFINITION_PROVIDERS).distinctBy(Any::javaClass)
+
+        val DETERMINISTIC_RT: Path = Paths.get(
+                System.getProperty("deterministic-rt.path") ?: throw AssertionError("deterministic-rt.path property not set"))
 
         /**
          * Get the full name of type [T].
@@ -46,13 +54,18 @@ abstract class TestBase {
     /**
      * Default analysis configuration.
      */
-    val configuration = AnalysisConfiguration(Whitelist.MINIMAL)
+    val configuration = AnalysisConfiguration(Whitelist.MINIMAL, bootstrapJar = DETERMINISTIC_RT)
 
     /**
      * Default analysis context
      */
     val context: AnalysisContext
-        get() = AnalysisContext.fromConfiguration(configuration, emptyList())
+        get() = AnalysisContext.fromConfiguration(configuration)
+
+    @After
+    fun destroy() {
+        configuration.close()
+    }
 
     /**
      * Short-hand for analysing and validating a class.
@@ -62,14 +75,15 @@ abstract class TestBase {
             noinline block: (RuleValidator.(AnalysisContext) -> Unit)
     ) {
         val reader = ClassReader(T::class.java.name)
-        val configuration = AnalysisConfiguration(minimumSeverityLevel = minimumSeverityLevel)
-        val validator = RuleValidator(ALL_RULES, configuration)
-        val context = AnalysisContext.fromConfiguration(
-                configuration,
-                listOf(ClassSource.fromClassName(reader.className))
-        )
-        validator.analyze(reader, context)
-        block(validator, context)
+        AnalysisConfiguration(
+            minimumSeverityLevel = minimumSeverityLevel,
+            classPath = listOf(DETERMINISTIC_RT)
+        ).use { analysisConfiguration ->
+            val validator = RuleValidator(ALL_RULES, analysisConfiguration)
+            val context = AnalysisContext.fromConfiguration(analysisConfiguration)
+            validator.analyze(reader, context)
+            block(validator, context)
+        }
     }
 
     /**
@@ -113,27 +127,26 @@ abstract class TestBase {
             }
         }
         var thrownException: Throwable? = null
-        Thread {
+        thread {
             try {
                 val pinnedTestClasses = pinnedClasses.map(Type::getInternalName).toSet()
-                val analysisConfiguration = AnalysisConfiguration(
-                        whitelist = whitelist,
-                        additionalPinnedClasses = pinnedTestClasses,
-                        minimumSeverityLevel = minimumSeverityLevel
-                )
-                SandboxRuntimeContext(SandboxConfiguration.of(
-                        executionProfile, rules, emitters, definitionProviders, enableTracing, analysisConfiguration
-                ), classSources).use {
-                    assertThat(runtimeCosts).areZero()
-                    action(this)
+                AnalysisConfiguration(
+                    whitelist = whitelist,
+                    bootstrapJar = DETERMINISTIC_RT,
+                    additionalPinnedClasses = pinnedTestClasses,
+                    minimumSeverityLevel = minimumSeverityLevel
+                ).use { analysisConfiguration ->
+                    SandboxRuntimeContext(SandboxConfiguration.of(
+                            executionProfile, rules, emitters, definitionProviders, enableTracing, analysisConfiguration
+                    )).use {
+                        assertThat(runtimeCosts).areZero()
+                        action(this)
+                    }
                 }
             } catch (exception: Throwable) {
                 thrownException = exception
             }
-        }.apply {
-            start()
-            join()
-        }
+        }.join()
         throw thrownException ?: return
     }
 
@@ -145,8 +158,12 @@ abstract class TestBase {
     /**
      * Create a new instance of a class using the sandbox class loader.
      */
-    inline fun <reified T : Callable> SandboxRuntimeContext.newCallable() =
-            classLoader.loadClassAndBytes(ClassSource.fromClassName(T::class.java.name), context)
+    inline fun <reified T : Callable> SandboxRuntimeContext.newCallable(): LoadedClass = loadClass<T>()
+
+    inline fun <reified T : Any> SandboxRuntimeContext.loadClass(): LoadedClass = loadClass(T::class.jvmName)
+
+    fun SandboxRuntimeContext.loadClass(className: String): LoadedClass =
+            classLoader.loadClassAndBytes(ClassSource.fromClassName(className), context)
 
     /**
      * Run the entry-point of the loaded [Callable] class.
@@ -164,6 +181,10 @@ abstract class TestBase {
     /**
      * Stub visitor.
      */
-    protected class Visitor : ClassVisitor(ClassAndMemberVisitor.API_VERSION)
+    protected class Writer : ClassWriter(COMPUTE_FRAMES or COMPUTE_MAXS) {
+        init {
+            assertEquals(ClassAndMemberVisitor.API_VERSION, api)
+        }
+    }
 
 }

@@ -20,7 +20,7 @@ class ClassMutator(
         private val configuration: AnalysisConfiguration,
         private val definitionProviders: List<DefinitionProvider> = emptyList(),
         private val emitters: List<Emitter> = emptyList()
-) : ClassAndMemberVisitor(classVisitor, configuration = configuration) {
+) : ClassAndMemberVisitor(configuration, classVisitor) {
 
     /**
      * Tracks whether any modifications have been applied to any of the processed class(es) and pertinent members.
@@ -82,7 +82,8 @@ class ClassMutator(
      */
     override fun visitInstruction(method: Member, emitter: EmitterModule, instruction: Instruction) {
         val context = EmitterContext(currentAnalysisContext(), configuration, emitter)
-        Processor.processEntriesOfType<Emitter>(emitters, analysisContext.messages) {
+        // We need to apply the tracing emitters before the non-tracing ones.
+        Processor.processEntriesOfType<Emitter>(emitters.sortedByDescending(Emitter::isTracer), analysisContext.messages) {
             it.emit(context, instruction)
         }
         if (!emitter.emitDefaultInstruction || emitter.hasEmittedCustomCode) {

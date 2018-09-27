@@ -1,6 +1,5 @@
 package net.corda.djvm.tools.cli
 
-import net.corda.djvm.execution.SandboxedRunnable
 import net.corda.djvm.source.ClassSource
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
@@ -20,7 +19,7 @@ class RunCommand : ClassCommand() {
     var classes: Array<String> = emptyArray()
 
     override fun processClasses(classes: List<Class<*>>) {
-        val interfaceName = SandboxedRunnable::class.java.simpleName
+        val interfaceName = java.util.function.Function::class.java.simpleName
         for (clazz in classes) {
             if (!clazz.interfaces.any { it.simpleName == interfaceName }) {
                 printError("Class is not an instance of $interfaceName; ${clazz.name}")
