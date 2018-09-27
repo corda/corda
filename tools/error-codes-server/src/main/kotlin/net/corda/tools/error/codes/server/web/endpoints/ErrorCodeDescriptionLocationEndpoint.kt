@@ -16,12 +16,11 @@ import net.corda.tools.error.codes.server.domain.ReleaseVersion
 import net.corda.tools.error.codes.server.web.endpoints.template.ConfigurableEndpoint
 import net.corda.tools.error.codes.server.web.endpoints.template.EndpointConfigProvider
 import reactor.core.publisher.Mono
-import java.util.*
 import javax.inject.Inject
 import javax.inject.Named
 
 @Named
-internal class ErrorCodeDescriptionLocationEndpoint @Inject constructor(configuration: ErrorCodeDescriptionLocationEndpoint.Configuration, @Application private val locateDescription: (ErrorCode, ReleaseVersion, PlatformEdition, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>) : ConfigurableEndpoint(configuration, setOf(HttpMethod.GET)) {
+internal class ErrorCodeDescriptionLocationEndpoint @Inject constructor(configuration: ErrorCodeDescriptionLocationEndpoint.Configuration, @Application private val locateDescription: (ErrorCode, ReleaseVersion, PlatformEdition, InvocationContext) -> Mono<ErrorDescriptionLocation>) : ConfigurableEndpoint(configuration, setOf(HttpMethod.GET)) {
 
     private companion object {
 

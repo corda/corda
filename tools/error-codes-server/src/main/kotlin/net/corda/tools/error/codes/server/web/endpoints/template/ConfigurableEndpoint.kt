@@ -16,7 +16,6 @@ import net.corda.tools.error.codes.server.domain.InvocationContext
 import net.corda.tools.error.codes.server.domain.loggerFor
 import reactor.core.Disposable
 import reactor.core.publisher.Mono
-import java.util.*
 
 internal abstract class ConfigurableEndpoint(configuration: Configuration, override val methods: Set<HttpMethod>) : VertxEndpoint(), Endpoint {
 
@@ -46,14 +45,14 @@ internal abstract class ConfigurableEndpoint(configuration: Configuration, overr
 
     protected open fun handleFailure(ctx: RoutingContext) = reportError(ctx.failure(), ctx.response(), ctx[InvocationContext::class.java.name])
 
-    protected fun <ELEMENT : Any> Mono<Optional<out ELEMENT>>.thenIfPresent(ctx: RoutingContext, action: (ELEMENT) -> Unit): Disposable {
+    protected fun <ELEMENT : Any> Mono<ELEMENT>.thenIfPresent(ctx: RoutingContext, action: (ELEMENT) -> Unit): Disposable {
 
-        return doOnSuccess { result: Optional<out ELEMENT>? ->
+        return doOnSuccess { result: ELEMENT? ->
 
-            if (result == null || !result.isPresent) {
+            if (result == null) {
                 ctx.response().endWithNotFound()
             } else {
-                action.invoke(result.get())
+                action.invoke(result)
             }
         }.subscribe({}, { error: Throwable -> reportError(error, ctx.response(), ctx[InvocationContext::class.java.name]) })
     }

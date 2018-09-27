@@ -11,11 +11,10 @@ import net.corda.tools.error.codes.server.domain.PlatformEdition
 import net.corda.tools.error.codes.server.domain.ReleaseVersion
 import org.apache.commons.lang3.builder.ToStringBuilder
 import reactor.core.publisher.Mono
-import java.util.*
 
 interface ErrorDescriptionService : EventPublisher<ErrorDescriptionService.Event>, AutoCloseable {
 
-    fun descriptionLocationFor(errorCode: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>>
+    fun descriptionLocationFor(errorCode: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition, invocationContext: InvocationContext): Mono<ErrorDescriptionLocation>
 
     sealed class Event(id: EventId = EventId.newInstance()) : AbstractEvent(id) {
 

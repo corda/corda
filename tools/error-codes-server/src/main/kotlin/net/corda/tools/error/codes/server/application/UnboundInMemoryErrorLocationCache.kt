@@ -9,8 +9,7 @@ import net.corda.tools.error.codes.server.domain.ErrorCoordinates
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import reactor.core.publisher.Mono
 import reactor.core.publisher.Mono.empty
-import reactor.core.publisher.Mono.just
-import java.util.*
+import reactor.core.publisher.Mono.justOrEmpty
 import javax.inject.Inject
 import javax.inject.Named
 
@@ -20,9 +19,9 @@ internal class UnboundInMemoryErrorLocationCache @Inject constructor(configurati
 
     private val cache: Cache<ErrorCoordinates, ErrorDescriptionLocation> = Caffeine.newBuilder().maximumSize(configuration.cacheMaximumSize.value).build()
 
-    operator fun get(errorCoordinates: ErrorCoordinates): Mono<Optional<out ErrorDescriptionLocation>> {
+    operator fun get(errorCoordinates: ErrorCoordinates): Mono<ErrorDescriptionLocation> {
 
-        return just(cache[errorCoordinates])
+        return justOrEmpty(cache[errorCoordinates])
     }
 
     fun put(errorCoordinates: ErrorCoordinates, location: ErrorDescriptionLocation): Mono<Unit> {
@@ -31,9 +30,9 @@ internal class UnboundInMemoryErrorLocationCache @Inject constructor(configurati
         return empty()
     }
 
-    private operator fun <KEY : Any, VALUE> Cache<KEY, VALUE>.get(key: KEY): Optional<VALUE> {
+    private operator fun <KEY : Any, VALUE> Cache<KEY, VALUE>.get(key: KEY): VALUE? {
 
-        return Optional.ofNullable(getIfPresent(key))
+        return getIfPresent(key)
     }
 
     private operator fun <KEY : Any, VALUE> Cache<KEY, VALUE>.set(key: KEY, value: VALUE) {
@@ -50,7 +49,7 @@ internal class UnboundInMemoryErrorLocationCache @Inject constructor(configurati
 // This allows injecting functions instead of types.
 @Application
 @Named
-internal class GetCachedErrorCode @Inject constructor(private val cache: UnboundInMemoryErrorLocationCache) : (ErrorCoordinates) -> Mono<Optional<out ErrorDescriptionLocation>> {
+internal class GetCachedErrorCode @Inject constructor(private val cache: UnboundInMemoryErrorLocationCache) : (ErrorCoordinates) -> Mono<ErrorDescriptionLocation> {
 
     override fun invoke(errorCoordinates: ErrorCoordinates) = cache[errorCoordinates]
 }
