@@ -6,14 +6,18 @@ Release notes
 Release 3.3
 -----------
 
-Corda 3.3 is, at its heart, a release that brings a lot of small improvements and contributions to a stable released version. Whereas the 3.1 and 3.2
-releases brought a number of critical bug fixes back from master, 3.3 addresses a large number of issues that have been found and fixed since the release
-of 3.0. It rolls up a great many improvements and polish to truly make the Corda experience just that much better.
+Corda 3.3 is, at its heart, a release that brings together many small improvements, fixes, and community contributions to deliver a stable and polished release
+of Corda`. Where both the 3.1 and 3.2 releases delivered a smaller number of critical bug fixes addressing immediate and impactful error conditions, 3.3
+addresses a much greater number of issues, both small and large, that have been found and fixed since the release of 3.0 back in March. Rolling up a great
+many improvements and polish to truly make the Corda experience just that much better.
 
 In addition to work undertaken by the main Corda development team, we've taken the opportunity in 3.3 to bring back many of the contributions made
-by community member from master onto the currently released, shipping, branch. It has been said many times before, but that community and those members
+by community members from master onto the currently released stable branch. It has been said many times before, but that community and those members
 are the real-life blood of Corda and anyone who takes the time to contribute is a star in our eyes. Brining that code into the current version we hope
 gives people the opportunity to see their work in action, to help their fellow community members, and for us to say thank you.
+
+Items of Note
+~~~~~~~~~~~~~
 
 * **Serialization fixes**
 
@@ -36,7 +40,7 @@ gives people the opportunity to see their work in action, to help their fellow c
 
 * **Persistent State Ref**
 
- We have made soem fixes to the ``net.corda.core.schemas.PersistentStateRef`` table that require a little maintaince when upgrading from 3.2. The
+ We have made some fixes to the ``net.corda.core.schemas.PersistentStateRef`` table that require a little maintenance when upgrading from 3.2. The
  exact process is detailed in the :doc:`upgrade-notes`.
 
 Special Thanks
@@ -54,7 +58,7 @@ We're therefore happy to extend thanks to the following members of that communit
   * `Yogesh <https://github.com/acetheultimate>`_ for a documentation tweak that can be see `here <https://github.com/corda/corda/commit/07e3ff502f620d5201a29cf12f686b50cd1cb17c>`_.
   * `Roman Plášil <https://github.com/Quiark>`_ for speeding up node shutdown when connecting to an http network map. This fix can be found `here <https://github.com/corda/corda/commit/ec1e40109d85d495b84cf4307fb8a7e34536f1d9>`_.
   * `renlulu <https://github.com/renlulu>`_ for a small `PR <https://github.com/corda/corda/commit/cda7c292437e228bd8df5c800f711d45a3d743e1>`_ to optimize some of the imports.
-  * `cxyzhang0 <https://github.com/cxyzhang0>`_ for making the IdentitySyncFlow more useful. See `here <https://github.com/corda/corda/commit/a86c79e40ca15a8b95380608be81fe338d82b141>`_.
+  * `cxyzhang0 <https://github.com/cxyzhang0>`_ for making the ``IdentitySyncFlow`` more useful. See `here <https://github.com/corda/corda/commit/a86c79e40ca15a8b95380608be81fe338d82b141>`_.
   * `Venelin Stoykov <https://github.com/vstoykov>`_ with updates to the `documentation <https://github.com/corda/corda/commit/4def8395b3bd100b2b0a3d2eecef5e20f0ec7f47>`_ around the progress tracker.
   * `Mohamed Amine Legheraba <https://github.com/MohamedLEGH>`_ for updates to the Azure documentation that can be seen `here <https://github.com/corda/corda/commit/14e9bf100d0b0236f65ee4ffd778f32307b9e519>`_.
   * `Stanly Johnson <https://github.com/stanly-johnson>`_ with a `fix <https://github.com/corda/corda/commit/f9a9bb19a7cc6d202446890e4e11bebd4a118cf3>`_ to the network bootstrapper.
@@ -62,13 +66,13 @@ We're therefore happy to extend thanks to the following members of that communit
 
 Issues Fixed
 ~~~~~~~~~~~~
-* Removing DigitalSignatureWithCertPath [`CORDA-1995 <https://r3-cev.atlassian.net/browse/CORDA-1995>`_]
-* class-carpenter bugfix [`Corda-1945<https://r3-cev.atlassian.net/browse/Corda-1945>`_]
-* If a second identity is mistakenly created the node will not start [`CORDA-1811 <https://r3-cev.atlassian.net/browse/CORDA-1811>`_]
-* Demobench profile load fails with stack dump [`CORDA-1948 <https://r3-cev.atlassian.net/browse/CORDA-1948>`_]
-* Deletes of NodeInfo can fail to propagate leading to infinite retries [`CORDA-2029 <https://r3-cev.atlassian.net/browse/CORDA-2029>`_]
-* Copy all the certificates from the network-trust-store.jks file to the node's trust store [`CORDA-2012 <https://r3-cev.atlassian.net/browse/CORDA-2012>`_]
-* Add SNI header to TLS connections [`CORDA-2001 <https://r3-cev.atlassian.net/browse/CORDA-2001>`_]
+* Refactoring ``DigitalSignatureWithCertPath`` for more performant storing of the certificate chain. [`CORDA-1995 <https://r3-cev.atlassian.net/browse/CORDA-1995>`_]
+* The serializers class carpenter fails when superclass has double-size primitive field. [`Corda-1945 <https://r3-cev.atlassian.net/browse/Corda-1945>`_]
+* If a second identity is mistakenly created the node will not start. [`CORDA-1811 <https://r3-cev.atlassian.net/browse/CORDA-1811>`_]
+* Demobench profile load fails with stack dump. [`CORDA-1948 <https://r3-cev.atlassian.net/browse/CORDA-1948>`_]
+* Deletes of NodeInfo can fail to propagate leading to infinite retries. [`CORDA-2029 <https://r3-cev.atlassian.net/browse/CORDA-2029>`_]
+* Copy all the certificates from the network-trust-store.jks file to the node's trust store. [`CORDA-2012 <https://r3-cev.atlassian.net/browse/CORDA-2012>`_]
+* Add SNI (Server Name Indication) header to TLS connections. [`CORDA-2001 <https://r3-cev.atlassian.net/browse/CORDA-2001>`_]
 * Fix duplicate index declaration in the Cash schema. [`CORDA-1952 <https://r3-cev.atlassian.net/browse/CORDA-1952>`_]
 * Hello World Tutorial Page mismatch between code sample and explanatory text. [`CORDA-1950 <https://r3-cev.atlassian.net/browse/CORDA-1950>`_]
 * Java Instructions to Invoke Hello World CorDapp are incorrect. [`CORDA-1949 <https://r3-cev.atlassian.net/browse/CORDA-1949>`_]
@@ -81,7 +85,7 @@ Issues Fixed
 * ``NodeVaultService.loadStates`` queries without a ``PageSpecification`` property set. This leads to issues with large transactions. [`CORDA-1895 <https://r3-cev.atlassian.net/browse/CORDA-1895>`_]
 * If a node has two flows, where one's name is a longer version of the other's, they cannot be started [`CORDA-1892 <https://r3-cev.atlassian.net/browse/CORDA-1892>`_]
 * Vault Queries across ``LinearStates`` and ``FungibleState`` tables return incorrect results. [`CORDA-1888 <https://r3-cev.atlassian.net/browse/CORDA-1888>`_]
-* Checking the version of the corda jar file by executing the jar with the ``--version`` flag without specifying a valid node configuration file causes an exception to be thrown. [`CORDA-1884 <https://r3-cev.atlassian.net/browse/CORDA-1884>`_]
+* Checking the version of the Corda jar file by executing the jar with the ``--version`` flag without specifying a valid node configuration file causes an exception to be thrown. [`CORDA-1884 <https://r3-cev.atlassian.net/browse/CORDA-1884>`_]
 * RPC deadlocks after a node restart. [`CORDA-1875 <https://r3-cev.atlassian.net/browse/CORDA-1875>`_]
 * Vault query fails to find a state if it extends some class (``ContractState``) and it is that base class that is used as the predicate (``vaultService.queryBy<I>()``). [`CORDA-1858 <https://r3-cev.atlassian.net/browse/CORDA-1858>`_]
 * Missing unconsumed states from linear id when querying vault caused by a the previous transaction failing with an SQL exception. [`CORDA-1847 <https://r3-cev.atlassian.net/browse/CORDA-1847>`_]
@@ -137,9 +141,9 @@ Issues Fixed
 * Node Info file watcher should block and load ``NodeInfo`` when node startup. [`CORDA-1604 <https://r3-cev.atlassian.net/browse/CORDA-1604>`_]
 * Improved logging of the network parameters update process. [`CORDA-1405 <https://r3-cev.atlassian.net/browse/CORDA-1405>`_]
 * Ensure all conditions in cash selection query are tested. [`CORDA-1266 <https://r3-cev.atlassian.net/browse/CORDA-1266>`_]
-* NodeVaultService bug. Start node, issue cash, stop node, start node, getCashBalances() will not show any cash
+* ``NodeVaultService`` bug. Start node, issue cash, stop node, start node, ``getCashBalances()`` will not show any cash
 * A Corda node doesn't re-select cluster from HA Notary.
-* Event Horizon is not wire compatible with older network params objects.
+* Event Horizon is not wire compatible with older network parameters objects.
 * Notary unable to resolve Party after processing a flow from same Party.
 * Misleading error message shown when a node is restarted after a flag day event.
 
