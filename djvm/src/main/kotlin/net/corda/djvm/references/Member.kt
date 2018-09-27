@@ -3,6 +3,12 @@ package net.corda.djvm.references
 import org.objectweb.asm.MethodVisitor
 
 /**
+ * Alias for a handler which will replace an entire
+ * method body with a block of byte-code.
+ */
+typealias MethodBody = (MethodVisitor) -> Unit
+
+/**
  * Representation of a class member.
  *
  * @property access The access flags of the member.
@@ -13,9 +19,8 @@ import org.objectweb.asm.MethodVisitor
  * @property annotations The names of the annotations the member is attributed.
  * @property exceptions The names of the exceptions that the member can throw.
  * @property value The default value of a field.
+ * @property body One or more handlers to replace the method body with new byte-code.
  */
-typealias MethodBody = (MethodVisitor) -> Unit
-
 data class Member(
         override val access: Int,
         override val className: String,
