@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import com.uchuhimo.konf.Config
 import com.uchuhimo.konf.ConfigSpec
 import net.corda.tools.error.codes.server.application.annotations.Application
+import net.corda.tools.error.codes.server.domain.ErrorCoordinates
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import reactor.core.publisher.Mono
 import reactor.core.publisher.Mono.empty

@@ -3,6 +3,8 @@ package net.corda.tools.error.codes.server.application
 import net.corda.tools.error.codes.server.application.annotations.Application
 import net.corda.tools.error.codes.server.commons.events.PublishingEventSource
 import net.corda.tools.error.codes.server.domain.ErrorCode
+import net.corda.tools.error.codes.server.domain.ErrorCoordinates
+import net.corda.tools.error.codes.server.domain.ErrorDescription
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.InvocationContext
 import net.corda.tools.error.codes.server.domain.PlatformEdition
@@ -18,7 +20,7 @@ import javax.inject.Named
 
 @Application
 @Named
-internal class CachingErrorDescriptionService @Inject constructor(@Adapter private val lookup: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>>, private val retrieveCached: (ErrorCoordinates) -> Mono<Optional<out ErrorDescriptionLocation>>, private val addToCache: (ErrorCoordinates, ErrorDescriptionLocation) -> Mono<Unit>, @Named(CachingErrorDescriptionService.eventSourceQualifier) override val source: PublishingEventSource<ErrorDescriptionService.Event> = CachingErrorDescriptionService.EventSourceBean()) : ErrorDescriptionService {
+internal class CachingErrorDescriptionService @Inject constructor(@Adapter private val lookup: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescription>>, private val retrieveCached: (ErrorCoordinates) -> Mono<Optional<out ErrorDescriptionLocation>>, private val addToCache: (ErrorCoordinates, ErrorDescriptionLocation) -> Mono<Unit>, @Named(CachingErrorDescriptionService.eventSourceQualifier) override val source: PublishingEventSource<ErrorDescriptionService.Event> = CachingErrorDescriptionService.EventSourceBean()) : ErrorDescriptionService {
 
     private companion object {
 
@@ -29,12 +31,8 @@ internal class CachingErrorDescriptionService @Inject constructor(@Adapter priva
     // TODO sollecitom perhaps return a StackOverflow search query URL instead of not found on absent.
     override fun descriptionLocationFor(errorCode: ErrorCode, releaseVersion: ReleaseVersion, platformEdition: PlatformEdition, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
 
-        // TODO sollecitom remove errorCode from ErrorDescriptionLocation.
-        // TODO sollecitom add ErrorDescription with ErrorDescriptionLocation field, plus ErrorCode, ReleaseVersion and PlatformEdition.
-        // TODO sollecitom return multiple ErrorDescription from `lookup`, as a Flux, and use the "closest" in terms of ReleaseVersion and PlatformEdition here.
         val coordinates = ErrorCoordinates(errorCode, releaseVersion, platformEdition)
-
-        return coordinates.let(retrieveCached).orIfAbsent { lookup(coordinates.code, invocationContext).andIfPresent { addToCache(coordinates, it) } }.thenPublish(coordinates, invocationContext)
+        return coordinates.let(retrieveCached).orIfAbsent { lookupClosestTo(coordinates, invocationContext) }.andIfPresent { addToCache(coordinates, it) }.thenPublish(coordinates, invocationContext)
     }
 
     @PreDestroy
@@ -42,6 +40,12 @@ internal class CachingErrorDescriptionService @Inject constructor(@Adapter priva
 
         source.close()
         logger.info("Closed")
+    }
+
+    private fun lookupClosestTo(coordinates: ErrorCoordinates, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
+
+        // TODO sollecitom return multiple ErrorDescription from `lookup`, as a Flux, and use the "closest" in terms of ReleaseVersion and PlatformEdition here.
+        return lookup(coordinates.code, invocationContext).map { description -> description.map(ErrorDescription::location) }
     }
 
     private fun <ELEMENT : Any> Mono<Optional<out ELEMENT>>.andIfPresent(action: (ELEMENT) -> Mono<Unit>): Mono<Optional<out ELEMENT>> {

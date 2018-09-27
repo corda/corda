@@ -1,6 +1,8 @@
 package net.corda.tools.error.codes.server.application
 
 import net.corda.tools.error.codes.server.domain.ErrorCode
+import net.corda.tools.error.codes.server.domain.ErrorCoordinates
+import net.corda.tools.error.codes.server.domain.ErrorDescription
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.InvocationContext
 import net.corda.tools.error.codes.server.domain.PlatformEdition
@@ -29,8 +31,8 @@ internal class CachingErrorDescriptionServiceTest {
             val errorCoordinates = ErrorCoordinates(ErrorCode("1jwqa1d"), ReleaseVersion(4, 3, 1), PlatformEdition.OpenSource)
             val invocationContext = InvocationContext.newInstance()
 
-            val retrieveCached = { coordinates: ErrorCoordinates -> locationFor(coordinates.code).also { assertThat(coordinates).isEqualTo(errorCoordinates) } }
-            val lookup = { code: ErrorCode, _: InvocationContext -> locationFor(code).also { lookupCalled = true } }
+            val retrieveCached = { coordinates: ErrorCoordinates -> locationStub().also { assertThat(coordinates).isEqualTo(errorCoordinates) } }
+            val lookup = { _: ErrorCode, _: InvocationContext -> descriptionFor(errorCoordinates).also { lookupCalled = true } }
             val addToCache = { _: ErrorCoordinates, _: ErrorDescriptionLocation -> empty<Unit>() }
 
             val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
@@ -48,7 +50,7 @@ internal class CachingErrorDescriptionServiceTest {
             val invocationContext = InvocationContext.newInstance()
 
             val retrieveCached = { _: ErrorCoordinates -> empty<Optional<out ErrorDescriptionLocation>>() }
-            val lookup = { code: ErrorCode, _: InvocationContext -> locationFor(code).also { lookupCalled = true }.also { assertThat(code).isEqualTo(errorCoordinates.code) } }
+            val lookup = { code: ErrorCode, _: InvocationContext -> descriptionFor(errorCoordinates).also { lookupCalled = true }.also { assertThat(code).isEqualTo(errorCoordinates.code) } }
             val addToCache = { _: ErrorCoordinates, _: ErrorDescriptionLocation -> empty<Unit>() }
 
             val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
@@ -65,11 +67,11 @@ internal class CachingErrorDescriptionServiceTest {
             val errorCoordinates = ErrorCoordinates(ErrorCode("1jwqa"), ReleaseVersion(4, 3, 1), PlatformEdition.Enterprise)
             val invocationContext = InvocationContext.newInstance()
 
-            var lookedUpLocation: ErrorDescriptionLocation? = null
+            var lookedUpDescription: ErrorDescription? = null
 
             val retrieveCached = { _: ErrorCoordinates -> just<Optional<out ErrorDescriptionLocation>>(Optional.empty()) }
-            val lookup = { code: ErrorCode, _: InvocationContext -> locationFor(code).doOnNext { location -> location.ifPresent { lookedUpLocation = it } } }
-            val addToCache = { coordinates: ErrorCoordinates, location: ErrorDescriptionLocation -> empty<Unit>().also { addToCacheCalled = true }.also { assertThat(coordinates).isEqualTo(errorCoordinates) }.also { assertThat(location).isEqualTo(lookedUpLocation) } }
+            val lookup = { _: ErrorCode, _: InvocationContext -> descriptionFor(errorCoordinates).doOnNext { description -> description.ifPresent { lookedUpDescription = it } } }
+            val addToCache = { coordinates: ErrorCoordinates, location: ErrorDescriptionLocation -> empty<Unit>().also { addToCacheCalled = true }.also { assertThat(coordinates).isEqualTo(errorCoordinates) }.also { assertThat(location).isEqualTo(lookedUpDescription?.location) } }
 
             val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
 
@@ -85,7 +87,7 @@ internal class CachingErrorDescriptionServiceTest {
             val invocationContext = InvocationContext.newInstance()
 
             val retrieveCached = { _: ErrorCoordinates -> empty<Optional<out ErrorDescriptionLocation>>() }
-            val lookup = { _: ErrorCode, _: InvocationContext -> empty<Optional<out ErrorDescriptionLocation>>() }
+            val lookup = { _: ErrorCode, _: InvocationContext -> empty<Optional<out ErrorDescription>>() }
             val addToCache = { _: ErrorCoordinates, _: ErrorDescriptionLocation -> empty<Unit>() }
 
             val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
@@ -104,10 +106,19 @@ internal class CachingErrorDescriptionServiceTest {
 
     private fun ErrorDescriptionService.descriptionLocationFor(coordinates: ErrorCoordinates, invocationContext: InvocationContext) = descriptionLocationFor(coordinates.code, coordinates.releaseVersion, coordinates.platformEdition, invocationContext)
 
-    private fun locationFor(errorCode: ErrorCode, url: String = "https://stackoverflow.com/questions/3591291/spring-jackson-and-customization-e-g-customdeserializer", location: ErrorDescriptionLocation? = ErrorDescriptionLocation.External(URI.create(url), errorCode)): Mono<Optional<out ErrorDescriptionLocation>> {
+    private fun locationStub(url: String = "https://stackoverflow.com/questions/3591291/spring-jackson-and-customization-e-g-customdeserializer", location: ErrorDescriptionLocation? = ErrorDescriptionLocation.External(URI.create(url))): Mono<Optional<out ErrorDescriptionLocation>> {
 
         return if (location != null) {
             just(Optional.of(location))
+        } else {
+            empty()
+        }
+    }
+
+    private fun descriptionFor(errorCoordinates: ErrorCoordinates, description: ErrorDescription? = ErrorDescription(ErrorDescriptionLocation.External(URI.create("https://stackoverflow.com/questions/359")), errorCoordinates)): Mono<Optional<out ErrorDescription>> {
+
+        return if (description != null) {
+            just(Optional.of(description))
         } else {
             empty()
         }

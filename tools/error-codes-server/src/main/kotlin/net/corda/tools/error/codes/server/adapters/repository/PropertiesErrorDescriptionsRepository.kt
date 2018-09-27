@@ -1,9 +1,13 @@
 package net.corda.tools.error.codes.server.adapters.repository
 
+import net.corda.tools.error.codes.server.domain.ErrorCoordinates
 import net.corda.tools.error.codes.server.commons.lifecycle.Startable
 import net.corda.tools.error.codes.server.domain.ErrorCode
+import net.corda.tools.error.codes.server.domain.ErrorDescription
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.InvocationContext
+import net.corda.tools.error.codes.server.domain.PlatformEdition
+import net.corda.tools.error.codes.server.domain.ReleaseVersion
 import net.corda.tools.error.codes.server.domain.annotations.Adapter
 import net.corda.tools.error.codes.server.domain.repository.descriptions.ErrorDescriptionsRepository
 import reactor.core.publisher.Mono
@@ -28,16 +32,19 @@ internal class PropertiesErrorDescriptionsRepository @Inject constructor(@Adapte
         properties = loadProperties.invoke()
     }
 
-    override operator fun get(errorCode: ErrorCode, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
+    override operator fun get(errorCode: ErrorCode, invocationContext: InvocationContext): Mono<Optional<out ErrorDescription>> {
 
-        return properties.getProperty(errorCode.value)?.let { url -> just<Optional<out ErrorDescriptionLocation>>(Optional.of(ErrorDescriptionLocation.External(URI.create(url), errorCode))) } ?: empty()
+        // TODO sollecitom remove these.
+        val releaseVersion = ReleaseVersion(3, 2, 1)
+        val platformEdition = PlatformEdition.OpenSource
+        return properties.getProperty(errorCode.value)?.let { url -> just<Optional<out ErrorDescription>>(Optional.of(ErrorDescription(ErrorDescriptionLocation.External(URI.create(url)), ErrorCoordinates(errorCode, releaseVersion, platformEdition)))) } ?: empty()
     }
 }
 
 // This allows injecting functions instead of types.
 @Adapter
 @Named
-internal class RetrieveErrorDescription @Inject constructor(@Adapter private val service: ErrorDescriptionsRepository) : (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>> {
+internal class RetrieveErrorDescription @Inject constructor(@Adapter private val service: ErrorDescriptionsRepository) : (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescription>> {
 
     override fun invoke(errorCode: ErrorCode, invocationContext: InvocationContext) = service[errorCode, invocationContext]
 }

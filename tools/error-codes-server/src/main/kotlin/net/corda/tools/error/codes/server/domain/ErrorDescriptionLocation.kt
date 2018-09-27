@@ -5,9 +5,9 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import java.net.URI
 
-sealed class ErrorDescriptionLocation(val errorCode: ErrorCode) {
+sealed class ErrorDescriptionLocation {
 
-    class External(val uri: URI, errorCode: ErrorCode) : ErrorDescriptionLocation(errorCode) {
+    class External(val uri: URI) : ErrorDescriptionLocation() {
 
         override fun equals(other: Any?): Boolean {
 
@@ -29,7 +29,6 @@ sealed class ErrorDescriptionLocation(val errorCode: ErrorCode) {
         override fun toString(): String {
 
             val toString = ToStringBuilder(ToStringStyle.SHORT_PREFIX_STYLE)
-            toString["errorCode"] = errorCode.value
             toString["uri"] = uri.toString()
             return toString.build()
         }

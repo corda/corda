@@ -8,9 +8,10 @@ import io.vertx.ext.web.client.HttpResponse
 import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
 import net.corda.tools.error.codes.server.ErrorCodesWebApplication
-import net.corda.tools.error.codes.server.application.ErrorCoordinates
+import net.corda.tools.error.codes.server.domain.ErrorCoordinates
 import net.corda.tools.error.codes.server.commons.web.Port
 import net.corda.tools.error.codes.server.domain.ErrorCode
+import net.corda.tools.error.codes.server.domain.ErrorDescription
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.InvocationContext
 import net.corda.tools.error.codes.server.domain.PlatformEdition
@@ -43,7 +44,7 @@ internal class ErrorCodeDescriptionLocationContractTest {
     private companion object {
 
         private var errorCoordinates: ErrorCoordinates? = null
-        private var location: Mono<Optional<out ErrorDescriptionLocation>>? = null
+        private var description: Mono<Optional<out ErrorDescription>>? = null
     }
 
     @Test
@@ -52,9 +53,10 @@ internal class ErrorCodeDescriptionLocationContractTest {
 
         val errorCoordinates = ErrorCoordinates(ErrorCode("123jdazz"), ReleaseVersion(4, 3, 1), PlatformEdition.OpenSource)
 
-        val location = ErrorDescriptionLocation.External(URI.create("https://thisisatest/boom"), errorCoordinates.code)
+        val location = ErrorDescriptionLocation.External(URI.create("https://thisisatest/boom"))
+        val description = ErrorDescription(location, errorCoordinates)
 
-        val response = performRequestWithStubbedValue(errorCoordinates, just(Optional.of(location))).block()!!
+        val response = performRequestWithStubbedValue(errorCoordinates, just(Optional.of(description))).block()!!
 
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TEMPORARY_REDIRECT.code())
         assertThat(response.headers()[HttpHeaderNames.LOCATION]).isEqualTo(location.uri.toASCIIString())
@@ -72,10 +74,10 @@ internal class ErrorCodeDescriptionLocationContractTest {
         assertThat(response.headers()[HttpHeaderNames.LOCATION]).isNull()
     }
 
-    private fun performRequestWithStubbedValue(errorCoordinatesForServer: ErrorCoordinates, locationReturned: Mono<Optional<out ErrorDescriptionLocation>>): Mono<HttpResponse<Buffer>> {
+    private fun performRequestWithStubbedValue(errorCoordinatesForServer: ErrorCoordinates, descriptionReturned: Mono<Optional<out ErrorDescription>>): Mono<HttpResponse<Buffer>> {
 
         errorCoordinates = errorCoordinatesForServer
-        location = locationReturned
+        description = descriptionReturned
 
         val vertx = Vertx.vertx()
         val client = webServer.client(vertx)
@@ -120,13 +122,13 @@ internal class ErrorCodeDescriptionLocationContractTest {
 
         @Adapter
         @Bean
-        open fun repository(): (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>> {
+        open fun repository(): (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescription>> {
 
-            return object : (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescriptionLocation>> {
+            return object : (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescription>> {
 
-                override fun invoke(p1: ErrorCode, p2: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
+                override fun invoke(errorCode: ErrorCode, invocationContext: InvocationContext): Mono<Optional<out ErrorDescription>> {
 
-                    return location!!
+                    return description!!
                 }
             }
         }
