@@ -88,7 +88,7 @@ cordapp {
         name "net/corda/finance"
         vendor "Corda Open Source"
     }
-// signing DSL entry is not yet available in Cordapp plugin
+// TODO signing DSL entry is not yet available in Cordapp plugin, start using this entry using (with enabled=true) when Corda-1915 is release in corda-gradle-plugins 
 //    signing {
 //        // Pass system properties via ./gradlew finance:signJar -DjarSignerKeystoreFile="/path/to/keystore.jks"
 //        // -DjarSignerKeystorepass="password" -DjarSignerKeyalias="alias"
