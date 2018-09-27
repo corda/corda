@@ -8,8 +8,8 @@ Setting up a Corda network
 Bootstrapping a development network
 -----------------------------------
 
-During CorDapp development, no network is required. You should use the :doc:`bootstrapper tool <network-bootstrapper>`
-to create a private, semi-static network for testing.
+When testing CorDapps during development, you should use the :doc:`bootstrapper tool <network-bootstrapper>` to create
+a local test network.
 
 Creating your own compatibility zone
 ------------------------------------

@@ -26,7 +26,9 @@ You install CorDapps on the node by placing CorDapp JARs in the ``cordapps`` fol
 
 In development mode (i.e. when ``devMode = true``), the ``certificates`` directory is filled with pre-configured
 keystores if they do not already exist to ensure that developers can get the nodes working as quickly as
-possible. Note that these pre-configured keystores are not secure.
+possible.
+
+.. warning:: These pre-configured keystores are not secure and must not used in a production environments.
 
 The keystores store the key pairs and certificates under the following aliases:
 
