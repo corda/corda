@@ -19,7 +19,6 @@ import javax.annotation.PostConstruct
 import javax.inject.Inject
 import javax.inject.Named
 
-// TODO sollecitom create an integration test for this class, fetching the bean from Spring context, and testing it through its interface.
 @Adapter
 @Named
 internal class PropertiesErrorDescriptionsRepository @Inject constructor(@Adapter private val loadProperties: () -> Properties) : ErrorDescriptionsRepository, Startable {
@@ -40,7 +39,7 @@ internal class PropertiesErrorDescriptionsRepository @Inject constructor(@Adapte
 
     override operator fun get(errorCode: ErrorCode, invocationContext: InvocationContext): Flux<out ErrorDescription> {
 
-        return properties.getProperty(errorCode.value)?.split(DESCRIPTIONS_SEPARATOR)?.toFlux()?.map { parseDescription(it, errorCode) } ?: empty()
+        return properties.getProperty(errorCode.value)?.split(DESCRIPTIONS_SEPARATOR)?.toFlux()?.filter(String::isNotBlank)?.map { parseDescription(it, errorCode) } ?: empty()
     }
 
     private fun parseDescription(rawValue: String, errorCode: ErrorCode): ErrorDescription {
