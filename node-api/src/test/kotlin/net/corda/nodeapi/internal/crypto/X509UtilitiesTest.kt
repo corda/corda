@@ -63,8 +63,7 @@ class X509UtilitiesTest {
         val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
         val CIPHER_SUITES = arrayOf(
                 "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-                "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
+                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
         )
         // We ensure that all of the algorithms are both used (at least once) as first and second in the following [Pair]s.
         // We also add [DEFAULT_TLS_SIGNATURE_SCHEME] and [DEFAULT_IDENTITY_SIGNATURE_SCHEME] combinations for consistency.
