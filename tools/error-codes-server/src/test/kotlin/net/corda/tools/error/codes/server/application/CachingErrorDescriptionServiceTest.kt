@@ -31,7 +31,7 @@ internal class CachingErrorDescriptionServiceTest {
             val invocationContext = InvocationContext.newInstance()
             val descriptions: Flux<out ErrorDescription> = Flux.just(description())
 
-            val retrieveCached = { coordinates: ErrorCoordinates -> locationStub().also { assertThat(coordinates).isEqualTo(errorCoordinates) } }
+            val retrieveCached = { coordinates: ErrorCoordinates -> Mono.just(location()).also { assertThat(coordinates).isEqualTo(errorCoordinates) } }
             val lookup = { _: ErrorCode, _: InvocationContext -> descriptions.also { lookupCalled = true } }
             val addToCache = { _: ErrorCoordinates, _: ErrorDescriptionLocation -> empty<Unit>() }
 
@@ -111,11 +111,7 @@ internal class CachingErrorDescriptionServiceTest {
 
     private fun ErrorDescriptionService.descriptionLocationFor(coordinates: ErrorCoordinates, invocationContext: InvocationContext) = descriptionLocationFor(coordinates.code, coordinates.releaseVersion, coordinates.platformEdition, invocationContext)
 
-    // TODO sollecitom try and get rid of this.
-    private fun locationStub(url: String = "https://stackoverflow.com/questions/3591291/spring-jackson-and-customization-e-g-customdeserializer", location: ErrorDescriptionLocation? = ErrorDescriptionLocation.External(URI.create(url))): Mono<ErrorDescriptionLocation> {
+    private fun location(url: String = "https://stackoverflow.com/questions/3591291/spring-jackson-and-customization-e-g-customdeserializer"): ErrorDescriptionLocation = ErrorDescriptionLocation.External(URI.create(url))
 
-        return Mono.justOrEmpty(location)
-    }
-
-    private fun description(url: String = "https://stackoverflow.com/questions/35", errorCode: ErrorCode = ErrorCode("12hdlsa"), releaseVersion: ReleaseVersion = ReleaseVersion(3, 2, 1), platformEdition: PlatformEdition = PlatformEdition.Enterprise, description: ErrorDescription = ErrorDescription(ErrorDescriptionLocation.External(URI.create(url)), ErrorCoordinates(errorCode, releaseVersion, platformEdition))) = description
+    private fun description(url: String = "https://stackoverflow.com/questions/35", errorCode: ErrorCode = ErrorCode("12hdlsa"), releaseVersion: ReleaseVersion = ReleaseVersion(3, 2, 1), platformEdition: PlatformEdition = PlatformEdition.Enterprise, description: ErrorDescription = ErrorDescription(location(url), ErrorCoordinates(errorCode, releaseVersion, platformEdition))) = description
 }
