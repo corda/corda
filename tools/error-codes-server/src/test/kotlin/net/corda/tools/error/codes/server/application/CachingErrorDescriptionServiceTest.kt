@@ -18,8 +18,6 @@ import java.net.URI
 
 internal class CachingErrorDescriptionServiceTest {
 
-    // TODO sollecitom add tests to cover for "closest" result.
-
     @Nested
     internal inner class DescriptionLocationFor {
 
@@ -106,6 +104,67 @@ internal class CachingErrorDescriptionServiceTest {
             }.subscribe()
 
             service.use { it.descriptionLocationFor(errorCoordinates, invocationContext).block() }
+        }
+
+        @Test
+        fun inexact_coordinates_match_returns_closest_to_release_version() {
+
+            val specifiedReleaseVersion = ReleaseVersion(4, 3, 1)
+            val errorCoordinates = ErrorCoordinates(ErrorCode("1jwqa1d"), specifiedReleaseVersion, PlatformEdition.OpenSource)
+            val invocationContext = InvocationContext.newInstance()
+
+            val closestUrl = "https://closest.com"
+            val closestReleaseVersion = ReleaseVersion(specifiedReleaseVersion.major + 1, specifiedReleaseVersion.minor + 3, specifiedReleaseVersion.patch + 5)
+
+            val furthestUrl = "https://furthest.com"
+            val furthestReleaseVersion = ReleaseVersion(specifiedReleaseVersion.major + 2, specifiedReleaseVersion.minor + 1, specifiedReleaseVersion.patch + 1)
+
+            val descriptions: Flux<out ErrorDescription> = Flux.just(description(releaseVersion = furthestReleaseVersion, url = furthestUrl), description(releaseVersion = closestReleaseVersion, url = closestUrl))
+
+            val retrieveCached = { coordinates: ErrorCoordinates -> Mono.empty<ErrorDescriptionLocation>().also { assertThat(coordinates).isEqualTo(errorCoordinates) } }
+            val lookup = { _: ErrorCode, _: InvocationContext -> descriptions }
+            val addToCache = { _: ErrorCoordinates, _: ErrorDescriptionLocation -> empty<Unit>() }
+
+            val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
+
+            val errorDescriptionLocation = service.use { it.descriptionLocationFor(errorCoordinates, invocationContext).block() }
+
+            assertThat(errorDescriptionLocation).isNotNull
+            assertThat(errorDescriptionLocation).isInstanceOfSatisfying(ErrorDescriptionLocation.External::class.java) { location ->
+
+                assertThat(location.uri.toASCIIString()).isEqualTo(closestUrl)
+            }
+        }
+
+        @Test
+        fun inexact_coordinates_match_with_same_release_version_returns_closest_to_edition() {
+
+            val specifiedEdition = PlatformEdition.OpenSource
+            val errorCoordinates = ErrorCoordinates(ErrorCode("1jwqa1d"), ReleaseVersion(4, 3, 1), specifiedEdition)
+            val invocationContext = InvocationContext.newInstance()
+
+            val closestUrl = "https://closest.com"
+            @Suppress("UnnecessaryVariable")
+            val closestEdition = specifiedEdition
+
+            val furthestUrl = "https://furthest.com"
+            val furthestEdition = PlatformEdition.Enterprise
+
+            val descriptions: Flux<out ErrorDescription> = Flux.just(description(platformEdition = closestEdition, url = closestUrl), description(platformEdition = furthestEdition, url = furthestUrl))
+
+            val retrieveCached = { coordinates: ErrorCoordinates -> Mono.empty<ErrorDescriptionLocation>().also { assertThat(coordinates).isEqualTo(errorCoordinates) } }
+            val lookup = { _: ErrorCode, _: InvocationContext -> descriptions }
+            val addToCache = { _: ErrorCoordinates, _: ErrorDescriptionLocation -> empty<Unit>() }
+
+            val service = CachingErrorDescriptionService(lookup, retrieveCached, addToCache)
+
+            val errorDescriptionLocation = service.use { it.descriptionLocationFor(errorCoordinates, invocationContext).block() }
+
+            assertThat(errorDescriptionLocation).isNotNull
+            assertThat(errorDescriptionLocation).isInstanceOfSatisfying(ErrorDescriptionLocation.External::class.java) { location ->
+
+                assertThat(location.uri.toASCIIString()).isEqualTo(closestUrl)
+            }
         }
     }
 
