@@ -34,6 +34,11 @@ gives people the opportunity to see their work in action, to help their fellow c
   signing certificates (Network Map and Doorman). This has the effect of allowing the root certificate to *always* be kept offline and never retrieved or
   used. Those new intermediate certificates can be used to generate, if ever needed, new signing certs without risking compromise of the root key.
 
+* **Persistent State Ref**
+
+ We have made soem fixes to the ``net.corda.core.schemas.PersistentStateRef`` table that require a little maintaince when upgrading from 3.2. The
+ exact process is detailed in the :doc:`upgrade-notes`.
+
 Special Thanks
 ~~~~~~~~~~~~~~
 
@@ -57,10 +62,16 @@ We're therefore happy to extend thanks to the following members of that communit
 
 Issues Fixed
 ~~~~~~~~~~~~
+* Removing DigitalSignatureWithCertPath [`CORDA-1995 <https://r3-cev.atlassian.net/browse/CORDA-1995>`_]
+* class-carpenter bugfix [`Corda-1945<https://r3-cev.atlassian.net/browse/Corda-1945>`_]
+* If a second identity is mistakenly created the node will not start [`CORDA-1811 <https://r3-cev.atlassian.net/browse/CORDA-1811>`_]
+* Demobench profile load fails with stack dump [`CORDA-1948 <https://r3-cev.atlassian.net/browse/CORDA-1948>`_]
+* Deletes of NodeInfo can fail to propagate leading to infinite retries [`CORDA-2029 <https://r3-cev.atlassian.net/browse/CORDA-2029>`_]
+* Copy all the certificates from the network-trust-store.jks file to the node's trust store [`CORDA-2012 <https://r3-cev.atlassian.net/browse/CORDA-2012>`_]
+* Add SNI header to TLS connections [`CORDA-2001 <https://r3-cev.atlassian.net/browse/CORDA-2001>`_]
 * Fix duplicate index declaration in the Cash schema. [`CORDA-1952 <https://r3-cev.atlassian.net/browse/CORDA-1952>`_]
 * Hello World Tutorial Page mismatch between code sample and explanatory text. [`CORDA-1950 <https://r3-cev.atlassian.net/browse/CORDA-1950>`_]
 * Java Instructions to Invoke Hello World CorDapp are incorrect. [`CORDA-1949 <https://r3-cev.atlassian.net/browse/CORDA-1949>`_]
-* The class carpenter fails when a superclass has any double-size primitive fields. (e.g. long, double) [`CORDA-1945 <https://r3-cev.atlassian.net/browse/CORDA-1945>`_]
 * Add ``VersionInfo`` to the ``NodeInfo`` submission request to the network map element of the compatibility zone. [`CORDA-1938 <https://r3-cev.atlassian.net/browse/CORDA-1938>`_]
 * Rename current INTERMEDIATE_CA certificate role to DOORMAN_CA certificate role. [`CORDA-1934 <https://r3-cev.atlassian.net/browse/CORDA-1934>`_]
 * Make node-side network map verification agnostic to the certificate hierarchy. [`CORDA-1932 <https://r3-cev.atlassian.net/browse/CORDA-1932>`_]
@@ -101,7 +112,7 @@ Issues Fixed
 * Buggy ``CommodityContract`` issuance logic. [`CORDA-1459 <https://r3-cev.atlassian.net/browse/CORDA-1459>`_]
 * Error in the process-id deletion process allows multiple instances of the same node to be run. [`CORDA-1455 <https://r3-cev.atlassian.net/browse/CORDA-1455>`_]
 * Node crashes if network map returns HTTP 50X error. [`CORDA-1414 <https://r3-cev.atlassian.net/browse/CORDA-1414>`_]
-* Delegate Property doesn't serialize – throws an erroneous type mismatch error. [`CORDA-1403 <https://r3-cev.atlassian.net/browse/CORDA-1403>`_]
+* Delegate Property doesn't serialize, throws an erroneous type mismatch error. [`CORDA-1403 <https://r3-cev.atlassian.net/browse/CORDA-1403>`_]
 * If a vault query throws an exception, the stack trace is swallowed. [`CORDA-1397 <https://r3-cev.atlassian.net/browse/CORDA-1397>`_]
 * Node can fail to fully start when a port conflict occurs, no useful error message is generated when this occurs. [`CORDA-1394 <https://r3-cev.atlassian.net/browse/CORDA-1394>`_]
 * Running the ``deployNodes`` gradle task back to back without a clean doesn't work. [`CORDA-1389 <https://r3-cev.atlassian.net/browse/CORDA-1389>`_]
@@ -109,7 +120,7 @@ Issues Fixed
 * ``CordaServices`` are instantiated multiple times per Party when using ``NodeDriver``. [`CORDA-1385 <https://r3-cev.atlassian.net/browse/CORDA-1385>`_]
 * Out of memory errors can be seen when using Demobench + Explorer. [`CORDA-1356 <https://r3-cev.atlassian.net/browse/CORDA-1356>`_]
 * Reduce the amount of classpath scanning during integration tests execution. [`CORDA-1355 <https://r3-cev.atlassian.net/browse/CORDA-1355>`_]
-* SIMM demo – throws “attachment too big” errors. [`CORDA-1346 <https://r3-cev.atlassian.net/browse/CORDA-1346>`_]
+* SIMM demo throws "attachment too big" errors. [`CORDA-1346 <https://r3-cev.atlassian.net/browse/CORDA-1346>`_]
 * Fix vault query paging example in ``ScheduledFlowTests``. [`CORDA-1344 <https://r3-cev.atlassian.net/browse/CORDA-1344>`_]
 * The shell doesn't print the return value of a started flow. [`CORDA-1342 <https://r3-cev.atlassian.net/browse/CORDA-1342>`_]
 * Provide access to database transactions for CorDapp developers. [`CORDA-1341 <https://r3-cev.atlassian.net/browse/CORDA-1341>`_]
@@ -126,8 +137,9 @@ Issues Fixed
 * Node Info file watcher should block and load ``NodeInfo`` when node startup. [`CORDA-1604 <https://r3-cev.atlassian.net/browse/CORDA-1604>`_]
 * Improved logging of the network parameters update process. [`CORDA-1405 <https://r3-cev.atlassian.net/browse/CORDA-1405>`_]
 * Ensure all conditions in cash selection query are tested. [`CORDA-1266 <https://r3-cev.atlassian.net/browse/CORDA-1266>`_]
+* NodeVaultService bug. Start node, issue cash, stop node, start node, getCashBalances() will not show any cash
 * A Corda node doesn't re-select cluster from HA Notary.
-* Time Horizon is not wire compatible with older network params objects.
+* Event Horizon is not wire compatible with older network params objects.
 * Notary unable to resolve Party after processing a flow from same Party.
 * Misleading error message shown when a node is restarted after a flag day event.
 

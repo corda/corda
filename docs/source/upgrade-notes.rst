@@ -28,10 +28,17 @@ versions you are currently using are still in force.
 
 We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes.
 
-UNRELEASED
-----------
+V3.2 to v3.3
+------------
 
-<<< Fill this in >>>
+* Update the Corda Release version
+
+  The ``corda_release_version`` identifier in your projects gradle file will need changing as follows:
+
+  .. sourcecode:: shell
+
+    ext.corda_release_version = '3.3-corda'
+
 
 * API change: ``net.corda.core.schemas.PersistentStateRef`` fields (``index`` and ``txId``) incorrectly marked as nullable are now non-nullable,
   :doc:`changelog` contains the explanation.
