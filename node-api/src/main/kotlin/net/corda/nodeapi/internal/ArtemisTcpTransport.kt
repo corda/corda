@@ -18,8 +18,7 @@ class ArtemisTcpTransport {
     companion object {
         val CIPHER_SUITES = listOf(
                 "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-                "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
+                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
         )
 
         val TLS_VERSIONS = listOf("TLSv1.2")
