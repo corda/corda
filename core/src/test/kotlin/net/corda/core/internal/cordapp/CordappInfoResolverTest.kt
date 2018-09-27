@@ -19,6 +19,7 @@ class CordappInfoResolverTest {
             assertEquals(expectedTargetVersion, actualTargetVersion)
         }
         assertEquals(defaultTargetVersion, returnCallingTargetVersion())
+        CordappInfoResolver.clear()
     }
 
     @Test()
@@ -26,7 +27,7 @@ class CordappInfoResolverTest {
         CordappInfoResolver.register(listOf(javaClass.name), CordappImpl.Info("test", "test", "2", 3, 222))
         CordappInfoResolver.register(listOf(javaClass.name), CordappImpl.Info("test1", "test1", "1", 2, 456))
         assertEquals(0, returnCallingTargetVersion())
-
+        CordappInfoResolver.clear()
     }
     private fun returnCallingTargetVersion(): Int {
         return CordappInfoResolver.getCorDappInfo()?.targetPlatformVersion ?: 0

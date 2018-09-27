@@ -58,4 +58,8 @@ object CordappInfoResolver {
             cordappInfoResolver = resolver
         }
     }
+
+    internal fun clear() {
+        cordappClasses.clear()
+    }
 }
