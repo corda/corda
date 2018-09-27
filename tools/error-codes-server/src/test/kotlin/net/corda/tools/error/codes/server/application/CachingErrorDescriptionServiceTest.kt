@@ -107,7 +107,7 @@ internal class CachingErrorDescriptionServiceTest {
         }
 
         @Test
-        fun inexact_coordinates_match_returns_closest_to_release_version() {
+        fun closest_release_version_determines_result_on_multiple_locations_for_error_code() {
 
             val specifiedReleaseVersion = ReleaseVersion(4, 3, 1)
             val errorCoordinates = ErrorCoordinates(ErrorCode("1jwqa1d"), specifiedReleaseVersion, PlatformEdition.OpenSource)
@@ -137,7 +137,7 @@ internal class CachingErrorDescriptionServiceTest {
         }
 
         @Test
-        fun inexact_coordinates_match_with_same_release_version_returns_closest_to_edition() {
+        fun closest_edition_determines_result_on_multiple_locations_with_same_version_for_error_code() {
 
             val specifiedEdition = PlatformEdition.OpenSource
             val errorCoordinates = ErrorCoordinates(ErrorCode("1jwqa1d"), ReleaseVersion(4, 3, 1), specifiedEdition)
