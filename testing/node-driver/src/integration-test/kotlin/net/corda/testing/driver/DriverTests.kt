@@ -188,14 +188,5 @@ class DriverTests {
         testFuture.getOrThrow()
     }
 
-    @Test
-    fun `driver start with Java 8 only`() {
-        //pretend other Java version is in use, this would not work for node starting in separate proces (startNodesInProcess=false)
-        System.setProperty("java.version", "1.10.0_001")
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-            assertThatIllegalStateException().isThrownBy { startNode().getOrThrow() }
-        }
-    }
-
     private fun DriverDSL.newNode(name: CordaX500Name) = { startNode(NodeParameters(providedName = name)) }
 }
