@@ -30,6 +30,8 @@ internal val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
         override fun generatePublic(keyInfo: SubjectPublicKeyInfo) = decodePublicKey(EDDSA_ED25519_SHA512, keyInfo.encoded)
         override fun generatePrivate(keyInfo: PrivateKeyInfo) = decodePrivateKey(EDDSA_ED25519_SHA512, keyInfo.encoded)
     })
+    // Required due to [X509CRL].verify() reported issues in network-services after BC 1.60 update.
+    put("AlgorithmParameters.SHA256WITHECDSA", "org.bouncycastle.jcajce.provider.asymmetric.ec.AlgorithmParametersSpi")
 }.also {
     // This registration is needed for reading back EdDSA key from java keystore.
     // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
