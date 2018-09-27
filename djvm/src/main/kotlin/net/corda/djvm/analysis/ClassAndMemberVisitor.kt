@@ -506,8 +506,10 @@ open class ClassAndMemberVisitor(
 
         private fun tryReplaceMethodBody() {
             if (method.body.isNotEmpty() && (mv != null)) {
-                for (body in method.body) {
-                    body(mv)
+                EmitterModule(mv).apply {
+                    for (body in method.body) {
+                        body(this)
+                    }
                 }
                 mv.visitMaxs(-1, -1)
                 mv.visitEnd()

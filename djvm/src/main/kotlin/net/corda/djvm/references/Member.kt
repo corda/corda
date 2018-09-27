@@ -1,12 +1,12 @@
 package net.corda.djvm.references
 
-import org.objectweb.asm.MethodVisitor
+import net.corda.djvm.code.EmitterModule
 
 /**
  * Alias for a handler which will replace an entire
  * method body with a block of byte-code.
  */
-typealias MethodBody = (MethodVisitor) -> Unit
+typealias MethodBody = (EmitterModule) -> Unit
 
 /**
  * Representation of a class member.

@@ -1,7 +1,8 @@
 package net.corda.djvm.code
 
+import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import sandbox.net.corda.djvm.costing.RuntimeCostAccounter
 
@@ -30,7 +31,7 @@ class EmitterModule(
     /**
      * Emit instruction for creating a new object of type [typeName].
      */
-    fun new(typeName: String, opcode: Int = Opcodes.NEW) {
+    fun new(typeName: String, opcode: Int = NEW) {
         hasEmittedCustomCode = true
         methodVisitor.visitTypeInsn(opcode, typeName)
     }
@@ -63,7 +64,7 @@ class EmitterModule(
      */
     fun invokeStatic(owner: String, name: String, descriptor: String, isInterface: Boolean = false) {
         hasEmittedCustomCode = true
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, owner, name, descriptor, isInterface)
+        methodVisitor.visitMethodInsn(INVOKESTATIC, owner, name, descriptor, isInterface)
     }
 
     /**
@@ -71,7 +72,7 @@ class EmitterModule(
      */
     fun invokeSpecial(owner: String, name: String, descriptor: String, isInterface: Boolean = false) {
         hasEmittedCustomCode = true
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, owner, name, descriptor, isInterface)
+        methodVisitor.visitMethodInsn(INVOKESPECIAL, owner, name, descriptor, isInterface)
     }
 
     /**
@@ -86,7 +87,7 @@ class EmitterModule(
      */
     fun pop() {
         hasEmittedCustomCode = true
-        methodVisitor.visitInsn(Opcodes.POP)
+        methodVisitor.visitInsn(POP)
     }
 
     /**
@@ -94,7 +95,7 @@ class EmitterModule(
      */
     fun duplicate() {
         hasEmittedCustomCode = true
-        methodVisitor.visitInsn(Opcodes.DUP)
+        methodVisitor.visitInsn(DUP)
     }
 
     /**
@@ -104,13 +105,31 @@ class EmitterModule(
         hasEmittedCustomCode = true
         val exceptionName = Type.getInternalName(exceptionType)
         new(exceptionName)
-        methodVisitor.visitInsn(Opcodes.DUP)
+        methodVisitor.visitInsn(DUP)
         methodVisitor.visitLdcInsn(message)
         invokeSpecial(exceptionName, "<init>", "(Ljava/lang/String;)V")
-        methodVisitor.visitInsn(Opcodes.ATHROW)
+        methodVisitor.visitInsn(ATHROW)
     }
 
     inline fun <reified T : Throwable> throwException(message: String) = throwException(T::class.java, message)
+
+    /**
+     * Emit instruction for returning from "void" method.
+     */
+    fun returnVoid() {
+        methodVisitor.visitInsn(RETURN)
+        hasEmittedCustomCode = true
+    }
+
+    /**
+     * Emit instructions for a new line number.
+     */
+    fun lineNumber(line: Int) {
+        val label = Label()
+        methodVisitor.visitLabel(label)
+        methodVisitor.visitLineNumber(line, label)
+        hasEmittedCustomCode = true
+    }
 
     /**
      * Tell the code writer not to emit the default instruction.

@@ -1,12 +1,11 @@
 package net.corda.djvm.rules.implementation
 
 import net.corda.djvm.analysis.AnalysisRuntimeContext
+import net.corda.djvm.code.EmitterModule
 import net.corda.djvm.code.MemberDefinitionProvider
-import net.corda.djvm.code.ruleViolationError
 import net.corda.djvm.references.Member
-import org.objectweb.asm.Label
-import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
+import sandbox.net.corda.djvm.rules.RuleViolationError
 
 /**
  * Replace reflection APIs with stubs that throw exceptions. Only for unpinned classes.
@@ -18,15 +17,9 @@ class StubOutReflectionMethods : MemberDefinitionProvider {
         else -> member
     }
 
-    private fun writeMethodBody(mv: MethodVisitor): Unit = with(mv) {
-        val throwEx = Label()
-        visitLabel(throwEx)
-        visitLineNumber(0, throwEx)
-        visitTypeInsn(NEW, ruleViolationError)
-        visitInsn(DUP)
-        visitLdcInsn("Disallowed reference to reflection API")
-        visitMethodInsn(INVOKESPECIAL, ruleViolationError, "<init>", "(Ljava/lang/String;)V", false)
-        visitInsn(ATHROW)
+    private fun writeMethodBody(emitter: EmitterModule): Unit = with(emitter) {
+        lineNumber(0)
+        throwException(RuleViolationError::class.java, "Disallowed reference to reflection API")
     }
 
     // The method must be public and with a Java implementation.

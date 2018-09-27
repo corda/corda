@@ -1,10 +1,9 @@
 package net.corda.djvm.rules.implementation
 
 import net.corda.djvm.analysis.AnalysisRuntimeContext
+import net.corda.djvm.code.EmitterModule
 import net.corda.djvm.code.MemberDefinitionProvider
 import net.corda.djvm.references.Member
-import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Opcodes.*
 import java.lang.reflect.Modifier
 
 /**
@@ -22,8 +21,8 @@ class StubOutFinalizerMethods : MemberDefinitionProvider {
         else -> member
     }
 
-    private fun writeMethodBody(mv: MethodVisitor): Unit = with(mv) {
-        visitInsn(RETURN)
+    private fun writeMethodBody(emitter: EmitterModule): Unit = with(emitter) {
+        returnVoid()
     }
 
     /**

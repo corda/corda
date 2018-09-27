@@ -1,12 +1,11 @@
 package net.corda.djvm.rules.implementation
 
 import net.corda.djvm.analysis.AnalysisRuntimeContext
+import net.corda.djvm.code.EmitterModule
 import net.corda.djvm.code.MemberDefinitionProvider
-import net.corda.djvm.code.ruleViolationError
 import net.corda.djvm.references.Member
-import org.objectweb.asm.Label
-import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
+import sandbox.net.corda.djvm.rules.RuleViolationError
 import java.lang.reflect.Modifier
 
 /**
@@ -22,19 +21,13 @@ class StubOutNativeMethods : MemberDefinitionProvider {
         else -> member
     }
 
-    private fun writeExceptionMethodBody(mv: MethodVisitor): Unit = with(mv) {
-        val throwEx = Label()
-        visitLabel(throwEx)
-        visitLineNumber(0, throwEx)
-        visitTypeInsn(NEW, ruleViolationError)
-        visitInsn(DUP)
-        visitLdcInsn("Native method has been deleted")
-        visitMethodInsn(INVOKESPECIAL, ruleViolationError, "<init>", "(Ljava/lang/String;)V", false)
-        visitInsn(ATHROW)
+    private fun writeExceptionMethodBody(emitter: EmitterModule): Unit = with(emitter) {
+        lineNumber(0)
+        throwException(RuleViolationError::class.java, "Native method has been deleted")
     }
 
-    private fun writeStubMethodBody(mv: MethodVisitor): Unit = with(mv) {
-        visitInsn(RETURN)
+    private fun writeStubMethodBody(emitter: EmitterModule): Unit = with(emitter) {
+        returnVoid()
     }
 
     private fun isForStubbing(member: Member): Boolean = member.signature == "()V" && member.memberName == "registerNatives"
