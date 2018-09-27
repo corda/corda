@@ -11,16 +11,18 @@ import net.corda.tools.error.codes.server.domain.PlatformEdition
 import net.corda.tools.error.codes.server.domain.ReleaseVersion
 import net.corda.tools.error.codes.server.domain.annotations.Adapter
 import net.corda.tools.error.codes.server.domain.loggerFor
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.publisher.Mono.defer
 import java.util.*
 import javax.annotation.PreDestroy
 import javax.inject.Inject
 import javax.inject.Named
+import kotlin.Comparator
 
 @Application
 @Named
-internal class CachingErrorDescriptionService @Inject constructor(@Adapter private val lookup: (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescription>>, private val retrieveCached: (ErrorCoordinates) -> Mono<Optional<out ErrorDescriptionLocation>>, private val addToCache: (ErrorCoordinates, ErrorDescriptionLocation) -> Mono<Unit>, @Named(CachingErrorDescriptionService.eventSourceQualifier) override val source: PublishingEventSource<ErrorDescriptionService.Event> = CachingErrorDescriptionService.EventSourceBean()) : ErrorDescriptionService {
+internal class CachingErrorDescriptionService @Inject constructor(@Adapter private val lookup: (ErrorCode, InvocationContext) -> Flux<out ErrorDescription>, private val retrieveCached: (ErrorCoordinates) -> Mono<Optional<out ErrorDescriptionLocation>>, private val addToCache: (ErrorCoordinates, ErrorDescriptionLocation) -> Mono<Unit>, @Named(CachingErrorDescriptionService.eventSourceQualifier) override val source: PublishingEventSource<ErrorDescriptionService.Event> = CachingErrorDescriptionService.EventSourceBean()) : ErrorDescriptionService {
 
     private companion object {
 
@@ -44,8 +46,29 @@ internal class CachingErrorDescriptionService @Inject constructor(@Adapter priva
 
     private fun lookupClosestTo(coordinates: ErrorCoordinates, invocationContext: InvocationContext): Mono<Optional<out ErrorDescriptionLocation>> {
 
-        // TODO sollecitom return multiple ErrorDescription from `lookup`, as a Flux, and use the "closest" in terms of ReleaseVersion and PlatformEdition here.
-        return lookup(coordinates.code, invocationContext).map { description -> description.map(ErrorDescription::location) }
+        // TODO sollecitom try and get rid of java.util.Optional here.
+        return lookup(coordinates.code, invocationContext).sort(closestTo(coordinates)).take(1).singleOrEmpty().map(ErrorDescription::location).map { Optional.ofNullable(it) }
+    }
+
+    private fun closestTo(coordinates: ErrorCoordinates): Comparator<ErrorDescription> {
+
+        val specifiedReleaseVersion = coordinates.releaseVersion
+
+        // TODO sollecitom create a type.
+        return Comparator<ErrorDescription> { first, second ->
+
+            val firstDistance: ReleaseVersion = first?.coordinates?.releaseVersion?.distanceFrom(specifiedReleaseVersion) ?: ReleaseVersion(Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
+            val secondDistance: ReleaseVersion = second?.coordinates?.releaseVersion?.distanceFrom(specifiedReleaseVersion) ?: ReleaseVersion(Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
+            firstDistance.compareTo(secondDistance)
+        }.thenComparator { first: ErrorDescription?, second: ErrorDescription? ->
+
+            when {
+                first?.coordinates?.platformEdition == second?.coordinates?.platformEdition -> 0
+                first?.coordinates?.platformEdition == coordinates.platformEdition -> -1
+                second?.coordinates?.platformEdition == coordinates.platformEdition -> 1
+                else -> 0
+            }
+        }
     }
 
     private fun <ELEMENT : Any> Mono<Optional<out ELEMENT>>.andIfPresent(action: (ELEMENT) -> Mono<Unit>): Mono<Optional<out ELEMENT>> {

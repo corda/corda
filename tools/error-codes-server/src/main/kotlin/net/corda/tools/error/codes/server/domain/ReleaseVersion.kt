@@ -1,8 +1,9 @@
 package net.corda.tools.error.codes.server.domain
 
 import net.corda.tools.error.codes.server.commons.domain.validation.ValidationResult
+import java.lang.Math.abs
 
-data class ReleaseVersion(val major: Int, val minor: Int = 0, val patch: Int = 0) {
+data class ReleaseVersion(val major: Int, val minor: Int = 0, val patch: Int = 0) : Comparable<ReleaseVersion> {
 
     init {
         val errors = errorsForArgs(major, minor, patch)
@@ -13,6 +14,13 @@ data class ReleaseVersion(val major: Int, val minor: Int = 0, val patch: Int = 0
 
     override fun toString() = description()
 
+    override fun compareTo(other: ReleaseVersion) = COMPARATOR.compare(this, other)
+
+    fun distanceFrom(other: ReleaseVersion): ReleaseVersion {
+
+        return ReleaseVersion(abs(major - other.major), abs(minor - other.minor), abs(patch - other.patch))
+    }
+
     companion object {
 
         const val SEPARATOR = "."
@@ -20,6 +28,8 @@ data class ReleaseVersion(val major: Int, val minor: Int = 0, val patch: Int = 0
         private const val MAJOR_NEGATIVE_VALUE_ERROR = "Major release version part cannot be negative."
         private const val MINOR_NEGATIVE_VALUE_ERROR = "Minor release version part cannot be negative."
         private const val PATCH_NEGATIVE_VALUE_ERROR = "Patch release version part cannot be negative."
+
+        private val COMPARATOR = Comparator.comparing(ReleaseVersion::major).thenBy(ReleaseVersion::minor).thenBy(ReleaseVersion::patch)
 
         @JvmStatic
         fun errorsForArgs(major: Int, minor: Int, patch: Int): Set<String> {

@@ -8,9 +8,9 @@ import io.vertx.ext.web.client.HttpResponse
 import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
 import net.corda.tools.error.codes.server.ErrorCodesWebApplication
-import net.corda.tools.error.codes.server.domain.ErrorCoordinates
 import net.corda.tools.error.codes.server.commons.web.Port
 import net.corda.tools.error.codes.server.domain.ErrorCode
+import net.corda.tools.error.codes.server.domain.ErrorCoordinates
 import net.corda.tools.error.codes.server.domain.ErrorDescription
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
 import net.corda.tools.error.codes.server.domain.InvocationContext
@@ -25,14 +25,14 @@ import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.FilterType
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.junit.jupiter.SpringJUnitJupiterConfig
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.core.publisher.Mono.empty
-import reactor.core.publisher.Mono.just
+import reactor.core.publisher.Flux.just
+import reactor.core.publisher.Flux.empty
 import reactor.core.publisher.MonoProcessor
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.URI
-import java.util.*
 import javax.inject.Inject
 
 @SpringJUnitJupiterConfig(ErrorCodeDescriptionLocationContractTest.Configuration::class)
@@ -44,7 +44,7 @@ internal class ErrorCodeDescriptionLocationContractTest {
     private companion object {
 
         private var errorCoordinates: ErrorCoordinates? = null
-        private var description: Mono<Optional<out ErrorDescription>>? = null
+        private var descriptions: Flux<out ErrorDescription>? = null
     }
 
     @Test
@@ -56,7 +56,7 @@ internal class ErrorCodeDescriptionLocationContractTest {
         val location = ErrorDescriptionLocation.External(URI.create("https://thisisatest/boom"))
         val description = ErrorDescription(location, errorCoordinates)
 
-        val response = performRequestWithStubbedValue(errorCoordinates, just(Optional.of(description))).block()!!
+        val response = performRequestWithStubbedValue(errorCoordinates, just(description)).block()!!
 
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.TEMPORARY_REDIRECT.code())
         assertThat(response.headers()[HttpHeaderNames.LOCATION]).isEqualTo(location.uri.toASCIIString())
@@ -74,10 +74,10 @@ internal class ErrorCodeDescriptionLocationContractTest {
         assertThat(response.headers()[HttpHeaderNames.LOCATION]).isNull()
     }
 
-    private fun performRequestWithStubbedValue(errorCoordinatesForServer: ErrorCoordinates, descriptionReturned: Mono<Optional<out ErrorDescription>>): Mono<HttpResponse<Buffer>> {
+    private fun performRequestWithStubbedValue(errorCoordinatesForServer: ErrorCoordinates, descriptionReturned: Flux<out ErrorDescription>): Mono<HttpResponse<Buffer>> {
 
         errorCoordinates = errorCoordinatesForServer
-        description = descriptionReturned
+        descriptions = descriptionReturned
 
         val vertx = Vertx.vertx()
         val client = webServer.client(vertx)
@@ -122,13 +122,13 @@ internal class ErrorCodeDescriptionLocationContractTest {
 
         @Adapter
         @Bean
-        open fun repository(): (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescription>> {
+        open fun repository(): (ErrorCode, InvocationContext) -> Flux<out ErrorDescription> {
 
-            return object : (ErrorCode, InvocationContext) -> Mono<Optional<out ErrorDescription>> {
+            return object : (ErrorCode, InvocationContext) -> Flux<out ErrorDescription> {
 
-                override fun invoke(errorCode: ErrorCode, invocationContext: InvocationContext): Mono<Optional<out ErrorDescription>> {
+                override fun invoke(errorCode: ErrorCode, invocationContext: InvocationContext): Flux<out ErrorDescription> {
 
-                    return description!!
+                    return descriptions!!
                 }
             }
         }
