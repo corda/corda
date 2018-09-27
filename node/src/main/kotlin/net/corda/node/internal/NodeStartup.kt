@@ -15,6 +15,7 @@ import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
+import net.corda.node.internal.Node.Companion.isValidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
@@ -33,7 +34,6 @@ import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.tools.shell.InteractiveShell
-import org.apache.commons.lang.SystemUtils
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
 import picocli.CommandLine.Mixin
@@ -45,7 +45,6 @@ import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
 import java.util.*
@@ -128,22 +127,6 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
             return true
         }
         return null
-    }
-
-    private fun isValidJavaVersion(): Boolean {
-        if (!hasMinimumJavaVersion()) {
-            println("You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8.")
-            println("Corda will now exit...")
-            return false
-        }
-        return true
-    }
-
-    private fun hasMinimumJavaVersion(): Boolean {
-        // when the ext.java8_minUpdateVersion gradle constant changes, so must this check
-        val major = SystemUtils.JAVA_VERSION_FLOAT
-        val update = SystemUtils.JAVA_VERSION.substringAfter("_").toLong()
-        return major == 1.8F && update >= 171
     }
 
     // TODO: Reconsider if automatic re-registration should be applied when something failed during initial registration.
