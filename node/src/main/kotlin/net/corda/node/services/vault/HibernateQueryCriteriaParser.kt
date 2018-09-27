@@ -547,6 +547,21 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             }
         }
 
+        // contract state types
+        val contractStateTypes = deriveContractStateTypes(criteria.contractStateTypes)
+        if (contractStateTypes.isNotEmpty()) {
+            val predicateID = Pair(VaultSchemaV1.VaultStates::contractStateClassName.name, IN)
+            if (commonPredicates.containsKey(predicateID)) {
+                val existingTypes = (commonPredicates[predicateID]!!.expressions[0] as InPredicate<*>).values.map { (it as LiteralExpression).literal }.toSet()
+                if (existingTypes != contractStateTypes) {
+                    log.warn("Enriching previous attribute [${VaultSchemaV1.VaultStates::contractStateClassName.name}] values [$existingTypes] with [$contractStateTypes]")
+                    commonPredicates.replace(predicateID, criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractStateTypes.plus(existingTypes))))
+                }
+            } else {
+                commonPredicates[predicateID] = criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractStateTypes))
+            }
+        }
+
         // contract constraint types
         if (criteria.constraintTypes.isNotEmpty()) {
             val predicateID = Pair(VaultSchemaV1.VaultStates::constraintType.name, IN)
