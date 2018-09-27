@@ -1,9 +1,17 @@
 package net.corda.core.internal.cordapp
 
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class CordappInfoResolverTest {
+
+    @Before
+    @After
+    fun clearCordappInfoResolver() {
+        CordappInfoResolver.clear()
+    }
 
     @Test()
     fun `The correct cordapp resolver is used after calling withCordappResolution`() {
@@ -19,7 +27,6 @@ class CordappInfoResolverTest {
             assertEquals(expectedTargetVersion, actualTargetVersion)
         }
         assertEquals(defaultTargetVersion, returnCallingTargetVersion())
-        CordappInfoResolver.clear()
     }
 
     @Test()
@@ -27,8 +34,8 @@ class CordappInfoResolverTest {
         CordappInfoResolver.register(listOf(javaClass.name), CordappImpl.Info("test", "test", "2", 3, 222))
         CordappInfoResolver.register(listOf(javaClass.name), CordappImpl.Info("test1", "test1", "1", 2, 456))
         assertEquals(0, returnCallingTargetVersion())
-        CordappInfoResolver.clear()
     }
+
     private fun returnCallingTargetVersion(): Int {
         return CordappInfoResolver.getCorDappInfo()?.targetPlatformVersion ?: 0
     }
