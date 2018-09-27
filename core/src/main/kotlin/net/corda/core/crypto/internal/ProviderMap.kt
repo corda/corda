@@ -11,6 +11,7 @@ import net.i2p.crypto.eddsa.EdDSASecurityProvider
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
+import org.bouncycastle.jcajce.provider.asymmetric.ec.AlgorithmParametersSpi
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
@@ -31,7 +32,7 @@ internal val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
         override fun generatePrivate(keyInfo: PrivateKeyInfo) = decodePrivateKey(EDDSA_ED25519_SHA512, keyInfo.encoded)
     })
     // Required due to [X509CRL].verify() reported issues in network-services after BC 1.60 update.
-    put("AlgorithmParameters.SHA256WITHECDSA", "org.bouncycastle.jcajce.provider.asymmetric.ec.AlgorithmParametersSpi")
+    put("AlgorithmParameters.SHA256WITHECDSA", AlgorithmParametersSpi::class.java.name)
 }.also {
     // This registration is needed for reading back EdDSA key from java keystore.
     // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
