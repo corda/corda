@@ -48,9 +48,9 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
             // Includes the corda-finance CorDapp on our node.
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
             extraConfig = [
-                // Specify a JVM argument to be used when running the node (in this case, extra heap size).
-                jvmArgs : [ "-Xmx1g" ],
-                // Set the H2 address.
+                // Setting the JMX reporter type.
+                jmxReporterType: 'JOLOKIA',
+                // Setting the H2 address.
                 'h2Settings.address': 'localhost:10030'
             ]
         }
