@@ -156,7 +156,7 @@ open class Node(configuration: NodeConfiguration,
                 val update = SystemUtils.JAVA_VERSION.substringAfter("_").toLong()
                 major == 1.8F && update >= 171
             } catch (e: NumberFormatException) { // custom JDKs may not have the update version (e.g. 1.8.0-adoptopenjdk)
-                return false
+                false
             }
         }
     }
