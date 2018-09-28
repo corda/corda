@@ -2,25 +2,47 @@ package net.corda.djvm.code
 
 import net.corda.djvm.analysis.AnalysisConfiguration
 import net.corda.djvm.analysis.ClassAndMemberVisitor
+import net.corda.djvm.code.instructions.MethodEntry
 import net.corda.djvm.references.ClassRepresentation
 import net.corda.djvm.references.Member
+import net.corda.djvm.references.MethodBody
 import net.corda.djvm.utilities.Processor
 import net.corda.djvm.utilities.loggerFor
 import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.Opcodes.*
 
 /**
  * Helper class for applying a set of definition providers and emitters to a class or set of classes.
  *
  * @param classVisitor Class visitor to use when traversing the structure of classes.
- * @property definitionProviders A set of providers used to update the name or meta-data of classes and members.
+ * @property configuration The configuration to use for class analysis.
+ * @param definitionProviders A set of providers used to update the name or meta-data of classes and members.
  * @property emitters A set of code emitters used to modify and instrument method bodies.
  */
 class ClassMutator(
         classVisitor: ClassVisitor,
         private val configuration: AnalysisConfiguration,
         private val definitionProviders: List<DefinitionProvider> = emptyList(),
-        private val emitters: List<Emitter> = emptyList()
+        emitters: List<Emitter> = emptyList()
 ) : ClassAndMemberVisitor(configuration, classVisitor) {
+
+    /**
+     * Internal [Emitter] to add static field initializers to
+     * any class constructor method.
+     */
+    private inner class PrependClassInitializer : Emitter {
+        override fun emit(context: EmitterContext, instruction: Instruction) = context.emit {
+            if (instruction is MethodEntry
+                    && instruction.method.memberName == "<clinit>" && instruction.method.signature == "()V"
+                    && initializers.isNotEmpty()) {
+                writeByteCode(initializers)
+                initializers.clear()
+            }
+        }
+    }
+
+    private val emitters: List<Emitter> = emitters + PrependClassInitializer()
+    private val initializers = mutableListOf<MethodBody>()
 
     /**
      * Tracks whether any modifications have been applied to any of the processed class(es) and pertinent members.
@@ -42,6 +64,29 @@ class ClassMutator(
             hasBeenModified = true
         }
         return super.visitClass(resultingClass)
+    }
+
+    /**
+     * If we have some static fields to initialise, and haven't already added them
+     * to an existing class initialiser block then we need to create one.
+     */
+    override fun visitClassEnd(classVisitor: ClassVisitor, clazz: ClassRepresentation) {
+        tryWriteClassInitializer(classVisitor)
+        super.visitClassEnd(classVisitor, clazz)
+    }
+
+    private fun tryWriteClassInitializer(classVisitor: ClassVisitor) {
+        if (initializers.isNotEmpty()) {
+            classVisitor.visitMethod(ACC_STATIC, "<clinit>", "()V", null, null)?.also { mv ->
+                mv.visitCode()
+                EmitterModule(mv).writeByteCode(initializers)
+                mv.visitInsn(RETURN)
+                mv.visitMaxs(-1, -1)
+                mv.visitEnd()
+            }
+            initializers.clear()
+            hasBeenModified = true
+        }
     }
 
     /**
@@ -71,6 +116,7 @@ class ClassMutator(
         }
         if (field != resultingField) {
             logger.trace("Field has been mutated {}", field)
+            initializers += resultingField.body
             hasBeenModified = true
         }
         return super.visitField(clazz, resultingField)

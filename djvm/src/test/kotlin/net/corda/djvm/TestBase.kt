@@ -163,7 +163,7 @@ abstract class TestBase {
     inline fun <reified T : Any> SandboxRuntimeContext.loadClass(): LoadedClass = loadClass(T::class.jvmName)
 
     fun SandboxRuntimeContext.loadClass(className: String): LoadedClass =
-            classLoader.loadClassAndBytes(ClassSource.fromClassName(className), context)
+            classLoader.loadForSandbox(className, context)
 
     /**
      * Run the entry-point of the loaded [Callable] class.

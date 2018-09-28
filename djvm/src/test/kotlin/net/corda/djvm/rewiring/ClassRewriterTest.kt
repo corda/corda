@@ -1,9 +1,6 @@
 package net.corda.djvm.rewiring
 
-import foo.bar.sandbox.A
-import foo.bar.sandbox.B
-import foo.bar.sandbox.Empty
-import foo.bar.sandbox.StrictFloat
+import foo.bar.sandbox.*
 import net.corda.djvm.TestBase
 import net.corda.djvm.assertions.AssertionExtensions.assertThat
 import net.corda.djvm.execution.ExecutionProfile
@@ -11,6 +8,7 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import sandbox.net.corda.djvm.costing.ThresholdViolationError
 import java.nio.file.Paths
+import java.util.*
 
 class ClassRewriterTest : TestBase() {
 
@@ -102,4 +100,51 @@ class ClassRewriterTest : TestBase() {
             return input
         }
     }
+
+    @Test
+    fun `can load class with constant fields`() = sandbox(DEFAULT) {
+        assertThat(loadClass<ObjectWithConstants>())
+                .hasClassName("sandbox.net.corda.djvm.rewiring.ObjectWithConstants")
+                .hasBeenModified()
+    }
+
+    @Test
+    fun `test rewrite static method`() = sandbox(DEFAULT) {
+        assertThat(loadClass<Arrays>())
+                .hasClassName("sandbox.java.util.Arrays")
+                .hasBeenModified()
+    }
+
+    @Test
+    fun `test stitch new super-interface`() = sandbox(DEFAULT) {
+        assertThat(loadClass<CharSequence>())
+                .hasClassName("sandbox.java.lang.CharSequence")
+                .hasInterface("java.lang.CharSequence")
+                .hasBeenModified()
+    }
+
+    @Test
+    fun `test class with stitched interface`() = sandbox(DEFAULT) {
+        assertThat(loadClass<StringBuilder>())
+                .hasClassName("sandbox.java.lang.StringBuilder")
+                .hasInterface("sandbox.java.lang.CharSequence")
+                .hasBeenModified()
+    }
+
+    @Test
+    fun `test loading Throwable`() = sandbox(DEFAULT) {
+        assertThat(loadClass<Throwable>())
+                .hasClassName("sandbox.java.lang.Throwable")
+                .hasBeenModified()
+    }
+}
+
+@Suppress("unused")
+private object ObjectWithConstants {
+    const val MESSAGE = "Hello Sandbox!"
+    const val BIG_NUMBER = 99999L
+    const val NUMBER = 100
+    const val CHAR = '?'
+    const val BYTE = 7f.toByte()
+    val DATA = Array(0) { "" }
 }

@@ -7,6 +7,7 @@ import net.corda.djvm.references.ClassModule
 import net.corda.djvm.references.MemberModule
 import net.corda.djvm.source.BootstrapClassLoader
 import net.corda.djvm.source.SourceClassLoader
+import org.objectweb.asm.Type
 import sandbox.net.corda.djvm.costing.RuntimeCostAccounter
 import java.io.Closeable
 import java.io.IOException
@@ -43,12 +44,7 @@ class AnalysisConfiguration(
      * Classes that have already been declared in the sandbox namespace and that should be made
      * available inside the sandboxed environment.
      */
-    val pinnedClasses: Set<String> = setOf(
-        SANDBOXED_OBJECT,
-        RuntimeCostAccounter.TYPE_NAME,
-        ruleViolationError,
-        thresholdViolationError
-    ) + additionalPinnedClasses
+    val pinnedClasses: Set<String> = MANDATORY_PINNED_CLASSES + additionalPinnedClasses
 
     /**
      * Functionality used to resolve the qualified name and relevant information about a class.
@@ -65,13 +61,64 @@ class AnalysisConfiguration(
         }
     }
 
+    fun isMandatoryBase(className: String): Boolean
+            = MANDATORY_UNMODIFIED_CLASSES.contains(className) || MANDATORY_UNMODIFIED.any { it.matches(className) }
+    fun isStitchedClass(className: String): Boolean = STITCHED_CLASSES.contains(className)
+    fun isRequiredUnmodified(className: String): Boolean = className in pinnedClasses || MANDATORY_UNMODIFIED_CLASSES.contains(className)
+
     companion object {
         /**
          * The package name prefix to use for classes loaded into a sandbox.
          */
         private const val SANDBOX_PREFIX: String = "sandbox/"
 
-        private const val SANDBOXED_OBJECT = SANDBOX_PREFIX + "java/lang/Object"
+        private val MANDATORY_PINNED_CLASSES: Set<String> = setOf(
+            sandbox.java.lang.Object::class.java,
+            sandbox.java.lang.String::class.java,
+            sandbox.java.lang.Character::class.java,
+            sandbox.java.lang.Number::class.java,
+            sandbox.java.lang.Integer::class.java,
+            sandbox.java.lang.Long::class.java,
+            sandbox.java.lang.Short::class.java,
+            sandbox.java.lang.Byte::class.java,
+            sandbox.java.lang.Double::class.java,
+            sandbox.java.lang.Float::class.java,
+            sandbox.java.lang.Boolean::class.java
+        ).map(Type::getInternalName).toSet() + setOf(
+            RuntimeCostAccounter.TYPE_NAME,
+            ruleViolationError,
+            thresholdViolationError
+        )
+
+        private val STITCHED_CLASSES: Set<String> = setOf(
+            "sandbox/java/lang/Appendable",
+            "sandbox/java/lang/CharSequence",
+            "sandbox/java/lang/Comparable",
+            "sandbox/java/lang/Iterable",
+            "sandbox/java/util/Comparator"
+        )
+
+        private val MANDATORY_UNMODIFIED_CLASSES: Set<String> = setOf(
+            java.lang.String::class.java,
+            java.lang.Character::class.java,
+            java.lang.Number::class.java,
+            java.lang.Integer::class.java,
+            java.lang.Long::class.java,
+            java.lang.Short::class.java,
+            java.lang.Byte::class.java,
+            java.lang.Double::class.java,
+            java.lang.Float::class.java,
+            java.lang.Boolean::class.java,
+            java.lang.Void::class.java,
+            kotlin.Any::class.java,
+            kotlin.Throwable::class.java,
+            ThreadDeath::class.java
+        ).map(Type::getInternalName).toSet()
+
+        private val MANDATORY_UNMODIFIED: Set<Regex> = setOf(
+            "^java/lang/(.*)Error$".toRegex(),
+            "^java/lang/(.*)Exception$".toRegex()
+        )
     }
 
 }

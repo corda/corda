@@ -1,10 +1,9 @@
 package net.corda.djvm.execution
 
 import foo.bar.sandbox.MyObject
-import foo.bar.sandbox.testRandom
+import foo.bar.sandbox.testClock
 import foo.bar.sandbox.toNumber
 import net.corda.djvm.TestBase
-import net.corda.djvm.analysis.Whitelist
 import net.corda.djvm.assertions.AssertionExtensions.withProblem
 import net.corda.djvm.rewiring.SandboxClassLoadingException
 import org.assertj.core.api.Assertions.assertThat
@@ -13,13 +12,13 @@ import org.junit.Test
 import sandbox.net.corda.djvm.costing.ThresholdViolationError
 import sandbox.net.corda.djvm.rules.RuleViolationError
 import java.nio.file.Files
-import java.util.*
 import java.util.function.Function
+import java.util.stream.Collectors.*
 
 class SandboxExecutorTest : TestBase() {
 
     @Test
-    fun `can load and execute runnable`() = sandbox(Whitelist.MINIMAL) {
+    fun `can load and execute runnable`() = sandbox(DEFAULT) {
         val contractExecutor = DeterministicSandboxExecutor<Int, String>(configuration)
         val summary = contractExecutor.run<TestSandboxedRunnable>(1)
         val result = summary.result
@@ -123,32 +122,32 @@ class SandboxExecutorTest : TestBase() {
 
     @Test
     fun `can detect illegal references in Kotlin meta-classes`() = sandbox(DEFAULT, ExecutionProfile.DEFAULT) {
-        val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
+        val contractExecutor = DeterministicSandboxExecutor<Int, Long>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestKotlinMetaClasses>(0) }
-                .withCauseInstanceOf(RuleViolationError::class.java)
-                .withMessageContaining("Disallowed reference to reflection API")
+                .withCauseInstanceOf(NoSuchMethodError::class.java)
+                .withProblem("sandbox.java.lang.System.nanoTime()J")
     }
 
-    class TestKotlinMetaClasses : Function<Int, Int> {
-        override fun apply(input: Int): Int {
-            val someNumber = testRandom()
+    class TestKotlinMetaClasses : Function<Int, Long> {
+        override fun apply(input: Int): Long {
+            val someNumber = testClock()
             return "12345".toNumber() * someNumber
         }
     }
 
     @Test
     fun `cannot execute runnable that references non-deterministic code`() = sandbox(DEFAULT) {
-        val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
+        val contractExecutor = DeterministicSandboxExecutor<Int, Long>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestNonDeterministicCode>(0) }
-                .withCauseInstanceOf(RuleViolationError::class.java)
-                .withProblem("Disallowed reference to reflection API")
+                .withCauseInstanceOf(NoSuchMethodError::class.java)
+                .withProblem("sandbox.java.lang.System.currentTimeMillis()J")
     }
 
-    class TestNonDeterministicCode : Function<Int, Int> {
-        override fun apply(input: Int): Int {
-            return Random().nextInt()
+    class TestNonDeterministicCode : Function<Int, Long> {
+        override fun apply(input: Int): Long {
+            return System.currentTimeMillis()
         }
     }
 
@@ -494,6 +493,53 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
+    fun `check building a string`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<String, String>(configuration)
+        contractExecutor.run<TestStringBuilding>("Hello Sandbox!").apply {
+            assertThat(result).isEqualTo("")
+        }
+    }
+
+    class TestStringBuilding : Function<String, String> {
+        override fun apply(input: String): String {
+            return StringBuilder("SANDBOX")
+                    .append(": Boolean=").append(true)
+                    .append(", Char='").append('X')
+                    .append("', Integer=").append(1234)
+                    .append(", Long=").append(99999L)
+                    .append(", Short=").append(3200.toShort())
+                    .append(", Byte=").append(101.toByte())
+                    .append(", String='").append(input)
+                    .append("', Float=").append(123.456f)
+                    .append(", Double=").append(987.6543)
+                    .toString()
+        }
+    }
+
+    @Test
+    fun `check System-arraycopy still works`() = sandbox(DEFAULT) {
+        val source = arrayOf("one", "two", "three")
+        assertThat(TestArrayCopy().apply(source))
+            .isEqualTo(source)
+            .isNotSameAs(source)
+
+        val contractExecutor = DeterministicSandboxExecutor<Array<String>, Array<String>>(configuration)
+        contractExecutor.run<TestArrayCopy>(source).apply {
+            assertThat(result)
+                .isEqualTo(source)
+                .isNotSameAs(source)
+        }
+    }
+
+    class TestArrayCopy : Function<Array<String>, Array<String>> {
+        override fun apply(input: Array<String>): Array<String> {
+            val newArray = Array(input.size) { "" }
+            System.arraycopy(input, 0, newArray, 0, newArray.size)
+            return newArray
+        }
+    }
+
+    @Test
     fun `can load and execute class that has finalize`() = sandbox(DEFAULT) {
         assertThatExceptionOfType(UnsupportedOperationException::class.java)
             .isThrownBy { TestFinalizeMethod().apply(100) }
@@ -513,6 +559,24 @@ class SandboxExecutorTest : TestBase() {
 
         private fun finalize() {
             throw UnsupportedOperationException("Very Bad Thing")
+        }
+    }
+
+    @Test
+    fun `can execute parallel stream`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<String, String>(configuration)
+        contractExecutor.run<TestParallelStream>("Pebble").apply {
+            assertThat(result).isEqualTo("Five,Four,One,Pebble,Three,Two")
+        }
+    }
+
+    class TestParallelStream : Function<String, String> {
+        override fun apply(input: String): String {
+            return listOf(input, "One", input, "Two", input, "Three", input, "Four", input, "Five")
+                    .stream()
+                    .distinct()
+                    .sorted()
+                    .collect(joining(","))
         }
     }
 }

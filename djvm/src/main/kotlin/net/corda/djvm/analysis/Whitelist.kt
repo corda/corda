@@ -89,12 +89,23 @@ open class Whitelist private constructor(
      * Enumerate all the entries of the whitelist.
      */
     val items: Set<String>
-        get() = textEntries + entries.map { it.pattern }
+        get() = textEntries + entries.map(Regex::pattern)
 
     companion object {
         private val everythingRegex = setOf(".*".toRegex())
 
         private val minimumSet = setOf(
+            "^java/lang/Class(\\..*)?$".toRegex(),
+            "^java/lang/ClassLoader(\\..*)?$".toRegex(),
+            "^java/lang/Cloneable(\\..*)?$".toRegex(),
+            "^java/lang/Object(\\..*)?$".toRegex(),
+            "^java/lang/Override(\\..*)?$".toRegex(),
+            "^java/lang/Void$".toRegex(),
+            "^java/lang/reflect/Array(\\..*)?$".toRegex(),
+            "^java/io/Serializable$".toRegex()
+        )
+
+        private val moonimumSet = setOf(
                 "^java/lang/Boolean(\\..*)?$".toRegex(),
                 "^java/lang/Byte(\\..*)?$".toRegex(),
                 "^java/lang/Character(\\..*)?$".toRegex(),
@@ -113,6 +124,7 @@ open class Whitelist private constructor(
                 "^java/lang/Override(\\..*)?$".toRegex(),
                 "^java/lang/Short(\\..*)?$".toRegex(),
                 "^java/lang/String(\\..*)?$".toRegex(),
+                "^java/lang/System\\.arraycopy:\\(.*\\)V$".toRegex(),
                 "^java/lang/ThreadDeath(\\..*)?$".toRegex(),
                 "^java/lang/Throwable(\\..*)?$".toRegex(),
                 "^java/lang/Void(\\..*)?$".toRegex(),

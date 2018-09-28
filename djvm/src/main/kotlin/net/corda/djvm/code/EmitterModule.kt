@@ -1,5 +1,6 @@
 package net.corda.djvm.code
 
+import net.corda.djvm.references.MethodBody
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
@@ -44,17 +45,9 @@ class EmitterModule(
     }
 
     /**
-     * Emit instruction for loading an integer constant onto the stack.
+     * Emit instruction for loading a constant onto the stack.
      */
-    fun loadConstant(constant: Int) {
-        hasEmittedCustomCode = true
-        methodVisitor.visitLdcInsn(constant)
-    }
-
-    /**
-     * Emit instruction for loading a string constant onto the stack.
-     */
-    fun loadConstant(constant: String) {
+    fun loadConstant(constant: Any) {
         hasEmittedCustomCode = true
         methodVisitor.visitLdcInsn(constant)
     }
@@ -83,6 +76,14 @@ class EmitterModule(
     }
 
     /**
+     * Emit instruction for storing a value into a static field.
+     */
+    fun putStatic(owner: String, name: String, descriptor: String) {
+        methodVisitor.visitFieldInsn(PUTSTATIC, owner, name, descriptor)
+        hasEmittedCustomCode = true
+    }
+
+    /**
      * Emit instruction for popping one element off the stack.
      */
     fun pop() {
@@ -102,7 +103,6 @@ class EmitterModule(
      * Emit a sequence of instructions for instantiating and throwing an exception based on the provided message.
      */
     fun <T : Throwable> throwException(exceptionType: Class<T>, message: String) {
-        hasEmittedCustomCode = true
         val exceptionName = Type.getInternalName(exceptionType)
         new(exceptionName)
         methodVisitor.visitInsn(DUP)
@@ -129,6 +129,15 @@ class EmitterModule(
         methodVisitor.visitLabel(label)
         methodVisitor.visitLineNumber(line, label)
         hasEmittedCustomCode = true
+    }
+
+    /**
+     * Write the bytecode from these [MethodBody] objects as provided.
+     */
+    fun writeByteCode(bodies: Iterable<MethodBody>) {
+        for (body in bodies) {
+            body(this)
+        }
     }
 
     /**

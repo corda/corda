@@ -86,7 +86,7 @@ open class ClassAndMemberVisitor(
     /**
      * Process class after it has been fully traversed and analyzed.
      */
-    open fun visitClassEnd(clazz: ClassRepresentation) {}
+    open fun visitClassEnd(classVisitor: ClassVisitor, clazz: ClassRepresentation) {}
 
     /**
      * Extract the meta-data indicating the source file of the traversed class (i.e., where it is compiled from).
@@ -241,7 +241,7 @@ open class ClassAndMemberVisitor(
                     .getClassReferencesFromClass(currentClass!!, configuration.analyzeAnnotations)
                     .forEach(::recordTypeReference)
             captureExceptions {
-                visitClassEnd(currentClass!!)
+                visitClassEnd(this, currentClass!!)
             }
             super.visitEnd()
         }
@@ -268,6 +268,10 @@ open class ClassAndMemberVisitor(
                 annotations.add(desc)
                 captureExceptions {
                     visitClassAnnotation(this, desc)
+                }
+                //TODO Sort this out properly
+                if (desc == "Lkotlin/Metadata;") {
+                    return null
                 }
             }
             return super.visitAnnotation(desc, visible)
@@ -385,7 +389,9 @@ open class ClassAndMemberVisitor(
          */
         override fun visitCode() {
             tryReplaceMethodBody()
-            super.visitCode()
+            visit(MethodEntry(method)) {
+                super.visitCode()
+            }
         }
 
         /**
@@ -491,6 +497,15 @@ open class ClassAndMemberVisitor(
         override fun visitIincInsn(`var`: Int, increment: Int) {
             visit(IntegerInstruction(Opcodes.IINC, increment)) {
                 super.visitIincInsn(`var`, increment)
+            }
+        }
+
+        /**
+         * Transform values loaded from the constants pool.
+         */
+        override fun visitLdcInsn(value: Any) {
+            visit(ConstantInstruction(value), defaultFirst = true) {
+                super.visitLdcInsn(value)
             }
         }
 

@@ -103,7 +103,7 @@ class ClassResolver(
     }
 
     /**
-     * Resolve class name from a fully qualified name.
+     * Resolve sandboxed class name from a fully qualified name.
      */
     private fun resolveName(name: String): String {
         return if (isPinnedOrWhitelistedClass(name)) {

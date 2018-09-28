@@ -67,7 +67,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
         val context = AnalysisContext.fromConfiguration(configuration.analysisConfiguration)
         val result = IsolatedTask(runnableClass.qualifiedClassName, configuration).run {
             validate(context, classLoader, classSources)
-            val loadedClass = classLoader.loadClassAndBytes(runnableClass, context)
+            val loadedClass = classLoader.loadForSandbox(runnableClass, context)
             val instance = loadedClass.type.newInstance()
             val method = loadedClass.type.getMethod("apply", Any::class.java)
             try {
@@ -101,7 +101,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
     fun load(classSource: ClassSource): LoadedClass {
         val context = AnalysisContext.fromConfiguration(configuration.analysisConfiguration)
         val result = IsolatedTask("LoadClass", configuration).run {
-            classLoader.loadClassAndBytes(classSource, context)
+            classLoader.loadForSandbox(classSource, context)
         }
         return result.output ?: throw ClassNotFoundException(classSource.qualifiedClassName)
     }
@@ -146,7 +146,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
     ): ReferenceValidationSummary {
         processClassQueue(*classSources.toTypedArray()) { classSource, className ->
             val didLoad = try {
-                classLoader.loadClassAndBytes(classSource, context)
+                classLoader.loadForSandbox(classSource, context)
                 true
             } catch (exception: SandboxClassLoadingException) {
                 // Continue; all warnings and errors are captured in [context.messages]
@@ -201,6 +201,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
         }
     }
 
-    private val logger = loggerFor<SandboxExecutor<TInput, TOutput>>()
-
+    private companion object {
+        private val logger = loggerFor<SandboxExecutor<*, *>>()
+    }
 }
