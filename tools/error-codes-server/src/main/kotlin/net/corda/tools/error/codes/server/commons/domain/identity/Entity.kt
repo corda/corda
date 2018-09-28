@@ -1,6 +1,5 @@
 package net.corda.tools.error.codes.server.commons.domain.identity
 
-import net.corda.tools.error.codes.server.commons.events.AbstractEvent
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import java.time.Instant
@@ -18,7 +17,7 @@ abstract class Entity<ID : AbstractId<*>>(val id: ID) {
             return false
         }
 
-        other as AbstractEvent
+        other as Entity<*>
 
         if (id != other.id) {
             return false
