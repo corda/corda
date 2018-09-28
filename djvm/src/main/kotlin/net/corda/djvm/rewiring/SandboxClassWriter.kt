@@ -22,15 +22,17 @@ import org.objectweb.asm.Type
  */
 open class SandboxClassWriter(
         classReader: ClassReader,
-        private val classLoader: ClassLoader,
+        private val cloader: ClassLoader,
         flags: Int = COMPUTE_FRAMES or COMPUTE_MAXS
 ) : ClassWriter(classReader, flags) {
+
+    override fun getClassLoader(): ClassLoader = cloader
 
     /**
      * Get the common super type of [type1] and [type2].
      */
     override fun getCommonSuperClass(type1: String, type2: String): String {
-        // Need to override [getCommonSuperClass] to ensure that the correct class loader is used.
+        // Need to override [getCommonSuperClass] to ensure that we use ClassLoader.loadClass().
         when {
             type1 == OBJECT_NAME -> return type1
             type2 == OBJECT_NAME -> return type2

@@ -9,7 +9,7 @@ description 'Corda deterministic JVM sandbox'
 
 ext {
     // Shaded version of ASM to avoid conflict with root project.
-    asm_version = '6.1.1'
+    asm_version = '6.2.1'
 }
 
 repositories {
