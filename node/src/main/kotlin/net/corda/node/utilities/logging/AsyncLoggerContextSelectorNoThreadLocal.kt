@@ -10,7 +10,6 @@ import org.apache.logging.log4j.util.PropertiesUtil
 import java.net.URI
 
 class AsyncLoggerContextSelectorNoThreadLocal : ClassLoaderContextSelector() {
-
     companion object {
         /**
          * Returns `true` if the user specified this selector as the Log4jContextSelector, to make all loggers
