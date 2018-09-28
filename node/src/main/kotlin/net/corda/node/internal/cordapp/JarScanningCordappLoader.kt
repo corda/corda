@@ -9,6 +9,7 @@ import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.CordappInfoResolver
+import net.corda.core.internal.notary.NotaryService
 import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -128,10 +129,8 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun findNotaryService(scanResult: RestrictedScanResult): Class<out NotaryService>? {
         val result = scanResult.getClassesWithSuperclass(NotaryService::class)
-        logger.info("Found impl NotaryService: " + result.joinToString(","))
-        val result2 = scanResult.getClassesWithSuperclass(TrustedAuthorityNotaryService::class)
-        logger.info("Found impl TrustedAuthorityNotaryService: " + result2.joinToString(","))
-        return (result + result2).firstOrNull()
+        logger.info("Found notary service CorDapp implementations: " + result.joinToString(", "))
+        return result.firstOrNull()
     }
 
     private fun getJarHash(url: URL): SecureHash.SHA256 = url.openStream().readFully().sha256()

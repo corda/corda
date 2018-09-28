@@ -3,6 +3,7 @@ package net.corda.node.services.transactions
 import net.corda.core.flows.FlowSession
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.TrustedAuthorityNotaryService
+import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.api.ServiceHubInternal
 import java.security.PublicKey
 
@@ -26,9 +27,9 @@ class SimpleNotaryService(override val services: ServiceHubInternal, override va
 }
 
 // Entities used by a Notary
-object NodeNotary
+object NodeNotarySchema
 
-object NodeNotaryV1 : MappedSchema(schemaFamily = NodeNotary.javaClass, version = 1,
+object NodeNotarySchemaV1 : MappedSchema(schemaFamily = NodeNotarySchema.javaClass, version = 1,
         mappedTypes = listOf(PersistentUniquenessProvider.BaseComittedState::class.java,
                 PersistentUniquenessProvider.Request::class.java,
                 PersistentUniquenessProvider.CommittedState::class.java

@@ -54,7 +54,7 @@ class NodeSchemaServiceTest {
         val mockNotaryNode = mockNet.notaryNodes.first()
         val schemaService = mockNotaryNode.services.schemaService
 
-        // check against NodeCore + NodeNotary Schemas
+        // check against NodeCore Schema
         assertTrue(schemaService.schemaOptions.containsKey(NodeCoreV1))
         mockNet.stopNodes()
     }
@@ -102,7 +102,7 @@ class NodeSchemaServiceTest {
         driver(DriverParameters(startNodesInProcess = true)) {
             val notary = defaultNotaryNode.getOrThrow()
             val mappedSchemas = notary.rpc.startFlow(::MappedSchemasFlow).returnValue.getOrThrow()
-            // check against NodeCore + NodeNotary Schemas
+            // check against NodeCore Schema
             assertTrue(mappedSchemas.contains(NodeCoreV1.name))
         }
 

@@ -4,10 +4,10 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.notary.bftsmart.BftSmartNotaryService
 
-object BftSmartNotary
+object BftSmartNotarySchema
 
-object BftSmartNotaryV1 : MappedSchema(
-        schemaFamily = BftSmartNotary.javaClass,
+object BftSmartNotarySchemaV1 : MappedSchema(
+        schemaFamily = BftSmartNotarySchema.javaClass,
         version = 1,
         mappedTypes = listOf(
                 PersistentUniquenessProvider.BaseComittedState::class.java,

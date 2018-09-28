@@ -255,7 +255,7 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         }
 
         val nodeInfo = node.start()
-        val loadedCodapps = node.services.cordappProvider.cordapps.filter { !it.isLoaded }
+        val loadedCodapps = node.services.cordappProvider.cordapps.filter { it.isLoaded }
         logLoadedCorDapps(loadedCodapps)
 
         node.nodeReadyFuture.thenMatch({

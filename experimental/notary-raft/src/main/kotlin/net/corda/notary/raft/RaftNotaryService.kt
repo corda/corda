@@ -25,6 +25,7 @@ class RaftNotaryService(
                 database,
                 clock,
                 monitoringService.metrics,
+                services.cacheFactory,
                 raftConfig
         )
     }

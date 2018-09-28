@@ -41,7 +41,10 @@ data class CordappImpl(
      *
      * TODO: Also add [SchedulableFlow] as a Cordapp class
      */
-    override val cordappClasses: List<String> = (rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass }).map { it.name } + contractClassNames
+    override val cordappClasses: List<String> = run {
+        val classList = rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass } + notaryService
+         classList.mapNotNull { it?.name } + contractClassNames
+    }
 
     // TODO Why a seperate Info class and not just have the fields directly in CordappImpl?
     data class Info(val shortName: String, val vendor: String, val version: String, val minimumPlatformVersion: Int, val targetPlatformVersion: Int) {
