@@ -1,5 +1,6 @@
 package net.corda.tools.error.codes.server.adapters.repository
 
+import net.corda.tools.error.codes.server.annotations.TestBean
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorDescription
 import net.corda.tools.error.codes.server.domain.ErrorDescriptionLocation
@@ -67,10 +68,12 @@ internal class PropertiesErrorDescriptionsRepositoryTest : ErrorDescriptionsRepo
         return serialised.toString()
     }
 
-    @ComponentScan(basePackageClasses = [PropertiesErrorDescriptionsRepository::class], excludeFilters = [ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [PropertiesFileLoader.Configuration::class])])
+    @TestBean
+    @ComponentScan(basePackageClasses = [PropertiesErrorDescriptionsRepository::class], excludeFilters = [ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [PropertiesFileLoader.Configuration::class]), ComponentScan.Filter(type = FilterType.ANNOTATION, classes = [TestBean::class])])
     @SpringBootApplication
     internal open class Configuration {
 
+        @TestBean
         @Bean
         open fun propertiesFileLoaderConfiguration(): PropertiesFileLoader.Configuration {
 

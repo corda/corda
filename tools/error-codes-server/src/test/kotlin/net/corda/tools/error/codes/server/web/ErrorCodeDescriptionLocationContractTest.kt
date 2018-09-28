@@ -8,6 +8,7 @@ import io.vertx.ext.web.client.HttpResponse
 import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
 import net.corda.tools.error.codes.server.ErrorCodesWebApplication
+import net.corda.tools.error.codes.server.annotations.TestBean
 import net.corda.tools.error.codes.server.commons.web.Port
 import net.corda.tools.error.codes.server.domain.ErrorCode
 import net.corda.tools.error.codes.server.domain.ErrorCoordinates
@@ -102,10 +103,12 @@ internal class ErrorCodeDescriptionLocationContractTest {
 
     private fun WebServer.client(vertx: Vertx): WebClient = WebClient.create(vertx, WebClientOptions().setDefaultHost("localhost").setDefaultPort(options.port.value))
 
-    @ComponentScan(basePackageClasses = [ErrorCodesWebApplication::class], excludeFilters = [ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [ErrorCodesWebApplication::class]), ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [WebServer.Options::class]), ComponentScan.Filter(type = FilterType.ANNOTATION, classes = [Adapter::class])])
+    @TestBean
+    @ComponentScan(basePackageClasses = [ErrorCodesWebApplication::class], excludeFilters = [ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [ErrorCodesWebApplication::class, WebServer.Options::class]), ComponentScan.Filter(type = FilterType.ANNOTATION, classes = [Adapter::class, TestBean::class])])
     @SpringBootApplication
     internal open class Configuration {
 
+        @TestBean
         @Bean
         open fun webServerOptions(): WebServer.Options {
 
@@ -121,6 +124,7 @@ internal class ErrorCodeDescriptionLocationContractTest {
         }
 
         @Adapter
+        @TestBean
         @Bean
         open fun repository(): (ErrorCode, InvocationContext) -> Flux<out ErrorDescription> {
 
