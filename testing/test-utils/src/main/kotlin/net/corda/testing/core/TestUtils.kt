@@ -127,6 +127,8 @@ class TestIdentity(val name: CordaX500Name, val keyPair: KeyPair) {
          * Creates an identity that won't equal any other. This is mostly useful as a throwaway for test helpers.
          * @param organisation the organisation part of the new identity's name.
          */
+        @JvmStatic
+        @JvmOverloads
         fun fresh(organisation: String, signatureScheme: SignatureScheme = Crypto.DEFAULT_SIGNATURE_SCHEME): TestIdentity {
             val keyPair = Crypto.generateKeyPair(signatureScheme)
             val name = CordaX500Name(organisation, keyPair.public.toStringShort(), CordaX500Name.unspecifiedCountry)
@@ -135,11 +137,11 @@ class TestIdentity(val name: CordaX500Name, val keyPair: KeyPair) {
     }
 
     /** Creates an identity with a deterministic [keyPair] i.e. same [entropy] same keyPair. */
-    constructor(name: CordaX500Name, entropy: Long, signatureScheme: SignatureScheme = Crypto.DEFAULT_SIGNATURE_SCHEME)
+    @JvmOverloads constructor(name: CordaX500Name, entropy: Long, signatureScheme: SignatureScheme = Crypto.DEFAULT_SIGNATURE_SCHEME)
             : this(name, Crypto.deriveKeyPairFromEntropy(signatureScheme, BigInteger.valueOf(entropy)))
 
     /** Creates an identity with the given name and a fresh keyPair. */
-    constructor(name: CordaX500Name, signatureScheme: SignatureScheme = Crypto.DEFAULT_SIGNATURE_SCHEME)
+    @JvmOverloads constructor(name: CordaX500Name, signatureScheme: SignatureScheme = Crypto.DEFAULT_SIGNATURE_SCHEME)
             : this(name, Crypto.generateKeyPair(signatureScheme))
 
     val publicKey: PublicKey get() = keyPair.public
