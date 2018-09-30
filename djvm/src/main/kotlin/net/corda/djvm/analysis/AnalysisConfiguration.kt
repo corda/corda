@@ -91,7 +91,6 @@ class AnalysisConfiguration(
         )
 
         private val STITCHED_CLASSES: Set<String> = setOf(
-            "sandbox/java/lang/Appendable",
             "sandbox/java/lang/CharSequence",
             "sandbox/java/lang/Comparable",
             "sandbox/java/lang/Iterable",
