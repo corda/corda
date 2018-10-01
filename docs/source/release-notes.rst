@@ -16,8 +16,8 @@ by community members from master onto the currently released stable branch. It h
 are the real-life blood of Corda and anyone who takes the time to contribute is a star in our eyes. Brining that code into the current version we hope
 gives people the opportunity to see their work in action, to help their fellow community members, and for us to say thank you.
 
-Items of Note
-~~~~~~~~~~~~~
+Changes of Note
+~~~~~~~~~~~~~~~
 
 * **Serialization fixes**
 
@@ -64,8 +64,14 @@ We're therefore happy to extend thanks to the following members of that communit
   * `Stanly Johnson <https://github.com/stanly-johnson>`_ with a `fix <https://github.com/corda/corda/commit/f9a9bb19a7cc6d202446890e4e11bebd4a118cf3>`_ to the network bootstrapper.
   * `Tittu Varghese <https://github.com/tittuvarghese>`_ for adding a favicon to the docsite. This commit can be found `here <https://github.com/corda/corda/commit/cd8988865599261db45505060735880c3066792e>`_
 
+All Good Things!
+~~~~~~~~~~~~~~~~
+
+3.3 will be the final planned release from the version 3 API branch of Corda. Rapidly galloping over the horizon is the impending release of Corda Version 4.0 coming sometime this winter. 4.0 will of course remain backward compaitble with the stabilised parts of the API and Wire format whilst benefiting from over 9 months of sustained feature developemnt. We're excited the release and hope you are, but in the meantime we remain commited to the current stable version and present 3.3 as the swan song for a major milestone of the Corda platform.
+
 Issues Fixed
 ~~~~~~~~~~~~
+
 * Refactoring ``DigitalSignatureWithCertPath`` for more performant storing of the certificate chain. [`CORDA-1995 <https://r3-cev.atlassian.net/browse/CORDA-1995>`_]
 * The serializers class carpenter fails when superclass has double-size primitive field. [`Corda-1945 <https://r3-cev.atlassian.net/browse/Corda-1945>`_]
 * If a second identity is mistakenly created the node will not start. [`CORDA-1811 <https://r3-cev.atlassian.net/browse/CORDA-1811>`_]
