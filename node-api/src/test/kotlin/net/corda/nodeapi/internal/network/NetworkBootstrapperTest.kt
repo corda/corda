@@ -217,7 +217,7 @@ class NetworkBootstrapperTest {
 
     private fun bootstrap(copyCordapps: Boolean = true) {
         providedCordaJar = (rootDir / "corda.jar").let { if (it.exists()) it.readAll() else null }
-        bootstrapper.bootstrap(rootDir, copyCordapps)
+        bootstrapper.bootstrap(rootDir, copyCordapps, NetworkBootstrapper.MINIMUM_PLATFORM_VERSION)
     }
 
     private fun createNodeConfFile(nodeDirName: String, config: FakeNodeConfig) {

@@ -24,8 +24,11 @@ class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a l
     @Option(names = ["--no-copy"], description = ["""Don't copy the CorDapp JARs into the nodes' "cordapps" directories."""])
     private var noCopy: Boolean = false
 
+    @Option(names = ["--minimum-platform-version"], description = ["The minimumPlatformVersion to use in network-parameters in case no existing network-parameters file is found"])
+    private var minimumPlatformVersion = NetworkBootstrapper.MINIMUM_PLATFORM_VERSION
+
     override fun runProgram(): Int {
-        NetworkBootstrapper().bootstrap(dir.toAbsolutePath().normalize(), copyCordapps = !noCopy)
+        NetworkBootstrapper().bootstrap(dir.toAbsolutePath().normalize(), copyCordapps = !noCopy, defaultMinimumPlatformVersion = minimumPlatformVersion)
         return 0 //exit code
     }
 }

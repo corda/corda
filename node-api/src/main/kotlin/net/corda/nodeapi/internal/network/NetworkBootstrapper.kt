@@ -68,6 +68,8 @@ internal constructor(private val initSerEnv: Boolean,
                 "--just-generate-node-info"
         )
 
+        const val MINIMUM_PLATFORM_VERSION = 4
+
         private const val LOGS_DIR_NAME = "logs"
 
         private fun extractEmbeddedCordaJar(): InputStream {
@@ -152,26 +154,32 @@ internal constructor(private val initSerEnv: Boolean,
      *
      * TODO: Remove once the gradle plugins are updated to 4.0.30
      */
-    fun bootstrap(directory: Path, cordappJars: List<Path>) {
-        bootstrap(directory, cordappJars, copyCordapps = true, fromCordform = true)
+    fun bootstrap(directory: Path, cordappJars: List<Path>, defaultMinimumPlatformVersion: Int) {
+        bootstrap(directory, cordappJars, copyCordapps = true, fromCordform = true, defaultMinimumPlatformVersion = defaultMinimumPlatformVersion)
     }
 
     /** Entry point for Cordform */
-    fun bootstrapCordform(directory: Path, cordappJars: List<Path>) {
-        bootstrap(directory, cordappJars, copyCordapps = false, fromCordform = true)
+    fun bootstrapCordform(directory: Path, cordappJars: List<Path>, defaultMinimumPlatformVersion: Int) {
+        bootstrap(directory, cordappJars, copyCordapps = false, fromCordform = true, defaultMinimumPlatformVersion = defaultMinimumPlatformVersion)
     }
 
     /** Entry point for the tool */
-    fun bootstrap(directory: Path, copyCordapps: Boolean) {
+    fun bootstrap(directory: Path, copyCordapps: Boolean, defaultMinimumPlatformVersion: Int) {
         // Don't accidently include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
         val cordappJars = directory.list { paths ->
             paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }.toList()
         }
-        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false)
+        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, defaultMinimumPlatformVersion = defaultMinimumPlatformVersion)
     }
 
-    private fun bootstrap(directory: Path, cordappJars: List<Path>, copyCordapps: Boolean, fromCordform: Boolean) {
+    private fun bootstrap(
+            directory: Path,
+            cordappJars: List<Path>,
+            copyCordapps: Boolean,
+            fromCordform: Boolean,
+            defaultMinimumPlatformVersion: Int
+    ) {
         directory.createDirectories()
         println("Bootstrapping local test network in $directory")
         if (!fromCordform) {
@@ -210,7 +218,7 @@ internal constructor(private val initSerEnv: Boolean,
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles, configs)
             println("Generating contract implementations whitelist")
             val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.filter { !isSigned(it) }.map(contractsJarConverter))
-            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs)
+            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, defaultMinimumPlatformVersion)
             if (newNetParams != existingNetParams) {
                 println("${if (existingNetParams == null) "New" else "Updated"} $newNetParams")
             } else {
@@ -337,10 +345,13 @@ internal constructor(private val initSerEnv: Boolean,
         throw IllegalStateException(msg.toString())
     }
 
-    private fun installNetworkParameters(notaryInfos: List<NotaryInfo>,
-                                         whitelist: Map<String, List<AttachmentId>>,
-                                         existingNetParams: NetworkParameters?,
-                                         nodeDirs: List<Path>): NetworkParameters {
+    private fun installNetworkParameters(
+            notaryInfos: List<NotaryInfo>,
+            whitelist: Map<String, List<AttachmentId>>,
+            existingNetParams: NetworkParameters?,
+            nodeDirs: List<Path>,
+            defaultMinimumPlatformVersion: Int
+    ): NetworkParameters {
         // TODO Add config for minimumPlatformVersion, maxMessageSize and maxTransactionSize
         val netParams = if (existingNetParams != null) {
             if (existingNetParams.whitelistedContractImplementations == whitelist && existingNetParams.notaries == notaryInfos) {
@@ -355,7 +366,7 @@ internal constructor(private val initSerEnv: Boolean,
             }
         } else {
             NetworkParameters(
-                    minimumPlatformVersion = 4,
+                    minimumPlatformVersion = defaultMinimumPlatformVersion,
                     notaries = notaryInfos,
                     modifiedTime = Instant.now(),
                     maxMessageSize = 10485760,
