@@ -1,7 +1,7 @@
 package net.corda.djvm.execution
 
 /**
- * The execution profile of a [SandboxedRunnable] when run in a sandbox.
+ * The execution profile of a [java.util.function.Function] when run in a sandbox.
  *
  * @property allocationCostThreshold The threshold placed on allocations.
  * @property invocationCostThreshold The threshold placed on invocations.

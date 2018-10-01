@@ -25,10 +25,10 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.DEV_INTERMEDIATE_CA
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.cert.jcajce.JcaX509CRLConverter
@@ -62,6 +62,7 @@ import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.Response
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class CertificateRevocationListNodeTests {
     @Rule
@@ -80,6 +81,32 @@ class CertificateRevocationListNodeTests {
     private val revokedIntermediateCerts: MutableList<BigInteger> = mutableListOf()
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
+
+    companion object {
+        fun createRevocationList(clrServer: CrlServer, signatureAlgorithm: String, caCertificate: X509Certificate,
+                                 caPrivateKey: PrivateKey,
+                                 endpoint: String,
+                                 indirect: Boolean,
+                                 vararg serialNumbers: BigInteger): X509CRL {
+            println("Generating CRL for $endpoint")
+            val builder = JcaX509v2CRLBuilder(caCertificate.subjectX500Principal, Date(System.currentTimeMillis() - 1.minutes.toMillis()))
+            val extensionUtils = JcaX509ExtensionUtils()
+            builder.addExtension(Extension.authorityKeyIdentifier,
+                    false, extensionUtils.createAuthorityKeyIdentifier(caCertificate))
+            val issuingDistPointName = GeneralName(
+                    GeneralName.uniformResourceIdentifier,
+                    "http://${clrServer.hostAndPort.host}:${clrServer.hostAndPort.port}/crl/$endpoint")
+            // This is required and needs to match the certificate settings with respect to being indirect
+            val issuingDistPoint = IssuingDistributionPoint(DistributionPointName(GeneralNames(issuingDistPointName)), indirect, false)
+            builder.addExtension(Extension.issuingDistributionPoint, true, issuingDistPoint)
+            builder.setNextUpdate(Date(System.currentTimeMillis() + 1.seconds.toMillis()))
+            serialNumbers.forEach {
+                builder.addCRLEntry(it, Date(System.currentTimeMillis() - 10.minutes.toMillis()), ReasonFlags.certificateHold)
+            }
+            val signer = JcaContentSignerBuilder(signatureAlgorithm).setProvider(Crypto.findProvider("BC")).build(caPrivateKey)
+            return JcaX509CRLConverter().setProvider(Crypto.findProvider("BC")).getCRL(builder.build(signer))
+        }
+    }
 
     @Before
     fun setUp() {
@@ -455,12 +482,15 @@ class CertificateRevocationListNodeTests {
         @Path("node.crl")
         @Produces("application/pkcs7-crl")
         fun getNodeCRL(): Response {
-            return Response.ok(createRevocationList(
+            return Response.ok(CertificateRevocationListNodeTests.createRevocationList(
+                    server,
+                    SIGNATURE_ALGORITHM,
                     INTERMEDIATE_CA.certificate,
                     INTERMEDIATE_CA.keyPair.private,
                     NODE_CRL,
                     false,
-                    *revokedNodeCerts.toTypedArray()).encoded).build()
+                    *revokedNodeCerts.toTypedArray()).encoded)
+                    .build()
         }
 
         @GET
@@ -468,11 +498,14 @@ class CertificateRevocationListNodeTests {
         @Produces("application/pkcs7-crl")
         fun getIntermediateCRL(): Response {
             return Response.ok(createRevocationList(
+                    server,
+                    SIGNATURE_ALGORITHM,
                     ROOT_CA.certificate,
                     ROOT_CA.keyPair.private,
                     INTEMEDIATE_CRL,
                     false,
-                    *revokedIntermediateCerts.toTypedArray()).encoded).build()
+                    *revokedIntermediateCerts.toTypedArray()).encoded)
+                    .build()
         }
 
         @GET
@@ -480,33 +513,13 @@ class CertificateRevocationListNodeTests {
         @Produces("application/pkcs7-crl")
         fun getEmptyCRL(): Response {
             return Response.ok(createRevocationList(
+                    server,
+                    SIGNATURE_ALGORITHM,
                     ROOT_CA.certificate,
                     ROOT_CA.keyPair.private,
-                    EMPTY_CRL, true).encoded).build()
-        }
-
-        private fun createRevocationList(caCertificate: X509Certificate,
-                                         caPrivateKey: PrivateKey,
-                                         endpoint: String,
-                                         indirect: Boolean,
-                                         vararg serialNumbers: BigInteger): X509CRL {
-            println("Generating CRL for $endpoint")
-            val builder = JcaX509v2CRLBuilder(caCertificate.subjectX500Principal, Date(System.currentTimeMillis() - 1.minutes.toMillis()))
-            val extensionUtils = JcaX509ExtensionUtils()
-            builder.addExtension(Extension.authorityKeyIdentifier,
-                    false, extensionUtils.createAuthorityKeyIdentifier(caCertificate))
-            val issuingDistPointName = GeneralName(
-                    GeneralName.uniformResourceIdentifier,
-                    "http://${server.hostAndPort.host}:${server.hostAndPort.port}/crl/$endpoint")
-            // This is required and needs to match the certificate settings with respect to being indirect
-            val issuingDistPoint = IssuingDistributionPoint(DistributionPointName(GeneralNames(issuingDistPointName)), indirect, false)
-            builder.addExtension(Extension.issuingDistributionPoint, true, issuingDistPoint)
-            builder.setNextUpdate(Date(System.currentTimeMillis() + 1.seconds.toMillis()))
-            serialNumbers.forEach {
-                builder.addCRLEntry(it, Date(System.currentTimeMillis() - 10.minutes.toMillis()), ReasonFlags.certificateHold)
-            }
-            val signer = JcaContentSignerBuilder(SIGNATURE_ALGORITHM).setProvider(BouncyCastleProvider.PROVIDER_NAME).build(caPrivateKey)
-            return JcaX509CRLConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCRL(builder.build(signer))
+                    EMPTY_CRL,
+                    true).encoded)
+                    .build()
         }
     }
 
@@ -544,6 +557,34 @@ class CertificateRevocationListNodeTests {
                 val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 }
                 addServlet(jerseyServlet, "/*")
             }
+        }
+    }
+
+    @Test
+    fun `verify CRL algorithms`() {
+        val ECDSA_ALGORITHM = "SHA256withECDSA"
+        val EC_ALGORITHM = "EC"
+        val EMPTY_CRL = "empty.crl"
+
+        val crl = createRevocationList(
+                server,
+                ECDSA_ALGORITHM,
+                ROOT_CA.certificate,
+                ROOT_CA.keyPair.private,
+                EMPTY_CRL,
+                true)
+        // This should pass.
+        crl.verify(ROOT_CA.keyPair.public)
+
+        // Try changing the algorithm to EC will fail.
+        assertFailsWith<IllegalArgumentException>("Unknown signature type requested: EC") {
+            createRevocationList(
+                server,
+                EC_ALGORITHM,
+                ROOT_CA.certificate,
+                ROOT_CA.keyPair.private,
+                EMPTY_CRL,
+                true)
         }
     }
 }

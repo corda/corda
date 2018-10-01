@@ -40,10 +40,11 @@ data class CordappImpl(
     override val cordappClasses: List<String> = (rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass }).map { it.name } + contractClassNames
 
     // TODO Why a seperate Info class and not just have the fields directly in CordappImpl?
-    data class Info(val shortName: String, val vendor: String, val version: String) {
+    data class Info(val shortName: String, val vendor: String, val version: String, val minimumPlatformVersion: Int, val targetPlatformVersion: Int) {
         companion object {
             private const val UNKNOWN_VALUE = "Unknown"
-            val UNKNOWN = Info(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE)
+
+            val UNKNOWN = Info(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE, 1, 1)
         }
 
         fun hasUnknownFields(): Boolean = arrayOf(shortName, vendor, version).any { it == UNKNOWN_VALUE }

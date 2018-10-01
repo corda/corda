@@ -8,6 +8,7 @@ import net.corda.core.crypto.sha256
 import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
+import net.corda.core.internal.cordapp.CordappInfoResolver
 import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -35,7 +36,7 @@ import kotlin.streams.toList
  * @property cordappJarPaths The classpath of cordapp JARs
  */
 class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>,
-                                                   versionInfo: VersionInfo = VersionInfo.UNKNOWN) : CordappLoaderTemplate() {
+                                                   private val versionInfo: VersionInfo = VersionInfo.UNKNOWN) : CordappLoaderTemplate() {
 
     override val cordapps: List<CordappImpl> by lazy { loadCordapps() + coreCordapp }
 
@@ -104,13 +105,25 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
             serializationWhitelists = listOf(),
             serializationCustomSerializers = listOf(),
             customSchemas = setOf(),
-            info = CordappImpl.Info("corda-core", versionInfo.vendor, versionInfo.releaseVersion),
+            info = CordappImpl.Info("corda-core", versionInfo.vendor, versionInfo.releaseVersion, 1, versionInfo.platformVersion),
             allFlows = listOf(),
             jarPath = ContractUpgradeFlow.javaClass.location, // Core JAR location
             jarHash = SecureHash.allOnesHash
     )
 
-    private fun loadCordapps(): List<CordappImpl> = cordappJarPaths.map { scanCordapp(it).toCordapp(it) }
+    private fun loadCordapps(): List<CordappImpl> {
+        val cordapps = cordappJarPaths.map { scanCordapp(it).toCordapp(it) }
+                .filter {
+                    if (it.info.minimumPlatformVersion > versionInfo.platformVersion) {
+                        logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it requires minimum platform version ${it.info.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
+                        false
+                    } else {
+                        true
+                    }
+                }
+        cordapps.forEach { CordappInfoResolver.register(it.cordappClasses, it.info) }
+        return cordapps
+    }
 
     private fun RestrictedScanResult.toCordapp(url: RestrictedURL): CordappImpl {
         val info = url.url.openStream().let(::JarInputStream).use { it.manifest }.toCordappInfo(CordappImpl.jarName(url.url))

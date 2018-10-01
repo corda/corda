@@ -1,7 +1,9 @@
 package net.corda.djvm.code
 
+import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Opcodes.*
+import org.objectweb.asm.Type
 import sandbox.net.corda.djvm.costing.RuntimeCostAccounter
 
 /**
@@ -29,7 +31,7 @@ class EmitterModule(
     /**
      * Emit instruction for creating a new object of type [typeName].
      */
-    fun new(typeName: String, opcode: Int = Opcodes.NEW) {
+    fun new(typeName: String, opcode: Int = NEW) {
         hasEmittedCustomCode = true
         methodVisitor.visitTypeInsn(opcode, typeName)
     }
@@ -38,7 +40,7 @@ class EmitterModule(
      * Emit instruction for creating a new object of type [T].
      */
     inline fun <reified T> new() {
-        new(T::class.java.name)
+        new(Type.getInternalName(T::class.java))
     }
 
     /**
@@ -62,7 +64,7 @@ class EmitterModule(
      */
     fun invokeStatic(owner: String, name: String, descriptor: String, isInterface: Boolean = false) {
         hasEmittedCustomCode = true
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, owner, name, descriptor, isInterface)
+        methodVisitor.visitMethodInsn(INVOKESTATIC, owner, name, descriptor, isInterface)
     }
 
     /**
@@ -70,14 +72,14 @@ class EmitterModule(
      */
     fun invokeSpecial(owner: String, name: String, descriptor: String, isInterface: Boolean = false) {
         hasEmittedCustomCode = true
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, owner, name, descriptor, isInterface)
+        methodVisitor.visitMethodInsn(INVOKESPECIAL, owner, name, descriptor, isInterface)
     }
 
     /**
      * Emit instruction for invoking a special method on class [T], e.g. a constructor or a method on a super-type.
      */
     inline fun <reified T> invokeSpecial(name: String, descriptor: String, isInterface: Boolean = false) {
-        invokeSpecial(T::class.java.name, name, descriptor, isInterface)
+        invokeSpecial(Type.getInternalName(T::class.java), name, descriptor, isInterface)
     }
 
     /**
@@ -85,7 +87,7 @@ class EmitterModule(
      */
     fun pop() {
         hasEmittedCustomCode = true
-        methodVisitor.visitInsn(Opcodes.POP)
+        methodVisitor.visitInsn(POP)
     }
 
     /**
@@ -93,19 +95,40 @@ class EmitterModule(
      */
     fun duplicate() {
         hasEmittedCustomCode = true
-        methodVisitor.visitInsn(Opcodes.DUP)
+        methodVisitor.visitInsn(DUP)
     }
 
     /**
      * Emit a sequence of instructions for instantiating and throwing an exception based on the provided message.
      */
-    fun throwError(message: String) {
+    fun <T : Throwable> throwException(exceptionType: Class<T>, message: String) {
         hasEmittedCustomCode = true
-        new<java.lang.Exception>()
-        methodVisitor.visitInsn(Opcodes.DUP)
+        val exceptionName = Type.getInternalName(exceptionType)
+        new(exceptionName)
+        methodVisitor.visitInsn(DUP)
         methodVisitor.visitLdcInsn(message)
-        invokeSpecial<java.lang.Exception>("<init>", "(Ljava/lang/String;)V")
-        methodVisitor.visitInsn(Opcodes.ATHROW)
+        invokeSpecial(exceptionName, "<init>", "(Ljava/lang/String;)V")
+        methodVisitor.visitInsn(ATHROW)
+    }
+
+    inline fun <reified T : Throwable> throwException(message: String) = throwException(T::class.java, message)
+
+    /**
+     * Emit instruction for returning from "void" method.
+     */
+    fun returnVoid() {
+        methodVisitor.visitInsn(RETURN)
+        hasEmittedCustomCode = true
+    }
+
+    /**
+     * Emit instructions for a new line number.
+     */
+    fun lineNumber(line: Int) {
+        val label = Label()
+        methodVisitor.visitLabel(label)
+        methodVisitor.visitLineNumber(line, label)
+        hasEmittedCustomCode = true
     }
 
     /**

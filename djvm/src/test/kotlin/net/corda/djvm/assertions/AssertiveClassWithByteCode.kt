@@ -1,27 +1,31 @@
 package net.corda.djvm.assertions
 
 import net.corda.djvm.rewiring.LoadedClass
-import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.*
 
 class AssertiveClassWithByteCode(private val loadedClass: LoadedClass) {
 
     fun isSandboxed(): AssertiveClassWithByteCode {
-        Assertions.assertThat(loadedClass.type.name).startsWith("sandbox.")
+        assertThat(loadedClass.type.name).startsWith("sandbox.")
         return this
     }
 
     fun hasNotBeenModified(): AssertiveClassWithByteCode {
-        Assertions.assertThat(loadedClass.byteCode.isModified)
+        assertThat(loadedClass.byteCode.isModified)
                 .`as`("Byte code has been modified")
                 .isEqualTo(false)
         return this
     }
 
     fun hasBeenModified(): AssertiveClassWithByteCode {
-        Assertions.assertThat(loadedClass.byteCode.isModified)
-                .`as`("Byte code has been modified")
+        assertThat(loadedClass.byteCode.isModified)
+                .`as`("Byte code has not been modified")
                 .isEqualTo(true)
         return this
     }
 
+    fun hasClassName(className: String): AssertiveClassWithByteCode {
+        assertThat(loadedClass.type.name).isEqualTo(className)
+        return this
+    }
 }

@@ -1,5 +1,7 @@
 package net.corda.node
 
+import net.corda.nodeapi.internal.PLATFORM_VERSION
+
 /**
  * Encapsulates various pieces of version information of the node.
  */
@@ -17,6 +19,6 @@ data class VersionInfo(
         val vendor: String) {
 
     companion object {
-        val UNKNOWN = VersionInfo(1, "Unknown", "Unknown", "Unknown")
+        val UNKNOWN = VersionInfo(PLATFORM_VERSION, "Unknown", "Unknown", "Unknown")
     }
 }

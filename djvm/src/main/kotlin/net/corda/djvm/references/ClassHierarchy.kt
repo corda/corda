@@ -82,8 +82,8 @@ class ClassHierarchy(
         return findAncestors(get(className)).plus(get(OBJECT_NAME))
                 .asSequence()
                 .filterNotNull()
-                .map { memberModule.getFromClass(it, memberName, signature) }
-                .firstOrNull { it != null }
+                .mapNotNull { memberModule.getFromClass(it, memberName, signature) }
+                .firstOrNull()
                 .apply {
                     logger.trace("Getting rooted member for {}.{}:{} yields {}", className, memberName, signature, this)
                 }

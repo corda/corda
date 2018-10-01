@@ -33,52 +33,53 @@ class WhitelistGenerateCommand : CommandBase() {
     override fun validateArguments() = paths.isNotEmpty()
 
     override fun handleCommand(): Boolean {
-        val entries = mutableListOf<String>()
-        val visitor = object : ClassAndMemberVisitor() {
-            override fun visitClass(clazz: ClassRepresentation): ClassRepresentation {
-                entries.add(clazz.name)
-                return super.visitClass(clazz)
-            }
+        val entries = AnalysisConfiguration().use { configuration ->
+            val entries = mutableListOf<String>()
+            val visitor = object : ClassAndMemberVisitor(configuration, null) {
+                override fun visitClass(clazz: ClassRepresentation): ClassRepresentation {
+                    entries.add(clazz.name)
+                    return super.visitClass(clazz)
+                }
 
-            override fun visitMethod(clazz: ClassRepresentation, method: Member): Member {
-                visitMember(clazz, method)
-                return super.visitMethod(clazz, method)
-            }
+                override fun visitMethod(clazz: ClassRepresentation, method: Member): Member {
+                    visitMember(clazz, method)
+                    return super.visitMethod(clazz, method)
+                }
 
-            override fun visitField(clazz: ClassRepresentation, field: Member): Member {
-                visitMember(clazz, field)
-                return super.visitField(clazz, field)
-            }
+                override fun visitField(clazz: ClassRepresentation, field: Member): Member {
+                    visitMember(clazz, field)
+                    return super.visitField(clazz, field)
+                }
 
-            private fun visitMember(clazz: ClassRepresentation, member: Member) {
-                entries.add("${clazz.name}.${member.memberName}:${member.signature}")
+                private fun visitMember(clazz: ClassRepresentation, member: Member) {
+                    entries.add("${clazz.name}.${member.memberName}:${member.signature}")
+                }
             }
+            val context = AnalysisContext.fromConfiguration(configuration)
+            for (path in paths) {
+                ClassSource.fromPath(path).getStreamIterator().forEach {
+                    visitor.analyze(it, context)
+                }
+            }
+            entries
         }
-        val context = AnalysisContext.fromConfiguration(AnalysisConfiguration(), emptyList())
-        for (path in paths) {
-            ClassSource.fromPath(path).getStreamIterator().forEach {
-                visitor.analyze(it, context)
-            }
-        }
-        val output = output
-        if (output != null) {
-            Files.newOutputStream(output, StandardOpenOption.CREATE).use {
-                GZIPOutputStream(it).use {
-                    PrintStream(it).use {
-                        it.println("""
+        output?.also {
+            Files.newOutputStream(it, StandardOpenOption.CREATE).use { out ->
+                GZIPOutputStream(out).use { gzip ->
+                    PrintStream(gzip).use { pout ->
+                        pout.println("""
                             |java/.*
                             |javax/.*
                             |jdk/.*
+                            |com/sun/.*
                             |sun/.*
                             |---
                             """.trimMargin().trim())
-                        printEntries(it, entries)
+                        printEntries(pout, entries)
                     }
                 }
             }
-        } else {
-            printEntries(System.out, entries)
-        }
+        } ?: printEntries(System.out, entries)
         return true
     }
 
