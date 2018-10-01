@@ -21,10 +21,10 @@ import java.util.*
 class BridgeControlListener(val config: MutualSslConfiguration,
                             maxMessageSize: Int,
                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
-                            bridgeAuditService: BridgeAuditService? = null) : AutoCloseable {
+                            bridgeMetricsService: BridgeMetricsService? = null) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
     private val bridgeManager: BridgeManager = AMQPBridgeManager(config, maxMessageSize,
-            artemisMessageClientFactory, bridgeAuditService)
+            artemisMessageClientFactory, bridgeMetricsService)
     private val validInboundQueues = mutableSetOf<String>()
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
