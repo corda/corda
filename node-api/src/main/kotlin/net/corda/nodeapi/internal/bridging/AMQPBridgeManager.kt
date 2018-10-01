@@ -34,7 +34,9 @@ import kotlin.concurrent.withLock
  *  The Netty thread pool used by the AMQPBridges is also shared and managed by the AMQPBridgeManager.
  */
 @VisibleForTesting
-class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int, private val artemisMessageClientFactory: () -> ArtemisSessionProvider) : BridgeManager {
+class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int,
+                        private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
+                        private val bridgeMetricsService: BridgeMetricsService? = null) : BridgeManager {
 
     private val lock = ReentrantLock()
     private val queueNamesToBridgesMap = mutableMapOf<String, MutableList<AMQPBridge>>()
@@ -65,10 +67,11 @@ class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int, pri
      */
     private class AMQPBridge(val queueName: String,
                              val targets: List<NetworkHostAndPort>,
-                             private val legalNames: Set<CordaX500Name>,
+                             val legalNames: Set<CordaX500Name>,
                              private val amqpConfig: AMQPConfiguration,
                              sharedEventGroup: EventLoopGroup,
-                             private val artemis: ArtemisSessionProvider) {
+                             private val artemis: ArtemisSessionProvider,
+                             private val bridgeMetricsService: BridgeMetricsService?) {
         companion object {
             private val log = contextLogger()
         }
@@ -104,7 +107,7 @@ class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int, pri
 
         fun start() {
             logInfoWithMDC("Create new AMQP bridge")
-            connectedSubscription = amqpClient.onConnection.subscribe({ x -> onSocketConnected(x.connected) })
+            connectedSubscription = amqpClient.onConnection.subscribe { x -> onSocketConnected(x.connected) }
             amqpClient.start()
         }
 
@@ -128,6 +131,7 @@ class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int, pri
                 synchronized(artemis) {
                     if (connected) {
                         logInfoWithMDC("Bridge Connected")
+                        bridgeMetricsService?.bridgeConnected(targets, legalNames)
                         val sessionFactory = artemis.started!!.sessionFactory
                         val session = sessionFactory.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
                         this.session = session
@@ -137,6 +141,7 @@ class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int, pri
                         session.start()
                     } else {
                         logInfoWithMDC("Bridge Disconnected")
+                        bridgeMetricsService?.bridgeDisconnected(targets, legalNames)
                         consumer?.close()
                         consumer = null
                         session?.stop()
@@ -148,8 +153,10 @@ class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int, pri
 
         private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
             if (artemisMessage.bodySize > amqpConfig.maxMessageSize) {
-                logWarnWithMDC("Message exceeds maxMessageSize network parameter, maxMessageSize: [${amqpConfig.maxMessageSize}], message size: [${artemisMessage.bodySize}], " +
-                        "dropping message, uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
+                val msg = "Message exceeds maxMessageSize network parameter, maxMessageSize: [${amqpConfig.maxMessageSize}], message size: [${artemisMessage.bodySize}], " +
+                        "dropping message, uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}"
+                logWarnWithMDC(msg)
+                bridgeMetricsService?.packetDropEvent(artemisMessage, msg)
                 // Ack the message to prevent same message being sent to us again.
                 artemisMessage.acknowledge()
                 return
@@ -185,6 +192,7 @@ class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int, pri
                 }
             }
             amqpClient.write(sendableMessage)
+            bridgeMetricsService?.packetAcceptedEvent(sendableMessage)
         }
     }
 
@@ -196,8 +204,9 @@ class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int, pri
                     return
                 }
             }
-            val newBridge = AMQPBridge(queueName, targets, legalNames, amqpConfig, sharedEventLoopGroup!!, artemis!!)
+            val newBridge = AMQPBridge(queueName, targets, legalNames, amqpConfig, sharedEventLoopGroup!!, artemis!!, bridgeMetricsService)
             bridges += newBridge
+            bridgeMetricsService?.bridgeCreated(targets, legalNames)
             newBridge
         }
         newBridge.start()
@@ -214,6 +223,7 @@ class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int, pri
                         queueNamesToBridgesMap.remove(queueName)
                     }
                     bridge.stop()
+                    bridgeMetricsService?.bridgeDestroyed(bridge.targets, bridge.legalNames)
                 }
             }
         }
