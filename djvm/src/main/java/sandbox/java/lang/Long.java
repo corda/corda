@@ -215,4 +215,25 @@ public final class Long extends Number implements Comparable<Long> {
     public static Long toDJVM(java.lang.Long l) {
         return (l == null) ? null : valueOf(l);
     }
+
+    static int stringSize(final long number) {
+        long l = 10;
+        int i = 1;
+
+        while ((i < 19) && (number >= l)) {
+            l *= 10;
+            ++i;
+        }
+
+        return i;
+    }
+
+    static void getChars(final long number, int index, char[] buffer) {
+        java.lang.String s = java.lang.Long.toString(number);
+        int length = s.length();
+
+        while (length > 0) {
+            buffer[--index] = s.charAt(--length);
+        }
+    }
 }

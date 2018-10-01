@@ -1,17 +1,20 @@
 package net.corda.djvm.source
 
+import net.corda.djvm.code.asResourcePath
 import java.nio.file.Path
 
 /**
  * The source of one or more compiled Java classes.
  *
  * @property qualifiedClassName The fully qualified class name.
+ * @property internalClassName The fully qualified internal class name, i.e. with '/' instead of '.'.
  * @property origin The origin of the class source, if any.
  */
 class ClassSource private constructor(
         val qualifiedClassName: String = "",
         val origin: String? = null
 ) {
+    val internalClassName: String = qualifiedClassName.asResourcePath
 
     companion object {
 

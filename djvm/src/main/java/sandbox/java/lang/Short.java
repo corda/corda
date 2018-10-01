@@ -125,8 +125,4 @@ public final class Short extends Number implements Comparable<Short> {
     public static Short toDJVM(java.lang.Short i) {
         return (i == null) ? null : valueOf(i);
     }
-
-    // Placeholder class to ensure that this class's bytecode
-    // is compatible with the loaded bootstrap classes.
-    private static class ShortCache extends Object {}
 }

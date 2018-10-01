@@ -61,7 +61,7 @@ open class SandboxClassWriter(
         }
     }
 
-    companion object {
+    private companion object {
 
         private const val OBJECT_NAME = "java/lang/Object"
 

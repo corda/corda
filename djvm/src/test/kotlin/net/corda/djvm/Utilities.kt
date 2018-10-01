@@ -8,6 +8,8 @@ object Utilities {
 
     fun throwThresholdViolationError(): Nothing = throw ThresholdViolationError("Can't catch this!")
 
+    fun throwContractConstraintViolation(): Nothing = throw IllegalArgumentException("Contract constraint violated")
+
     fun throwError(): Nothing = throw Error()
 
     fun throwThrowable(): Nothing = throw Throwable()

@@ -26,6 +26,7 @@ import net.corda.djvm.code.asResourcePath
  */
 class ClassResolver(
         private val pinnedClasses: Set<String>,
+        private val templateClasses: Set<String>,
         private val whitelist: Whitelist,
         private val sandboxPrefix: String
 ) {
@@ -83,7 +84,7 @@ class ClassResolver(
      * Reverse the resolution of a class name.
      */
     fun reverse(resolvedClassName: String): String {
-        if (resolvedClassName in pinnedClasses) {
+        if (resolvedClassName in pinnedClasses || resolvedClassName in templateClasses) {
             return resolvedClassName
         }
         if (resolvedClassName.startsWith(sandboxPrefix)) {
@@ -106,7 +107,7 @@ class ClassResolver(
      * Resolve sandboxed class name from a fully qualified name.
      */
     private fun resolveName(name: String): String {
-        return if (isPinnedOrWhitelistedClass(name)) {
+        return if (isPinnedOrWhitelistedClass(name) || name in templateClasses) {
             name
         } else {
             "$sandboxPrefix$name"

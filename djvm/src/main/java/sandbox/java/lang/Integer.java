@@ -10,6 +10,8 @@ public final class Integer extends Number implements Comparable<Integer> {
     public static final int BYTES = java.lang.Integer.BYTES;
     public static final int SIZE = java.lang.Integer.SIZE;
 
+    static final int[] SIZE_TABLE = new int[] { 9, 99, 999, 9999, 99999, 999999, 9999999, 99999999, 999999999, MAX_VALUE };
+
     @SuppressWarnings("unchecked")
     public static final Class<Integer> TYPE = (Class) java.lang.Integer.TYPE;
 
@@ -218,5 +220,22 @@ public final class Integer extends Number implements Comparable<Integer> {
 
     public static Integer toDJVM(java.lang.Integer i) {
         return (i == null) ? null : valueOf(i);
+    }
+
+    static int stringSize(final int number) {
+        int i = 0;
+        while (number > SIZE_TABLE[i]) {
+            ++i;
+        }
+        return i + 1;
+    }
+
+    static void getChars(final int number, int index, char[] buffer) {
+        java.lang.String s = java.lang.Integer.toString(number);
+        int length = s.length();
+
+        while (length > 0) {
+            buffer[--index] = s.charAt(--length);
+        }
     }
 }

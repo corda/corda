@@ -1,11 +1,8 @@
 @file:JvmName("DJVM")
 package sandbox.java.lang
 
-import kotlin.reflect.jvm.jvmName
-
-@Suppress("unchecked_cast")
 fun Any.unsandbox(): Any {
-    return when(this) {
+    return when (this) {
         is Object -> fromDJVM()
         is ByteArray -> this
         is IntArray -> this
@@ -15,13 +12,13 @@ fun Any.unsandbox(): Any {
         is ShortArray -> this
         is CharArray -> this
         is BooleanArray -> this
-        is Array<*> -> (this as Array<Object>).fromDJVMArray()
-        else -> throw IllegalArgumentException("sandbox object '$this' has unknown type: ${this::class.jvmName}")
+        is Array<*> -> fromDJVMArray()
+        else -> this
     }
 }
 
 fun Any.sandbox(): Any {
-    return when(this) {
+    return when (this) {
         is kotlin.String -> String.toDJVM(this)
         is kotlin.Char -> Character.toDJVM(this)
         is kotlin.Long -> Long.toDJVM(this)
@@ -40,16 +37,16 @@ fun Any.sandbox(): Any {
         is CharArray -> this
         is BooleanArray -> this
         is Array<*> -> toDJVMArray<Object>()
-        else -> throw IllegalArgumentException("Object '$this' has unknown type: ${this::class.jvmName}")
+        else -> this
     }
 }
 
-private fun <T : Object> Array<T>.fromDJVMArray(): Array<*> {
+private fun Array<*>.fromDJVMArray(): Array<*> {
     return Object.fromDJVM(this)
 }
 
 private fun Class<*>.toDJVMType(): Class<*> {
-    return when(this) {
+    return when (this) {
         kotlin.String::class.java -> String::class.java
         kotlin.Long::class.javaObjectType -> Long::class.java
         kotlin.Int::class.javaObjectType -> Integer::class.java

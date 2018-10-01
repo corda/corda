@@ -49,7 +49,7 @@ class AnalysisConfiguration(
     /**
      * Functionality used to resolve the qualified name and relevant information about a class.
      */
-    val classResolver: ClassResolver = ClassResolver(pinnedClasses, whitelist, SANDBOX_PREFIX)
+    val classResolver: ClassResolver = ClassResolver(pinnedClasses, TEMPLATE_CLASSES, whitelist, SANDBOX_PREFIX)
 
     private val bootstrapClassLoader = bootstrapJar?.let { BootstrapClassLoader(it, classResolver) }
     val supportingClassLoader = SourceClassLoader(classPath, classResolver, bootstrapClassLoader)
@@ -61,10 +61,9 @@ class AnalysisConfiguration(
         }
     }
 
-    fun isMandatoryBase(className: String): Boolean
-            = MANDATORY_UNMODIFIED_CLASSES.contains(className) || MANDATORY_UNMODIFIED.any { it.matches(className) }
     fun isStitchedClass(className: String): Boolean = STITCHED_CLASSES.contains(className)
-    fun isRequiredUnmodified(className: String): Boolean = className in pinnedClasses || MANDATORY_UNMODIFIED_CLASSES.contains(className)
+    fun isTemplateClass(className: String): Boolean = className in TEMPLATE_CLASSES
+    fun isPinnedClass(className: String): Boolean = className in pinnedClasses
 
     companion object {
         /**
@@ -72,52 +71,52 @@ class AnalysisConfiguration(
          */
         private const val SANDBOX_PREFIX: String = "sandbox/"
 
+        /**
+         * These class must belong to the application class loader.
+         * They should already exist within the sandbox namespace.
+         */
         private val MANDATORY_PINNED_CLASSES: Set<String> = setOf(
-            sandbox.java.lang.Object::class.java,
-            sandbox.java.lang.String::class.java,
-            sandbox.java.lang.Character::class.java,
-            sandbox.java.lang.Number::class.java,
-            sandbox.java.lang.Integer::class.java,
-            sandbox.java.lang.Long::class.java,
-            sandbox.java.lang.Short::class.java,
-            sandbox.java.lang.Byte::class.java,
-            sandbox.java.lang.Double::class.java,
-            sandbox.java.lang.Float::class.java,
-            sandbox.java.lang.Boolean::class.java
-        ).map(Type::getInternalName).toSet() + setOf(
             RuntimeCostAccounter.TYPE_NAME,
             ruleViolationError,
             thresholdViolationError
         )
 
-        private val STITCHED_CLASSES: Set<String> = setOf(
-            "sandbox/java/lang/CharSequence",
-            "sandbox/java/lang/Comparable",
-            "sandbox/java/lang/Iterable",
-            "sandbox/java/util/Comparator"
-        )
-
-        private val MANDATORY_UNMODIFIED_CLASSES: Set<String> = setOf(
-            java.lang.String::class.java,
-            java.lang.Character::class.java,
-            java.lang.Number::class.java,
-            java.lang.Integer::class.java,
-            java.lang.Long::class.java,
-            java.lang.Short::class.java,
+        /**
+         * These classes will be duplicated into every sandbox's
+         * classloader.
+         */
+        private val TEMPLATE_CLASSES: Set<String> = setOf(
+            java.lang.Boolean::class.java,
             java.lang.Byte::class.java,
+            java.lang.Character::class.java,
             java.lang.Double::class.java,
             java.lang.Float::class.java,
-            java.lang.Boolean::class.java,
-            java.lang.Void::class.java,
-            kotlin.Any::class.java,
-            kotlin.Throwable::class.java,
-            ThreadDeath::class.java
-        ).map(Type::getInternalName).toSet()
-
-        private val MANDATORY_UNMODIFIED: Set<Regex> = setOf(
-            "^java/lang/(.*)Error$".toRegex(),
-            "^java/lang/(.*)Exception$".toRegex()
+            java.lang.Integer::class.java,
+            java.lang.Long::class.java,
+            java.lang.Number::class.java,
+            java.lang.Short::class.java,
+            java.lang.String::class.java,
+            java.lang.System::class.java,
+            kotlin.Any::class.java
+        ).sandboxed() + setOf(
+            "sandbox/java/lang/DJVM",
+            "sandbox/Task"
         )
+
+        /**
+         * These interfaces will be modified as follows when
+         * added to the sandbox:
+         *
+         * <code>interface sandbox.A extends A</code>
+         */
+        private val STITCHED_CLASSES: Set<String> = setOf(
+            CharSequence::class.java,
+            Comparable::class.java,
+            Iterable::class.java,
+            Comparator::class.java
+        ).sandboxed()
+
+        private fun Set<Class<*>>.sandboxed(): Set<String> = map(Type::getInternalName).map { SANDBOX_PREFIX + it }.toSet()
     }
 
 }

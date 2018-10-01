@@ -136,7 +136,7 @@ open class ClassAndMemberVisitor(
      */
     protected fun shouldBeProcessed(className: String): Boolean {
         return !configuration.whitelist.inNamespace(className) &&
-                className !in configuration.pinnedClasses
+                !configuration.isPinnedClass(className)
     }
 
     /**

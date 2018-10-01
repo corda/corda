@@ -25,18 +25,56 @@ public class Object {
         return this;
     }
 
-    public static java.lang.Object[] fromDJVM(Object[] args) {
+    public static java.lang.Object[] fromDJVM(java.lang.Object[] args) {
         if (args == null) {
             return null;
         }
 
-        java.lang.Object[] unwrapped = new java.lang.Object[args.length];
+        java.lang.Object[] unwrapped = (java.lang.Object[]) java.lang.reflect.Array.newInstance(
+            fromDJVM(args.getClass().getComponentType()), args.length
+        );
         int i = 0;
-        for (Object arg: args) {
-            unwrapped[i] = arg.fromDJVM();
+        for (java.lang.Object arg : args) {
+            unwrapped[i] = unwrap(arg);
             ++i;
         }
         return unwrapped;
+    }
+
+    private static java.lang.Object unwrap(java.lang.Object arg) {
+        if (arg instanceof Object) {
+            return ((Object) arg).fromDJVM();
+        } else if (Object[].class.isAssignableFrom(arg.getClass())) {
+            return fromDJVM((Object[]) arg);
+        } else {
+            return arg;
+        }
+    }
+
+    private static Class<?> fromDJVM(Class<?> type) {
+        if (type == String.class) {
+            return java.lang.String.class;
+        } else if (type == Integer.class) {
+            return java.lang.Integer.class;
+        } else if (type == Long.class) {
+            return java.lang.Long.class;
+        } else if (type == Short.class) {
+            return java.lang.Short.class;
+        } else if (type == Byte.class) {
+            return java.lang.Byte.class;
+        } else if (type == Double.class) {
+            return java.lang.Double.class;
+        } else if (type == Float.class) {
+            return java.lang.Float.class;
+        } else if (type == Character.class) {
+            return java.lang.Character.class;
+        } else if (type == Boolean.class) {
+            return java.lang.Boolean.class;
+        } else if (type == Object.class) {
+            return java.lang.Object.class;
+        } else {
+            return type;
+        }
     }
 
     static java.util.Locale fromDJVM(sandbox.java.util.Locale locale) {

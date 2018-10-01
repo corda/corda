@@ -21,16 +21,33 @@ class SandboxClassRemapper(cv: ClassVisitor, private val configuration: Analysis
     private inner class MethodRemapperWithPinning(private val nonmapper: MethodVisitor, remapper: MethodVisitor)
         : MethodVisitor(API_VERSION, remapper) {
 
-        private fun mapperFor(owner: String): MethodVisitor {
-            return if (owner in configuration.pinnedClasses) nonmapper else mv
+        private fun mapperFor(element: Element): MethodVisitor {
+            return if (configuration.isPinnedClass(element.owner) || configuration.isTemplateClass(element.owner) || element in UNMAPPED) {
+                nonmapper
+            } else {
+                mv
+            }
         }
 
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) {
-            return mapperFor(owner).visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+            val method = Element(owner, name, descriptor)
+            val newOwner = if (method == OBJECT_TOSTRING) "sandbox/java/lang/Object" else owner
+            return mapperFor(method).visitMethodInsn(opcode, newOwner, name, descriptor, isInterface)
         }
 
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String) {
-            return mapperFor(owner).visitFieldInsn(opcode, owner, name, descriptor)
+            val field = Element(owner, name, descriptor)
+            return mapperFor(field).visitFieldInsn(opcode, owner, name, descriptor)
         }
+    }
+
+    private data class Element(val owner: String, val name: String, val descriptor: String)
+
+    private companion object {
+        private val UNMAPPED = setOf(
+            Element("java/lang/System", "arraycopy", "(Ljava/lang/Object;ILjava/lang/Object;II)V")
+        )
+
+        private val OBJECT_TOSTRING = Element("java/lang/Object", "toString", "()Ljava/lang/String;")
     }
 }

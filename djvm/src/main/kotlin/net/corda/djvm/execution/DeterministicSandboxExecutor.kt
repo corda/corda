@@ -2,8 +2,6 @@ package net.corda.djvm.execution
 
 import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.source.ClassSource
-import sandbox.java.lang.sandbox
-import sandbox.java.lang.unsandbox
 import java.util.function.Function
 
 /**
@@ -16,17 +14,14 @@ import java.util.function.Function
  */
 class DeterministicSandboxExecutor<TInput, TOutput>(
         configuration: SandboxConfiguration
-) : SandboxExecutor<Any?, Any?>(configuration) {
+) : SandboxExecutor<TInput, TOutput>(configuration) {
 
     /**
      * Short-hand for running a [Function] in a sandbox by its type reference.
      */
     inline fun <reified TRunnable : Function<in TInput, out TOutput>> run(input: TInput):
             ExecutionSummaryWithResult<TOutput> {
-        return run(ClassSource.fromClassName(TRunnable::class.java.name), input?.sandbox()).let {
-            @Suppress("unchecked_cast")
-            ExecutionSummaryWithResult(it.result?.unsandbox(), it.costs) as ExecutionSummaryWithResult<TOutput>
-        }
+        return run(ClassSource.fromClassName(TRunnable::class.java.name), input)
     }
 
 }

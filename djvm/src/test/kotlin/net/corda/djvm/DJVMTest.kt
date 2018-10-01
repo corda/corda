@@ -6,7 +6,7 @@ import org.junit.Test
 import sandbox.java.lang.sandbox
 import sandbox.java.lang.unsandbox
 
-class SandboxLangTest {
+class DJVMTest {
 
     @Test
     fun testDJVMString() {
@@ -82,6 +82,36 @@ class SandboxLangTest {
     fun testSandboxingIntegersAsObjectArray() {
         val result = arrayOf(1, 2, 3, 10).sandbox()
         assertThat(result).isEqualTo(arrayOf(1.toDJVM(), 2.toDJVM(), 3.toDJVM(), 10.toDJVM()))
+    }
+
+    @Test
+    fun testUnsandboxingArrays() {
+        val arr = arrayOf(
+            Array(1) { "Hello".toDJVM() },
+            Array(1) { 1234000L.toDJVM() },
+            Array(1) { 1234.toDJVM() },
+            Array(1) { 923.toShort().toDJVM() },
+            Array(1) { 27.toByte().toDJVM() },
+            Array(1) { 'X'.toDJVM() },
+            Array(1) { 987.65f.toDJVM() },
+            Array(1) { 343.282.toDJVM() },
+            Array(1) { true.toDJVM() },
+            ByteArray(1) { 127.toByte() },
+            CharArray(1) { '?'}
+        )
+        val result = arr.unsandbox() as Array<*>
+        assertEquals(arr.size, result.size)
+        assertArrayEquals(Array(1) { "Hello" }, result[0] as Array<*>)
+        assertArrayEquals(Array(1) { 1234000L }, result[1] as Array<*>)
+        assertArrayEquals(Array(1) { 1234 }, result[2] as Array<*>)
+        assertArrayEquals(Array(1) { 923.toShort() }, result[3] as Array<*>)
+        assertArrayEquals(Array(1) { 27.toByte() }, result[4] as Array<*>)
+        assertArrayEquals(Array(1) { 'X' }, result[5] as Array<*>)
+        assertArrayEquals(Array(1) { 987.65f }, result[6] as Array<*>)
+        assertArrayEquals(Array(1) { 343.282 }, result[7] as Array<*>)
+        assertArrayEquals(Array(1) { true }, result[8] as Array<*>)
+        assertArrayEquals(ByteArray(1) { 127.toByte() }, result[9] as ByteArray)
+        assertArrayEquals(CharArray(1) { '?' }, result[10] as CharArray)
     }
 
     private fun String.toDJVM(): sandbox.java.lang.String = sandbox.java.lang.String.toDJVM(this)

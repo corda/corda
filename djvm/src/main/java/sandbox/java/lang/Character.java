@@ -451,7 +451,7 @@ public final class Character extends Object implements Comparable<Character>, Se
     // real classes will be loaded from the from the bootstrap jar
     // and then mapped into the sandbox.* namespace.
     public enum UnicodeScript {}
-    public static final class UnicodeBlock extends Character.Subset {}
+    public static final class UnicodeBlock extends Subset {}
     public static class Subset extends Object {}
 
     /**

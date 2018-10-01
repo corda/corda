@@ -314,12 +314,12 @@ public final class String extends Object implements Comparable<String>, CharSequ
         return value.toCharArray();
     }
 
-    public static String format(String format, Object... args) {
+    public static String format(String format, java.lang.Object... args) {
         return toDJVM(java.lang.String.format(fromDJVM(format), fromDJVM(args)));
     }
 
-    public static String format(Locale l, String format, Object... args) {
-        return toDJVM(java.lang.String.format(fromDJVM(l), fromDJVM(format), fromDJVM(args)));
+    public static String format(Locale locale, String format, java.lang.Object... args) {
+        return toDJVM(java.lang.String.format(fromDJVM(locale), fromDJVM(format), fromDJVM(args)));
     }
 
     public static String join(CharSequence delimiter, CharSequence... elements) {
@@ -331,8 +331,8 @@ public final class String extends Object implements Comparable<String>, CharSequ
         return toDJVM(java.lang.String.join(delimiter, elements));
     }
 
-    public static String valueOf(Object obj) {
-        return toDJVM(java.lang.String.valueOf(obj));
+    public static String valueOf(java.lang.Object obj) {
+        return (obj instanceof Object) ? ((Object) obj).toDJVMString() : toDJVM(java.lang.String.valueOf(obj));
     }
 
     public static String valueOf(char data[]) {
@@ -391,6 +391,7 @@ public final class String extends Object implements Comparable<String>, CharSequ
     public static String toDJVM(java.lang.String value) {
         return (value == null) ? null : new String(value);
     }
+
     public static java.lang.String fromDJVM(String value) {
         return (value == null) ? null : value.fromDJVM();
     }

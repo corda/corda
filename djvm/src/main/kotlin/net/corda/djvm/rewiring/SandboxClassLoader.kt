@@ -20,7 +20,7 @@ import java.nio.file.Paths
 class SandboxClassLoader(
         configuration: SandboxConfiguration,
         private val context: AnalysisContext
-) : ClassLoader(null) {
+) : ClassLoader() {
 
     private val analysisConfiguration = configuration.analysisConfiguration
 
@@ -78,7 +78,12 @@ class SandboxClassLoader(
      * @return The resulting <tt>Class</tt> object.
      */
     override fun loadClass(name: String, resolve: Boolean): Class<*> {
-        return loadClassAndBytes(ClassSource.fromClassName(name), context).type
+        val source = ClassSource.fromClassName(name)
+        return if (name.startsWith("sandbox.") && !analysisConfiguration.isPinnedClass(source.internalClassName)) {
+            loadClassAndBytes(source, context).type
+        } else {
+            super.loadClass(name, resolve)
+        }
     }
 
     /**
@@ -91,45 +96,43 @@ class SandboxClassLoader(
      */
     private fun loadClassAndBytes(request: ClassSource, context: AnalysisContext): LoadedClass {
         logger.debug("Loading class {}, origin={}...", request.qualifiedClassName, request.origin)
-        val requestedPath = request.qualifiedClassName.asResourcePath
+        val requestedPath = request.internalClassName
         val sourceName = analysisConfiguration.classResolver.reverseNormalized(request.qualifiedClassName)
         val resolvedName = analysisConfiguration.classResolver.resolveNormalized(sourceName)
-        val sourcePath = sourceName.asResourcePath
 
         // Check if the class has already been loaded.
         val loadedClass = loadedClasses[requestedPath]
         if (loadedClass != null) {
             logger.trace("Class {} already loaded", request.qualifiedClassName)
             return loadedClass
-        } else if (analysisConfiguration.isRequiredUnmodified(requestedPath)) {
-            // Some classes are so fundamental that the sandbox requires them "as is".
+        } else if (analysisConfiguration.isPinnedClass(requestedPath)) {
             logger.debug("Class {} is loaded unmodified", request.qualifiedClassName)
             return loadUnmodifiedClass(requestedPath)
-        } else if (sourcePath != requestedPath && !loadedClasses.containsKey(sourcePath) &&
-                   (analysisConfiguration.isMandatoryBase(sourcePath) || analysisConfiguration.isStitchedClass(requestedPath))) {
-            logger.debug("Original class {} must also be loaded unmodified", sourceName)
-            loadUnmodifiedClass(sourcePath)
         }
 
-        // Load the byte code for the specified class.
-        val reader = supportingClassLoader.classReader(sourceName, context, request.origin)
+        val byteCode = if (analysisConfiguration.isTemplateClass(requestedPath)) {
+            loadUnmodifiedByteCode(requestedPath)
+        } else {
+            // Load the byte code for the specified class.
+            val reader = supportingClassLoader.classReader(sourceName, context, request.origin)
 
-        // Analyse the class if not matching the whitelist.
-        val readClassName = reader.className
-        if (!analysisConfiguration.whitelist.matches(readClassName)) {
-            logger.trace("Class {} does not match with the whitelist", request.qualifiedClassName)
-            logger.trace("Analyzing class {}...", request.qualifiedClassName)
-            analyzer.analyze(reader, context)
+            // Analyse the class if not matching the whitelist.
+            val readClassName = reader.className
+            if (!analysisConfiguration.whitelist.matches(readClassName)) {
+                logger.trace("Class {} does not match with the whitelist", request.qualifiedClassName)
+                logger.trace("Analyzing class {}...", request.qualifiedClassName)
+                analyzer.analyze(reader, context)
+            }
+
+            // Check if any errors were found during analysis.
+            if (context.messages.errorCount > 0) {
+                logger.debug("Errors detected after analyzing class {}", request.qualifiedClassName)
+                throw SandboxClassLoadingException(context)
+            }
+
+            // Transform the class definition and byte code in accordance with provided rules.
+            rewriter.rewrite(reader, context)
         }
-
-        // Check if any errors were found during analysis.
-        if (context.messages.errorCount > 0) {
-            logger.debug("Errors detected after analyzing class {}", request.qualifiedClassName)
-            throw SandboxClassLoadingException(context)
-        }
-
-        // Transform the class definition and byte code in accordance with provided rules.
-        val byteCode = rewriter.rewrite(reader, context)
 
         Files.write(Paths.get("djvm-$sourceName.class"), byteCode.bytes)
 
@@ -156,11 +159,13 @@ class SandboxClassLoader(
         return classWithByteCode
     }
 
+    private fun loadUnmodifiedByteCode(internalClassName: String): ByteCode {
+        return ByteCode((getSystemClassLoader().getResourceAsStream(internalClassName + ".class")
+                ?: throw ClassNotFoundException(internalClassName)).readBytes(), false)
+    }
+
     private fun loadUnmodifiedClass(className: String): LoadedClass {
-        return LoadedClass(
-            supportingClassLoader.loadClass(className),
-            UNMODIFIED
-        ).apply {
+        return LoadedClass(supportingClassLoader.loadClass(className), UNMODIFIED).apply {
             loadedClasses[className] = this
         }
     }

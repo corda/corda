@@ -5,7 +5,7 @@ import org.junit.Test
 
 class ClassResolverTest {
 
-    private val resolver = ClassResolver(emptySet(), Whitelist.MINIMAL, "sandbox/")
+    private val resolver = ClassResolver(emptySet(), emptySet(), Whitelist.MINIMAL, "sandbox/")
 
     @Test
     fun `can resolve class name`() {

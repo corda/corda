@@ -4,7 +4,7 @@ import foo.bar.sandbox.*
 import net.corda.djvm.TestBase
 import net.corda.djvm.assertions.AssertionExtensions.assertThat
 import net.corda.djvm.execution.ExecutionProfile
-import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.*
 import org.junit.Test
 import sandbox.net.corda.djvm.costing.ThresholdViolationError
 import java.nio.file.Paths
@@ -128,13 +128,6 @@ class ClassRewriterTest : TestBase() {
         assertThat(loadClass<StringBuilder>())
                 .hasClassName("sandbox.java.lang.StringBuilder")
                 .hasInterface("sandbox.java.lang.CharSequence")
-                .hasBeenModified()
-    }
-
-    @Test
-    fun `test loading Throwable`() = sandbox(DEFAULT) {
-        assertThat(loadClass<Throwable>())
-                .hasClassName("sandbox.java.lang.Throwable")
                 .hasBeenModified()
     }
 }
