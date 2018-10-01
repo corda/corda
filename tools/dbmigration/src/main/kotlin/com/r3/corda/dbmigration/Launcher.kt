@@ -84,7 +84,7 @@ private class DbManagementToolOptions {
 
     @Option(
             names = ["--$EXECUTE_MIGRATION"],
-            description = ["This option will run the db migration on the configured database. This is the only command that will actually write to the database."]
+            description = ["This option will run the database migration on the configured database. This is the only command that will actually write to the database."]
     )
     var executeMigration: Boolean = false
 
