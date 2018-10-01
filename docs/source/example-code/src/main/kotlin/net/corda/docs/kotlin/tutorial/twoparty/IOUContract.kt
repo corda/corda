@@ -11,7 +11,7 @@ import net.corda.core.contracts.*
 // Replace IOUContract's contract ID and definition with:
 class IOUContract : Contract {
     companion object {
-        val ID = "com.template.IOUContract"
+        const val ID = "com.template.IOUContract"
     }
 
     // Our Create command.
