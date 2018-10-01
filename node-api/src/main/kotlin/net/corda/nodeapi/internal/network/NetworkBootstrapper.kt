@@ -154,8 +154,8 @@ internal constructor(private val initSerEnv: Boolean,
      *
      * TODO: Remove once the gradle plugins are updated to 4.0.30
      */
-    fun bootstrap(directory: Path, cordappJars: List<Path>, defaultMinimumPlatformVersion: Int) {
-        bootstrap(directory, cordappJars, copyCordapps = true, fromCordform = true, defaultMinimumPlatformVersion = defaultMinimumPlatformVersion)
+    fun bootstrap(directory: Path, cordappJars: List<Path>) {
+        bootstrap(directory, cordappJars, copyCordapps = true, fromCordform = true)
     }
 
     /** Entry point for Cordform */
