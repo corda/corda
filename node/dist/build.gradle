@@ -1,4 +1,5 @@
 import org.gradle.internal.jvm.Jvm
+import org.apache.tools.ant.taskdefs.condition.Os
 
 apply plugin: 'net.corda.plugins.publish-utils'
 
@@ -59,20 +60,15 @@ task copyLauncherLibs(type: Copy, dependsOn: [project(':launcher').jar]) {
     into "$buildDir/tmp/launcher-lib"
 }
 
-def isLinux = System.properties['os.name'].toLowerCase().contains('linux')
-def isMac = System.properties['os.name'].toLowerCase().contains('mac')
-if (isLinux || isMac) {
+if (Os.isFamily(Os.FAMILY_UNIX)) {
     println("Detected *nix system, enabling distribution creation")
 
 
     task buildLauncher(type: Exec, dependsOn: [copyLauncherLibs]) {
         description 'Build Launcher executable'
 
-        def relativeDir
-        if (isLinux)
-            relativeDir = "launcher"
-        else
-            relativeDir = "launcher.app/Contents"
+        def relativeDir = "launcher"
+
 
         def extraArgs = [
                 "-BjvmOptions=-javaagent:../../lib/quasar-core-${quasar_version}-jdk8.jar=${project(':node:capsule').quasarExcludeExpression}",

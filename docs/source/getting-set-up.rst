@@ -9,7 +9,7 @@ Corda uses industry-standard tools:
 * **IntelliJ IDEA** - supported versions **2017.x** and **2018.x** (with Kotlin plugin version |kotlin_version|)
 * **Git**
 
-We also use Gradle and Kotlin, but you do not need to install them. A standalone Gradle wrapper is provided, and it 
+We also use Gradle and Kotlin, but you do not need to install them. A standalone Gradle wrapper is provided, and it
 will download the correct version of Kotlin.
 
 Please note:
@@ -49,12 +49,14 @@ The set-up instructions are available for the following platforms:
 
 * :ref:`deb-ubuntu-label`
 
+* :ref:`fedora-label`
+
 .. _windows-label:
 
 Windows
 -------
 
-.. warning:: If you are using a Mac or a Debian/Ubuntu machine, please follow the :ref:`mac-label` or :ref:`deb-ubuntu-label` instructions instead.
+.. warning:: If you are using a Mac, Debian/Ubuntu or Fedora machine, please follow the :ref:`mac-label`, :ref:`deb-ubuntu-label` or :ref:`fedora-label` instructions instead.
 
 Java
 ^^^^
@@ -142,7 +144,7 @@ Run from IntelliJ
 Mac
 ---
 
-.. warning:: If you are using a Windows or a Debian/Ubuntu machine, please follow the :ref:`windows-label` or :ref:`deb-ubuntu-label` instructions instead.
+.. warning:: If you are using a Windows, Debian/Ubuntu or Fedora machine, please follow the :ref:`windows-label`, :ref:`deb-ubuntu-label` or :ref:`fedora-label` instructions instead.
 
 Java
 ^^^^
@@ -249,7 +251,7 @@ You can clone these repos to your local machine by running the command ``git clo
 Debian/Ubuntu
 -------------
 
-.. warning:: If you are using a Mac or a Windows machine, please follow the :ref:`mac-label` or :ref:`windows-label` instructions instead.
+.. warning:: If you are using a Mac, Windows or Fedora machine, please follow the :ref:`mac-label`, :ref:`windows-label` or :ref:`fedora-label` instructions instead.
 
 These instructions were tested on Ubuntu Desktop 18.04 LTS.
 
@@ -272,6 +274,35 @@ Jetbrains offers a pre-built snap package that allows for easy, one-step install
 1. To download the snap, navigate to https://snapcraft.io/intellij-idea-community
 2. Click ``Install``, then ``View in Desktop Store``. Choose ``Ubuntu Software`` in the Launch Application window.
 3. Ensure the Kotlin plugin in Intellij is updated to version |kotlin_version|
+
+.. _fedora-label:
+
+Fedora
+-------------
+
+.. warning:: If you are using a Mac, Windows or Debian/Ubuntu machine, please follow the :ref:`mac-label`, :ref:`windows-label` or :ref:`deb-ubuntu-label` instructions instead.
+
+These instructions were tested on Fedora 28.
+
+Java
+^^^^
+1. Download the RPM installation file of Oracle JDK from https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html.
+2. Install the package with ``rpm -ivh jdk-<version>-linux-<architecture>.rpm`` or use the default software manager.
+3. Choose java version by using the following command ``alternatives --config java``
+4. Verify that the JDK was installed correctly by running ``java -version``
+
+Git
+^^^^
+1. From the terminal, Git can be installed using dnf with the command ``sudo dnf install git``
+2. Verify that git was installed correctly by typing ``git --version``
+
+IntelliJ
+^^^^^^^^
+1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?platform=linux&code=IIC
+2. Unpack the ``tar.gz`` file using the following command ``tar xfz ideaIC-<version>.tar.gz -C /opt``
+3. Run IntelliJ with ``/opt/ideaIC-<version>/bin/idea.sh``
+4. Ensure the Kotlin plugin in IntelliJ is updated to version |kotlin_version|
+
 
 Next steps
 ----------

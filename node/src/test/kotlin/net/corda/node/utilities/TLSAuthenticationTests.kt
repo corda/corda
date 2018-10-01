@@ -64,8 +64,7 @@ class TLSAuthenticationTests {
     // Default supported TLS schemes for Corda nodes.
     private val CORDA_TLS_CIPHER_SUITES = arrayOf(
             "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-            "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
+            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
     )
 
     @Test
@@ -159,27 +158,6 @@ class TLSAuthenticationTests {
 
         val (serverSocket, clientSocket) = buildTLSSockets(serverSocketFactory, clientSocketFactory, 0, 0)
         testConnect(serverSocket, clientSocket, "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256")
-    }
-
-    @Test
-    fun `All RSA - avoid ECC for DH`() {
-        val (serverSocketFactory, clientSocketFactory) = buildTLSFactories(
-                rootCAScheme = Crypto.RSA_SHA256,
-                intermediateCAScheme = Crypto.RSA_SHA256,
-                client1CAScheme = Crypto.RSA_SHA256,
-                client1TLSScheme = Crypto.RSA_SHA256,
-                client2CAScheme = Crypto.RSA_SHA256,
-                client2TLSScheme = Crypto.RSA_SHA256
-        )
-
-        val (serverSocket, clientSocket) = buildTLSSockets(
-                serverSocketFactory,
-                clientSocketFactory,
-                0,
-                0,
-                CORDA_TLS_CIPHER_SUITES,
-                arrayOf("TLS_DHE_RSA_WITH_AES_128_GCM_SHA256")) // Second client accepts DHE only.
-        testConnect(serverSocket, clientSocket, "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256")
     }
 
     // According to RFC 5246 (TLS 1.2), section 7.4.1.2 ClientHello cipher_suites:
