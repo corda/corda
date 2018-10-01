@@ -17,6 +17,9 @@ import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.io.Writer
 import javax.sql.DataSource
+import liquibase.database.core.PostgresDatabase
+import liquibase.structure.DatabaseObject
+import liquibase.structure.core.Schema
 
 class SchemaMigration(
         val schemas: Set<MappedSchema>,
@@ -135,6 +138,7 @@ class SchemaMigration(
 
     private fun getLiquibaseDatabase(conn: JdbcConnection): Database {
 
+        // Enterprise only
         // The standard MSSQLDatabase in Liquibase does not support sequences for Ms Azure.
         // this class just overrides that behaviour
         class AzureDatabase(conn: JdbcConnection) : MSSQLDatabase() {
@@ -147,9 +151,33 @@ class SchemaMigration(
             override fun supportsSequences(): Boolean = true
         }
 
+        // Enterprise only
+        // Postgres - Wrap schema name into double quotes to preserve case sensitivity
+        class PostgresDatabaseFixed(conn: JdbcConnection) : PostgresDatabase() {
+            init {
+                this.connection = conn
+            }
+
+            override fun getPriority(): Int { return super.getPriority() + 1 }
+
+            // For PostgreSQL if a schema name has uppercase or lowercase characters only then Liquibase would add it to generated query
+            // without double quotes and effectively make them lowercase. This is inconsistent with Corda which wraps schema name for PostgreSQL in double quotes.
+            // The overridden method ensures Liquibase wraps schema name into double quotes.
+            override fun mustQuoteObjectName(objectName: String, objectType: Class<out DatabaseObject>?): Boolean {
+                return if (objectType == Schema::class.java)
+                    true
+                else
+                    super.mustQuoteObjectName(objectName, objectType)
+            }
+        }
+
         val liquibaseDbImplementation = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(conn)
 
-        return if (liquibaseDbImplementation is MSSQLDatabase) AzureDatabase(conn) else liquibaseDbImplementation
+        return when (liquibaseDbImplementation) {
+            is PostgresDatabase -> PostgresDatabaseFixed(conn) // Enterprise only
+            is MSSQLDatabase -> AzureDatabase(conn) // Enterprise only
+            else -> liquibaseDbImplementation
+        }
     }
 
     /** For existing database created before verions 4.0 add Liquibase support - creates DATABASECHANGELOG and DATABASECHANGELOGLOCK tables and mark changesets are executed. */

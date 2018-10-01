@@ -86,7 +86,7 @@ class HibernateConfiguration(
             config.setProperty("hibernate.hbm2ddl.auto","validate")
 
         databaseConfig.schema?.apply {
-            //preserving case-sensitive schema name for PostgreSQL by wrapping in double quotes, schema without double quotes would be treated as case-insensitive (lower cases)
+            // Enterprise only - preserving case-sensitive schema name for PostgreSQL by wrapping in double quotes, schema without double quotes would be treated as case-insensitive (lower cases)
             val schemaName = if (jdbcUrl.contains(":postgresql:", ignoreCase = true) && !databaseConfig.schema.startsWith("\"")) {
                 "\"" + databaseConfig.schema + "\""
             } else {
@@ -231,4 +231,3 @@ class HibernateConfiguration(
 
 /** Allow Oracle database drivers ojdbc7.jar and ojdbc8.jar to deserialize classes from oracle.sql.converter package. */
 fun oracleJdbcDriverSerialFilter(clazz: Class<*>): Boolean = clazz.name.startsWith("oracle.sql.converter.")
-

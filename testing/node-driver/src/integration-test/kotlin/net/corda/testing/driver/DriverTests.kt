@@ -58,7 +58,7 @@ class DriverTests : IntegrationTest() {
         @ClassRule
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName(),
-                DUMMY_REGULATOR_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName())
+                DUMMY_REGULATOR_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName(), "R3CEV")
     }
 
     @Test
@@ -157,7 +157,6 @@ class DriverTests : IntegrationTest() {
 
     @Test
     fun `driver rejects multiple nodes with the same organisation name`() {
-        assumeTrue(!IntegrationTest.isRemoteDatabaseMode()) // Enterprise only - disable test, Liquibase doesn't quote schema name with all uppercase or lowercase letters
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             newNode(CordaX500Name(commonName = "Notary", organisation = "R3CEV", locality = "New York", country = "US"))().getOrThrow()
             assertThatIllegalArgumentException().isThrownBy {
