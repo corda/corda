@@ -159,8 +159,8 @@ internal constructor(private val initSerEnv: Boolean,
     }
 
     /** Entry point for Cordform */
-    fun bootstrapCordform(directory: Path, cordappJars: List<Path>, defaultMinimumPlatformVersion: Int) {
-        bootstrap(directory, cordappJars, copyCordapps = false, fromCordform = true, defaultMinimumPlatformVersion = defaultMinimumPlatformVersion)
+    fun bootstrapCordform(directory: Path, cordappJars: List<Path>) {
+        bootstrap(directory, cordappJars, copyCordapps = false, fromCordform = true)
     }
 
     /** Entry point for the tool */
@@ -178,7 +178,7 @@ internal constructor(private val initSerEnv: Boolean,
             cordappJars: List<Path>,
             copyCordapps: Boolean,
             fromCordform: Boolean,
-            defaultMinimumPlatformVersion: Int
+            defaultMinimumPlatformVersion: Int = MINIMUM_PLATFORM_VERSION
     ) {
         directory.createDirectories()
         println("Bootstrapping local test network in $directory")
