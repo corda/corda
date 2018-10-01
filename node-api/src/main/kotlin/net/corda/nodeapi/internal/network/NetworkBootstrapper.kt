@@ -28,12 +28,14 @@ import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.amqpMagic
 import java.io.InputStream
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.jar.JarInputStream
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
@@ -208,7 +210,7 @@ internal constructor(private val initSerEnv: Boolean,
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles, configs)
             println("Generating contract implementations whitelist")
-            val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.map(contractsJarConverter))
+            val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), readIncludeWhitelist(directory), cordappJars.filter { !isSigned(it) }.map(contractsJarConverter))
             val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs)
             if (newNetParams != existingNetParams) {
                 println("${if (existingNetParams == null) "New" else "Updated"} $newNetParams")
@@ -398,4 +400,9 @@ internal constructor(private val initSerEnv: Boolean,
             return magic == amqpMagic && target == SerializationContext.UseCase.P2P
         }
     }
+
+    private fun isSigned(file: Path): Boolean =
+            JarInputStream(Files.newInputStream(file)).use {
+                JarSignatureCollector.collectSigningParties(it).isNotEmpty()
+            }
 }

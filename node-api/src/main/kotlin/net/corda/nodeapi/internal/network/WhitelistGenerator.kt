@@ -12,10 +12,12 @@ import org.slf4j.LoggerFactory
 import java.nio.file.Path
 
 private const val EXCLUDE_WHITELIST_FILE_NAME = "exclude_whitelist.txt"
+private const val INCLUDE_WHITELIST_FILE_NAME = "include_whitelist.txt"
 private val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.network.WhitelistGenerator")
 
 fun generateWhitelist(networkParameters: NetworkParameters?,
                       excludeContracts: List<ContractClassName>,
+                      includeContracts: List<ContractClassName>,
                       cordappJars: List<ContractsJar>): Map<ContractClassName, List<AttachmentId>> {
     val existingWhitelist = networkParameters?.whitelistedContractImplementations ?: emptyMap()
 
@@ -26,8 +28,11 @@ fun generateWhitelist(networkParameters: NetworkParameters?,
         }
     }
 
+    val intersection = excludeContracts.intersect(includeContracts)
+    require(intersection.isEmpty()) { "Contract classes $intersection cannot be defined in both $EXCLUDE_WHITELIST_FILE_NAME and $INCLUDE_WHITELIST_FILE_NAME." }
+
     val newWhiteList = cordappJars
-            .flatMap { jar -> (jar.scan() - excludeContracts).map { it to jar.hash } }
+            .flatMap { jar -> (jar.scan() - excludeContracts + includeContracts).map { it to jar.hash } }
             .toMultiMap()
 
     return (newWhiteList.keys + existingWhitelist.keys).associateBy({ it }) {
@@ -39,5 +44,10 @@ fun generateWhitelist(networkParameters: NetworkParameters?,
 
 fun readExcludeWhitelist(directory: Path): List<String> {
     val file = directory / EXCLUDE_WHITELIST_FILE_NAME
+    return if (file.exists()) file.readAllLines().map(String::trim) else emptyList()
+}
+
+fun readIncludeWhitelist(directory: Path): List<String> {
+    val file = directory / INCLUDE_WHITELIST_FILE_NAME
     return if (file.exists()) file.readAllLines().map(String::trim) else emptyList()
 }

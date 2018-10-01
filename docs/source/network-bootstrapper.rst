@@ -87,9 +87,10 @@ Any CorDapps provided when bootstrapping a network will be scanned for contracts
 The CorDapp JARs will be hashed and scanned for ``Contract`` classes. These contract class implementations will become part
 of the whitelisted contracts in the network parameters (see ``NetworkParameters.whitelistedContractImplementations`` :doc:`network-map`).
 
-By default the bootstrapper will whitelist all the contracts found in all the CorDapp JARs. To prevent certain
-contracts from being whitelisted, add their fully qualified class name in the ``exclude_whitelist.txt``. These will instead
+By default the bootstrapper will whitelist all the contracts found in all the unsiged CorDapp JARs (a JAR file not signed bu jarSinger tool).
+To prevent certain contracts from being whitelisted, add their fully qualified class name in the ``exclude_whitelist.txt``. These will instead
 use the more restrictive ``HashAttachmentConstraint``.
+To add certain contracts to whitelisting, add their fully qualified class name in the ``include_whitelist.txt``.
 
 For example:
 
