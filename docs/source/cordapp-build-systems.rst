@@ -109,6 +109,29 @@ in Gradle. See the example below, specifically the ``apache-commons`` include.
 For further information about managing dependencies, see
 `the Gradle docs <https://docs.gradle.org/current/userguide/dependency_management.html>`_.
 
+Signing the CorDapp JAR
+^^^^^^^^^^^^^^^^^^^^^^^
+*Since corda-gradle-plugins 4.0.30*
+
+The ``cordapp`` plugin can sign the generated Cordapp JAR using `jarsinger` tool (internally runs ANT task `SignJar`).
+To enable CordApp signing add ``signing`` entry with ``enabled`` option set to ``true``.
+The signing ``options`` are any relevant parameters for ANT `SignJar <https://ant.apache.org/manual/Tasks/signjar.html>`_ task.
+
+.. sourcecode:: groovy
+
+    cordapp {
+        signing {
+            enabled true
+            options {
+                keystore keyStoreFile
+                storepass keystorePass
+                alias keyAlias
+            }
+        }
+    }
+
+Cordformation plugin can also sign CorDapps JARs, when deploing set of nodes, see :doc:`generating-a-node`.
+
 Example
 ^^^^^^^
 Below is a sample of what a CorDapp's Gradle dependencies block might look like. When building your own CorDapp, you should 
