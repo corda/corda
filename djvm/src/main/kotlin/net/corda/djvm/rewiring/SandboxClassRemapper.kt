@@ -31,8 +31,7 @@ class SandboxClassRemapper(cv: ClassVisitor, private val configuration: Analysis
 
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) {
             val method = Element(owner, name, descriptor)
-            val newOwner = if (method == OBJECT_TOSTRING) "sandbox/java/lang/Object" else owner
-            return mapperFor(method).visitMethodInsn(opcode, newOwner, name, descriptor, isInterface)
+            return mapperFor(method).visitMethodInsn(opcode, owner, name, descriptor, isInterface)
         }
 
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String) {
@@ -45,9 +44,8 @@ class SandboxClassRemapper(cv: ClassVisitor, private val configuration: Analysis
 
     private companion object {
         private val UNMAPPED = setOf(
-            Element("java/lang/System", "arraycopy", "(Ljava/lang/Object;ILjava/lang/Object;II)V")
+            Element("java/lang/System", "arraycopy", "(Ljava/lang/Object;ILjava/lang/Object;II)V"),
+            Element("java/lang/Object", "toString", "()Ljava/lang/String;")
         )
-
-        private val OBJECT_TOSTRING = Element("java/lang/Object", "toString", "()Ljava/lang/String;")
     }
 }

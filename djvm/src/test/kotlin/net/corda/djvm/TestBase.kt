@@ -13,6 +13,9 @@ import net.corda.djvm.messages.Severity
 import net.corda.djvm.references.ClassHierarchy
 import net.corda.djvm.rewiring.LoadedClass
 import net.corda.djvm.rules.Rule
+import net.corda.djvm.rules.implementation.StaticConstantRemover
+import net.corda.djvm.rules.implementation.StringConstantWrapper
+import net.corda.djvm.rules.implementation.instrumentation.ToDJVMStringWrapper
 import net.corda.djvm.source.ClassSource
 import net.corda.djvm.utilities.Discovery
 import net.corda.djvm.validation.RuleValidator
@@ -35,7 +38,11 @@ abstract class TestBase {
 
         val ALL_EMITTERS = Discovery.find<Emitter>()
 
+        val BASIC_EMITTERS: List<Emitter> = listOf(StringConstantWrapper(), ToDJVMStringWrapper())
+
         val ALL_DEFINITION_PROVIDERS = Discovery.find<DefinitionProvider>()
+
+        val BASIC_DEFINITION_PROVIDERS: List<DefinitionProvider> = listOf(StaticConstantRemover())
 
         val BLANK = emptySet<Any>()
 
@@ -106,8 +113,8 @@ abstract class TestBase {
             action: SandboxRuntimeContext.() -> Unit
     ) {
         val rules = mutableListOf<Rule>()
-        val emitters = mutableListOf<Emitter>()
-        val definitionProviders = mutableListOf<DefinitionProvider>()
+        val emitters = mutableListOf<Emitter>().apply { addAll(BASIC_EMITTERS) }
+        val definitionProviders = mutableListOf<DefinitionProvider>().apply { addAll(BASIC_DEFINITION_PROVIDERS) }
         val classSources = mutableListOf<ClassSource>()
         var executionProfile = ExecutionProfile.UNLIMITED
         var whitelist = Whitelist.MINIMAL
@@ -137,7 +144,12 @@ abstract class TestBase {
                     minimumSeverityLevel = minimumSeverityLevel
                 ).use { analysisConfiguration ->
                     SandboxRuntimeContext(SandboxConfiguration.of(
-                            executionProfile, rules, emitters, definitionProviders, enableTracing, analysisConfiguration
+                        executionProfile,
+                        rules.distinctBy(Any::javaClass),
+                        emitters.distinctBy(Any::javaClass),
+                        definitionProviders.distinctBy(Any::javaClass),
+                        enableTracing,
+                        analysisConfiguration
                     )).use {
                         assertThat(runtimeCosts).areZero()
                         action(this)

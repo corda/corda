@@ -61,6 +61,14 @@ class EmitterModule(
     }
 
     /**
+     * Emit instruction for invoking a virtual method.
+     */
+    fun invokeVirtual(owner: String, name: String, descriptor: String, isInterface: Boolean = false) {
+        hasEmittedCustomCode = true
+        methodVisitor.visitMethodInsn(INVOKEVIRTUAL, owner, name, descriptor, isInterface)
+    }
+
+    /**
      * Emit instruction for invoking a special method, e.g. a constructor or a method on a super-type.
      */
     fun invokeSpecial(owner: String, name: String, descriptor: String, isInterface: Boolean = false) {

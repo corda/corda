@@ -4,6 +4,7 @@ import foo.bar.sandbox.MyObject
 import foo.bar.sandbox.testClock
 import foo.bar.sandbox.toNumber
 import net.corda.djvm.TestBase
+import net.corda.djvm.analysis.Whitelist
 import net.corda.djvm.Utilities
 import net.corda.djvm.Utilities.throwContractConstraintViolation
 import net.corda.djvm.Utilities.throwError
@@ -27,7 +28,7 @@ import java.util.stream.Collectors.*
 class SandboxExecutorTest : TestBase() {
 
     @Test
-    fun `can load and execute runnable`() = sandbox(DEFAULT) {
+    fun `can load and execute runnable`() = sandbox(Whitelist.MINIMAL) {
         val contractExecutor = DeterministicSandboxExecutor<Int, String?>(configuration)
         val summary = contractExecutor.run<TestSandboxedRunnable>(1)
         val result = summary.result
@@ -52,13 +53,13 @@ class SandboxExecutorTest : TestBase() {
                 .withMessageContaining("Contract constraint violated")
     }
 
-    class Contract : Function<Transaction?, Unit> {
-        override fun apply(input: Transaction?) {
+    class Contract : Function<Transaction, Unit> {
+        override fun apply(input: Transaction) {
             throwContractConstraintViolation()
         }
     }
 
-    data class Transaction(val id: Int?)
+    data class Transaction(val id: Int)
 
     @Test
     fun `can load and execute code that overrides object hash code`() = sandbox(DEFAULT) {
@@ -526,7 +527,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `check System-arraycopy still works`() = sandbox(DEFAULT) {
+    fun `check System-arraycopy still works with Objects`() = sandbox(DEFAULT) {
         val source = arrayOf("one", "two", "three")
         assertThat(TestArrayCopy().apply(source))
             .isEqualTo(source)
@@ -543,6 +544,25 @@ class SandboxExecutorTest : TestBase() {
     class TestArrayCopy : Function<Array<String>, Array<String>> {
         override fun apply(input: Array<String>): Array<String> {
             val newArray = Array(input.size) { "" }
+            System.arraycopy(input, 0, newArray, 0, newArray.size)
+            return newArray
+        }
+    }
+
+    @Test
+    fun `test System-arraycopy still works with CharArray`() = sandbox(DEFAULT) {
+        val source = CharArray(10) { '?' }
+        val contractExecutor = DeterministicSandboxExecutor<CharArray, CharArray>(configuration)
+        contractExecutor.run<TestCharArrayCopy>(source).apply {
+            assertThat(result)
+                .isEqualTo(source)
+                .isNotSameAs(source)
+        }
+    }
+
+    class TestCharArrayCopy : Function<CharArray, CharArray> {
+        override fun apply(input: CharArray): CharArray {
+            val newArray = CharArray(input.size) { 'X' }
             System.arraycopy(input, 0, newArray, 0, newArray.size)
             return newArray
         }

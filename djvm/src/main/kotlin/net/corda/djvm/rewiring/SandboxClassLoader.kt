@@ -134,7 +134,7 @@ class SandboxClassLoader(
             rewriter.rewrite(reader, context)
         }
 
-        Files.write(Paths.get("djvm-$sourceName.class"), byteCode.bytes)
+        Files.write(Paths.get("build/djvm-$sourceName.class"), byteCode.bytes)
 
         // Try to define the transformed class.
         val clazz = try {
@@ -160,7 +160,7 @@ class SandboxClassLoader(
     }
 
     private fun loadUnmodifiedByteCode(internalClassName: String): ByteCode {
-        return ByteCode((getSystemClassLoader().getResourceAsStream(internalClassName + ".class")
+        return ByteCode((getSystemClassLoader().getResourceAsStream("$internalClassName.class")
                 ?: throw ClassNotFoundException(internalClassName)).readBytes(), false)
     }
 
