@@ -22,6 +22,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.lang.Long.min
 import java.net.InetSocketAddress
+import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.KeyManagerFactory
@@ -157,12 +158,18 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                 }
             }
 
+            val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory)
             val target = parent.currentTarget
-            val handler = createClientSslHelper(target, parent.allowedRemoteLegalNames, keyManagerFactory, trustManagerFactory)
+            val handler = if (parent.configuration.useOpenSsl){
+                createClientOpenSslHandler(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory, ch.alloc())
+            } else {
+                createClientSslHelper(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory)
+            }
             pipeline.addLast("sslHandler", handler)
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
             pipeline.addLast(AMQPChannelHandler(false,
                     parent.allowedRemoteLegalNames,
+                    wrappedKeyManagerFactory,
                     conf.userName,
                     conf.password,
                     conf.trace,

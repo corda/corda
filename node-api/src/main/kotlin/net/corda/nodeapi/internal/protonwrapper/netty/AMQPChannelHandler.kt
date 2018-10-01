@@ -34,6 +34,7 @@ import javax.net.ssl.SSLException
  */
 internal class AMQPChannelHandler(private val serverMode: Boolean,
                                   private val allowedRemoteLegalNames: Set<CordaX500Name>?,
+                                  private var keyManagerFactory: CertHoldingKeyManagerFactoryWrapper,
                                   private val userName: String?,
                                   private val password: String?,
                                   private val trace: Boolean,
@@ -45,11 +46,11 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     }
 
     private lateinit var remoteAddress: InetSocketAddress
-    private var localCert: X509Certificate? = null
     private var remoteCert: X509Certificate? = null
     private var eventProcessor: EventProcessor? = null
     private var suppressClose: Boolean = false
     private var badCert: Boolean = false
+    private var localCert: X509Certificate? = null
 
     private fun withMDC(block: () -> Unit) {
         val oldMDC = MDC.getCopyOfContextMap()
@@ -122,7 +123,18 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         if (evt is SslHandshakeCompletionEvent) {
             if (evt.isSuccess) {
                 val sslHandler = ctx.pipeline().get(SslHandler::class.java)
-                localCert = sslHandler.engine().session.localCertificates[0].x509
+                val sslSession = sslHandler.engine().session
+                localCert = keyManagerFactory.getCurrentCertChain()?.get(0)
+                if (localCert == null) {
+                    log.error("SSL KeyManagerFactory failed to provide a local cert")
+                    ctx.close()
+                    return
+                }
+                if (sslSession.peerCertificates == null || sslSession.peerCertificates.isEmpty()) {
+                    log.error("No peer certificates")
+                    ctx.close()
+                    return
+                }
                 remoteCert = sslHandler.engine().session.peerCertificates[0].x509
                 val remoteX500Name = try {
                     CordaX500Name.build(remoteCert!!.subjectX500Principal)
@@ -151,7 +163,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                 } else {
                     badCert = true
                 }
-                logErrorWithMDC("Handshake failure ${evt.cause().message}")
+                logErrorWithMDC("Handshake failure: ${evt.cause().message}")
                 if (log.isTraceEnabled) {
                     withMDC { log.trace("Handshake failure", evt.cause()) }
                 }

@@ -40,13 +40,32 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.security.cert.X509Certificate
 import javax.net.ssl.*
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class ProtonWrapperTests {
+
+@RunWith(Parameterized::class)
+class ProtonWrapperTests(val sslSetup: SslSetup) {
+    companion object {
+        data class SslSetup(val clientNative: Boolean, val serverNative: Boolean) {
+            override fun toString(): String = "Client: ${if (clientNative) "openSsl" else "javaSsl"} Server: ${if (serverNative) "openSsl" else "javaSsl"} "
+        }
+
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0}")
+        fun data(): Collection<SslSetup> = listOf(
+                SslSetup(false, false),
+                SslSetup(true, false),
+                SslSetup(false, true),
+                SslSetup(true, true)
+        )
+    }
+
     @Rule
     @JvmField
     val temporaryFolder = TemporaryFolder()
@@ -407,7 +426,7 @@ class ProtonWrapperTests {
         val baseDirectory = temporaryFolder.root.toPath() / "artemis"
         val certificatesDirectory = baseDirectory / "certificates"
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
-        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, useOpenSsl = sslSetup.serverNative)
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
@@ -432,7 +451,7 @@ class ProtonWrapperTests {
         val baseDirectory = temporaryFolder.root.toPath() / "client"
         val certificatesDirectory = baseDirectory / "certificates"
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
-        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, useOpenSsl = sslSetup.clientNative)
         val clientConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
@@ -450,6 +469,7 @@ class ProtonWrapperTests {
             override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
+            override val useOpenSsl: Boolean = sslSetup.clientNative
         }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort),
@@ -463,7 +483,7 @@ class ProtonWrapperTests {
         val baseDirectory = temporaryFolder.root.toPath() / "client_%$id"
         val certificatesDirectory = baseDirectory / "certificates"
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
-        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, useOpenSsl = sslSetup.clientNative)
         val clientConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
@@ -481,6 +501,7 @@ class ProtonWrapperTests {
             override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
+            override val useOpenSsl: Boolean = sslSetup.clientNative
         }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort)),
@@ -496,7 +517,7 @@ class ProtonWrapperTests {
         val baseDirectory = temporaryFolder.root.toPath() / "server"
         val certificatesDirectory = baseDirectory / "certificates"
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
-        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, useOpenSsl = sslSetup.serverNative)
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
@@ -514,6 +535,7 @@ class ProtonWrapperTests {
             override val trustStore = serverTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
+            override val useOpenSsl: Boolean = sslSetup.serverNative
         }
         return AMQPServer(
                 "0.0.0.0",

@@ -1,5 +1,10 @@
 package net.corda.nodeapi.internal.crypto
 
+
+import io.netty.handler.ssl.ClientAuth
+import io.netty.handler.ssl.SslContextBuilder
+import io.netty.handler.ssl.SslProvider
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.*
 import net.corda.core.crypto.Crypto.COMPOSITE_KEY
 import net.corda.core.crypto.Crypto.ECDSA_SECP256K1_SHA256
@@ -28,8 +33,12 @@ import net.corda.serialization.internal.amqp.amqpMagic
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.stubs.CertificateStoreStubs
+import net.corda.testing.driver.PortAllocation
+import net.corda.testing.internal.NettyTestClient
+import net.corda.testing.internal.NettyTestHandler
+import net.corda.testing.internal.NettyTestServer
 import net.corda.testing.internal.createDevIntermediateCaCertPath
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x509.*
@@ -65,6 +74,9 @@ class X509UtilitiesTest {
                 "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
                 "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
         )
+
+        val portAllocation = PortAllocation.Incremental(10000)
+
         // We ensure that all of the algorithms are both used (at least once) as first and second in the following [Pair]s.
         // We also add [DEFAULT_TLS_SIGNATURE_SCHEME] and [DEFAULT_IDENTITY_SIGNATURE_SCHEME] combinations for consistency.
         val certChainSchemeCombinations = listOf(
@@ -346,6 +358,65 @@ class X509UtilitiesTest {
         assertFalse { serverError }
         serverSocket.close()
         assertTrue(done)
+    }
+
+    @Test
+    fun `create server cert and use in OpenSSL channel`() {
+        val sslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(tempFolder.root.toPath(), keyStorePassword = "serverstorepass")
+
+        val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
+
+        // Generate server cert and private key and populate another keystore suitable for SSL
+        sslConfig.keyStore.get(true).registerDevP2pCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa)
+        sslConfig.createTrustStore(rootCa.certificate)
+
+        val keyStore = sslConfig.keyStore.get()
+        val trustStore = sslConfig.trustStore.get()
+
+        val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
+        keyManagerFactory.init(keyStore)
+
+        val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        trustManagerFactory.init(trustStore)
+
+
+        val sslServerContext = SslContextBuilder
+                .forServer(keyManagerFactory)
+                .trustManager(trustManagerFactory)
+                .clientAuth(ClientAuth.REQUIRE)
+                .ciphers(CIPHER_SUITES.toMutableList())
+                .sslProvider(SslProvider.OPENSSL)
+                .protocols("TLSv1.2")
+                .build()
+        val sslClientContext = SslContextBuilder
+                .forClient()
+                .keyManager(keyManagerFactory)
+                .trustManager(trustManagerFactory)
+                .ciphers(CIPHER_SUITES.toMutableList())
+                .sslProvider(SslProvider.OPENSSL)
+                .protocols("TLSv1.2")
+                .build()
+        val serverHandler = NettyTestHandler { ctx, msg -> ctx?.writeAndFlush(msg) }
+        val clientHandler = NettyTestHandler { _, msg -> assertEquals("Hello", NettyTestHandler.readString(msg)) }
+        NettyTestServer(sslServerContext, serverHandler, portAllocation.nextPort()).use { server ->
+            server.start()
+            NettyTestClient(sslClientContext, InetAddress.getLocalHost().canonicalHostName, server.port, clientHandler).use { client ->
+                client.start()
+
+                clientHandler.writeString("Hello")
+                val readCalled = clientHandler.waitForReadCalled()
+                clientHandler.rethrowIfFailed()
+                serverHandler.rethrowIfFailed()
+                assertTrue(readCalled)
+                assertEquals(1, serverHandler.readCalledCounter)
+                assertEquals(1, clientHandler.readCalledCounter)
+
+                val peerChain = client.engine!!.session.peerCertificates.x509
+                val peerX500Principal = peerChain[0].subjectX500Principal
+                assertEquals(MEGA_CORP.name.x500Principal, peerX500Principal)
+                X509Utilities.validateCertificateChain(rootCa.certificate, peerChain)
+            }
+        }
     }
 
     private fun tempFile(name: String): Path = tempFolder.root.toPath() / name

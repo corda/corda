@@ -55,5 +55,12 @@ interface AMQPConfiguration {
     @JvmDefault
     val socksProxyConfig: SocksProxyConfig?
         get() = null
+
+    /**
+     * Whether to use the tcnative open/boring SSL provider or the default Java SSL provider
+     */
+    @JvmDefault
+    val useOpenSsl: Boolean
+        get() = false
 }
 

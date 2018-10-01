@@ -280,7 +280,8 @@ data class NodeConfigurationImpl(
         override val flowMonitorPeriodMillis: Duration = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS,
         override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS,
         override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT),
-        override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA
+        override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA,
+        private val useOpenSsl: Boolean = false
 ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
@@ -313,7 +314,7 @@ data class NodeConfigurationImpl(
     private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword)
     private val p2pTrustStoreFilePath: Path get() = certificatesDirectory / "truststore.jks"
     private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword)
-    override val p2pSslOptions: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
+    override val p2pSslOptions: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore, useOpenSsl)
 
     override val rpcOptions: NodeRpcOptions
         get() {

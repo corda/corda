@@ -5,11 +5,9 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.hours
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.config.EnterpriseConfiguration
-import net.corda.node.services.config.MutualExclusionConfiguration
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
@@ -23,8 +21,8 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -34,12 +32,22 @@ import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.util.*
+import kotlin.concurrent.thread
 import kotlin.system.measureNanoTime
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 
-class AMQPBridgeTest {
+@RunWith(Parameterized::class)
+class AMQPBridgeTest(private val useOpenSsl: Boolean) {
+    companion object {
+        @JvmStatic
+        @Parameterized.Parameters(name = "useOpenSsl = {0}")
+        fun data(): Collection<Boolean> = listOf(false, true)
+    }
+
     @Rule
     @JvmField
     val temporaryFolder = TemporaryFolder()
@@ -198,13 +206,30 @@ class AMQPBridgeTest {
         var timeNanosCreateMessage = 0L
         var timeNanosSendMessage = 0L
         var timeMillisRead = 0L
+
+        val recThread = thread {
+            val current = artemisConsumer.receive()
+            val messageId = current.getIntProperty(P2PMessagingHeaders.senderUUID)
+            assertEquals(numReceived, messageId)
+            ++numReceived
+            current.acknowledge()
+            timeMillisRead = measureTimeMillis {
+                while (numReceived < numMessages) {
+                    val currentMsg = artemisConsumer.receive()
+                    val loopMessageId = currentMsg.getIntProperty(P2PMessagingHeaders.senderUUID)
+                    assertEquals(numReceived, loopMessageId)
+                    ++numReceived
+                    currentMsg.acknowledge()
+                }
+            }
+        }
         val simpleSourceQueueName = SimpleString(sourceQueueName)
         val totalTimeMillis = measureTimeMillis {
-            repeat(numMessages) {
+            repeat(numMessages) { i ->
                 var artemisMessage: ClientMessage? = null
                 timeNanosCreateMessage += measureNanoTime {
                     artemisMessage = artemis.session.createMessage(true).apply {
-                        putIntProperty("CountProp", it)
+                        putIntProperty(P2PMessagingHeaders.senderUUID, i)
                         writeBodyBufferBytes(rubbishPayload)
                         // Use the magic deduplication property built into Artemis as our message identity too
                         putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
@@ -215,18 +240,9 @@ class AMQPBridgeTest {
                 }
             }
             artemisClient.started!!.session.commit()
-
-
-            timeMillisRead = measureTimeMillis {
-                while (numReceived < numMessages) {
-                    val current = artemisConsumer.receive()
-                    val messageId = current.getIntProperty("CountProp")
-                    assertEquals(numReceived, messageId)
-                    ++numReceived
-                    current.acknowledge()
-                }
-            }
+            recThread.join(1.hours.toMillis())
         }
+
         println("Creating $numMessages messages took ${timeNanosCreateMessage / (1000 * 1000)} milliseconds")
         println("Sending $numMessages messages took ${timeNanosSendMessage / (1000 * 1000)} milliseconds")
         println("Receiving $numMessages messages took $timeMillisRead milliseconds")
@@ -244,7 +260,7 @@ class AMQPBridgeTest {
     private fun createArtemis(sourceQueueName: String?): Triple<ArtemisMessagingServer, ArtemisMessagingClient, BridgeManager> {
         val baseDir = temporaryFolder.root.toPath() / "artemis"
         val certificatesDirectory = baseDir / "certificates"
-        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, useOpenSsl = useOpenSsl)
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDir).whenever(it).baseDirectory
@@ -260,7 +276,8 @@ class AMQPBridgeTest {
         artemisConfig.configureWithDevSSLCertificate()
 
         val artemisServer = ArtemisMessagingServer(artemisConfig, artemisAddress.copy(host = "0.0.0.0"), MAX_MESSAGE_SIZE)
-        val artemisClient = ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE)
+
+        val artemisClient = ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE, confirmationWindowSize = artemisConfig.enterpriseConfiguration.tuning.p2pConfirmationWindowSize)
 
         artemisServer.start()
         artemisClient.start()
@@ -279,7 +296,7 @@ class AMQPBridgeTest {
     private fun createArtemisReceiver(targetAdress: NetworkHostAndPort, workingDir: String): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
         val baseDir = temporaryFolder.root.toPath() / workingDir
         val certificatesDirectory = baseDir / "certificates"
-        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, useOpenSsl = useOpenSsl)
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(baseDir).whenever(it).baseDirectory
@@ -288,7 +305,9 @@ class AMQPBridgeTest {
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(targetAdress).whenever(it).p2pAddress
-            doReturn("").whenever(it).jmxMonitoringHttpPort
+            doReturn(null).whenever(it).jmxMonitoringHttpPort
+            @Suppress("DEPRECATION")
+            doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
         }
         artemisConfig.configureWithDevSSLCertificate()
@@ -304,7 +323,7 @@ class AMQPBridgeTest {
     private fun createAMQPServer(maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPServer {
         val baseDir = temporaryFolder.root.toPath() / "server"
         val certificatesDirectory = baseDir / "certificates"
-        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, useOpenSsl = useOpenSsl)
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "server").whenever(it).baseDirectory
@@ -321,6 +340,7 @@ class AMQPBridgeTest {
             override val trustStore  = serverConfig.p2pSslOptions.trustStore.get()
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
+            override val useOpenSsl = serverConfig.p2pSslOptions.useOpenSsl
         }
         return AMQPServer("0.0.0.0",
                 amqpAddress.port,

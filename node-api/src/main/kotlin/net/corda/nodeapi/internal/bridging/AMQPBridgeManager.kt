@@ -43,8 +43,13 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
     private class AMQPConfigurationImpl private constructor(override val keyStore: CertificateStore,
                                                             override val trustStore: CertificateStore,
                                                             override val socksProxyConfig: SocksProxyConfig?,
-                                                            override val maxMessageSize: Int) : AMQPConfiguration {
-        constructor(config: MutualSslConfiguration, socksProxyConfig: SocksProxyConfig?, maxMessageSize: Int) : this(config.keyStore.get(), config.trustStore.get(), socksProxyConfig, maxMessageSize)
+                                                            override val maxMessageSize: Int,
+                                                            override val useOpenSsl: Boolean) : AMQPConfiguration {
+        constructor(config: MutualSslConfiguration, socksProxyConfig: SocksProxyConfig?, maxMessageSize: Int) : this(config.keyStore.get(),
+                config.trustStore.get(),
+                socksProxyConfig,
+                maxMessageSize,
+                config.useOpenSsl)
     }
 
     private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(config, socksProxyConfig, maxMessageSize)

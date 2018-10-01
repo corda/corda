@@ -1,6 +1,9 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
+import io.netty.buffer.ByteBufAllocator
+import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.ssl.SslHandler
+import io.netty.handler.ssl.SslProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
@@ -126,6 +129,23 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
     return SslHandler(sslEngine)
 }
 
+internal fun createClientOpenSslHandler(target: NetworkHostAndPort,
+                                        expectedRemoteLegalNames: Set<CordaX500Name>,
+                                        keyManagerFactory: KeyManagerFactory,
+                                        trustManagerFactory: TrustManagerFactory,
+                                        alloc: ByteBufAllocator): SslHandler {
+    val sslContext = SslContextBuilder.forClient().sslProvider(SslProvider.OPENSSL).keyManager(keyManagerFactory).trustManager(LoggingTrustManagerFactoryWrapper(trustManagerFactory)).build()
+    val sslEngine = sslContext.newEngine(alloc, target.host, target.port)
+    sslEngine.enabledProtocols = ArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
+    sslEngine.enabledCipherSuites = ArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
+    if (expectedRemoteLegalNames.size == 1) {
+        val sslParameters = sslEngine.sslParameters
+        sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.single())))
+        sslEngine.sslParameters = sslParameters
+    }
+    return SslHandler(sslEngine)
+}
+
 internal fun createServerSslHelper(keyManagerFactory: KeyManagerFactory,
                                    trustManagerFactory: TrustManagerFactory): SslHandler {
     val sslContext = SSLContext.getInstance("TLS")
@@ -157,6 +177,18 @@ internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateSto
     val pkixParams = PKIXBuilderParameters(trustStore.value.internal, X509CertSelector())
     pkixParams.addCertPathChecker(revocationChecker)
     return CertPathTrustManagerParameters(pkixParams)
+}
+
+internal fun createServerOpenSslHandler(keyManagerFactory: KeyManagerFactory,
+                                        trustManagerFactory: TrustManagerFactory,
+                                        alloc: ByteBufAllocator): SslHandler {
+    val sslContext = SslContextBuilder.forServer(keyManagerFactory).sslProvider(SslProvider.OPENSSL).trustManager(LoggingTrustManagerFactoryWrapper(trustManagerFactory)).build()
+    val sslEngine = sslContext.newEngine(alloc)
+    sslEngine.useClientMode = false
+    sslEngine.needClientAuth = true
+    sslEngine.enabledProtocols = ArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
+    sslEngine.enabledCipherSuites = ArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
+    return SslHandler(sslEngine)
 }
 
 fun KeyManagerFactory.init(keyStore: CertificateStore) = init(keyStore.value.internal, keyStore.password.toCharArray())

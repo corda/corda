@@ -23,6 +23,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.net.BindException
 import java.net.InetSocketAddress
+import java.security.cert.X509Certificate
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.KeyManagerFactory
@@ -66,11 +67,17 @@ class AMQPServer(val hostName: String,
 
         override fun initChannel(ch: SocketChannel) {
             val pipeline = ch.pipeline()
-            val handler = createServerSslHelper(keyManagerFactory, trustManagerFactory)
+            val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory)
+            val handler = if (parent.configuration.useOpenSsl){
+                createServerOpenSslHandler(wrappedKeyManagerFactory, trustManagerFactory, ch.alloc())
+            } else {
+                createServerSslHelper(wrappedKeyManagerFactory, trustManagerFactory)
+            }
             pipeline.addLast("sslHandler", handler)
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
             pipeline.addLast(AMQPChannelHandler(true,
                     null,
+                    wrappedKeyManagerFactory,
                     conf.userName,
                     conf.password,
                     conf.trace,

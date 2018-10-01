@@ -19,7 +19,8 @@ data class BridgeSSLConfigurationImpl(private val sslKeystore: Path,
                                       private val keyStorePassword: String,
                                       private val trustStoreFile: Path,
                                       private val trustStorePassword: String,
-                                      private val crlCheckSoftFail: Boolean) : BridgeSSLConfiguration {
+                                      private val crlCheckSoftFail: Boolean,
+                                      override val useOpenSsl: Boolean = false) : BridgeSSLConfiguration {
 
     override val keyStore = FileBasedCertificateStoreSupplier(sslKeystore, keyStorePassword)
     override val trustStore = FileBasedCertificateStoreSupplier(trustStoreFile, trustStorePassword)
