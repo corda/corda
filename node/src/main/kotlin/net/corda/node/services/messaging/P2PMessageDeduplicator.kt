@@ -10,7 +10,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
@@ -29,7 +28,7 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
     private val processedMessages = createProcessedMessages(cacheFactory)
     // We add the peer to the key, so other peers cannot attempt malicious meddling with sequence numbers.
     // Expire after 7 days since we last touched an entry, to avoid infinite growth.
-    private val senderUUIDSeqNoHWM: MutableMap<SenderKey, SenderHashToSeqNo> = Caffeine.newBuilder().expireAfterAccess(7, TimeUnit.DAYS).build<SenderKey, SenderHashToSeqNo>().asMap()
+    private val senderUUIDSeqNoHWM: MutableMap<SenderKey, SenderHashToSeqNo> = cacheFactory.buildNamed<SenderKey, SenderHashToSeqNo>(Caffeine.newBuilder(), "P2PMessageDeduplicator_senderUUIDSeqNoHWM").asMap()
 
     private fun createProcessedMessages(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<DeduplicationId, MessageMeta, ProcessedMessage, String> {
         return AppendOnlyPersistentMap(

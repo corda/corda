@@ -62,7 +62,8 @@ import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.DefaultNamedCacheFactory
+import net.corda.node.utilities.EnterpriseNamedCacheFactory
+import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.isH2Database
@@ -118,7 +119,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
     }
 
     private val metricRegistry = MetricRegistry()
-    override val cacheFactory = DefaultNamedCacheFactory().bindWithConfig(configuration).bindWithMetrics(metricRegistry).tokenize()
+    override val cacheFactory = EnterpriseNamedCacheFactory(configuration.enterpriseConfiguration.getTracingConfig()).bindWithConfig(configuration).bindWithMetrics(metricRegistry).tokenize()
 
     override val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, false).tokenize()
     override val identityService = PersistentIdentityService(cacheFactory).tokenize()
@@ -144,7 +145,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
     override val keyManagementService = PersistentKeyManagementService(cacheFactory, identityService, database).tokenize()
     private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, validatedTransactions)
     @Suppress("LeakingThis")
-    override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService).tokenize()
+    override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory).tokenize()
     override val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database)
     val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
     override val monitoringService = MonitoringService(metricRegistry).tokenize()

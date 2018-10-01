@@ -95,16 +95,6 @@ class CacheTracing {
     data class CacheTracingConfig(val enabled: Boolean, val targetDir: Path, val converter: (key: Any?) -> Long)
 
     companion object {
-        var cacheTracingConfig: CacheTracingConfig? = null
-
-        fun <K, V> wrap(cache: Cache<K, V>, name: String): Cache<K, V> {
-            return wrap(cache, cacheTracingConfig, name)
-        }
-
-        fun <K, V> wrap(cache: LoadingCache<K, V>, name: String): LoadingCache<K, V> {
-            return wrap(cache, cacheTracingConfig, name)
-        }
-
         fun <K, V> wrap(cache: Cache<K, V>, config: CacheTracingConfig?, traceName: String): Cache<K, V> {
             return if (config != null && config.enabled) TracingCacheWrapper(cache, getCollector(config.targetDir, traceName, config.converter)) else cache
         }

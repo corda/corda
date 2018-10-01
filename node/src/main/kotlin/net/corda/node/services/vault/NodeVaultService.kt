@@ -21,10 +21,9 @@ import net.corda.core.transactions.*
 import net.corda.core.utilities.*
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
-import net.corda.node.services.config.KB
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.node.utilities.NamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.currentDBSession
@@ -61,7 +60,7 @@ class NodeVaultService(
         private val servicesForResolution: ServicesForResolution,
         private val database: CordaPersistence,
         private val schemaService: SchemaService,
-        transactionCacheSizeBytes: Long = NodeConfiguration.defaultTransactionCacheSize
+        cacheFactory: NamedCacheFactory
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
         private val log = contextLogger()
@@ -87,10 +86,9 @@ class NodeVaultService(
     private val contractStateTypeMappings = mutableMapOf<String, MutableSet<String>>()
 
     /**
-     * This caches what states are in the vault for a particular transaction. Size the cache based on one entry per 8KB of transaction cache.
-     * This size results in minimum of 1024.
+     * This caches what states are in the vault for a particular transaction.
      */
-    private val producedStatesMapping = Caffeine.newBuilder().maximumSize(transactionCacheSizeBytes / 8.KB).buildNamed<SecureHash, BitSet>("NodeVaultService_producedStates")
+    private val producedStatesMapping = cacheFactory.buildNamed<SecureHash, BitSet>(Caffeine.newBuilder(), "NodeVaultService_producedStates")
 
     override fun start() {
         criteriaBuilder = database.hibernateConfig.sessionFactoryForRegisteredSchemas.criteriaBuilder

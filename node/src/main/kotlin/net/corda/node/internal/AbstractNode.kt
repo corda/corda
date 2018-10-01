@@ -943,7 +943,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 services,
                 database,
                 schemaService,
-                configuration.transactionCacheSizeBytes
+                cacheFactory
         )
     }
 

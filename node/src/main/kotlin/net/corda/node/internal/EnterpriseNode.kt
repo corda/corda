@@ -10,7 +10,6 @@ import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.internal.profiling.CacheTracing
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
@@ -19,6 +18,7 @@ import net.corda.node.services.config.RelayConfiguration
 import net.corda.node.services.statemachine.MultiThreadedStateMachineExecutor
 import net.corda.node.services.statemachine.MultiThreadedStateMachineManager
 import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.node.utilities.EnterpriseNamedCacheFactory
 import net.corda.node.utilities.profiling.getTracingConfig
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -29,10 +29,8 @@ import java.util.concurrent.TimeUnit
 
 open class EnterpriseNode(configuration: NodeConfiguration,
                           versionInfo: VersionInfo,
-                          initialiseSerialization: Boolean = true,
-        // running this as a constructor default parameter as this is the first thing that will be run when instantiating the class
-                          initHelper: Unit = { CacheTracing.cacheTracingConfig = configuration.enterpriseConfiguration.getTracingConfig() }()
-) : Node(configuration, versionInfo, initialiseSerialization) {
+                          initialiseSerialization: Boolean = true
+) : Node(configuration, versionInfo, initialiseSerialization, cacheFactoryPrototype = EnterpriseNamedCacheFactory(configuration.enterpriseConfiguration.getTracingConfig())) {
     companion object {
         private val logger by lazy { loggerFor<EnterpriseNode>() }
 

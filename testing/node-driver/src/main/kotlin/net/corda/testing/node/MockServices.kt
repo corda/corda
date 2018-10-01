@@ -249,7 +249,7 @@ open class MockServices private constructor(
         }
 
     internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence): VaultServiceInternal {
-        return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService).apply { start() }
+        return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, EnterpriseMockNamedCachedFactory()).apply { start() }
     }
 
     // This needs to be internal as MutableClassToInstanceMap is a guava type and shouldn't be part of our public API

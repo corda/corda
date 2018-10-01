@@ -47,7 +47,8 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.NodePropertiesPersistentStore
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.utilities.DefaultNamedCacheFactory
+import net.corda.node.utilities.EnterpriseNamedCacheFactory
+import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.isH2Database
@@ -76,7 +77,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration, overrid
     private val runOnStop = ArrayList<() -> Any?>()
 
     private val metricRegistry = MetricRegistry()
-    override val cacheFactory = DefaultNamedCacheFactory().bindWithConfig(configuration).bindWithMetrics(metricRegistry)
+    override val cacheFactory = EnterpriseNamedCacheFactory(configuration.enterpriseConfiguration.getTracingConfig()).bindWithConfig(configuration).bindWithMetrics(metricRegistry)
 
     override val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, false)
     override val identityService = PersistentIdentityService(cacheFactory)
@@ -104,7 +105,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration, overrid
     override val keyManagementService = PersistentKeyManagementService(cacheFactory, identityService, database)
     private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, validatedTransactions)
     @Suppress("LeakingThis")
-    override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService)
+    override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory)
     override val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database)
     override val monitoringService = MonitoringService(metricRegistry)
     override val networkMapUpdater = NetworkMapUpdater(
