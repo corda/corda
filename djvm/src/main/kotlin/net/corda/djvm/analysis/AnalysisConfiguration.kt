@@ -1,9 +1,15 @@
 package net.corda.djvm.analysis
 
+import net.corda.djvm.code.ruleViolationError
+import net.corda.djvm.code.thresholdViolationError
 import net.corda.djvm.messages.Severity
 import net.corda.djvm.references.ClassModule
 import net.corda.djvm.references.MemberModule
+import net.corda.djvm.source.BootstrapClassLoader
+import net.corda.djvm.source.SourceClassLoader
 import sandbox.net.corda.djvm.costing.RuntimeCostAccounter
+import java.io.Closeable
+import java.io.IOException
 import java.nio.file.Path
 
 /**
@@ -13,7 +19,8 @@ import java.nio.file.Path
  * @param additionalPinnedClasses Classes that have already been declared in the sandbox namespace and that should be
  * made available inside the sandboxed environment.
  * @property minimumSeverityLevel The minimum severity level to log and report.
- * @property classPath The extended class path to use for the analysis.
+ * @param classPath The extended class path to use for the analysis.
+ * @param bootstrapJar The location of a jar containing the Java APIs.
  * @property analyzeAnnotations Analyze annotations despite not being explicitly referenced.
  * @property prefixFilters Only record messages where the originating class name matches one of the provided prefixes.
  * If none are provided, all messages will be reported.
@@ -24,23 +31,39 @@ class AnalysisConfiguration(
         val whitelist: Whitelist = Whitelist.MINIMAL,
         additionalPinnedClasses: Set<String> = emptySet(),
         val minimumSeverityLevel: Severity = Severity.WARNING,
-        val classPath: List<Path> = emptyList(),
+        classPath: List<Path> = emptyList(),
+        bootstrapJar: Path? = null,
         val analyzeAnnotations: Boolean = false,
         val prefixFilters: List<String> = emptyList(),
         val classModule: ClassModule = ClassModule(),
         val memberModule: MemberModule = MemberModule()
-) {
+) : Closeable {
 
     /**
      * Classes that have already been declared in the sandbox namespace and that should be made
      * available inside the sandboxed environment.
      */
-    val pinnedClasses: Set<String> = setOf(SANDBOXED_OBJECT, RUNTIME_COST_ACCOUNTER) + additionalPinnedClasses
+    val pinnedClasses: Set<String> = setOf(
+        SANDBOXED_OBJECT,
+        RuntimeCostAccounter.TYPE_NAME,
+        ruleViolationError,
+        thresholdViolationError
+    ) + additionalPinnedClasses
 
     /**
      * Functionality used to resolve the qualified name and relevant information about a class.
      */
     val classResolver: ClassResolver = ClassResolver(pinnedClasses, whitelist, SANDBOX_PREFIX)
+
+    private val bootstrapClassLoader = bootstrapJar?.let { BootstrapClassLoader(it, classResolver) }
+    val supportingClassLoader = SourceClassLoader(classPath, classResolver, bootstrapClassLoader)
+
+    @Throws(IOException::class)
+    override fun close() {
+        supportingClassLoader.use {
+            bootstrapClassLoader?.close()
+        }
+    }
 
     companion object {
         /**
@@ -48,8 +71,7 @@ class AnalysisConfiguration(
          */
         private const val SANDBOX_PREFIX: String = "sandbox/"
 
-        private const val SANDBOXED_OBJECT = "sandbox/java/lang/Object"
-        private const val RUNTIME_COST_ACCOUNTER = RuntimeCostAccounter.TYPE_NAME
+        private const val SANDBOXED_OBJECT = SANDBOX_PREFIX + "java/lang/Object"
     }
 
 }

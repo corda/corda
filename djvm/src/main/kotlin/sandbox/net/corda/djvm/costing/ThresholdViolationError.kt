@@ -1,4 +1,4 @@
-package net.corda.djvm.costing
+package sandbox.net.corda.djvm.costing
 
 /**
  * Exception thrown when a sandbox threshold is violated. This will kill the current thread and consequently exit the
@@ -6,6 +6,4 @@ package net.corda.djvm.costing
  *
  * @property message The description of the condition causing the problem.
  */
-class ThresholdViolationException(
-        override val message: String
-) : ThreadDeath()
+class ThresholdViolationError(override val message: String) : ThreadDeath()

@@ -56,6 +56,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.serialization.internal.*
+import org.apache.commons.lang.SystemUtils
 import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -139,6 +140,26 @@ open class Node(configuration: NodeConfiguration,
 
         // TODO: make this configurable.
         const val MAX_RPC_MESSAGE_SIZE = 10485760
+
+        fun isValidJavaVersion(): Boolean {
+            if (!hasMinimumJavaVersion()) {
+                println("You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8.")
+                println("Corda will now exit...")
+                return false
+            }
+            return true
+        }
+
+        private fun hasMinimumJavaVersion(): Boolean {
+            // when the ext.java8_minUpdateVersion gradle constant changes, so must this check
+            val major = SystemUtils.JAVA_VERSION_FLOAT
+            return try {
+                val update = SystemUtils.JAVA_VERSION.substringAfter("_").toLong()
+                major == 1.8F && update >= 171
+            } catch (e: NumberFormatException) { // custom JDKs may not have the update version (e.g. 1.8.0-adoptopenjdk)
+                false
+            }
+        }
     }
 
     override val log: Logger get() = staticLog

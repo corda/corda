@@ -16,7 +16,11 @@ class ReferenceMap(
 
     private val referencesPerLocation: MutableMap<String, MutableSet<ReferenceWithLocation>> = hashMapOf()
 
-    private var numberOfReferences = 0
+    /**
+     * The number of references in the map.
+     */
+    var numberOfReferences = 0
+        private set
 
     /**
      * Add source location association to a target member.
@@ -49,12 +53,6 @@ class ReferenceMap(
     ): Set<ReferenceWithLocation> {
         return referencesPerLocation.getOrElse(key(className, memberName, signature)) { emptySet() }
     }
-
-    /**
-     * The number of member references in the map.
-     */
-    val size: Int
-        get() = numberOfReferences
 
     /**
      * Get iterator for all the references in the map.

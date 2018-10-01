@@ -3,25 +3,20 @@ package net.corda.djvm
 import net.corda.djvm.analysis.AnalysisContext
 import net.corda.djvm.costing.RuntimeCostSummary
 import net.corda.djvm.rewiring.SandboxClassLoader
-import net.corda.djvm.source.ClassSource
 
 /**
  * The context in which a sandboxed operation is run.
  *
  * @property configuration The configuration of the sandbox.
- * @property inputClasses The classes passed in for analysis.
  */
-class SandboxRuntimeContext(
-        val configuration: SandboxConfiguration,
-        private val inputClasses: List<ClassSource>
-) {
+class SandboxRuntimeContext(val configuration: SandboxConfiguration) {
 
     /**
      * The class loader to use inside the sandbox.
      */
     val classLoader: SandboxClassLoader = SandboxClassLoader(
             configuration,
-            AnalysisContext.fromConfiguration(configuration.analysisConfiguration, inputClasses)
+            AnalysisContext.fromConfiguration(configuration.analysisConfiguration)
     )
 
     /**
@@ -35,7 +30,7 @@ class SandboxRuntimeContext(
     fun use(action: SandboxRuntimeContext.() -> Unit) {
         SandboxRuntimeContext.instance = this
         try {
-            this.action()
+            action(this)
         } finally {
             threadLocalContext.remove()
         }
@@ -43,9 +38,7 @@ class SandboxRuntimeContext(
 
     companion object {
 
-        private val threadLocalContext = object : ThreadLocal<SandboxRuntimeContext?>() {
-            override fun initialValue(): SandboxRuntimeContext? = null
-        }
+        private val threadLocalContext = ThreadLocal<SandboxRuntimeContext?>()
 
         /**
          * When called from within a sandbox, this returns the context for the current sandbox thread.

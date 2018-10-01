@@ -3,29 +3,31 @@ package net.corda.djvm.rewiring
 import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.analysis.AnalysisContext
 import net.corda.djvm.analysis.ClassAndMemberVisitor
+import net.corda.djvm.code.asResourcePath
 import net.corda.djvm.references.ClassReference
 import net.corda.djvm.source.ClassSource
-import net.corda.djvm.source.SourceClassLoader
 import net.corda.djvm.utilities.loggerFor
 import net.corda.djvm.validation.RuleValidator
 
 /**
  * Class loader that enables registration of rewired classes.
  *
- * @property configuration The configuration to use for the sandbox.
+ * @param configuration The configuration to use for the sandbox.
  * @property context The context in which analysis and processing is performed.
  */
 class SandboxClassLoader(
-        val configuration: SandboxConfiguration,
-        val context: AnalysisContext
-) : ClassLoader() {
+        configuration: SandboxConfiguration,
+        private val context: AnalysisContext
+) : ClassLoader(null) {
+
+    private val analysisConfiguration = configuration.analysisConfiguration
 
     /**
      * The instance used to validate that any loaded class complies with the specified rules.
      */
     private val ruleValidator: RuleValidator = RuleValidator(
             rules = configuration.rules,
-            configuration = configuration.analysisConfiguration
+            configuration = analysisConfiguration
     )
 
     /**
@@ -37,12 +39,12 @@ class SandboxClassLoader(
     /**
      * Set of classes that should be left untouched due to pinning.
      */
-    private val pinnedClasses = configuration.analysisConfiguration.pinnedClasses
+    private val pinnedClasses = analysisConfiguration.pinnedClasses
 
     /**
      * Set of classes that should be left untouched due to whitelisting.
      */
-    private val whitelistedClasses = configuration.analysisConfiguration.whitelist
+    private val whitelistedClasses = analysisConfiguration.whitelist
 
     /**
      * Cache of loaded classes.
@@ -52,10 +54,7 @@ class SandboxClassLoader(
     /**
      * The class loader used to find classes on the extended class path.
      */
-    private val supportingClassLoader = SourceClassLoader(
-            configuration.analysisConfiguration.classPath,
-            configuration.analysisConfiguration.classResolver
-    )
+    private val supportingClassLoader = analysisConfiguration.supportingClassLoader
 
     /**
      * The re-writer to use for registered classes.
@@ -83,9 +82,9 @@ class SandboxClassLoader(
      * @return The resulting <tt>Class</tt> object and its byte code representation.
      */
     fun loadClassAndBytes(source: ClassSource, context: AnalysisContext): LoadedClass {
-        logger.trace("Loading class {}, origin={}...", source.qualifiedClassName, source.origin)
-        val name = configuration.analysisConfiguration.classResolver.reverseNormalized(source.qualifiedClassName)
-        val resolvedName = configuration.analysisConfiguration.classResolver.resolveNormalized(name)
+        logger.debug("Loading class {}, origin={}...", source.qualifiedClassName, source.origin)
+        val name = analysisConfiguration.classResolver.reverseNormalized(source.qualifiedClassName)
+        val resolvedName = analysisConfiguration.classResolver.resolveNormalized(name)
 
         // Check if the class has already been loaded.
         val loadedClass = loadedClasses[name]
@@ -99,14 +98,14 @@ class SandboxClassLoader(
 
         // Analyse the class if not matching the whitelist.
         val readClassName = reader.className
-        if (!configuration.analysisConfiguration.whitelist.matches(readClassName)) {
+        if (!analysisConfiguration.whitelist.matches(readClassName)) {
             logger.trace("Class {} does not match with the whitelist", source.qualifiedClassName)
             logger.trace("Analyzing class {}...", source.qualifiedClassName)
             analyzer.analyze(reader, context)
         }
 
         // Check if the class should be left untouched.
-        val qualifiedName = name.replace('.', '/')
+        val qualifiedName = name.asResourcePath
         if (qualifiedName in pinnedClasses) {
             logger.trace("Class {} is marked as pinned", source.qualifiedClassName)
             val pinnedClasses = LoadedClass(
@@ -146,7 +145,7 @@ class SandboxClassLoader(
             context.recordClassOrigin(name, ClassReference(source.origin))
         }
 
-        logger.trace("Loaded class {}, bytes={}, isModified={}",
+        logger.debug("Loaded class {}, bytes={}, isModified={}",
                 source.qualifiedClassName, byteCode.bytes.size, byteCode.isModified)
 
         return classWithByteCode
