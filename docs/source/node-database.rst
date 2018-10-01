@@ -90,6 +90,20 @@ Note that:
   the driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
   extract the archive and copy the single file ``mssql-jdbc-6.2.2.jre8.jar`` as the archive comes with two JAR versions
 
+Example dataSource.url for SQL Server:
+
+.. sourcecode:: none
+
+    dataSource.url = "jdbc:sqlserver://[HOST]:[PORT];databaseName=[DATABASE_NAME]"
+
+Note that:
+
+* By default the connection to the database is not SSL, for securing JDBC connection refer to
+  `Securing JDBC Driver Application <https://docs.microsoft.com/en-us/sql/connect/jdbc/securing-jdbc-driver-applications?view=sql-server-2017>`_,
+* Ensure JDBC connection properties match the SQL Server setup, especially when trying to reuse JDBC URL format valid for Azure SQL,
+  as misconfiguration may prevent Corda node to start with supposedly unrelated error message e.g.:
+  `Caused by: org.hibernate.HibernateException: Access to DialectResolutionInfo cannot be null when 'hibernate.dialect' not set`
+
 To delete existing data from the database, run the following SQL:
 
 .. sourcecode:: sql
@@ -183,7 +197,7 @@ To set up a database schema with normal operation permissions:
 In Oracle database a user has full control over own schema because a schema is essentially the user account.
 In order to restrict the permissions two the database, two users needs to be created, the first one with administrative permissions (`ADMIN_USER` in SQL script),
 the second one with operation permissions (`USER` in the SQL script). Corda node will access the tables
-in the schema of the other user for which it has permissions to select/inser/delete data.
+in the schema of the other user for which it has permissions to select/insert/delete data.
 
 .. sourcecode:: sql
 
@@ -199,17 +213,19 @@ in the schema of the other user for which it has permissions to select/inser/del
     GRANT SELECT, INSERT, UPDATE, DELETE ANY [ADMIN_USER].[TABLE] TO [USER];
     GRANT SELECT ANY SEQUENCE TO [USER];
 
-When connecting via database user with normal operation permissions, all queries needs to be prefixes the the other schema name.
+When connecting via database user with normal operation permissions, all queries needs to be prefixed with the other schema name.
 Corda node doesn't guarantee to prefix each SQL query with a schema namespace.
 Additional node configuration entry allows to set current schema to ADMIN_USER while connecting to the database:
 
 .. sourcecode:: none
 
-    dataSourcePorperties {
+    dataSourceProperties {
         [...]
         connectionInitSql="alter session set current_schema=[ADMIN_USER]"
     }
 
+To allow VARCHAR2 and NVARCHAR2 column types to store more than 2000 characters ensure the database instance is configured to use
+extended data types, e.g. for Oracle 12.1 refer to `MAX_STRING_SIZE <https://docs.oracle.com/database/121/REFRN/GUID-D424D23B-0933-425F-BC69-9C0E6724693C.htm#REFRN10321>`_.
 
 Example node configuration for Oracle:
 
@@ -229,7 +245,8 @@ Example node configuration for Oracle:
 
 Note that:
 
-* The ``runMigration`` is `false` or may be omitted for node setup with normal operation permissions.
+* SCHEMA name equals to USER name if the schema was setup with administrative permissions (see the first DDL snippet for Oracle)
+* The ``runMigration`` is `false` or may be omitted for node setup with normal operation permissions
 * The ``database.schema`` property is optional
 * The minimum transaction isolation level ``database.transactionIsolationLevel`` is `READ_COMMITTED`
 * Ensure that the Oracle JDBC driver JAR is copied to the ``./drivers`` subdirectory or if applicable specify path in the ``jarDirs`` property

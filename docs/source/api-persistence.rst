@@ -112,6 +112,9 @@ Several examples of entities and mappings are provided in the codebase, includin
 .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/schemas/CashSchemaV1.kt
     :language: kotlin
 
+.. note:: Ensure table and column names are compatible with the naming convention of database vendors for which the Cordapp will be deployed,
+   e.g. for Oracle 12.1 the maximum length of table/column name is 30 characters.
+
 Identity mapping
 ----------------
 Schema entity attributes defined by identity types (``AbstractParty``, ``Party``, ``AnonymousParty``) are automatically
