@@ -9,7 +9,7 @@ first public Beta (:ref:`Milestone 12 <changelog_m12>`), to :ref:`V1.0 <changelo
 
 General rules
 -------------
-Always remember to update the version identifiers in your project gradle file:
+Always remember to update the version identifiers in your project's gradle file:
 
 .. sourcecode:: shell
 

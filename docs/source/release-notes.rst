@@ -6,15 +6,16 @@ Release notes
 Release 3.3
 -----------
 
-Corda 3.3 is, at its heart, a release that brings together many small improvements, fixes, and community contributions to deliver a stable and polished release
-of Corda`. Where both the 3.1 and 3.2 releases delivered a smaller number of critical bug fixes addressing immediate and impactful error conditions, 3.3
+Corda 3.3 brings together many small improvements, fixes, and community contributions to deliver a stable and polished release
+of Corda. Where both the 3.1 and 3.2 releases delivered a smaller number of critical bug fixes addressing immediate and impactful error conditions, 3.3
 addresses a much greater number of issues, both small and large, that have been found and fixed since the release of 3.0 back in March. Rolling up a great
 many improvements and polish to truly make the Corda experience just that much better.
 
 In addition to work undertaken by the main Corda development team, we've taken the opportunity in 3.3 to bring back many of the contributions made
-by community members from master onto the currently released stable branch. It has been said many times before, but that community and those members
-are the real-life blood of Corda and anyone who takes the time to contribute is a star in our eyes. Brining that code into the current version we hope
-gives people the opportunity to see their work in action, to help their fellow community members, and for us to say thank you.
+by community members from master onto the currently released stable branch. It has been said many times before, but the community and its members
+are the real life-blood of Corda and anyone who takes the time to contribute is a star in our eyes. Bringing that code into the current version we hope
+gives people the opportunity to see their work in action, and to help their fellow community members by having these contributions available in a
+supported release.
 
 Changes of Note
 ~~~~~~~~~~~~~~~
@@ -28,20 +29,26 @@ Changes of Note
 
 * **Certificate Hierarchy**
 
-  After consultation, collaboration, and discussion with industry experts, R3 have decided to alter the default Certificate Hierarchy (PKI) utilized by
+  After consultation, collaboration, and discussion with industry experts, we have decided to alter the default Certificate Hierarchy (PKI) utilized by
   Corda and the Corda Network. To facilitate this, the nodes have had their certificate path verification logic made much more flexible. All existing
   certificate hierarchy, certificates, and networks will remain valid. The possibility now exists for nodes to recognize a deeper certificate chain and
   thus compatibility zone operators can deploy and adhere to the PKI standards they expect and are comfortable with.
 
-  Practically speaking, the old code assumed a 3-level hierarchy of root -> intermediate ca (doorman) -> node, and this was hard coded. From 3.3 onward an
+  Practically speaking, the old code assumed a 3-level hierarchy of Root -> Intermediate CA (Doorman) -> Node, and this was hard coded. From 3.3 onward an
   arbitrary depth of certificate chain is supported. For the Corda Network, this means the introduction of an intermediate layer between the root and the
   signing certificates (Network Map and Doorman). This has the effect of allowing the root certificate to *always* be kept offline and never retrieved or
   used. Those new intermediate certificates can be used to generate, if ever needed, new signing certs without risking compromise of the root key.
 
 * **Persistent State Ref**
 
- We have made some fixes to the ``net.corda.core.schemas.PersistentStateRef`` table that require a little maintenance when upgrading from 3.2. The
- exact process is detailed in the :doc:`upgrade-notes`.
+  We have made some fixes to the ``net.corda.core.schemas.PersistentStateRef`` table that require a little maintenance when upgrading from 3.2. The
+  exact process is detailed in the :doc:`upgrade-notes`.
+
+  The fields ``index`` and ``txId`` are now non-nullable. Effectively they always were non-nullable, values were set from non-nullable fields of other objects
+  and the class is used as the database Primary Key columns of other entities (databases already impose those columns as non-nullable, even if the JPA
+  annotation ``nullable=false`` was absent).
+
+  In case your Cordapps use this entity class to persist data in own custom tables as non Primary Key columns refer to :doc:`upgrade-notes` for upgrade instructions.
 
 Special Thanks
 ~~~~~~~~~~~~~~
@@ -67,7 +74,9 @@ We're therefore happy to extend thanks to the following members of that communit
 All Good Things!
 ~~~~~~~~~~~~~~~~
 
-3.3 will be the final planned release from the version 3 API branch of Corda. Rapidly galloping over the horizon is the impending release of Corda Version 4.0 coming sometime this winter. 4.0 will of course remain backward compaitble with the stabilised parts of the API and Wire format whilst benefiting from over 9 months of sustained feature developemnt. We're excited the release and hope you are, but in the meantime we remain commited to the current stable version and present 3.3 as the swan song for a major milestone of the Corda platform.
+3.3 will be the final planned release from the version 3 API branch of Corda. Rapidly galloping over the horizon is the impending release of Corda Version 4.0 coming sometime this winter.
+4.0 will of course remain backward compatible with the stabilised parts of the API and Wire format whilst benefiting from over 9 months of sustained feature development. We're excited the
+for release and hope you are. In the meantime we remain committed to the current stable version and present 3.3 as the swan song for a major milestone of the Corda platform.
 
 Issues Fixed
 ~~~~~~~~~~~~
