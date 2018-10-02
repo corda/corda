@@ -71,12 +71,12 @@ We're therefore happy to extend thanks to the following members of that communit
   * `Stanly Johnson <https://github.com/stanly-johnson>`_ with a `fix <https://github.com/corda/corda/commit/f9a9bb19a7cc6d202446890e4e11bebd4a118cf3>`_ to the network bootstrapper.
   * `Tittu Varghese <https://github.com/tittuvarghese>`_ for adding a favicon to the docsite. This commit can be found `here <https://github.com/corda/corda/commit/cd8988865599261db45505060735880c3066792e>`_
 
-All Good Things!
-~~~~~~~~~~~~~~~~
+What's That Coming Over The Hill!
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-3.3 will be the final planned release from the version 3 API branch of Corda. Rapidly galloping over the horizon is the impending release of Corda Version 4.0 coming sometime this winter.
-4.0 will of course remain backward compatible with the stabilised parts of the API and Wire format whilst benefiting from over 9 months of sustained feature development. We're excited the
-for release and hope you are. In the meantime we remain committed to the current stable version and present 3.3 as the swan song for a major milestone of the Corda platform.
+Whilst we are, as ever, really proud to be delivering another rock solid version of API Version 3, appearing over the horizon at an impressive gallop is the impending
+release of Corda Version 4.0, loosely slated to arrive coming sometime this winter. 4.0 will of course remain backward compatible with the stabilised parts of the API and
+wire-format delivered in version 3, whilst benefiting from over 9 months of sustained feature development.
 
 Issues Fixed
 ~~~~~~~~~~~~
