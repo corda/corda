@@ -94,15 +94,6 @@ to "walk the chain" and verify that each input was generated through a valid seq
 Reference input states
 ~~~~~~~~~~~~~~~~~~~~~~
 
-A reference input state is a ``ContractState`` which can be referred to in a transaction by the contracts of input and
-output states but whose contract is not executed as part of the transaction verification process. Furthermore,
-reference states are not consumed when the transaction is committed to the ledger but they are checked for
-"current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a normal
-state when it occurs in an input or output position.
-
-Reference data states enable many parties to "reuse" the same state in their transactions as reference data whilst
-still allowing the reference data state owner the capability to update the state.
-
 A reference input state is added to a transaction as a ``ReferencedStateAndRef``. A ``ReferencedStateAndRef`` can be
 obtained from a ``StateAndRef`` by calling the ``StateAndRef.referenced()`` method which returns a
 ``ReferencedStateAndRef``.
@@ -123,20 +114,32 @@ obtained from a ``StateAndRef`` by calling the ``StateAndRef.referenced()`` meth
             :end-before: DOCEND 55
             :dedent: 12
 
-**Known limitations:**
+**Handling of update races:**
 
-*Notary change:* It is likely the case that users of reference states do not have permission to change the notary assigned
-to a reference state. Even if users *did* have this permission the result would likely be a bunch of
-notary change races. As such, if a reference state is added to a transaction which is assigned to a
-different notary to the input and output states then all those inputs and outputs must be moved to the
-notary which the reference state uses.
+When using reference states in a transaction, it may be the case that a notarisation failure occurs. This is most likely
+because the creator of the state (being used as a reference state in your transaction), has just updated it.
 
-If two or more reference states assigned to different notaries are added to a transaction then it follows
-that this transaction likely *cannot* be committed to the ledger as it unlikely that the party using the
-reference state can change the assigned notary for one of the reference states.
+Typically, the creator of such reference data will have implemented flows for syndicating the updates out to users.
+However it is inevitable that there will be a delay between the state being used as a reference being consumed, and the
+nodes using it receiving the update.
 
-As such, if reference states assigned to multiple different notaries are added to a transaction builder
-then the check below will fail.
+This is where the ``WithReferencedStatesFlow`` comes in. Given a flow which uses reference states, the
+``WithReferencedStatesFlow`` will execute the the flow as a subFlow. If the flow fails due to a ``NotaryError.Conflict``
+for a reference state, then it will be suspended until the state refs for the reference states are consumed. In this
+case, a consumption means that:
+
+1. the owner of the reference state has updated the state with a valid, notarised transaction
+2. the owner of the reference state has shared the update with the node attempting to run the flow which uses the
+   reference state
+3. The node has successfully committed the transaction updating the reference state (and all the dependencies), and
+   added the updated reference state to the vault.
+
+At the point where the transaction updating the state being used as a reference is committed to storage and the vault
+update occurs, then the ``WithReferencedStatesFlow`` will wake up and re-execute the provided flow.
+
+.. warning:: Caution should be taken when using this flow as it facilitates automated re-running of flows which use
+reference states. The flow using reference states should include checks to ensure that the reference data is
+   reasonable, especially if some economics transaction depends upon it.
 
 Output states
 ^^^^^^^^^^^^^

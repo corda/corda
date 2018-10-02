@@ -79,6 +79,7 @@ We look forward to seeing what you can do with Corda!
    design/kafka-notary/design.md
    design/monitoring-management/design.md
    design/sgx-integration/design.md
+      design/reference-states/design.md
    design/sgx-infrastructure/design.md
    design/threat-model/corda-threat-model.md
    design/data-model-upgrades/signature-constraints.md
