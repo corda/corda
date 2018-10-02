@@ -80,8 +80,6 @@ parameters file, and trigger the network parameters upgrade process. This involv
 command to accept the new parameters file and then restarting the node. Node owners who do not restart their node in
 time effectively stop being a part of the network.
 
-.. _signature-constraints:
-
 **Signature constraints.** These are not yet supported, but once implemented they will allow a state to require a JAR
 signed by a specified identity, via the regular Java ``jarsigner`` tool. This will be the most flexible type
 and the smoothest to deploy: no restarts or contract upgrade transactions are needed.

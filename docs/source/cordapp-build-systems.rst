@@ -113,7 +113,7 @@ Signing the CorDapp JAR
 ^^^^^^^^^^^^^^^^^^^^^^^
 *Since corda-gradle-plugins 4.0.30*
 
-The ``cordapp`` plugin can sign the generated Cordapp JAR using `jarsinger` tool (internally runs ANT task `SignJar`).
+The ``cordapp`` plugin can sign the generated Cordapp JAR using `jarsigner` tool (internally runs ANT task `SignJar`).
 To enable CordApp signing add ``signing`` entry with ``enabled`` option set to ``true``.
 The signing ``options`` are any relevant parameters for ANT `SignJar <https://ant.apache.org/manual/Tasks/signjar.html>`_ task.
 

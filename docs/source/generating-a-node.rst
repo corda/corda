@@ -187,10 +187,10 @@ The example below shows the minimal set of ``options`` needed to create a dummy 
         }
     }
 
-If the intention to sing Cordapps is to use :ref:`Signature constraints <standalone_database_config_examples_ref>` then contracts classes form the Cordapp needs to be excluded from `Zone constraints`.
-List all contract classes in the Cordform entry ``excludeWhitelist``. The classes' names from
-the list will be omitted from `Zone constraints`. Internally the ``excludeWhitelist`` list generates `exclude_whitelist.txt` file used by :doc:`network-bootstrapper` tool.
-If ``excludeWhitelist`` is not specified and all Cordapps are signed (so potentially corda-finance/Finance Cordapp) then contracts from Finance Cordapp are added to the list to allow to work with signature constraintsa.
+Contracts classes from signed CorDapp JARs will be checked by `Signature constraints` by default.
+You can force them to be checked by `Zone constraints` by adding contract class names to ``includeWhitelist`` entry,
+the list will generate `include_whitelist.txt` file used internally by :doc:`network-bootstrapper` tool.
+Refer to :doc:`api-contract-constraints` to understand implication of different constraint types before adding ``includeWhitelist`` to ``deployNodes`` task.
 
 Example:
 
@@ -198,8 +198,7 @@ Example:
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         [...]
-        excludeWhitelist = [ "net.corda.finance.contracts.asset.Cash", "net.corda.finance.contracts.asset.CommercialPaper",
-        "net.corda.finance.contracts.CommercialPaper", "net.corda.finance.contracts.JavaCommercialPaper" ]
+        includeWhitelist = [ "net.corda.finance.contracts.asset.Cash", "net.corda.finance.contracts.asset.CommercialPaper" ]
    }
 
 Specifying a custom webserver
