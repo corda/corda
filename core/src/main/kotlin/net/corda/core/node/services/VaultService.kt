@@ -192,7 +192,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                                            val otherResults: List<Any>)
 
     @CordaSerializable
-    data class StateMetadata constructor(
+    data class StateMetadata @JvmOverloads constructor(
             val ref: StateRef,
             val contractStateClassName: String,
             val recordedTime: Instant,
@@ -201,19 +201,9 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             val notary: AbstractParty?,
             val lockId: String?,
             val lockUpdateTime: Instant?,
-            val relevancyStatus: Vault.RelevancyStatus?,
-            val constraintInfo: ConstraintInfo
+            val relevancyStatus: Vault.RelevancyStatus? = null,
+            val constraintInfo: ConstraintInfo = ConstraintInfo(AlwaysAcceptAttachmentConstraint)
     ) {
-        constructor(ref: StateRef,
-                    contractStateClassName: String,
-                    recordedTime: Instant,
-                    consumedTime: Instant?,
-                    status: Vault.StateStatus,
-                    notary: AbstractParty?,
-                    lockId: String?,
-                    lockUpdateTime: Instant?
-        ) : this(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, null)
-
         fun copy(
                 ref: StateRef = this.ref,
                 contractStateClassName: String = this.contractStateClassName,
@@ -226,17 +216,6 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         ): StateMetadata {
             return StateMetadata(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, null)
         }
-        constructor(ref: StateRef,
-                    contractStateClassName: String,
-                    recordedTime: Instant,
-                    consumedTime: Instant?,
-                    status: Vault.StateStatus,
-                    notary: AbstractParty?,
-                    lockId: String?,
-                    lockUpdateTime: Instant?,
-                    relevancyStatus: Vault.RelevancyStatus?
-        ) : this(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, relevancyStatus, ConstraintInfo(AlwaysAcceptAttachmentConstraint))
-
         fun copy(
                 ref: StateRef = this.ref,
                 contractStateClassName: String = this.contractStateClassName,
