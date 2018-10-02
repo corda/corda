@@ -42,12 +42,11 @@ fun generateWhitelist(networkParameters: NetworkParameters?,
     }
 }
 
-fun readExcludeWhitelist(directory: Path): List<String> {
-    val file = directory / EXCLUDE_WHITELIST_FILE_NAME
-    return if (file.exists()) file.readAllLines().map(String::trim) else emptyList()
-}
+fun readExcludeWhitelist(directory: Path): List<String> = readList(directory, EXCLUDE_WHITELIST_FILE_NAME)
 
-fun readIncludeWhitelist(directory: Path): List<String> {
-    val file = directory / INCLUDE_WHITELIST_FILE_NAME
+fun readIncludeWhitelist(directory: Path): List<String> = readList(directory, INCLUDE_WHITELIST_FILE_NAME)
+
+fun readList(directory: Path, fileName: String): List<String> {
+    val file = directory / fileName
     return if (file.exists()) file.readAllLines().map(String::trim) else emptyList()
 }

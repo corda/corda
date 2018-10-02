@@ -401,8 +401,9 @@ internal constructor(private val initSerEnv: Boolean,
         }
     }
 
-    private fun isSigned(file: Path): Boolean =
-            JarInputStream(Files.newInputStream(file)).use {
-                JarSignatureCollector.collectSigningParties(it).isNotEmpty()
-            }
+    private fun isSigned(file: Path): Boolean = file.read {
+        JarInputStream(it).use {
+            JarSignatureCollector.collectSigningParties(it).isNotEmpty()
+        }
+    }
 }
