@@ -297,6 +297,9 @@ absolute path to the node's base directory.
                         .. _Dropwizard: https://metrics.dropwizard.io/3.2.3/manual/third-party.html
                         .. _Introduction to New Relic for Java: https://docs.newrelic.com/docs/agents/java-agent/getting-started/introduction-new-relic-java
 
+:useOpenSsl:    If set to true, the node will use a native SSL implementation for TLS rather than the JVM SSL. The native SSL library currently
+                shipped with Corda Enterprise is BoringSsl. The default is to use JVM SSL, i.e. the flag being set to ``false``.
+
 :enterpriseConfiguration: Allows fine-grained controls of various features only available in the enterprise version of Corda.
 
     :tuning: Performance tuning parameters for Corda Enterprise

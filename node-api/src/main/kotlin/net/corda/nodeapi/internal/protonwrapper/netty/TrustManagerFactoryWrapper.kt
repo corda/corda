@@ -12,16 +12,16 @@ class LoggingTrustManagerFactorySpiWrapper(private val factorySpi: TrustManagerF
         return if (factorySpi is LoggingTrustManagerFactorySpiWrapper) trustManagers else trustManagers.filterIsInstance(X509ExtendedTrustManager::class.java).map { LoggingTrustManagerWrapper(it) }.toTypedArray()
     }
 
-    override fun engineInit(p0: KeyStore?) {
+    override fun engineInit(ks: KeyStore?) {
         val engineInitMethod = TrustManagerFactorySpi::class.java.getDeclaredMethod("engineInit", KeyStore::class.java)
         engineInitMethod.isAccessible = true
-        engineInitMethod.invoke(factorySpi, p0)
+        engineInitMethod.invoke(factorySpi, ks)
     }
 
-    override fun engineInit(p0: ManagerFactoryParameters?) {
+    override fun engineInit(spec: ManagerFactoryParameters?) {
         val engineInitMethod = TrustManagerFactorySpi::class.java.getDeclaredMethod("engineInit", ManagerFactoryParameters::class.java)
         engineInitMethod.isAccessible = true
-        engineInitMethod.invoke(factorySpi, p0)
+        engineInitMethod.invoke(factorySpi, spec)
     }
 }
 

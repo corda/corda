@@ -6,16 +6,16 @@ import javax.net.ssl.*
 
 
 class CertHoldingKeyManagerFactorySpiWrapper(private val factorySpi: KeyManagerFactorySpi) : KeyManagerFactorySpi() {
-    override fun engineInit(p0: KeyStore?, p1: CharArray?) {
+    override fun engineInit(keyStore: KeyStore?, password: CharArray?) {
         val engineInitMethod = KeyManagerFactorySpi::class.java.getDeclaredMethod("engineInit", KeyStore::class.java, CharArray::class.java)
         engineInitMethod.isAccessible = true
-        engineInitMethod.invoke(factorySpi, p0, p1)
+        engineInitMethod.invoke(factorySpi, keyStore, password)
     }
 
-    override fun engineInit(p0: ManagerFactoryParameters?) {
+    override fun engineInit(spec: ManagerFactoryParameters?) {
         val engineInitMethod = KeyManagerFactorySpi::class.java.getDeclaredMethod("engineInit", ManagerFactoryParameters::class.java)
         engineInitMethod.isAccessible = true
-        engineInitMethod.invoke(factorySpi, p0)
+        engineInitMethod.invoke(factorySpi, spec)
     }
 
     private fun getKeyManagersImpl(): Array<KeyManager> {
