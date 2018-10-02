@@ -8,14 +8,6 @@ fun Any.unsandbox(): Any {
     return when (this) {
         is Enum<*> -> fromDJVMEnum()
         is Object -> fromDJVM()
-        is ByteArray -> this
-        is IntArray -> this
-        is LongArray -> this
-        is DoubleArray -> this
-        is FloatArray -> this
-        is ShortArray -> this
-        is CharArray -> this
-        is BooleanArray -> this
         is Array<*> -> fromDJVMArray()
         else -> this
     }
@@ -33,14 +25,6 @@ fun Any.sandbox(): Any {
         is kotlin.Double -> Double.toDJVM(this)
         is kotlin.Boolean -> Boolean.toDJVM(this)
         is kotlin.Enum<*> -> toDJVMEnum()
-        is ByteArray -> this
-        is IntArray -> this
-        is LongArray -> this
-        is DoubleArray -> this
-        is FloatArray -> this
-        is ShortArray -> this
-        is CharArray -> this
-        is BooleanArray -> this
         is Array<*> -> toDJVMArray<Object>()
         else -> this
     }
