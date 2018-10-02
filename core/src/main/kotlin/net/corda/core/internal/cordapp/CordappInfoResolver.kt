@@ -1,6 +1,6 @@
 package net.corda.core.internal.cordapp
 
-import co.paralleluniverse.common.util.VisibleForTesting
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.utilities.loggerFor
 import java.util.concurrent.ConcurrentHashMap
 
