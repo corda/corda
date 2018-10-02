@@ -1,6 +1,7 @@
 package sandbox.java.lang;
 
 import org.jetbrains.annotations.NotNull;
+import sandbox.net.corda.djvm.rules.RuleViolationError;
 
 public class Object {
 
@@ -52,28 +53,11 @@ public class Object {
     }
 
     private static Class<?> fromDJVM(Class<?> type) {
-        if (type == String.class) {
-            return java.lang.String.class;
-        } else if (type == Integer.class) {
-            return java.lang.Integer.class;
-        } else if (type == Long.class) {
-            return java.lang.Long.class;
-        } else if (type == Short.class) {
-            return java.lang.Short.class;
-        } else if (type == Byte.class) {
-            return java.lang.Byte.class;
-        } else if (type == Double.class) {
-            return java.lang.Double.class;
-        } else if (type == Float.class) {
-            return java.lang.Float.class;
-        } else if (type == Character.class) {
-            return java.lang.Character.class;
-        } else if (type == Boolean.class) {
-            return java.lang.Boolean.class;
-        } else if (type == Object.class) {
-            return java.lang.Object.class;
-        } else {
-            return type;
+        try {
+            java.lang.String name = type.getName();
+            return Class.forName(name.startsWith("sandbox.") ? name.substring(8) : name);
+        } catch (ClassNotFoundException e) {
+            throw new RuleViolationError(e.getMessage());
         }
     }
 

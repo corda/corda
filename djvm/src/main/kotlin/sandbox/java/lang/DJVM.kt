@@ -4,6 +4,8 @@ package sandbox.java.lang
 
 import org.objectweb.asm.Opcodes.ACC_ENUM
 
+private const val SANDBOX_PREFIX = "sandbox."
+
 fun Any.unsandbox(): Any {
     return when (this) {
         is Enum<*> -> fromDJVMEnum()
@@ -30,12 +32,30 @@ fun Any.sandbox(): Any {
     }
 }
 
-private fun Array<*>.fromDJVMArray(): Array<*> {
-    return Object.fromDJVM(this)
+private fun Array<*>.fromDJVMArray(): Array<*> = Object.fromDJVM(this)
+
+/**
+ * These functions use the "current" classloader, i.e. classloader
+ * that owns this DJVM class.
+ */
+private fun Class<*>.toDJVMType(): Class<*> = Class.forName(name.toSandboxPackage())
+private fun Class<*>.fromDJVMType(): Class<*> = Class.forName(name.fromSandboxPackage())
+
+private fun kotlin.String.toSandboxPackage(): kotlin.String {
+    return if (startsWith(SANDBOX_PREFIX)) {
+        this
+    } else {
+        SANDBOX_PREFIX + this
+    }
 }
 
-private fun Class<*>.toDJVMType(): Class<*> = Class.forName("sandbox.$name")
-private fun Class<*>.fromDJVMType(): Class<*> = Class.forName(name.substring(8))
+private fun kotlin.String.fromSandboxPackage(): kotlin.String {
+    return if (startsWith(SANDBOX_PREFIX)) {
+        substring(8)
+    } else {
+        this
+    }
+}
 
 private inline fun <reified T : Object> Array<*>.toDJVMArray(): Array<out T?> {
     @Suppress("unchecked_cast")
@@ -66,13 +86,15 @@ fun getEnumConstants(clazz: Class<in Enum<*>>): Array<*>? {
 }
 
 internal fun enumConstantDirectory(clazz: Class<in Enum<*>>): sandbox.java.util.Map<String, Enum<*>>? {
+    // DO NOT replace get with Kotlin's [] because Kotlin would use java.util.Map.
     return allEnumDirectories.get(clazz) ?: createEnumDirectory(clazz)
 }
 
 @Suppress("unchecked_cast")
 private fun getEnumConstantsShared(clazz: Class<in Enum<*>>): Array<out Enum<*>>? {
     return if (isEnum(clazz)) {
-        return allEnums.get(clazz) ?: createEnum(clazz)
+        // DO NOT replace get with Kotlin's [] because Kotlin would use java.util.Map.
+        allEnums.get(clazz) ?: createEnum(clazz)
     } else {
         null
     }
@@ -83,6 +105,7 @@ private fun createEnum(clazz: Class<in Enum<*>>): Array<out Enum<*>>? {
     return clazz.getMethod("values").let { method ->
         method.isAccessible = true
         method.invoke(null) as? Array<Enum<*>>
+    // DO NOT replace put with Kotlin's [] because Kotlin would use java.util.Map.
     }?.apply { allEnums.put(clazz, this) }
 }
 
@@ -90,8 +113,10 @@ private fun createEnumDirectory(clazz: Class<in Enum<*>>): sandbox.java.util.Map
     val universe = getEnumConstantsShared(clazz) ?: throw IllegalArgumentException("${clazz.name} is not an enum type")
     val directory = sandbox.java.util.LinkedHashMap<String, Enum<*>>(2 * universe.size)
     for (entry in universe) {
+        // DO NOT replace put with Kotlin's [] because Kotlin would use java.util.Map.
         directory.put(entry.name(), entry)
     }
+    // DO NOT replace put with Kotlin's [] because Kotlin would use java.util.Map.
     allEnumDirectories.put(clazz, directory)
     return directory
 }

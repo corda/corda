@@ -6,6 +6,11 @@ import net.corda.djvm.code.Instruction
 import net.corda.djvm.code.instructions.MemberAccessInstruction
 import org.objectweb.asm.Opcodes.*
 
+/**
+ * The enum-related methods on [Class] all require that enums use [java.lang.Enum]
+ * as their super class. So replace their all invocations with ones to equivalent
+ * methods on the DJVM class that require [sandbox.java.lang.Enum] instead.
+ */
 class WriteEnumMethods : Emitter {
     override fun emit(context: EmitterContext, instruction: Instruction) = context.emit {
         if (instruction is MemberAccessInstruction && instruction.owner == "java/lang/Class") {
