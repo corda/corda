@@ -68,8 +68,6 @@ internal constructor(private val initSerEnv: Boolean,
                 "--just-generate-node-info"
         )
 
-        const val MINIMUM_PLATFORM_VERSION = 4
-
         private const val LOGS_DIR_NAME = "logs"
 
         private fun extractEmbeddedCordaJar(): InputStream {
@@ -164,13 +162,13 @@ internal constructor(private val initSerEnv: Boolean,
     }
 
     /** Entry point for the tool */
-    fun bootstrap(directory: Path, copyCordapps: Boolean, defaultMinimumPlatformVersion: Int) {
+    fun bootstrap(directory: Path, copyCordapps: Boolean, minimumPlatformVersion: Int) {
         // Don't accidently include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
         val cordappJars = directory.list { paths ->
             paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }.toList()
         }
-        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, defaultMinimumPlatformVersion = defaultMinimumPlatformVersion)
+        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, minimumPlatformVersion = minimumPlatformVersion)
     }
 
     private fun bootstrap(
@@ -178,7 +176,7 @@ internal constructor(private val initSerEnv: Boolean,
             cordappJars: List<Path>,
             copyCordapps: Boolean,
             fromCordform: Boolean,
-            defaultMinimumPlatformVersion: Int = MINIMUM_PLATFORM_VERSION
+            minimumPlatformVersion: Int = PLATFORM_VERSION
     ) {
         directory.createDirectories()
         println("Bootstrapping local test network in $directory")
@@ -218,7 +216,7 @@ internal constructor(private val initSerEnv: Boolean,
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles, configs)
             println("Generating contract implementations whitelist")
             val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.filter { !isSigned(it) }.map(contractsJarConverter))
-            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, defaultMinimumPlatformVersion)
+            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, minimumPlatformVersion)
             if (newNetParams != existingNetParams) {
                 println("${if (existingNetParams == null) "New" else "Updated"} $newNetParams")
             } else {
