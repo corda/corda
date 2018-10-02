@@ -38,7 +38,8 @@ enum class TransactionIsolationLevel {
     /**
      * The JDBC constant value of the same name but prefixed with TRANSACTION_ defined in [java.sql.Connection].
      */
-    val jdbcValue: Int = java.sql.Connection::class.java.getField("TRANSACTION_$name").get(null) as Int
+    val jdbcString = "TRANSACTION_$name"
+    val jdbcValue: Int = java.sql.Connection::class.java.getField(jdbcString).get(null) as Int
 }
 
 private val _contextDatabase = InheritableThreadLocal<CordaPersistence>()
@@ -63,6 +64,7 @@ class CordaPersistence(
             HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl)
         }
     }
+
     val entityManagerFactory get() = hibernateConfig.sessionFactoryForRegisteredSchemas
 
     data class Boundary(val txId: UUID, val success: Boolean)
