@@ -1,5 +1,5 @@
 Firewall configuration
-====================
+======================
 
 .. contents::
 

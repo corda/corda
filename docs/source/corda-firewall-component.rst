@@ -1,5 +1,5 @@
 Firewall Component Overview
-===============================
+===========================
 
 .. contents::
 
@@ -175,7 +175,7 @@ to highlight the option:
 Full production HA DMZ ready mode (hot/cold node, hot/warm bridge)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Finally, we show a full HA solution as recommended for production. This does require adding an external Zookeeper
+Finally, we show a full HA solution as recommended for production. This does require adding an external ZooKeeper
 cluster to provide bridge master selection and extra instances of the bridge and float. This allows
 hot-warm operation of all the bridge and float instances. The Corda Enterprise node should be run as hot-cold HA too.
 Highlighted in the diagram is the addition of the ``haConfig`` section to point at ``zookeeper`` and also the use of secondary
@@ -186,3 +186,28 @@ pool of DMZ float processes.:
      :scale: 100%
      :align: center
 
+Apache ZooKeeper
+----------------
+Apache ZooKeeper is used in Corda firewall to manage the hot/warm bridge clusters, because hot/hot is not supported, ZooKeeper is used to ensure only 1 instance of the bridge is active at all time.
+ZooKeeper instance is also used for signals failover when the active bridge is disconnected.
+
+Setting up ZooKeeper cluster
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ZooKeeper can be deployed in single-server, or multi-server setup. A clustered (multi-Server) setup is recommended for production use, for added fault tolerance and reliability.
+
+Detailed setup instruction can be found in `Apache ZooKeeper documentation <https://zookeeper.apache.org/doc/r3.5.3-beta/zookeeperAdmin.html#sc_zkMulitServerSetup>`_.
+
+.. note::  Only Apache ZooKeeper version 3.5.3-beta is compatible due to Apache Curator v4.0.1 dependencies.
+
+Sharing ZooKeeper
+^^^^^^^^^^^^^^^^^
+A single ZooKeeper cluster instance can be shared between multiple bridge clusters to reduce infrastructure cost, the ``haConfig.haTopic`` can be configured to allow each bridge cluster accessing different ZooKeeper path.
+
+.. image:: resources/bridge/zookeeper.png
+:scale: 100%
+     :align: center
+
+The above example shows multiple Corda bridges (NodeA and NodeB) connecting to the same ZooKeeper server.
+Node A and B have their own namespaces in ZooKeeper, which allow them to operate in the same ZooKeeper without interfering each other.
+
+This setup can be configured by setting NodeA and B's ``haConfig.haTopic`` to ``/corda/bridge/NodeA`` and ``/coda/bridge/NodeB`` respectively, the parent nodes (/corda and /corda/bridge) will be created automatically upon connection.
