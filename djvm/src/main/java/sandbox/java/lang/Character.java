@@ -4,7 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.Serializable;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "WeakerAccess"})
 public final class Character extends Object implements Comparable<Character>, Serializable {
     public static final int MIN_RADIX = java.lang.Character.MIN_RADIX;
     public static final int MAX_RADIX = java.lang.Character.MAX_RADIX;

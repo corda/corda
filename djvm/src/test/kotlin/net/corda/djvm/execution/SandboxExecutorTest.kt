@@ -506,7 +506,8 @@ class SandboxExecutorTest : TestBase() {
     fun `check building a string`() = sandbox(DEFAULT) {
         val contractExecutor = DeterministicSandboxExecutor<String?, String?>(configuration)
         contractExecutor.run<TestStringBuilding>("Hello Sandbox!").apply {
-            assertThat(result).isEqualTo("SANDBOX: Boolean=true, Char='X', Integer=1234, Long=99999, Short=3200, Byte=101, String='Hello Sandbox!")
+            assertThat(result)
+                .isEqualTo("SANDBOX: Boolean=true, Char='X', Integer=1234, Long=99999, Short=3200, Byte=101, String='Hello Sandbox!', Float=123.456, Double=987.6543")
         }
     }
 
@@ -520,8 +521,8 @@ class SandboxExecutorTest : TestBase() {
                     .append(", Short=").append(3200.toShort())
                     .append(", Byte=").append(101.toByte())
                     .append(", String='").append(input)
-//                    .append("', Float=").append(123.456f)
-//                    .append(", Double=").append(987.6543)
+                    .append("', Float=").append(123.456f)
+                    .append(", Double=").append(987.6543)
                     .toString()
         }
     }

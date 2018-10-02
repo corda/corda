@@ -4,7 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.Serializable;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "WeakerAccess"})
 public final class Boolean extends Object implements Comparable<Boolean>, Serializable {
 
     public static final Boolean TRUE = new Boolean(true);

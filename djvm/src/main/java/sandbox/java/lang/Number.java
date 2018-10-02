@@ -3,6 +3,7 @@ package sandbox.java.lang;
 import org.jetbrains.annotations.NotNull;
 import java.io.Serializable;
 
+@SuppressWarnings("unused")
 public abstract class Number extends Object implements Serializable {
 
     public abstract double doubleValue();

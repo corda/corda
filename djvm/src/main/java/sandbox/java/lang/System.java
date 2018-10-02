@@ -1,5 +1,6 @@
 package sandbox.java.lang;
 
+@SuppressWarnings("WeakerAccess")
 public final class System extends Object {
 
     private static final ThreadLocal<java.lang.Integer> objectCounter = ThreadLocal.withInitial(() -> 0);

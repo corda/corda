@@ -2,7 +2,7 @@ package sandbox.java.lang;
 
 import org.jetbrains.annotations.NotNull;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "WeakerAccess"})
 public final class Integer extends Number implements Comparable<Integer> {
 
     public static final int MIN_VALUE = java.lang.Integer.MIN_VALUE;

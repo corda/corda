@@ -2,7 +2,7 @@ package sandbox.java.lang;
 
 import org.jetbrains.annotations.NotNull;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "WeakerAccess"})
 public final class Float extends Number implements Comparable<Float> {
     public static final float POSITIVE_INFINITY = java.lang.Float.POSITIVE_INFINITY;
     public static final float NEGATIVE_INFINITY = java.lang.Float.NEGATIVE_INFINITY;

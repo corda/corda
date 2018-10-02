@@ -2,7 +2,7 @@ package sandbox.java.lang;
 
 import org.jetbrains.annotations.NotNull;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "WeakerAccess"})
 public final class Byte extends Number implements Comparable<Byte> {
     public static final byte MIN_VALUE = java.lang.Byte.MIN_VALUE;
     public static final byte MAX_VALUE = java.lang.Byte.MAX_VALUE;
@@ -10,7 +10,7 @@ public final class Byte extends Number implements Comparable<Byte> {
     public static final int SIZE = java.lang.Byte.SIZE;
 
     @SuppressWarnings("unchecked")
-    public static final Class<java.lang.Byte> TYPE = (Class) java.lang.Byte.TYPE;
+    public static final Class<Byte> TYPE = (Class) java.lang.Byte.TYPE;
 
     private final byte value;
 

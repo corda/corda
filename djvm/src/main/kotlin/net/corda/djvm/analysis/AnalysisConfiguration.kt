@@ -97,6 +97,7 @@ class AnalysisConfiguration(
             java.lang.Short::class.java,
             java.lang.String::class.java,
             java.lang.System::class.java,
+            java.lang.ThreadLocal::class.java,
             kotlin.Any::class.java
         ).sandboxed() + setOf(
             "sandbox/java/lang/DJVM",
