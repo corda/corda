@@ -61,6 +61,7 @@ object CordappInfoResolver {
         }
     }
 
+    @VisibleForTesting
     internal fun clear() {
         cordappClasses.clear()
     }
