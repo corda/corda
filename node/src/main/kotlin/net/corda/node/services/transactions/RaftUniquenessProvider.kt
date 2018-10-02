@@ -28,8 +28,8 @@ import net.corda.core.utilities.debug
 import net.corda.node.services.config.RaftConfig
 import net.corda.node.services.transactions.RaftTransactionCommitLog.Commands.CommitTransaction
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.node.utilities.NamedCacheFactory
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.nio.file.Path
@@ -51,17 +51,20 @@ import javax.persistence.Table
  */
 @ThreadSafe
 class RaftUniquenessProvider(
-        private val transportConfiguration: NodeSSLConfiguration,
+        private val storagePath: Path,
+        private val transportConfiguration: MutualSslConfiguration,
         private val db: CordaPersistence,
         private val clock: Clock,
         private val metrics: MetricRegistry,
+        private val cacheFactory: NamedCacheFactory,
         private val raftConfig: RaftConfig
 ) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
-        fun createMap(): AppendOnlyPersistentMap<StateRef, Pair<Long, SecureHash>, CommittedState, PersistentStateRef> =
+        fun createMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<StateRef, Pair<Long, SecureHash>, CommittedState, PersistentStateRef> =
                 AppendOnlyPersistentMap(
-                        "RaftUniquenessProvider_transactions",
+                        cacheFactory = cacheFactory,
+                        name = "RaftUniquenessProvider_transactions",
                         toPersistentEntityKey = { PersistentStateRef(it) },
                         fromPersistentEntity = {
                             val txId = it.id.txId
@@ -96,8 +99,6 @@ class RaftUniquenessProvider(
             var index: Long = 0
     )
 
-    /** Directory storing the Raft log and state machine snapshots */
-    private val storagePath: Path = transportConfiguration.baseDirectory
     private lateinit var _clientFuture: CompletableFuture<CopycatClient>
     private lateinit var server: CopycatServer
 
@@ -111,7 +112,7 @@ class RaftUniquenessProvider(
     fun start() {
         log.info("Creating Copycat server, log stored in: ${storagePath.toAbsolutePath()}")
         val stateMachineFactory = {
-            RaftTransactionCommitLog(db, clock, RaftUniquenessProvider.Companion::createMap)
+            RaftTransactionCommitLog(db, clock, { createMap(cacheFactory) })
         }
         val address = raftConfig.nodeAddress.let { Address(it.host, it.port) }
         val storage = buildStorage(storagePath)
@@ -155,14 +156,14 @@ class RaftUniquenessProvider(
                 .build()
     }
 
-    private fun buildTransport(config: SSLConfiguration): Transport? {
+    private fun buildTransport(config: MutualSslConfiguration): Transport? {
         return NettyTransport.builder()
                 .withSsl()
                 .withSslProtocol(SslProtocol.TLSv1_2)
-                .withKeyStorePath(config.sslKeystore.toString())
-                .withKeyStorePassword(config.keyStorePassword)
-                .withTrustStorePath(config.trustStoreFile.toString())
-                .withTrustStorePassword(config.trustStorePassword)
+                .withKeyStorePath(config.keyStore.path.toString())
+                .withKeyStorePassword(config.keyStore.password)
+                .withTrustStorePath(config.trustStore.path.toString())
+                .withTrustStorePassword(config.trustStore.password)
                 .build()
     }
 

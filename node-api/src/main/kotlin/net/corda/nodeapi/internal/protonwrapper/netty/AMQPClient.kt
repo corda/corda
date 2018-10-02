@@ -116,14 +116,14 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         private val conf = parent.configuration
 
         init {
-            keyManagerFactory.init(conf.keyStore, conf.keyStorePrivateKeyPassword)
+            keyManagerFactory.init(conf.keyStore)
             trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.crlCheckSoftFail))
         }
 
         override fun initChannel(ch: SocketChannel) {
             val pipeline = ch.pipeline()
             val target = parent.currentTarget
-            val handler = createClientSslHelper(target, keyManagerFactory, trustManagerFactory)
+            val handler = createClientSslHelper(target, parent.allowedRemoteLegalNames, keyManagerFactory, trustManagerFactory)
             pipeline.addLast("sslHandler", handler)
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
             pipeline.addLast(AMQPChannelHandler(false,

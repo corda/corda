@@ -5,6 +5,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.node.utilities.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
@@ -271,7 +272,8 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
     )
 
     class TestMap : AppendOnlyPersistentMap<Long, String, PersistentMapEntry, Long>(
-            "ApoendOnlyPersistentMap_test",
+            cacheFactory = TestingNamedCacheFactory(),
+            name = "ApoendOnlyPersistentMap_test",
             toPersistentEntityKey = { it },
             fromPersistentEntity = { Pair(it.key, it.value) },
             toPersistentEntity = { key: Long, value: String ->

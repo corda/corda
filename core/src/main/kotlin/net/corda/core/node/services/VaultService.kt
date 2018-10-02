@@ -160,7 +160,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             val notary: AbstractParty?,
             val lockId: String?,
             val lockUpdateTime: Instant?,
-            val isRelevant: Vault.RelevancyStatus?
+            val relevancyStatus: Vault.RelevancyStatus?
     ) {
         constructor(ref: StateRef,
                     contractStateClassName: String,

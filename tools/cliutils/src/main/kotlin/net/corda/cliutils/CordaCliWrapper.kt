@@ -2,12 +2,17 @@ package net.corda.cliutils
 
 import net.corda.core.internal.rootMessage
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.loggerFor
 
-import org.apache.logging.log4j.Level
+import org.fusesource.jansi.AnsiConsole
+import org.slf4j.event.Level
 import picocli.CommandLine
 import picocli.CommandLine.*
+import java.nio.file.Path
+import java.nio.file.Paths
 import kotlin.system.exitProcess
 import java.util.*
+import java.util.concurrent.Callable
 
 /**
  * When we have errors in command line flags that are not handled by picocli (e.g. non existing files), an error is thrown
@@ -34,19 +39,48 @@ interface Validated {
             logger.error(RED + "Exceptions when parsing command line arguments:")
             logger.error(errors.joinToString("\n") + RESET)
             CommandLine(this).usage(System.err)
-            exitProcess(1)
+            exitProcess(ExitCodes.FAILURE)
         }
     }
 }
 
-fun CordaCliWrapper.start(vararg args: String) {
+/** This is generally covered by commons-lang. */
+object CordaSystemUtils {
+    private const val OS_NAME = "os.name"
+    private const val MAC_PREFIX = "Mac"
+    private const val WIN_PREFIX = "Windows"
+
+    fun isOsMac(): Boolean = getOsName().startsWith(MAC_PREFIX)
+    fun isOsWindows(): Boolean = getOsName().startsWith(WIN_PREFIX)
+    fun getOsName(): String = System.getProperty(OS_NAME)
+}
+
+fun CordaCliWrapper.start(args: Array<String>) {
+    this.args = args
+
+    // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
+    AnsiConsole.systemInstall()
+
     val cmd = CommandLine(this)
+    // Make sure any provided paths are absolute. Relative paths have caused issues and are less clear in logs.
+    cmd.registerConverter(Path::class.java) { Paths.get(it).toAbsolutePath().normalize() }
     cmd.commandSpec.name(alias)
     cmd.commandSpec.usageMessage().description(description)
     try {
-        cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(Help.Ansi.AUTO),
-                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(Help.Ansi.AUTO),
+        val defaultAnsiMode = if (CordaSystemUtils.isOsWindows()) { Help.Ansi.ON } else { Help.Ansi.AUTO }
+        val results = cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(defaultAnsiMode),
+                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(defaultAnsiMode),
                 *args)
+        // If an error code has been returned, use this and exit
+        results?.firstOrNull()?.let {
+            if (it is Int) {
+                exitProcess(it)
+            } else {
+                exitProcess(ExitCodes.FAILURE)
+            }
+        }
+        // If no results returned, picocli ran something without invoking the main program, e.g. --help or --version, so exit successfully
+        exitProcess(ExitCodes.SUCCESS)
     } catch (e: ExecutionException) {
         val throwable = e.cause ?: e
         if (this.verbose) {
@@ -54,7 +88,7 @@ fun CordaCliWrapper.start(vararg args: String) {
         } else {
             System.err.println("*ERROR*: ${throwable.rootMessage ?: "Use --verbose for more details"}")
         }
-        exitProcess(1)
+        exitProcess(ExitCodes.FAILURE)
     }
 }
 
@@ -72,8 +106,16 @@ fun CordaCliWrapper.start(vararg args: String) {
         parameterListHeading = "%n@|bold,underline Parameters|@:%n%n",
         optionListHeading = "%n@|bold,underline Options|@:%n%n",
         commandListHeading = "%n@|bold,underline Commands|@:%n%n")
-abstract class CordaCliWrapper(val alias: String, val description: String) : Runnable {
-    @Option(names = ["-v", "--verbose"], description = ["If set, prints logging to the console as well as to a file."])
+abstract class CordaCliWrapper(val alias: String, val description: String) : Callable<Int> {
+    companion object {
+        private val logger by lazy { loggerFor<CordaCliWrapper>() }
+    }
+
+    // Raw args are provided for use in logging - this is a lateinit var rather than a constructor parameter as the class
+    // needs to be parameterless for autocomplete to work.
+    lateinit var args: Array<String>
+
+    @Option(names = ["-v", "--verbose", "--log-to-console"], description = ["If set, prints logging to the console as well as to a file."])
     var verbose: Boolean = false
 
     @Option(names = ["--logging-level"],
@@ -88,30 +130,33 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Run
 
     // This needs to be called before loggers (See: NodeStartup.kt:51 logger called by lazy, initLogging happens before).
     // Node's logging is more rich. In corda configurations two properties, defaultLoggingLevel and consoleLogLevel, are usually used.
-    private fun initLogging() {
-        val loggingLevel = loggingLevel.name().toLowerCase(Locale.ENGLISH)
+    open fun initLogging() {
+        val loggingLevel = loggingLevel.name.toLowerCase(Locale.ENGLISH)
         System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
         if (verbose) {
             System.setProperty("consoleLogLevel", loggingLevel)
         }
+        System.setProperty("log-path", Paths.get(".").toString())
     }
 
-    // Override this function with the actual method to be run once all the arguments have been parsed
-    abstract fun runProgram()
+    // Override this function with the actual method to be run once all the arguments have been parsed. The return number
+    // is the exit code to be returned
+    abstract fun runProgram(): Int
 
-    final override fun run() {
-        installShellExtensionsParser.installOrUpdateShellExtensions(alias, this.javaClass.name)
+    override fun call(): Int {
         initLogging()
-        runProgram()
+        logger.info("Application Args: ${args.joinToString(" ")}")
+        installShellExtensionsParser.installOrUpdateShellExtensions(alias, this.javaClass.name)
+        return runProgram()
     }
 }
 
 /**
- * Converter from String to log4j logging Level.
+ * Converter from String to slf4j logging Level.
  */
 class LoggingLevelConverter : ITypeConverter<Level> {
     override fun convert(value: String?): Level {
-        return value?.let { Level.getLevel(it) }
+        return value?.let { Level.valueOf(it.toUpperCase()) }
                 ?: throw TypeConversionException("Unknown option for --logging-level: $value")
     }
 

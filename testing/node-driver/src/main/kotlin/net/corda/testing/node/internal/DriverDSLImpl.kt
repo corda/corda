@@ -5,7 +5,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
-import net.corda.client.rpc.internal.createCordaRPCClientWithInternalSslAndClassLoader
+import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.identity.CordaX500Name
@@ -23,10 +23,12 @@ import net.corda.node.NodeRegistrationOption
 import net.corda.node.VersionInfo
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeWithInfo
+import net.corda.node.internal.clientSslOptionsCompatibleWith
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
+import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
@@ -45,14 +47,17 @@ import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
 import net.corda.testing.internal.setGlobalSerialization
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import rx.Observable
 import rx.Subscription
 import rx.schedulers.Schedulers
+import rx.subjects.AsyncSubject
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL
@@ -160,7 +165,8 @@ class DriverDSLImpl(
 
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.corda.rpcOptions.address
-        val client = createCordaRPCClientWithInternalSslAndClassLoader(config.corda.rpcOptions.adminAddress, sslConfiguration = config.corda)
+        val clientRpcSslOptions =  clientSslOptionsCompatibleWith(config.corda.rpcOptions)
+        val client = createCordaRPCClientWithSslAndClassLoader(rpcAddress, sslConfiguration = clientRpcSslOptions)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 config.corda.rpcUsers[0].run { client.start(username, password) }
@@ -195,7 +201,8 @@ class DriverDSLImpl(
     ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
-        val name = providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
+        val name = providedName
+                ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
 
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
@@ -268,7 +275,7 @@ class DriverDSLImpl(
                         "devMode" to false)
         )).checkAndOverrideForInMemoryDB()
 
-        val versionInfo = VersionInfo(1, "1", "1", "1")
+        val versionInfo = VersionInfo(PLATFORM_VERSION, "1", "1", "1")
         config.corda.certificatesDirectory.createDirectories()
         // Create network root truststore.
         val rootTruststorePath = config.corda.certificatesDirectory / "network-root-truststore.jks"
@@ -602,7 +609,8 @@ class DriverDSLImpl(
                     }
                 }
             }
-            val p2pReadyFuture = addressMustBeBoundFuture(executorService, config.corda.p2pAddress, process)
+            val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
+            val p2pReadyFuture = addressMustBeBoundFuture(executorService, effectiveP2PAddress, process)
             return p2pReadyFuture.flatMap {
                 val processDeathFuture = poll(executorService, "process death while waiting for RPC (${config.corda.myLegalName})") {
                     if (process.isAlive) null else process
@@ -612,7 +620,7 @@ class DriverDSLImpl(
                     val networkMapFuture = executorService.fork { visibilityHandle.listen(rpc) }.flatMap { it }
                     firstOf(processDeathFuture, networkMapFuture) {
                         if (it == processDeathFuture) {
-                            throw ListenProcessDeathException(config.corda.p2pAddress, process)
+                            throw ListenProcessDeathException(effectiveP2PAddress, process)
                         }
                         // Will interrupt polling for process death as this is no longer relevant since the process been
                         // successfully started and reflected itself in the NetworkMap.
@@ -687,6 +695,7 @@ class DriverDSLImpl(
                 executorService: ScheduledExecutorService,
                 config: NodeConfig
         ): CordaFuture<Pair<NodeWithInfo, Thread>> {
+            val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
             return executorService.fork {
                 log.info("Starting in-process Node ${config.corda.myLegalName.organisation}")
                 if (!(ManagementFactory.getRuntimeMXBean().inputArguments.any { it.contains("quasar") })) {
@@ -703,7 +712,7 @@ class DriverDSLImpl(
                 }
                 nodeWithInfo to nodeThread
             }.flatMap { nodeAndThread ->
-                addressMustBeBoundFuture(executorService, config.corda.p2pAddress).map { nodeAndThread }
+                addressMustBeBoundFuture(executorService, effectiveP2PAddress).map { nodeAndThread }
             }
         }
 
@@ -726,9 +735,11 @@ class DriverDSLImpl(
 
             val systemProperties = mutableMapOf(
                     "name" to config.corda.myLegalName,
-                    "visualvm.display.name" to "corda-${config.corda.myLegalName}",
-                    "log4j2.debug" to if (debugPort != null) "true" else "false"
+                    "visualvm.display.name" to "corda-${config.corda.myLegalName}"
             )
+            debugPort?.let {
+                systemProperties += "log4j2.debug" to "true"
+            }
 
             systemProperties += inheritFromParentProcess()
             systemProperties += overriddenSystemProperties
@@ -798,8 +809,13 @@ class DriverDSLImpl(
             config += "rpcUsers" to configuration.toConfig().getValue("rpcUsers")
             config += "useHTTPS" to useHTTPS
             config += "baseDirectory" to configuration.baseDirectory.toAbsolutePath().toString()
-            config += "keyStorePassword" to configuration.keyStorePassword
-            config += "trustStorePassword" to configuration.trustStorePassword
+
+            config += "keyStorePath" to configuration.p2pSslOptions.keyStore.path.toString()
+            config += "keyStorePassword" to configuration.p2pSslOptions.keyStore.password
+
+            config += "trustStorePath" to configuration.p2pSslOptions.trustStore.path.toString()
+            config += "trustStorePassword" to configuration.p2pSslOptions.trustStore.password
+
             return config
         }
 
@@ -868,7 +884,7 @@ private class NetworkVisibilityController {
             val (snapshot, updates) = rpc.networkMapFeed()
             visibleNodeCount = snapshot.size
             checkIfAllVisible()
-            subscription = updates.subscribe {
+            subscription = updates.subscribe({
                 when (it) {
                     is NetworkMapCache.MapChange.Added -> {
                         visibleNodeCount++
@@ -882,7 +898,9 @@ private class NetworkVisibilityController {
                         // Nothing to do here but better being exhaustive.
                     }
                 }
-            }
+            }, { _ ->
+                // Nothing to do on errors here.
+            })
             return future
         }
 
@@ -1110,3 +1128,16 @@ private fun Config.toNodeOnly(): Config {
 
 internal fun DriverParameters.cordappsForAllNodes(): Set<TestCorDapp> = cordappsForAllNodes
         ?: cordappsInCurrentAndAdditionalPackages(extraCordappPackagesToScan)
+
+fun DriverDSL.startNode(providedName: CordaX500Name, devMode: Boolean, parameters: NodeParameters = NodeParameters()): CordaFuture<NodeHandle> {
+    var customOverrides = emptyMap<String, String>()
+    if (!devMode) {
+        val nodeDir = baseDirectory(providedName)
+        val certificatesDirectory = nodeDir / "certificates"
+        val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
+        val p2pSslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        p2pSslConfig.configureDevKeyAndTrustStores(providedName, signingCertStore, certificatesDirectory)
+        customOverrides = mapOf("devMode" to "false")
+    }
+    return startNode(parameters, providedName = providedName, customOverrides = customOverrides)
+}

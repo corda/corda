@@ -55,13 +55,13 @@ We will start with defining helper function that returns a ``CommercialPaper`` s
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
@@ -122,13 +122,13 @@ last line of ``transaction``:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 2
         :end-before: DOCEND 2
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 2
         :end-before: DOCEND 2
@@ -138,13 +138,13 @@ Let's take a look at a transaction that fails.
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 3
         :end-before: DOCEND 3
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 3
         :end-before: DOCEND 3
@@ -167,13 +167,13 @@ However we can specify that this is an intended behaviour by changing ``verifies
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 4
         :end-before: DOCEND 4
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 4
         :end-before: DOCEND 4
@@ -183,13 +183,13 @@ We can continue to build the transaction until it ``verifies``:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 5
         :end-before: DOCEND 5
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 5
         :end-before: DOCEND 5
@@ -206,13 +206,13 @@ What should we do if we wanted to test what happens when the wrong party signs t
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 6
         :end-before: DOCEND 6
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 6
         :end-before: DOCEND 6
@@ -227,13 +227,13 @@ ledger with a single transaction:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 7
         :end-before: DOCEND 7
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 7
         :end-before: DOCEND 7
@@ -246,13 +246,13 @@ Now that we know how to define a single transaction, let's look at how to define
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 8
         :end-before: DOCEND 8
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 8
         :end-before: DOCEND 8
@@ -273,13 +273,13 @@ To do so let's create a simple example that uses the same input twice:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 9
         :end-before: DOCEND 9
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 9
         :end-before: DOCEND 9
@@ -290,13 +290,13 @@ verification (``fails()`` at the end). As in previous examples we can use ``twea
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/kotlin/tutorial/testdsl/TutorialTestDSL.kt
         :language: kotlin
         :start-after: DOCSTART 10
         :end-before: DOCEND 10
         :dedent: 4
 
-    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/TutorialTestDSL.java
         :language: java
         :start-after: DOCSTART 10
         :end-before: DOCEND 10

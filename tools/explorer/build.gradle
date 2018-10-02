@@ -1,7 +1,3 @@
-repositories {
-    mavenCentral()
-}
-
 apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'application'
@@ -59,6 +55,11 @@ dependencies {
     compile 'org.controlsfx:controlsfx:8.40.12'
     // This provide com.apple.eawt stub for non-mac system.
     compile 'com.yuvimasory:orange-extensions:1.3.0'
+}
+
+tasks.withType(JavaCompile) {
+    // Resolves a Gradle warning about not scanning for pre-processors.
+    options.compilerArgs << '-proc:none'
 }
 
 task runDemoNodes(dependsOn: 'classes', type: JavaExec) {

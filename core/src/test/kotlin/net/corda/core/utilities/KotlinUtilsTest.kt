@@ -3,9 +3,10 @@ package net.corda.core.utilities
 import com.esotericsoftware.kryo.KryoException
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.checkpointDeserialize
+import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
-import net.corda.node.serialization.kryo.kryoMagic
-import net.corda.serialization.internal.SerializationContextImpl
+import net.corda.serialization.internal.CheckpointSerializationContextImpl
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
@@ -24,12 +25,11 @@ class KotlinUtilsTest {
     @Rule
     val expectedEx: ExpectedException = ExpectedException.none()
 
-    private val KRYO_CHECKPOINT_NOWHITELIST_CONTEXT = SerializationContextImpl(kryoMagic,
+    private val KRYO_CHECKPOINT_NOWHITELIST_CONTEXT = CheckpointSerializationContextImpl(
             javaClass.classLoader,
             EmptyWhitelist,
             emptyMap(),
             true,
-            SerializationContext.UseCase.Checkpoint,
             null)
 
     @Test
@@ -44,7 +44,7 @@ class KotlinUtilsTest {
     fun `checkpointing a transient property with non-capturing lambda`() {
         val original = NonCapturingTransientProperty()
         val originalVal = original.transientVal
-        val copy = original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize(context = KRYO_CHECKPOINT_CONTEXT)
+        val copy = original.checkpointSerialize(context = KRYO_CHECKPOINT_CONTEXT).checkpointDeserialize(context = KRYO_CHECKPOINT_CONTEXT)
         val copyVal = copy.transientVal
         assertThat(copyVal).isNotEqualTo(originalVal)
         assertThat(copy.transientVal).isEqualTo(copyVal)
@@ -55,14 +55,14 @@ class KotlinUtilsTest {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
         val original = NonCapturingTransientProperty()
-        original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
+        original.checkpointSerialize(context = KRYO_CHECKPOINT_CONTEXT).checkpointDeserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
     }
 
     @Test
     fun `checkpointing a transient property with capturing lambda`() {
         val original = CapturingTransientProperty("Hello")
         val originalVal = original.transientVal
-        val copy = original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize(context = KRYO_CHECKPOINT_CONTEXT)
+        val copy = original.checkpointSerialize(context = KRYO_CHECKPOINT_CONTEXT).checkpointDeserialize(context = KRYO_CHECKPOINT_CONTEXT)
         val copyVal = copy.transientVal
         assertThat(copyVal).isNotEqualTo(originalVal)
         assertThat(copy.transientVal).isEqualTo(copyVal)
@@ -76,7 +76,7 @@ class KotlinUtilsTest {
 
         val original = CapturingTransientProperty("Hello")
 
-        original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
+        original.checkpointSerialize(context = KRYO_CHECKPOINT_CONTEXT).checkpointDeserialize(context = KRYO_CHECKPOINT_NOWHITELIST_CONTEXT)
     }
 
     private class NullTransientProperty {

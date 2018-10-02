@@ -1,5 +1,8 @@
 package net.corda.djvm.references
 
+import net.corda.djvm.code.asPackagePath
+import net.corda.djvm.code.asResourcePath
+
 /**
  * Class-specific functionality.
  */
@@ -42,14 +45,12 @@ class ClassModule : AnnotationModule() {
     /**
      * Get the binary version of a class name.
      */
-    fun getBinaryClassName(name: String) =
-            normalizeClassName(name).replace('.', '/')
+    fun getBinaryClassName(name: String) = normalizeClassName(name).asResourcePath
 
     /**
      * Get the formatted version of a class name.
      */
-    fun getFormattedClassName(name: String) =
-            normalizeClassName(name).replace('/', '.')
+    fun getFormattedClassName(name: String) = normalizeClassName(name).asPackagePath
 
     /**
      * Get the short name of a class.

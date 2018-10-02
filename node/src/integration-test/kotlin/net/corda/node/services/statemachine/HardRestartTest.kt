@@ -28,6 +28,10 @@ import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
 class HardRestartTest {
+    companion object {
+        val logConfigFile = ProjectStructure.projectRootDir / "config" / "dev" / "log4j2.xml"
+    }
+
     @StartableByRPC
     @InitiatingFlow
     class Ping(private val pongParty: Party, val times: Int) : FlowLogic<Unit>() {
@@ -52,10 +56,6 @@ class HardRestartTest {
                 assertEquals(i, j)
             }
         }
-    }
-
-    companion object {
-        val logConfigFile = ProjectStructure.projectRootDir / "config" / "dev" / "log4j2.xml"
     }
 
     @Test

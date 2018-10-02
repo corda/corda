@@ -1,7 +1,7 @@
 package net.corda.djvm.execution
 
 /**
- * The summary of the execution of a [SandboxedRunnable] in a sandbox.
+ * The summary of the execution of a [java.util.function.Function] in a sandbox.
  *
  * @property result The outcome of the sandboxed operation.
  * @see ExecutionSummary

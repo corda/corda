@@ -15,6 +15,7 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.node.utilities.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.LogHelper
@@ -51,7 +52,7 @@ class NodeAttachmentServiceTest {
         val dataSourceProperties = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProperties, DatabaseConfig(), { null }, { null })
         fs = Jimfs.newFileSystem(Configuration.unix())
-        storage = NodeAttachmentService(MetricRegistry(), database).also {
+        storage = NodeAttachmentService(MetricRegistry(), TestingNamedCacheFactory(), database).also {
             database.transaction {
                 it.start()
             }

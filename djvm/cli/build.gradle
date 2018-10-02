@@ -15,12 +15,10 @@ configurations {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
 
     compile "info.picocli:picocli:$picocli_version"
-    compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
     compile project(path: ":djvm", configuration: "shadow")
 
     // Deterministic runtime - used in whitelist generation

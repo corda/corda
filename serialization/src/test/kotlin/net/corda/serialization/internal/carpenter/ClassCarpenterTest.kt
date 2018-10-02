@@ -129,6 +129,27 @@ class ClassCarpenterTest {
         assertEquals("B{a=xa, b=xb}", i.toString())
     }
 
+    /**
+     * Tests the fix for [Corda-1945](https://r3-cev.atlassian.net/secure/RapidBoard.jspa?rapidView=83&modal=detail&selectedIssue=CORDA-1945)
+     */
+    @Test
+    fun `superclasses with double-size primitive constructor parameters`() {
+        val schema1 = ClassSchema(
+                "gen.A",
+                mapOf("a" to NonNullableField(Long::class.javaPrimitiveType!!)))
+
+        val schema2 = ClassSchema(
+                "gen.B",
+                mapOf("b" to NonNullableField(String::class.java)),
+                schema1)
+
+        val clazz = cc.build(schema2)
+        val i = clazz.constructors[0].newInstance(1L, "xb") as SimpleFieldAccess
+        assertEquals(1L, i["a"])
+        assertEquals("xb", i["b"])
+        assertEquals("B{a=1, b=xb}", i.toString())
+    }
+
     @Test
     fun interfaces() {
         val schema1 = ClassSchema(

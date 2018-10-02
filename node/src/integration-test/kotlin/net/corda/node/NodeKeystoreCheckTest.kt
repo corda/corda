@@ -4,15 +4,14 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.internal.div
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
-import java.nio.file.Path
 import javax.security.auth.x500.X500Principal
 
 class NodeKeystoreCheckTest {
@@ -21,22 +20,20 @@ class NodeKeystoreCheckTest {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             assertThatThrownBy {
                 startNode(customOverrides = mapOf("devMode" to false)).getOrThrow()
-            }.hasMessageContaining("Identity certificate not found")
+            }.hasMessageContaining("One or more keyStores (identity or TLS) or trustStore not found.")
         }
     }
 
     @Test
     fun `node should throw exception if cert path doesn't chain to the trust root`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-            // Create keystores
+            // Create keystores.
             val keystorePassword = "password"
-            val config = object : SSLConfiguration {
-                override val keyStorePassword: String = keystorePassword
-                override val trustStorePassword: String = keystorePassword
-                override val certificatesDirectory: Path = baseDirectory(ALICE_NAME) / "certificates"
-                override val crlCheckSoftFail: Boolean = true
-            }
-            config.configureDevKeyAndTrustStores(ALICE_NAME)
+            val certificatesDirectory = baseDirectory(ALICE_NAME) / "certificates"
+            val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory, keystorePassword)
+            val p2pSslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, keyStorePassword = keystorePassword, trustStorePassword = keystorePassword)
+
+            p2pSslConfig.configureDevKeyAndTrustStores(ALICE_NAME, signingCertStore, certificatesDirectory)
 
             // This should pass with correct keystore.
             val node = startNode(
@@ -48,8 +45,8 @@ class NodeKeystoreCheckTest {
             node.stop()
 
             // Fiddle with node keystore.
-            config.loadNodeKeyStore().update {
-                // Self signed root
+            signingCertStore.get().update {
+                // Self signed root.
                 val badRootKeyPair = Crypto.generateKeyPair()
                 val badRoot = X509Utilities.createSelfSignedCACertificate(X500Principal("O=Bad Root,L=Lodnon,C=GB"), badRootKeyPair)
                 val nodeCA = getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)

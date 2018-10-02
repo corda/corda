@@ -2,9 +2,9 @@ package net.corda.node.services.statemachine.interceptors
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.statemachine.ActionExecutor
 import net.corda.node.services.statemachine.Event
@@ -68,7 +68,7 @@ class FiberDeserializationChecker {
     private val jobQueue = LinkedBlockingQueue<Job>()
     private var foundUnrestorableFibers: Boolean = false
 
-    fun start(checkpointSerializationContext: SerializationContext) {
+    fun start(checkpointSerializationContext: CheckpointSerializationContext) {
         require(checkerThread == null)
         checkerThread = thread(name = "FiberDeserializationChecker") {
             while (true) {
@@ -76,7 +76,7 @@ class FiberDeserializationChecker {
                 when (job) {
                     is Job.Check -> {
                         try {
-                            job.serializedFiber.deserialize(context = checkpointSerializationContext)
+                            job.serializedFiber.checkpointDeserialize(context = checkpointSerializationContext)
                         } catch (throwable: Throwable) {
                             log.error("Encountered unrestorable checkpoint!", throwable)
                             foundUnrestorableFibers = true

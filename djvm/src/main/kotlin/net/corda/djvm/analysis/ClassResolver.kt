@@ -1,5 +1,8 @@
 package net.corda.djvm.analysis
 
+import net.corda.djvm.code.asPackagePath
+import net.corda.djvm.code.asResourcePath
+
 /**
  * Functionality for resolving the class name of a sandboxable class.
  *
@@ -32,12 +35,12 @@ class ClassResolver(
      */
     fun resolve(name: String): String {
         return when {
-            name.startsWith("[") && name.endsWith(";") -> {
+            name.startsWith('[') && name.endsWith(';') -> {
                 complexArrayTypeRegex.replace(name) {
                     "${it.groupValues[1]}L${resolveName(it.groupValues[2])};"
                 }
             }
-            name.startsWith("[") && !name.endsWith(";") -> name
+            name.startsWith('[') && !name.endsWith(';') -> name
             else -> resolveName(name)
         }
     }
@@ -46,7 +49,7 @@ class ClassResolver(
      * Resolve the class name from a fully qualified normalized name.
      */
     fun resolveNormalized(name: String): String {
-        return resolve(name.replace('.', '/')).replace('/', '.')
+        return resolve(name.asResourcePath).asPackagePath
     }
 
     /**
@@ -96,7 +99,7 @@ class ClassResolver(
      * Reverse the resolution of a class name from a fully qualified normalized name.
      */
     fun reverseNormalized(name: String): String {
-        return reverse(name.replace('.', '/')).replace('/', '.')
+        return reverse(name.asResourcePath).asPackagePath
     }
 
     /**

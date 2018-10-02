@@ -48,7 +48,7 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
 
         fun makeComplicatedListenableFuture(): CordaFuture<Pair<String, CordaFuture<String>>>
 
-        @RPCSinceVersion(2)
+        @RPCSinceVersion(2000)
         fun addedLater()
 
         fun captureUser(): String
@@ -58,7 +58,7 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
     private lateinit var complicatedListenableFuturee: CordaFuture<Pair<String, CordaFuture<String>>>
 
     inner class TestOpsImpl : TestOps {
-        override val protocolVersion = 1
+        override val protocolVersion = 1000
         // do not remove Unit
         override fun barf(): Unit = throw IllegalArgumentException("Barf!")
         override fun void() {}

@@ -26,7 +26,7 @@ class RPCFailureTests {
     }
 
     class OpsImpl : Ops {
-        override val protocolVersion = 1
+        override val protocolVersion = 1000
         override fun getUnserializable() = Unserializable()
         override fun getUnserializableAsync(): CordaFuture<Unserializable> {
             return openFuture<Unserializable>().apply { capture { getUnserializable() } }

@@ -1,0 +1,141 @@
+- commandName: "<main class>"
+  positionalParams: []
+  params:
+  - parameterName: "--base-directory"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "--bootstrap-raft-cluster"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--clear-network-map-cache"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--config-file"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "--dev-mode"
+    parameterType: "java.lang.Boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--initial-registration"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--install-shell-extensions"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--just-generate-node-info"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--just-generate-rpc-ssl-settings"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--log-to-console"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--logging-level"
+    parameterType: "org.slf4j.event.Level"
+    required: false
+    multiParam: false
+    acceptableValues:
+    - "ERROR"
+    - "WARN"
+    - "INFO"
+    - "DEBUG"
+    - "TRACE"
+  - parameterName: "--network-root-truststore"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "--network-root-truststore-password"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--no-local-shell"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--on-unknown-config-keys"
+    parameterType: "net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy"
+    required: false
+    multiParam: false
+    acceptableValues:
+    - "FAIL"
+    - "WARN"
+    - "IGNORE"
+  - parameterName: "--sshd"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--sshd-port"
+    parameterType: "int"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--verbose"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "-b"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "-c"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "-d"
+    parameterType: "java.lang.Boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "-f"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "-n"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "-p"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "-t"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "-v"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []

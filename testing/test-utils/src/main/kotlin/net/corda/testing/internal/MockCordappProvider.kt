@@ -35,6 +35,7 @@ class MockCordappProvider(
                 serializationCustomSerializers = emptyList(),
                 customSchemas = emptySet(),
                 jarPath = Paths.get("").toUri().toURL(),
+                info = CordappImpl.Info.UNKNOWN,
                 allFlows = emptyList(),
                 jarHash = SecureHash.allOnesHash)
         if (cordappRegistry.none { it.first.contractClassNames.contains(contractClassName) && it.second == contractHash }) {

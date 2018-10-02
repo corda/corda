@@ -10,6 +10,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.utilities.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -28,7 +29,7 @@ import kotlin.test.assertFailsWith
 class PersistentUniquenessProviderTests {
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    val testSerialization = SerializationEnvironmentRule(inheritable = true)
     private val identity = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
     private val txID = SecureHash.randomSHA256()
     private val requestSignature = NotarisationRequestSignature(DigitalSignature.WithKey(NullKeys.NullPublicKey, ByteArray(32)), 0)
@@ -49,18 +50,15 @@ class PersistentUniquenessProviderTests {
 
     @Test
     fun `should commit a transaction with unused inputs without exception`() {
-        database.transaction {
-            val provider = PersistentUniquenessProvider(Clock.systemUTC())
+        val provider = PersistentUniquenessProvider(Clock.systemUTC(), database, TestingNamedCacheFactory())
             val inputState = generateStateRef()
 
             provider.commit(listOf(inputState), txID, identity, requestSignature)
-        }
     }
 
     @Test
     fun `should report a conflict for a transaction with previously used inputs`() {
-        database.transaction {
-            val provider = PersistentUniquenessProvider(Clock.systemUTC())
+        val provider = PersistentUniquenessProvider(Clock.systemUTC(), database, TestingNamedCacheFactory())
             val inputState = generateStateRef()
 
             val inputs = listOf(inputState)
@@ -76,5 +74,4 @@ class PersistentUniquenessProviderTests {
             val conflictCause = error.consumedStates[inputState]!!
             assertEquals(conflictCause.hashOfTransactionId, firstTxId.sha256())
         }
-    }
 }
