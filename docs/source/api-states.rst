@@ -152,3 +152,45 @@ Where:
 * ``encumbrance`` points to another state that must also appear as an input to any transaction consuming this
   state
 * ``constraint`` is a constraint on which contract-code attachments can be used with this state
+
+Reference States
+----------------
+
+A reference input state is a ``ContractState`` which can be referred to in a transaction by the contracts of input and
+output states but whose contract is not executed as part of the transaction verification process. Furthermore,
+reference states are not consumed when the transaction is committed to the ledger but they are checked for
+"current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a normal
+state when it occurs in an input or output position.
+
+Reference data states enable many parties to reuse the same state in their transactions as reference data whilst
+still allowing the reference data state owner the capability to update the state. A standard example would be the
+creation of financial instrument reference data and the use of such reference data by parties holding the related
+financial instruments.
+
+Just like regular input states, the chain of provenance for reference states is resolved and all dependency transactions
+verified. This is because users of reference data must be satisfied that the data they are referring to is valid as per
+the rules of the contract which governs it and that all previous participants of teh state assented to updates of it.
+
+**Known limitations:**
+
+*Notary change:* It is likely the case that users of reference states do not have permission to change the notary
+assigned to a reference state. Even if users *did* have this permission the result would likely be a bunch of
+notary change races. As such, if a reference state is added to a transaction which is assigned to a
+different notary to the input and output states then all those inputs and outputs must be moved to the
+notary which the reference state uses.
+
+If two or more reference states assigned to different notaries are added to a transaction then it follows that this
+transaction cannot be committed to the ledger. This would also be the case for transactions not containing reference
+states. There is an additional complication for transaction including reference states, however. It is unlikely that the
+party using the reference states has the authority to change the notary for the state (in other words, the party using the
+reference state would not be listed as a participant on it). Therefore, it is likely that a transaction containing
+reference states with two different notaries cannot be committed to the ledger.
+
+As such, if reference states assigned to multiple different notaries are added to a transaction builder
+then the check below will fail.
+
+        .. warning:: Currently, encumbrances should not be used with reference states. In the case where a state is
+                     encumbered by an encumbrance state, the encumbrance state should also be referenced in the same
+                     transaction that references the encumbered state. This is because the data contained within the
+                     encumbered state may take on a different meaning, and likely would do, once the encumbrance state
+                     is taken into account.
