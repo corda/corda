@@ -1,4 +1,4 @@
-package net.corda.djvm.rules.implementation.instrumentation
+package net.corda.djvm.rules.implementation
 
 import net.corda.djvm.code.Emitter
 import net.corda.djvm.code.EmitterContext

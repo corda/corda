@@ -15,7 +15,8 @@ import net.corda.djvm.rewiring.LoadedClass
 import net.corda.djvm.rules.Rule
 import net.corda.djvm.rules.implementation.StaticConstantRemover
 import net.corda.djvm.rules.implementation.StringConstantWrapper
-import net.corda.djvm.rules.implementation.instrumentation.ToDJVMStringWrapper
+import net.corda.djvm.rules.implementation.ToDJVMStringWrapper
+import net.corda.djvm.rules.implementation.WriteEnumMethods
 import net.corda.djvm.source.ClassSource
 import net.corda.djvm.utilities.Discovery
 import net.corda.djvm.validation.RuleValidator
@@ -38,10 +39,16 @@ abstract class TestBase {
 
         val ALL_EMITTERS = Discovery.find<Emitter>()
 
-        val BASIC_EMITTERS: List<Emitter> = listOf(StringConstantWrapper(), ToDJVMStringWrapper())
+        // We need at least these emitters to handle the Java API classes.
+        val BASIC_EMITTERS: List<Emitter> = listOf(
+            StringConstantWrapper(),
+            ToDJVMStringWrapper(),
+            WriteEnumMethods()
+        )
 
         val ALL_DEFINITION_PROVIDERS = Discovery.find<DefinitionProvider>()
 
+        // We need at least these providers to handle the Java API classes.
         val BASIC_DEFINITION_PROVIDERS: List<DefinitionProvider> = listOf(StaticConstantRemover())
 
         val BLANK = emptySet<Any>()
