@@ -162,7 +162,7 @@ reference states are not consumed when the transaction is committed to the ledge
 "current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a normal
 state when it occurs in an input or output position.
 
-Reference data states enable many parties to "reuse" the same state in their transactions as reference data whilst
+Reference data states enable many parties to reuse the same state in their transactions as reference data whilst
 still allowing the reference data state owner the capability to update the state. A standard example would be the
 creation of financial instrument reference data and the use of such reference data by parties holding the related
 financial instruments.
@@ -179,14 +179,18 @@ notary change races. As such, if a reference state is added to a transaction whi
 different notary to the input and output states then all those inputs and outputs must be moved to the
 notary which the reference state uses.
 
-If two or more reference states assigned to different notaries are added to a transaction then it follows
-that this transaction likely *cannot* be committed to the ledger as it unlikely that the party using the
-reference state can change the assigned notary for one of the reference states.
+If two or more reference states assigned to different notaries are added to a transaction then it follows that this
+transaction cannot be committed to the ledger. This would also be the case for transactions not containing reference
+states. There is an additional complication for transaction including reference states, however. It is unlikely that the
+party using the reference states has the authority to change the notary for the state (in other words, the party using the
+reference state would not be listed as a participant on it). Therefore, it is likely that a transaction containing
+reference states with two different notaries cannot be committed to the ledger.
 
 As such, if reference states assigned to multiple different notaries are added to a transaction builder
 then the check below will fail.
 
-*Encumbrances:* In the near future, additional logic must be added to handle references of encumbered states. In the
-case where a state is encumbered by an encumbrance state. The encumbrance state should also be referenced in the same
-transaction that references the encumbered state. This is because the data contained within the encumbered state may
-take on a different meaning, and likely would do, once the encumbrance state is taken into account.
+        .. warning:: Currently, encumbrances should not be used with reference states. In the case where a state is
+                     encumbered by an encumbrance state, the encumbrance state should also be referenced in the same
+                     transaction that references the encumbered state. This is because the data contained within the
+                     encumbered state may take on a different meaning, and likely would do, once the encumbrance state
+                     is taken into account.

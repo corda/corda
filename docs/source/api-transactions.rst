@@ -138,8 +138,8 @@ At the point where the transaction updating the state being used as a reference 
 update occurs, then the ``WithReferencedStatesFlow`` will wake up and re-execute the provided flow.
 
 .. warning:: Caution should be taken when using this flow as it facilitates automated re-running of flows which use
-reference states. The flow using reference states should include checks to ensure that the reference data is
-   reasonable, especially if some economics transaction depends upon it.
+             reference states. The flow using reference states should include checks to ensure that the reference data is
+             reasonable, especially if the economics of the transaction depends upon the data contained within a reference state.
 
 Output states
 ^^^^^^^^^^^^^

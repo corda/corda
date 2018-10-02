@@ -33,7 +33,7 @@ Here is an example of an update transaction, with two inputs and two outputs:
    :scale: 25%
    :align: center
 
-   A transaction can contain any number of inputs, outputs and references of any type:
+A transaction can contain any number of inputs, outputs and references of any type:
 
 * They can include many different state types (e.g. both cash and bonds)
 * They can be issuances (have zero inputs) or exits (have zero outputs)
