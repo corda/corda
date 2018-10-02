@@ -96,6 +96,9 @@ absolute path to the node's base directory.
         note that the host is the included as the advertised entry in the network map. As a result the value listed
         here must be externally accessible when running nodes across a cluster of machines. If the provided host is unreachable,
         the node will try to auto-discover its public one.
+        
+:additionalP2PAddresses: An array of additional host:port values, which will be included in the advertised NodeInfo in the network map in addition to the ``p2pAddress``.
+    Nodes can use this configuration option to advertise HA endpoints and aliases to external parties. If not specified the default value is an empty list.
 
 :flowTimeout: When a flow implementing the ``TimedFlow`` interface does not complete in time, it is restarted from the
     initial checkpoint. Currently only used for notarisation requests: if a notary replica dies while processing a notarisation request,

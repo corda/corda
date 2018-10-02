@@ -1,9 +1,11 @@
 package net.corda.djvm.rewiring
 
+import net.corda.djvm.code.asPackagePath
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.ClassWriter.COMPUTE_FRAMES
 import org.objectweb.asm.ClassWriter.COMPUTE_MAXS
+import org.objectweb.asm.Type
 
 /**
  * Class writer for sandbox execution, with configurable a [classLoader] to ensure correct deduction of the used class
@@ -20,26 +22,28 @@ import org.objectweb.asm.ClassWriter.COMPUTE_MAXS
  */
 open class SandboxClassWriter(
         classReader: ClassReader,
-        private val classLoader: ClassLoader,
+        private val cloader: ClassLoader,
         flags: Int = COMPUTE_FRAMES or COMPUTE_MAXS
 ) : ClassWriter(classReader, flags) {
+
+    override fun getClassLoader(): ClassLoader = cloader
 
     /**
      * Get the common super type of [type1] and [type2].
      */
     override fun getCommonSuperClass(type1: String, type2: String): String {
-        // Need to override [getCommonSuperClass] to ensure that the correct class loader is used.
+        // Need to override [getCommonSuperClass] to ensure that we use ClassLoader.loadClass().
         when {
             type1 == OBJECT_NAME -> return type1
             type2 == OBJECT_NAME -> return type2
         }
         val class1 = try {
-            classLoader.loadClass(type1.replace('/', '.'))
+            classLoader.loadClass(type1.asPackagePath)
         } catch (exception: Exception) {
             throw TypeNotPresentException(type1, exception)
         }
         val class2 = try {
-            classLoader.loadClass(type2.replace('/', '.'))
+            classLoader.loadClass(type2.asPackagePath)
         } catch (exception: Exception) {
             throw TypeNotPresentException(type2, exception)
         }
@@ -52,7 +56,7 @@ open class SandboxClassWriter(
                 do {
                     clazz = clazz.superclass
                 } while (!clazz.isAssignableFrom(class2))
-                clazz.name.replace('.', '/')
+                Type.getInternalName(clazz)
             }
         }
     }

@@ -22,7 +22,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Try
 import rx.Observable
-import rx.subjects.PublishSubject
 import java.io.IOException
 import java.io.InputStream
 import java.security.PublicKey
@@ -42,7 +41,8 @@ data class StateMachineInfo @JvmOverloads constructor(
          * An object representing information about the initiator of the flow. Note that this field is
          * superseded by the [invocationContext] property, which has more detail.
          */
-        @Deprecated("There is more info available using 'context'") val initiator: FlowInitiator,
+        @Deprecated("There is more info available using 'invocationContext'")
+        val initiator: FlowInitiator,
         /** A [DataFeed] of the current progress step as a human readable string, and updates to that string. */
         val progressTrackerStepAndUpdates: DataFeed<String, String>?,
         /** An [InvocationContext] describing why and by whom the flow was started. */
@@ -76,7 +76,8 @@ sealed class StateMachineUpdate {
 // DOCSTART 1
 /**
  * Data class containing information about the scheduled network parameters update. The info is emitted every time node
- * receives network map with [ParametersUpdate] which wasn't seen before. For more information see: [CordaRPCOps.networkParametersFeed] and [CordaRPCOps.acceptNewNetworkParameters].
+ * receives network map with [ParametersUpdate] which wasn't seen before. For more information see: [CordaRPCOps.networkParametersFeed]
+ * and [CordaRPCOps.acceptNewNetworkParameters].
  * @property hash new [NetworkParameters] hash
  * @property parameters new [NetworkParameters] data structure
  * @property description description of the update
@@ -96,12 +97,6 @@ data class StateMachineTransactionMapping(val stateMachineRunId: StateMachineRun
 
 /** RPC operations that the node exposes to clients. */
 interface CordaRPCOps : RPCOps {
-    /**
-     * Returns the RPC protocol version, which is the same the node's Platform Version. Exists since version 1 so guaranteed
-     * to be present.
-     */
-    override val protocolVersion: Int get() = nodeInfo().platformVersion
-
     /** Returns a list of currently in-progress state machine infos. */
     fun stateMachinesSnapshot(): List<StateMachineInfo>
 
@@ -232,6 +227,9 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange>
+
+    /** Returns the network parameters the node is operating under. */
+    val networkParameters: NetworkParameters
 
     /**
      * Returns [DataFeed] object containing information on currently scheduled parameters update (null if none are currently scheduled)
@@ -406,38 +404,20 @@ interface CordaRPCOps : RPCOps {
      * This does not wait for flows to be completed.
      */
     fun shutdown()
-}
 
-/**
- * Returns a [DataFeed] that keeps track on the count of pending flows.
- */
-fun CordaRPCOps.pendingFlowsCount(): DataFeed<Int, Pair<Int, Int>> {
+    /**
+     * Shuts the node down. Returns immediately.
+     * @param drainPendingFlows whether the node will wait for pending flows to be completed before exiting. While draining, new flows from RPC will be rejected.
+     */
+    fun terminate(drainPendingFlows: Boolean = false)
 
-    val stateMachineState = stateMachinesFeed()
-    var pendingFlowsCount = stateMachineState.snapshot.size
-    var completedFlowsCount = 0
-    val updates = PublishSubject.create<Pair<Int, Int>>()
-    stateMachineState
-            .updates
-            .doOnNext { update ->
-                when (update) {
-                    is StateMachineUpdate.Added -> {
-                        pendingFlowsCount++
-                        updates.onNext(completedFlowsCount to pendingFlowsCount)
-                    }
-                    is StateMachineUpdate.Removed -> {
-                        completedFlowsCount++
-                        updates.onNext(completedFlowsCount to pendingFlowsCount)
-                        if (completedFlowsCount == pendingFlowsCount) {
-                            updates.onCompleted()
-                        }
-                    }
-                }
-            }.subscribe()
-    if (completedFlowsCount == 0) {
-        updates.onCompleted()
-    }
-    return DataFeed(pendingFlowsCount, updates)
+    /**
+     * Returns whether the node is waiting for pending flows to complete before shutting down.
+     * Disabling draining mode cancels this state.
+     *
+     * @return whether the node will shutdown when the pending flows count reaches zero.
+     */
+    fun isWaitingForShutdown(): Boolean
 }
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),

@@ -1,6 +1,5 @@
 package net.corda.djvm.tools.cli
 
-import net.corda.djvm.tools.Utilities.workingDirectory
 import picocli.CommandLine.Command
 import java.nio.file.Files
 

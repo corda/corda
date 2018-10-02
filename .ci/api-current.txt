@@ -2532,7 +2532,6 @@ public interface net.corda.core.messaging.CordaRPCOps extends net.corda.core.mes
   public abstract void clearNetworkMapCache()
   @NotNull
   public abstract java.time.Instant currentNodeTime()
-  public abstract int getProtocolVersion()
   @NotNull
   public abstract Iterable<String> getVaultTransactionNotes(net.corda.core.crypto.SecureHash)
   @RPCReturnsObservables
@@ -4449,8 +4448,6 @@ public interface net.corda.core.serialization.SerializationCustomSerializer
   public abstract PROXY toProxy(OBJ)
 ##
 public final class net.corda.core.serialization.SerializationDefaults extends java.lang.Object
-  @NotNull
-  public final net.corda.core.serialization.SerializationContext getCHECKPOINT_CONTEXT()
   @NotNull
   public final net.corda.core.serialization.SerializationContext getP2P_CONTEXT()
   @NotNull
@@ -6886,8 +6883,6 @@ public final class net.corda.testing.core.SerializationEnvironmentRule extends j
   public <init>(boolean)
   @NotNull
   public org.junit.runners.model.Statement apply(org.junit.runners.model.Statement, org.junit.runner.Description)
-  @NotNull
-  public final net.corda.core.serialization.SerializationContext getCheckpointContext()
   @NotNull
   public final net.corda.core.serialization.SerializationFactory getSerializationFactory()
   public static final net.corda.testing.core.SerializationEnvironmentRule$Companion Companion

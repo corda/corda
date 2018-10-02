@@ -147,9 +147,17 @@ internal constructor(private val initSerEnv: Boolean,
         }
     }
 
-    /** Entry point for Cordform */
+    /** Old Entry point for Cordform
+     *
+     * TODO: Remove once the gradle plugins are updated to 4.0.30
+     */
     fun bootstrap(directory: Path, cordappJars: List<Path>) {
         bootstrap(directory, cordappJars, copyCordapps = true, fromCordform = true)
+    }
+
+    /** Entry point for Cordform */
+    fun bootstrapCordform(directory: Path, cordappJars: List<Path>) {
+        bootstrap(directory, cordappJars, copyCordapps = false, fromCordform = true)
     }
 
     /** Entry point for the tool */

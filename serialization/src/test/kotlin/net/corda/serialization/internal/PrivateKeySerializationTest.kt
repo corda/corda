@@ -3,6 +3,8 @@ package net.corda.serialization.internal
 import net.corda.core.crypto.Crypto
 import net.corda.core.serialization.SerializationContext.UseCase.*
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.internal.CheckpointSerializationDefaults
+import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.serialization.serialize
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -33,13 +35,13 @@ class PrivateKeySerializationTest(private val privateKey: PrivateKey, private va
     @Test
     fun `passed with expected UseCases`() {
         assertTrue { privateKey.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes.isNotEmpty() }
-        assertTrue { privateKey.serialize(context = SerializationDefaults.CHECKPOINT_CONTEXT).bytes.isNotEmpty() }
+        assertTrue { privateKey.checkpointSerialize(context = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT).bytes.isNotEmpty() }
     }
 
     @Test
     fun `failed with wrong UseCase`() {
         assertThatThrownBy { privateKey.serialize(context = SerializationDefaults.P2P_CONTEXT) }
                 .isInstanceOf(IllegalStateException::class.java)
-                .hasMessageContaining("UseCase '$P2P' is not within")
+                .hasMessageContaining("UseCase '$P2P' is not 'Storage")
     }
 }

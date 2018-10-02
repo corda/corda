@@ -61,8 +61,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var lockId: String? = null,
 
             /** Used to determine whether a state abides by the relevancy rules of the recording node */
-            @Column(name = "is_relevant", nullable = false)
-            var isRelevant: Vault.RelevancyStatus,
+            @Column(name = "relevancy_status", nullable = false)
+            var relevancyStatus: Vault.RelevancyStatus,
 
             /** refers to the last time a lock was taken (reserved) or updated (released, re-reserved) */
             @Column(name = "lock_timestamp", nullable = true)

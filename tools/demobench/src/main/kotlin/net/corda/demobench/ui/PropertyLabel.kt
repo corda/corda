@@ -1,30 +1,41 @@
 package net.corda.demobench.ui
 
+import javafx.scene.control.ContentDisplay
 import javafx.scene.control.Label
+import javafx.scene.control.Tooltip
 import javafx.scene.layout.HBox
 
 class PropertyLabel : HBox() {
+    private val nameLabel = Label()
+    private val myTooltip = Tooltip()
 
-    val nameLabel = Label()
-    val valueLabel = Label()
+    private var nameText = ""
+    private var valueText = ""
 
     var name: String
-        get() = nameLabel.text
+        get() = nameText
         set(value) {
-            nameLabel.text = value
+            nameText = value
+            updateText()
         }
 
     var value: String
-        get() = valueLabel.text
+        get() = valueText
         set(value) {
-            valueLabel.text = value
+            valueText = value
+            updateText()
         }
+
+    private fun updateText() {
+        nameLabel.text = "$nameText $valueText"
+        myTooltip.text = "$nameText $valueText"
+    }
 
     init {
         nameLabel.styleClass.add("property-name")
-        valueLabel.styleClass.add("property-value")
-
-        children.addAll(nameLabel, valueLabel)
+        myTooltip.contentDisplay = ContentDisplay.CENTER
+        Tooltip.install(nameLabel, myTooltip)
+        children.addAll(nameLabel)
         styleClass.add("property-label")
     }
 }

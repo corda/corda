@@ -5,10 +5,10 @@
 <?import net.corda.demobench.ui.*?>
 <VBox visible="false" prefHeight="953.0" prefWidth="1363.0" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" styleClass="terminal-vbox">
     <HBox fx:id="header" disable="true" prefHeight="95.0" prefWidth="800.0" styleClass="header">
-        <VBox prefHeight="66.0" HBox.hgrow="ALWAYS">
+        <VBox prefHeight="66.0" HBox.hgrow="SOMETIMES">
             <Label fx:id="nodeName" style="-fx-font-size: 40; -fx-text-fill: red;"/>
         </VBox>
-        <VBox prefHeight="93.0" prefWidth="267.0">
+        <VBox prefHeight="93.0" prefWidth="267.0" HBox.hgrow="SOMETIMES">
             <PropertyLabel fx:id="states" name="States in vault: "/>
             <PropertyLabel fx:id="transactions" name="Known transactions: "/>
             <PropertyLabel fx:id="balance" name="Balance: "/>

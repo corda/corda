@@ -13,7 +13,8 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.CertificateStoreSupplier
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
@@ -27,6 +28,7 @@ import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.DEV_INTERMEDIATE_CA
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.cert.jcajce.JcaX509CRLConverter
@@ -50,7 +52,6 @@ import java.io.Closeable
 import java.math.BigInteger
 import java.net.InetSocketAddress
 import java.security.KeyPair
-import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.Security
 import java.security.cert.X509CRL
@@ -61,6 +62,7 @@ import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.Response
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class CertificateRevocationListNodeTests {
     @Rule
@@ -79,6 +81,32 @@ class CertificateRevocationListNodeTests {
     private val revokedIntermediateCerts: MutableList<BigInteger> = mutableListOf()
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
+
+    companion object {
+        fun createRevocationList(clrServer: CrlServer, signatureAlgorithm: String, caCertificate: X509Certificate,
+                                 caPrivateKey: PrivateKey,
+                                 endpoint: String,
+                                 indirect: Boolean,
+                                 vararg serialNumbers: BigInteger): X509CRL {
+            println("Generating CRL for $endpoint")
+            val builder = JcaX509v2CRLBuilder(caCertificate.subjectX500Principal, Date(System.currentTimeMillis() - 1.minutes.toMillis()))
+            val extensionUtils = JcaX509ExtensionUtils()
+            builder.addExtension(Extension.authorityKeyIdentifier,
+                    false, extensionUtils.createAuthorityKeyIdentifier(caCertificate))
+            val issuingDistPointName = GeneralName(
+                    GeneralName.uniformResourceIdentifier,
+                    "http://${clrServer.hostAndPort.host}:${clrServer.hostAndPort.port}/crl/$endpoint")
+            // This is required and needs to match the certificate settings with respect to being indirect
+            val issuingDistPoint = IssuingDistributionPoint(DistributionPointName(GeneralNames(issuingDistPointName)), indirect, false)
+            builder.addExtension(Extension.issuingDistributionPoint, true, issuingDistPoint)
+            builder.setNextUpdate(Date(System.currentTimeMillis() + 1.seconds.toMillis()))
+            serialNumbers.forEach {
+                builder.addCRLEntry(it, Date(System.currentTimeMillis() - 10.minutes.toMillis()), ReasonFlags.certificateHold)
+            }
+            val signer = JcaContentSignerBuilder(signatureAlgorithm).setProvider(Crypto.findProvider("BC")).build(caPrivateKey)
+            return JcaX509CRLConverter().setProvider(Crypto.findProvider("BC")).getCRL(builder.build(signer))
+        }
+    }
 
     @Before
     fun setUp() {
@@ -330,22 +358,25 @@ class CertificateRevocationListNodeTests {
                              nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
                              tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
                              maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPClient, X509Certificate> {
+        val baseDirectory = temporaryFolder.root.toPath() / "client"
+        val certificatesDirectory = baseDirectory / "certificates"
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
         val clientConfig = rigorousMock<AbstractNodeConfiguration>().also {
-            doReturn(temporaryFolder.root.toPath() / "client").whenever(it).baseDirectory
+            doReturn(baseDirectory).whenever(it).baseDirectory
+            doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(BOB_NAME).whenever(it).myLegalName
-            doReturn("trustpass").whenever(it).trustStorePassword
-            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
+            doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
-        val nodeCert = clientConfig.recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
-        val clientTruststore = clientConfig.loadTrustStore().internal
-        val clientKeystore = clientConfig.loadSslKeyStore().internal
+        val nodeCert = (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
+        val keyStore = clientConfig.p2pSslOptions.keyStore.get()
 
         val amqpConfig = object : AMQPConfiguration {
-            override val keyStore: KeyStore = clientKeystore
-            override val keyStorePrivateKeyPassword: CharArray = clientConfig.keyStorePassword.toCharArray()
-            override val trustStore: KeyStore = clientTruststore
+            override val keyStore = keyStore
+            override val trustStore = clientConfig.p2pSslOptions.trustStore.get()
             override val crlCheckSoftFail: Boolean = crlCheckSoftFail
             override val maxMessageSize: Int = maxMessageSize
         }
@@ -360,21 +391,24 @@ class CertificateRevocationListNodeTests {
                              nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
                              tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
                              maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPServer, X509Certificate> {
+        val baseDirectory = temporaryFolder.root.toPath() / "server"
+        val certificatesDirectory = baseDirectory / "certificates"
+        val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
-            doReturn(temporaryFolder.root.toPath() / "server").whenever(it).baseDirectory
+            doReturn(baseDirectory).whenever(it).baseDirectory
+            doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(name).whenever(it).myLegalName
-            doReturn("trustpass").whenever(it).trustStorePassword
-            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
+            doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
-        val nodeCert = serverConfig.recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
-        val serverTruststore = serverConfig.loadTrustStore().internal
-        val serverKeystore = serverConfig.loadSslKeyStore().internal
+        val nodeCert = (signingCertificateStore to p2pSslConfiguration).recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
+        val keyStore = serverConfig.p2pSslOptions.keyStore.get()
         val amqpConfig = object : AMQPConfiguration {
-            override val keyStore: KeyStore = serverKeystore
-            override val keyStorePrivateKeyPassword: CharArray = serverConfig.keyStorePassword.toCharArray()
-            override val trustStore: KeyStore = serverTruststore
+            override val keyStore = keyStore
+            override val trustStore = serverConfig.p2pSslOptions.trustStore.get()
             override val crlCheckSoftFail: Boolean = crlCheckSoftFail
             override val maxMessageSize: Int = maxMessageSize
         }
@@ -384,22 +418,28 @@ class CertificateRevocationListNodeTests {
                 amqpConfig), nodeCert)
     }
 
-    private fun SSLConfiguration.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {
-        val nodeKeyStore = loadNodeKeyStore()
-        val (nodeCert, nodeKeys) = nodeKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
+    private fun Pair<CertificateStoreSupplier, MutualSslConfiguration>.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {
+
+        val signingCertificateStore = first
+        val p2pSslConfiguration = second
+        val nodeKeyStore = signingCertificateStore.get()
+        val (nodeCert, nodeKeys) = nodeKeyStore.query { getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA) }
         val newNodeCert = replaceCrlDistPointCaCertificate(nodeCert, CertificateType.NODE_CA, INTERMEDIATE_CA.keyPair, nodeCaCrlDistPoint)
-        val nodeCertChain = listOf(newNodeCert, INTERMEDIATE_CA.certificate, *nodeKeyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA).drop(2).toTypedArray())
-        nodeKeyStore.internal.deleteEntry(X509Utilities.CORDA_CLIENT_CA)
-        nodeKeyStore.save()
+        val nodeCertChain = listOf(newNodeCert, INTERMEDIATE_CA.certificate, *nodeKeyStore.query { getCertificateChain(X509Utilities.CORDA_CLIENT_CA) }.drop(2).toTypedArray())
+        nodeKeyStore.update {
+            internal.deleteEntry(X509Utilities.CORDA_CLIENT_CA)
+        }
         nodeKeyStore.update {
             setPrivateKey(X509Utilities.CORDA_CLIENT_CA, nodeKeys.private, nodeCertChain)
         }
-        val sslKeyStore = loadSslKeyStore()
-        val (tlsCert, tlsKeys) = sslKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS)
+        val sslKeyStore = p2pSslConfiguration.keyStore.get()
+        val (tlsCert, tlsKeys) = sslKeyStore.query { getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS) }
         val newTlsCert = replaceCrlDistPointCaCertificate(tlsCert, CertificateType.TLS, nodeKeys, tlsCrlDistPoint, X500Name.getInstance(ROOT_CA.certificate.subjectX500Principal.encoded))
-        val sslCertChain = listOf(newTlsCert, newNodeCert, INTERMEDIATE_CA.certificate, *sslKeyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_TLS).drop(3).toTypedArray())
-        sslKeyStore.internal.deleteEntry(X509Utilities.CORDA_CLIENT_TLS)
-        sslKeyStore.save()
+        val sslCertChain = listOf(newTlsCert, newNodeCert, INTERMEDIATE_CA.certificate, *sslKeyStore.query { getCertificateChain(X509Utilities.CORDA_CLIENT_TLS) }.drop(3).toTypedArray())
+
+        sslKeyStore.update {
+            internal.deleteEntry(X509Utilities.CORDA_CLIENT_TLS)
+        }
         sslKeyStore.update {
             setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKeys.private, sslCertChain)
         }
@@ -442,12 +482,15 @@ class CertificateRevocationListNodeTests {
         @Path("node.crl")
         @Produces("application/pkcs7-crl")
         fun getNodeCRL(): Response {
-            return Response.ok(createRevocationList(
+            return Response.ok(CertificateRevocationListNodeTests.createRevocationList(
+                    server,
+                    SIGNATURE_ALGORITHM,
                     INTERMEDIATE_CA.certificate,
                     INTERMEDIATE_CA.keyPair.private,
                     NODE_CRL,
                     false,
-                    *revokedNodeCerts.toTypedArray()).encoded).build()
+                    *revokedNodeCerts.toTypedArray()).encoded)
+                    .build()
         }
 
         @GET
@@ -455,11 +498,14 @@ class CertificateRevocationListNodeTests {
         @Produces("application/pkcs7-crl")
         fun getIntermediateCRL(): Response {
             return Response.ok(createRevocationList(
+                    server,
+                    SIGNATURE_ALGORITHM,
                     ROOT_CA.certificate,
                     ROOT_CA.keyPair.private,
                     INTEMEDIATE_CRL,
                     false,
-                    *revokedIntermediateCerts.toTypedArray()).encoded).build()
+                    *revokedIntermediateCerts.toTypedArray()).encoded)
+                    .build()
         }
 
         @GET
@@ -467,33 +513,13 @@ class CertificateRevocationListNodeTests {
         @Produces("application/pkcs7-crl")
         fun getEmptyCRL(): Response {
             return Response.ok(createRevocationList(
+                    server,
+                    SIGNATURE_ALGORITHM,
                     ROOT_CA.certificate,
                     ROOT_CA.keyPair.private,
-                    EMPTY_CRL, true).encoded).build()
-        }
-
-        private fun createRevocationList(caCertificate: X509Certificate,
-                                         caPrivateKey: PrivateKey,
-                                         endpoint: String,
-                                         indirect: Boolean,
-                                         vararg serialNumbers: BigInteger): X509CRL {
-            println("Generating CRL for $endpoint")
-            val builder = JcaX509v2CRLBuilder(caCertificate.subjectX500Principal, Date(System.currentTimeMillis() - 1.minutes.toMillis()))
-            val extensionUtils = JcaX509ExtensionUtils()
-            builder.addExtension(Extension.authorityKeyIdentifier,
-                    false, extensionUtils.createAuthorityKeyIdentifier(caCertificate))
-            val issuingDistPointName = GeneralName(
-                    GeneralName.uniformResourceIdentifier,
-                    "http://${server.hostAndPort.host}:${server.hostAndPort.port}/crl/$endpoint")
-            // This is required and needs to match the certificate settings with respect to being indirect
-            val issuingDistPoint = IssuingDistributionPoint(DistributionPointName(GeneralNames(issuingDistPointName)), indirect, false)
-            builder.addExtension(Extension.issuingDistributionPoint, true, issuingDistPoint)
-            builder.setNextUpdate(Date(System.currentTimeMillis() + 1.seconds.toMillis()))
-            serialNumbers.forEach {
-                builder.addCRLEntry(it, Date(System.currentTimeMillis() - 10.minutes.toMillis()), ReasonFlags.certificateHold)
-            }
-            val signer = JcaContentSignerBuilder(SIGNATURE_ALGORITHM).setProvider(BouncyCastleProvider.PROVIDER_NAME).build(caPrivateKey)
-            return JcaX509CRLConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCRL(builder.build(signer))
+                    EMPTY_CRL,
+                    true).encoded)
+                    .build()
         }
     }
 
@@ -531,6 +557,34 @@ class CertificateRevocationListNodeTests {
                 val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 }
                 addServlet(jerseyServlet, "/*")
             }
+        }
+    }
+
+    @Test
+    fun `verify CRL algorithms`() {
+        val ECDSA_ALGORITHM = "SHA256withECDSA"
+        val EC_ALGORITHM = "EC"
+        val EMPTY_CRL = "empty.crl"
+
+        val crl = createRevocationList(
+                server,
+                ECDSA_ALGORITHM,
+                ROOT_CA.certificate,
+                ROOT_CA.keyPair.private,
+                EMPTY_CRL,
+                true)
+        // This should pass.
+        crl.verify(ROOT_CA.keyPair.public)
+
+        // Try changing the algorithm to EC will fail.
+        assertFailsWith<IllegalArgumentException>("Unknown signature type requested: EC") {
+            createRevocationList(
+                server,
+                EC_ALGORITHM,
+                ROOT_CA.certificate,
+                ROOT_CA.keyPair.private,
+                EMPTY_CRL,
+                true)
         }
     }
 }

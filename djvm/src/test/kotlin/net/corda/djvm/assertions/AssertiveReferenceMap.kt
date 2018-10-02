@@ -10,7 +10,7 @@ open class AssertiveReferenceMap(private val references: ReferenceMap) {
 
     fun hasCount(count: Int): AssertiveReferenceMap {
         val allReferences = references.joinToString("\n") { " - $it" }
-        Assertions.assertThat(references.size)
+        Assertions.assertThat(references.numberOfReferences)
                 .overridingErrorMessage("Expected $count reference(s), found:\n$allReferences")
                 .isEqualTo(count)
         return this

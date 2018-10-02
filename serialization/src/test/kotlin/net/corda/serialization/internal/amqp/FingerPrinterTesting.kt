@@ -15,10 +15,6 @@ class FingerPrinterTesting : FingerPrinter {
         return cache.computeIfAbsent(type) { index++.toString() }
     }
 
-    override fun setOwner(factory: SerializerFactory) {
-        return
-    }
-
     @Suppress("UNUSED")
     fun changeFingerprint(type: Type) {
         cache.computeIfAbsent(type) { "" }.apply { index++.toString() }
@@ -47,7 +43,7 @@ class FingerPrinterTestingTests {
                 AllWhitelist,
                 ClassLoader.getSystemClassLoader(),
                 evolutionSerializerGetter = EvolutionSerializerGetterTesting(),
-                fingerPrinter = FingerPrinterTesting())
+                fingerPrinterConstructor = { _ -> FingerPrinterTesting() })
 
         val blob = TestSerializationOutput(VERBOSE, factory).serializeAndReturnSchema(C(1, 2L))
 

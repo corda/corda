@@ -7,6 +7,7 @@ import com.github.benmanes.caffeine.cache.RemovalCause
 import com.github.benmanes.caffeine.cache.RemovalListener
 import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
@@ -14,6 +15,7 @@ import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSer
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
@@ -64,7 +66,7 @@ import kotlin.reflect.jvm.javaMethod
  * automatically signal the server. This is done using a cache that holds weak references to the [UnicastSubject]s.
  * The cleanup happens in batches using a dedicated reaper, scheduled on [reaperExecutor].
  *
- * The client will attempt to failover in case the server become unreachable. Depending on the [ServerLocataor] instance
+ * The client will attempt to failover in case the server become unreachable. Depending on the [ServerLocator] instance
  * passed in the constructor, failover is either handle at Artemis level or client level. If only one transport
  * was used to create the [ServerLocator], failover is handled by Artemis (retrying based on [CordaRPCClientConfiguration].
  * If a list of transport configurations was used, failover is handled locally. Artemis is able to do it, however the
@@ -80,7 +82,8 @@ class RPCClientProxyHandler(
         serializationContext: SerializationContext,
         private val sessionId: Trace.SessionId,
         private val externalTrace: Trace?,
-        private val impersonatedActor: Actor?
+        private val impersonatedActor: Actor?,
+        private val targetLegalIdentity: CordaX500Name?
 ) : InvocationHandler {
 
     private enum class State {
@@ -97,12 +100,18 @@ class RPCClientProxyHandler(
         // To check whether toString() is being invoked
         val toStringMethod: Method = Object::toString.javaMethod!!
 
-        private fun addRpcCallSiteToThrowable(throwable: Throwable, callSite: Throwable) {
+        private fun addRpcCallSiteToThrowable(throwable: Throwable, callSite: CallSite) {
             var currentThrowable = throwable
             while (true) {
                 val cause = currentThrowable.cause
                 if (cause == null) {
-                    currentThrowable.initCause(callSite)
+                    try {
+                        currentThrowable.initCause(callSite)
+                    } catch (e: IllegalStateException) {
+                        // OK, we did our best, but the first throwable with a null cause was instantiated using
+                        // Throwable(Throwable) or Throwable(String, Throwable) which means initCause can't ever
+                        // be called even if it was passed null.
+                    }
                     break
                 } else {
                     currentThrowable = cause
@@ -146,15 +155,17 @@ class RPCClientProxyHandler(
     private fun createRpcObservableMap(): RpcObservableMap {
         val onObservableRemove = RemovalListener<InvocationId, UnicastSubject<Notification<*>>> { key, _, cause ->
             val observableId = key!!
-            val rpcCallSite = callSiteMap?.remove(observableId)
+            val rpcCallSite: CallSite? = callSiteMap?.remove(observableId)
             if (cause == RemovalCause.COLLECTED) {
                 log.warn(listOf(
                         "A hot observable returned from an RPC was never subscribed to.",
                         "This wastes server-side resources because it was queueing observations for retrieval.",
                         "It is being closed now, but please adjust your code to call .notUsed() on the observable",
-                        "to close it explicitly. (Java users: subscribe to it then unsubscribe). This warning",
-                        "will appear less frequently in future versions of the platform and you can ignore it",
-                        "if you want to.").joinToString(" "), rpcCallSite)
+                        "to close it explicitly. (Java users: subscribe to it then unsubscribe). If you aren't sure",
+                        "where the leak is coming from, set -Dnet.corda.client.rpc.trackRpcCallSites=true on the JVM",
+                        "command line and you will get a stack trace with this warning."
+                ).joinToString(" "), rpcCallSite)
+                rpcCallSite?.printStackTrace()
             }
             observablesToReap.locked { observables.add(observableId) }
         }
@@ -215,6 +226,9 @@ class RPCClientProxyHandler(
         startSessions()
     }
 
+    /** A throwable that doesn't represent a real error - it's just here to wrap a stack trace. */
+    class CallSite(val rpcName: String) : Throwable("<Call site of root RPC '$rpcName'>")
+
     // This is the general function that transforms a client side RPC to internal Artemis messages.
     override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?): Any? {
         lifeCycle.requireState { it == State.STARTED || it == State.SERVER_VERSION_NOT_SET }
@@ -230,7 +244,7 @@ class RPCClientProxyHandler(
             throw RPCException("RPC server is not available.")
 
         val replyId = InvocationId.newInstance()
-        callSiteMap?.set(replyId, Throwable("<Call site of root RPC '${method.name}'>"))
+        callSiteMap?.set(replyId, CallSite(method.name))
         try {
             val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
             val request = RPCApi.ClientToServer.RpcRequest(
@@ -263,6 +277,9 @@ class RPCClientProxyHandler(
     private fun sendMessage(message: RPCApi.ClientToServer) {
         val artemisMessage = producerSession!!.createMessage(false)
         message.writeToClientMessage(artemisMessage)
+        targetLegalIdentity?.let {
+            artemisMessage.putStringProperty(RPCApi.RPC_TARGET_LEGAL_IDENTITY, it.toString())
+        }
         sendExecutor!!.submit {
             artemisMessage.putLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME, deduplicationSequenceNumber.getAndIncrement())
             log.debug { "-> RPC -> $message" }
@@ -273,7 +290,7 @@ class RPCClientProxyHandler(
     // The handler for Artemis messages.
     private fun artemisMessageHandler(message: ClientMessage) {
         fun completeExceptionally(id: InvocationId, e: Throwable, future: SettableFuture<Any?>?) {
-            val rpcCallSite: Throwable? = callSiteMap?.get(id)
+            val rpcCallSite: CallSite? = callSiteMap?.get(id)
             if (rpcCallSite != null) addRpcCallSiteToThrowable(e, rpcCallSite)
             future?.setException(e.cause ?: e)
         }
@@ -536,7 +553,7 @@ class RPCClientProxyHandler(
         m.keys.forEach { k ->
             observationExecutorPool.run(k) {
                 try {
-                    m[k]?.onError(RPCException("Connection failure detected."))
+                    m[k]?.onError(ConnectionFailureException())
                 } catch (th: Throwable) {
                     log.error("Unexpected exception when RPC connection failure handling", th)
                 }
@@ -545,7 +562,7 @@ class RPCClientProxyHandler(
         observableContext.observableMap.invalidateAll()
 
         rpcReplyMap.forEach { _, replyFuture ->
-            replyFuture.setException(RPCException("Connection failure detected."))
+            replyFuture.setException(ConnectionFailureException())
         }
 
         rpcReplyMap.clear()
@@ -555,13 +572,14 @@ class RPCClientProxyHandler(
 
 private typealias RpcObservableMap = Cache<InvocationId, UnicastSubject<Notification<*>>>
 private typealias RpcReplyMap = ConcurrentHashMap<InvocationId, SettableFuture<Any?>>
-private typealias CallSiteMap = ConcurrentHashMap<InvocationId, Throwable?>
+private typealias CallSiteMap = ConcurrentHashMap<InvocationId, RPCClientProxyHandler.CallSite?>
 
 /**
  * Holds a context available during de-serialisation of messages that are expected to contain Observables.
  *
- * @param observableMap holds the Observables that are ultimately exposed to the user.
- * @param hardReferenceStore holds references to Observables we want to keep alive while they are subscribed to.
+ * @property observableMap holds the Observables that are ultimately exposed to the user.
+ * @property hardReferenceStore holds references to Observables we want to keep alive while they are subscribed to.
+ * @property callSiteMap keeps stack traces captured when an RPC was invoked, useful for debugging when an observable leaks.
  */
 data class ObservableContext(
         val callSiteMap: CallSiteMap?,

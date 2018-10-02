@@ -10,9 +10,8 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
-import net.corda.node.internal.NodeWithInfo
 import net.corda.node.internal.Node
-
+import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -21,6 +20,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.User
+import org.apache.commons.lang.SystemUtils
 import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Before
@@ -85,7 +85,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @JvmOverloads
     fun startNode(legalName: CordaX500Name,
-                  platformVersion: Int = 1,
+                  platformVersion: Int = 4,
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap()): NodeWithInfo {
         val baseDirectory = baseDirectory(legalName).createDirectories()
@@ -146,6 +146,11 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 }
 
 class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo) : Node(configuration, versionInfo, false) {
+
+    override fun start() : NodeInfo {
+        check(isValidJavaVersion()) { "You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8." }
+        return super.start()
+    }
 
     override val rxIoScheduler get() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
 }

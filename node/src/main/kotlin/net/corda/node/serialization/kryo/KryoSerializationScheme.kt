@@ -10,10 +10,9 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.CheckpointSerializationScheme
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.*
 import java.security.PublicKey
@@ -32,46 +31,30 @@ private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() 
     override fun read(kryo: Kryo, input: Input, type: Class<AutoCloseable>) = throw IllegalStateException("Should not reach here!")
 }
 
-abstract class AbstractKryoSerializationScheme : SerializationScheme {
+object KryoSerializationScheme : CheckpointSerializationScheme {
     private val kryoPoolsForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, KryoPool>()
 
-    protected abstract fun rpcClientKryoPool(context: SerializationContext): KryoPool
-    protected abstract fun rpcServerKryoPool(context: SerializationContext): KryoPool
-
-    // this can be overridden in derived serialization schemes
-    protected open val publicKeySerializer: Serializer<PublicKey> = PublicKeySerializer
-
-    private fun getPool(context: SerializationContext): KryoPool {
+    private fun getPool(context: CheckpointSerializationContext): KryoPool {
         return kryoPoolsForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
-            when (context.useCase) {
-                SerializationContext.UseCase.Checkpoint ->
-                    KryoPool.Builder {
-                        val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
-                        val classResolver = CordaClassResolver(context).apply { setKryo(serializer.kryo) }
-                        // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
-                        val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
-                        serializer.kryo.apply {
-                            field.set(this, classResolver)
-                            // don't allow overriding the public key serializer for checkpointing
-                            DefaultKryoCustomizer.customize(this)
-                            addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
-                            register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
-                            classLoader = it.second
-                        }
-                    }.build()
-                SerializationContext.UseCase.RPCClient ->
-                    rpcClientKryoPool(context)
-                SerializationContext.UseCase.RPCServer ->
-                    rpcServerKryoPool(context)
-                else ->
-                    KryoPool.Builder {
-                        DefaultKryoCustomizer.customize(CordaKryo(CordaClassResolver(context)), publicKeySerializer).apply { classLoader = it.second }
-                    }.build()
-            }
+            KryoPool.Builder {
+                val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
+                val classResolver = CordaClassResolver(context).apply { setKryo(serializer.kryo) }
+                // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
+                val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
+                serializer.kryo.apply {
+                    field.set(this, classResolver)
+                    // don't allow overriding the public key serializer for checkpointing
+                    DefaultKryoCustomizer.customize(this)
+                    addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
+                    register(ClosureSerializer.Closure::class.java, CordaClosureSerializer)
+                    classLoader = it.second
+                }
+            }.build()
+
         }
     }
 
-    private fun <T : Any> SerializationContext.kryo(task: Kryo.() -> T): T {
+    private fun <T : Any> CheckpointSerializationContext.kryo(task: Kryo.() -> T): T {
         return getPool(this).run { kryo ->
             kryo.context.ensureCapacity(properties.size)
             properties.forEach { kryo.context.put(it.key, it.value) }
@@ -83,7 +66,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
         }
     }
 
-    override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
+    override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: CheckpointSerializationContext): T {
         val dataBytes = kryoMagic.consume(byteSequence)
                 ?: throw KryoException("Serialized bytes header does not match expected format.")
         return context.kryo {
@@ -111,7 +94,7 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
         }
     }
 
-    override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
+    override fun <T : Any> serialize(obj: T, context: CheckpointSerializationContext): SerializedBytes<T> {
         return context.kryo {
             SerializedBytes(kryoOutput {
                 kryoMagic.writeTo(this)
@@ -131,13 +114,11 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
     }
 }
 
-val KRYO_CHECKPOINT_CONTEXT = SerializationContextImpl(
-        kryoMagic,
+val KRYO_CHECKPOINT_CONTEXT = CheckpointSerializationContextImpl(
         SerializationDefaults.javaClass.classLoader,
         QuasarWhitelist,
         emptyMap(),
         true,
-        SerializationContext.UseCase.Checkpoint,
         null,
         AlwaysAcceptEncodingWhitelist
 )

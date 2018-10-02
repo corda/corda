@@ -12,6 +12,7 @@ of contributing to Corda.
    building-corda
    testing
    codestyle
+   cli-ux-guidelines
    building-the-docs
    api-scanner
    contributing-flow-state-machines

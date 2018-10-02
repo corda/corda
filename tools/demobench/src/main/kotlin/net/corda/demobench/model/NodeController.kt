@@ -146,7 +146,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 notaries = listOf(NotaryInfo(identity, config.nodeConfig.notary!!.validating)),
                 modifiedTime = Instant.now(),
                 maxMessageSize = 10485760,
-                maxTransactionSize = Int.MAX_VALUE,
+                maxTransactionSize = 10485760,
                 epoch = 1,
                 whitelistedContractImplementations = emptyMap()
         ))

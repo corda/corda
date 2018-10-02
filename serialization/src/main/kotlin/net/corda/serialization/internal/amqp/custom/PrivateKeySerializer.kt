@@ -2,7 +2,6 @@ package net.corda.serialization.internal.amqp.custom
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationContext.UseCase.Checkpoint
 import net.corda.core.serialization.SerializationContext.UseCase.Storage
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.checkUseCase
@@ -13,14 +12,12 @@ import java.util.*
 
 object PrivateKeySerializer : CustomSerializer.Implements<PrivateKey>(PrivateKey::class.java) {
 
-    private val allowedUseCases = EnumSet.of(Storage, Checkpoint)
-
     override val schemaForDocumentation = Schema(listOf(RestrictedType(type.toString(), "", listOf(type.toString()), SerializerFactory.primitiveTypeName(ByteArray::class.java)!!, descriptor, emptyList())))
 
     override fun writeDescribedObject(obj: PrivateKey, data: Data, type: Type, output: SerializationOutput,
                                       context: SerializationContext
     ) {
-        checkUseCase(allowedUseCases)
+        checkUseCase(Storage)
         output.writeObject(obj.encoded, data, clazz, context)
     }
 

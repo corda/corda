@@ -52,7 +52,9 @@ class HTTPNetworkRegistrationService(compatibilityZoneURL: URL, val versionInfo:
     }
 
     override fun submitRequest(request: PKCS10CertificationRequest): String {
-        return String(registrationURL.post(OpaqueBytes(request.encoded), "Client-Version" to "${versionInfo.platformVersion}"))
+        return String(registrationURL.post(OpaqueBytes(request.encoded),
+                "Platform-Version" to "${versionInfo.platformVersion}",
+                "Client-Version" to versionInfo.releaseVersion))
     }
 }
 

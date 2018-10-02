@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.uncheckedCast
+import java.io.InputStream
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStore
@@ -29,6 +30,14 @@ class X509KeyStore private constructor(val internal: KeyStore, private val store
         fun fromFile(keyStoreFile: Path, storePassword: String, createNew: Boolean = false): X509KeyStore {
             val internal: KeyStore = if (createNew) loadOrCreateKeyStore(keyStoreFile, storePassword) else loadKeyStore(keyStoreFile, storePassword)
             return X509KeyStore(internal, storePassword, keyStoreFile)
+        }
+
+        /**
+         * Reads a [KeyStore] from an [InputStream].
+         */
+        fun fromInputStream(stream: InputStream, storePassword: String): X509KeyStore {
+            val internal = loadKeyStore(stream, storePassword)
+            return X509KeyStore(internal, storePassword)
         }
     }
 

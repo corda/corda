@@ -7,9 +7,6 @@ import net.corda.djvm.execution.*
 import net.corda.djvm.references.ClassModule
 import net.corda.djvm.source.ClassSource
 import net.corda.djvm.source.SourceClassLoader
-import net.corda.djvm.tools.Utilities.find
-import net.corda.djvm.tools.Utilities.onEmpty
-import net.corda.djvm.tools.Utilities.userClassPath
 import net.corda.djvm.utilities.Discovery
 import djvm.org.objectweb.asm.ClassReader
 import picocli.CommandLine.Option
@@ -66,7 +63,7 @@ abstract class ClassCommand : CommandBase() {
 
     private lateinit var classLoader: ClassLoader
 
-    protected var executor = SandboxExecutor<Any, Any>()
+    protected var executor = SandboxExecutor<Any, Any>(SandboxConfiguration.DEFAULT)
 
     private var derivedWhitelist: Whitelist = Whitelist.MINIMAL
 
@@ -117,7 +114,7 @@ abstract class ClassCommand : CommandBase() {
     }
 
     private fun findDiscoverableRunnables(filters: Array<String>): List<Class<*>> {
-        val classes = find<DiscoverableRunnable>()
+        val classes = find<java.util.function.Function<*,*>>()
         val applicableFilters = filters
                 .filter { !isJarFile(it) && !isFullClassName(it) }
         val filteredClasses = applicableFilters
@@ -128,7 +125,7 @@ abstract class ClassCommand : CommandBase() {
                 }
 
         if (applicableFilters.isNotEmpty() && filteredClasses.isEmpty()) {
-            throw Exception("Could not find any classes implementing ${SandboxedRunnable::class.java.simpleName} " +
+            throw Exception("Could not find any classes implementing ${java.util.function.Function::class.java.simpleName} " +
                     "whose name matches '${applicableFilters.joinToString(" ")}'")
         }
 
@@ -192,7 +189,7 @@ abstract class ClassCommand : CommandBase() {
                 profile = profile,
                 rules = if (ignoreRules) { emptyList() } else { Discovery.find() },
                 emitters = ignoreEmitters.emptyListIfTrueOtherwiseNull(),
-                definitionProviders = if(ignoreDefinitionProviders) { emptyList() } else { Discovery.find() },
+                definitionProviders = if (ignoreDefinitionProviders) { emptyList() } else { Discovery.find() },
                 enableTracing = !disableTracing,
                 analysisConfiguration = AnalysisConfiguration(
                         whitelist = whitelist,

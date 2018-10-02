@@ -4,6 +4,10 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.io.Output
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.CheckpointSerializationFactory
+import net.corda.core.serialization.internal.checkpointDeserialize
+import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.serialization.kryo.CordaClassResolver
 import net.corda.node.serialization.kryo.CordaKryo
@@ -11,6 +15,7 @@ import net.corda.node.serialization.kryo.DefaultKryoCustomizer
 import net.corda.node.serialization.kryo.kryoMagic
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
@@ -18,16 +23,18 @@ import org.junit.Test
 import java.io.ByteArrayOutputStream
 
 class SerializationTokenTest {
+
     @Rule
     @JvmField
-    val testSerialization = SerializationEnvironmentRule()
-    private lateinit var factory: SerializationFactory
-    private lateinit var context: SerializationContext
+    val testCheckpointSerialization = CheckpointSerializationEnvironmentRule()
+
+    private lateinit var factory: CheckpointSerializationFactory
+    private lateinit var context: CheckpointSerializationContext
 
     @Before
     fun setup() {
-        factory = testSerialization.serializationFactory
-        context = testSerialization.checkpointContext.withWhitelisted(SingletonSerializationToken::class.java)
+        factory = testCheckpointSerialization.checkpointSerializationFactory
+        context = testCheckpointSerialization.checkpointSerializationContext.withWhitelisted(SingletonSerializationToken::class.java)
     }
 
     // Large tokenizable object so we can tell from the smaller number of serialized bytes it was actually tokenized
@@ -42,16 +49,16 @@ class SerializationTokenTest {
         override fun equals(other: Any?) = other is LargeTokenizable && other.bytes.size == this.bytes.size
     }
 
-    private fun serializeAsTokenContext(toBeTokenized: Any) = SerializeAsTokenContextImpl(toBeTokenized, factory, context, rigorousMock())
+    private fun serializeAsTokenContext(toBeTokenized: Any) = CheckpointSerializeAsTokenContextImpl(toBeTokenized, factory, context, rigorousMock())
     @Test
     fun `write token and read tokenizable`() {
         val tokenizableBefore = LargeTokenizable()
         val context = serializeAsTokenContext(tokenizableBefore)
         val testContext = this.context.withTokenContext(context)
 
-        val serializedBytes = tokenizableBefore.serialize(factory, testContext)
+        val serializedBytes = tokenizableBefore.checkpointSerialize(factory, testContext)
         assertThat(serializedBytes.size).isLessThan(tokenizableBefore.numBytes)
-        val tokenizableAfter = serializedBytes.deserialize(factory, testContext)
+        val tokenizableAfter = serializedBytes.checkpointDeserialize(factory, testContext)
         assertThat(tokenizableAfter).isSameAs(tokenizableBefore)
     }
 
@@ -62,8 +69,8 @@ class SerializationTokenTest {
         val tokenizableBefore = UnitSerializeAsToken()
         val context = serializeAsTokenContext(tokenizableBefore)
         val testContext = this.context.withTokenContext(context)
-        val serializedBytes = tokenizableBefore.serialize(factory, testContext)
-        val tokenizableAfter = serializedBytes.deserialize(factory, testContext)
+        val serializedBytes = tokenizableBefore.checkpointSerialize(factory, testContext)
+        val tokenizableAfter = serializedBytes.checkpointDeserialize(factory, testContext)
         assertThat(tokenizableAfter).isSameAs(tokenizableBefore)
     }
 
@@ -72,7 +79,7 @@ class SerializationTokenTest {
         val tokenizableBefore = UnitSerializeAsToken()
         val context = serializeAsTokenContext(emptyList<Any>())
         val testContext = this.context.withTokenContext(context)
-        tokenizableBefore.serialize(factory, testContext)
+        tokenizableBefore.checkpointSerialize(factory, testContext)
     }
 
     @Test(expected = UnsupportedOperationException::class)
@@ -80,14 +87,14 @@ class SerializationTokenTest {
         val tokenizableBefore = UnitSerializeAsToken()
         val context = serializeAsTokenContext(emptyList<Any>())
         val testContext = this.context.withTokenContext(context)
-        val serializedBytes = tokenizableBefore.toToken(serializeAsTokenContext(emptyList<Any>())).serialize(factory, testContext)
-        serializedBytes.deserialize(factory, testContext)
+        val serializedBytes = tokenizableBefore.toToken(serializeAsTokenContext(emptyList<Any>())).checkpointSerialize(factory, testContext)
+        serializedBytes.checkpointDeserialize(factory, testContext)
     }
 
     @Test(expected = KryoException::class)
     fun `no context set`() {
         val tokenizableBefore = UnitSerializeAsToken()
-        tokenizableBefore.serialize(factory, context)
+        tokenizableBefore.checkpointSerialize(factory, context)
     }
 
     @Test(expected = KryoException::class)
@@ -105,7 +112,7 @@ class SerializationTokenTest {
             kryo.writeObject(it, emptyList<Any>())
         }
         val serializedBytes = SerializedBytes<Any>(stream.toByteArray())
-        serializedBytes.deserialize(factory, testContext)
+        serializedBytes.checkpointDeserialize(factory, testContext)
     }
 
     private class WrongTypeSerializeAsToken : SerializeAsToken {
@@ -121,7 +128,7 @@ class SerializationTokenTest {
         val tokenizableBefore = WrongTypeSerializeAsToken()
         val context = serializeAsTokenContext(tokenizableBefore)
         val testContext = this.context.withTokenContext(context)
-        val serializedBytes = tokenizableBefore.serialize(factory, testContext)
-        serializedBytes.deserialize(factory, testContext)
+        val serializedBytes = tokenizableBefore.checkpointSerialize(factory, testContext)
+        serializedBytes.checkpointDeserialize(factory, testContext)
     }
 }

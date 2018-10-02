@@ -28,7 +28,7 @@ implement ``FlowAsyncOperation``:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/flowstatemachines/TutorialFlowAsyncOperation.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/flowstatemachines/TutorialFlowAsyncOperation.kt
         :language: kotlin
         :start-after: DOCSTART SummingOperation
         :end-before: DOCEND SummingOperation
@@ -62,7 +62,7 @@ flow:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/flowstatemachines/TutorialFlowAsyncOperation.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/flowstatemachines/TutorialFlowAsyncOperation.kt
         :language: kotlin
         :start-after: DOCSTART ExampleSummingFlow
         :end-before: DOCEND ExampleSummingFlow
@@ -104,7 +104,7 @@ Let's assume we made a mistake in our summing operation:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/flowstatemachines/TutorialFlowAsyncOperation.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/flowstatemachines/TutorialFlowAsyncOperation.kt
         :language: kotlin
         :start-after: DOCSTART SummingOperationThrowing
         :end-before: DOCEND SummingOperationThrowing

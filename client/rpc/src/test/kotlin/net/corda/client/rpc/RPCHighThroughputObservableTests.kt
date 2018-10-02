@@ -24,7 +24,7 @@ class RPCHighThroughputObservableTests : AbstractRPCTest() {
     }
 
     internal class TestOpsImpl : TestOps {
-        override val protocolVersion = 1
+        override val protocolVersion = 1000
 
         override fun makeObservable(): Observable<Int> = Observable.interval(0, TimeUnit.MICROSECONDS).map { it.toInt() + 1 }
     }

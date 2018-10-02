@@ -12,8 +12,8 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
@@ -69,7 +69,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             val actionExecutor: ActionExecutor,
             val stateMachine: StateMachine,
             val serviceHub: ServiceHubInternal,
-            val checkpointSerializationContext: SerializationContext,
+            val checkpointSerializationContext: CheckpointSerializationContext,
             val unfinishedFibers: ReusableLatch
     )
 
@@ -369,7 +369,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 Event.Suspend(
                         ioRequest = ioRequest,
                         maySkipCheckpoint = skipPersistingCheckpoint,
-                        fiber = this.serialize(context = serializationContext.value)
+                        fiber = this.checkpointSerialize(context = serializationContext.value)
                 )
             } catch (throwable: Throwable) {
                 Event.Error(throwable)

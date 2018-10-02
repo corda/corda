@@ -11,6 +11,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
+import net.corda.node.VersionInfo
 import net.corda.node.utilities.registration.cacheControl
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NetworkMap
@@ -23,7 +24,7 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util.*
 
-class NetworkMapClient(compatibilityZoneURL: URL) {
+class NetworkMapClient(compatibilityZoneURL: URL, private val versionInfo: VersionInfo) {
     companion object {
         private val logger = contextLogger()
     }
@@ -38,14 +39,18 @@ class NetworkMapClient(compatibilityZoneURL: URL) {
     fun publish(signedNodeInfo: SignedNodeInfo) {
         val publishURL = URL("$networkMapUrl/publish")
         logger.trace { "Publishing NodeInfo to $publishURL." }
-        publishURL.post(signedNodeInfo.serialize())
+        publishURL.post(signedNodeInfo.serialize(),
+                "Platform-Version" to "${versionInfo.platformVersion}",
+                "Client-Version" to versionInfo.releaseVersion)
         logger.trace { "Published NodeInfo to $publishURL successfully." }
     }
 
     fun ackNetworkParametersUpdate(signedParametersHash: SignedData<SecureHash>) {
         val ackURL = URL("$networkMapUrl/ack-parameters")
         logger.trace { "Sending network parameters with hash ${signedParametersHash.raw.deserialize()} approval to $ackURL." }
-        ackURL.post(signedParametersHash.serialize())
+        ackURL.post(signedParametersHash.serialize(),
+                "Platform-Version" to "${versionInfo.platformVersion}",
+                "Client-Version" to versionInfo.releaseVersion)
         logger.trace { "Sent network parameters approval to $ackURL successfully." }
     }
 

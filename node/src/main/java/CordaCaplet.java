@@ -21,16 +21,8 @@ public class CordaCaplet extends Capsule {
 
     private Config parseConfigFile(List<String> args) {
         String baseDirOption = getOption(args, "--base-directory");
-        // Ensure consistent behaviour with NodeArgsParser.kt, see CORDA-1598.
-        if (null == baseDirOption || baseDirOption.isEmpty()) {
-            baseDirOption = getOption(args, "-base-directory");
-        }
         this.baseDir = Paths.get((baseDirOption == null) ? "." : baseDirOption).toAbsolutePath().normalize().toString();
         String config = getOption(args, "--config-file");
-        // Same as for baseDirOption.
-        if (null == config || config.isEmpty()) {
-            config = getOption(args, "-config-file");
-        }
         File configFile = (config == null) ? new File(baseDir, "node.conf") : new File(config);
         try {
             ConfigParseOptions parseOptions = ConfigParseOptions.defaults().setAllowMissing(false);
