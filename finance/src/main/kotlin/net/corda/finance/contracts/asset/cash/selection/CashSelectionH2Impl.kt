@@ -31,7 +31,7 @@ class CashSelectionH2Impl : AbstractCashSelection() {
     //          http://www.h2database.com/html/functions.html#set
     //       3) H2 does not support JOIN's in FOR UPDATE (hence we are forced to execute 2 queries)
     override fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean {
-        connection.createStatement().use { it.execute("CALL SET(@t, CAST(0 AS BIGINT));") }
+        connection.createStatement().execute("CALL SET(@t, CAST(0 AS BIGINT));")
 
         // state_status = 0 -> UNCONSUMED.
         // is_relevant = 0 -> RELEVANT.
