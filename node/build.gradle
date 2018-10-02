@@ -91,6 +91,9 @@ dependencies {
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
+    // For async logging
+    compile "com.lmax:disruptor:$disruptor_version"
+
     // JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
