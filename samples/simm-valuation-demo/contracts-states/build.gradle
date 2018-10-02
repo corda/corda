@@ -6,6 +6,7 @@ def shrinkJar = file("$buildDir/libs/${project.name}-${project.version}-tiny.jar
 cordapp {
     info {
         vendor = 'R3'
+        targetVersion = platform_version.toInteger()
     }
 }
 
