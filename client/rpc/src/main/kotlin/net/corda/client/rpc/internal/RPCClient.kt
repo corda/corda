@@ -6,6 +6,7 @@ import net.corda.client.rpc.RPCException
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.logElapsedTime
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.ClientRpcSslOptions
@@ -15,11 +16,11 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransportsFromList
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcInternalClientTcpTransport
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
+import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransportsFromList
+import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcInternalClientTcpTransport
+import net.corda.nodeapi.internal.config.SslConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -43,7 +44,7 @@ class RPCClient<I : RPCOps>(
 
     constructor(
             hostAndPort: NetworkHostAndPort,
-            sslConfiguration: SSLConfiguration,
+            sslConfiguration: SslConfiguration,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
     ) : this(rpcInternalClientTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
@@ -65,7 +66,8 @@ class RPCClient<I : RPCOps>(
             username: String,
             password: String,
             externalTrace: Trace? = null,
-            impersonatedActor: Actor? = null
+            impersonatedActor: Actor? = null,
+            targetLegalIdentity: CordaX500Name? = null
     ): RPCConnection<I> {
         return log.logElapsedTime("Startup") {
             val clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.${random63BitValue()}")
@@ -85,7 +87,8 @@ class RPCClient<I : RPCOps>(
                 isUseGlobalPools = nodeSerializationEnv != null
             }
             val sessionId = Trace.SessionId.newInstance()
-            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress, rpcOpsClass, serializationContext, sessionId, externalTrace, impersonatedActor)
+            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress,
+                    rpcOpsClass, serializationContext, sessionId, externalTrace, impersonatedActor, targetLegalIdentity)
             try {
                 proxyHandler.start()
                 val ops: I = uncheckedCast(Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler))

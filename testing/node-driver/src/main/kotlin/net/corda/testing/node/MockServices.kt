@@ -18,6 +18,7 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.configureDatabase
@@ -27,6 +28,7 @@ import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
+import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
@@ -69,10 +71,10 @@ open class MockServices private constructor(
 
     companion object {
 
-        private fun cordappLoaderForPackages(packages: Iterable<String>): CordappLoader {
+        private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): CordappLoader {
 
             val cordappPaths = TestCordappDirectories.forPackages(packages)
-            return JarScanningCordappLoader.fromDirectories(cordappPaths)
+            return JarScanningCordappLoader.fromDirectories(cordappPaths, versionInfo)
         }
 
         /**

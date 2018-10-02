@@ -9,6 +9,10 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.toFuture
 import net.corda.core.utilities.getOrThrow
+import net.corda.docs.kotlin.SubmitCompletionFlow
+import net.corda.docs.kotlin.SubmitTradeApprovalFlow
+import net.corda.docs.kotlin.TradeApprovalContract
+import net.corda.docs.kotlin.WorkflowState
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.MockNetwork

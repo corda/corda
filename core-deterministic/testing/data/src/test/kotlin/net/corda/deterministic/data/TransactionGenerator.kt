@@ -7,9 +7,9 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.serialization.serialize
-import net.corda.deterministic.common.MockContractAttachment
-import net.corda.deterministic.common.SampleCommandData
-import net.corda.deterministic.common.TransactionVerificationRequest
+import net.corda.deterministic.verifier.MockContractAttachment
+import net.corda.deterministic.verifier.SampleCommandData
+import net.corda.deterministic.verifier.TransactionVerificationRequest
 import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash.*

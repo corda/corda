@@ -47,22 +47,27 @@ Command-line options
 ~~~~~~~~~~~~~~~~~~~~
 The node can optionally be started with the following command-line options:
 
-* ``--base-directory``: The node working directory where all the files are kept (default: ``.``)
+* ``--base-directory``, ``-b``: The node working directory where all the files are kept (default: ``.``).
 * ``--bootstrap-raft-cluster``: Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer 
-  addresses), acting as a seed for other nodes to join the cluster
-* ``--config-file``: The path to the config file (default: ``node.conf``)                          
-* ``--help``
-* ``--initial-registration``: Start initial node registration with Corda network to obtain certificate from the permissioning 
-  server      
-* ``--just-generate-node-info``: Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then 
-  quit          
-* ``--log-to-console``: If set, prints logging to the console as well as to a file
-* ``--logging-level <[ERROR,WARN,INFO, DEBUG,TRACE]>``: Enable logging at this level and higher (default: INFO)
-* ``--network-root-truststore``: Network root trust store obtained from network operator
-* ``--network-root-truststore-password``: Network root trust store password obtained from network operator
-* ``--no-local-shell``: Do not start the embedded shell locally
-* ``--sshd``: Enables SSHD server for node administration
-* ``--version``: Print the version and exit
+  addresses), acting as a seed for other nodes to join the cluster.
+* ``--clear-network-map-cache``, ``-c``: Clears local copy of network map, on node startup it will be restored from server or file system.
+* ``--config-file``, ``-f``: The path to the config file. Defaults to ``node.conf``.
+* ``--dev-mode``, ``-d``: Runs the node in developer mode. Unsafe in production. Defaults to true on MacOS and desktop versions of Windows. False otherwise.
+* ``--initial-registration``: Start initial node registration with the compatibility zone to obtain a certificate from the Doorman.
+* ``--just-generate-node-info``: Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then
+  quit.
+* ``--just-generate-rpc-ssl-settings``: Generate the ssl keystore and truststore for a secure RPC connection.
+* ``--network-root-truststore``, ``-t``: Network root trust store obtained from network operator.
+* ``--network-root-truststore-password``, ``-p``: Network root trust store password obtained from network operator.
+* ``--no-local-shell``, ``-n``: Do not start the embedded shell locally.
+* ``--on-unknown-config-keys <[FAIL,WARN,INFO]>``: How to behave on unknown node configuration. Defaults to FAIL.
+* ``--sshd``: Enables SSH server for node administration.
+* ``--sshd-port``: Sets the port for the SSH server. If not supplied and SSH server is enabled, the port defaults to 2222.
+* ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
+* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
+* ``--install-shell-extensions``: Install ``corda`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
+* ``--help``, ``-h``: Show this help message and exit.
+* ``--version``, ``-V``: Print version information and exit.
 
 .. _enabling-remote-debugging:
 

@@ -54,7 +54,6 @@ abstract class ContainerService(
             log.info("Container $id info: $info")
 
             client.startContainer(id)
-
             true
         } catch (e: Exception) {
             id = null
@@ -79,9 +78,7 @@ abstract class ContainerService(
     override fun checkPrerequisites() {
         if (!client.listImages().any { true == it.repoTags()?.contains(imageReference) }) {
             log.info("Pulling image $imageReference ...")
-            client.pull(imageReference, { _ ->
-                run { }
-            })
+            client.pull(imageReference) { }
             log.info("Image $imageReference downloaded")
         }
     }

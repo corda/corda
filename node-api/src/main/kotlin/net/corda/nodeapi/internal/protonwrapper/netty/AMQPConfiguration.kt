@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.config.CertificateStore
 import java.security.KeyStore
 
 interface AMQPConfiguration {
@@ -21,19 +22,14 @@ interface AMQPConfiguration {
         get() = ArtemisMessagingComponent.PEER_USER
 
     /**
-     * The keystore used for TLS connections
+     * The key store used for TLS connections
      */
-    val keyStore: KeyStore
+    val keyStore: CertificateStore
 
     /**
-     * Password used to unlock TLS private keys in the KeyStore.
+     * The trust root key store to validate the peer certificates against
      */
-    val keyStorePrivateKeyPassword: CharArray
-
-    /**
-     * The trust root KeyStore to validate the peer certificates against
-     */
-    val trustStore: KeyStore
+    val trustStore: CertificateStore
 
     /**
      * Setting crlCheckSoftFail to true allows certificate paths where some leaf certificates do not contain cRLDistributionPoints

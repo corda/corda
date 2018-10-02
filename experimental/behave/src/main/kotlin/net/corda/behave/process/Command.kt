@@ -4,7 +4,7 @@ import net.corda.behave.await
 import net.corda.behave.file.currentDirectory
 import net.corda.behave.process.output.OutputListener
 import net.corda.behave.waitFor
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import rx.Observable
@@ -20,8 +20,10 @@ open class Command(
         private val directory: Path = currentDirectory,
         private val timeout: Duration = 2.minutes
 ): Closeable {
-
-    protected val log = loggerFor<Command>()
+    companion object {
+        private val WAIT_BEFORE_KILL: Duration = 5.seconds
+        private val log = contextLogger()
+    }
 
     private val terminationLatch = CountDownLatch(1)
 
@@ -36,21 +38,16 @@ open class Command(
     var exitCode = -1
         private set
 
-    val output: Observable<String> = Observable.create<String>({ emitter ->
+    val output: Observable<String> = Observable.create<String> { emitter ->
         outputListener = object : OutputListener {
-            override fun onNewLine(line: String) {
-                emitter.onNext(line)
-            }
-
-            override fun onEndOfStream() {
-                emitter.onCompleted()
-            }
+            override fun onNewLine(line: String) = emitter.onNext(line)
+            override fun onEndOfStream() = emitter.onCompleted()
         }
-    }).share()
+    }.share()
 
     private val thread = Thread(Runnable {
         try {
-            log.info("Command: $command")
+            log.info("Executing command: $command from directory: $directory")
             val processBuilder = ProcessBuilder(command)
                     .directory(directory.toFile())
                     .redirectErrorStream(true)
@@ -132,12 +129,13 @@ open class Command(
     }
 
     override fun close() {
+        if (process?.isAlive == true) {
+            kill()
+        }
         waitFor()
     }
 
-    fun run() = use { _ -> }
-
-    fun use(action: (Command) -> Unit): Int {
+    fun run(action: (Command) -> Unit = { }): Int {
         use {
             start()
             action(this)
@@ -145,8 +143,8 @@ open class Command(
         return exitCode
     }
 
-    fun use(subscriber: Subscriber<String>, action: (Command, Observable<String>) -> Unit = { _, _ -> }): Int {
-        use {
+    fun run(subscriber: Subscriber<String>, action: (Command, Observable<String>) -> Unit = { _, _ -> }): Int {
+        run {
             output.subscribe(subscriber)
             start()
             action(this, output)
@@ -155,11 +153,4 @@ open class Command(
     }
 
     override fun toString() = "Command(${command.joinToString(" ")})"
-
-    companion object {
-
-        private val WAIT_BEFORE_KILL: Duration = 5.seconds
-
-    }
-
 }

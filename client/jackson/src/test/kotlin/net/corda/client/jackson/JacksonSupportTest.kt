@@ -197,7 +197,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     fun DigitalSignatureWithCert() {
         val digitalSignature = DigitalSignatureWithCert(MINI_CORP.identity.certificate, secureRandomBytes(128))
         val json = mapper.valueToTree<ObjectNode>(digitalSignature)
-        val (by, bytes) = json.assertHasOnlyFields("by", "bytes")
+        val (by, bytes) = json.assertHasOnlyFields("by", "bytes", "parentCertsChain")
         assertThat(by.valueAs<X509Certificate>(mapper)).isEqualTo(MINI_CORP.identity.certificate)
         assertThat(bytes.binaryValue()).isEqualTo(digitalSignature.bytes)
         assertThat(mapper.convertValue<DigitalSignatureWithCert>(json)).isEqualTo(digitalSignature)
@@ -610,7 +610,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(json["serialNumber"].bigIntegerValue()).isEqualTo(cert.serialNumber)
         assertThat(json["issuer"].valueAs<X500Principal>(mapper)).isEqualTo(cert.issuerX500Principal)
         assertThat(json["subject"].valueAs<X500Principal>(mapper)).isEqualTo(cert.subjectX500Principal)
-        assertThat(json["publicKey"].valueAs<PublicKey>(mapper)).isEqualTo(cert.publicKey)
+        // cert.publicKey should be converted to a supported format (this is required because [Certificate] returns keys as SUN EC keys, not BC).
+        assertThat(json["publicKey"].valueAs<PublicKey>(mapper)).isEqualTo(Crypto.toSupportedPublicKey(cert.publicKey))
         assertThat(json["notAfter"].valueAs<Date>(mapper)).isEqualTo(cert.notAfter)
         assertThat(json["notBefore"].valueAs<Date>(mapper)).isEqualTo(cert.notBefore)
         assertThat(json["encoded"].binaryValue()).isEqualTo(cert.encoded)

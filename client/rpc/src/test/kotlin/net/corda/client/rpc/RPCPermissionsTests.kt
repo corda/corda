@@ -25,7 +25,7 @@ class RPCPermissionsTests : AbstractRPCTest() {
     }
 
     class TestOpsImpl : TestOps {
-        override val protocolVersion = 1
+        override val protocolVersion = 1000
         override fun validatePermission(method: String, target: String?) {
             val authorized = if (target == null) {
                 rpcContext().isPermitted(method)

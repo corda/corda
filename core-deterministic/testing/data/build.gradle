@@ -8,7 +8,7 @@ dependencies {
     testCompile project(':core')
     testCompile project(':finance')
     testCompile project(':node-driver')
-    testCompile project(':core-deterministic:testing:common')
+    testCompile project(path: ':core-deterministic:testing:verifier', configuration: 'runtimeArtifacts')
 
     testCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     testCompile "org.jetbrains.kotlin:kotlin-reflect"

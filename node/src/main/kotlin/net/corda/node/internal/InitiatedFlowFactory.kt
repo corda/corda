@@ -12,4 +12,3 @@ sealed class InitiatedFlowFactory<out F : FlowLogic<*>> {
                                              val appName: String,
                                              override val factory: (FlowSession) -> F) : InitiatedFlowFactory<F>()
 }
-

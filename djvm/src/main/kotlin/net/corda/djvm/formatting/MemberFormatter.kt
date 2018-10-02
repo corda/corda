@@ -53,7 +53,7 @@ class MemberFormatter(
      * Check whether or not a signature is for a method.
      */
     fun isMethod(abbreviatedSignature: String): Boolean {
-        return abbreviatedSignature.startsWith("(")
+        return abbreviatedSignature.startsWith('(')
     }
 
     /**

@@ -57,7 +57,7 @@ Classes get onto the whitelist via one of three mechanisms:
 The annotation is the preferred method for whitelisting.  An example is shown in :doc:`tutorial-clientrpc-api`.
 It's reproduced here as an example of both ways you can do this for a couple of example classes.
 
-.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcTutorial.kt
+.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/ClientRpcTutorial.kt
     :language: kotlin
     :start-after: START 7
     :end-before: END 7

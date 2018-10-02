@@ -12,5 +12,6 @@ interface MemberInformation {
     val className: String
     val memberName: String
     val signature: String
+    @JvmDefault
     val reference: String get() = "$className.$memberName:$signature"
 }

@@ -3,7 +3,7 @@ package net.corda.deterministic.crypto
 import net.corda.core.crypto.*
 import net.corda.deterministic.KeyStoreProvider
 import net.corda.deterministic.CheatingSecurityProvider
-import net.corda.deterministic.common.LocalSerializationRule
+import net.corda.deterministic.verifier.LocalSerializationRule
 import org.junit.*
 import org.junit.rules.RuleChain
 import java.security.*

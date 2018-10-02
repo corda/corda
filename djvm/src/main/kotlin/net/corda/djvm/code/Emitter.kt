@@ -20,6 +20,7 @@ interface Emitter {
     /**
      * Indication of whether or not the emitter performs instrumentation for tracing inside the sandbox.
      */
+    @JvmDefault
     val isTracer: Boolean
         get() = false
 

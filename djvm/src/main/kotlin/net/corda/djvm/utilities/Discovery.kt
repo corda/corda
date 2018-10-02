@@ -7,6 +7,7 @@ import java.lang.reflect.Modifier
  * Find and instantiate types that implement a certain interface.
  */
 object Discovery {
+    const val FORBIDDEN_CLASS_MASK = (Modifier.STATIC or Modifier.ABSTRACT)
 
     /**
      * Get an instance of each concrete class that implements interface or class [T].
@@ -15,7 +16,7 @@ object Discovery {
         val instances = mutableListOf<T>()
         FastClasspathScanner("net/corda/djvm")
                 .matchClassesImplementing(T::class.java) { clazz ->
-                    if (!Modifier.isAbstract(clazz.modifiers) && !Modifier.isStatic(clazz.modifiers)) {
+                    if (clazz.modifiers and FORBIDDEN_CLASS_MASK == 0) {
                         try {
                             instances.add(clazz.newInstance())
                         } catch (exception: Throwable) {

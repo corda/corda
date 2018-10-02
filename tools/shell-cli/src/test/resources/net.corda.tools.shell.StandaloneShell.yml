@@ -1,0 +1,119 @@
+- commandName: "<main class>"
+  positionalParams: []
+  params:
+  - parameterName: "--commands-directory"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "--config-file"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "--cordapp-directory"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "--host"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--install-shell-extensions"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--log-to-console"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--logging-level"
+    parameterType: "org.slf4j.event.Level"
+    required: false
+    multiParam: false
+    acceptableValues:
+    - "ERROR"
+    - "WARN"
+    - "INFO"
+    - "DEBUG"
+    - "TRACE"
+  - parameterName: "--password"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--port"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--sshd-hostkey-directory"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "--sshd-port"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--truststore-file"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "--truststore-password"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--truststore-type"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--user"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--verbose"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "-a"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "-c"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "-f"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "-o"
+    parameterType: "java.nio.file.Path"
+    required: false
+    multiParam: true
+    acceptableValues: []
+  - parameterName: "-p"
+    parameterType: "java.lang.String"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "-v"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+

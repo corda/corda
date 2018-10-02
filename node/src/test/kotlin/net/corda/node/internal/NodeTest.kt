@@ -58,12 +58,9 @@ class NodeTest {
     @Test
     fun `generateAndSaveNodeInfo works`() {
         val configuration = createConfig(ALICE_NAME)
-        val platformVersion = 789
+        val info = VersionInfo(789, "3.0", "SNAPSHOT", "R3")
         configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
-            val versionInfo = rigorousMock<VersionInfo>().also {
-                doReturn(platformVersion).whenever(it).platformVersion
-            }
-            val node = Node(configuration, versionInfo, initialiseSerialization = false)
+            val node = Node(configuration, info, initialiseSerialization = false)
             assertEquals(node.generateNodeInfo(), node.generateNodeInfo())  // Node info doesn't change (including the serial)
         }
     }
@@ -87,9 +84,8 @@ class NodeTest {
                 // Save some NodeInfo
                 session.save(persistentNodeInfo)
             }
-            val node = Node(configuration, rigorousMock<VersionInfo>().also {
-                doReturn(10).whenever(it).platformVersion
-            }, initialiseSerialization = false)
+            val versionInfo = VersionInfo(10, "3.0", "SNAPSHOT", "R3")
+            val node = Node(configuration, versionInfo, initialiseSerialization = false)
             assertThat(getAllInfos(it)).isNotEmpty
             node.clearNetworkMapCache()
             assertThat(getAllInfos(it)).isEmpty()
@@ -97,7 +93,7 @@ class NodeTest {
     }
 
     @Test
-    fun `Node can start with multiple keypairs for it's identity`() {
+    fun `Node can start with multiple keypairs for its identity`() {
         val configuration = createConfig(ALICE_NAME)
         val (nodeInfo1, _) = createNodeInfoAndSigned(ALICE_NAME)
         val (nodeInfo2, _) = createNodeInfoAndSigned(ALICE_NAME)
@@ -135,6 +131,8 @@ class NodeTest {
 
             val node = Node(configuration, rigorousMock<VersionInfo>().also {
                 doReturn(10).whenever(it).platformVersion
+                doReturn("test-vendor").whenever(it).vendor
+                doReturn("1.0").whenever(it).releaseVersion
             }, initialiseSerialization = false)
 
             //this throws an exception with old behaviour

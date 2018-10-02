@@ -77,7 +77,7 @@ A state is a class that stores data that is checked by the contract. A commercia
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/contract/TutorialContract.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/contract/TutorialContract.kt
         :language: kotlin
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
@@ -129,7 +129,7 @@ Let's define a few commands now:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/contract/TutorialContract.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/contract/TutorialContract.kt
         :language: kotlin
         :start-after: DOCSTART 2
         :end-before: DOCEND 2
@@ -160,7 +160,7 @@ run two contracts one time each: Cash and CommercialPaper.
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/contract/TutorialContract.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/contract/TutorialContract.kt
         :language: kotlin
         :start-after: DOCSTART 3
         :end-before: DOCEND 3
@@ -285,7 +285,7 @@ logic.
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/contract/TutorialContract.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/contract/TutorialContract.kt
         :language: kotlin
         :start-after: DOCSTART 4
         :end-before: DOCEND 4
@@ -404,7 +404,7 @@ a method to wrap up the issuance process:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/contract/TutorialContract.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/contract/TutorialContract.kt
         :language: kotlin
         :start-after: DOCSTART 5
         :end-before: DOCEND 5
@@ -430,7 +430,7 @@ defined inside the contract itself
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/contract/TutorialContract.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/contract/TutorialContract.kt
         :language: kotlin
         :start-after: DOCSTART 8
         :end-before: DOCEND 8
@@ -464,7 +464,7 @@ What about moving the paper, i.e. reassigning ownership to someone else?
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/contract/TutorialContract.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/contract/TutorialContract.kt
         :language: kotlin
         :start-after: DOCSTART 6
         :end-before: DOCEND 6
@@ -487,7 +487,7 @@ Finally, we can do redemption.
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/contract/TutorialContract.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/contract/TutorialContract.kt
         :language: kotlin
         :start-after: DOCSTART 7
         :end-before: DOCEND 7

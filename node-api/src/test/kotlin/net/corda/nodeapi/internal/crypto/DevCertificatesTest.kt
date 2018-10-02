@@ -1,8 +1,7 @@
 package net.corda.nodeapi.internal.crypto
 
 import net.corda.core.internal.validate
-import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_FILE
-import net.corda.nodeapi.internal.DEV_CA_TRUST_STORE_PASS
+import net.corda.nodeapi.internal.loadDevCaTrustStore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -22,8 +21,8 @@ class DevCertificatesTest {
     @Test
     fun `create server certificate in keystore for SSL`() {
         // given
-        val newTrustStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/$DEV_CA_TRUST_STORE_FILE"), DEV_CA_TRUST_STORE_PASS)
-        val newTrustRoot = newTrustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA)
+        val newTrustStore = loadDevCaTrustStore()
+        val newTrustRoot = newTrustStore[X509Utilities.CORDA_ROOT_CA]
         val newTrustAnchor = TrustAnchor(newTrustRoot, null)
 
         val oldNodeCaKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("regression-test/$OLD_NODE_DEV_KEYSTORE_FILE_NAME"), OLD_DEV_KEYSTORE_PASS)
