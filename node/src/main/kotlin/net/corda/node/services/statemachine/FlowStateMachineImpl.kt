@@ -218,7 +218,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = true)
             Try.Success(result)
         } catch (throwable: Throwable) {
-            logger.info("Flow threw exception... sending to flow hospital", throwable)
+            logger.info("Flow threw exception... sending it to flow hospital", throwable)
             Try.Failure<R>(throwable)
         }
         val softLocksId = if (hasSoftLockedStates) logic.runId.uuid else null

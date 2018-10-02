@@ -217,7 +217,11 @@ class StaffedFlowHospital {
      */
     object FinalityDoctor : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: MedicalHistory): Diagnosis {
-            return if (currentState.flowLogic is FinalityHandler) Diagnosis.OVERNIGHT_OBSERVATION else Diagnosis.NOT_MY_SPECIALTY
+            return (currentState.flowLogic as? FinalityHandler)?.let { logic -> Diagnosis.OVERNIGHT_OBSERVATION.also { warn(logic, flowFiber, currentState) } } ?: Diagnosis.NOT_MY_SPECIALTY
+        }
+
+        private fun warn(flowLogic: FinalityHandler, flowFiber: FlowFiber, currentState: StateMachineState) {
+            log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention might be needed, for no retrying will be performed until the node is restarted. State machine state: $currentState, initiating party was: ${flowLogic.sender().name}")
         }
     }
 }
