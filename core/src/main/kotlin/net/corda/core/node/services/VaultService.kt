@@ -201,7 +201,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             val lockId: String?,
             val lockUpdateTime: Instant?,
             val relevancyStatus: Vault.RelevancyStatus? = null,
-            val constraintInfo: ConstraintInfo = ConstraintInfo(AlwaysAcceptAttachmentConstraint)
+            val constraintInfo: ConstraintInfo? = null
     ) {
         fun copy(
                 ref: StateRef = this.ref,
