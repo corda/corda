@@ -163,6 +163,7 @@ internal constructor(private val initSerEnv: Boolean,
 
     /** Entry point for the tool */
     fun bootstrap(directory: Path, copyCordapps: Boolean, minimumPlatformVersion: Int) {
+        require(minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
         // Don't accidently include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
         val cordappJars = directory.list { paths ->
