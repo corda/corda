@@ -16,22 +16,18 @@ import rx.Subscription
 
 class SimpleMessageFilterService(val conf: FirewallConfiguration,
                                  val auditService: FirewallAuditService,
-                                 val artemisConnectionService: BridgeArtemisConnectionService,
-                                 val bridgeSenderService: BridgeSenderService,
+                                 private val artemisConnectionService: BridgeArtemisConnectionService,
+                                 private val bridgeSenderService: BridgeSenderService,
                                  private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : IncomingMessageFilterService, ServiceStateSupport by stateHelper {
     companion object {
         val log = contextLogger()
     }
 
-    private val statusFollower: ServiceStateCombiner
+    private val statusFollower = ServiceStateCombiner(listOf(auditService, artemisConnectionService, bridgeSenderService))
     private var statusSubscriber: Subscription? = null
     private val whiteListedAMQPHeaders: Set<String> = conf.whitelistedHeaders.toSet()
     private var inboundSession: ClientSession? = null
     private var inboundProducer: ClientProducer? = null
-
-    init {
-        statusFollower = ServiceStateCombiner(listOf(auditService, artemisConnectionService, bridgeSenderService))
-    }
 
     override fun start() {
         statusSubscriber = statusFollower.activeChange.subscribe({
@@ -67,7 +63,7 @@ class SimpleMessageFilterService(val conf: FirewallConfiguration,
         } catch (ex: IllegalArgumentException) {
             throw SecurityException("Invalid Legal Name ${inboundMessage.sourceLegalName}")
         }
-        require(inboundMessage.payload.size > 0) { "No valid payload" }
+        require(inboundMessage.payload.isNotEmpty()) { "No valid payload" }
         val validInboxTopic = bridgeSenderService.validateReceiveTopic(inboundMessage.topic, sourceLegalName)
         require(validInboxTopic) { "Topic not a legitimate Inbox for a node on this Artemis Broker ${inboundMessage.topic}" }
         require(inboundMessage.applicationProperties.keys.all { it in whiteListedAMQPHeaders }) { "Disallowed header present in ${inboundMessage.applicationProperties.keys}" }
@@ -77,7 +73,7 @@ class SimpleMessageFilterService(val conf: FirewallConfiguration,
         try {
             validateMessage(inboundMessage)
         } catch (ex: Exception) {
-            auditService.packetDropEvent(inboundMessage, "Packet Failed validation checks: " + ex.message)
+            auditService.packetDropEvent(inboundMessage, "Packet Failed validation checks: " + ex.message, RoutingDirection.INBOUND)
             inboundMessage.complete(true) // consume the bad message, so that it isn't redelivered forever.
             return
         }
@@ -95,8 +91,8 @@ class SimpleMessageFilterService(val conf: FirewallConfiguration,
             }
             artemisMessage.putStringProperty(P2PMessagingHeaders.bridgedCertificateSubject, SimpleString(inboundMessage.sourceLegalName))
             artemisMessage.writeBodyBufferBytes(inboundMessage.payload)
-            producer.send(SimpleString(inboundMessage.topic), artemisMessage, { _ -> inboundMessage.complete(true) })
-            auditService.packetAcceptedEvent(inboundMessage)
+            producer.send(SimpleString(inboundMessage.topic), artemisMessage) { _ -> inboundMessage.complete(true) }
+            auditService.packetAcceptedEvent(inboundMessage, RoutingDirection.INBOUND)
         } catch (ex: Exception) {
             log.error("Error trying to forward message", ex)
             inboundMessage.complete(false) // delivery failure. NAK back to source and await re-delivery attempts

@@ -45,6 +45,8 @@ data class FloatOuterConfigurationImpl(override val floatAddress: NetworkHostAnd
 
 data class BridgeHAConfigImpl(override val haConnectionString: String, override val haPriority: Int = 10, override val haTopic: String = "/bridge/ha") : BridgeHAConfig
 
+data class AuditServiceConfigurationImpl(override val loggingIntervalSec: Long) : AuditServiceConfiguration
+
 data class FirewallConfigurationImpl(
         override val baseDirectory: Path,
         private val certificatesDirectory: Path = baseDirectory / "certificates",
@@ -65,7 +67,8 @@ data class FirewallConfigurationImpl(
         override val artemisReconnectionIntervalMax: Int = 60000,
         override val politeShutdownPeriod: Int = 1000,
         override val p2pConfirmationWindowSize: Int = 1048576,
-        override val whitelistedHeaders: List<String> = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList()
+        override val whitelistedHeaders: List<String> = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList(),
+        override val auditServiceConfiguration: AuditServiceConfigurationImpl
 ) : FirewallConfiguration {
     init {
         if (firewallMode == FirewallMode.SenderReceiver) {

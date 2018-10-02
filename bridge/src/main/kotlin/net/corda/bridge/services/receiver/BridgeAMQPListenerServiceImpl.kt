@@ -1,9 +1,6 @@
 package net.corda.bridge.services.receiver
 
-import net.corda.bridge.services.api.BridgeAMQPListenerService
-import net.corda.bridge.services.api.FirewallAuditService
-import net.corda.bridge.services.api.FirewallConfiguration
-import net.corda.bridge.services.api.ServiceStateSupport
+import net.corda.bridge.services.api.*
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
@@ -67,11 +64,11 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
         onConnectSubscription = server.onConnection.subscribe(_onConnection)
         onConnectAuditSubscription = server.onConnection.subscribe({
             if (it.connected) {
-                auditService.successfulConnectionEvent(true, it.remoteAddress, it.remoteCert?.subjectDN?.name
-                        ?: "", "Successful AMQP inbound connection")
+                auditService.successfulConnectionEvent(it.remoteAddress, it.remoteCert?.subjectDN?.name
+                        ?: "", "Successful AMQP inbound connection", RoutingDirection.INBOUND)
             } else {
-                auditService.failedConnectionEvent(true, it.remoteAddress, it.remoteCert?.subjectDN?.name
-                        ?: "", "Failed AMQP inbound connection")
+                auditService.failedConnectionEvent(it.remoteAddress, it.remoteCert?.subjectDN?.name
+                        ?: "", "Failed AMQP inbound connection", RoutingDirection.INBOUND)
             }
         }, { log.error("Connection event error", it) })
         onReceiveSubscription = server.onReceive.subscribe(_onReceive)

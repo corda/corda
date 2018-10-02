@@ -1,6 +1,6 @@
 package net.corda.bridge.services.api
 
-import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
+import net.corda.nodeapi.internal.protonwrapper.messages.ApplicationMessage
 import java.net.InetSocketAddress
 
 /**
@@ -9,9 +9,17 @@ import java.net.InetSocketAddress
  * security data to an enterprise service.
  */
 interface FirewallAuditService : ServiceLifecycleSupport {
-    fun successfulConnectionEvent(inbound: Boolean, sourceIP: InetSocketAddress, certificateSubject: String, msg: String)
-    fun failedConnectionEvent(inbound: Boolean, sourceIP: InetSocketAddress?, certificateSubject: String?, msg: String)
-    fun packetDropEvent(packet: ReceivedMessage?, msg: String)
-    fun packetAcceptedEvent(packet: ReceivedMessage)
+    fun successfulConnectionEvent(address: InetSocketAddress, certificateSubject: String, msg: String, direction: RoutingDirection)
+    fun failedConnectionEvent(address: InetSocketAddress, certificateSubject: String?, msg: String, direction: RoutingDirection)
+    fun packetDropEvent(packet: ApplicationMessage?, msg: String, direction: RoutingDirection)
+    fun packetAcceptedEvent(packet: ApplicationMessage, direction: RoutingDirection)
     fun statusChangeEvent(msg: String)
+}
+
+/**
+ * Specifies direction of message flow with regard to Corda Node connected to Firewall.
+ */
+enum class RoutingDirection {
+    INBOUND,
+    OUTGOING
 }

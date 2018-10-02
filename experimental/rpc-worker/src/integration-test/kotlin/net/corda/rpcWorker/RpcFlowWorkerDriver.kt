@@ -4,6 +4,7 @@ import net.corda.bridge.FirewallVersionInfo
 import net.corda.bridge.internal.FirewallInstance
 import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.bridge.services.api.FirewallMode
+import net.corda.bridge.services.config.AuditServiceConfigurationImpl
 import net.corda.bridge.services.config.BridgeInboundConfigurationImpl
 import net.corda.bridge.services.config.BridgeOutboundConfigurationImpl
 import net.corda.bridge.services.config.FirewallConfigurationImpl
@@ -201,7 +202,8 @@ data class RpcFlowWorkerDriverDSL(private val driverDSL: DriverDSLImpl) : Intern
         val bridgeConfig = FirewallConfigurationImpl(baseDirectory = baseDirectory, crlCheckSoftFail = true,
                 bridgeInnerConfig = null, keyStorePassword = "pass", trustStorePassword = "pass", firewallMode = FirewallMode.SenderReceiver,
                 networkParametersPath = baseDirectory, outboundConfig = BridgeOutboundConfigurationImpl(nodeConfig.messagingServerAddress!!, listOf(), null, null),
-                inboundConfig = BridgeInboundConfigurationImpl(bridgeListeningAddress, null), enableAMQPPacketTrace = false, floatOuterConfig = null, haConfig = null)
+                inboundConfig = BridgeInboundConfigurationImpl(bridgeListeningAddress, null), enableAMQPPacketTrace = false, floatOuterConfig = null, haConfig = null,
+                auditServiceConfiguration = AuditServiceConfigurationImpl(120))
 
         baseDirectory.createDirectories()
         // Write config (for reference)

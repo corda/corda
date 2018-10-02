@@ -1,5 +1,6 @@
 package net.corda.bridge
 
+import com.typesafe.config.ConfigException
 import net.corda.bridge.services.api.FirewallMode
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
@@ -119,5 +120,17 @@ class ConfigTest {
             createAndLoadConfigFromResource(tempFolder.root.toPath() / "bad", badConfigResource)
         }
 
+        assertEquals(60, config.auditServiceConfiguration.loggingIntervalSec)
+    }
+
+    @Test
+    fun `Load audit service config`() {
+        val configResource = "/net/corda/bridge/withaudit/firewall.conf"
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        assertEquals(34, config.auditServiceConfiguration.loggingIntervalSec)
+
+        assertFailsWith<ConfigException.WrongType> {
+            createAndLoadConfigFromResource(tempFolder.root.toPath() / "err1", "/net/corda/bridge/withaudit/badconfig/badInterval.conf")
+        }
     }
 }

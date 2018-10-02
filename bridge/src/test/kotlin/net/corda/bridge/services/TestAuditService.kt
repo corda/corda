@@ -1,7 +1,8 @@
 package net.corda.bridge.services
 
 import net.corda.bridge.services.api.FirewallAuditService
-import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
+import net.corda.bridge.services.api.RoutingDirection
+import net.corda.nodeapi.internal.protonwrapper.messages.ApplicationMessage
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.net.InetSocketAddress
@@ -22,22 +23,22 @@ class TestAuditService() : FirewallAuditService, TestServiceBase() {
     val onAuditEvent: Observable<AuditEvent>
         get() = _onAuditEvent
 
-    override fun successfulConnectionEvent(inbound: Boolean, sourceIP: InetSocketAddress, certificateSubject: String, msg: String) {
+    override fun successfulConnectionEvent(address: InetSocketAddress, certificateSubject: String, msg: String, direction: RoutingDirection) {
         ++eventCount
         _onAuditEvent.onNext(AuditEvent.SUCCESSFUL_CONNECTION)
     }
 
-    override fun failedConnectionEvent(inbound: Boolean, sourceIP: InetSocketAddress?, certificateSubject: String?, msg: String) {
+    override fun failedConnectionEvent(address: InetSocketAddress, certificateSubject: String?, msg: String, direction: RoutingDirection) {
         ++eventCount
         _onAuditEvent.onNext(AuditEvent.FAILED_CONNECTION)
     }
 
-    override fun packetDropEvent(packet: ReceivedMessage?, msg: String) {
+    override fun packetDropEvent(packet: ApplicationMessage?, msg: String, direction: RoutingDirection) {
         ++eventCount
         _onAuditEvent.onNext(AuditEvent.PACKET_DROP)
     }
 
-    override fun packetAcceptedEvent(packet: ReceivedMessage) {
+    override fun packetAcceptedEvent(packet: ApplicationMessage, direction: RoutingDirection) {
         ++eventCount
         _onAuditEvent.onNext(AuditEvent.PACKET_ACCEPT)
     }

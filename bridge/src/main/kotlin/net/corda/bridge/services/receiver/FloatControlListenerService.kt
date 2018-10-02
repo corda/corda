@@ -25,31 +25,25 @@ import kotlin.concurrent.withLock
 class FloatControlListenerService(val conf: FirewallConfiguration,
                                   val maximumMessageSize: Int,
                                   val auditService: FirewallAuditService,
-                                  val amqpListener: BridgeAMQPListenerService,
+                                  private val amqpListener: BridgeAMQPListenerService,
                                   private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : FloatControlService, ServiceStateSupport by stateHelper {
     companion object {
-        val log = contextLogger()
+        private val log = contextLogger()
     }
 
     private val lock = ReentrantLock()
-    private val statusFollower: ServiceStateCombiner
+    private val statusFollower = ServiceStateCombiner(listOf(auditService, amqpListener))
     private var statusSubscriber: Subscription? = null
     private var incomingMessageSubscriber: Subscription? = null
     private var connectSubscriber: Subscription? = null
     private var receiveSubscriber: Subscription? = null
     private var amqpControlServer: AMQPServer? = null
-    private val sslConfiguration: MutualSslConfiguration
+    private val sslConfiguration: MutualSslConfiguration = conf.floatOuterConfig?.customSSLConfiguration ?: conf.p2pSslOptions
     private val floatControlAddress = conf.floatOuterConfig!!.floatAddress
     private val floatClientName = conf.floatOuterConfig!!.expectedCertificateSubject
     private var activeConnectionInfo: ConnectionChange? = null
     private var forwardAddress: NetworkHostAndPort? = null
     private var forwardLegalName: String? = null
-
-    init {
-        statusFollower = ServiceStateCombiner(listOf(auditService, amqpListener))
-        sslConfiguration = conf.floatOuterConfig?.customSSLConfiguration ?: conf.p2pSslOptions
-    }
-
 
     override fun start() {
         statusSubscriber = statusFollower.activeChange.subscribe({
@@ -150,13 +144,13 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
 
     private fun onControlMessage(receivedMessage: ReceivedMessage) {
         if (!receivedMessage.checkTunnelControlTopic()) {
-            auditService.packetDropEvent(receivedMessage, "Invalid control topic packet received on topic ${receivedMessage.topic}!!")
+            auditService.packetDropEvent(receivedMessage, "Invalid control topic packet received on topic ${receivedMessage.topic}!!", RoutingDirection.INBOUND)
             receivedMessage.complete(true)
             return
         }
         val controlMessage = try {
             if (CordaX500Name.parse(receivedMessage.sourceLegalName) != floatClientName) {
-                auditService.packetDropEvent(receivedMessage, "Invalid control source legal name!!")
+                auditService.packetDropEvent(receivedMessage, "Invalid control source legal name!!", RoutingDirection.INBOUND)
                 receivedMessage.complete(true)
                 return
             }
@@ -208,7 +202,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
             return
         }
         if (!message.topic.startsWith(P2P_PREFIX)) {
-            auditService.packetDropEvent(message, "Message topic is not a valid peer namespace ${message.topic}")
+            auditService.packetDropEvent(message, "Message topic is not a valid peer namespace ${message.topic}", RoutingDirection.INBOUND)
             message.complete(true) // consume message so it isn't resent forever
             return
         }
@@ -228,6 +222,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
                     emptyMap())
             amqpForwardMessage.onComplete.then { message.complete(it.get() == MessageStatus.Acknowledged) }
             amqpControl.write(amqpForwardMessage)
+            auditService.packetAcceptedEvent(message, RoutingDirection.INBOUND)
         } catch (ex: Exception) {
             log.error("Failed to forward message", ex)
             message.complete(false)

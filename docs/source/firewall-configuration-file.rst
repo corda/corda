@@ -201,6 +201,10 @@ absolute path to the firewall's base directory.
         sets of ``bridges`` (e.g. in test environments).
         The default value is ``bridge/ha`` and would not normally need to be changed if the cluster is not shared.
 
+:auditServiceConfiguration: Both ``FloatOuter`` and ``BridgeInner`` components have an audit service which is currently outputting into the process log some traffic statistics.
+
+    :loggingIntervalSec: This is an integer value which controls how frequently, in seconds, statistics will be written into the logs.
+
 :artemisReconnectionIntervalMin: If connection to the local Artemis server fails the initial reconnection attempt will be
     after [artemisReconnectionIntervalMin] ms. The default interval is 5000 ms.
     Subsequent retries will take be exponentially backed off until they reach [artemisReconnectionIntervalMax] ms.

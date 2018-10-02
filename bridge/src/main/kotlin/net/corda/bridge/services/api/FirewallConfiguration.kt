@@ -85,6 +85,10 @@ interface FloatOuterConfiguration {
     val customSSLConfiguration: BridgeSSLConfiguration?
 }
 
+interface AuditServiceConfiguration {
+    val loggingIntervalSec: Long
+}
+
 interface FirewallConfiguration {
     val baseDirectory: Path
     val firewallMode: FirewallMode
@@ -112,4 +116,5 @@ interface FirewallConfiguration {
     val whitelistedHeaders: List<String>
     val crlCheckSoftFail: Boolean
     val p2pSslOptions: MutualSslConfiguration
+    val auditServiceConfiguration: AuditServiceConfiguration
 }

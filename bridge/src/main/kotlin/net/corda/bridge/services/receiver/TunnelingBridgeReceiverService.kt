@@ -29,29 +29,21 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
                                      val maximumMessageSize: Int,
                                      val auditService: FirewallAuditService,
                                      haService: BridgeMasterService,
-                                     val filterService: IncomingMessageFilterService,
+                                     private val filterService: IncomingMessageFilterService,
                                      private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeReceiverService, ServiceStateSupport by stateHelper {
     companion object {
-        val log = contextLogger()
+        private val log = contextLogger()
     }
 
-    private val statusFollower: ServiceStateCombiner
+    private val statusFollower = ServiceStateCombiner(listOf(auditService, haService, filterService))
     private var statusSubscriber: Subscription? = null
     private var connectSubscriber: Subscription? = null
     private var receiveSubscriber: Subscription? = null
     private var amqpControlClient: AMQPClient? = null
-    private val controlLinkSSLConfiguration: MutualSslConfiguration
-    private val floatListenerSSLConfiguration: MutualSslConfiguration
-    private val expectedCertificateSubject: CordaX500Name
+    private val controlLinkSSLConfiguration: MutualSslConfiguration = conf.bridgeInnerConfig?.customSSLConfiguration ?: conf.p2pSslOptions
+    private val floatListenerSSLConfiguration: MutualSslConfiguration = conf.bridgeInnerConfig?.customFloatOuterSSLConfiguration ?: conf.p2pSslOptions
+    private val expectedCertificateSubject: CordaX500Name = conf.bridgeInnerConfig!!.expectedCertificateSubject
     private val secureRandom: SecureRandom = newSecureRandom()
-
-    init {
-        statusFollower = ServiceStateCombiner(listOf(auditService, haService, filterService))
-        controlLinkSSLConfiguration = conf.bridgeInnerConfig?.customSSLConfiguration ?: conf.p2pSslOptions
-        floatListenerSSLConfiguration = conf.bridgeInnerConfig?.customFloatOuterSSLConfiguration ?: conf.p2pSslOptions
-        expectedCertificateSubject = conf.bridgeInnerConfig!!.expectedCertificateSubject
-    }
-
 
     override fun start() {
         statusSubscriber = statusFollower.activeChange.subscribe({
@@ -171,14 +163,14 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
 
     private fun onFloatMessage(receivedMessage: ReceivedMessage) {
         if (!receivedMessage.checkTunnelDataTopic()) {
-            auditService.packetDropEvent(receivedMessage, "Invalid float inbound topic received ${receivedMessage.topic}!!")
+            auditService.packetDropEvent(receivedMessage, "Invalid float inbound topic received ${receivedMessage.topic}!!", RoutingDirection.INBOUND)
             receivedMessage.complete(true)
             return
         }
         val innerMessage = try {
             receivedMessage.payload.deserialize<FloatDataPacket>()
         } catch (ex: Exception) {
-            auditService.packetDropEvent(receivedMessage, "Unable to decode Float Control message")
+            auditService.packetDropEvent(receivedMessage, "Unable to decode Float Control message", RoutingDirection.INBOUND)
             receivedMessage.complete(true)
             return
         }
