@@ -381,7 +381,11 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
             logger.info("Debug port: ${agentProperties.getProperty("sun.jdwp.listenerAddress")}")
         }
-        logger.info("Starting as node on ${conf.p2pAddress}")
+        var nodeStartedMessage = "Starting as node on ${conf.p2pAddress}"
+        if (conf.extraNetworkMapKeys.isNotEmpty()) {
+            nodeStartedMessage = "$nodeStartedMessage with additional Network Map keys ${conf.extraNetworkMapKeys.joinToString(prefix = "[", postfix = "]", separator = ", ")}"
+        }
+        logger.info(nodeStartedMessage)
     }
 
     protected open fun registerWithNetwork(conf: NodeConfiguration, versionInfo: VersionInfo, nodeRegistrationConfig: NodeRegistrationOption) {
