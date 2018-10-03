@@ -723,9 +723,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             val identitiesKeyStore = configuration.signingCertificateStore.get()
             val trustStore = configuration.p2pSslOptions.trustStore.get()
             AllCertificateStores(trustStore, sslKeyStore, identitiesKeyStore)
-        } catch (e: KeyStoreException) {
-            log.warn("At least one of the keystores or truststore passwords does not match configuration.")
-            null
         } catch (e: IOException) {
             log.error("IO exception while trying to validate keystores and truststore", e)
             null
@@ -736,11 +733,15 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private fun validateKeyStores(): X509Certificate {
         // Step 1. Check trustStore, sslKeyStore and identitiesKeyStore exist.
-        val certStores = requireNotNull(getCertificateStores()) {
-            "One or more keyStores (identity or TLS) or trustStore not found. " +
-                    "Please either copy your existing keys and certificates from another node, " +
-                    "or if you don't have one yet, fill out the config file and run corda.jar --initial-registration. " +
-                    "Read more at: https://docs.corda.net/permissioning.html"
+        val certStores = try {
+            requireNotNull(getCertificateStores()) {
+                "One or more keyStores (identity or TLS) or trustStore not found. " +
+                        "Please either copy your existing keys and certificates from another node, " +
+                        "or if you don't have one yet, fill out the config file and run corda.jar --initial-registration. " +
+                        "Read more at: https://docs.corda.net/permissioning.html"
+            }
+        } catch (e: KeyStoreException) {
+            throw IllegalArgumentException("At least one of the keystores or truststore passwords does not match configuration.")
         }
         // Step 2. Check that trustStore contains the correct key-alias entry.
         require(CORDA_ROOT_CA in certStores.trustStore) {
