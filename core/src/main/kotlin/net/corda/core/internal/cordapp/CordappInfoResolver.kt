@@ -1,5 +1,6 @@
 package net.corda.core.internal.cordapp
 
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.utilities.loggerFor
 import java.util.concurrent.ConcurrentHashMap
 
@@ -49,6 +50,7 @@ object CordappInfoResolver {
      * Temporarily switch out the internal resolver for another one. For use in testing.
      */
     @Synchronized
+    @VisibleForTesting
     fun withCordappInfoResolution(tempResolver: () -> CordappImpl.Info?, block: () -> Unit) {
         val resolver = cordappInfoResolver
         cordappInfoResolver = tempResolver
@@ -59,6 +61,7 @@ object CordappInfoResolver {
         }
     }
 
+    @VisibleForTesting
     internal fun clear() {
         cordappClasses.clear()
     }

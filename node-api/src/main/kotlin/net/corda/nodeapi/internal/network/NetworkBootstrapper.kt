@@ -34,6 +34,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.jar.JarInputStream
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
@@ -208,7 +209,7 @@ internal constructor(private val initSerEnv: Boolean,
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles, configs)
             println("Generating contract implementations whitelist")
-            val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.map(contractsJarConverter))
+            val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.filter { !isSigned(it) }.map(contractsJarConverter))
             val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs)
             if (newNetParams != existingNetParams) {
                 println("${if (existingNetParams == null) "New" else "Updated"} $newNetParams")
@@ -396,6 +397,12 @@ internal constructor(private val initSerEnv: Boolean,
 
         override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
             return magic == amqpMagic && target == SerializationContext.UseCase.P2P
+        }
+    }
+
+    private fun isSigned(file: Path): Boolean = file.read {
+        JarInputStream(it).use {
+            JarSignatureCollector.collectSigningParties(it).isNotEmpty()
         }
     }
 }
