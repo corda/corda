@@ -5,7 +5,7 @@ Networks
    :maxdepth: 1
 
    joining-a-network
-   setting-up-a-corda-network
+   corda-test-networks
    running-a-notary
    permissioning
    network-map
