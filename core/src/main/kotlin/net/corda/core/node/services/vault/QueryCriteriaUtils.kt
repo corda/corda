@@ -184,7 +184,8 @@ data class Sort(val columns: Collection<SortColumn>) : BaseSort() {
         STATE_STATUS("stateStatus"),
         RECORDED_TIME("recordedTime"),
         CONSUMED_TIME("consumedTime"),
-        LOCK_ID("lockId")
+        LOCK_ID("lockId"),
+        CONSTRAINT_TYPE("constraintType")
     }
 
     enum class LinearStateAttribute(val attributeName: String) : Attribute {

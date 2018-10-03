@@ -15,8 +15,12 @@ import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.Vault.ConstraintInfo.Companion.constraintInfo
 import net.corda.core.schemas.PersistentStateRef
+import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.*
 import net.corda.core.utilities.*
 import net.corda.node.services.api.SchemaService
@@ -150,6 +154,7 @@ class NodeVaultService(
                 // Adding a new column in the "VaultStates" table was considered the best approach.
                 val keys = stateOnly.participants.map { it.owningKey }
                 val isRelevant = isRelevant(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
+                val constraintInfo = Vault.ConstraintInfo(stateAndRef.value.state.constraint)
                 val stateToAdd = VaultSchemaV1.VaultStates(
                         notary = stateAndRef.value.state.notary,
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
@@ -157,7 +162,9 @@ class NodeVaultService(
                         lockId = uuid,
                         lockUpdateTime = if (uuid == null) null else now,
                         recordedTime = clock.instant(),
-                        relevancyStatus = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT
+                        relevancyStatus = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT,
+                        constraintType = constraintInfo.type(),
+                        constraintData = constraintInfo.data()
                 )
                 stateToAdd.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(stateToAdd)
@@ -562,7 +569,9 @@ class NodeVaultService(
                                     vaultState.notary,
                                     vaultState.lockId,
                                     vaultState.lockUpdateTime,
-                                    vaultState.relevancyStatus))
+                                    vaultState.relevancyStatus,
+                                    constraintInfo(vaultState.constraintType, vaultState.constraintData)
+                            ))
                         } else {
                             // TODO: improve typing of returned other results
                             log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
