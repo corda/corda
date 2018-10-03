@@ -349,7 +349,7 @@ internal constructor(private val initSerEnv: Boolean,
             whitelist: Map<String, List<AttachmentId>>,
             existingNetParams: NetworkParameters?,
             nodeDirs: List<Path>,
-            defaultMinimumPlatformVersion: Int
+            minimumPlatformVersion: Int
     ): NetworkParameters {
         // TODO Add config for minimumPlatformVersion, maxMessageSize and maxTransactionSize
         val netParams = if (existingNetParams != null) {
@@ -365,7 +365,7 @@ internal constructor(private val initSerEnv: Boolean,
             }
         } else {
             NetworkParameters(
-                    minimumPlatformVersion = defaultMinimumPlatformVersion,
+                    minimumPlatformVersion = minimumPlatformVersion,
                     notaries = notaryInfos,
                     modifiedTime = Instant.now(),
                     maxMessageSize = 10485760,
