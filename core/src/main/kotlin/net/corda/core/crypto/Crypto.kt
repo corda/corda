@@ -23,6 +23,7 @@ import org.bouncycastle.asn1.sec.SECObjectIdentifiers
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
+import org.bouncycastle.crypto.CryptoServicesRegistrar
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateKey
@@ -419,7 +420,9 @@ object Crypto {
         }
         require(clearData.isNotEmpty()) { "Signing of an empty array is not permitted!" }
         val signature = Signature.getInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
-        signature.initSign(privateKey)
+        // Note that deterministic signature schemes, such as EdDSA, do not require extra randomness, but we have to
+        // ensure that non-deterministic algorithms (i.e., ECDSA) use non-blocking SecureRandom implementations (if possible).
+        signature.initSign(privateKey, newSecureRandom())
         signature.update(clearData)
         return signature.sign()
     }
@@ -1017,5 +1020,10 @@ object Crypto {
     @JvmStatic
     fun registerProviders() {
         providerMap
+        // Adding our non-blocking newSecureRandom as default for any BouncyCastle operations
+        // (applies only when a SecureRandom is not specifically defined, i.e., if we call
+        // signature.initSign(privateKey) instead of signature.initSign(privateKey, newSecureRandom()
+        // for a BC algorithm, i.e., ECDSA).
+        CryptoServicesRegistrar.setSecureRandom(newSecureRandom())
     }
 }
