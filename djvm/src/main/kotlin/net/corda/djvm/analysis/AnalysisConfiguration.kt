@@ -98,10 +98,13 @@ class AnalysisConfiguration(
             java.lang.String::class.java,
             java.lang.System::class.java,
             java.lang.ThreadLocal::class.java,
-            kotlin.Any::class.java
+            kotlin.Any::class.java,
+            sun.misc.JavaLangAccess::class.java,
+            sun.misc.SharedSecrets::class.java
         ).sandboxed() + setOf(
             "sandbox/java/lang/DJVM",
-            "sandbox/Task"
+            "sandbox/Task",
+            "sandbox/sun/misc/SharedSecrets\$JavaLangAccessImpl"
         )
 
         /**

@@ -72,7 +72,7 @@ private fun Enum<*>.fromDJVMEnum(): kotlin.Enum<*> {
 
 private fun kotlin.Enum<*>.toDJVMEnum(): Enum<*> {
     @Suppress("unchecked_cast")
-    return (getEnumConstants(javaClass.toDJVMType() as Class<in Enum<*>>) as Array<Enum<*>>)[ordinal]
+    return (getEnumConstants(javaClass.toDJVMType() as Class<Enum<*>>) as Array<Enum<*>>)[ordinal]
 }
 
 /**
@@ -81,17 +81,17 @@ private fun kotlin.Enum<*>.toDJVMEnum(): Enum<*> {
 fun isEnum(clazz: Class<*>): kotlin.Boolean
         = (clazz.modifiers and ACC_ENUM != 0) && (clazz.superclass == sandbox.java.lang.Enum::class.java)
 
-fun getEnumConstants(clazz: Class<in Enum<*>>): Array<*>? {
+fun getEnumConstants(clazz: Class<out Enum<*>>): Array<*>? {
     return getEnumConstantsShared(clazz)?.clone()
 }
 
-internal fun enumConstantDirectory(clazz: Class<in Enum<*>>): sandbox.java.util.Map<String, Enum<*>>? {
+internal fun enumConstantDirectory(clazz: Class<out Enum<*>>): sandbox.java.util.Map<String, out Enum<*>>? {
     // DO NOT replace get with Kotlin's [] because Kotlin would use java.util.Map.
     return allEnumDirectories.get(clazz) ?: createEnumDirectory(clazz)
 }
 
 @Suppress("unchecked_cast")
-private fun getEnumConstantsShared(clazz: Class<in Enum<*>>): Array<out Enum<*>>? {
+internal fun getEnumConstantsShared(clazz: Class<out Enum<*>>): Array<out Enum<*>>? {
     return if (isEnum(clazz)) {
         // DO NOT replace get with Kotlin's [] because Kotlin would use java.util.Map.
         allEnums.get(clazz) ?: createEnum(clazz)
@@ -101,15 +101,15 @@ private fun getEnumConstantsShared(clazz: Class<in Enum<*>>): Array<out Enum<*>>
 }
 
 @Suppress("unchecked_cast")
-private fun createEnum(clazz: Class<in Enum<*>>): Array<out Enum<*>>? {
+private fun createEnum(clazz: Class<out Enum<*>>): Array<out Enum<*>>? {
     return clazz.getMethod("values").let { method ->
         method.isAccessible = true
-        method.invoke(null) as? Array<Enum<*>>
+        method.invoke(null) as? Array<out Enum<*>>
     // DO NOT replace put with Kotlin's [] because Kotlin would use java.util.Map.
     }?.apply { allEnums.put(clazz, this) }
 }
 
-private fun createEnumDirectory(clazz: Class<in Enum<*>>): sandbox.java.util.Map<String, Enum<*>> {
+private fun createEnumDirectory(clazz: Class<out Enum<*>>): sandbox.java.util.Map<String, out Enum<*>> {
     val universe = getEnumConstantsShared(clazz) ?: throw IllegalArgumentException("${clazz.name} is not an enum type")
     val directory = sandbox.java.util.LinkedHashMap<String, Enum<*>>(2 * universe.size)
     for (entry in universe) {
@@ -121,5 +121,5 @@ private fun createEnumDirectory(clazz: Class<in Enum<*>>): sandbox.java.util.Map
     return directory
 }
 
-private val allEnums: sandbox.java.util.Map<Class<in Enum<*>>, Array<out Enum<*>>> = sandbox.java.util.LinkedHashMap()
-private val allEnumDirectories: sandbox.java.util.Map<Class<in Enum<*>>, sandbox.java.util.Map<String, Enum<*>>> = sandbox.java.util.LinkedHashMap()
+private val allEnums: sandbox.java.util.Map<Class<out Enum<*>>, Array<out Enum<*>>> = sandbox.java.util.LinkedHashMap()
+private val allEnumDirectories: sandbox.java.util.Map<Class<out Enum<*>>, sandbox.java.util.Map<String, out Enum<*>>> = sandbox.java.util.LinkedHashMap()

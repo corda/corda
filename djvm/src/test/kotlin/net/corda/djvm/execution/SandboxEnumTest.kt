@@ -3,6 +3,7 @@ package net.corda.djvm.execution
 import net.corda.djvm.TestBase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import java.util.*
 import java.util.function.Function
 
 class SandboxEnumTest : TestBase() {
@@ -29,6 +30,22 @@ class SandboxEnumTest : TestBase() {
             assertThat(result).isTrue()
         }
     }
+
+    @Test
+    fun `test we can create EnumMap`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<ExampleEnum, Int>(configuration)
+        contractExecutor.run<UseEnumMap>(ExampleEnum.TWO).apply {
+            assertThat(result).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun `test we can create EnumSet`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<ExampleEnum, Boolean>(configuration)
+        contractExecutor.run<UseEnumSet>(ExampleEnum.ONE).apply {
+            assertThat(result).isTrue()
+        }
+    }
 }
 
 
@@ -47,6 +64,20 @@ class TransformEnum : Function<Int, Array<String>> {
 class FetchEnum : Function<String, ExampleEnum> {
     override fun apply(input: String): ExampleEnum {
         return ExampleEnum.valueOf(input)
+    }
+}
+
+class UseEnumMap : Function<ExampleEnum, Int> {
+    override fun apply(input: ExampleEnum): Int {
+        val map = EnumMap<ExampleEnum, String>(ExampleEnum::class.java)
+        map[input] = input.name
+        return map.size
+    }
+}
+
+class UseEnumSet : Function<ExampleEnum, Boolean> {
+    override fun apply(input: ExampleEnum): Boolean {
+        return EnumSet.allOf(ExampleEnum::class.java).contains(input)
     }
 }
 
