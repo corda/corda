@@ -20,6 +20,8 @@ class FinalityHandler(private val sender: FlowSession) : FlowLogic<Unit>() {
     override fun call() {
         subFlow(ReceiveTransactionFlow(sender, true, StatesToRecord.ONLY_RELEVANT))
     }
+
+    internal fun sender(): Party = sender.counterparty
 }
 
 class NotaryChangeHandler(otherSideSession: FlowSession) : AbstractStateReplacementFlow.Acceptor<Party>(otherSideSession) {

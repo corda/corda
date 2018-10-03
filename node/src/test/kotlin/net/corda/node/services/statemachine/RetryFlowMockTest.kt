@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.flatMap
@@ -15,6 +16,7 @@ import net.corda.node.services.FinalityHandler
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.nodeapi.internal.persistence.contextTransaction
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -136,10 +138,10 @@ class RetryFlowMockTest {
     @Test
     fun `Patient records do not leak in hospital when using killFlow`() {
         // Make sure we have seen an update from the hospital, and thus the flow went there.
+        val alice = TestIdentity(CordaX500Name.parse("L=London,O=Alice Ltd,OU=Trade,C=GB")).party
         val records = nodeA.smm.flowHospital.track().updates.toBlocking().toIterable().iterator()
         val flow: FlowStateMachine<Unit> = nodeA.services.startFlow(FinalityHandler(object : FlowSession() {
-            override val counterparty: Party
-                get() = TODO("not implemented")
+            override val counterparty = alice
 
             override fun getCounterpartyFlowInfo(maySkipCheckpoint: Boolean): FlowInfo {
                 TODO("not implemented")

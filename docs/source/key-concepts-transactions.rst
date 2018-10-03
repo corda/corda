@@ -33,7 +33,7 @@ Here is an example of an update transaction, with two inputs and two outputs:
    :scale: 25%
    :align: center
 
-A transaction can contain any number of inputs and outputs of any type:
+A transaction can contain any number of inputs, outputs and references of any type:
 
 * They can include many different state types (e.g. both cash and bonds)
 * They can be issuances (have zero inputs) or exits (have zero outputs)
@@ -107,6 +107,18 @@ Each required signers should only sign the transaction if the following two cond
 
 If the transaction gathers all the required signatures but these conditions do not hold, the transaction's outputs
 will not be valid, and will not be accepted as inputs to subsequent transactions.
+
+Reference states
+----------------
+
+As mentioned in :doc:`key-concepts-states`, some states need to be referred to by the contracts of other input or output
+states but not updated/consumed. This is where reference states come in. When a state is added to the references list of
+a transaction, instead of the inputs or outputs list, then it is treated as a *reference state*. There are two important
+differences between regular states and reference states:
+
+* The specified notary for the transaction **does** check whether the reference states are current. However, reference
+  states are not consumed when the transaction containing them is committed to the ledger.
+* The contracts for reference states are not executed for the transaction containing them.
 
 Other transaction components
 ----------------------------

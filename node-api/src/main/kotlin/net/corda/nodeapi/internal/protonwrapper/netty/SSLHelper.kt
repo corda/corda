@@ -199,5 +199,5 @@ internal fun x500toHostName(x500Name: CordaX500Name): String {
     val secureHash = SecureHash.sha256(x500Name.toString())
     // RFC 1035 specifies a limit 255 bytes for hostnames with each label being 63 bytes or less. Due to this, the string
     // representation of the SHA256 hash is truncated to 32 characters.
-    return String.format(HOSTNAME_FORMAT, secureHash.toString().substring(0..32).toLowerCase())
+    return String.format(HOSTNAME_FORMAT, secureHash.toString().take(32).toLowerCase())
 }
