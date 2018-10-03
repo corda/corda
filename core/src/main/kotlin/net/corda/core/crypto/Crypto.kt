@@ -422,7 +422,14 @@ object Crypto {
         val signature = Signature.getInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
         // Note that deterministic signature schemes, such as EdDSA, do not require extra randomness, but we have to
         // ensure that non-deterministic algorithms (i.e., ECDSA) use non-blocking SecureRandom implementations (if possible).
-        signature.initSign(privateKey, newSecureRandom())
+        // TODO consider updating this when the related BC issue for Sphincs is fixed.
+        if (signatureScheme != SPHINCS256_SHA256) {
+            signature.initSign(privateKey, newSecureRandom())
+        } else {
+            // Special handling for Sphincs, due to a BC implementation issue.
+            // As Sphincs is deterministic, it does not require RNG input anyway.
+            signature.initSign(privateKey)
+        }
         signature.update(clearData)
         return signature.sign()
     }
