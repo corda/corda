@@ -39,17 +39,6 @@ Changes of Note
   signing certificates (Network Map and Doorman). This has the effect of allowing the root certificate to *always* be kept offline and never retrieved or
   used. Those new intermediate certificates can be used to generate, if ever needed, new signing certs without risking compromise of the root key.
 
-* **Persistent State Ref**
-
-  We have made some fixes to the ``net.corda.core.schemas.PersistentStateRef`` table that require a little maintenance when upgrading from 3.2. The
-  exact process is detailed in the :doc:`upgrade-notes`.
-
-  The fields ``index`` and ``txId`` are now non-nullable. Effectively they always were non-nullable, values were set from non-nullable fields of other objects
-  and the class is used as the database Primary Key columns of other entities (databases already impose those columns as non-nullable, even if the JPA
-  annotation ``nullable=false`` was absent).
-
-  In case your Cordapps use this entity class to persist data in own custom tables as non Primary Key columns refer to :doc:`upgrade-notes` for upgrade instructions.
-
 Special Thanks
 ~~~~~~~~~~~~~~
 
@@ -70,13 +59,6 @@ We're therefore happy to extend thanks to the following members of that communit
   * `Mohamed Amine Legheraba <https://github.com/MohamedLEGH>`_ for updates to the Azure documentation that can be seen `here <https://github.com/corda/corda/commit/14e9bf100d0b0236f65ee4ffd778f32307b9e519>`_.
   * `Stanly Johnson <https://github.com/stanly-johnson>`_ with a `fix <https://github.com/corda/corda/commit/f9a9bb19a7cc6d202446890e4e11bebd4a118cf3>`_ to the network bootstrapper.
   * `Tittu Varghese <https://github.com/tittuvarghese>`_ for adding a favicon to the docsite. This commit can be found `here <https://github.com/corda/corda/commit/cd8988865599261db45505060735880c3066792e>`_
-
-What's That Coming Over The Hill!
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Whilst we are, as ever, really proud to be delivering another rock solid version of API Version 3, appearing over the horizon at an impressive gallop is the impending
-release of Corda Version 4.0, loosely slated to arrive coming sometime this winter. 4.0 will of course remain backward compatible with the stabilised parts of the API and
-wire-format delivered in version 3, whilst benefiting from over 9 months of sustained feature development.
 
 Issues Fixed
 ~~~~~~~~~~~~
