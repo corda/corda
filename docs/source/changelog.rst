@@ -9,6 +9,8 @@ Unreleased
 
 * Introduce minimum and target platform version for CorDapps.
 
+* Vault storage of contract state constraints metadata and associated vault query functions to retrieve and sort by constraint type.
+
 * New overload for ``CordaRPCClient.start()`` method allowing to specify target legal identity to use for RPC call.
 
 * Case insensitive vault queries can be specified via a boolean on applicable SQL criteria builder operators. By default queries will be case sensitive.
