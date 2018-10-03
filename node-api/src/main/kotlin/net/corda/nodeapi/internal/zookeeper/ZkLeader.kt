@@ -6,18 +6,18 @@ package net.corda.nodeapi.internal.zookeeper
  */
 interface CordaLeaderListener {
     /**
-     * This is called when the LeaderLatch's state goes from hasLeadership = false to hasLeadership = true.
-     *
-     * Note that it is possible that by the time this method call happens, hasLeadership has fallen back to false.  If
-     * this occurs, you can expect {@link #notLeader()} to also be called.
-     */
-    fun notLeader()
-
-    /**
      * This is called when the LeaderLatch's state goes from hasLeadership = true to hasLeadership = false.
      *
      * Note that it is possible that by the time this method call happens, hasLeadership has become true.  If
      * this occurs, you can expect {@link #isLeader()} to also be called.
+     */
+    fun notLeader()
+
+    /**
+     * This is called when the LeaderLatch's state goes from hasLeadership = false to hasLeadership = true.
+     *
+     * Note that it is possible that by the time this method call happens, hasLeadership has fallen back to false.  If
+     * this occurs, you can expect {@link #notLeader()} to also be called.
      */
     fun isLeader()
 }
@@ -58,12 +58,12 @@ interface ZkLeader {
     fun removeLeadershipListener(listener: CordaLeaderListener)
 
     /**
-     * @return [true] if client is the current leader, [false] otherwise
+     * @return `true` if client is the current leader, `false` otherwise
      */
     fun isLeader(): Boolean
 
     /**
-     * @return [true] if client is started, [false] otherwise
+     * @return `true` if client is started, `false` otherwise
      */
     fun isStarted(): Boolean
 }

@@ -11,21 +11,22 @@ import net.corda.bridge.services.sender.DirectBridgeSenderService
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Subscription
 
-class BridgeSupervisorServiceImpl(val conf: FirewallConfiguration,
+class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
                                   maxMessageSize: Int,
-                                  val auditService: FirewallAuditService,
+                                  auditService: FirewallAuditService,
                                   inProcessAMQPListenerService: BridgeAMQPListenerService?,
                                   private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeSupervisorService, ServiceStateSupport by stateHelper {
     companion object {
-        val log = contextLogger()
-        val consoleLogger = LoggerFactory.getLogger("BasicInfo")
+        private val log = contextLogger()
+        private val consoleLogger : Logger = LoggerFactory.getLogger("BasicInfo")
     }
 
     private val haService: BridgeMasterService
-    private val artemisService: BridgeArtemisConnectionServiceImpl
+    private val artemisService: BridgeArtemisConnectionService
     private val senderService: BridgeSenderService
     private val receiverService: BridgeReceiverService
     private val filterService: IncomingMessageFilterService
@@ -33,12 +34,12 @@ class BridgeSupervisorServiceImpl(val conf: FirewallConfiguration,
     private var statusSubscriber: Subscription? = null
 
     init {
-        if (conf.haConfig == null) {
-            haService = SingleInstanceMasterService(conf, auditService)
-        } else {
-            haService = ExternalMasterElectionService(conf, auditService)
-        }
         artemisService = BridgeArtemisConnectionServiceImpl(conf, maxMessageSize, auditService)
+        haService = if (conf.haConfig == null) {
+            SingleInstanceMasterService(conf, auditService)
+        } else {
+            ExternalMasterElectionService(conf, auditService, artemisService)
+        }
         senderService = DirectBridgeSenderService(conf, maxMessageSize, auditService, haService, artemisService)
         filterService = SimpleMessageFilterService(conf, auditService, artemisService, senderService)
         receiverService = if (conf.firewallMode == FirewallMode.SenderReceiver) {
