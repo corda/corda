@@ -271,18 +271,6 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence?
     }
 }
 
-fun parserTransactionIsolationLevel(property: String?): Int =
-        when (property) {
-            "none" -> Connection.TRANSACTION_NONE
-            "readUncommitted" -> Connection.TRANSACTION_READ_UNCOMMITTED
-            "readCommitted" -> Connection.TRANSACTION_READ_COMMITTED
-            "repeatableRead" -> Connection.TRANSACTION_REPEATABLE_READ
-            "serializable" -> Connection.TRANSACTION_SERIALIZABLE
-            else -> {
-                Connection.TRANSACTION_REPEATABLE_READ
-            }
-        }
-
 fun isH2Database(jdbcUrl: String) = jdbcUrl.startsWith("jdbc:h2:")
 
 /** Check if any nested cause is of [SQLException] type. */
