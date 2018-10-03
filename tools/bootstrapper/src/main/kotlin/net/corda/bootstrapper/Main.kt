@@ -2,6 +2,7 @@ package net.corda.bootstrapper
 
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
+import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.network.NetworkBootstrapper
 import picocli.CommandLine.Option
 import java.nio.file.Path
@@ -24,8 +25,11 @@ class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a l
     @Option(names = ["--no-copy"], description = ["""Don't copy the CorDapp JARs into the nodes' "cordapps" directories."""])
     private var noCopy: Boolean = false
 
+    @Option(names = ["--minimum-platform-version"], description = ["The minimumPlatformVersion to use in the network-parameters"])
+    private var minimumPlatformVersion = PLATFORM_VERSION
+
     override fun runProgram(): Int {
-        NetworkBootstrapper().bootstrap(dir.toAbsolutePath().normalize(), copyCordapps = !noCopy)
+        NetworkBootstrapper().bootstrap(dir.toAbsolutePath().normalize(), copyCordapps = !noCopy, minimumPlatformVersion = minimumPlatformVersion)
         return 0 //exit code
     }
 }
