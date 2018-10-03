@@ -7,6 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter
+
 * Introduce minimum and target platform version for CorDapps.
 
 * New overload for ``CordaRPCClient.start()`` method allowing to specify target legal identity to use for RPC call.
