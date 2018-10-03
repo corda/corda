@@ -28,7 +28,7 @@ import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
-import net.corda.nodeapi.internal.PLATFORM_VERSION
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
@@ -54,10 +54,8 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import rx.Observable
 import rx.Subscription
 import rx.schedulers.Schedulers
-import rx.subjects.AsyncSubject
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL

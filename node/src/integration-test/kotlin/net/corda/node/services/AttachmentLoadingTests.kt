@@ -26,7 +26,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
-import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME

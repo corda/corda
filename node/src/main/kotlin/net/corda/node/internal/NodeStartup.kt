@@ -28,7 +28,7 @@ import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
-import net.corda.nodeapi.internal.PLATFORM_VERSION
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
