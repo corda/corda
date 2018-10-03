@@ -29,7 +29,7 @@ The Corda Network Bootstrapper can be downloaded from `here <https://corda.net/r
 Create a directory containing a node config file, ending in "_node.conf", for each node you want to create. Then run the
 following command:
 
-``java -jar network-bootstrapper-VERSION.jar --dir <nodes-root-dir>``
+``java -jar network-bootstrapper-VERSION.jar <nodes-root-dir>``
 
 For example running the command on a directory containing these files:
 
@@ -148,7 +148,7 @@ can use the network bootstrapper on the following network structure:
 
 Then run the network bootstrapper again from the root dir:
 
-``java -jar network-bootstrapper-VERSION.jar --dir <nodes-root-dir>``
+``java -jar network-bootstrapper-VERSION.jar <nodes-root-dir>``
 
 Which will give the following:
 
@@ -217,7 +217,7 @@ For example, with the following pre-generated network:
 
 Then run the network bootstrapper again from the root dir:
 
-``java -jar network-bootstrapper-VERSION.jar --dir <nodes-root-dir>``
+``java -jar network-bootstrapper-VERSION.jar <nodes-root-dir>``
 
 To give the following:
 
