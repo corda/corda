@@ -221,7 +221,7 @@ class StaffedFlowHospital {
         }
 
         private fun warn(flowLogic: FinalityHandler, flowFiber: FlowFiber, currentState: StateMachineState) {
-            log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention might be needed, for no retrying will be performed until the node is restarted. State machine state: $currentState, initiating party was: ${flowLogic.sender().name}")
+            log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying the flow by re-starting the node. State machine state: $currentState, initiating party was: ${flowLogic.sender().name}")
         }
     }
 }
