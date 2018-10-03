@@ -9,6 +9,7 @@ import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Duration
+import java.util.*
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import kotlin.reflect.KProperty
@@ -135,12 +136,16 @@ fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
     throw e.cause!!
 }
 
-private val warnings = mutableSetOf<String>()
+private const val MAX_SIZE = 100
+private val warnings = Collections.newSetFromMap(object : LinkedHashMap<String, Boolean>() {
+    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>?) = size > MAX_SIZE
+})
 
 /**
  * Utility to help log a warning message only once.
- * It's not thread safe, as in the worst case the warning will be logged twice.
+ * It implements an ad hoc Fifo cache because there's none available in the standard libraries.
  */
+@Synchronized
 fun Logger.warnOnce(warning: String) {
     if (warning !in warnings) {
         warnings.add(warning)

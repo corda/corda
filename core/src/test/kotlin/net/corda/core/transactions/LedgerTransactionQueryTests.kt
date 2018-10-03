@@ -73,7 +73,7 @@ class LedgerTransactionQueryTests {
         )
         services.recordTransactions(fakeIssueTx)
         val dummyStateRef = StateRef(fakeIssueTx.id, 0)
-        return StateAndRef(TransactionState(dummyState, DummyContract.PROGRAM_ID, DUMMY_NOTARY, null), dummyStateRef)
+        return StateAndRef(TransactionState(dummyState, DummyContract.PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), dummyStateRef)
     }
 
     private fun makeDummyTransaction(): LedgerTransaction {
