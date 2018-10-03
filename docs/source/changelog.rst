@@ -7,6 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter
+
 * Introduce minimum and target platform version for CorDapps.
 
 * Vault storage of contract state constraints metadata and associated vault query functions to retrieve and sort by constraint type.
