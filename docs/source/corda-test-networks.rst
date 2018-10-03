@@ -1,7 +1,7 @@
 .. _log4j2: http://logging.apache.org/log4j/2.x/
 
-Setting up a Corda network
-==========================
+Corda networks
+==============
 
 A Corda network consists of a number of machines running nodes. These nodes communicate using persistent protocols in
 order to create and validate transactions.
@@ -16,8 +16,8 @@ as services, and one node may run several of them.
 * Regular node: All nodes have a vault and may start protocols communicating with other nodes, notaries and oracles and
   evolve their private ledger
 
-Setting up your own network
----------------------------
+Bootstrap your own test network
+-------------------------------
 
 Certificates
 ~~~~~~~~~~~~
