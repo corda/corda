@@ -3,16 +3,15 @@ package net.corda.node.services.persistence
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.node.internal.CheckpointIncompatibleException
 import net.corda.node.internal.CheckpointVerifier
-import net.corda.node.internal.configureDatabase
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
-import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.node.services.statemachine.FlowStart
+import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -20,6 +19,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions

@@ -9,6 +9,8 @@ import net.corda.node.internal.security.tryAuthenticate
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.nodeapi.internal.config.User
+import net.corda.testing.internal.TestingNamedCacheFactory
+import net.corda.testing.internal.fromUserList
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import javax.security.auth.login.FailedLoginException
@@ -134,7 +136,7 @@ class RPCSecurityManagerTest {
 
     private fun checkUserActions(permissions: Set<String>, permitted: Set<ArrayList<String>>) {
         val user = User(username = "user", password = "password", permissions = permissions)
-        val userRealms = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(listOf(user)))
+        val userRealms = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(listOf(user)), TestingNamedCacheFactory())
         val disabled = allActions.filter { !permitted.contains(listOf(it)) }
         for (subject in listOf(
                 userRealms.authenticate("user", Password("password")),

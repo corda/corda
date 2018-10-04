@@ -17,6 +17,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
@@ -115,7 +116,7 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 // TODO Log warning if this node is a notary but not one of the ones specified in the network parameters, both for core and custom
 abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                val platformClock: CordaClock,
-                               cacheFactoryPrototype: NamedCacheFactory,
+                               cacheFactoryPrototype: BindableNamedCacheFactory,
                                protected val versionInfo: VersionInfo,
                                protected val serverThread: AffinityExecutor.ServiceAffinityExecutor,
                                private val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
@@ -150,8 +151,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             identityService::wellKnownPartyFromX500Name,
             identityService::wellKnownPartyFromAnonymous,
             schemaService,
-            configuration.dataSourceProperties
-    )
+            configuration.dataSourceProperties,
+            cacheFactory)
     init {
         // TODO Break cyclic dependency
         identityService.database = database
@@ -169,7 +170,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, transactionStorage)
     @Suppress("LeakingThis")
     val vaultService = makeVaultService(keyManagementService, servicesForResolution, database).tokenize()
-    val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database)
+    val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
     val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
     val networkMapUpdater = NetworkMapUpdater(
             networkMapCache,
@@ -185,7 +186,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     ).closeOnStop()
     @Suppress("LeakingThis")
     val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount).tokenize()
-    val contractUpgradeService = ContractUpgradeServiceImpl().tokenize()
+    val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
     @Suppress("LeakingThis")
     protected val network: MessagingService = makeMessagingService().tokenize()
@@ -999,23 +1000,12 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
 
 class ConfigurationException(message: String) : CordaException(message)
 
-// TODO This is no longer used by AbstractNode and can be moved elsewhere
-fun configureDatabase(hikariProperties: Properties,
-                      databaseConfig: DatabaseConfig,
-                      wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
-                      wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
-                      schemaService: SchemaService = NodeSchemaService(),
-                      internalSchemas: Set<MappedSchema> = NodeSchemaService().internalSchemas()): CordaPersistence {
-    val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, hikariProperties)
-    persistence.startHikariPool(hikariProperties, databaseConfig, internalSchemas)
-    return persistence
-}
-
 fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                            wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                            schemaService: SchemaService,
-                           hikariProperties: Properties): CordaPersistence {
+                           hikariProperties: Properties,
+                           cacheFactory: NamedCacheFactory): CordaPersistence {
     // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
     // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
@@ -1023,7 +1013,7 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
     val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
-    return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters)
+    return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, cacheFactory, attributeConverters)
 }
 
 fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null) {
