@@ -78,15 +78,19 @@ fun <T : Any> getValueProperties(kotlinConstructor: KFunction<T>?, type: Type, f
     }
 
 private fun List<PropertyAccessor>.addCalculatedProperties(factory: SerializerFactory, type: Type)
-        : List<PropertyAccessor> = this + type.asClass().calculatedPropertyDescriptors().map { (name, descriptor) ->
-    val calculatedPropertyMethod = descriptor.getter
-            ?: throw IllegalStateException("Property $name is not a calculated property")
-
-    CalculatedPropertyAccessor(PropertySerializer.make(
-            name,
-            PublicPropertyReader(calculatedPropertyMethod),
-            calculatedPropertyMethod.genericReturnType,
-            factory))
+        : List<PropertyAccessor> {
+    val nonCalculated = map { it.serializer.name }.toSet()
+    return this + type.asClass().calculatedPropertyDescriptors().mapNotNull { (name, descriptor) ->
+        if (name in nonCalculated) null else {
+            val calculatedPropertyMethod = descriptor.getter
+                    ?: throw IllegalStateException("Property $name is not a calculated property")
+            CalculatedPropertyAccessor(PropertySerializer.make(
+                    name,
+                    PublicPropertyReader(calculatedPropertyMethod),
+                    calculatedPropertyMethod.genericReturnType,
+                    factory))
+        }
+    }
 }
 
 /**

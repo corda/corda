@@ -90,4 +90,34 @@ class RoundTripTests {
         val deserialized = DeserializationInput(factory).deserialize(bytes)
         assertThat(deserialized.getSquared()).isEqualTo(4)
     }
+
+    interface I {
+        @get:SerializableCalculatedProperty
+        val squared: Int
+    }
+
+    @Test
+    fun inheritedCalculatedFunction() {
+        class C: I {
+            var i: Int = 0
+            override val squared get() = i * i
+        }
+
+        val instance = C().apply { i = 2 }
+        val factory = testDefaultFactoryNoEvolution()
+        val bytes = SerializationOutput(factory).serialize(instance)
+        val deserialized = DeserializationInput(factory).deserialize(bytes) as I
+        assertThat(deserialized.squared).isEqualTo(4)
+    }
+
+    @Test
+    fun inheritedCalculatedFunctionIsNotCalculated() {
+        class C(override val squared: Int): I
+
+        val instance = C(2)
+        val factory = testDefaultFactoryNoEvolution()
+        val bytes = SerializationOutput(factory).serialize(instance)
+        val deserialized = DeserializationInput(factory).deserialize(bytes) as I
+        assertThat(deserialized.squared).isEqualTo(2)
+    }
 }
