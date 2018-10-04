@@ -1,42 +1,4 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
-# Design 
-
-DOCUMENT MANAGEMENT
----
-
-Design documents should follow the standard GitHub version management and pull request (PR) review workflow mechanism.
-
-## Document Control
-
-| Title                |                                          |
-| -------------------- | ---------------------------------------- |
-| Date                 | 27 March 2018                            |
-| Author               | Roger Willis                             |
-| Distribution         | Matthew Nesbit, Rick Parker              |
-| Corda target version | open source and enterprise               |
-| JIRA reference       | No JIRA's raised.                        |
-
-## Approvals
-
-#### Document Sign-off
-
-| Author            |                                          |
-| ----------------- | ---------------------------------------- |
-| Reviewer(s)       | (GitHub PR reviewers)                    |
-| Final approver(s) | (GitHub PR approver(s) from Design Approval Board) |
-
-#### Design Decisions
-
-There's only really one way to do this that satisfies our requirements - add a new input `StateAndRef` component group to the transaction classes. Other possible solutions are discussed below and why they are inappropriate.
-
-## Document History 
-
-* [Version 1](https://github.com/corda/enterprise/blob/779aaefa5c09a6a28191496dd45252b6e207b7f7/docs/source/design/reference-states/design.md) (Received comments from Richard Brown and Mark Oldfield).
-* [Version 2](https://github.com/corda/enterprise/blob/a87f1dcb22ba15081b0da92ba1501b6b81ae2baf/docs/source/design/reference-states/design.md) (Version presented to the DRB).
-
-HIGH LEVEL DESIGN
----
+# Reference states 
 
 ## Overview
 
@@ -44,13 +6,15 @@ See a prototype implementation here: https://github.com/corda/corda/pull/2889
 
 There is an increasing need for Corda to support use-cases which require reference data which is issued and updated by specific parties, but available for use, by reference, in transactions built by other parties.
 
-Why is this type of reference data required?
+Why is this type of reference data required? A key benefit of blockchain systems is that everybody is sure they see the
+same as their counterpart - and for this to work in situations where accurate processing depends on reference data
+requires everybody to be operating on the same reference data. This, in turn, requires any given piece of reference data
+to be uniquely identifiable and, requires that any given transaction must be certain to be operating on the most current
+version of that reference data. In cases where the latter condition applies, only the notary can attest to this fact and
+this, in turn, means the reference data must be in the form of an unconsumed state.
 
-1. A key benefit of blockchain systems is that everybody is sure they see the same as their counterpart - and for this to work in situations where accurate processing depends on reference data requires everybody to be operating on the same reference data.
-2. This, in turn, requires any given piece of reference data to be uniquely identifiable and, requires that any given transaction must be certain to be operating on the most current version of that reference data.
-3. In cases where the latter condition applies, only the notary can attest to this fact and this, in turn, means the reference data must be in the form of an unconsumed state.
-
-This document outlines the approach for adding support for this type of reference data to the Corda transaction model via a new approach called "reference input states".
+This document outlines the approach for adding support for this type of reference data to the Corda transaction model
+via a new approach called "reference input states".
 
 ## Background
 
@@ -71,15 +35,9 @@ However, neither of these solutions are optimal for reasons discussed in later s
 
 As such, this design document introduces the concept of a "reference input state" which is a better way to serve "periodically changing subjective reference data" on Corda.
 
-*What is a "reference input state"?*
-
 A reference input state is a `ContractState` which can be referred to in a transaction by the contracts of input and output states but whose contract is not executed as part of the transaction verification process and is not consumed when the transaction is committed to the ledger but _is_ checked for "current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a normal state when it occurs in an input or output position.
 
-*What will reference input states enable?*
-
 Reference data states will enable many parties to "reuse" the same state in their transactions as reference data whilst still allowing the reference data state owner the capability to update the state. When data distribution groups are available then reference state owners will be able to distribute updates to subscribers more easily. Currently, distribution would have to be performed manually.
-
-*Roughly, how are reference input states implemented?*
 
 Reference input states can be added to Corda by adding a new transaction component group that allows developers to add reference data `ContractState`s that are not consumed when the transaction is committed to the ledger. This eliminates the problems created by long chains of provenance, contention, and allows developers to use any `ContractState` for reference data. The feature should allow developers to add _any_ `ContractState` available in their vault, even if they are not a `participant` whilst nevertheless providing a guarantee that the state being used is the most recent version of that piece of information.
 
@@ -92,14 +50,6 @@ Goals
 Non-goals (eg. out of scope)
 
 * Data distribution groups are required to realise the full potential of reference data states. This design document does not discuss data distribution groups.
-
-## Timeline
-
-This work should be ready by the release of Corda V4. There is a prototype which is currently good enough for one of the firm's most critical projects, but more work is required:
-
-* to assess the impact of this change
-* write tests
-* write documentation
 
 ## Requirements
 
@@ -223,17 +173,3 @@ It does the following:
 5. Then it re-does the initial calculation, re-creates the subflow with the new resolved tips using the factory, and re-runs it as a new subflow.
 
 Care must be taken to handle progress tracking correctly in case of loops.
-
-## Complementary solutions
-
-See discussion of alternative approaches above in the "design decisions" section.
-
-## Final recommendation
-
-Proceed to Implementation
-
-TECHNICAL DESIGN
----
-
-* Summary of changes to be included.
-* Summary of outstanding issues to be included.
