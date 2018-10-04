@@ -6,10 +6,11 @@ import net.corda.djvm.code.Instruction
 import net.corda.djvm.code.instructions.MemberAccessInstruction
 
 /**
- * [java.lang.Object] has no [toDJVMString] method, so always invoke
- * [sandbox.java.lang.String.toDJVM] explicitly afterwards.
+ * Classes which cannot be mapped into the sandbox will still return [java.lang.String]
+ * from some functions, e.g. [java.lang.Object.toString]. So always explicitly invoke
+ * [sandbox.java.lang.String.toDJVM] after these.
  */
-class ToDJVMStringWrapper : Emitter {
+class StringReturnTypeWrapper : Emitter {
     override fun emit(context: EmitterContext, instruction: Instruction) = context.emit {
         if (instruction is MemberAccessInstruction
                 && instruction.owner == "java/lang/Object"

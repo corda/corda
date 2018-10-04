@@ -15,7 +15,7 @@ import net.corda.djvm.rewiring.LoadedClass
 import net.corda.djvm.rules.Rule
 import net.corda.djvm.rules.implementation.StaticConstantRemover
 import net.corda.djvm.rules.implementation.StringConstantWrapper
-import net.corda.djvm.rules.implementation.ToDJVMStringWrapper
+import net.corda.djvm.rules.implementation.StringReturnTypeWrapper
 import net.corda.djvm.rules.implementation.WriteEnumMethods
 import net.corda.djvm.source.ClassSource
 import net.corda.djvm.utilities.Discovery
@@ -42,7 +42,7 @@ abstract class TestBase {
         // We need at least these emitters to handle the Java API classes.
         val BASIC_EMITTERS: List<Emitter> = listOf(
             StringConstantWrapper(),
-            ToDJVMStringWrapper(),
+            StringReturnTypeWrapper(),
             WriteEnumMethods()
         )
 
