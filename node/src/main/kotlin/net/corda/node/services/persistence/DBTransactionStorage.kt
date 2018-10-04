@@ -30,11 +30,11 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
     @Table(name = "${NODE_DATABASE_PREFIX}transactions")
     class DBTransaction(
             @Id
-            @Column(name = "tx_id", length = 64, nullable = false)
+            @Column(name = "tx_id", length = 64)
             var txId: String = "",
 
             @Lob
-            @Column(name = "transaction_value", nullable = false)
+            @Column(name = "transaction_value")
             var transaction: ByteArray = ByteArray(0)
     ) : Serializable
 

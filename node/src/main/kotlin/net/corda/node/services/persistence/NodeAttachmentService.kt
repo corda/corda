@@ -75,24 +75,24 @@ class NodeAttachmentService(
             indexes = arrayOf(Index(name = "att_id_idx", columnList = "att_id")))
     class DBAttachment(
             @Id
-            @Column(name = "att_id", nullable = false)
+            @Column(name = "att_id")
             var attId: String,
 
-            @Column(name = "content", nullable = false)
+            @Column(name = "content")
             @Lob
             var content: ByteArray,
 
             @Column(name = "insertion_date", nullable = false, updatable = false)
             var insertionDate: Instant = Instant.now(),
 
-            @Column(name = "uploader", updatable = false, nullable = true)
+            @Column(name = "uploader", updatable = false)
             var uploader: String? = null,
 
-            @Column(name = "filename", updatable = false, nullable = true)
+            @Column(name = "filename", updatable = false)
             var filename: String? = null,
 
             @ElementCollection
-            @Column(name = "contract_class_name", nullable = false)
+            @Column(name = "contract_class_name")
             @CollectionTable(name = "${NODE_DATABASE_PREFIX}attachments_contracts", joinColumns = arrayOf(
                     JoinColumn(name = "att_id", referencedColumnName = "att_id")),
                     foreignKey = ForeignKey(name = "FK__ctr_class__attachments"))

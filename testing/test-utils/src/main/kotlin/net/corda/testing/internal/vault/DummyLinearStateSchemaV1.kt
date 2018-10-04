@@ -33,7 +33,7 @@ object DummyLinearStateSchemaV1 : MappedSchema(schemaFamily = DummyLinearStateSc
             /**
              * UniqueIdentifier
              */
-            @Column(name = "external_id", nullable = true)
+            @Column(name = "external_id")
             var externalId: String?,
 
             @Column(name = "uuid", nullable = false)
@@ -43,16 +43,16 @@ object DummyLinearStateSchemaV1 : MappedSchema(schemaFamily = DummyLinearStateSc
             /**
              *  Dummy attributes
              */
-            @Column(name = "linear_string", nullable = false)
+            @Column(name = "linear_string")
             var linearString: String,
 
-            @Column(name = "linear_number", nullable = false)
+            @Column(name = "linear_number")
             var linearNumber: Long,
 
-            @Column(name = "linear_timestamp", nullable = false)
+            @Column(name = "linear_timestamp")
             var linearTimestamp: Instant,
 
-            @Column(name = "linear_boolean", nullable = false)
+            @Column(name = "linear_boolean")
             var linearBoolean: Boolean
     ) : PersistentState()
 }

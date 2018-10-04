@@ -18,11 +18,11 @@ class ContractUpgradeServiceImpl : ContractUpgradeService, SingletonSerializeAsT
     @Table(name = "${NODE_DATABASE_PREFIX}contract_upgrades")
     class DBContractUpgrade(
             @Id
-            @Column(name = "state_ref", length = 96, nullable = false)
+            @Column(name = "state_ref", length = 96)
             var stateRef: String = "",
 
             /** refers to the UpgradedContract class name*/
-            @Column(name = "contract_class_name", nullable = false)
+            @Column(name = "contract_class_name")
             var upgradedContractClassName: String = ""
     ) : Serializable
 

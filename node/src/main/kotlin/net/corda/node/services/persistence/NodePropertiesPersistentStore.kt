@@ -30,10 +30,10 @@ class NodePropertiesPersistentStore(readPhysicalNodeId: () -> String, persistenc
     @Table(name = "${NODE_DATABASE_PREFIX}properties")
     class DBNodeProperty(
             @Id
-            @Column(name = "property_key", nullable = false)
+            @Column(name = "property_key")
             val key: String = "",
 
-            @Column(name = "property_value", nullable = true)
+            @Column(name = "property_value")
             var value: String? = ""
     ) : Serializable
 }

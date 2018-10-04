@@ -202,15 +202,15 @@ class P2PMessagingClient(private val config: NodeConfiguration,
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_retry")
     class RetryMessage(
             @Id
-            @Column(name = "message_id", length = 64, nullable = false)
+            @Column(name = "message_id", length = 64)
             var key: Long = 0,
 
             @Lob
-            @Column(nullable = false)
+            @Column
             var message: ByteArray = ByteArray(0),
 
             @Lob
-            @Column(nullable = false)
+            @Column
             var recipients: ByteArray = ByteArray(0)
     ) : Serializable
 

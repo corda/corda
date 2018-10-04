@@ -29,10 +29,10 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}transaction_mappings")
     class DBTransactionMapping(
             @Id
-            @Column(name = "tx_id", length = 64, nullable = false)
+            @Column(name = "tx_id", length = 64)
             var txId: String = "",
 
-            @Column(name = "state_machine_run_id", length = 36, nullable = false)
+            @Column(name = "state_machine_run_id", length = 36)
             var stateMachineRunId: String = ""
     ) : Serializable
 
