@@ -38,16 +38,7 @@ object CryptoSignUtils {
         }
         require(clearData.isNotEmpty()) { "Signing of an empty array is not permitted!" }
         val signature = Signature.getInstance(signatureScheme.signatureName, signatureScheme.providerName)
-        // Note that deterministic signature schemes, such as EdDSA, do not require extra randomness, but we have to
-        // ensure that non-deterministic algorithms (i.e., ECDSA) use non-blocking SecureRandom implementations (if possible).
-        // TODO consider updating this when the related BC issue for Sphincs is fixed.
-        if (signatureScheme != SPHINCS256_SHA256) {
-            signature.initSign(privateKey, newSecureRandom())
-        } else {
-            // Special handling for Sphincs, due to a BC implementation issue.
-            // As Sphincs is deterministic, it does not require RNG input anyway.
-            signature.initSign(privateKey)
-        }
+        signature.initSign(privateKey)
         signature.update(clearData)
         return signature.sign()
     }
