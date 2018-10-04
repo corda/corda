@@ -20,7 +20,7 @@ class DBCheckpointStorage : CheckpointStorage {
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
     class DBCheckpoint(
             @Id
-            @Column(name = "checkpoint_id", length = 64, nullable = false)
+            @Column(name = "checkpoint_id", length = 64)
             var checkpointId: String = "",
 
             @Column(name = "checkpoint_value")

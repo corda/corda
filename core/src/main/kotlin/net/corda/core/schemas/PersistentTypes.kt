@@ -57,7 +57,7 @@ open class MappedSchema(schemaFamily: Class<*>,
  */
 @Embeddable
 data class PersistentStateRef(
-        @Column(name = "transaction_id", length = 64, nullable = false)
+        @Column(name = "transaction_id", length = 64)
         var txId: String? = null,
 
         @Column(name = "output_index")
