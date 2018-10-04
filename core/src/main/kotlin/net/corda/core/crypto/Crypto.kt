@@ -2,6 +2,7 @@ package net.corda.core.crypto
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
+import net.corda.core.StubOutForDJVM
 import net.corda.core.crypto.internal.*
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
@@ -382,6 +383,7 @@ object Crypto {
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
+    @DeleteForDJVM
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(privateKey: PrivateKey, clearData: ByteArray): ByteArray = doSign(findSignatureScheme(privateKey), privateKey, clearData)
@@ -396,6 +398,7 @@ object Crypto {
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
+    @DeleteForDJVM
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(schemeCodeName: String, privateKey: PrivateKey, clearData: ByteArray): ByteArray {
@@ -412,6 +415,7 @@ object Crypto {
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
+    @DeleteForDJVM
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(signatureScheme: SignatureScheme, privateKey: PrivateKey, clearData: ByteArray): ByteArray {
@@ -446,6 +450,7 @@ object Crypto {
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
+    @DeleteForDJVM
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(keyPair: KeyPair, signableData: SignableData): TransactionSignature {
@@ -1031,6 +1036,11 @@ object Crypto {
         // (applies only when a SecureRandom is not specifically defined, i.e., if we call
         // signature.initSign(privateKey) instead of signature.initSign(privateKey, newSecureRandom()
         // for a BC algorithm, i.e., ECDSA).
+        setBouncyCastleRNG()
+    }
+
+    @StubOutForDJVM
+    private fun setBouncyCastleRNG() {
         CryptoServicesRegistrar.setSecureRandom(newSecureRandom())
     }
 }

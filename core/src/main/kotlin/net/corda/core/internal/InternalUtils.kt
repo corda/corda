@@ -462,6 +462,7 @@ inline fun <T : Any> T.signWithCert(signer: (SerializedBytes<T>) -> DigitalSigna
     return SignedDataWithCert(serialised, signer(serialised))
 }
 
+@DeleteForDJVM
 fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificate): SignedDataWithCert<T> {
     return signWithCert {
         val signature = Crypto.doSign(privateKey, it.bytes)

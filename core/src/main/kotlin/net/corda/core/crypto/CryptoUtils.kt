@@ -64,6 +64,7 @@ fun KeyPair.sign(bytesToSign: OpaqueBytes): DigitalSignature.WithKey = sign(byte
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
+@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(signableData: SignableData): TransactionSignature = Crypto.doSign(this, signableData)
 
