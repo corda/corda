@@ -11,6 +11,7 @@ import net.corda.nodeapi.internal.protonwrapper.messages.ApplicationMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import java.lang.management.ManagementFactory
 import java.net.InetSocketAddress
+import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.time.Duration
 import java.util.*
@@ -34,6 +35,14 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
         private fun <K> Map<K, AtomicLong>.prettyPrint(tabsCount: Int, nf: NumberFormat): String {
             val leftPad = "\t".repeat(tabsCount)
             return entries.joinToString(separator = "\n") { entry -> leftPad + entry.key.toString() + " -> " + nf.format(entry.value.get())}
+        }
+
+        private fun <K> Map<K, AtomicLong>.whenNonEmptyPrint(block: Map<K, AtomicLong>.() -> String): String {
+            return if(this.isEmpty()) {
+                ""
+            } else {
+                block()
+            }
         }
     }
 
@@ -151,7 +160,8 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
 
         val operatingSystemMXBean = ManagementFactory.getOperatingSystemMXBean()
         val loadAverage = operatingSystemMXBean.systemLoadAverage
-        val loadAverageStr = if(loadAverage < 0) "N/A"  else "${loadAverage * 100}%"
+        val df = DecimalFormat("#.##")
+        val loadAverageStr = if(loadAverage < 0) "N/A" else "${df.format(loadAverage * 100)}%"
 
         val runtime = Runtime.getRuntime()
         val freeMemory = runtime.freeMemory().toMB()
@@ -184,15 +194,15 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
                                                    "${nf.format(dirStatsOut.accepted.mapValues { it.value.second }.sumValues())}(outgoing)\n" +
                                 "\tPackets dropped count: ${nf.format(dirStatsIn.droppedPacketsCount.sumValues())}(inbound), ${nf.format(dirStatsOut.droppedPacketsCount.sumValues())}(outgoing)"
 
-        val breakDownTrafficStr =   "Traffic breakdown:\n" +
-                                           "\tSuccessful connections in:\n${dirStatsIn.successfulConnectionCount.prettyPrint(2, nf)}\n" +
-                                           "\tSuccessful connections out:\n${dirStatsOut.successfulConnectionCount.prettyPrint(2, nf)}\n" +
-                                           "\tFailed connections in:\n${dirStatsIn.failedConnectionCount.prettyPrint(2, nf)}\n" +
-                                           "\tFailed connections out:\n${dirStatsOut.failedConnectionCount.prettyPrint(2, nf)}\n" +
-                                           "\tAccepted packets in:\n${inAcceptedPackets.prettyPrint(2, nf)}\n" +
-                                           "\tAccepted packets out:\n${outAcceptedPackets.prettyPrint(2, nf)}\n" +
-                                           "\tDropped packets in:\n${dirStatsIn.droppedPacketsCount.prettyPrint(2, nf)}\n" +
-                                           "\tDropped packets out:\n${dirStatsOut.droppedPacketsCount.prettyPrint(2, nf)}"
+        val breakDownTrafficStr = "Traffic breakdown:\n" +
+                dirStatsIn.successfulConnectionCount.whenNonEmptyPrint { "\tSuccessful connections in:\n${prettyPrint(2, nf)}\n" } +
+                dirStatsOut.successfulConnectionCount.whenNonEmptyPrint { "\tSuccessful connections out:\n${prettyPrint(2, nf)}\n" } +
+                dirStatsIn.failedConnectionCount.whenNonEmptyPrint { "\tFailed connections in:\n${prettyPrint(2, nf)}\n" } +
+                dirStatsOut.failedConnectionCount.whenNonEmptyPrint { "\tFailed connections out:\n${prettyPrint(2, nf)}\n" } +
+                inAcceptedPackets.whenNonEmptyPrint { "\tAccepted packets in:\n${prettyPrint(2, nf)}\n" } +
+                outAcceptedPackets.whenNonEmptyPrint { "\tAccepted packets out:\n${prettyPrint(2, nf)}\n" } +
+                dirStatsIn.droppedPacketsCount.whenNonEmptyPrint { "\tDropped packets in:\n${prettyPrint(2, nf)}\n" } +
+                dirStatsOut.droppedPacketsCount.whenNonEmptyPrint { "\tDropped packets out:\n${prettyPrint(2, nf)}" }
 
         return durationStr + "\n" + runtimeStr + "\n" + trafficTotalsStr + "\n" + breakDownTrafficStr
     }

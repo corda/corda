@@ -84,19 +84,23 @@ class LoggingFirewallAuditServiceTest {
             instance.packetAcceptedEvent(it.createMessage(direction), direction)
         }
 
-        val statsStr = instance.prepareStatsAndReset()
-        assertThat(statsStr, containsSubstring("Successful connection count: 13(inbound), 27(outgoing)"))
-        assertThat(statsStr, containsSubstring("Failed connection count: 2(inbound), 5(outgoing)"))
-        assertThat(statsStr, containsSubstring("Packets accepted count: 3,000(inbound), 6,000(outgoing)"))
-        assertThat(statsStr, containsSubstring("Bytes transmitted: 60,000(inbound), 120,000(outgoing)"))
-        assertThat(statsStr, containsSubstring("Packets dropped count: 6(inbound), 14(outgoing)"))
-        assertThat(statsStr, containsSubstring("Failed connections out:"))
-        assertThat(statsStr, containsSubstring("Server5:10001 -> 1"))
+       with(instance.prepareStatsAndReset()) {
+           assertThat(this, containsSubstring("Successful connection count: 13(inbound), 27(outgoing)"))
+           assertThat(this, containsSubstring("Failed connection count: 2(inbound), 5(outgoing)"))
+           assertThat(this, containsSubstring("Packets accepted count: 3,000(inbound), 6,000(outgoing)"))
+           assertThat(this, containsSubstring("Bytes transmitted: 60,000(inbound), 120,000(outgoing)"))
+           assertThat(this, containsSubstring("Packets dropped count: 6(inbound), 14(outgoing)"))
+           assertThat(this, containsSubstring("Failed connections out:"))
+           assertThat(this, containsSubstring("Server5:10001 -> 1"))
+       }
 
         // Ensure reset stats
-        val statsStr2 = instance.prepareStatsAndReset()
-        assertThat(statsStr2, containsSubstring("Successful connection count: 0"))
-        assertThat(statsStr2, containsSubstring("Packets dropped count: 0(inbound), 0(outgoing)"))
+        with(instance.prepareStatsAndReset()) {
+            assertThat(this, containsSubstring("Successful connection count: 0"))
+            assertThat(this, containsSubstring("Packets dropped count: 0(inbound), 0(outgoing)"))
+            assertThat(this, containsSubstring("Failed connections out:").not())
+            assertThat(this, containsSubstring("Accepted packets out:").not())
+        }
     }
 }
 
