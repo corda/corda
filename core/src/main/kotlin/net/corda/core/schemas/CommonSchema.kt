@@ -54,7 +54,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             /** [OwnableState] attributes */
 
             /** X500Name of owner party **/
-            @Column(name = "owner_name", nullable = true)
+            @Column(name = "owner_name")
             var owner: AbstractParty,
 
             /** [FungibleAsset] attributes
@@ -64,16 +64,16 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
              */
 
             /** Amount attributes */
-            @Column(name = "quantity", nullable = false)
+            @Column(name = "quantity")
             var quantity: Long,
 
             /** Issuer attributes */
 
             /** X500Name of issuer party **/
-            @Column(name = "issuer_name", nullable = true)
+            @Column(name = "issuer_name")
             var issuer: AbstractParty,
 
-            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
+            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE)
             @Type(type = "corda-wrapper-binary")
             var issuerRef: ByteArray
     ) : PersistentState()

@@ -25,25 +25,25 @@ object NodeInfoSchemaV1 : MappedSchema(
     class PersistentNodeInfo(
             @Id
             @GeneratedValue
-            @Column(name = "node_info_id", nullable = false)
+            @Column(name = "node_info_id")
             var id: Int,
 
-            @Column(name = "node_info_hash", length = 64, nullable = false)
+            @Column(name="node_info_hash", length = 64)
             val hash: String,
 
-            @Column(name = "addresses", nullable = false)
+            @Column(name = "addresses")
             @OneToMany(cascade = arrayOf(CascadeType.ALL), orphanRemoval = true)
             @JoinColumn(name = "node_info_id", foreignKey = ForeignKey(name = "FK__info_hosts__infos"))
             val addresses: List<DBHostAndPort>,
 
-            @Column(name = "legal_identities_certs", nullable = false)
+            @Column(name = "legal_identities_certs")
             @ManyToMany(cascade = arrayOf(CascadeType.ALL))
             @JoinTable(name = "node_link_nodeinfo_party",
                     joinColumns = arrayOf(JoinColumn(name = "node_info_id", foreignKey = ForeignKey(name = "FK__link_nodeinfo_party__infos"))),
                     inverseJoinColumns = arrayOf(JoinColumn(name = "party_name", foreignKey = ForeignKey(name = "FK__link_ni_p__info_p_cert"))))
             val legalIdentitiesAndCerts: List<DBPartyAndCertificate>,
 
-            @Column(name = "platform_version", nullable = false)
+            @Column(name = "platform_version")
             val platformVersion: Int,
 
             /**
@@ -51,7 +51,7 @@ object NodeInfoSchemaV1 : MappedSchema(
              * Not expected to be sequential, but later versions of the registration must have higher values
              * Similar to the serial number on DNS records.
              */
-            @Column(name = "serial", nullable = false)
+            @Column(name = "serial")
             val serial: Long
     ) : Serializable {
         fun toNodeInfo(): NodeInfo {
@@ -69,7 +69,7 @@ object NodeInfoSchemaV1 : MappedSchema(
     data class DBHostAndPort(
             @Id
             @GeneratedValue
-            @Column(name = "hosts_id", nullable = false)
+            @Column(name = "hosts_id")
             var id: Int,
             val host: String? = null,
             val port: Int? = null
@@ -95,11 +95,11 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "party_name", nullable = false)
             val name: String,
 
-            @Column(name = "owning_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
+            @Column(name = "owning_key_hash", length = MAX_HASH_HEX_SIZE)
             val owningKeyHash: String,
 
             @Lob
-            @Column(name = "party_cert_binary", nullable = false)
+            @Column(name = "party_cert_binary")
             val partyCertBinary: ByteArray,
 
 
