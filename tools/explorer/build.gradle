@@ -11,13 +11,6 @@ processResources {
     from file("$rootDir/config/dev/log4j2.xml")
 }
 
-configurations {
-    compile {
-        // We don't need Hibernate just for its @Type annotation.
-        exclude group: 'org.hibernate', module: 'hibernate-core'
-    }
-}
-
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
