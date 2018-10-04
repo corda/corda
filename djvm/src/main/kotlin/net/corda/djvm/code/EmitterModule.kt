@@ -83,6 +83,10 @@ class EmitterModule(
         invokeSpecial(Type.getInternalName(T::class.java), name, descriptor, isInterface)
     }
 
+    fun invokeInterface(owner: String, name: String, descriptor: String) {
+        methodVisitor.visitMethodInsn(INVOKEINTERFACE, owner, name, descriptor, true)
+    }
+
     /**
      * Emit instruction for storing a value into a static field.
      */
@@ -108,6 +112,24 @@ class EmitterModule(
     }
 
     /**
+     * Emit instruction for pushing an object reference
+     * from a register onto the stack.
+     */
+    fun pushObject(regNum: Int) {
+        methodVisitor.visitVarInsn(ALOAD, regNum)
+        hasEmittedCustomCode
+    }
+
+    /**
+     * Emit instruction for pushing an integer value
+     * from a register onto the stack.
+     */
+    fun pushInteger(regNum: Int) {
+        methodVisitor.visitVarInsn(ILOAD, regNum)
+        hasEmittedCustomCode
+    }
+
+    /**
      * Emit a sequence of instructions for instantiating and throwing an exception based on the provided message.
      */
     fun <T : Throwable> throwException(exceptionType: Class<T>, message: String) {
@@ -126,6 +148,14 @@ class EmitterModule(
      */
     fun returnVoid() {
         methodVisitor.visitInsn(RETURN)
+        hasEmittedCustomCode = true
+    }
+
+    /**
+     * Emit instruction for a function that returns an object reference.
+     */
+    fun returnObject() {
+        methodVisitor.visitInsn(ARETURN)
         hasEmittedCustomCode = true
     }
 

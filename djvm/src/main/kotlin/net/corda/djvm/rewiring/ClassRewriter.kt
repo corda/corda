@@ -5,6 +5,9 @@ import net.corda.djvm.analysis.AnalysisConfiguration
 import net.corda.djvm.analysis.AnalysisContext
 import net.corda.djvm.analysis.ClassAndMemberVisitor.Companion.API_VERSION
 import net.corda.djvm.code.ClassMutator
+import net.corda.djvm.code.EmitterModule
+import net.corda.djvm.code.emptyAsNull
+import net.corda.djvm.references.Member
 import net.corda.djvm.utilities.loggerFor
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -45,16 +48,37 @@ open class ClassRewriter(
         private val logger = loggerFor<ClassRewriter>()
     }
 
+    /**
+     * Extra visitor that is applied after [SandboxRemapper]. This "stitches" the original
+     * unmapped interface as a super-interface of the mapped version.
+     */
     private class InterfaceStitcher(parent: ClassVisitor, private val configuration: AnalysisConfiguration)
         : ClassVisitor(API_VERSION, parent)
     {
-        override fun visit(version: Int, access: Int, name: String, signature: String?, superName: String?, interfaces: Array<String>?) {
-            val stitchedInterfaces = if (configuration.isStitchedClass(name)) {
-                arrayOf(*(interfaces ?: emptyArray()), configuration.classResolver.reverse(name))
-            } else {
-                interfaces
+        private val extraMethods = mutableListOf<Member>()
+
+        override fun visit(version: Int, access: Int, className: String, signature: String?, superName: String?, interfaces: Array<String>?) {
+            val stitchedInterfaces = configuration.stitchedInterfaces[className]?.let { methods ->
+                extraMethods += methods
+                arrayOf(*(interfaces ?: emptyArray()), configuration.classResolver.reverse(className))
+            } ?: interfaces
+
+            super.visit(version, access, className, signature, superName, stitchedInterfaces)
+        }
+
+        override fun visitEnd() {
+            for (method in extraMethods) {
+                method.apply {
+                    visitMethod(access, memberName, signature, genericsDetails.emptyAsNull, exceptions.toTypedArray())?.also { mv ->
+                        mv.visitCode()
+                        EmitterModule(mv).writeByteCode(body)
+                        mv.visitMaxs(-1, -1)
+                        mv.visitEnd()
+                    }
+                }
             }
-            super.visit(version, access, name, signature, superName, stitchedInterfaces)
+            extraMethods.clear()
+            super.visitEnd()
         }
     }
 }

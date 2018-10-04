@@ -1,12 +1,16 @@
 package net.corda.djvm.analysis
 
+import net.corda.djvm.code.EmitterModule
 import net.corda.djvm.code.ruleViolationError
 import net.corda.djvm.code.thresholdViolationError
 import net.corda.djvm.messages.Severity
 import net.corda.djvm.references.ClassModule
+import net.corda.djvm.references.Member
 import net.corda.djvm.references.MemberModule
+import net.corda.djvm.references.MethodBody
 import net.corda.djvm.source.BootstrapClassLoader
 import net.corda.djvm.source.SourceClassLoader
+import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import sandbox.net.corda.djvm.costing.RuntimeCostAccounter
 import java.io.Closeable
@@ -42,9 +46,17 @@ class AnalysisConfiguration(
 
     /**
      * Classes that have already been declared in the sandbox namespace and that should be made
-     * available inside the sandboxed environment.
+     * available inside the sandboxed environment. These classes belong to the application
+     * classloader and so are shared across all sandboxes.
      */
     val pinnedClasses: Set<String> = MANDATORY_PINNED_CLASSES + additionalPinnedClasses
+
+    /**
+     * These interfaces are modified as they are mapped into the sandbox by
+     * having their unsandboxed version "stitched in" as a super-interface.
+     * And in some cases, we need to add some synthetic bridge methods as well.
+     */
+    val stitchedInterfaces: Map<String, List<Member>> get() = STITCHED_INTERFACES
 
     /**
      * Functionality used to resolve the qualified name and relevant information about a class.
@@ -61,7 +73,6 @@ class AnalysisConfiguration(
         }
     }
 
-    fun isStitchedClass(className: String): Boolean = STITCHED_CLASSES.contains(className)
     fun isTemplateClass(className: String): Boolean = className in TEMPLATE_CLASSES
     fun isPinnedClass(className: String): Boolean = className in pinnedClasses
 
@@ -102,8 +113,8 @@ class AnalysisConfiguration(
             sun.misc.JavaLangAccess::class.java,
             sun.misc.SharedSecrets::class.java
         ).sandboxed() + setOf(
-            "sandbox/java/lang/DJVM",
             "sandbox/Task",
+            "sandbox/java/lang/DJVM",
             "sandbox/sun/misc/SharedSecrets\$JavaLangAccessImpl"
         )
 
@@ -113,14 +124,60 @@ class AnalysisConfiguration(
          *
          * <code>interface sandbox.A extends A</code>
          */
-        private val STITCHED_CLASSES: Set<String> = setOf(
-            CharSequence::class.java,
-            Comparable::class.java,
-            Iterable::class.java,
-            Comparator::class.java
-        ).sandboxed()
+        private val STITCHED_INTERFACES: Map<String, List<Member>> = mapOf(
+            sandboxed(CharSequence::class.java) to listOf(
+                object : MethodBuilder(
+                    access = ACC_PUBLIC or ACC_SYNTHETIC or ACC_BRIDGE,
+                    className = "sandbox/java/lang/CharSequence",
+                    memberName = "subSequence",
+                    descriptor = "(II)Ljava/lang/CharSequence;"
+                ) {
+                    override fun writeBody(emitter: EmitterModule) = with(emitter) {
+                        pushObject(0)
+                        pushInteger(1)
+                        pushInteger(2)
+                        invokeInterface(className, memberName, "(II)L$className;")
+                        returnObject()
+                    }
+                }.withBody()
+                 .build(),
+                MethodBuilder(
+                    access = ACC_PUBLIC or ACC_ABSTRACT,
+                    className = "sandbox/java/lang/CharSequence",
+                    memberName = "toString",
+                    descriptor = "()Ljava/lang/String;"
+                ).build()
+            ),
+            sandboxed(Comparable::class.java) to emptyList(),
+            sandboxed(Comparator::class.java) to emptyList(),
+            sandboxed(Iterable::class.java) to emptyList()
+        )
 
-        private fun Set<Class<*>>.sandboxed(): Set<String> = map(Type::getInternalName).map { SANDBOX_PREFIX + it }.toSet()
+        private fun sandboxed(clazz: Class<*>) = SANDBOX_PREFIX + Type.getInternalName(clazz)
+        private fun Set<Class<*>>.sandboxed(): Set<String> = map(Companion::sandboxed).toSet()
     }
 
+    private open class MethodBuilder(
+            protected val access: Int,
+            protected val className: String,
+            protected val memberName: String,
+            protected val descriptor: String) {
+        private val bodies = mutableListOf<MethodBody>()
+
+        protected open fun writeBody(emitter: EmitterModule) {}
+
+        fun withBody(): MethodBuilder {
+            bodies.add(::writeBody)
+            return this
+        }
+
+        fun build() = Member(
+            access = access,
+            className = className,
+            memberName = memberName,
+            signature = descriptor,
+            genericsDetails = "",
+            body = bodies
+        )
+    }
 }

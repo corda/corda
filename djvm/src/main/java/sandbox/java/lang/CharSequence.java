@@ -14,4 +14,8 @@ public interface CharSequence extends java.lang.CharSequence {
     @NotNull
     String toDJVMString();
 
+    @Override
+    @NotNull
+    java.lang.String toString();
+
 }
