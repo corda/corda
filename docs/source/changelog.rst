@@ -6,6 +6,16 @@ release, see :doc:`upgrade-notes`.
 
 Version 3.3
 -----------
+
+* Vault query fix: support query by parent classes of Contract State classes (see https://github.com/corda/corda/issues/3714)
+
+* Fixed an issue preventing Shell from returning control to the user when CTRL+C is pressed in the terminal.
+
+* Fixed a problem that sometimes prevented nodes from starting in presence of custom state types in the database without a corresponding type from installed CorDapps.
+
+* Introduced a grace period before the initial node registration fails if the node cannot connect to the Doorman.
+  It retries 10 times with a 1 minute interval in between each try. At the moment this is not configurable.
+
 * Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
 
 * Changes to the JSON/YAML serialisation format from ``JacksonSupport``, which also applies to the node shell:
@@ -49,12 +59,6 @@ Version 3.3
 
 * Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored
   as the raw type, List for example.
-
-* API change: ``net.corda.core.schemas.PersistentStateRef`` fields (index and txId) are now non-nullable.
-  The fields were always effectively non-nullable - values were set from non-nullable fields of other objects.
-  The class is used as database Primary Key columns of other entities and databases already impose those columns as non-nullable
-  (even if JPA annotation nullable=false was absent).
-  In case your Cordapps use this entity class to persist data in own custom tables as non Primary Key columns refer to :doc:`upgrade-notes` for upgrade instructions.
 
 * Table name with a typo changed from ``NODE_ATTCHMENTS_CONTRACTS`` to ``NODE_ATTACHMENTS_CONTRACTS``.
 

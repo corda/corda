@@ -155,7 +155,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     /** Set to non-null once [start] has been successfully called. */
     open val started get() = _started
-    @Volatile private var _started: StartedNode<AbstractNode>? = null
+    @Volatile
+    private var _started: StartedNode<AbstractNode>? = null
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager): CordaRPCOps {
@@ -195,7 +196,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
 
-        networkMapClient = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, identityService.trustRoot) }
+        networkMapClient = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, identityService.trustRoot, versionInfo) }
         val networkParameteresReader = NetworkParametersReader(identityService.trustRoot, networkMapClient, configuration.baseDirectory)
         val networkParameters = networkParameteresReader.networkParameters
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) {
@@ -266,6 +267,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
                 networkMapClient,
                 networkParameteresReader.hash,
+                services.myInfo.serialize().hash,
                 configuration.baseDirectory)
         runOnStop += networkMapUpdater::close
 
@@ -319,7 +321,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 serial = 0
         )
 
-        val nodeInfoFromDb = networkMapCache.getNodeByLegalName(identity.name)
+        val nodeInfoFromDb = getPreviousNodeInfoIfPresent(networkMapCache, identity)
+
 
         val nodeInfo = if (potentialNodeInfo == nodeInfoFromDb?.copy(serial = 0)) {
             // The node info hasn't changed. We use the one from the database to preserve the serial.
@@ -347,6 +350,19 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
 
         return Pair(keyPairs, nodeInfo)
+    }
+
+    private fun getPreviousNodeInfoIfPresent(networkMapCache: NetworkMapCacheBaseInternal, identity: PartyAndCertificate): NodeInfo? {
+        val nodeInfosFromDb = networkMapCache.getNodesByLegalName(identity.name)
+
+        return when (nodeInfosFromDb.size) {
+            0 -> null
+            1 -> nodeInfosFromDb[0]
+            else -> {
+                log.warn("Found more than one node registration with our legal name, this is only expected if our keypair has been regenerated")
+                nodeInfosFromDb[0]
+            }
+        }
     }
 
     // Publish node info on startup and start task that sends every day a heartbeat - republishes node info.
@@ -712,7 +728,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {
-        val notaryKey = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
+        val notaryKey = myNotaryIdentity?.owningKey
+                ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
         return notaryConfig.run {
             if (raft != null) {
                 val uniquenessProvider = RaftUniquenessProvider(configuration, database, services.monitoringService.metrics, raft)
@@ -846,7 +863,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         override val networkMapUpdater: NetworkMapUpdater get() = this@AbstractNode.networkMapUpdater
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
             require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
-            return cordappServices.getInstance(type) ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
+            return cordappServices.getInstance(type)
+                    ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
         }
 
         override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? {

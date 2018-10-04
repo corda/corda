@@ -24,20 +24,22 @@ import java.security.cert.X509Certificate
 //       also note that IDs are numbered from 1 upwards, matching numbering of other enum types in ASN.1 specifications.
 // TODO: Link to the specification once it has a permanent URL
 enum class CertRole(val validParents: NonEmptySet<CertRole?>, val isIdentity: Boolean, val isWellKnown: Boolean) : ASN1Encodable {
-    /**
-     * Intermediate CA (Doorman service).
-     */
-    INTERMEDIATE_CA(NonEmptySet.of(null), false, false),
+    /** Signing certificate for the Doorman CA. */
+    DOORMAN_CA(NonEmptySet.of(null), false, false),
     /** Signing certificate for the network map. */
     NETWORK_MAP(NonEmptySet.of(null), false, false),
     /** Well known (publicly visible) identity of a service (such as notary). */
-    SERVICE_IDENTITY(NonEmptySet.of(INTERMEDIATE_CA), true, true),
+    SERVICE_IDENTITY(NonEmptySet.of(DOORMAN_CA), true, true),
     /** Node level CA from which the TLS and well known identity certificates are issued. */
-    NODE_CA(NonEmptySet.of(INTERMEDIATE_CA), false, false),
+    NODE_CA(NonEmptySet.of(DOORMAN_CA), false, false),
     /** Transport layer security certificate for a node. */
     TLS(NonEmptySet.of(NODE_CA), false, false),
     /** Well known (publicly visible) identity of a legal entity. */
-    LEGAL_IDENTITY(NonEmptySet.of(INTERMEDIATE_CA, NODE_CA), true, true),
+    // TODO: at the moment, Legal Identity certs are issued by Node CA only. However, [DOORMAN_CA] is also added
+    //      as a valid parent of [LEGAL_IDENTITY] for backwards compatibility purposes (eg. if we decide TLS has its
+    //      own Root CA and Doorman CA directly issues Legal Identities; thus, there won't be a requirement for
+    //      Node CA). Consider removing [DOORMAN_CA] from [validParents] when the model is finalised.
+    LEGAL_IDENTITY(NonEmptySet.of(DOORMAN_CA, NODE_CA), true, true),
     /** Confidential (limited visibility) identity of a legal entity. */
     CONFIDENTIAL_LEGAL_IDENTITY(NonEmptySet.of(LEGAL_IDENTITY), true, false);
 

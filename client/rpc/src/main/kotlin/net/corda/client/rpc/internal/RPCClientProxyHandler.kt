@@ -27,6 +27,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.DeduplicationChecker
+import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
@@ -39,6 +40,7 @@ import java.lang.reflect.Method
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.reflect.jvm.javaMethod
@@ -170,6 +172,8 @@ class RPCClientProxyHandler(
     private val deduplicationChecker = DeduplicationChecker(rpcConfiguration.deduplicationCacheExpiry)
     private val deduplicationSequenceNumber = AtomicLong(0)
 
+    private val sendingEnabled = AtomicBoolean(true)
+
     /**
      * Start the client. This creates the per-client queue, starts the consumer session and the reaper.
      */
@@ -188,7 +192,12 @@ class RPCClientProxyHandler(
                 rpcConfiguration.reapInterval.toMillis(),
                 TimeUnit.MILLISECONDS
         )
-        sessionFactory = serverLocator.createSessionFactory()
+        try {
+            sessionFactory = serverLocator.createSessionFactory()
+        } catch (e: ActiveMQNotConnectedException) {
+            throw (RPCException("Cannot connect to server(s). Tried with all available servers.", e))
+        }
+        sessionFactory!!.addFailoverListener(this::failoverHandler)
         producerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
         rpcProducer = producerSession!!.createProducer(RPCApi.RPC_SERVER_QUEUE_NAME)
         consumerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
@@ -210,6 +219,9 @@ class RPCClientProxyHandler(
         if (consumerSession!!.isClosed) {
             throw RPCException("RPC Proxy is closed")
         }
+
+        if (!sendingEnabled.get())
+            throw RPCException("RPC server is not available.")
 
         val replyId = InvocationId.newInstance()
         callSiteMap?.set(replyId, Throwable("<Call site of root RPC '${method.name}'>"))
@@ -392,6 +404,46 @@ class RPCClientProxyHandler(
             log.debug { "Reaping ${observableIds.size} observables" }
             sendMessage(RPCApi.ClientToServer.ObservablesClosed(observableIds))
         }
+    }
+
+    private fun failoverHandler(event: FailoverEventType) {
+        when (event) {
+            FailoverEventType.FAILURE_DETECTED -> {
+                cleanUpOnConnectionLoss()
+            }
+
+            FailoverEventType.FAILOVER_COMPLETED -> {
+                sendingEnabled.set(true)
+                log.info("RPC server available.")
+            }
+
+            FailoverEventType.FAILOVER_FAILED -> {
+                log.error("Could not reconnect to the RPC server.")
+            }
+        }
+    }
+
+    private fun cleanUpOnConnectionLoss() {
+        sendingEnabled.set(false)
+        log.warn("Terminating observables.")
+        val m = observableContext.observableMap.asMap()
+        m.keys.forEach { k ->
+            observationExecutorPool.run(k) {
+                try {
+                    m[k]?.onError(RPCException("Connection failure detected."))
+                } catch (th: Throwable) {
+                    log.error("Unexpected exception when RPC connection failure handling", th)
+                }
+            }
+        }
+        observableContext.observableMap.invalidateAll()
+
+        rpcReplyMap.forEach { _, replyFuture ->
+            replyFuture.setException(RPCException("Connection failure detected."))
+        }
+
+        rpcReplyMap.clear()
+        callSiteMap?.clear()
     }
 }
 

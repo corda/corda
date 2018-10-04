@@ -21,8 +21,7 @@ import java.nio.file.StandardCopyOption
 data class NodeConfig(
         val myLegalName: CordaX500Name,
         val p2pAddress: NetworkHostAndPort,
-        val rpcAddress: NetworkHostAndPort,
-        val rpcAdminAddress: NetworkHostAndPort,
+        val rpcSettings: NodeRpcSettings,
         /** This is not used by the node but by the webserver which looks at node.conf. */
         val webAddress: NetworkHostAndPort,
         val notary: NotaryService?,
@@ -46,8 +45,8 @@ data class NodeConfig(
 
         val config = toConfig()
         val rpcSettings = empty()
-                .withValue("address", ConfigValueFactory.fromAnyRef(rpcAddress.toString()))
-                .withValue("adminAddress", ConfigValueFactory.fromAnyRef(rpcAdminAddress.toString()))
+                .withValue("address", ConfigValueFactory.fromAnyRef(rpcSettings.address.toString()))
+                .withValue("adminAddress", ConfigValueFactory.fromAnyRef(rpcSettings.adminAddress.toString()))
                 .root()
         return config.withoutPath("rpcAddress").withoutPath("rpcAdminAddress").withValue("rpcSettings", rpcSettings)
     }

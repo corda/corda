@@ -15,6 +15,7 @@ import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
 import net.corda.vega.api.SwapDataView
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Ignore
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -28,6 +29,7 @@ class SimmValuationTest {
         val testTradeId = "trade1"
     }
 
+    @Ignore("Far Too Flakey on V3 - ooms")
     @Test
     fun `runs SIMM valuation demo`() {
         val logConfigFile = projectRootDir / "samples" / "simm-valuation-demo" / "src" / "main" / "resources" / "log4j2.xml"

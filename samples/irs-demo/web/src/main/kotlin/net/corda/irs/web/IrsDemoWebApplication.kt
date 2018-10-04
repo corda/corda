@@ -3,10 +3,10 @@ package net.corda.irs.web
 import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.RPCException
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.finance.plugin.registerFinanceJSONMappers
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -39,7 +39,7 @@ class IrsDemoWebApplication {
         do {
             try {
                 return CordaRPCClient(NetworkHostAndPort.parse(cordaHost)).start(cordaUser, cordaPassword).proxy
-            } catch (ex: ActiveMQNotConnectedException) {
+            } catch (ex: RPCException) {
                 if (maxRetries-- > 0) {
                     Thread.sleep(1000)
                 } else {

@@ -107,7 +107,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
         override fun initChannel(ch: SocketChannel) {
             val pipeline = ch.pipeline()
-            val handler = createClientSslHelper(parent.currentTarget, keyManagerFactory, trustManagerFactory)
+            val handler = createClientSslHelper(parent.currentTarget, parent.allowedRemoteLegalNames, keyManagerFactory, trustManagerFactory)
             pipeline.addLast("sslHandler", handler)
             if (parent.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
             pipeline.addLast(AMQPChannelHandler(false,
