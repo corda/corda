@@ -32,7 +32,7 @@ Changes of Note
   After consultation, collaboration, and discussion with industry experts, we have decided to alter the default Certificate Hierarchy (PKI) utilized by
   Corda and the Corda Network. To facilitate this, the nodes have had their certificate path verification logic made much more flexible. All existing
   certificate hierarchy, certificates, and networks will remain valid. The possibility now exists for nodes to recognize a deeper certificate chain and
-  thus compatibility zone operators can deploy and adhere to the PKI standards they expect and are comfortable with.
+  thus Compatibility Zone operators can deploy and adhere to the PKI standards they expect and are comfortable with.
 
   Practically speaking, the old code assumed a 3-level hierarchy of Root -> Intermediate CA (Doorman) -> Node, and this was hard coded. From 3.3 onward an
   arbitrary depth of certificate chain is supported. For the Corda Network, this means the introduction of an intermediate layer between the root and the
@@ -73,7 +73,7 @@ Issues Fixed
 * Fix duplicate index declaration in the Cash schema. [`CORDA-1952 <https://r3-cev.atlassian.net/browse/CORDA-1952>`_]
 * Hello World Tutorial Page mismatch between code sample and explanatory text. [`CORDA-1950 <https://r3-cev.atlassian.net/browse/CORDA-1950>`_]
 * Java Instructions to Invoke Hello World CorDapp are incorrect. [`CORDA-1949 <https://r3-cev.atlassian.net/browse/CORDA-1949>`_]
-* Add ``VersionInfo`` to the ``NodeInfo`` submission request to the network map element of the compatibility zone. [`CORDA-1938 <https://r3-cev.atlassian.net/browse/CORDA-1938>`_]
+* Add ``VersionInfo`` to the ``NodeInfo`` submission request to the network map element of the Compatibility Zone. [`CORDA-1938 <https://r3-cev.atlassian.net/browse/CORDA-1938>`_]
 * Rename current INTERMEDIATE_CA certificate role to DOORMAN_CA certificate role. [`CORDA-1934 <https://r3-cev.atlassian.net/browse/CORDA-1934>`_]
 * Make node-side network map verification agnostic to the certificate hierarchy. [`CORDA-1932 <https://r3-cev.atlassian.net/browse/CORDA-1932>`_]
 * Corda Shell incorrectly deserializes generic types as raw types. [`CORDA-1907 <https://r3-cev.atlassian.net/browse/CORDA-1907>`_]
@@ -166,7 +166,7 @@ with Azure cloud services for remote hosting of Nodes and Docker instances for l
 
 * **Split Compatibility Zone**
 
-Prior to this release compatibility zone membership was denoted with a single configuration setting
+Prior to this release Compatibility Zone membership was denoted with a single configuration setting
 
 .. sourcecode:: shell
 
@@ -177,7 +177,7 @@ of its identity as well as the Network Map service where it would publish its si
 retrieve the Network Map.
 
 Compatibility Zones can now, however, be configured with the two disparate services, Doorman and
-Network Map, running on different URLs. If the compatibility zone your node is connecting to
+Network Map, running on different URLs. If the Compatibility Zone your node is connecting to
 is configured in this manner, the new configuration looks as follows.
 
 .. sourcecode:: shell
