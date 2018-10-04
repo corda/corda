@@ -3,7 +3,6 @@
 package net.corda.deterministic.crypto
 
 import net.corda.core.crypto.*
-import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
 import net.corda.core.crypto.Crypto.findSignatureScheme
 import net.corda.core.crypto.Crypto.isSupportedSignatureScheme
 import net.corda.core.serialization.serialize
