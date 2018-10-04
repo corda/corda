@@ -187,8 +187,8 @@ The example below shows the minimal set of ``options`` needed to create a dummy 
         }
     }
 
-Contracts classes from signed CorDapp JARs will be checked by `Signature constraints` by default.
-You can force them to be checked by `Zone constraints` by adding contract class names to ``includeWhitelist`` entry,
+Contracts classes from signed CorDapp JARs will be checked by Signature Constraints by default.
+You can force them to be checked by Zone Constraints by adding contract class names to ``includeWhitelist`` entry,
 the list will generate `include_whitelist.txt` file used internally by :doc:`network-bootstrapper` tool.
 Refer to :doc:`api-contract-constraints` to understand implication of different constraint types before adding ``includeWhitelist`` to ``deployNodes`` task.
 
