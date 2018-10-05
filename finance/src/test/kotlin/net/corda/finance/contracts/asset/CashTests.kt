@@ -160,12 +160,17 @@ class CashTests {
         }
     }
 
+    @BelongsToContract(Cash::class)
+    object DummyState: ContractState {
+        override val participants: List<AbstractParty> = emptyList()
+    }
+
     @Test
     fun `issue by move`() {
         // Check we can't "move" money into existence.
         transaction {
             attachment(Cash.PROGRAM_ID)
-            input(Cash.PROGRAM_ID, DummyState())
+            input(Cash.PROGRAM_ID, DummyState)
             output(Cash.PROGRAM_ID, outState)
             command(miniCorp.publicKey, Cash.Commands.Move())
             this `fails with` "there is at least one cash input for this group"
