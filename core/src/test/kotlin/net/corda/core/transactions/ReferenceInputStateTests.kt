@@ -58,7 +58,18 @@ class ReferenceStateTests {
     // check might not be present in other contracts, like Cash, for example. Cash might have a command
     // called "Share" that allows a party to prove to another that they own over a certain amount of cash.
     // As such, cash can be added to the references list with a "Share" command.
+    @BelongsToContract(ExampleContract::class)
     data class ExampleState(val creator: Party, val data: String) : ContractState {
+        override val participants: List<AbstractParty> get() = listOf(creator)
+    }
+
+    // This state has only been created to serve reference data so it cannot ever be used as an input or
+    // output when it is being referred to. However, we might want all states to be referable, so this
+    // check might not be present in other contracts, like Cash, for example. Cash might have a command
+    // called "Share" that allows a party to prove to another that they own over a certain amount of cash.
+    // As such, cash can be added to the references list with a "Share" command.
+    @BelongsToContract(Cash::class)
+    data class ExampleCashState(val creator: Party, val data: String) : ContractState {
         override val participants: List<AbstractParty> get() = listOf(creator)
     }
 
@@ -169,7 +180,7 @@ class ReferenceStateTests {
             transaction {
                 input("REF DATA")
                 command(ALICE_PUBKEY, ExampleContract.Update())
-                output(Cash.PROGRAM_ID, "UPDATED REF DATA", "REF DATA".output<ExampleState>().copy(data = "NEW STUFF!"))
+                output(ExampleContract::class.java.typeName, "UPDATED REF DATA", "REF DATA".output<ExampleState>().copy(data = "NEW STUFF!"))
                 verifies()
             }
             // Try to use the old one.
