@@ -498,7 +498,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
         val generatedCordapps = mutableListOf(VirtualCordapp.generateCoreCordapp(versionInfo))
-        if (configuration.notary != null) generatedCordapps += VirtualCordapp.generateSimpleNotaryCordapp(versionInfo)
+        if (configuration.notary != null && configuration.notary?.className == SimpleNotaryService::class.java.name) {
+            generatedCordapps += VirtualCordapp.generateSimpleNotaryCordapp(versionInfo)
+        }
         return JarScanningCordappLoader.fromDirectories(
                 configuration.cordappDirectories,
                 versionInfo,

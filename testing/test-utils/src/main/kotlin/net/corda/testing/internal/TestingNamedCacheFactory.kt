@@ -1,4 +1,4 @@
-package net.corda.node.utilities
+package net.corda.testing.internal
 
 import com.codahale.metrics.MetricRegistry
 import com.github.benmanes.caffeine.cache.Cache
@@ -9,6 +9,7 @@ import net.corda.core.internal.buildNamed
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.config.MB
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.utilities.NamedCacheFactory
 
 class TestingNamedCacheFactory private constructor(private val sizeOverride: Long, private val metricRegistry: MetricRegistry?, private val nodeConfiguration: NodeConfiguration?) : NamedCacheFactory, SingletonSerializeAsToken() {
     constructor(sizeOverride: Long = 1024) : this(sizeOverride, null, null)

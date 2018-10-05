@@ -16,8 +16,10 @@ class SimpleNotaryService(override val services: ServiceHubInternal, override va
 
     override fun createServiceFlow(otherPartySession: FlowSession): NotaryServiceFlow {
         return if (notaryConfig.validating) {
+            log.info("Starting in validating mode")
             ValidatingNotaryFlow(otherPartySession, this)
         } else {
+            log.info("Starting in non-validating mode")
             NonValidatingNotaryFlow(otherPartySession, this)
         }
     }
