@@ -10,11 +10,9 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.internal.config.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
-import net.corda.testing.common.internal.ProjectStructure
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.nio.file.Paths
-import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.jar.JarFile
 import kotlin.streams.toList
@@ -23,12 +21,6 @@ class NodeVersioningTest {
     private companion object {
         val user = User("user1", "test", permissions = setOf("ALL"))
         val port = AtomicInteger(15100)
-
-        val expectedPlatformVersion = (ProjectStructure.projectRootDir / "constants.properties").read {
-            val constants = Properties()
-            constants.load(it)
-            constants.getProperty("platformVersion").toInt()
-        }
     }
 
     private val factory = NodeProcess.Factory()
@@ -45,7 +37,7 @@ class NodeVersioningTest {
     @Test
     fun `platform version in manifest file`() {
         val manifest = JarFile(factory.cordaJar.toFile()).manifest
-        assertThat(manifest.mainAttributes.getValue("Corda-Platform-Version").toInt()).isEqualTo(expectedPlatformVersion)
+        assertThat(manifest.mainAttributes.getValue("Corda-Platform-Version").toInt()).isEqualTo(PLATFORM_VERSION)
     }
 
     @Test
@@ -60,9 +52,9 @@ class NodeVersioningTest {
         factory.create(aliceConfig).use { alice ->
             alice.connect().use {
                 val rpc = it.proxy
-                assertThat(rpc.protocolVersion).isEqualTo(expectedPlatformVersion)
-                assertThat(rpc.nodeInfo().platformVersion).isEqualTo(expectedPlatformVersion)
-                assertThat(rpc.startFlow(NodeVersioningTest::GetPlatformVersionFlow).returnValue.getOrThrow()).isEqualTo(expectedPlatformVersion)
+                assertThat(rpc.protocolVersion).isEqualTo(PLATFORM_VERSION)
+                assertThat(rpc.nodeInfo().platformVersion).isEqualTo(PLATFORM_VERSION)
+                assertThat(rpc.startFlow(NodeVersioningTest::GetPlatformVersionFlow).returnValue.getOrThrow()).isEqualTo(PLATFORM_VERSION)
             }
         }
     }

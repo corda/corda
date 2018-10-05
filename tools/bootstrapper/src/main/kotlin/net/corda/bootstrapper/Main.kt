@@ -2,7 +2,7 @@ package net.corda.bootstrapper
 
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
-import net.corda.nodeapi.internal.PLATFORM_VERSION
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.network.NetworkBootstrapper
 import picocli.CommandLine.Option
 import java.nio.file.Path
