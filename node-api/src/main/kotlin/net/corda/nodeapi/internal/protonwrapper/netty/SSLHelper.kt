@@ -18,6 +18,8 @@ import java.security.cert.*
 import java.util.*
 import javax.net.ssl.*
 
+private const val HOSTNAME_FORMAT = "%s.corda.net"
+
 internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager) : X509ExtendedTrustManager() {
     companion object {
         val log = contextLogger()
