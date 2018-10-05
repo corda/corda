@@ -23,9 +23,25 @@ object JarSignatureCollector {
      * @param jar The open [JarInputStream] to collect signing parties from.
      * @throws InvalidJarSignersException If the signer sets for any two signable items are different from each other.
      */
-    fun collectSigningParties(jar: JarInputStream): List<Party> {
+    fun collectSigningParties(jar: JarInputStream): List<Party> = collectSigningSet(jar).toPartiesOrderedByName()
+
+    /**
+     * Returns an ordered list of every [X509Certificate] which has signed every signable item in the given [JarInputStream].
+     *
+     * @param jar The open [JarInputStream] to collect signing parties from.
+     * @throws InvalidJarSignersException If the signer sets for any two signable items are different from each other.
+     */
+    fun collectCertificates(jar: JarInputStream): List<X509Certificate> = collectSigningSet(jar).toCertificates()
+
+    /**
+     * Returns set of every [CodeSigner] which has signed every signable item in the given [JarInputStream].
+     *
+     * @param jar The open [JarInputStream] to collect signing parties from.
+     * @throws InvalidJarSignersException If the signer sets for any two signable items are different from each other.
+     */
+    private fun collectSigningSet(jar: JarInputStream): Set<CodeSigner> {
         val signerSets = jar.fileSignerSets
-        if (signerSets.isEmpty()) return emptyList()
+        if (signerSets.isEmpty()) return emptySet()
 
         val (firstFile, firstSignerSet) = signerSets.first()
         for ((otherFile, otherSignerSet) in signerSets.subList(1, signerSets.size)) {
@@ -38,7 +54,7 @@ object JarSignatureCollector {
                 """.trimIndent().replace('\n', ' '))
         }
 
-        return firstSignerSet.toPartiesOrderedByName()
+        return firstSignerSet
     }
 
     private val JarInputStream.fileSignerSets: List<Pair<String, Set<CodeSigner>>> get() =
@@ -62,6 +78,10 @@ object JarSignatureCollector {
     private fun Set<CodeSigner>.toPartiesOrderedByName(): List<Party> = map {
         Party(it.signerCertPath.certificates[0] as X509Certificate)
     }.sortedBy { it.name.toString() } // Sorted for determinism.
+
+    private fun Set<CodeSigner>.toCertificates(): List<X509Certificate> = map {
+       it.signerCertPath.certificates[0] as X509Certificate
+    }.sortedBy { it.toString() } // Sorted for determinism.
 
     private val JarInputStream.entries get(): Sequence<JarEntry> = generateSequence(nextJarEntry) { nextJarEntry }
 }

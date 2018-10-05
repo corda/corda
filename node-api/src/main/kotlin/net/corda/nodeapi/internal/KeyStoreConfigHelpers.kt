@@ -97,6 +97,8 @@ const val DEV_CA_KEY_STORE_PASS: String = "cordacadevpass"
 const val DEV_CA_TRUST_STORE_FILE: String = "cordatruststore.jks"
 const val DEV_CA_TRUST_STORE_PASS: String = "trustpass"
 
+val DEV_CERTIFICATES: List<X509Certificate> get() = listOf(DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate)
+
 // We need a class so that we can get hold of the class loader
 internal object DevCaHelper {
     fun loadDevCa(alias: String): CertificateAndKeyPair {
