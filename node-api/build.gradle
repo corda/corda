@@ -50,7 +50,7 @@ dependencies {
     compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 
     // For caches rather than guava
-    compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
+    compile "com.github.corda.caffeine:caffeine:fifty_weight-SNAPSHOT"
 
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
