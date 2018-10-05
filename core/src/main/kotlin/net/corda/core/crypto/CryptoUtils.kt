@@ -24,6 +24,7 @@ import java.security.*
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
+@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun PrivateKey.sign(bytesToSign: ByteArray): DigitalSignature = DigitalSignature(Crypto.doSign(this, bytesToSign))
 
@@ -36,6 +37,7 @@ fun PrivateKey.sign(bytesToSign: ByteArray): DigitalSignature = DigitalSignature
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
+@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
     return DigitalSignature.WithKey(publicKey, this.sign(bytesToSign).bytes)
@@ -49,10 +51,12 @@ fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignat
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
+@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(bytesToSign: ByteArray): DigitalSignature.WithKey = private.sign(bytesToSign, public)
 
 /** Helper function to sign the bytes of [bytesToSign] with a key pair. */
+@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(bytesToSign: OpaqueBytes): DigitalSignature.WithKey = sign(bytesToSign.bytes)
 
@@ -64,6 +68,7 @@ fun KeyPair.sign(bytesToSign: OpaqueBytes): DigitalSignature.WithKey = sign(byte
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
+@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(signableData: SignableData): TransactionSignature = Crypto.doSign(this, signableData)
 
