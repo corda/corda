@@ -105,6 +105,7 @@ class AnalysisConfiguration(
             java.lang.Integer::class.java,
             java.lang.Long::class.java,
             java.lang.Number::class.java,
+            java.lang.Runtime::class.java,
             java.lang.Short::class.java,
             java.lang.String::class.java,
             java.lang.String.CASE_INSENSITIVE_ORDER::class.java,

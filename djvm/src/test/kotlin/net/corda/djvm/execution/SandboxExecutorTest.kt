@@ -654,14 +654,28 @@ class SandboxExecutorTest : TestBase() {
     @Test
     fun `test unicode characters`() = sandbox(DEFAULT) {
         val contractExecutor = DeterministicSandboxExecutor<Int, String>(configuration)
-        contractExecutor.run<ExamineUnicode>(0x01f600).apply {
+        contractExecutor.run<ExamineUnicodeBlock>(0x01f600).apply {
             assertThat(result).isEqualTo("EMOTICONS")
         }
     }
 
-    class ExamineUnicode : Function<Int, String> {
+    class ExamineUnicodeBlock : Function<Int, String> {
         override fun apply(codePoint: Int): String {
             return Character.UnicodeBlock.of(codePoint).toString()
+        }
+    }
+
+    @Test
+    fun `test unicode scripts`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<String, Character.UnicodeScript>(configuration)
+        contractExecutor.run<ExamineUnicodeScript>("COMMON").apply {
+            assertThat(result).isEqualTo(Character.UnicodeScript.COMMON)
+        }
+    }
+
+    class ExamineUnicodeScript : Function<String, Character.UnicodeScript> {
+        override fun apply(scriptName: String): Character.UnicodeScript {
+            return Character.UnicodeScript.valueOf(scriptName)
         }
     }
 }
