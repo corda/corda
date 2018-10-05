@@ -123,3 +123,23 @@ private fun createEnumDirectory(clazz: Class<out Enum<*>>): sandbox.java.util.Ma
 
 private val allEnums: sandbox.java.util.Map<Class<out Enum<*>>, Array<out Enum<*>>> = sandbox.java.util.LinkedHashMap()
 private val allEnumDirectories: sandbox.java.util.Map<Class<out Enum<*>>, sandbox.java.util.Map<String, out Enum<*>>> = sandbox.java.util.LinkedHashMap()
+
+/**
+ * Replacement functions for Class<*>.forName(...) which protect
+ * against users loading classes from outside the sandbox.
+ */
+@Throws(ClassNotFoundException::class)
+fun classForName(className: kotlin.String): Class<*> {
+    if (!className.startsWith(SANDBOX_PREFIX)) {
+        throw ClassNotFoundException(className)
+    }
+    return Class.forName(className)
+}
+
+@Throws(ClassNotFoundException::class)
+fun classForName(className: kotlin.String, initialize: kotlin.Boolean, classLoader: ClassLoader): Class<*> {
+    if (!className.startsWith(SANDBOX_PREFIX)) {
+        throw ClassNotFoundException(className)
+    }
+    return Class.forName(className, initialize, classLoader)
+}

@@ -13,10 +13,7 @@ import net.corda.djvm.messages.Severity
 import net.corda.djvm.references.ClassHierarchy
 import net.corda.djvm.rewiring.LoadedClass
 import net.corda.djvm.rules.Rule
-import net.corda.djvm.rules.implementation.StaticConstantRemover
-import net.corda.djvm.rules.implementation.StringConstantWrapper
-import net.corda.djvm.rules.implementation.StringReturnTypeWrapper
-import net.corda.djvm.rules.implementation.WriteEnumMethods
+import net.corda.djvm.rules.implementation.*
 import net.corda.djvm.source.ClassSource
 import net.corda.djvm.utilities.Discovery
 import net.corda.djvm.validation.RuleValidator
@@ -41,9 +38,10 @@ abstract class TestBase {
 
         // We need at least these emitters to handle the Java API classes.
         val BASIC_EMITTERS: List<Emitter> = listOf(
-            StringConstantWrapper(),
-            StringReturnTypeWrapper(),
-            WriteEnumMethods()
+            ArgumentUnwrapper(),
+            ReturnTypeWrapper(),
+            RewriteClassMethods(),
+            StringConstantWrapper()
         )
 
         val ALL_DEFINITION_PROVIDERS = Discovery.find<DefinitionProvider>()
@@ -98,14 +96,6 @@ abstract class TestBase {
             validator.analyze(reader, context)
             block(validator, context)
         }
-    }
-
-    /**
-     * Short-hand for analysing a class.
-     */
-    inline fun analyze(block: (ClassAndMemberVisitor.(AnalysisContext) -> Unit)) {
-        val validator = RuleValidator(emptyList(), configuration)
-        block(validator, context)
     }
 
     /**

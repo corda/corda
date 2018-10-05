@@ -1,15 +1,19 @@
 package net.corda.djvm.rewiring
 
 import net.corda.djvm.analysis.ClassResolver
+import net.corda.djvm.analysis.Whitelist
+import org.objectweb.asm.*
 import org.objectweb.asm.commons.Remapper
 
 /**
  * Class name and descriptor re-mapper for use in a sandbox.
  *
  * @property classResolver Functionality for resolving the class name of a sandboxed or sandboxable class.
+ * @property whitelist Identifies the Java APIs which are not mapped into the sandbox namespace.
  */
 open class SandboxRemapper(
-        private val classResolver: ClassResolver
+        private val classResolver: ClassResolver,
+        private val whitelist: Whitelist
 ) : Remapper() {
 
     /**
@@ -24,6 +28,17 @@ open class SandboxRemapper(
      */
     override fun map(typename: String): String {
         return rewriteTypeName(super.map(typename))
+    }
+
+    /**
+     * Mapper for [Type] and [Handle] objects.
+     */
+    override fun mapValue(obj: Any?): Any? {
+        return if (obj is Handle && whitelist.matches(obj.owner)) {
+            obj
+        } else {
+            super.mapValue(obj)
+        }
     }
 
     /**

@@ -7,7 +7,7 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.ClassRemapper
 
 class SandboxClassRemapper(cv: ClassVisitor, private val configuration: AnalysisConfiguration)
-    : ClassRemapper(cv, SandboxRemapper(configuration.classResolver)
+    : ClassRemapper(cv, SandboxRemapper(configuration.classResolver, configuration.whitelist)
 ) {
     override fun createMethodRemapper(mv: MethodVisitor): MethodVisitor {
         return MethodRemapperWithPinning(mv, super.createMethodRemapper(mv))
@@ -22,7 +22,7 @@ class SandboxClassRemapper(cv: ClassVisitor, private val configuration: Analysis
         : MethodVisitor(API_VERSION, remapper) {
 
         private fun mapperFor(element: Element): MethodVisitor {
-            return if (configuration.isPinnedClass(element.owner) || configuration.isTemplateClass(element.owner) || element in UNMAPPED) {
+            return if (configuration.isPinnedClass(element.owner) || configuration.isTemplateClass(element.owner) || isUnmapped(element)) {
                 nonmapper
             } else {
                 mv
@@ -40,12 +40,14 @@ class SandboxClassRemapper(cv: ClassVisitor, private val configuration: Analysis
         }
     }
 
-    private data class Element(val owner: String, val name: String, val descriptor: String)
+    private fun isUnmapped(element: Element): Boolean
+            = (element in UNMAPPED_METHODS) || configuration.whitelist.matches(element.owner)
 
     private companion object {
-        private val UNMAPPED = setOf(
-            Element("java/lang/System", "arraycopy", "(Ljava/lang/Object;ILjava/lang/Object;II)V"),
-            Element("java/lang/Object", "toString", "()Ljava/lang/String;")
+        private val UNMAPPED_METHODS = setOf(
+            Element("java/lang/System", "arraycopy", "(Ljava/lang/Object;ILjava/lang/Object;II)V")
         )
     }
+
+    private data class Element(val owner: String, val name: String, val descriptor: String)
 }

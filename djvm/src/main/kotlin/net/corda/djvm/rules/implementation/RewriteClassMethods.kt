@@ -11,7 +11,7 @@ import org.objectweb.asm.Opcodes.*
  * as their super class. So replace their all invocations with ones to equivalent
  * methods on the DJVM class that require [sandbox.java.lang.Enum] instead.
  */
-class WriteEnumMethods : Emitter {
+class RewriteClassMethods : Emitter {
     override fun emit(context: EmitterContext, instruction: Instruction) = context.emit {
         if (instruction is MemberAccessInstruction && instruction.owner == "java/lang/Class") {
             when (instruction.operation) {
@@ -36,7 +36,21 @@ class WriteEnumMethods : Emitter {
                         descriptor = "(Ljava/lang/Class;)[Ljava/lang/Object;")
                     preventDefault()
                 }
+
+                INVOKESTATIC -> if (isClassForName(instruction)) {
+                    invokeStatic(
+                        owner = "sandbox/java/lang/DJVM",
+                        name = "classForName",
+                        descriptor = instruction.signature
+                    )
+                    preventDefault()
+                }
             }
         }
     }
+
+    private fun isClassForName(instruction: MemberAccessInstruction): Boolean
+        = instruction.memberName == "forName" &&
+            (instruction.signature == "(Ljava/lang/String;)Ljava/lang/Class;" ||
+                    instruction.signature == "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;")
 }

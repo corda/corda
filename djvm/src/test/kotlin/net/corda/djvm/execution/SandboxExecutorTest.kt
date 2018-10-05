@@ -609,4 +609,27 @@ class SandboxExecutorTest : TestBase() {
                     .collect(joining(","))
         }
     }
+
+    @Test
+    fun `users cannot load non-sandboxed classes`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<String, Class<*>>(configuration)
+        assertThatExceptionOfType(SandboxException::class.java)
+                .isThrownBy { contractExecutor.run<TestClassForName>("java.util.List") }
+                .withCauseInstanceOf(ClassNotFoundException::class.java)
+                .withMessageContaining("java.util.List")
+    }
+
+    @Test
+    fun `users can load sandboxed classes`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<String, Class<*>>(configuration)
+        contractExecutor.run<TestClassForName>("sandbox.java.util.List").apply {
+            assertThat(result?.name).isEqualTo("sandbox.java.util.List")
+        }
+    }
+
+    class TestClassForName : Function<String, Class<*>> {
+        override fun apply(input: String): Class<*> {
+            return Class.forName(input)
+        }
+    }
 }

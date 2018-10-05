@@ -85,6 +85,7 @@ class EmitterModule(
 
     fun invokeInterface(owner: String, name: String, descriptor: String) {
         methodVisitor.visitMethodInsn(INVOKEINTERFACE, owner, name, descriptor, true)
+        hasEmittedCustomCode = true
     }
 
     /**
@@ -117,7 +118,7 @@ class EmitterModule(
      */
     fun pushObject(regNum: Int) {
         methodVisitor.visitVarInsn(ALOAD, regNum)
-        hasEmittedCustomCode
+        hasEmittedCustomCode = true
     }
 
     /**
@@ -126,7 +127,31 @@ class EmitterModule(
      */
     fun pushInteger(regNum: Int) {
         methodVisitor.visitVarInsn(ILOAD, regNum)
-        hasEmittedCustomCode
+        hasEmittedCustomCode = true
+    }
+
+    /**
+     * Emit instructions to rearrange the stack as follows:
+     *     [W1]    [W3]
+     *     [W2] -> [W1]
+     *     [w3]    [W2]
+     */
+    fun raiseThirdWordToTop() {
+        methodVisitor.visitInsn(DUP2_X1)
+        methodVisitor.visitInsn(POP2)
+        hasEmittedCustomCode = true
+    }
+
+    /**
+     * Emit instructions to rearrange the stack as follows:
+     *     [W1]    [W2]
+     *     [W2] -> [W3]
+     *     [W3]    [W1]
+     */
+    fun sinkTopToThirdWord() {
+        methodVisitor.visitInsn(DUP_X2)
+        methodVisitor.visitInsn(POP)
+        hasEmittedCustomCode = true
     }
 
     /**

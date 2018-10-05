@@ -8,8 +8,6 @@ import net.corda.djvm.references.ClassReference
 import net.corda.djvm.source.ClassSource
 import net.corda.djvm.utilities.loggerFor
 import net.corda.djvm.validation.RuleValidator
-import java.nio.file.Files
-import java.nio.file.Paths
 
 /**
  * Class loader that enables registration of rewired classes.
@@ -133,8 +131,6 @@ class SandboxClassLoader(
             // Transform the class definition and byte code in accordance with provided rules.
             rewriter.rewrite(reader, context)
         }
-
-        Files.write(Paths.get("build/djvm-$sourceName.class"), byteCode.bytes)
 
         // Try to define the transformed class.
         val clazz = try {
