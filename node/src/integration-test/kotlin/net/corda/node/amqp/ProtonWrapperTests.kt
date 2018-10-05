@@ -109,7 +109,6 @@ class ProtonWrapperTests {
             override val certificatesDirectory = temporaryFolder.root.toPath()
             override val keyStorePassword = "serverstorepass"
             override val trustStorePassword = "trustpass"
-            override val crlCheckSoftFail: Boolean = true
         }
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
