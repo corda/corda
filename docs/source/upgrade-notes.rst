@@ -9,7 +9,7 @@ first public Beta (:ref:`Milestone 12 <changelog_m12>`), to :ref:`V1.0 <changelo
 
 General rules
 -------------
-Always remember to update the version identifiers in your project gradle file:
+Always remember to update the version identifiers in your project's gradle file:
 
 .. sourcecode:: shell
 
@@ -28,10 +28,17 @@ versions you are currently using are still in force.
 
 We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes.
 
-UNRELEASED
-----------
+V3.2 to v3.3
+------------
 
-<<< Fill this in >>>
+* Update the Corda Release version
+
+  The ``corda_release_version`` identifier in your projects gradle file will need changing as follows:
+
+  .. sourcecode:: shell
+
+    ext.corda_release_version = '3.3-corda'
+
 
 v3.1 to v3.2
 ------------

@@ -4,8 +4,8 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`upgrade-notes`.
 
-Unreleased
-==========
+Version 3.3
+-----------
 
 * Vault query fix: support query by parent classes of Contract State classes (see https://github.com/corda/corda/issues/3714)
 
