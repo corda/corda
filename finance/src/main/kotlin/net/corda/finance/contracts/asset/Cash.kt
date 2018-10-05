@@ -59,7 +59,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     ) : FungibleAsset<Currency>, QueryableState {
         constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: AbstractParty)
                 : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
-        
+
         override val exitKeys = setOf(owner.owningKey, amount.token.issuer.party.owningKey)
         override val participants = listOf(owner)
 
