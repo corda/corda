@@ -138,7 +138,6 @@ class TransactionSignatureTest {
         val signableData = SignableData(txId, SignatureMetadata(3, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
         return CheatingSecurityProvider().use {
             CryptoSignUtils.doSign(keyPair, signableData)
-
         }
     }
 }

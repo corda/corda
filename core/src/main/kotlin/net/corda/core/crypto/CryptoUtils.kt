@@ -150,7 +150,6 @@ fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
  * @param entropy a [BigInteger] value.
  * @return a deterministically generated [KeyPair] for the [Crypto.DEFAULT_SIGNATURE_SCHEME].
  */
-@DeleteForDJVM
 fun entropyToKeyPair(entropy: BigInteger): KeyPair = Crypto.deriveKeyPairFromEntropy(entropy)
 
 /**
