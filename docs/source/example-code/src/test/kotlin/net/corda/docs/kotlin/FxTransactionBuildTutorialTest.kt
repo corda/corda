@@ -1,18 +1,12 @@
-package net.corda.docs
+package net.corda.docs.kotlin
 
 import net.corda.core.identity.Party
 import net.corda.core.toFuture
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.docs.kotlin.ForeignExchangeFlow
-import net.corda.docs.kotlin.ForeignExchangeRemoteFlow
-import net.corda.finance.DOLLARS
-import net.corda.finance.GBP
-import net.corda.finance.POUNDS
-import net.corda.finance.USD
+import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.finance.issuedBy
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode

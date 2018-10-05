@@ -66,11 +66,11 @@ public class IOUFlow extends FlowLogic<Void> {
         final SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
 
         // Creating a session with the other party.
-        FlowSession otherpartySession = initiateFlow(otherParty);
+        FlowSession otherPartySession = initiateFlow(otherParty);
 
         // Obtaining the counterparty's signature.
         SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(
-                signedTx, ImmutableList.of(otherpartySession), CollectSignaturesFlow.tracker()));
+                signedTx, ImmutableList.of(otherPartySession), CollectSignaturesFlow.tracker()));
 
         // Finalising the transaction.
         subFlow(new FinalityFlow(fullySignedTx));

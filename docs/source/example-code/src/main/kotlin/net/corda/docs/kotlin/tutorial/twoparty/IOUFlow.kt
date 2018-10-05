@@ -1,3 +1,5 @@
+@file:Suppress("MemberVisibilityCanBePrivate")
+
 package net.corda.docs.kotlin.tutorial.twoparty
 
 // DOCSTART 01
@@ -48,10 +50,10 @@ class IOUFlow(val iouValue: Int,
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
         // Creating a session with the other party.
-        val otherpartySession = initiateFlow(otherParty)
+        val otherPartySession = initiateFlow(otherParty)
 
         // Obtaining the counterparty's signature.
-        val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx, listOf(otherpartySession), CollectSignaturesFlow.tracker()))
+        val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx, listOf(otherPartySession), CollectSignaturesFlow.tracker()))
 
         // Finalising the transaction.
         subFlow(FinalityFlow(fullySignedTx))
