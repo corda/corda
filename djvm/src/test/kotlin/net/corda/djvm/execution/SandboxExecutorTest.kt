@@ -29,14 +29,14 @@ class SandboxExecutorTest : TestBase() {
 
     @Test
     fun `can load and execute runnable`() = sandbox(Whitelist.MINIMAL) {
-        val contractExecutor = DeterministicSandboxExecutor<Int, String?>(configuration)
+        val contractExecutor = DeterministicSandboxExecutor<Int, String>(configuration)
         val summary = contractExecutor.run<TestSandboxedRunnable>(1)
         val result = summary.result
         assertThat(result).isEqualTo("sandbox")
     }
 
-    class TestSandboxedRunnable : Function<Int, String?> {
-        override fun apply(input: Int): String? {
+    class TestSandboxedRunnable : Function<Int, String> {
+        override fun apply(input: Int): String {
             return "sandbox"
         }
     }
@@ -74,7 +74,11 @@ class SandboxExecutorTest : TestBase() {
             val obj = Object()
             val hash1 = obj.hashCode()
             val hash2 = obj.hashCode()
-            require(hash1 == hash2)
+            //require(hash1 == hash2)
+            // TODO: Replace require() once we have working exception support.
+            if (hash1 != hash2) {
+                throwError()
+            }
             return Object().hashCode()
         }
     }

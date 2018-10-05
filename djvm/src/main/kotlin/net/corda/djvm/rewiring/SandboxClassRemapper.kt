@@ -40,14 +40,7 @@ class SandboxClassRemapper(cv: ClassVisitor, private val configuration: Analysis
         }
     }
 
-    private fun isUnmapped(element: Element): Boolean
-            = (element in UNMAPPED_METHODS) || configuration.whitelist.matches(element.owner)
-
-    private companion object {
-        private val UNMAPPED_METHODS = setOf(
-            Element("java/lang/System", "arraycopy", "(Ljava/lang/Object;ILjava/lang/Object;II)V")
-        )
-    }
+    private fun isUnmapped(element: Element): Boolean = configuration.whitelist.matches(element.owner)
 
     private data class Element(val owner: String, val name: String, val descriptor: String)
 }
