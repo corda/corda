@@ -450,7 +450,7 @@ public final class Character extends Object implements Comparable<Character>, Se
     // the Character class bytecode is generated correctly. The
     // real classes will be loaded from the from the bootstrap jar
     // and then mapped into the sandbox.* namespace.
-    public class UnicodeScript extends Enum<UnicodeScript> {
+    public static final class UnicodeScript extends Enum<UnicodeScript> {
         private UnicodeScript(String name, int index) {
             super(name, index);
         }

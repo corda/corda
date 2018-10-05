@@ -667,15 +667,16 @@ class SandboxExecutorTest : TestBase() {
 
     @Test
     fun `test unicode scripts`() = sandbox(DEFAULT) {
-        val contractExecutor = DeterministicSandboxExecutor<String, Character.UnicodeScript>(configuration)
+        val contractExecutor = DeterministicSandboxExecutor<String, Character.UnicodeScript?>(configuration)
         contractExecutor.run<ExamineUnicodeScript>("COMMON").apply {
             assertThat(result).isEqualTo(Character.UnicodeScript.COMMON)
         }
     }
 
-    class ExamineUnicodeScript : Function<String, Character.UnicodeScript> {
-        override fun apply(scriptName: String): Character.UnicodeScript {
-            return Character.UnicodeScript.valueOf(scriptName)
+    class ExamineUnicodeScript : Function<String, Character.UnicodeScript?> {
+        override fun apply(scriptName: String): Character.UnicodeScript? {
+            val script = Character.UnicodeScript.valueOf(scriptName)
+            return if (script::class.java.isEnum) script else null
         }
     }
 }
