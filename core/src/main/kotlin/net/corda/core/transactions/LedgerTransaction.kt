@@ -2,11 +2,15 @@ package net.corda.core.transactions
 
 import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
+import net.corda.core.StubOutForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
+import net.corda.core.contracts.TransactionVerificationException.TransactionRequiredContractUnspecifiedException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.internal.cordapp.CordappInfoResolver
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
@@ -149,7 +153,35 @@ data class LedgerTransaction private constructor(
     }
 
     /**
-     * Verify that package ownership is respected.
+     * For all input and output [TransactionState]s, validates that the wrapped [ContractState] matches up with the
+     * wrapped [Contract], as declared by the [BelongsToContract] annotation on the [ContractState]'s class.
+     *
+     * If the target platform version of the current CorDapp is lower than 4.0, a warning will be written to the log
+     * if any mismatch is detected. If it is 4.0 or later, then [TransactionContractConflictException] will be thrown.
+     */
+    private fun validateStatesAgainstContract(internalTx: LedgerTransaction) =
+            internalTx.allStates.forEach(::validateStateAgainstContract)
+
+    private fun validateStateAgainstContract(state: TransactionState<ContractState>) {
+        val shouldEnforce = StateContractValidationEnforcementRule.shouldEnforce
+
+        val requiredContractClassName = state.data.requiredContractClassName ?:
+            if (shouldEnforce) throw TransactionRequiredContractUnspecifiedException(id, state)
+            else return
+
+        if (state.contract != requiredContractClassName)
+            if (shouldEnforce) {
+                throw TransactionContractConflictException(id, state, requiredContractClassName)
+            } else {
+                logger.warnOnce("""
+                            State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
+                            is bundled in TransactionState with ${state.contract}.
+                            """.trimIndent().replace('\n', ' '))
+            }
+    }
+
+    /**
+     * Verify that for each contract the network wide package owner is respected.
      *
      * TODO - revisit once transaction contains network parameters.
      */
@@ -169,24 +201,6 @@ data class LedgerTransaction private constructor(
             if (!owner.isFulfilledBy(attachment.signers)) {
                 throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
             }
-        }
-    }
-
-    /**
-     * For all input and output [TransactionState]s, validates that the wrapped [ContractState] matches up with the
-     * wrapped [Contract], as declared by the [BelongsToContract] annotation on the [ContractState]'s class.
-     *
-     * A warning will be written to the log if any mismatch is detected.
-     */
-    private fun validateStatesAgainstContract(internalTx: LedgerTransaction) = internalTx.allStates.forEach { validateStateAgainstContract(it) }
-
-    private fun validateStateAgainstContract(state: TransactionState<ContractState>) {
-        state.data.requiredContractClassName?.let { requiredContractClassName ->
-            if (state.contract != requiredContractClassName)
-                logger.warnOnce("""
-                State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
-                is bundled in TransactionState with ${state.contract}.
-                """.trimIndent().replace('\n', ' '))
         }
     }
 
@@ -788,4 +802,3 @@ data class LedgerTransaction private constructor(
             references = references
     )
 }
-
