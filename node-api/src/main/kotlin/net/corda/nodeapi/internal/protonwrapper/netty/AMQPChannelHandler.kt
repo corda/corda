@@ -21,7 +21,9 @@ import org.apache.qpid.proton.engine.impl.ProtocolTracer
 import org.apache.qpid.proton.framing.TransportFrame
 import org.slf4j.LoggerFactory
 import java.net.InetSocketAddress
+import java.nio.channels.ClosedChannelException
 import java.security.cert.X509Certificate
+import javax.net.ssl.SSLException
 
 /**
  *  An instance of AMQPChannelHandler sits inside the netty pipeline and controls the socket level lifecycle.
@@ -102,7 +104,15 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                 createAMQPEngine(ctx)
                 onOpen(Pair(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true, false)))
             } else {
-                badCert = true
+                val cause = evt.cause()
+                // This happens when the peer node is closed during SSL establishment.
+                if (cause is ClosedChannelException) {
+                    log.warn("SSL Handshake closed early.")
+                } else if (cause is SSLException && cause.message == "handshake timed out") { // Sadly the exception thrown by Netty wrapper requires that we check the message.
+                    log.warn("SSL Handshake timed out")
+                } else {
+                    badCert = true
+                }
                 log.error("Handshake failure ${evt.cause().message}")
                 if (log.isTraceEnabled) {
                     log.trace("Handshake failure", evt.cause())
