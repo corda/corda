@@ -166,6 +166,7 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
             """.trimIndent().replace('\n', ' '), null)
 
     // TODO: add reference to documentation
+    @KeepForDJVM
     class TransactionRequiredContractUnspecifiedException(txId: SecureHash, state: TransactionState<ContractState>)
         : TransactionVerificationException(txId,
             """

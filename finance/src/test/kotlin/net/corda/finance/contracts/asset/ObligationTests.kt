@@ -21,7 +21,6 @@ import net.corda.finance.contracts.NetType
 import net.corda.finance.contracts.asset.Obligation.Lifecycle
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
 import net.corda.testing.dsl.*
 import net.corda.testing.internal.TEST_TX_TIME
@@ -144,12 +143,17 @@ class ObligationTests {
         }
     }
 
+    @BelongsToContract(DummyContract::class)
+    object DummyState: ContractState {
+        override val participants: List<AbstractParty> = emptyList()
+    }
+
     @Test
     fun `issue debt`() {
         // Check we can't "move" debt into existence.
         transaction {
             attachments(DummyContract.PROGRAM_ID, Obligation.PROGRAM_ID)
-            input(DummyContract.PROGRAM_ID, DummyState())
+            input(DummyContract.PROGRAM_ID, DummyState)
             output(Obligation.PROGRAM_ID, outState)
             command(MINI_CORP_PUBKEY, Obligation.Commands.Move())
             this `fails with` "at least one obligation input"
