@@ -21,7 +21,9 @@ import org.apache.qpid.proton.engine.impl.ProtocolTracer
 import org.apache.qpid.proton.framing.TransportFrame
 import org.slf4j.LoggerFactory
 import java.net.InetSocketAddress
+import java.nio.channels.ClosedChannelException
 import java.security.cert.X509Certificate
+import javax.net.ssl.SSLException
 
 /**
  *  An instance of AMQPChannelHandler sits inside the netty pipeline and controls the socket level lifecycle.
@@ -41,6 +43,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     private lateinit var localCert: X509Certificate
     private lateinit var remoteCert: X509Certificate
     private var eventProcessor: EventProcessor? = null
+    private var badCert: Boolean = false
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
@@ -72,7 +75,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     override fun channelInactive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
         log.info("Closed client connection ${ch.id()} from $remoteAddress to ${ch.localAddress()}")
-        onClose(Pair(ch as SocketChannel, ConnectionChange(remoteAddress, null, false)))
+        onClose(Pair(ch as SocketChannel, ConnectionChange(remoteAddress, null, false, badCert)))
         eventProcessor?.close()
         ctx.fireChannelInactive()
     }
@@ -83,22 +86,49 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                 val sslHandler = ctx.pipeline().get(SslHandler::class.java)
                 localCert = sslHandler.engine().session.localCertificates[0].x509
                 remoteCert = sslHandler.engine().session.peerCertificates[0].x509
-                try {
-                    val remoteX500Name = CordaX500Name.build(remoteCert.subjectX500Principal)
-                    require(allowedRemoteLegalNames == null || remoteX500Name in allowedRemoteLegalNames)
-                    log.info("handshake completed subject: $remoteX500Name")
+                val remoteX500Name = try {
+                    CordaX500Name.build(remoteCert.subjectX500Principal)
                 } catch (ex: IllegalArgumentException) {
-                    log.error("Invalid certificate subject", ex)
+                    badCert = true
+                    log.error("Certificate subject not a valid CordaX500Name", ex)
                     ctx.close()
                     return
                 }
+                if (allowedRemoteLegalNames != null && remoteX500Name !in allowedRemoteLegalNames) {
+                    badCert = true
+                    log.error("Provided certificate subject $remoteX500Name not in expected set $allowedRemoteLegalNames")
+                    ctx.close()
+                    return
+                }
+                log.info("Handshake completed with subject: $remoteX500Name")
                 createAMQPEngine(ctx)
-                onOpen(Pair(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true)))
+                onOpen(Pair(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true, false)))
             } else {
-                log.error("Handshake failure $evt")
+                val cause = evt.cause()
+                // This happens when the peer node is closed during SSL establishment.
+                if (cause is ClosedChannelException) {
+                    log.warn("SSL Handshake closed early.")
+                } else if (cause is SSLException && cause.message == "handshake timed out") { // Sadly the exception thrown by Netty wrapper requires that we check the message.
+                    log.warn("SSL Handshake timed out")
+                } else {
+                    badCert = true
+                }
+                log.error("Handshake failure ${evt.cause().message}")
+                if (log.isTraceEnabled) {
+                    log.trace("Handshake failure", evt.cause())
+                }
                 ctx.close()
             }
         }
+    }
+
+    @Suppress("OverridingDeprecatedMember")
+    override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
+        log.warn("Closing channel due to nonrecoverable exception ${cause.message}")
+        if (log.isTraceEnabled) {
+            log.trace("Pipeline uncaught exception", cause)
+        }
+        ctx.close()
     }
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
