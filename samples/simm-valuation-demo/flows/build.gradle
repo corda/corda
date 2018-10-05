@@ -4,7 +4,7 @@ apply plugin: 'net.corda.plugins.cordapp'
 cordapp {
     info {
         vendor = 'R3'
-        targetPlatformVersion = platform_version.toInteger()
+        targetPlatformVersion = corda_platform_version.toInteger()
     }
 }
 

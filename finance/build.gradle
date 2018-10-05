@@ -87,7 +87,7 @@ cordapp {
     info {
         name "net/corda/finance"
         vendor "Corda Open Source"
-        targetPlatformVersion platform_version.toInteger()
+        targetPlatformVersion corda_platform_version.toInteger()
         minimumPlatformVersion 1
     }
 }
