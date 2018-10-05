@@ -16,6 +16,9 @@ configurations {
     compile {
         exclude group: "log4j", module: "log4j"
         exclude group: "org.apache.logging.log4j"
+
+        // The Node only needs this for binary compatibility with Cordapps written in Kotlin 1.1.
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jre8'
     }
 }
 
