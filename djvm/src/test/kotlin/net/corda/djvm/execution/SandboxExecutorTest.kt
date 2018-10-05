@@ -636,4 +636,32 @@ class SandboxExecutorTest : TestBase() {
             return Class.forName(input)
         }
     }
+
+    @Test
+    fun `test case-insensitive string sorting`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<Array<String>, Array<String>>(configuration)
+        contractExecutor.run<CaseInsensitiveSort>(arrayOf("Zelda", "angela", "BOB", "betsy", "ALBERT")).apply {
+            assertThat(result).isEqualTo(arrayOf("ALBERT", "angela", "betsy", "BOB", "Zelda"))
+        }
+    }
+
+    class CaseInsensitiveSort : Function<Array<String>, Array<String>> {
+        override fun apply(input: Array<String>): Array<String> {
+            return listOf(*input).sortedWith(String.CASE_INSENSITIVE_ORDER).toTypedArray()
+        }
+    }
+
+    @Test
+    fun `test unicode characters`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<Int, String>(configuration)
+        contractExecutor.run<ExamineUnicode>(0x01f600).apply {
+            assertThat(result).isEqualTo("EMOTICONS")
+        }
+    }
+
+    class ExamineUnicode : Function<Int, String> {
+        override fun apply(codePoint: Int): String {
+            return Character.UnicodeBlock.of(codePoint).toString()
+        }
+    }
 }

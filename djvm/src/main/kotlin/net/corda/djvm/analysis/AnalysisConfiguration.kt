@@ -107,6 +107,7 @@ class AnalysisConfiguration(
             java.lang.Number::class.java,
             java.lang.Short::class.java,
             java.lang.String::class.java,
+            java.lang.String.CASE_INSENSITIVE_ORDER::class.java,
             java.lang.System::class.java,
             java.lang.ThreadLocal::class.java,
             kotlin.Any::class.java,
@@ -115,6 +116,7 @@ class AnalysisConfiguration(
         ).sandboxed() + setOf(
             "sandbox/Task",
             "sandbox/java/lang/DJVM",
+            "sandbox/sun/misc/SharedSecrets\$1",
             "sandbox/sun/misc/SharedSecrets\$JavaLangAccessImpl"
         )
 
