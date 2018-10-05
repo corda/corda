@@ -73,7 +73,8 @@ annotation out will lead to some very weird error messages!
 
 There are also a few more annotations, on the ``FlowLogic`` subclass itself:
 
-  * ``@InitiatingFlow`` means that this flow can be started directly by the node
+  * ``@InitiatingFlow`` means that this flow is part of a flow pair and that it triggers the other side to run the
+    the counterpart flow.
   * ``@StartableByRPC`` allows the node owner to start this flow via an RPC call
 
 Let's walk through the steps of ``FlowLogic.call`` itself. This is where we actually describe the procedure for
