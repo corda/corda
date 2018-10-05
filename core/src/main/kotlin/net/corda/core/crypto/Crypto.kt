@@ -809,7 +809,6 @@ object Crypto {
      * @return a new [KeyPair] from an entropy input.
      * @throws IllegalArgumentException if the requested signature scheme is not supported for KeyPair generation using an entropy input.
      */
-    @DeleteForDJVM
     @JvmStatic
     fun deriveKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
         return when (signatureScheme) {
@@ -825,7 +824,6 @@ object Crypto {
      * @param entropy a [BigInteger] value.
      * @return a new [KeyPair] from an entropy input.
      */
-    @DeleteForDJVM
     @JvmStatic
     fun deriveKeyPairFromEntropy(entropy: BigInteger): KeyPair = deriveKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
 
