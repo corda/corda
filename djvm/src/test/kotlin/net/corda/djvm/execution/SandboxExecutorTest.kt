@@ -679,4 +679,68 @@ class SandboxExecutorTest : TestBase() {
             return if (script::class.java.isEnum) script else null
         }
     }
+
+    @Test
+    fun `test users cannot define new classes`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<String, Class<*>>(configuration)
+        assertThatExceptionOfType(SandboxException::class.java)
+                .isThrownBy { contractExecutor.run<DefineNewClass>("sandbox.java.lang.DJVM") }
+                .withCauseInstanceOf(RuleViolationError::class.java)
+                .withMessageContaining("Disallowed reference to API;")
+                .withMessageContaining("java.lang.ClassLoader.defineClass")
+    }
+
+    class DefineNewClass : Function<String, Class<*>> {
+        override fun apply(input: String): Class<*> {
+            val data = ByteArray(0)
+            val cl = object : ClassLoader(this::class.java.classLoader) {
+                fun define(): Class<*> {
+                    return super.defineClass(input, data, 0, data.size)
+                }
+            }
+            return cl.define()
+        }
+    }
+
+    @Test
+    fun `test users cannot load new classes`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<String, Class<*>>(configuration)
+        assertThatExceptionOfType(SandboxException::class.java)
+                .isThrownBy { contractExecutor.run<LoadNewClass>("sandbox.java.lang.DJVM") }
+                .withCauseInstanceOf(RuleViolationError::class.java)
+                .withMessageContaining("Disallowed reference to API;")
+                .withMessageContaining("java.lang.ClassLoader.loadClass")
+    }
+
+    class LoadNewClass : Function<String, Class<*>> {
+        override fun apply(input: String): Class<*> {
+            val cl = object : ClassLoader(this::class.java.classLoader) {
+                fun load(): Class<*> {
+                    return super.loadClass(input)
+                }
+            }
+            return cl.load()
+        }
+    }
+
+    @Test
+    fun `test users cannot lookup classes`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<String, Class<*>>(configuration)
+        assertThatExceptionOfType(SandboxException::class.java)
+                .isThrownBy { contractExecutor.run<FindClass>("sandbox.java.lang.DJVM") }
+                .withCauseInstanceOf(RuleViolationError::class.java)
+                .withMessageContaining("Disallowed reference to API;")
+                .withMessageContaining("java.lang.ClassLoader.findClass")
+    }
+
+    class FindClass : Function<String, Class<*>> {
+        override fun apply(input: String): Class<*> {
+            val cl = object : ClassLoader(this::class.java.classLoader) {
+                fun find(): Class<*> {
+                    return super.findClass(input)
+                }
+            }
+            return cl.find()
+        }
+    }
 }
