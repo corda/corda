@@ -28,10 +28,15 @@ import net.corda.core.utilities.ProgressTracker
 @InitiatingFlow
 class FinalityFlow(val transaction: SignedTransaction,
                    private val extraRecipients: Set<Party>,
+                   private val forceNotarySignature: Boolean,
                    override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
-    constructor(transaction: SignedTransaction, extraParticipants: Set<Party>) : this(transaction, extraParticipants, tracker())
-    constructor(transaction: SignedTransaction) : this(transaction, emptySet(), tracker())
-    constructor(transaction: SignedTransaction, progressTracker: ProgressTracker) : this(transaction, emptySet(), progressTracker)
+    constructor(transaction: SignedTransaction, extraParticipants: Set<Party>, progressTracker: ProgressTracker) : this(transaction, extraParticipants, false, progressTracker)
+    constructor(transaction: SignedTransaction, extraParticipants: Set<Party>) : this(transaction, extraParticipants, false, tracker())
+    constructor(transaction: SignedTransaction, extraParticipants: Set<Party>, forceNotarySignature: Boolean) : this(transaction, extraParticipants, forceNotarySignature, tracker())
+    constructor(transaction: SignedTransaction) : this(transaction, emptySet(), false, tracker())
+    constructor(transaction: SignedTransaction, forceNotarySignature: Boolean) : this(transaction, emptySet(), forceNotarySignature, tracker())
+    constructor(transaction: SignedTransaction, progressTracker: ProgressTracker) : this(transaction, emptySet(), false, progressTracker)
+    constructor(transaction: SignedTransaction, forceNotarySignature: Boolean, progressTracker: ProgressTracker) : this(transaction, emptySet(), forceNotarySignature, progressTracker)
 
     companion object {
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service") {
@@ -92,7 +97,7 @@ class FinalityFlow(val transaction: SignedTransaction,
 
     private fun needsNotarySignature(stx: SignedTransaction): Boolean {
         val wtx = stx.tx
-        val needsNotarisation = wtx.inputs.isNotEmpty() || wtx.references.isNotEmpty() || wtx.timeWindow != null
+        val needsNotarisation = forceNotarySignature || wtx.inputs.isNotEmpty() || wtx.references.isNotEmpty() || wtx.timeWindow != null
         return needsNotarisation && hasNoNotarySignature(stx)
     }
 
