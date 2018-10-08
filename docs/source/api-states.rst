@@ -24,7 +24,7 @@ are considered to have a stake in the state. Among other things, the ``participa
 
 * Need to sign any notary-change and contract-upgrade transactions involving this state
 
-* Receive any finalised transactions involving this state as part of ``FinalityFlow``
+* Receive any finalised transactions involving this state as part of ``FinalityFlow`` / ``ReceiveFinalityFlow``
 
 ContractState sub-interfaces
 ----------------------------

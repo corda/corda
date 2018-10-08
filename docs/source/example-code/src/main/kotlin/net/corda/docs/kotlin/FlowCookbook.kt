@@ -568,13 +568,13 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         // We notarise the transaction and get it recorded in the vault of
         // the participants of all the transaction's states.
         // DOCSTART 09
-        val notarisedTx1: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker()))
+        val notarisedTx1: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, listOf(counterpartySession), FINALISATION.childProgressTracker()))
         // DOCEND 09
         // We can also choose to send it to additional parties who aren't one
         // of the state's participants.
         // DOCSTART 10
-        val additionalParties: Set<Party> = setOf(regulator)
-        val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, additionalParties, FINALISATION.childProgressTracker()))
+        val partySessions: List<FlowSession> = listOf(counterpartySession, initiateFlow(regulator))
+        val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, partySessions, FINALISATION.childProgressTracker()))
         // DOCEND 10
 
         // DOCSTART FlowSession porting
@@ -650,7 +650,7 @@ class ResponderFlow(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
             }
         }
 
-        subFlow(signTransactionFlow)
+        val idOfTxWeSigned = subFlow(signTransactionFlow).id
         // DOCEND 16
 
         /**-----------------------------
@@ -658,8 +658,11 @@ class ResponderFlow(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
         -----------------------------**/
         progressTracker.currentStep = FINALISATION
 
-        // Nothing to do here! As long as some other party calls
-        // ``FinalityFlow``, the recording of the transaction on our node
-        // we be handled automatically.
+        // As the final step the responder waits to receive the notarised transaction from the sending party
+        // Since it knows the ID of the transaction it just signed, the transaction ID is specified to ensure the correct
+        // transaction is received and recorded.
+        // DOCSTART ReceiveFinalityFlow
+        subFlow(ReceiveFinalityFlow(counterpartySession, expectedTxId = idOfTxWeSigned))
+        // DOCEND ReceiveFinalityFlow
     }
 }

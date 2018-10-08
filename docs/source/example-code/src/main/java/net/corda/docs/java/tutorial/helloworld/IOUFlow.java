@@ -2,16 +2,12 @@ package net.corda.docs.java.tutorial.helloworld;
 
 import co.paralleluniverse.fibers.Suspendable;
 import com.template.TemplateContract;
-import net.corda.core.flows.FlowException;
-import net.corda.core.flows.FlowLogic;
-import net.corda.core.flows.InitiatingFlow;
-import net.corda.core.flows.StartableByRPC;
+import net.corda.core.flows.*;
 import net.corda.core.utilities.ProgressTracker;
 
 // DOCSTART 01
 // Add these imports:
 import net.corda.core.contracts.Command;
-import net.corda.core.flows.FinalityFlow;
 import net.corda.core.identity.Party;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
@@ -59,8 +55,11 @@ public class IOUFlow extends FlowLogic<Void> {
         // Signing the transaction.
         SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
 
-        // Finalising the transaction.
-        subFlow(new FinalityFlow(signedTx));
+        // Creating a session with the other party.
+        FlowSession otherPartySession = initiateFlow(otherParty);
+
+        // We finalise the transaction and then send it to the counterparty.
+        subFlow(new FinalityFlow(signedTx, otherPartySession));
 
         return null;
     }

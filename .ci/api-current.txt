@@ -2301,7 +2301,7 @@ public final class net.corda.core.flows.ReceiveStateAndRefFlow extends net.corda
   @NotNull
   public java.util.List<net.corda.core.contracts.StateAndRef<T>> call()
 ##
-public final class net.corda.core.flows.ReceiveTransactionFlow extends net.corda.core.flows.FlowLogic
+public class net.corda.core.flows.ReceiveTransactionFlow extends net.corda.core.flows.FlowLogic
   public <init>(net.corda.core.flows.FlowSession)
   public <init>(net.corda.core.flows.FlowSession, boolean)
   public <init>(net.corda.core.flows.FlowSession, boolean, net.corda.core.node.StatesToRecord)
