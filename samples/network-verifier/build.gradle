@@ -49,3 +49,12 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         extraConfig = ['h2Settings.address' : 'localhost:0']
     }
 }
+
+cordapp {
+    info {
+        name "net/corda/samples/network-verifier"
+        vendor "Corda Open Source"
+        targetPlatformVersion corda_platform_version.toInteger()
+        minimumPlatformVersion 1
+    }
+}
