@@ -127,7 +127,7 @@ class SingleThreadedStateMachineManager(
     override fun start(tokenizableServices: List<Any>) {
         checkQuasarJavaAgentPresence()
         val checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
-                CheckpointSerializeAsTokenContextImpl(tokenizableServices, CheckpointSerializationDefaults.CHECKPOINT_SERIALIZATION_FACTORY, CheckpointSerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
+                CheckpointSerializeAsTokenContextImpl(tokenizableServices, CheckpointSerializationDefaults.CHECKPOINT_SERIALIZER, CheckpointSerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
         )
         this.checkpointSerializationContext = checkpointSerializationContext
         this.actionExecutor = makeActionExecutor(checkpointSerializationContext)
