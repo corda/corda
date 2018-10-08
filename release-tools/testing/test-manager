@@ -278,7 +278,7 @@ def main():
 
         def mixin_version_and_product(command):
             mixin_product(command)
-            command.add('VERSION', help='the target version of the release, e.g., 4.0', type=float)
+            command.add('VERSION', help='the target version of the release, e.g., 4.0', type=str)
 
         def mixin_candidate(command, optional=False):
             if optional:
