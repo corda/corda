@@ -22,11 +22,13 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.serialization.internal.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.internal.CheckpointSerializationEnvironmentRule
 import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions.*
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -47,6 +49,8 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         fun compression() = arrayOf<CordaSerializationEncoding?>(null) + CordaSerializationEncoding.values()
     }
 
+    @get:Rule
+    val serializationRule = CheckpointSerializationEnvironmentRule()
     private lateinit var context: CheckpointSerializationContext
 
     @Before
