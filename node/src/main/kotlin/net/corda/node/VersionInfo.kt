@@ -1,6 +1,6 @@
 package net.corda.node
 
-import net.corda.nodeapi.internal.PLATFORM_VERSION
+import net.corda.core.internal.PLATFORM_VERSION
 
 /**
  * Encapsulates various pieces of version information of the node.

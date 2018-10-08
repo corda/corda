@@ -112,10 +112,12 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     )
 
     private fun loadCordapps(): List<CordappImpl> {
-        val cordapps = cordappJarPaths.map { scanCordapp(it).toCordapp(it) }
+        val cordapps = cordappJarPaths
+                .map { scanCordapp(it).toCordapp(it) }
                 .filter {
                     if (it.info.minimumPlatformVersion > versionInfo.platformVersion) {
-                        logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it requires minimum platform version ${it.info.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
+                        logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it requires minimum " +
+                                "platform version ${it.info.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
                         false
                     } else {
                         true
@@ -126,7 +128,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     }
 
     private fun RestrictedScanResult.toCordapp(url: RestrictedURL): CordappImpl {
-        val info = url.url.openStream().let(::JarInputStream).use { it.manifest }.toCordappInfo(CordappImpl.jarName(url.url))
+        val info = url.url.openStream().let(::JarInputStream).use { it.manifest?.toCordappInfo(CordappImpl.jarName(url.url)) ?: CordappImpl.Info.UNKNOWN }
         return CordappImpl(
                 findContractClassNames(this),
                 findInitiatedFlows(this),

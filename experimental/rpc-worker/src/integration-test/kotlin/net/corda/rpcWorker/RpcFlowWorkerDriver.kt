@@ -13,6 +13,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.transpose
@@ -33,7 +34,6 @@ import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.nodeapi.internal.NodeInfoAndSigned
-import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.crypto.X509Utilities

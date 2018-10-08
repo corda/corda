@@ -457,11 +457,13 @@ $trustAnchor""", e, this, e.index)
     }
 }
 
+@DeleteForDJVM
 inline fun <T : Any> T.signWithCert(signer: (SerializedBytes<T>) -> DigitalSignatureWithCert): SignedDataWithCert<T> {
     val serialised = serialize()
     return SignedDataWithCert(serialised, signer(serialised))
 }
 
+@DeleteForDJVM
 fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificate): SignedDataWithCert<T> {
     return signWithCert {
         val signature = Crypto.doSign(privateKey, it.bytes)
@@ -469,10 +471,12 @@ fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificat
     }
 }
 
+@DeleteForDJVM
 inline fun <T : Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> DigitalSignature.WithKey): SignedData<T> {
     return SignedData(this, signer(this))
 }
 
+@DeleteForDJVM
 fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> = SignedData(this, keyPair.sign(this.bytes))
 
 fun ByteBuffer.copyBytes(): ByteArray = ByteArray(remaining()).also { get(it) }

@@ -52,7 +52,7 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
     @Test
     fun `2 parties contract upgrade`() {
         // Create dummy contract.
-        val signedByA = aliceNode.signDummyContract(alice.ref(1),0, bob.ref(1))
+        val signedByA = aliceNode.signDummyContract(alice.ref(1), 0, bob.ref(1))
         val stx = bobNode.addSignatureTo(signedByA)
 
         aliceNode.finalise(stx, bob)

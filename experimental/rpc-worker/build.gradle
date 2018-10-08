@@ -27,7 +27,10 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     // TODO: Eliminate this dependency and relocate all the necessary classes into an independent module
-    cordaCompile project(':node')
+    cordaCompile(project(':node')) {
+         // The Node only needs this for binary compatibility with Cordapps written in Kotlin 1.1.
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jre8'
+    }
 
     // Logging
     compile "org.slf4j:log4j-over-slf4j:$slf4j_version"

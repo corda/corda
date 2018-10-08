@@ -13,7 +13,10 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
-    compile project(':node')
+    compile(project(':node')) {
+        // The Node only needs this for binary compatibility with Cordapps written in Kotlin 1.1.
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jre8'
+    }
     compile project(':tools:cliutils')
 }
 
