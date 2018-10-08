@@ -209,13 +209,35 @@ if (Os.isFamily(Os.FAMILY_UNIX)) {
         builtBy(buildInstaller)
     }
 
+    assemble.dependsOn buildInstaller
+
+    // The "publication" tasks are created after this publish block.
     publish {
-        name 'corda-installer'
         disableDefaultJar = true
+        publishSources = false
+        publishJavadoc = false
+        name 'corda-installer'
     }
-
-
-
 } else {
     println("Not running on *nix, disabling distribution generation")
+
+    // The "publication" tasks are created after this publish block.
+    // We MUST duplicate this block here to prevent breaking the project on Windows.
+    publish {
+        disableDefaultJar = true
+        publishSources = false
+        publishJavadoc = false
+        name 'corda-installer'
+    }
+
+    task installFail {
+        doFirst {
+            def osName = org.gradle.internal.os.OperatingSystem.current()
+            throw new BuildCancelledException("Cannot publish installer on OS '$osName'")
+        }
+    }
+
+    // Prevent publication without this project's artifact.
+    publishToMavenLocal.dependsOn installFail
+    bintrayUpload.dependsOn installFail
 }
