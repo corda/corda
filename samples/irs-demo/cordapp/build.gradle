@@ -171,3 +171,12 @@ jar {
 artifacts {
     demoArtifacts jar
 }
+
+cordapp {
+    info {
+        name "net/corda/irs-demo"
+        vendor "Corda Open Source"
+        targetPlatformVersion corda_platform_version.toInteger()
+        minimumPlatformVersion 1
+    }
+}
