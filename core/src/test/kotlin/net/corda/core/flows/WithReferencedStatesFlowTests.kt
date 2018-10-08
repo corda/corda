@@ -24,14 +24,14 @@ import org.junit.After
 import org.junit.Test
 import kotlin.test.assertEquals
 
-
 // A dummy reference state contract.
 internal class RefState : Contract {
     companion object {
-        val CONTRACT_ID = "net.corda.core.flows.RefState"
+        const val CONTRACT_ID = "net.corda.core.flows.RefState"
     }
 
     override fun verify(tx: LedgerTransaction) = Unit
+
     data class State(val owner: Party, val version: Int = 0, override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState {
         override val participants: List<AbstractParty> get() = listOf(owner)
         fun update() = copy(version = version + 1)
@@ -46,34 +46,32 @@ internal class CreateRefState : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
-        return subFlow(FinalityFlow(
-                transaction = serviceHub.signInitialTransaction(TransactionBuilder(notary = notary).apply {
-                    addOutputState(RefState.State(ourIdentity), RefState.CONTRACT_ID)
-                    addCommand(RefState.Create(), listOf(ourIdentity.owningKey))
-                })
-        ))
+        val stx = serviceHub.signInitialTransaction(TransactionBuilder(notary = notary).apply {
+            addOutputState(RefState.State(ourIdentity), RefState.CONTRACT_ID)
+            addCommand(RefState.Create(), listOf(ourIdentity.owningKey))
+        })
+        return subFlow(FinalityFlow(stx))
     }
 }
 
 // A flow to update a specific reference state.
-internal class UpdateRefState(val stateAndRef: StateAndRef<ContractState>) : FlowLogic<SignedTransaction>() {
+internal class UpdateRefState(private val stateAndRef: StateAndRef<ContractState>) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
-        return subFlow(FinalityFlow(
-                transaction = serviceHub.signInitialTransaction(TransactionBuilder(notary = notary).apply {
-                    addInputState(stateAndRef)
-                    addOutputState((stateAndRef.state.data as RefState.State).update(), RefState.CONTRACT_ID)
-                    addCommand(RefState.Update(), listOf(ourIdentity.owningKey))
-                })
-        ))
+        val stx = serviceHub.signInitialTransaction(TransactionBuilder(notary = notary).apply {
+            addInputState(stateAndRef)
+            addOutputState((stateAndRef.state.data as RefState.State).update(), RefState.CONTRACT_ID)
+            addCommand(RefState.Update(), listOf(ourIdentity.owningKey))
+        })
+        return subFlow(FinalityFlow(stx))
     }
 }
 
 // A set of flows to share a stateref with all other nodes in the mock network.
 internal object ShareRefState {
     @InitiatingFlow
-    class Initiator(val stateAndRef: StateAndRef<ContractState>) : FlowLogic<Unit>() {
+    class Initiator(private val stateAndRef: StateAndRef<ContractState>) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val sessions = serviceHub.networkMapCache.allNodes.flatMap { it.legalIdentities }.map { initiateFlow(it) }
@@ -85,7 +83,7 @@ internal object ShareRefState {
     }
 
     @InitiatedBy(ShareRefState.Initiator::class)
-    class Responder(val otherSession: FlowSession) : FlowLogic<Unit>() {
+    class Responder(private val otherSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             logger.info("Receiving dependencies.")
@@ -99,7 +97,7 @@ internal object ShareRefState {
 }
 
 // A flow to use a reference state in another transaction.
-internal class UseRefState(val linearId: UniqueIdentifier) : FlowLogic<SignedTransaction>() {
+internal class UseRefState(private val linearId: UniqueIdentifier) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
@@ -108,14 +106,12 @@ internal class UseRefState(val linearId: UniqueIdentifier) : FlowLogic<SignedTra
                 relevancyStatus = Vault.RelevancyStatus.ALL
         )
         val referenceState = serviceHub.vaultService.queryBy<ContractState>(query).states.single()
-        return subFlow(FinalityFlow(
-                transaction = serviceHub.signInitialTransaction(TransactionBuilder(notary = notary).apply {
-                    @Suppress("DEPRECATION") // To be removed when feature is finalised.
-                    addReferenceState(referenceState.referenced())
-                    addOutputState(DummyState(), DummyContract.PROGRAM_ID)
-                    addCommand(DummyContract.Commands.Create(), listOf(ourIdentity.owningKey))
-                })
-        ))
+        val stx = serviceHub.signInitialTransaction(TransactionBuilder(notary = notary).apply {
+            addReferenceState(referenceState.referenced())
+            addOutputState(DummyState(), DummyContract.PROGRAM_ID)
+            addCommand(DummyContract.Commands.Create(), listOf(ourIdentity.owningKey))
+        })
+        return subFlow(FinalityFlow(stx))
     }
 }
 

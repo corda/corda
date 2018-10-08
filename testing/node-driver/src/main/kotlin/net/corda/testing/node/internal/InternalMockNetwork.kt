@@ -74,7 +74,7 @@ import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-val MOCK_VERSION_INFO = VersionInfo(4, "Mock release", "Mock revision", "Mock Vendor")
+val MOCK_VERSION_INFO = VersionInfo(PLATFORM_VERSION, "Mock release", "Mock revision", "Mock Vendor")
 
 data class MockNodeArgs(
         val config: NodeConfiguration,

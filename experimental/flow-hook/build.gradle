@@ -1,26 +1,5 @@
-buildscript {
-    // For sharing constants between builds
-    Properties constants = new Properties()
-    file("$projectDir/../../constants.properties").withInputStream { constants.load(it) }
-
-    ext.kotlin_version = constants.getProperty("kotlinVersion")
-    ext.javaassist_version = "3.12.1.GA"
-
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        jcenter()
-    }
-
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
-
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
+ext {
+    javaassist_version = "3.12.1.GA"
 }
 
 apply plugin: 'kotlin'
@@ -29,7 +8,10 @@ apply plugin: 'idea'
 description 'A javaagent to allow hooking into Kryo'
 
 dependencies {
-    compile project(':node')
+    compile(project(':node')) {
+        // The Node only needs this for binary compatibility with Cordapps written in Kotlin 1.1.
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jre8'
+    }
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "javassist:javassist:$javaassist_version"

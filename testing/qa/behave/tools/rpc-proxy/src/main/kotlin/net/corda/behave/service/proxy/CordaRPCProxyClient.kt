@@ -9,6 +9,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.openHttpConnection
 import net.corda.core.internal.responseAs
@@ -24,7 +25,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.testing.common.internal.testNetworkParameters
 import java.io.InputStream
 import java.net.URL

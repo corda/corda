@@ -2,6 +2,7 @@ package net.corda.testing.node.internal
 
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.createDirectories
@@ -32,7 +33,9 @@ import java.nio.file.Path
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
-// TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't support this, and it's a property of the Corda JAR)
+// TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by
+// using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't
+// support this, and it's a property of the Corda JAR)
 abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyList()) : IntegrationTest() {
     companion object {
         private val WHITESPACE = "\\s++".toRegex()
@@ -87,7 +90,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @JvmOverloads
     fun initNode(legalName: CordaX500Name,
-                 platformVersion: Int = 4,
+                 platformVersion: Int = PLATFORM_VERSION,
                  rpcUsers: List<User> = emptyList(),
                  configOverrides: Map<String, Any> = emptyMap()): InProcessNode {
         val baseDirectory = baseDirectory(legalName).createDirectories()
@@ -127,7 +130,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @JvmOverloads
     fun startNode(legalName: CordaX500Name,
-                  platformVersion: Int = 4,
+                  platformVersion: Int = PLATFORM_VERSION,
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap()): NodeWithInfo {
         val node = initNode(legalName,platformVersion, rpcUsers,configOverrides)

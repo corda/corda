@@ -91,6 +91,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
         return descriptions
     }
 
+    @DeleteForDJVM
     @VisibleForTesting
     fun withAdditionalSignature(keyPair: KeyPair, signatureMetadata: SignatureMetadata): SignedTransaction {
         val signableData = SignableData(tx.id, signatureMetadata)
