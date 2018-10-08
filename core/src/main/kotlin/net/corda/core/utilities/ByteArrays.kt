@@ -29,7 +29,7 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
      */
     abstract val bytes: ByteArray
 
-    /** Returns a [ByteArrayInputStream] of the bytes */
+    /** Returns a [ByteArrayInputStream] of the bytes. */
     fun open() = ByteArrayInputStream(_bytes, offset, size)
 
     /**
@@ -41,8 +41,6 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
      */
     @Suppress("MemberVisibilityCanBePrivate")
     fun subSequence(offset: Int, size: Int): ByteSequence {
-        require(offset >= 0)
-        require(offset + size <= this.size)
         // Intentionally use bytes rather than _bytes, to mirror the copy-or-not behaviour of that property.
         return if (offset == 0 && size == this.size) this else of(bytes, this.offset + offset, size)
     }
@@ -108,7 +106,7 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
                 return Integer.signum(unsignedThis - unsignedOther)
             }
         }
-        // First min bytes is the same, so now resort to size
+        // First min bytes is the same, so now resort to size.
         return Integer.signum(this.size - other.size)
     }
 
@@ -190,12 +188,12 @@ fun ByteArray.toHexString(): String = DatatypeConverter.printHexBinary(this)
 fun String.parseAsHex(): ByteArray = DatatypeConverter.parseHexBinary(this)
 
 /**
- * Class is public for serialization purposes
+ * Class is public for serialization purposes.
  */
 @KeepForDJVM
 class OpaqueBytesSubSequence(override val bytes: ByteArray, offset: Int, size: Int) : ByteSequence(bytes, offset, size) {
     init {
         require(offset >= 0 && offset < bytes.size)
-        require(size >= 0 && size <= bytes.size)
+        require(size >= 0 && offset + size <= bytes.size)
     }
 }
