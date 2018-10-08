@@ -99,6 +99,11 @@ internal class AttachmentsClassLoaderBuilder(private val properties: Map<Any, An
     }
 }
 
+fun serializationFactory(vararg schemes: SerializationScheme): SerializationFactory =
+        SerializationFactoryImpl().apply {
+            schemes.forEach { scheme -> registerScheme(scheme) }
+        }
+
 @KeepForDJVM
 open class SerializationFactoryImpl(
     // TODO: This is read-mostly. Probably a faster implementation to be found.

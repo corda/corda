@@ -2,17 +2,21 @@
 package net.corda.core.serialization.internal
 
 import net.corda.core.KeepForDJVM
-import net.corda.core.internal.InheritableThreadLocalToggleField
-import net.corda.core.internal.SimpleToggleField
-import net.corda.core.internal.ThreadLocalToggleField
-import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.*
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 
 @KeepForDJVM
 interface SerializationEnvironment {
+
+    companion object {
+        @JvmOverloads
+        fun with(nonCheckpoint: NonCheckpointEnvironment, checkpoint: CheckpointEnvironment? = null) =
+                ConfiguredSerializationEnvironment(nonCheckpoint, checkpoint)
+    }
+
     val serializationFactory: SerializationFactory
-    val checkpointSerializationFactory: CheckpointSerializationFactory
+    val checkpointSerializer: CheckpointSerializer
     val p2pContext: SerializationContext
     val rpcServerContext: SerializationContext
     val rpcClientContext: SerializationContext
@@ -20,30 +24,29 @@ interface SerializationEnvironment {
     val checkpointContext: CheckpointSerializationContext
 }
 
-@KeepForDJVM
-open class SerializationEnvironmentImpl(
-        override val serializationFactory: SerializationFactory,
-        override val p2pContext: SerializationContext,
-        rpcServerContext: SerializationContext? = null,
-        rpcClientContext: SerializationContext? = null,
-        storageContext: SerializationContext? = null,
-        checkpointContext: CheckpointSerializationContext? = null,
-        checkpointSerializationFactory: CheckpointSerializationFactory? = null) : SerializationEnvironment {
-    // Those that are passed in as null are never inited:
-    override lateinit var rpcServerContext: SerializationContext
-    override lateinit var rpcClientContext: SerializationContext
-    override lateinit var storageContext: SerializationContext
-    override lateinit var checkpointContext: CheckpointSerializationContext
-    override lateinit var checkpointSerializationFactory: CheckpointSerializationFactory
+data class ConfiguredSerializationEnvironment(
+        val nonCheckpoint: NonCheckpointEnvironment,
+        val checkpoint: CheckpointEnvironment? = null): SerializationEnvironment {
 
-    init {
-        rpcServerContext?.let { this.rpcServerContext = it }
-        rpcClientContext?.let { this.rpcClientContext = it }
-        storageContext?.let { this.storageContext = it }
-        checkpointContext?.let { this.checkpointContext = it }
-        checkpointSerializationFactory?.let { this.checkpointSerializationFactory = it  }
-    }
+    override val serializationFactory: SerializationFactory get() = nonCheckpoint.factory
+    override val checkpointSerializer: CheckpointSerializer get() = checkpoint?.serializer ?:
+        throw IllegalStateException("Checkpoint serializer not configured in this environment")
+    override val p2pContext: SerializationContext get() = nonCheckpoint.contexts.p2p ?:
+        throw IllegalStateException("P2P serialization context not configured in this environment")
+    override val rpcServerContext: SerializationContext get() = nonCheckpoint.contexts.rpc?.server ?:
+        throw IllegalStateException("RPC server serialization context not configured in this environment")
+    override val rpcClientContext: SerializationContext get() = nonCheckpoint.contexts.rpc?.client ?:
+        throw IllegalStateException("RPC client serialization context not configured in this environment")
+    override val storageContext: SerializationContext get() = nonCheckpoint.contexts.storage ?:
+        throw IllegalStateException("Storage serialization context not configured in this environment")
+    override val checkpointContext: CheckpointSerializationContext get() = checkpoint?.context ?:
+        throw IllegalStateException("Checkpoint serialization context not configured in this environment")
 }
+
+data class NonCheckpointEnvironment(val factory: SerializationFactory, val contexts: SerializationContexts)
+data class SerializationContexts @JvmOverloads constructor(val p2p: SerializationContext? = null, val rpc: RPCSerializationContexts? = null, val storage: SerializationContext? = null)
+data class RPCSerializationContexts @JvmOverloads constructor(val server: SerializationContext, val client: SerializationContext? = null)
+data class CheckpointEnvironment(val serializer: CheckpointSerializer, val context: CheckpointSerializationContext)
 
 private val _nodeSerializationEnv = SimpleToggleField<SerializationEnvironment>("nodeSerializationEnv", true)
 @VisibleForTesting

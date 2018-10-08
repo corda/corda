@@ -5,12 +5,24 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.*
 import net.corda.core.serialization.internal.CheckpointSerializationContext
-import net.corda.core.serialization.internal.CheckpointSerializationFactory
+import net.corda.core.serialization.internal.checkpointSerialize
 
 val serializationContextKey = SerializeAsTokenContext::class.java
 
-fun SerializationContext.withTokenContext(serializationContext: SerializeAsTokenContext): SerializationContext = this.withProperty(serializationContextKey, serializationContext)
-fun CheckpointSerializationContext.withTokenContext(serializationContext: SerializeAsTokenContext): CheckpointSerializationContext = this.withProperty(serializationContextKey, serializationContext)
+fun SerializationContext.withTokenContext(serializationContext: SerializeAsTokenContext): SerializationContext =
+        this.withProperty(serializationContextKey, serializationContext)
+
+fun CheckpointSerializationContext.withTokenContextTokenizing(toBeTokenized: Any, serviceHub: ServiceHub): CheckpointSerializationContext =
+        withTokenContext(createSerializeAsTokenContext(toBeTokenized, serviceHub))
+
+fun CheckpointSerializationContext.createSerializeAsTokenContext(toBeTokenized: Any, serviceHub: ServiceHub): SerializeAsTokenContextImpl {
+    return SerializeAsTokenContextImpl(serviceHub) {
+        toBeTokenized.checkpointSerialize(this@createSerializeAsTokenContext.withTokenContext(this))
+    }
+}
+
+private fun CheckpointSerializationContext.withTokenContext(context: SerializeAsTokenContext) =
+    this.withProperty(serializationContextKey, context)
 
 /**
  * A context for mapping SerializationTokens to/from SerializeAsTokens.
@@ -23,9 +35,6 @@ fun CheckpointSerializationContext.withTokenContext(serializationContext: Serial
  */
 @DeleteForDJVM
 class SerializeAsTokenContextImpl(override val serviceHub: ServiceHub, init: SerializeAsTokenContext.() -> Unit) : SerializeAsTokenContext {
-    constructor(toBeTokenized: Any, serializationFactory: SerializationFactory, context: SerializationContext, serviceHub: ServiceHub) : this(serviceHub, {
-        serializationFactory.serialize(toBeTokenized, context.withTokenContext(this))
-    })
 
     private val classNameToSingleton = mutableMapOf<String, SerializeAsToken>()
     private var readOnly = false
@@ -70,9 +79,6 @@ class SerializeAsTokenContextImpl(override val serviceHub: ServiceHub, init: Ser
  */
 @DeleteForDJVM
 class CheckpointSerializeAsTokenContextImpl(override val serviceHub: ServiceHub, init: SerializeAsTokenContext.() -> Unit) : SerializeAsTokenContext {
-    constructor(toBeTokenized: Any, serializationFactory: CheckpointSerializationFactory, context: CheckpointSerializationContext, serviceHub: ServiceHub) : this(serviceHub, {
-        serializationFactory.serialize(toBeTokenized, context.withTokenContext(this))
-    })
 
     private val classNameToSingleton = mutableMapOf<String, SerializeAsToken>()
     private var readOnly = false

@@ -5,9 +5,7 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationContext.*
 import net.corda.core.serialization.SerializationCustomSerializer
-import net.corda.core.serialization.internal.SerializationEnvironment
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
-import net.corda.core.serialization.internal.nodeSerializationEnv
+import net.corda.core.serialization.internal.*
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
@@ -34,17 +32,17 @@ class AMQPClientSerializationScheme(
             nodeSerializationEnv = createSerializationEnv(classLoader)
         }
 
-        fun createSerializationEnv(classLoader: ClassLoader? = null): SerializationEnvironment {
-            return SerializationEnvironmentImpl(
-                    SerializationFactoryImpl().apply {
-                        registerScheme(AMQPClientSerializationScheme(emptyList()))
-                    },
-                    storageContext = AMQP_STORAGE_CONTEXT,
-                    p2pContext = if (classLoader != null) AMQP_P2P_CONTEXT.withClassLoader(classLoader) else AMQP_P2P_CONTEXT,
-                    rpcClientContext = AMQP_RPC_CLIENT_CONTEXT,
-                    rpcServerContext = AMQP_RPC_SERVER_CONTEXT
-            )
-        }
+        fun createSerializationEnv(classLoader: ClassLoader? = null): SerializationEnvironment =
+            SerializationEnvironment.with(
+                    nonCheckpoint = NonCheckpointEnvironment(
+                            factory = serializationFactory(AMQPClientSerializationScheme(emptyList())),
+                            contexts = SerializationContexts(
+                                    storage = AMQP_STORAGE_CONTEXT,
+                                    p2p = if (classLoader != null) AMQP_P2P_CONTEXT.withClassLoader(classLoader)
+                                        else AMQP_P2P_CONTEXT,
+                                    rpc = RPCSerializationContexts(
+                                        client = AMQP_RPC_CLIENT_CONTEXT,
+                                        server = AMQP_RPC_SERVER_CONTEXT))))
     }
 
     override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
