@@ -3,6 +3,13 @@ from jira import JIRA
 from jira.exceptions import JIRAError
 # }}}
 
+# {{{ Python 2 and 3 interoperability
+try:
+    unicode('')
+except NameError:
+    unicode = str
+# }}}
+
 # {{{ Class for interacting with a hosted JIRA system
 class Jira:
 

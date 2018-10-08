@@ -5,7 +5,7 @@ import sys, traceback
 # {{{ Representation of a command-line program
 class Program:
 
-    # Create a new command-line program represenation, provided an optional name and description
+    # Create a new command-line program representation, provided an optional name and description
     def __init__(self, name=None, description=None):
         self.parser = ArgumentParser(name, description=description)
         self.subparsers = self.parser.add_subparsers(title='commands')
@@ -39,7 +39,10 @@ class Program:
                 t, exception, tb = sys.exc_info()
                 self.parser.error('{}\n\n{}'.format(error.message, '\n'.join(traceback.format_tb(tb))))
             else:
-                self.parser.error(error.message)
+                try:
+                    self.parser.error(error.message)
+                except AttributeError:
+                    self.parser.error(str(error))
 # }}}
 
 # {{{ Representation of a sub-command of a command-line program
