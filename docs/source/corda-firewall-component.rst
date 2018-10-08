@@ -77,14 +77,14 @@ The complete sequence is therefore:
 4.   On receipt of a message acknowledge from Artemis the ``StateMachine`` can continue flow if it is not awaiting a response
      i.e. a ``send`` operation. Otherwise it remains suspended waiting for the reply.
 
-5.   The receiving end of the bridge TLS/AMQP 1.0 link might be the Artemis broker of a remote node,
+5.   The receiving end of the bridge TLS 1.2 /AMQP 1.0 link might be the Artemis broker of a remote node,
      but for now we assume it is an enterprise deployment that is using a float process running behind a firewall.
      The receiver will already have confirmed the validity of the TLS originator when it accepted the TLS handshake.
      However, the float does some further basic checking of received messages and their associated headers.
      For instance the message must be targeted at an inbox address and must be below the network parameters defined ``maxMessageSize``.
 
 6.   Having passed initial checks on the message the float bundles up the message and originator as a payload to be
-     sent across the DMZ internal firewall. This inbound message path uses a separate AMQP 1.0/TLS control tunnel.
+     sent across the DMZ internal firewall. This inbound message path uses a separate AMQP 1.0/TLS 1.2 control tunnel.
      (N.B. This link is initiated from the local master bridge in the trusted zone to the float in the DMZ. This allows a
      simple firewall rule to be configured which blocks any attempts to probe the internal network from the DMZ.)
      Once the message is forwarded the float keeps track of the delivery acknowledgements,

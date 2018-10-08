@@ -1,7 +1,7 @@
 Networking and messaging
 ========================
 
-Corda uses AMQP/1.0 over TLS between nodes which is currently implemented using Apache Artemis, an embeddable message
+Corda uses AMQP/1.0 over TLS/1.2 between nodes which is currently implemented using Apache Artemis, an embeddable message
 queue broker. Building on established MQ protocols gives us features like persistence to disk, automatic delivery
 retries with backoff and dead-letter routing, security, large message streaming and so on.
 

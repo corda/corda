@@ -53,7 +53,7 @@ The particular mode is selected via the required ``firewallMode`` configuration 
 
 :BridgeInner: mode runs this instance of the ``corda-firewall.jar`` as the trusted portion of the peer-to-peer firewall float.
   Specifically, this process runs the complete outbound message processing. For the inbound path it operates only the filtering and durable storing portions of the message processing.
-  The process expects to connect through a firewall to a matched ``FloatOuter`` instance running in the DMZ as the actual ``TLS/AMQP 1.0`` termination point.
+  The process expects to connect through a firewall to a matched ``FloatOuter`` instance running in the DMZ as the actual ``TLS 1.2/AMQP 1.0`` termination point.
 
 :FloatOuter: causes this instance of the ``corda-firewall.jar`` to run as a protocol break proxy for inbound message path. The process
   will initialise a ``TLS`` control port and await connection from the ``BridgeInner``. Once the control connection is successful the ``BridgeInner`` will securely provision
@@ -91,16 +91,16 @@ absolute path to the firewall's base directory.
 
    :alternateArtemisBrokerAddresses: Optionally if there are multiple Artemis broker address e.g. for hot-cold node deployment, then additional hosts and ports may be included in a list.
 
-   :customSSLConfiguration:  The default behaviour is that the outgoing ``TLS/AMQP 1.0`` connections present certificate details from (``<workspace>/certificates/sslkeystore.jks``)
+   :customSSLConfiguration:  The default behaviour is that the outgoing ``TLS 1.2/AMQP 1.0`` connections present certificate details from (``<workspace>/certificates/sslkeystore.jks``)
         and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config. However, distinct KeyStores may be configured in this section:
 
         :keyStorePassword: The password for the TLS KeyStore and private keys within the KeyStore.
 
         :trustStorePassword: The password for TLS TrustStore.
 
-        :sslKeystore: The path to the KeyStore file to use in outgoing ``TLS/AMQP 1.0`` connections.
+        :sslKeystore: The path to the KeyStore file to use in outgoing ``TLS 1.2/AMQP 1.0`` connections.
 
-        :trustStoreFile: The path to the TrustStore file to use in outgoing ``TLS/AMQP 1.0`` connections.
+        :trustStoreFile: The path to the TrustStore file to use in outgoing ``TLS 1.2/AMQP 1.0`` connections.
 
         :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
 
@@ -116,19 +116,19 @@ absolute path to the firewall's base directory.
 
 :inboundConfig:  This section is used to configure the properties of the listening port. It is required for ``SenderReceiver`` and ``FloatOuter`` modes and must be absent for ``BridgeInner`` mode:
 
-        :listeningAddress: The host and port to bind to as ``TLS/AMQP 1.0`` listener. This may be a specific network interface on multi-homed machines.
+        :listeningAddress: The host and port to bind to as ``TLS 1.2/AMQP 1.0`` listener. This may be a specific network interface on multi-homed machines.
             It may also differ from the externally exposed public ``p2pAddress`` of the port if the firewalls, or load balancers transparently reroute the traffic.
 
-   :customSSLConfiguration:  The default behaviour is that the inbound ``TLS/AMQP 1.0`` connections present certificate details from (``<workspace>/certificates/sslkeystore.jks``)
+   :customSSLConfiguration:  The default behaviour is that the inbound ``TLS 1.2/AMQP 1.0`` connections present certificate details from (``<workspace>/certificates/sslkeystore.jks``)
         and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config. However, distinct KeyStores may be configured in this section:
 
         :keyStorePassword: The password for the TLS KeyStore and private keys within the KeyStore.
 
         :trustStorePassword: The password for TLS TrustStore.
 
-        :sslKeystore: The path to the KeyStore file to use in inbound ``TLS/AMQP 1.0`` connections.
+        :sslKeystore: The path to the KeyStore file to use in inbound ``TLS 1.2/AMQP 1.0`` connections.
 
-        :trustStoreFile: The path to the TrustStore file to use in inbound ``TLS/AMQP 1.0`` connections.
+        :trustStoreFile: The path to the TrustStore file to use in inbound ``TLS 1.2/AMQP 1.0`` connections.
 
         :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
 
