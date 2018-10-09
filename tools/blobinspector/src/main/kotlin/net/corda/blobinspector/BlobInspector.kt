@@ -34,8 +34,8 @@ fun main(args: Array<String>) {
 }
 
 class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised binary blobs to text") {
-    @Parameters(index = "*..0", paramLabel = "SOURCE", description = ["URL or file path to the blob"], converter = [SourceConverter::class])
-    var source: MutableList<URL> = mutableListOf()
+    @Parameters(index = "0", paramLabel = "SOURCE", description = ["URL or file path to the blob"], converter = [SourceConverter::class])
+    var source: URL? = null
 
     @Option(names = ["--format"], paramLabel = "type", description = ["Output format. Possible values: [YAML, JSON]"])
     private var formatType: OutputFormatType = OutputFormatType.YAML
@@ -61,8 +61,7 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
     }
 
     fun run(out: PrintStream): Int {
-        require(source.count() == 1) { "You must specify URL or file path to the blob" }
-        val inputBytes = source.first().readBytes()
+        val inputBytes = source!!.readBytes()
         val bytes = parseToBinaryRelaxed(inputFormatType, inputBytes)
                 ?: throw IllegalArgumentException("Error: this input does not appear to be encoded in Corda's AMQP extended format, sorry.")
 
