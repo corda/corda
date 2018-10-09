@@ -13,7 +13,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.internal.readObject
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
@@ -57,7 +57,7 @@ class FirewallInstance(val conf: FirewallConfiguration,
         }
         if (!serializationExists) {
             val classloader = this.javaClass.classLoader
-            nodeSerializationEnv = SerializationEnvironmentImpl(
+            nodeSerializationEnv = SerializationEnvironment.with(
                     SerializationFactoryImpl().apply {
                         registerScheme(AMQPFirewallSerializationScheme(emptyList()))
                     },
