@@ -16,8 +16,8 @@ buildscript {
     // TODO: Sort this alphabetically.
     ext.kotlin_version = constants.getProperty("kotlinVersion")
 
-    ext.quasar_group = 'co.paralleluniverse'
-    ext.quasar_version = '0.7.10'
+    ext.quasar_group = 'com.github.corda.quasar'
+    ext.quasar_version = '73f5cef96ecf8b57e4184bc3a255d225b03d5600'
 
     // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1 by default.
     // We must configure it manually to use the latest capsule version.

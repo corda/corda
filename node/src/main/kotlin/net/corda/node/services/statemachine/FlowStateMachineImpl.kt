@@ -1,7 +1,7 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
-import co.paralleluniverse.fibers.Fiber.parkAndSerialize
+import co.paralleluniverse.fibers.Fiber.parkAndCustomSerialize
 import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
@@ -361,7 +361,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun <R : Any> suspend(ioRequest: FlowIORequest<R>, maySkipCheckpoint: Boolean): R {
         val serializationContext = TransientReference(getTransientField(TransientValues::checkpointSerializationContext))
         val transaction = extractThreadLocalTransaction()
-        parkAndSerialize { _, _ ->
+        parkAndCustomSerialize {
             setLoggingContext()
             logger.trace { "Suspended on $ioRequest" }
 
