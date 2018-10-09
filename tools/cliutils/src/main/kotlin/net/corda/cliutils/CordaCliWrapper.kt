@@ -21,8 +21,6 @@ import java.util.concurrent.Callable
 interface Validated {
     companion object {
         val logger = contextLogger()
-        const val RED = "\u001B[31m"
-        const val RESET = "\u001B[0m"
     }
 
     /**
@@ -36,8 +34,8 @@ interface Validated {
     fun validate() {
         val errors = validator()
         if (errors.isNotEmpty()) {
-            logger.error(RED + "Exceptions when parsing command line arguments:")
-            logger.error(errors.joinToString("\n") + RESET)
+            logger.error(ShellConstants.RED + "Exceptions when parsing command line arguments:")
+            logger.error(errors.joinToString("\n") + ShellConstants.RESET)
             CommandLine(this).usage(System.err)
             exitProcess(ExitCodes.FAILURE)
         }
@@ -55,6 +53,11 @@ object CordaSystemUtils {
     fun getOsName(): String = System.getProperty(OS_NAME)
 }
 
+object ShellConstants {
+    const val RED = "\u001B[31m"
+    const val RESET = "\u001B[0m"
+}
+
 fun CordaCliWrapper.start(args: Array<String>) {
     this.args = args
 
@@ -66,27 +69,47 @@ fun CordaCliWrapper.start(args: Array<String>) {
     cmd.registerConverter(Path::class.java) { Paths.get(it).toAbsolutePath().normalize() }
     cmd.commandSpec.name(alias)
     cmd.commandSpec.usageMessage().description(description)
+    cmd.commandSpec.parser().collectErrors(true)
     try {
-        val defaultAnsiMode = if (CordaSystemUtils.isOsWindows()) { Help.Ansi.ON } else { Help.Ansi.AUTO }
-        val results = cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(defaultAnsiMode),
-                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(defaultAnsiMode),
-                *args)
-        // If an error code has been returned, use this and exit
-        results?.firstOrNull()?.let {
-            if (it is Int) {
-                exitProcess(it)
-            } else {
+        val defaultAnsiMode = if (CordaSystemUtils.isOsWindows()) {
+            Help.Ansi.ON
+        } else {
+            Help.Ansi.AUTO
+        }
+
+        val results = cmd.parse(*args)
+        val app = cmd.getCommand<CordaCliWrapper>()
+        if (cmd.isUsageHelpRequested) {
+            cmd.usage(System.out, defaultAnsiMode)
+            exitProcess(ExitCodes.SUCCESS)
+        }
+        if (cmd.isVersionHelpRequested) {
+            cmd.printVersionHelp(System.out, defaultAnsiMode)
+            exitProcess(ExitCodes.SUCCESS)
+        }
+        if (app.installShellExtensionsParser.installShellExtensions) {
+            System.out.println("Install shell extensions: ${app.installShellExtensionsParser.installShellExtensions}")
+            // ignore any parsing errors and run the program
+            exitProcess(app.call())
+        }
+        val allErrors = results.flatMap { it.parseResult?.errors() ?: emptyList() }
+        if (allErrors.any()) {
+            val parameterExceptions = allErrors.asSequence().filter { it is ParameterException }
+            if (parameterExceptions.any()) {
+                System.err.println("${ShellConstants.RED}${parameterExceptions.map{ it.message }.joinToString()}${ShellConstants.RESET}")
+                parameterExceptions.filter { it is UnmatchedArgumentException}.forEach { (it as UnmatchedArgumentException).printSuggestions(System.out) }
+                usage(cmd, System.out, defaultAnsiMode)
                 exitProcess(ExitCodes.FAILURE)
             }
+            throw allErrors.first()
         }
-        // If no results returned, picocli ran something without invoking the main program, e.g. --help or --version, so exit successfully
-        exitProcess(ExitCodes.SUCCESS)
-    } catch (e: ExecutionException) {
+        exitProcess(app.call())
+    } catch (e: Exception) {
         val throwable = e.cause ?: e
         if (this.verbose) {
             throwable.printStackTrace()
         } else {
-            System.err.println("*ERROR*: ${throwable.rootMessage ?: "Use --verbose for more details"}")
+            System.err.println("${ShellConstants.RED}${throwable.rootMessage ?: "Use --verbose for more details"}${ShellConstants.RESET}")
         }
         exitProcess(ExitCodes.FAILURE)
     }
@@ -126,7 +149,7 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Cal
     var loggingLevel: Level = Level.INFO
 
     @Mixin
-    private lateinit var installShellExtensionsParser: InstallShellExtensionsParser
+    lateinit var installShellExtensionsParser: InstallShellExtensionsParser
 
     // This needs to be called before loggers (See: NodeStartup.kt:51 logger called by lazy, initLogging happens before).
     // Node's logging is more rich. In corda configurations two properties, defaultLoggingLevel and consoleLogLevel, are usually used.

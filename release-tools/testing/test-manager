@@ -36,7 +36,8 @@ except:
 product_map = {
     'OS'   : 'Corda',
     'ENT'  : 'Corda Enterprise',
-    'NS'   : 'Corda Network Services',
+    'NS'   : 'ENM',
+    'ENM'  : 'ENM',
     'TEST' : 'Corda', # for demo and test purposes
 }
 # }}}
@@ -235,10 +236,15 @@ def create_release_candidate(args):
     print()
     has_tests = False
     for issue in jira.search(QUERY_LIST_TEST_INSTANCES, args.PRODUCT, version):
-        print(u' - {} {}'.format(blue(issue.key), issue.fields.summary))
+        test_status = issue.fields.status['name']
+        print(u' - {} {} ({})'.format(blue(issue.key), issue.fields.summary, test_status))
         epic_field = jira.custom_fields_by_name['Epic Link']
         epic = issue.fields[epic_field] if epic_field in issue.fields.to_dict() else ''
         labels = issue.fields.labels + [epic]
+        if test_status in ['Pass', 'Fail', 'Descope']:
+            print(u'   {} - Parent test is marked as {}'.format(yellow('SKIPPED'), test_status))
+            print()
+            continue
         print()
         has_tests = True
         print(u'    - Creating test run ticket for release candidate {} ...'.format(yellow('RC{:02d}'.format(CANDIDATE))))
@@ -278,7 +284,7 @@ def main():
 
         def mixin_version_and_product(command):
             mixin_product(command)
-            command.add('VERSION', help='the target version of the release, e.g., 4.0', type=float)
+            command.add('VERSION', help='the target version of the release, e.g., 4.0', type=str)
 
         def mixin_candidate(command, optional=False):
             if optional:

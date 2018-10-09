@@ -44,7 +44,6 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
 
         assertEquals(testJ, a.j)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
-        assertTrue(obj.obj is A)
         val serSchema = obj.envelope.schema
         assertEquals(2, serSchema.types.size)
         val l1 = serSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
@@ -83,8 +82,6 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(testJJ, a.jj)
 
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
-
-        assertTrue(obj.obj is A)
 
         val serSchema = obj.envelope.schema
 
@@ -127,8 +124,6 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
 
         val a = A(testI, testII)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
-
-        assertTrue(obj.obj is A)
 
         val serSchema = obj.envelope.schema
 
@@ -176,8 +171,6 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         val a = A(testI, testIII)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
-        assertTrue(obj.obj is A)
-
         val serSchema = obj.envelope.schema
 
         assertEquals(3, serSchema.types.size)
@@ -224,8 +217,6 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         val a = A(testI)
         val b = B(a, testIIII)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
-
-        assertTrue(obj.obj is B)
 
         val serSchema = obj.envelope.schema
 
@@ -281,8 +272,6 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         val b = B(a, testIIII)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 
-        assertTrue(obj.obj is B)
-
         val serSchema = obj.envelope.schema
 
         // The classes we're expecting to find:
@@ -304,8 +293,6 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         val testI = 25
         val a = A(testI)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
-
-        assertTrue(obj.obj is A)
 
         val serSchema = obj.envelope.schema
 

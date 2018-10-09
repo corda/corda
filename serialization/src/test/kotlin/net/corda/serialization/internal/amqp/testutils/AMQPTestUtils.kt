@@ -23,7 +23,7 @@ fun testDefaultFactoryNoEvolution(): SerializerFactory {
     return SerializerFactory(
             AllWhitelist,
             ClassLoader.getSystemClassLoader(),
-            evolutionSerializerGetter = EvolutionSerializerGetterTesting())
+            evolutionSerializerProvider = FailIfEvolutionAttempted)
 }
 
 fun testDefaultFactoryWithWhitelist() = SerializerFactory(EmptyWhitelist, ClassLoader.getSystemClassLoader())
