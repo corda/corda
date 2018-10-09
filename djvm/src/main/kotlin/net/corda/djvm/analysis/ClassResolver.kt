@@ -123,10 +123,10 @@ class ClassResolver(
                 sandboxRegex.matches(name)
     }
 
-    private val sandboxRegex = "^$sandboxPrefix.*$".toRegex()
+    private val sandboxRegex = "^$sandboxPrefix.*\$".toRegex()
 
     companion object {
-        private val complexArrayTypeRegex = "^(\\[+)L(.*);$".toRegex()
+        private val complexArrayTypeRegex = "^(\\[+)L(.*);\$".toRegex()
     }
 
 }

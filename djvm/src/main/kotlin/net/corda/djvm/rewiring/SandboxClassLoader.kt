@@ -75,6 +75,7 @@ class SandboxClassLoader(
      *
      * @return The resulting <tt>Class</tt> object.
      */
+    @Throws(ClassNotFoundException::class)
     override fun loadClass(name: String, resolve: Boolean): Class<*> {
         val source = ClassSource.fromClassName(name)
         return if (name.startsWith("sandbox.") && !analysisConfiguration.isPinnedClass(source.internalClassName)) {

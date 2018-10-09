@@ -269,10 +269,6 @@ open class ClassAndMemberVisitor(
                 captureExceptions {
                     visitClassAnnotation(this, desc)
                 }
-                //TODO Sort this out properly
-                if (desc == "Lkotlin/Metadata;") {
-                    return null
-                }
             }
             return super.visitAnnotation(desc, visible)
         }

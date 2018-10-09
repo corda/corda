@@ -51,7 +51,7 @@ private fun kotlin.String.toSandboxPackage(): kotlin.String {
 
 private fun kotlin.String.fromSandboxPackage(): kotlin.String {
     return if (startsWith(SANDBOX_PREFIX)) {
-        substring(8)
+        drop(SANDBOX_PREFIX.length)
     } else {
         this
     }
@@ -130,16 +130,23 @@ private val allEnumDirectories: sandbox.java.util.Map<Class<out Enum<*>>, sandbo
  */
 @Throws(ClassNotFoundException::class)
 fun classForName(className: kotlin.String): Class<*> {
-    if (!className.startsWith(SANDBOX_PREFIX)) {
-        throw ClassNotFoundException(className)
-    }
-    return Class.forName(className)
+    return Class.forName(toSandbox(className))
 }
 
 @Throws(ClassNotFoundException::class)
 fun classForName(className: kotlin.String, initialize: kotlin.Boolean, classLoader: ClassLoader): Class<*> {
-    if (!className.startsWith(SANDBOX_PREFIX)) {
+    return Class.forName(toSandbox(className), initialize, classLoader)
+}
+
+private fun toSandbox(className: kotlin.String): kotlin.String {
+    if (bannedClasses.any { it.matches(className) }) {
         throw ClassNotFoundException(className)
     }
-    return Class.forName(className, initialize, classLoader)
+    return SANDBOX_PREFIX + className
 }
+
+private val bannedClasses = setOf(
+    "^java\\.lang\\.DJVM(.*)?\$".toRegex(),
+    "^net\\.corda\\.djvm\\..*\$".toRegex(),
+    "^Task\$".toRegex()
+)
