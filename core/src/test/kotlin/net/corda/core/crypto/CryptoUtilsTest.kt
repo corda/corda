@@ -918,5 +918,8 @@ class CryptoUtilsTest {
         val signedZeroArray1stTime = Crypto.doSign(privateKey, test100ZeroBytes)
         val signedZeroArray2ndTime = Crypto.doSign(privateKey, test100ZeroBytes)
         assertEquals(OpaqueBytes(signedZeroArray1stTime), OpaqueBytes(signedZeroArray2ndTime))
+
+        // Just in case, test that signatures of different messages are not the same.
+        assertNotEquals(OpaqueBytes(signedData1stTime), OpaqueBytes(signedZeroArray1stTime))
     }
 }
