@@ -39,7 +39,7 @@ class CheckpointSerializationEnvironmentRule(private val inheritable: Boolean = 
 
         /** Do not call, instead use [SerializationEnvironmentRule] as a [org.junit.Rule]. */
         fun <T> run(taskLabel: String, task: (SerializationEnvironment) -> T): T {
-            return CheckpointSerializationEnvironmentRule().apply { init(taskLabel) }.runTask(task)
+            return CheckpointSerializationEnvironmentRule().apply { init() }.runTask(task)
         }
     }
 
@@ -47,14 +47,14 @@ class CheckpointSerializationEnvironmentRule(private val inheritable: Boolean = 
     private lateinit var env: SerializationEnvironment
 
     override fun apply(base: Statement, description: Description): Statement {
-        init(description.toString())
+        init()
         return object : Statement() {
             override fun evaluate() = runTask { base.evaluate() }
         }
     }
 
-    private fun init(envLabel: String) {
-        env = createTestSerializationEnv(envLabel)
+    private fun init() {
+        env = createTestSerializationEnv()
     }
 
     private fun <T> runTask(task: (SerializationEnvironment) -> T): T {
@@ -65,7 +65,6 @@ class CheckpointSerializationEnvironmentRule(private val inheritable: Boolean = 
         }
     }
 
-    val checkpointSerializationFactory get() = env.checkpointSerializationFactory
     val checkpointSerializationContext get() = env.checkpointContext
-
+    val checkpointSerializer get() = env.checkpointSerializer
 }

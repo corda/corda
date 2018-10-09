@@ -14,7 +14,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
@@ -393,7 +393,7 @@ internal constructor(private val initSerEnv: Boolean,
 
     // We need to to set serialization env, because generation of parameters is run from Cordform.
     private fun initialiseSerialization() {
-        _contextSerializationEnv.set(SerializationEnvironmentImpl(
+        _contextSerializationEnv.set(SerializationEnvironment.with(
                 SerializationFactoryImpl().apply {
                     registerScheme(AMQPParametersSerializationScheme)
                 },

@@ -22,6 +22,9 @@ test {
         // Running this class is the whole point, so include it explicitly.
         includeTestsMatching "net.corda.deterministic.data.GenerateData"
     }
+    // force execution of these tests to generate artifacts required by other module (eg. VerifyTransactionTest)
+    // note: required by Gradle Build Cache.
+    outputs.upToDateWhen { false }
 }
 assemble.finalizedBy test
 
