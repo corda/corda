@@ -498,7 +498,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
         val generatedCordapps = mutableListOf(VirtualCordapp.generateCoreCordapp(versionInfo))
-        if (configuration.notary != null && configuration.notary?.className == SimpleNotaryService::class.java.name) {
+        if (isRunningSimpleNotaryService(configuration)) {
+            // For backwards compatibility purposes the single node notary implementation is built-in: a virtual
+            // CorDapp will be generated.
             generatedCordapps += VirtualCordapp.generateSimpleNotaryCordapp(versionInfo)
         }
         return JarScanningCordappLoader.fromDirectories(
@@ -506,6 +508,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 versionInfo,
                 extraCordapps = generatedCordapps
         )
+    }
+
+    private fun isRunningSimpleNotaryService(configuration: NodeConfiguration): Boolean {
+        return configuration.notary != null && configuration.notary?.className == SimpleNotaryService::class.java.name
     }
 
     private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
