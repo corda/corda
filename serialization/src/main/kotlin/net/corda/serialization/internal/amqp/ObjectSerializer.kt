@@ -2,6 +2,7 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.core.internal.isConcreteClass
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.amqp.SerializerFactory.Companion.nameForType
@@ -61,7 +62,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             context: SerializationContext,
             debugIndent: Int) = ifThrowsAppend({ clazz.typeName }
     ) {
-        if (propertySerializers.size != javaConstructor?.parameterCount &&
+        if (propertySerializers.deserializableSize != javaConstructor?.parameterCount &&
                 javaConstructor?.parameterCount ?: 0 > 0
         ) {
             throw AMQPNotSerializableException(type, "Serialization constructor for class $type expects "
@@ -86,8 +87,9 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             input: DeserializationInput,
             context: SerializationContext): Any = ifThrowsAppend({ clazz.typeName }) {
         if (obj is List<*>) {
-            if (obj.size > propertySerializers.size) {
-                throw AMQPNotSerializableException(type, "Too many properties in described type $typeName")
+            if (obj.size != propertySerializers.size) {
+                throw AMQPNotSerializableException(type, "${obj.size} objects to deserialize, but " +
+                        "${propertySerializers.size} properties in described type $typeName")
             }
 
             return if (propertySerializers.byConstructor) {
@@ -109,8 +111,19 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
 
         return construct(propertySerializers.serializationOrder
                 .zip(obj)
-                .map { Pair(it.first.initialPosition, it.first.serializer.readProperty(it.second, schemas, input, context)) }
-                .sortedWith(compareBy({ it.first }))
+                .mapNotNull { (accessor, obj) ->
+                    // Ensure values get read out of input no matter what
+                    val value = accessor.serializer.readProperty(obj, schemas, input, context)
+
+                    when(accessor) {
+                        is PropertyAccessorConstructor -> accessor.initialPosition to value
+                        is CalculatedPropertyAccessor -> null
+                        else -> throw UnsupportedOperationException(
+                                "${accessor::class.simpleName} accessor not supported " +
+                                        "for constructor-based object building")
+                    }
+                }
+                .sortedWith(compareBy { it.first })
                 .map { it.second })
     }
 

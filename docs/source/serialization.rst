@@ -556,9 +556,32 @@ be able to use reflection over the deserialized data, for scripting languages th
 ensuring classes not on the classpath can be deserialized without loading potentially malicious code.
 
 If the original class implements some interfaces then the carpenter will make sure that all of the interface methods are
-backed by feilds. If that's not the case then an exception will be thrown during deserialization. This check can
+backed by fields. If that's not the case then an exception will be thrown during deserialization. This check can
 be turned off with ``SerializationContext.withLenientCarpenter``. This can be useful if only the field getters are needed,
 say in an object viewer.
+
+Calculated values
+`````````````````
+
+In some cases, for example the `exitKeys` field in ``FungibleState``, a property in an interface may normally be implemented
+as a *calculated* value, with a "getter" method for reading it but neither a corresponding constructor parameter nor a
+"setter" method for writing it. In this case, it will not automatically be included among the properties to be serialized,
+since the receiving class would ordinarily be able to re-calculate it on demand. However, a synthesized class will not
+have the method implementation which knows how to calculate the value, and a cast to the interface will fail because the
+property is not serialized and so the "getter" method present in the interface will not be synthesized.
+
+The solution is to annotate the method with the ``SerializableCalculatedProperty`` annotation, which will cause the value
+exposed by the method to be read and transmitted during serialization, but discarded during normal deserialization. The
+synthesized class will then include a backing field together with a "getter" for the serialized calculated value, and will
+remain compatible with the interface.
+
+If the annotation is added to the method in the *interface*, then all implementing classes must calculate the value and
+none may have a corresponding backing field; alternatively, it can be added to the overriding method on each implementing
+class where the value is calculated and there is no backing field. If the field is a Kotlin ``val``, then the annotation
+should be targeted at its getter method, e.g. ``@get:SerializableCalculatedProperty``.
+
+Future enhancements
+```````````````````
 
 Possible future enhancements include:
 

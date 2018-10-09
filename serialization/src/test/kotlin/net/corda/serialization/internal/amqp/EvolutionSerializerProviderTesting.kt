@@ -3,12 +3,12 @@ package net.corda.serialization.internal.amqp
 import java.io.NotSerializableException
 
 /**
- * An implementation of [EvolutionSerializerGetterBase] that disables all evolution within a
+ * An implementation of [EvolutionSerializerProvider] that disables all evolution within a
  * [SerializerFactory]. This is most useful in testing where it is known that evolution should not be
  * occurring and where bugs may be hidden by transparent invocation of an [EvolutionSerializer]. This
  * prevents that by simply throwing an exception whenever such a serializer is requested.
  */
-class EvolutionSerializerGetterTesting : EvolutionSerializerGetterBase() {
+object FailIfEvolutionAttempted : EvolutionSerializerProvider {
     override fun getEvolutionSerializer(factory: SerializerFactory,
                                         typeNotation: TypeNotation,
                                         newSerializer: AMQPSerializer<Any>,

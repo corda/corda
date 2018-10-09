@@ -16,6 +16,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
+import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
