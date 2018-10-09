@@ -225,6 +225,9 @@ Unreleased
   normal state when it occurs in an input or output position. *This feature is only available on Corda networks running
   with a minimum platform version of 4.*
 
+* Removed type parameter `U` from `tryLockFungibleStatesForSpending` to allow the function to be used with `FungibleState`
+  as well as `FungibleAsset`.
+
 Version 3.3
 -----------
 

@@ -28,12 +28,12 @@ class InsufficientBalanceException(val amountMissing: Amount<*>) : FlowException
  * (GBP, USD, oil, shares in company <X>, etc.) and any additional metadata (issuer, grade, class, etc.).
  */
 @KeepForDJVM
-interface FungibleAsset<T : Any> : OwnableState {
+interface FungibleAsset<T : Any> : FungibleState<Issued<T>>, OwnableState {
     /**
      * Amount represents a positive quantity of some issued product which can be cash, tokens, assets, or generally
      * anything else that's quantifiable with integer quantities. See [Issued] and [Amount] for more details.
      */
-    val amount: Amount<Issued<T>>
+    override val amount: Amount<Issued<T>>
 
     /**
      * There must be an ExitCommand signed by these keys to destroy the amount. While all states require their

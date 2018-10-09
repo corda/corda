@@ -348,10 +348,10 @@ interface VaultService {
      */
     @Suspendable
     @Throws(StatesNotAvailableException::class)
-    fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
-                                                                         eligibleStatesQuery: QueryCriteria,
-                                                                         amount: Amount<U>,
-                                                                         contractStateType: Class<out T>): List<StateAndRef<T>>
+    fun <T : FungibleState<*>> tryLockFungibleStatesForSpending(lockId: UUID,
+                                                                eligibleStatesQuery: QueryCriteria,
+                                                                amount: Amount<*>,
+                                                                contractStateType: Class<out T>): List<StateAndRef<T>>
 
     // DOCSTART VaultQueryAPI
     /**
