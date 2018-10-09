@@ -21,6 +21,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.*
 import net.corda.finance.flows.CashExitFlow.ExitRequest
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
+import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.sample.businessnetwork.iou.IOUFlow
 import net.corda.sample.businessnetwork.membership.flow.ObtainMembershipListContentFlow
@@ -72,7 +73,8 @@ class ExplorerSimulation(private val options: OptionSet) {
         val portAllocation = PortAllocation.Incremental(20000)
         driver(DriverParameters(
                 portAllocation = portAllocation,
-                extraCordappPackagesToScan = packagesOfClasses(CashIssueFlow::class, Cash::class, IOUFlow::class, ObtainMembershipListContentFlow::class),
+                extraCordappPackagesToScan = packagesOfClasses(CashIssueFlow::class, Cash::class, CashSchemaV1::class,
+                        IOUFlow::class, ObtainMembershipListContentFlow::class),
                 waitForAllNodesToFinish = true,
                 jmxPolicy = JmxPolicy(true)
         )) {
