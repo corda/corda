@@ -1,15 +1,30 @@
 apply plugin: 'kotlin'
-apply plugin: 'java'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
 dependencies {
-    cordaCompile project(":core")
-    cordaCompile project(":node-api")
-    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-
-    testCompile project(":test-utils")
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     testCompile "junit:junit:$junit_version"
+
+    // Corda integration dependencies
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(':core')
+    cordaCompile project(':node-driver')
+}
+
+publishing {
+    publications {
+        jarAndSources(MavenPublication) {
+            from components.java
+            artifactId 'network-verifier'
+
+            artifact sourceJar
+            artifact javadocJar
+        }
+    }
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
