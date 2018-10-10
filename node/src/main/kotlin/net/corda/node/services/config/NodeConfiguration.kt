@@ -156,6 +156,8 @@ data class BFTSMaRtConfiguration(
  *
  * @property doormanURL The URL of the tls certificate signing service.
  * @property networkMapURL The URL of the Network Map service.
+ * @property pnm If the compatibility zone operator supports the private network map option, have the node
+ * at registration automatically join that private network.
  * @property inferred Non user setting that indicates weather the Network Services configuration was
  * set explicitly ([inferred] == false) or weather they have been inferred via the compatibilityZoneURL parameter
  * ([inferred] == true) where both the network map and doorman are running on the same endpoint. Only one,
@@ -164,6 +166,7 @@ data class BFTSMaRtConfiguration(
 data class NetworkServicesConfig(
         val doormanURL: URL,
         val networkMapURL: URL,
+        val pnm: UUID? = null,
         val inferred : Boolean = false
 )
 
@@ -371,8 +374,9 @@ data class NodeConfigurationImpl(
             """.trimMargin())
         }
 
+        // Support the deprecated method of configuring network services with a single compatibilityZoneURL option
         if (compatibilityZoneURL != null && networkServices == null) {
-            networkServices = NetworkServicesConfig(compatibilityZoneURL, compatibilityZoneURL, true)
+            networkServices = NetworkServicesConfig(compatibilityZoneURL, compatibilityZoneURL, inferred = true)
         }
         require(h2port == null || h2Settings == null) { "Cannot specify both 'h2port' and 'h2Settings' in configuration" }
     }

@@ -96,10 +96,9 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
         val requestId = try {
             submitOrResumeCertificateSigningRequest(keyPair)
         } catch (e: Exception) {
-            if (e is ConnectException || e is ServiceUnavailableException || e is IOException) {
-                throw NodeRegistrationException(e)
-            }
-            throw e
+            throw if (e is ConnectException || e is ServiceUnavailableException || e is IOException) {
+                NodeRegistrationException(e.message, e)
+            } else e
         }
 
         val certificates = try {
@@ -200,7 +199,7 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
                 if (idlePeriodDuration != null) {
                     Thread.sleep(idlePeriodDuration.toMillis())
                 } else {
-                    throw NodeRegistrationException(e)
+                    throw NodeRegistrationException(null, e)
                 }
             }
         }
@@ -249,10 +248,17 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
     protected open fun isTlsCrlIssuerCertRequired(): Boolean = false
 }
 
-class NodeRegistrationException(cause: Throwable?) : IOException("Unable to contact node registration service", cause)
+class NodeRegistrationException(
+        message: String?,
+        cause: Throwable?
+) : IOException(message ?: "Unable to contact node registration service", cause)
 
-class NodeRegistrationHelper(private val config: NodeConfiguration, certService: NetworkRegistrationService, regConfig: NodeRegistrationOption, computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) :
-        NetworkRegistrationHelper(
+class NodeRegistrationHelper(
+        private val config: NodeConfiguration,
+        certService: NetworkRegistrationService,
+        regConfig: NodeRegistrationOption,
+        computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))
+) : NetworkRegistrationHelper(
                 config.certificatesDirectory,
                 config.signingCertificateStore,
                 config.myLegalName,
