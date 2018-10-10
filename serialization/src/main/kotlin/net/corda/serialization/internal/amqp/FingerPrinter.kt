@@ -91,12 +91,12 @@ internal class FingerPrintingState(private val factory: SerializerFactory) {
         is WildcardType,
         is TypeVariable<*> -> append("?$ANY_TYPE_HASH")
         is Class<*> -> fingerprintClass(type)
-        is GenericArrayType -> fingerprintType(type.genericComponentType).append(ARRAY_HASH)
+        is GenericArrayType -> fingerprintType(resolveTypeVariables(type.genericComponentType, currentContext ?: type)).append(ARRAY_HASH)
         else -> throw AMQPNotSerializableException(type, "Don't know how to hash")
     }
 
     private fun fingerprintClass(type: Class<*>) = when {
-        type.isArray -> fingerprintType(type.componentType).append(ARRAY_HASH)
+        type.isArray -> fingerprintType(resolveTypeVariables(type.componentType, currentContext ?: type)).append(ARRAY_HASH)
         type.isPrimitiveOrCollection -> append(type.name)
         type.isEnum -> fingerprintEnum(type)
         else -> fingerprintWithCustomSerializerOrElse(type, type) {
