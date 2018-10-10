@@ -22,7 +22,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
-import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationException
@@ -259,7 +258,8 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         }
 
         val nodeInfo = node.start()
-        logLoadedCorDapps(node.services.cordappProvider.cordapps)
+        val loadedCodapps = node.services.cordappProvider.cordapps.filter { it.isLoaded }
+        logLoadedCorDapps(loadedCodapps)
 
         node.nodeReadyFuture.thenMatch({
             // Elapsed time in seconds. We used 10 / 100.0 and not directly / 1000.0 to only keep two decimal digits.
@@ -424,6 +424,16 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
                     ::defaultSerialFilter
                 }
         SerialFilter.install(filter)
+    }
+
+    /** This filter is required for BFT-Smart to work as it only supports Java serialization. */
+    // TODO: move this filter out of the node, allow Cordapps to specify filters.
+    private fun bftSMaRtSerialFilter(clazz: Class<*>): Boolean = clazz.name.let {
+        it.startsWith("bftsmart.")
+                || it.startsWith("java.security.")
+                || it.startsWith("java.util.")
+                || it.startsWith("java.lang.")
+                || it.startsWith("java.net.")
     }
 
     protected open fun getVersionInfo(): VersionInfo {

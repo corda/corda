@@ -5,7 +5,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.utilities.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -14,6 +13,7 @@ import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.node.internal.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException

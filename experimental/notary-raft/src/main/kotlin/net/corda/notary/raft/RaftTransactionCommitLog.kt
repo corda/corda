@@ -1,4 +1,4 @@
-package net.corda.node.services.transactions
+package net.corda.notary.raft
 
 import io.atomix.catalyst.buffer.BufferInput
 import io.atomix.catalyst.buffer.BufferOutput
@@ -27,6 +27,7 @@ import net.corda.core.serialization.internal.checkpointSerialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.currentDBSession
@@ -111,7 +112,7 @@ class RaftTransactionCommitLog<E, EK>(
         }
     }
 
-    private fun logRequest(commitCommand: RaftTransactionCommitLog.Commands.CommitTransaction) {
+    private fun logRequest(commitCommand: Commands.CommitTransaction) {
         val request = PersistentUniquenessProvider.Request(
                 consumingTxHash = commitCommand.txId.toString(),
                 partyName = commitCommand.requestingParty,
@@ -192,8 +193,8 @@ class RaftTransactionCommitLog<E, EK>(
                 registerAbstract(SecureHash::class.java, CordaKryoSerializer::class.java)
                 registerAbstract(TimeWindow::class.java, CordaKryoSerializer::class.java)
                 registerAbstract(NotaryError::class.java, CordaKryoSerializer::class.java)
-                register(RaftTransactionCommitLog.Commands.CommitTransaction::class.java, CordaKryoSerializer::class.java)
-                register(RaftTransactionCommitLog.Commands.Get::class.java, CordaKryoSerializer::class.java)
+                register(Commands.CommitTransaction::class.java, CordaKryoSerializer::class.java)
+                register(Commands.Get::class.java, CordaKryoSerializer::class.java)
                 register(StateRef::class.java, CordaKryoSerializer::class.java)
                 register(LinkedHashMap::class.java, CordaKryoSerializer::class.java)
             }

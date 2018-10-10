@@ -1,7 +1,7 @@
-package net.corda.node.services.transactions
+package net.corda.notary.bftsmart
 
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.transactions.BFTSMaRtConfig.Companion.portIsClaimedFormat
+import net.corda.notary.bftsmart.BFTSMaRtConfig.Companion.portIsClaimedFormat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import kotlin.test.assertEquals

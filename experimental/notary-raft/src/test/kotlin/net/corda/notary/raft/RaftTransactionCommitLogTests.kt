@@ -1,4 +1,4 @@
-package net.corda.node.services.transactions
+package net.corda.notary.raft
 
 import com.typesafe.config.ConfigFactory
 import io.atomix.catalyst.transport.Address
@@ -17,7 +17,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.utilities.TestingNamedCacheFactory
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
@@ -156,7 +156,7 @@ class RaftTransactionCommitLogTests {
         val storage = Storage.builder().withStorageLevel(StorageLevel.MEMORY).build()
         val address = Address(myAddress.host, myAddress.port)
         // Enterprise - OS difference: below configureDatabase parameters differs with OS intentionally to be able run test in remote database
-        val database = configureDatabase(makeInternalTestDataSourceProperties( configSupplier = { ConfigFactory.empty() }), DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(includeNotarySchemas = true))
+        val database = configureDatabase(makeInternalTestDataSourceProperties( configSupplier = { ConfigFactory.empty() }), DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(extraSchemas = setOf(RaftNotarySchemaV1)))
         databases.add(database)
         val stateMachineFactory = { RaftTransactionCommitLog(database, Clock.systemUTC(), { RaftUniquenessProvider.createMap(TestingNamedCacheFactory()) }) }
 

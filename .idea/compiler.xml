@@ -218,6 +218,8 @@
       <module name="node_main" target="1.8" />
       <module name="node_smokeTest" target="1.8" />
       <module name="node_test" target="1.8" />
+      <module name="notary-bft-smart_main" target="1.8" />
+      <module name="notary-bft-smart_test" target="1.8" />
       <module name="notary-demo_main" target="1.8" />
       <module name="notary-demo_test" target="1.8" />
       <module name="notary-healthcheck-client_main" target="1.8" />
@@ -232,6 +234,8 @@
       <module name="perftestcordapp_integrationTest" target="1.8" />
       <module name="perftestcordapp_main" target="1.8" />
       <module name="perftestcordapp_test" target="1.8" />
+      <module name="notary-raft_main" target="1.8" />
+      <module name="notary-raft_test" target="1.8" />
       <module name="publish-utils_main" target="1.8" />
       <module name="publish-utils_test" target="1.8" />
       <module name="qa-behave_main" target="1.8" />

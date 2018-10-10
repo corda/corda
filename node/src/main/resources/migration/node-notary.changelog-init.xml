@@ -27,18 +27,6 @@
             <column name="consuming_transaction_id" type="NVARCHAR(64)"/>
         </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="1511451595465-18">
-        <createTable tableName="node_raft_committed_states">
-            <column name="transaction_id" type="NVARCHAR(64)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="output_index" type="INT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="raft_log_index" type="BIGINT"/>
-            <column name="consuming_transaction_id" type="NVARCHAR(64)"/>
-        </createTable>
-    </changeSet>
     <changeSet author="R3.Corda" id="1521131680317-17">
         <createTable tableName="node_notary_request_log">
             <column name="id" type="INT">
@@ -58,17 +46,10 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="1511451595465-31">
-        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="node_bft_states_pkey"
-                       tableName="node_bft_committed_states"/>
-    </changeSet>
+
     <changeSet author="R3.Corda" id="1511451595465-41">
         <addPrimaryKey columnNames="output_index, transaction_id" constraintName="node_notary_states_pkey"
                        tableName="node_notary_committed_states"/>
-    </changeSet>
-    <changeSet author="R3.Corda" id="1511451595465-43">
-        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="node_raft_state_pkey"
-                       tableName="node_raft_committed_states"/>
     </changeSet>
     <changeSet author="R3.Corda" id="1521131680317-48">
         <addPrimaryKey columnNames="id" constraintName="node_notary_request_log_pkey"
