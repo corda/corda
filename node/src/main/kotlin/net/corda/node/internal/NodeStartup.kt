@@ -73,20 +73,17 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         // doesn't mess with the running node's logs.
         enforceSingleNodeIsRunning(cmdLineOptions.baseDirectory)
 
-        // Step 3. Initialise logging.
-        initLogging()
-
-        // Step 4. Register all cryptography [Provider]s.
+        // Step 3. Register all cryptography [Provider]s.
         // Required to install our [SecureRandom] before e.g., UUID asks for one.
-        // This needs to go after initLogging(netty clashes with our logging).
+        // This needs to go after initLogging(netty clashes with our logging)
         Crypto.registerProviders()
 
-        // Step 5. Print banner and basic node info.
+        // Step 4. Print banner and basic node info.
         val versionInfo = getVersionInfo()
         drawBanner(versionInfo)
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
-        // Step 6. Load and validate node configuration.
+        // Step 5. Load and validate node configuration.
         val configuration = (attempt { loadConfiguration() }.doOnException(handleConfigurationLoadingError(cmdLineOptions.configFile)) as? Try.Success)?.let(Try.Success<NodeConfiguration>::value) ?: return ExitCodes.FAILURE
         val errors = configuration.validate()
         if (errors.isNotEmpty()) {
@@ -94,22 +91,22 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
             return ExitCodes.FAILURE
         }
 
-        // Step 7. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
+        // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
         attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success ?: return ExitCodes.FAILURE
 
-        // Step 8. Any actions required before starting up the Corda network layer.
+        // Step 7. Any actions required before starting up the Corda network layer.
         attempt { preNetworkRegistration(configuration) }.doOnException(handleRegistrationError) as? Try.Success ?: return ExitCodes.FAILURE
 
-        // Step 9. Check if in registration mode.
+        // Step 8. Check if in registration mode.
         checkAndRunRegistrationMode(configuration, versionInfo)?.let {
             return if (it) ExitCodes.SUCCESS
             else ExitCodes.FAILURE
         }
 
-        // Step 10. Log startup info.
+        // Step 9. Log startup info.
         logStartupInfo(versionInfo, configuration)
 
-        // Step 11. Start node: create the node, check for other command-line options, add extra logging etc.
+        // Step 10. Start node: create the node, check for other command-line options, add extra logging etc.
         attempt { startNode(configuration, versionInfo, startTime) }.doOnSuccess { logger.info("Node exiting successfully") }.doOnException(handleStartError) as? Try.Success ?: return ExitCodes.FAILURE
 
         return ExitCodes.SUCCESS
