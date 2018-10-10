@@ -7,10 +7,6 @@
 
     <changeSet author="R3.Corda" id="nullability">
         <addNotNullConstraint tableName="node_bft_committed_states" columnName="consuming_transaction_id" columnDataType="NVARCHAR(64)"/>
-
         <addNotNullConstraint tableName="node_notary_committed_states" columnName="consuming_transaction_id" columnDataType="NVARCHAR(64)"/>
-
-        <addNotNullConstraint tableName="node_raft_committed_states" columnName="raft_log_index" columnDataType="BIGINT"/>
-        <addNotNullConstraint tableName="node_raft_committed_states" columnName="consuming_transaction_id" columnDataType="NVARCHAR(64)"/>
     </changeSet>
 </databaseChangeLog>

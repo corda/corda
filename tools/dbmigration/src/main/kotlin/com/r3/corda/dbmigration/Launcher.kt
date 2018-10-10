@@ -153,7 +153,7 @@ private class DbManagementTool : CordaCliWrapper("database-manager", "The Corda 
                 val nodeConfig = ConfigHelper.loadConfig(baseDirectory, config).parseAs<NodeConfigurationImpl>(UnknownConfigKeysPolicy.IGNORE::handle)
                 val cordappLoader = JarScanningCordappLoader.fromDirectories(setOf(baseDirectory, baseDirectory / "cordapps"))
 
-                val schemaService = NodeSchemaService(extraSchemas = cordappLoader.cordappSchemas, includeNotarySchemas = nodeConfig.notary != null)
+                val schemaService = NodeSchemaService(extraSchemas = cordappLoader.cordappSchemas)
 
                 handleCommand(baseDirectory, config, cmdLineOptions.mode, cordappLoader.appClassLoader, schemaService.schemaOptions.keys)
             }

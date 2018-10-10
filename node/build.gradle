@@ -141,9 +141,6 @@ dependencies {
     // For H2 database support in persistence
     compile "com.h2database:h2:$h2_version"
 
-    // For the MySQLUniquenessProvider
-    compile group: 'mysql', name: 'mysql-connector-java', version: '6.0.6'
-
     // SQL connection pooling library
     compile "com.zaxxer:HikariCP:${hikari_version}"
 
@@ -155,17 +152,8 @@ dependencies {
     // We only need this dependency to compile our Caplet against.
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
 
-    // Java Atomix: RAFT library
-    compile 'io.atomix.copycat:copycat-client:1.2.8'
-    compile 'io.atomix.copycat:copycat-server:1.2.8'
-    compile 'io.atomix.catalyst:catalyst-netty:1.2.1'
-
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
-
-    // BFT-SMaRt
-    compile 'commons-codec:commons-codec:1.10'
-    compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
 
     // Apache Shiro: authentication, authorization and session management.
     compile "org.apache.shiro:shiro-core:${shiro_version}"

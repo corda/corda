@@ -9,7 +9,7 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.node.utilities.TestingNamedCacheFactory
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
@@ -154,7 +154,8 @@ class DBTransactionStorageTests {
     }
 
     private fun newTransactionStorage(cacheSizeBytesOverride: Long? = null) {
-        transactionStorage = DBTransactionStorage(database, TestingNamedCacheFactory(cacheSizeBytesOverride ?: 1024))
+        transactionStorage = DBTransactionStorage(database, TestingNamedCacheFactory(cacheSizeBytesOverride
+                ?: 1024))
     }
 
     private fun assertTransactionIsRetrievable(transaction: SignedTransaction) {

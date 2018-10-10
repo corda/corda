@@ -1,0 +1,35 @@
+apply plugin: 'kotlin'
+apply plugin: 'kotlin-jpa'
+apply plugin: 'idea'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.publish-utils'
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+dependencies {
+    cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
+    // Corda integration dependencies
+    cordaCompile project(':node')
+
+    // BFT-SMaRt
+    compile 'commons-codec:commons-codec:1.10'
+    compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
+
+    testCompile "junit:junit:$junit_version"
+    testCompile project(':node-driver')
+}
+
+idea {
+    module {
+        downloadJavadoc = true // defaults to false
+        downloadSources = true
+    }
+}
+
+publish {
+    name 'corda-notary-bft-smart'
+}

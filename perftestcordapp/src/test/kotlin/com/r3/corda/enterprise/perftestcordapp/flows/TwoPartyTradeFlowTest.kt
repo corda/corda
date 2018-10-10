@@ -327,7 +327,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     private fun makeNodeWithTracking(
             name: CordaX500Name): TestStartedNode {
         // Create a node in the mock network ...
-        return mockNet.createNode(InternalMockNodeParameters(legalName = name), nodeFactory = { args, _ ->
+        return mockNet.createNode(InternalMockNodeParameters(legalName = name), nodeFactory = { args ->
             object : InternalMockNetwork.MockNode(args) {
                 // That constructs a recording tx storage
                 override fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {

@@ -13,9 +13,9 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.MySQLConfiguration
-import net.corda.node.services.transactions.MySQLUniquenessProvider
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.nodeapi.internal.config.parseAs
+import net.corda.notary.mysql.MySQLUniquenessProvider
 import net.corda.notarytest.flows.AsyncLoadTestFlow
 import java.net.InetAddress
 import java.net.InetSocketAddress

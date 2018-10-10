@@ -117,7 +117,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
     private val metricRegistry = MetricRegistry()
     override val cacheFactory = EnterpriseNamedCacheFactory(configuration.enterpriseConfiguration.getTracingConfig()).bindWithConfig(configuration).bindWithMetrics(metricRegistry).tokenize()
 
-    override val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, false).tokenize()
+    override val schemaService = NodeSchemaService(cordappLoader.cordappSchemas).tokenize()
     override val identityService = PersistentIdentityService(cacheFactory).tokenize()
     override val database: CordaPersistence = createCordaPersistence(
             configuration.database,

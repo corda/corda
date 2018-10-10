@@ -48,8 +48,9 @@ class P2PMessagingTest : IntegrationTest() {
 
     private fun startDriverWithDistributedService(dsl: DriverDSL.(List<InProcess>) -> Unit) {
         driver(DriverParameters(
-                        startNodesInProcess = true,
-                        notarySpecs = listOf(NotarySpec(DISTRIBUTED_SERVICE_NAME, cluster = ClusterSpec.Raft(clusterSize = 2)))
+                startNodesInProcess = true,
+                extraCordappPackagesToScan = listOf("net.corda.notary.raft"),
+                notarySpecs = listOf(NotarySpec(DISTRIBUTED_SERVICE_NAME, cluster = ClusterSpec.Raft(clusterSize = 2)))
         )) {
             dsl(defaultNotaryHandle.nodeHandles.getOrThrow().map { (it as InProcess) })
         }

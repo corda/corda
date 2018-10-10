@@ -4,6 +4,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.toPath
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -25,7 +26,10 @@ data class CordappImpl(
         override val allFlows: List<Class<out FlowLogic<*>>>,
         override val jarPath: URL,
         val info: Info,
-        override val jarHash: SecureHash.SHA256) : Cordapp {
+        override val jarHash: SecureHash.SHA256,
+        override val notaryService: Class<out NotaryService>? = null,
+        /** Indicates whether the CorDapp is loaded from external sources, or generated on node startup (virtual). */
+        val isLoaded: Boolean = true) : Cordapp {
     override val name: String = jarName(jarPath)
 
     companion object {
@@ -37,7 +41,10 @@ data class CordappImpl(
      *
      * TODO: Also add [SchedulableFlow] as a Cordapp class
      */
-    override val cordappClasses: List<String> = (rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass }).map { it.name } + contractClassNames
+    override val cordappClasses: List<String> = run {
+        val classList = rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass } + notaryService
+         classList.mapNotNull { it?.name } + contractClassNames
+    }
 
     // TODO Why a seperate Info class and not just have the fields directly in CordappImpl?
     data class Info(val shortName: String, val vendor: String, val version: String, val minimumPlatformVersion: Int, val targetPlatformVersion: Int) {
