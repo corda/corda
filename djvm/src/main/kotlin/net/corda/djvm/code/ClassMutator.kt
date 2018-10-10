@@ -16,8 +16,8 @@ import org.objectweb.asm.Opcodes.*
  *
  * @param classVisitor Class visitor to use when traversing the structure of classes.
  * @property configuration The configuration to use for class analysis.
- * @param definitionProviders A set of providers used to update the name or meta-data of classes and members.
- * @property emitters A set of code emitters used to modify and instrument method bodies.
+ * @property definitionProviders A set of providers used to update the name or meta-data of classes and members.
+ * @param emitters A set of code emitters used to modify and instrument method bodies.
  */
 class ClassMutator(
         classVisitor: ClassVisitor,

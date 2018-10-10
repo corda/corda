@@ -138,6 +138,12 @@ fun classForName(className: kotlin.String, initialize: kotlin.Boolean, classLoad
     return Class.forName(toSandbox(className), initialize, classLoader)
 }
 
+/**
+ * Force the qualified class name into the sandbox.* namespace.
+ * Throw [ClassNotFoundException] anyway if we wouldn't want to
+ * return the resulting sandbox class. E.g. for any of our own
+ * internal classes.
+ */
 private fun toSandbox(className: kotlin.String): kotlin.String {
     if (bannedClasses.any { it.matches(className) }) {
         throw ClassNotFoundException(className)

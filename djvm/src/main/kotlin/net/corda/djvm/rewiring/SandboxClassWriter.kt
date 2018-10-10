@@ -14,7 +14,7 @@ import org.objectweb.asm.Type
  * @param classReader The [ClassReader] used to read the original class. It will be used to copy the entire constant
  * pool and bootstrap methods from the original class and also to copy other fragments of original byte code where
  * applicable.
- * @param cloader The class loader used to load the classes that are to be rewritten.
+ * @property cloader The class loader used to load the classes that are to be rewritten.
  * @param flags Option flags that can be used to modify the default behaviour of this class. Must be zero or a
  * combination of [COMPUTE_MAXS] and [COMPUTE_FRAMES]. These option flags do not affect methods that are copied as is
  * in the new class. This means that neither the maximum stack size nor the stack frames will be computed for these

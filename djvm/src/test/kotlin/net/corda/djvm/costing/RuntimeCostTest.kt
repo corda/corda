@@ -23,9 +23,7 @@ class RuntimeCostTest {
                     .isThrownBy { cost.increment(11) }
                     .withMessage("failed in Foo")
             assertThat(cost.value).isEqualTo(11)
-        }.apply {
-            join()
-        }
+        }.join()
     }
 
 }

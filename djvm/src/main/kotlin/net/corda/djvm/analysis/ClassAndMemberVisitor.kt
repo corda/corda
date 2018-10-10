@@ -85,6 +85,10 @@ open class ClassAndMemberVisitor(
 
     /**
      * Process class after it has been fully traversed and analyzed.
+     * The [classVisitor] has finished visiting all of the class's
+     * existing elements (i.e. methods, fields, inner classes etc)
+     * and is about to complete. However, it can still add new
+     * elements to the class, if required.
      */
     open fun visitClassEnd(classVisitor: ClassVisitor, clazz: ClassRepresentation) {}
 
