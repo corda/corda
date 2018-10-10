@@ -1,7 +1,7 @@
 package net.corda.cliutils
 
 import net.corda.core.internal.*
-import picocli.CommandLine
+import picocli.CommandLine.Option
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
@@ -122,7 +122,7 @@ private class ShellExtensionsGenerator(val alias: String, val className: String)
 }
 
 class InstallShellExtensionsParser {
-    @CommandLine.Option(names = ["--install-shell-extensions"], description = ["Install alias and autocompletion for bash and zsh"])
+    @Option(names = ["--install-shell-extensions"], description = ["Install alias and autocompletion for bash and zsh"])
     var installShellExtensions: Boolean = false
 
     fun installOrUpdateShellExtensions(alias: String, className: String) {
