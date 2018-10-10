@@ -122,13 +122,12 @@ fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || should
 data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
                         val bftSMaRt: BFTSMaRtConfiguration? = null,
-                        val custom: Boolean = false,
                         val serviceLegalName: CordaX500Name? = null,
                         val className: String = "net.corda.node.services.transactions.SimpleNotaryService"
 ) {
     init {
-        require(raft == null || bftSMaRt == null || !custom) {
-            "raft, bftSMaRt, and custom configs cannot be specified together"
+        require(raft == null || bftSMaRt == null) {
+            "raft and bftSMaRt configs cannot be specified together"
         }
     }
 

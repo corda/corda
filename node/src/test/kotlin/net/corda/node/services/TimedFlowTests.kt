@@ -88,7 +88,6 @@ class TimedFlowTests {
 
             val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryIdentity, true))))
             val notaryConfig = mock<NotaryConfig> {
-                whenever(it.custom).thenReturn(true)
                 whenever(it.isClusterConfig).thenReturn(true)
                 whenever(it.validating).thenReturn(true)
                 whenever(it.className).thenReturn(TestNotaryService::class.java.name)
