@@ -111,11 +111,21 @@ For further information about managing dependencies, see
 
 Signing the CorDapp JAR
 ^^^^^^^^^^^^^^^^^^^^^^^
-*Since corda-gradle-plugins 4.0.30*
+*Since corda-gradle-plugins 4.0.31*
 
-The ``cordapp`` plugin can sign the generated Cordapp JAR using `jarsigner` tool (internally runs ANT task `SignJar`).
-To enable CordApp signing add ``signing`` entry with ``enabled`` option set to ``true``.
-The signing ``options`` are any relevant parameters for ANT `SignJar <https://ant.apache.org/manual/Tasks/signjar.html>`_ task.
+The ``cordapp`` plugin signs the generated Cordapp JAR with well known Corda development certificate.
+Cordapp signing can disabled or configured to use an external keystore.
+`signing`` entry may contain the following parameters:
+
+ * ``enabled`` - the control flag to enable signing process, by default is set to ``true``, set to ``false`` to disable signing
+ * ``options`` - any relevant task parameters as for ANT task `SignJar <https://ant.apache.org/manual/Tasks/signjar.html>`_ ,
+ the minimal set of options to sign using external keyStore is:
+
+     * ``keystore`` - path to the keystore file, by default cordadevcakeys.jks keyStore shipped with the plugin is used
+     * ``alias`` - the alias to sign under, the default value is `cordaintermediateca`
+     * ``storepass`` - password for keystore, the default value is `cordacadevpass`
+     * ``keypass``  - password for private key if different than password for the keyStore, the dafualt value is `cordacadevkeypass`
+     * ``storetype`` - keystore type, the default value is `JKS`
 
 .. sourcecode:: groovy
 
@@ -124,13 +134,19 @@ The signing ``options`` are any relevant parameters for ANT `SignJar <https://an
             enabled true
             options {
                 keystore keyStoreFile
-                storepass keystorePass
                 alias keyAlias
+                storepass keystorePass
             }
         }
     }
 
-Cordformation plugin can also sign CorDapps JARs, when deploing set of nodes, see :doc:`generating-a-node`.
+Cordapp auto-signing allows to use signature constraints for contracts from the CorDapp
+without need to create a keyStore and configure the task.
+For production deployment ensure to sign CorDapp using own certificate e.g. by configuring options to point to external keyStore
+or by disabling signing in `corpapp`` plugin and require the Cordapp JAR is signed downstream in your build/deploymnet pipeline.
+CorDapp signed by Corda development certificate is accepted by Corda node only when running in the development mode.
+
+Cordformation plugin can also sign CorDapps JARs, when deploying set of nodes, see :doc:`generating-a-node`.
 
 Example
 ^^^^^^^
