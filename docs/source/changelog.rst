@@ -11,6 +11,9 @@ Unreleased
 
 * Introduce minimum and target platform version for CorDapps.
 
+* BFT-Smart and Raft notary implementations have been extracted out of node into ``experimental`` CorDapps to emphasise
+  their experimental nature. Moreover, the BFT-Smart notary will only work in dev mode due to its use of Java serialization.
+
 * Vault storage of contract state constraints metadata and associated vault query functions to retrieve and sort by constraint type.
 
 * New overload for ``CordaRPCClient.start()`` method allowing to specify target legal identity to use for RPC call.

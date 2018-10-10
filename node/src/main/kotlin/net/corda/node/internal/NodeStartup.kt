@@ -408,17 +408,7 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
     protected open fun loadConfigFile(): Pair<Config, Try<NodeConfiguration>> = cmdLineOptions.loadConfig()
 
     protected open fun banJavaSerialisation(conf: NodeConfiguration) {
-        SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
-    }
-
-    /** This filter is required for BFT-Smart to work as it only supports Java serialization. */
-    // TODO: move this filter out of the node, allow Cordapps to specify filters.
-    private fun bftSMaRtSerialFilter(clazz: Class<*>): Boolean = clazz.name.let {
-        it.startsWith("bftsmart.")
-                || it.startsWith("java.security.")
-                || it.startsWith("java.util.")
-                || it.startsWith("java.lang.")
-                || it.startsWith("java.net.")
+        SerialFilter.install(::defaultSerialFilter)
     }
 
     protected open fun getVersionInfo(): VersionInfo {

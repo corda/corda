@@ -32,6 +32,7 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.*
 import net.corda.node.CordaClock
+import net.corda.node.SerialFilter
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.classloading.requireAnnotation
@@ -153,6 +154,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             schemaService,
             configuration.dataSourceProperties,
             cacheFactory)
+
     init {
         // TODO Break cyclic dependency
         identityService.database = database
@@ -766,6 +768,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
             val notaryKey = myNotaryIdentity?.owningKey
                     ?: throw IllegalArgumentException("Unable to start notary service $serviceClass: notary identity not found")
+
+            /** Some notary implementations only work with Java serialization. */
+            maybeInstallSerializationFilter(serviceClass)
+
             val constructor = serviceClass.getDeclaredConstructor(ServiceHubInternal::class.java, PublicKey::class.java).apply { isAccessible = true }
             val service = constructor.newInstance(services, notaryKey) as NotaryService
 
@@ -776,6 +782,17 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 start()
             }
             return service
+        }
+    }
+
+    private fun maybeInstallSerializationFilter(serviceClass: Class<out NotaryService>) {
+        try {
+            @Suppress("UNCHECKED_CAST")
+            val filter = serviceClass.getDeclaredMethod("getSerializationFilter").invoke(null) as ((Class<*>) -> Boolean)
+            log.warn("Installing a custom Java serialization filter, required by ${serviceClass.name}. Note this may introduce additional security vulnerabilities.")
+            SerialFilter.install(filter)
+        } catch (e: NoSuchMethodException) {
+            log.debug("No custom serialization filter declared in ${serviceClass.name}")
         }
     }
 
