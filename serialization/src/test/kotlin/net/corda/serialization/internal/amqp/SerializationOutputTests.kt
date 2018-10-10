@@ -210,7 +210,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         return SerializerFactory(
                 AllWhitelist,
                 ClassLoader.getSystemClassLoader(),
-                evolutionSerializerGetter = EvolutionSerializerGetterTesting()
+                evolutionSerializerProvider = FailIfEvolutionAttempted
         )
     }
 

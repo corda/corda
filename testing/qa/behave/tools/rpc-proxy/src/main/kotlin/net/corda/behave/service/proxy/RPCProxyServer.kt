@@ -3,7 +3,7 @@ package net.corda.behave.service.proxy
 import net.corda.behave.service.proxy.RPCProxyServer.Companion.initialiseSerialization
 import net.corda.behave.service.proxy.RPCProxyServer.Companion.log
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -71,7 +71,7 @@ class RPCProxyServer(hostAndPort: NetworkHostAndPort, val webService: RPCProxyWe
         fun initialiseSerialization() {
             try {
                 nodeSerializationEnv =
-                        SerializationEnvironmentImpl(
+                        SerializationEnvironment.with(
                                 SerializationFactoryImpl().apply {
                                     registerScheme(AMQPClientSerializationScheme(emptyList()))
                                 },

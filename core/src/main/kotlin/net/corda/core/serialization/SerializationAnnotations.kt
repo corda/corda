@@ -20,3 +20,11 @@ import java.lang.annotation.Inherited
 @Retention(AnnotationRetention.RUNTIME)
 @Inherited
 annotation class CordaSerializable
+
+
+/**
+ * Used to annotate methods which expose calculated values that we want to be serialized for use by the class carpenter.
+ */
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.FUNCTION)
+annotation class SerializableCalculatedProperty

@@ -14,10 +14,7 @@ import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.internal.CheckpointSerializationFactory
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
-import net.corda.core.serialization.internal.effectiveSerializationEnv
-import net.corda.core.serialization.internal.nodeSerializationEnv
+import net.corda.core.serialization.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.CordaClock
 import net.corda.node.SimpleClock
@@ -28,7 +25,6 @@ import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
-import net.corda.node.serialization.kryo.KryoSerializationScheme
 import net.corda.node.services.api.AuditService
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.ServiceHubInternal
@@ -195,12 +191,11 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration, overrid
         }
         if (!serializationExists) {
             val classloader = cordappLoader.appClassLoader
-            nodeSerializationEnv = SerializationEnvironmentImpl(
+            nodeSerializationEnv = SerializationEnvironment.with(
                     SerializationFactoryImpl().apply {
                         registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps))
                         registerScheme(AMQPClientSerializationScheme(cordappLoader.cordapps))
                     },
-                    checkpointSerializationFactory = CheckpointSerializationFactory(KryoSerializationScheme),
                     p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                     rpcServerContext = AMQP_RPC_SERVER_CONTEXT.withClassLoader(classloader),
                     storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
