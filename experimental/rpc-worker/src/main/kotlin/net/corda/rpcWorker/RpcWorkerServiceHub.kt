@@ -75,7 +75,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration, overrid
     private val metricRegistry = MetricRegistry()
     override val cacheFactory = EnterpriseNamedCacheFactory(configuration.enterpriseConfiguration.getTracingConfig()).bindWithConfig(configuration).bindWithMetrics(metricRegistry)
 
-    override val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, false)
+    override val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
     override val identityService = PersistentIdentityService(cacheFactory)
     override val database: CordaPersistence = createCordaPersistence(
             configuration.database,

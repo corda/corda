@@ -1,4 +1,4 @@
-package net.corda.node.services.transactions
+package net.corda.notary.mysql
 
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.MetricRegistry

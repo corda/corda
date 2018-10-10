@@ -141,9 +141,6 @@ dependencies {
     // For H2 database support in persistence
     compile "com.h2database:h2:$h2_version"
 
-    // For the MySQLUniquenessProvider
-    compile group: 'mysql', name: 'mysql-connector-java', version: '6.0.6'
-
     // SQL connection pooling library
     compile "com.zaxxer:HikariCP:${hikari_version}"
 

@@ -66,7 +66,7 @@ class TimedFlowTestRule(val clusterSize: Int) : ExternalResource() {
                 whenever(it.custom).thenReturn(true)
                 whenever(it.isClusterConfig).thenReturn(true)
                 whenever(it.validating).thenReturn(true)
-                whenever(it.className).thenReturn(TestNotaryService::class.java.name)
+                whenever(it.className).thenReturn(TimedFlowTests.TestNotaryService::class.java.name)
             }
 
         val notaryNodes = (0 until clusterSize).map {
@@ -193,7 +193,7 @@ class TimedFlowTests {
         }.bufferUntilSubscribed().toBlocking().toFuture()
     }
 
-    private class TestNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
+    class TestNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
         override val uniquenessProvider = mock<UniquenessProvider>()
         override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = TestNotaryFlow(otherPartySession, this)
         override fun start() {}

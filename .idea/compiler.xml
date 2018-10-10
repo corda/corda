@@ -195,6 +195,8 @@
       <module name="loadtest_test" target="1.8" />
       <module name="mock_main" target="1.8" />
       <module name="mock_test" target="1.8" />
+      <module name="mysql_main" target="1.8" />
+      <module name="mysql_test" target="1.8" />
       <module name="net.corda_buildSrc_main" target="1.8" />
       <module name="net.corda_buildSrc_test" target="1.8" />
       <module name="net.corda_canonicalizer_main" target="1.8" />
@@ -229,13 +231,15 @@
       <module name="notary-healthcheck-cordapp_test" target="1.8" />
       <module name="notary-healthcheck_main" target="1.8" />
       <module name="notary-healthcheck_test" target="1.8" />
+      <module name="notary-raft_main" target="1.8" />
+      <module name="notary-raft_test" target="1.8" />
+      <module name="notary_main" target="1.8" />
+      <module name="notary_test" target="1.8" />
       <module name="notarytest_main" target="1.8" />
       <module name="notarytest_test" target="1.8" />
       <module name="perftestcordapp_integrationTest" target="1.8" />
       <module name="perftestcordapp_main" target="1.8" />
       <module name="perftestcordapp_test" target="1.8" />
-      <module name="notary-raft_main" target="1.8" />
-      <module name="notary-raft_test" target="1.8" />
       <module name="publish-utils_main" target="1.8" />
       <module name="publish-utils_test" target="1.8" />
       <module name="qa-behave_main" target="1.8" />

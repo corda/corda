@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.notary.mysql
 
 import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.doReturn
@@ -24,7 +24,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.MySQLConfiguration
 import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.transactions.MySQLNotaryService
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
@@ -64,9 +63,9 @@ class MySQLNotaryServiceTests : IntegrationTest() {
 
     @Before
     fun before() {
-        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"), threadPerNode = true)
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.notary.mysql"), threadPerNode = true)
         notaryParty = DevIdentityGenerator.generateDistributedNotarySingularIdentity(listOf(mockNet.baseDirectory(mockNet.nextNodeId)), notaryName)
-        val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryParty, false))))
+        val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryParty, true))))
         val notaryNodeUnstarted = createNotaryNode()
         val nodeUnstarted = mockNet.createUnstartedNode()
         val startedNodes = listOf(notaryNodeUnstarted, nodeUnstarted).map { n ->
@@ -256,8 +255,9 @@ class MySQLNotaryServiceTests : IntegrationTest() {
                         entropyRoot = BigInteger.valueOf(60L),
                         configOverrides = {
                             val notaryConfig = NotaryConfig(
-                                    validating = false,
-                                    mysql = MySQLConfiguration(dataStoreProperties, maxBatchSize = 10, maxBatchInputStates = 100)
+                                    validating = true,
+                                    mysql = MySQLConfiguration(dataStoreProperties, maxBatchSize = 10, maxBatchInputStates = 100),
+                                    className = MySQLNotaryService::class.java.name
                             )
                             doReturn(notaryConfig).whenever(it).notary
                         }
