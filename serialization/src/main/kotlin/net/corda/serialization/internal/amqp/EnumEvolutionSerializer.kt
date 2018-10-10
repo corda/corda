@@ -80,7 +80,7 @@ class EnumEvolutionSerializer(
             val renameRules: List<RenameSchemaTransform>? = uncheckedCast(transforms[TransformTypes.Rename])
 
             // What values exist on the enum as it exists on the class path
-            val localValues = new.type.asClass()!!.enumConstants.map { it.toString() }
+            val localValues = new.type.asClass().enumConstants.map { it.toString() }
 
             val conversions: MutableMap<String, String> = localValues
                     .union(defaultRules?.map { it.new }?.toSet() ?: emptySet())
@@ -130,7 +130,7 @@ class EnumEvolutionSerializer(
             throw AMQPNotSerializableException(type, "No rule to evolve enum constant $type::$enumName")
         }
 
-        return type.asClass()!!.enumConstants[ordinals[conversions[enumName]]!!]
+        return type.asClass().enumConstants[ordinals[conversions[enumName]]!!]
     }
 
     override fun writeClassInfo(output: SerializationOutput) {

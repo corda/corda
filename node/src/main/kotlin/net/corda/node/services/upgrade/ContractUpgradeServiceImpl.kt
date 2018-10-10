@@ -28,6 +28,7 @@ class ContractUpgradeServiceImpl : ContractUpgradeService, SingletonSerializeAsT
     private companion object {
         fun createContractUpgradesMap(): PersistentMap<String, String, DBContractUpgrade, String> {
             return PersistentMap(
+                    "ContractUpgradeService_upgrades",
                     toPersistentEntityKey = { it },
                     fromPersistentEntity = { Pair(it.stateRef, it.upgradedContractClassName ?: "") },
                     toPersistentEntity = { key: String, value: String ->

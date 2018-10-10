@@ -28,14 +28,15 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.hours
 import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
-import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.InitiatedFlowFactory
-import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.node.services.config.*
+import net.corda.node.services.config.FlowTimeoutConfiguration
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
+import net.corda.node.services.config.VerifierType
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
@@ -43,9 +44,8 @@ import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.transactions.BFTNonValidatingNotaryService
-import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
+import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -55,6 +55,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.TestCorDapp
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.setGlobalSerialization
+import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -67,12 +68,11 @@ import java.math.BigInteger
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
-import java.security.PublicKey
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
+val MOCK_VERSION_INFO = VersionInfo(PLATFORM_VERSION, "Mock release", "Mock revision", "Mock Vendor")
 
 data class MockNodeArgs(
         val config: NodeConfiguration,
@@ -147,7 +147,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                                val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
                                val testDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
                                val networkParameters: NetworkParameters = testNetworkParameters(),
-                               val defaultFactory: (MockNodeArgs, CordappLoader?) -> MockNode = { args, cordappLoader -> cordappLoader?.let { MockNode(args, it) } ?: MockNode(args) },
+                               val defaultFactory: (MockNodeArgs) -> MockNode = { args -> MockNode(args) },
                                val cordappsForAllNodes: Set<TestCorDapp> = emptySet(),
                                val autoVisibleNodes: Boolean = true) : AutoCloseable {
     init {
@@ -207,15 +207,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     val defaultNotaryIdentity: Party
         get() {
             return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
-        }
-
-    /**
-     * Return the identity of the default notary node.
-     * @see defaultNotaryNode
-     */
-    val defaultNotaryIdentityAndCert: PartyAndCertificate
-        get() {
-            return defaultNotaryNode.info.legalIdentitiesAndCerts.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
         }
 
     /**
@@ -283,11 +274,11 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         }
     }
 
-    open class MockNode(args: MockNodeArgs, cordappLoader: CordappLoader = JarScanningCordappLoader.fromDirectories(args.config.cordappDirectories)) : AbstractNode<TestStartedNode>(
+    open class MockNode(args: MockNodeArgs) : AbstractNode<TestStartedNode>(
             args.config,
             TestClock(Clock.systemUTC()),
+            DefaultNamedCacheFactory(),
             args.version,
-            cordappLoader,
             args.network.getServerThread(args.id),
             args.network.busyLatch
     ) {
@@ -430,27 +421,13 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         var acceptableLiveFiberCountOnStop: Int = 0
 
         override fun acceptableLiveFiberCountOnStop(): Int = acceptableLiveFiberCountOnStop
-
-        override fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSMaRtConfiguration): BFTSMaRt.Cluster {
-            return object : BFTSMaRt.Cluster {
-                override fun waitUntilAllReplicasHaveInitialized() {
-                    val clusterNodes = mockNet.nodes.map { it.started!! }.filter { notaryKey in it.info.legalIdentities.map { it.owningKey } }
-                    if (clusterNodes.size != bftSMaRtConfig.clusterAddresses.size) {
-                        throw IllegalStateException("Unable to enumerate all nodes in BFT cluster.")
-                    }
-                    clusterNodes.forEach {
-                        (it.notaryService as BFTNonValidatingNotaryService).waitUntilReplicaHasInitialized()
-                    }
-                }
-            }
-        }
     }
 
     fun createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters()): MockNode {
         return createUnstartedNode(parameters, defaultFactory)
     }
 
-    fun createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs, CordappLoader?) -> MockNode): MockNode {
+    fun createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs) -> MockNode): MockNode {
         return createNodeImpl(parameters, nodeFactory, false)
     }
 
@@ -459,14 +436,17 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     }
 
     /** Like the other [createNode] but takes a [nodeFactory] and propagates its [MockNode] subtype. */
-    fun createNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs, CordappLoader?) -> MockNode): TestStartedNode {
+    fun createNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters(), nodeFactory: (MockNodeArgs) -> MockNode): TestStartedNode {
         return uncheckedCast(createNodeImpl(parameters, nodeFactory, true).started)!!
     }
 
-    private fun createNodeImpl(parameters: InternalMockNodeParameters, nodeFactory: (MockNodeArgs, CordappLoader?) -> MockNode, start: Boolean): MockNode {
+    private fun createNodeImpl(parameters: InternalMockNodeParameters, nodeFactory: (MockNodeArgs) -> MockNode, start: Boolean): MockNode {
         val id = parameters.forcedID ?: nextNodeId++
-        val config = mockNodeConfiguration().also {
-            doReturn(baseDirectory(id).createDirectories()).whenever(it).baseDirectory
+        val baseDirectory = baseDirectory(id)
+        val certificatesDirectory = baseDirectory / "certificates"
+        certificatesDirectory.createDirectories()
+        val config = mockNodeConfiguration(certificatesDirectory).also {
+            doReturn(baseDirectory).whenever(it).baseDirectory
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
@@ -477,7 +457,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         val cordappDirectories = sharedCorDappsDirectories + TestCordappDirectories.cached(cordapps)
         doReturn(cordappDirectories).whenever(config).cordappDirectories
 
-        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version), JarScanningCordappLoader.fromDirectories(cordappDirectories))
+        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version))
         _nodes += node
         if (start) {
             node.start()
@@ -485,7 +465,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         return node
     }
 
-    fun restartNode(node: TestStartedNode, nodeFactory: (MockNodeArgs, CordappLoader?) -> MockNode): TestStartedNode {
+    fun restartNode(node: TestStartedNode, nodeFactory: (MockNodeArgs) -> MockNode): TestStartedNode {
         node.internals.disableDBCloseOnStop()
         node.dispose()
         return createNode(
@@ -553,7 +533,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
 
     /** Block until all scheduled activity, active flows and network activity has ceased. */
     fun waitQuiescent() {
-        busyLatch.await()
+        busyLatch.await(30000) // don't hang forever if for some reason things don't complete
     }
 
     override fun close() = stopNodes()
@@ -570,12 +550,17 @@ abstract class MessagingServiceSpy {
     abstract fun send(message: Message, target: MessageRecipients, sequenceKey: Any)
 }
 
-private fun mockNodeConfiguration(): NodeConfiguration {
+private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguration {
     @DoNotImplement
     abstract class AbstractNodeConfiguration : NodeConfiguration
+
+    val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
+    val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
+
     return rigorousMock<AbstractNodeConfiguration>().also {
-        doReturn("cordacadevpass").whenever(it).keyStorePassword
-        doReturn("trustpass").whenever(it).trustStorePassword
+        doReturn(certificatesDirectory.createDirectories()).whenever(it).certificatesDirectory
+        doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
+        doReturn(signingCertificateStore).whenever(it).signingCertificateStore
         doReturn(emptyList<User>()).whenever(it).rpcUsers
         doReturn(null).whenever(it).notary
         doReturn(DatabaseConfig()).whenever(it).database

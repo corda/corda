@@ -309,19 +309,20 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
 
 // Open for tests to override
 open class AppendOnlyPersistentMap<K, V, E, out EK>(
+        cacheFactory: NamedCacheFactory,
+        name: String,
         toPersistentEntityKey: (K) -> EK,
         fromPersistentEntity: (E) -> Pair<K, V>,
         toPersistentEntity: (key: K, value: V) -> E,
-        persistentEntityClass: Class<E>,
-        cacheBound: Long = 1024
+        persistentEntityClass: Class<E>
 ) : AppendOnlyPersistentMapBase<K, V, E, EK>(
         toPersistentEntityKey,
         fromPersistentEntity,
         toPersistentEntity,
         persistentEntityClass) {
-    //TODO determine cacheBound based on entity class later or with node config allowing tuning, or using some heuristic based on heap size
     override val cache = NonInvalidatingCache(
-            bound = cacheBound,
+            cacheFactory = cacheFactory,
+            name = name,
             loadFunction = { key: K ->
                 // This gets called if a value is read and the cache has no Transactional for this key yet.
                 val value: V? = loadValue(key)
@@ -353,11 +354,12 @@ open class AppendOnlyPersistentMap<K, V, E, out EK>(
 
 // Same as above, but with weighted values (e.g. memory footprint sensitive).
 class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
+        cacheFactory: NamedCacheFactory,
+        name: String,
         toPersistentEntityKey: (K) -> EK,
         fromPersistentEntity: (E) -> Pair<K, V>,
         toPersistentEntity: (key: K, value: V) -> E,
         persistentEntityClass: Class<E>,
-        maxWeight: Long,
         weighingFunc: (K, Transactional<V>) -> Int
 ) : AppendOnlyPersistentMapBase<K, V, E, EK>(
         toPersistentEntityKey,
@@ -365,7 +367,8 @@ class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
         toPersistentEntity,
         persistentEntityClass) {
     override val cache = NonInvalidatingWeightBasedCache(
-            maxWeight = maxWeight,
+            cacheFactory = cacheFactory,
+            name = name,
             weigher = Weigher { key, value -> weighingFunc(key, value) },
             loadFunction = { key: K ->
                 val value: V? = loadValue(key)

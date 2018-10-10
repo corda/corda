@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.network
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import net.corda.cordform.CordformNode
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -15,7 +14,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
@@ -35,6 +34,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.jar.JarInputStream
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
@@ -46,11 +46,11 @@ import kotlin.streams.toList
  */
 // TODO Move this to tools:bootstrapper
 class NetworkBootstrapper
-    @VisibleForTesting
-    internal constructor(private val initSerEnv: Boolean,
-                         private val embeddedCordaJar: () -> InputStream,
-                         private val nodeInfosGenerator: (List<Path>) -> List<Path>,
-                         private val contractsJarConverter: (Path) -> ContractsJar) {
+@VisibleForTesting
+internal constructor(private val initSerEnv: Boolean,
+                     private val embeddedCordaJar: () -> InputStream,
+                     private val nodeInfosGenerator: (List<Path>) -> List<Path>,
+                     private val contractsJarConverter: (Path) -> ContractsJar) {
 
     constructor() : this(
             initSerEnv = true,
@@ -102,7 +102,7 @@ class NetworkBootstrapper
                 process.destroyForcibly()
                 throw IllegalStateException("Error while generating node info file. Please check the logs in $logsDir.")
             }
-            check(process.exitValue() == 0) {  "Error while generating node info file. Please check the logs in $logsDir." }
+            check(process.exitValue() == 0) { "Error while generating node info file. Please check the logs in $logsDir." }
             return nodeDir.list { paths ->
                 paths.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
             }
@@ -148,22 +148,37 @@ class NetworkBootstrapper
         }
     }
 
-    /** Entry point for Cordform */
+    /** Old Entry point for Cordform
+     *
+     * TODO: Remove once the gradle plugins are updated to 4.0.30
+     */
     fun bootstrap(directory: Path, cordappJars: List<Path>) {
         bootstrap(directory, cordappJars, copyCordapps = true, fromCordform = true)
     }
 
+    /** Entry point for Cordform */
+    fun bootstrapCordform(directory: Path, cordappJars: List<Path>) {
+        bootstrap(directory, cordappJars, copyCordapps = false, fromCordform = true)
+    }
+
     /** Entry point for the tool */
-    fun bootstrap(directory: Path, copyCordapps: Boolean) {
+    fun bootstrap(directory: Path, copyCordapps: Boolean, minimumPlatformVersion: Int) {
+        require(minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
         // Don't accidently include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
         val cordappJars = directory.list { paths ->
             paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }.toList()
         }
-        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false)
+        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, minimumPlatformVersion = minimumPlatformVersion)
     }
 
-    private fun bootstrap(directory: Path, cordappJars: List<Path>, copyCordapps: Boolean, fromCordform: Boolean) {
+    private fun bootstrap(
+            directory: Path,
+            cordappJars: List<Path>,
+            copyCordapps: Boolean,
+            fromCordform: Boolean,
+            minimumPlatformVersion: Int = PLATFORM_VERSION
+    ) {
         directory.createDirectories()
         println("Bootstrapping local test network in $directory")
         if (!fromCordform) {
@@ -201,8 +216,8 @@ class NetworkBootstrapper
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles, configs)
             println("Generating contract implementations whitelist")
-            val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.map(contractsJarConverter))
-            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs)
+            val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.filter { !isSigned(it) }.map(contractsJarConverter))
+            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, minimumPlatformVersion)
             if (newNetParams != existingNetParams) {
                 println("${if (existingNetParams == null) "New" else "Updated"} $newNetParams")
             } else {
@@ -269,7 +284,7 @@ class NetworkBootstrapper
 
     private fun distributeNodeInfos(nodeDirs: List<Path>, nodeInfoFiles: List<Path>) {
         for (nodeDir in nodeDirs) {
-            val additionalNodeInfosDir = (nodeDir / CordformNode.NODE_INFO_DIRECTORY).createDirectories()
+            val additionalNodeInfosDir = (nodeDir / NODE_INFO_DIRECTORY).createDirectories()
             for (nodeInfoFile in nodeInfoFiles) {
                 nodeInfoFile.copyToDirectory(additionalNodeInfosDir, REPLACE_EXISTING)
             }
@@ -329,10 +344,13 @@ class NetworkBootstrapper
         throw IllegalStateException(msg.toString())
     }
 
-    private fun installNetworkParameters(notaryInfos: List<NotaryInfo>,
-                                         whitelist: Map<String, List<AttachmentId>>,
-                                         existingNetParams: NetworkParameters?,
-                                         nodeDirs: List<Path>): NetworkParameters {
+    private fun installNetworkParameters(
+            notaryInfos: List<NotaryInfo>,
+            whitelist: Map<String, List<AttachmentId>>,
+            existingNetParams: NetworkParameters?,
+            nodeDirs: List<Path>,
+            minimumPlatformVersion: Int
+    ): NetworkParameters {
         // TODO Add config for minimumPlatformVersion, maxMessageSize and maxTransactionSize
         val netParams = if (existingNetParams != null) {
             if (existingNetParams.whitelistedContractImplementations == whitelist && existingNetParams.notaries == notaryInfos) {
@@ -347,7 +365,7 @@ class NetworkBootstrapper
             }
         } else {
             NetworkParameters(
-                    minimumPlatformVersion = 4,
+                    minimumPlatformVersion = minimumPlatformVersion,
                     notaries = notaryInfos,
                     modifiedTime = Instant.now(),
                     maxMessageSize = 10485760,
@@ -364,10 +382,10 @@ class NetworkBootstrapper
 
     private fun NodeInfo.notaryIdentity(): Party {
         return when (legalIdentities.size) {
-            // Single node notaries have just one identity like all other nodes. This identity is the notary identity
+        // Single node notaries have just one identity like all other nodes. This identity is the notary identity
             1 -> legalIdentities[0]
-            // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
-            // cluster and is shared by all the other members. This is the notary identity.
+        // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
+        // cluster and is shared by all the other members. This is the notary identity.
             2 -> legalIdentities[1]
             else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
         }
@@ -375,7 +393,7 @@ class NetworkBootstrapper
 
     // We need to to set serialization env, because generation of parameters is run from Cordform.
     private fun initialiseSerialization() {
-        _contextSerializationEnv.set(SerializationEnvironmentImpl(
+        _contextSerializationEnv.set(SerializationEnvironment.with(
                 SerializationFactoryImpl().apply {
                     registerScheme(AMQPParametersSerializationScheme)
                 },
@@ -389,6 +407,12 @@ class NetworkBootstrapper
 
         override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
             return magic == amqpMagic && target == SerializationContext.UseCase.P2P
+        }
+    }
+
+    private fun isSigned(file: Path): Boolean = file.read {
+        JarInputStream(it).use {
+            JarSignatureCollector.collectSigningParties(it).isNotEmpty()
         }
     }
 }

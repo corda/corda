@@ -4,7 +4,6 @@ import com.google.common.collect.Maps;
 import net.corda.core.serialization.SerializationContext;
 import net.corda.core.serialization.SerializationFactory;
 import net.corda.core.serialization.SerializedBytes;
-import net.corda.serialization.internal.amqp.AMQPNotSerializableException;
 import net.corda.serialization.internal.amqp.SchemaKt;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import org.junit.Before;
@@ -20,8 +19,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 
 public final class ForbiddenLambdaSerializationTests {
+
     private EnumSet<SerializationContext.UseCase> contexts = EnumSet.complementOf(
-            EnumSet.of(SerializationContext.UseCase.Checkpoint, SerializationContext.UseCase.Testing));
+            EnumSet.of(SerializationContext.UseCase.Testing));
+
     @Rule
     public final SerializationEnvironmentRule testSerialization = new SerializationEnvironmentRule();
     private SerializationFactory factory;

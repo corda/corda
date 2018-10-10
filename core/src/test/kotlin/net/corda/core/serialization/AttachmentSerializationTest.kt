@@ -161,7 +161,7 @@ class AttachmentSerializationTest {
     }
 
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
-        client = mockNet.restartNode(client) { args, _ ->
+        client = mockNet.restartNode(client) { args ->
             object : InternalMockNetwork.MockNode(args) {
                 override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = checkAttachmentsOnLoad }
             }

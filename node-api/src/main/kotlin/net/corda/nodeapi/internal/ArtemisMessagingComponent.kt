@@ -6,7 +6,6 @@ import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
 import java.security.PublicKey
@@ -77,9 +76,7 @@ class ArtemisMessagingComponent {
         val queueName: String
     }
 
-    interface ArtemisPeerAddress : ArtemisAddress, SingleMessageRecipient {
-        val hostAndPort: NetworkHostAndPort
-    }
+    interface ArtemisPeerAddress : ArtemisAddress, SingleMessageRecipient
 
     /**
      * This is the class used to implement [SingleMessageRecipient], for now. Note that in future this class
@@ -90,12 +87,11 @@ class ArtemisMessagingComponent {
      *     an advertised service's queue.
      *
      * @param queueName The name of the queue this address is associated with.
-     * @param hostAndPort The address of the node.
      */
     @CordaSerializable
-    data class NodeAddress(override val queueName: String, override val hostAndPort: NetworkHostAndPort) : ArtemisPeerAddress {
-        constructor(peerIdentity: PublicKey, hostAndPort: NetworkHostAndPort) :
-                this("$PEERS_PREFIX${peerIdentity.toStringShort()}", hostAndPort)
+    data class NodeAddress(override val queueName: String) : ArtemisPeerAddress {
+        constructor(peerIdentity: PublicKey) :
+                this("$PEERS_PREFIX${peerIdentity.toStringShort()}")
     }
 
     /**

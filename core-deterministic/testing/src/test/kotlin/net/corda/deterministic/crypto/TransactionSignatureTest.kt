@@ -3,7 +3,7 @@ package net.corda.deterministic.crypto
 import net.corda.core.crypto.*
 import net.corda.deterministic.KeyStoreProvider
 import net.corda.deterministic.CheatingSecurityProvider
-import net.corda.deterministic.common.LocalSerializationRule
+import net.corda.deterministic.verifier.LocalSerializationRule
 import org.junit.*
 import org.junit.rules.RuleChain
 import java.security.*
@@ -37,7 +37,7 @@ class TransactionSignatureTest {
 
         // Sign the meta object.
         val transactionSignature: TransactionSignature = CheatingSecurityProvider().use {
-            keyPair.sign(signableData)
+            CryptoSignUtils.doSign(keyPair, signableData)
         }
 
         // Check auto-verification.
@@ -52,7 +52,7 @@ class TransactionSignatureTest {
     fun `Signature metadata full failure clearData has changed`() {
         val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
         val transactionSignature = CheatingSecurityProvider().use {
-            keyPair.sign(signableData)
+            CryptoSignUtils.doSign(keyPair, signableData)
         }
         Crypto.doVerify((testBytes + testBytes).sha256(), transactionSignature)
     }
@@ -137,7 +137,7 @@ class TransactionSignatureTest {
     private fun signOneTx(txId: SecureHash, keyPair: KeyPair): TransactionSignature {
         val signableData = SignableData(txId, SignatureMetadata(3, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
         return CheatingSecurityProvider().use {
-            keyPair.sign(signableData)
+            CryptoSignUtils.doSign(keyPair, signableData)
         }
     }
 }

@@ -3,8 +3,14 @@ package net.corda.core.contracts
 import net.corda.core.KeepForDJVM
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
+import net.corda.core.serialization.SerializableCalculatedProperty
 import java.security.PublicKey
 
+/**
+ * Thrown if a request is made to spend an amount of a [FungibleAsset] but there aren't enough tokens in the vault.
+ *
+ * @property amountMissing An [Amount] that specifies how many tokens were missing.
+ */
 class InsufficientBalanceException(val amountMissing: Amount<*>) : FlowException("Insufficient balance, missing $amountMissing")
 
 /**
@@ -33,6 +39,7 @@ interface FungibleAsset<T : Any> : OwnableState {
      * There must be an ExitCommand signed by these keys to destroy the amount. While all states require their
      * owner to sign, some (i.e. cash) also require the issuer.
      */
+    @get:SerializableCalculatedProperty
     val exitKeys: Collection<PublicKey>
 
     /**

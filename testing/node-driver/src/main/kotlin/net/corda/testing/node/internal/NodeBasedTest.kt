@@ -2,6 +2,7 @@ package net.corda.testing.node.internal
 
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.createDirectories
@@ -10,9 +11,8 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
-import net.corda.node.internal.NodeWithInfo
 import net.corda.node.internal.Node
-
+import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -21,6 +21,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.User
+import org.apache.commons.lang.SystemUtils
 import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Before
@@ -31,12 +32,12 @@ import java.nio.file.Path
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
-// TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't support this, and it's a property of the Corda JAR)
+// TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by
+// using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't
+// support this, and it's a property of the Corda JAR)
 abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyList()) {
     companion object {
         private val WHITESPACE = "\\s++".toRegex()
-
-        private val logger = loggerFor<NodeBasedTest>()
     }
 
     @Rule
@@ -85,7 +86,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @JvmOverloads
     fun startNode(legalName: CordaX500Name,
-                  platformVersion: Int = 1,
+                  platformVersion: Int = PLATFORM_VERSION,
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap()): NodeWithInfo {
         val baseDirectory = baseDirectory(legalName).createDirectories()
@@ -146,6 +147,11 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 }
 
 class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo) : Node(configuration, versionInfo, false) {
+
+    override fun start() : NodeInfo {
+        check(isValidJavaVersion()) { "You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8." }
+        return super.start()
+    }
 
     override val rxIoScheduler get() = CachedThreadScheduler(testThreadFactory()).also { runOnStop += it::shutdown }
 }

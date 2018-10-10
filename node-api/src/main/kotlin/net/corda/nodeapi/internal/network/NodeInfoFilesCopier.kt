@@ -1,8 +1,8 @@
 package net.corda.nodeapi.internal.network
 
-import net.corda.cordform.CordformNode
 import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
 import rx.Observable
 import rx.Scheduler
 import rx.Subscription
@@ -96,10 +96,11 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseabl
     private fun poll() {
         nodeDataMapBox.locked {
             for (nodeData in values) {
-                nodeData.nodeDir.list { paths -> paths
-                        .filter { it.isRegularFile() }
-                        .filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }
-                        .forEach { processPath(nodeData, it) }
+                nodeData.nodeDir.list { paths ->
+                    paths
+                            .filter { it.isRegularFile() }
+                            .filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }
+                            .forEach { processPath(nodeData, it) }
                 }
             }
         }
@@ -149,7 +150,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseabl
      * Convenience holder for all the paths and files relative to a single node.
      */
     private class NodeData(val nodeDir: Path) {
-        val additionalNodeInfoDirectory: Path = nodeDir.resolve(CordformNode.NODE_INFO_DIRECTORY)
+        val additionalNodeInfoDirectory: Path = nodeDir.resolve(NODE_INFO_DIRECTORY)
         // Map from Path to its lastModifiedTime.
         val previouslySeenFiles = mutableMapOf<Path, FileTime>()
 

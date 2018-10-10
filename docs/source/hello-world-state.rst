@@ -63,7 +63,7 @@ Let's get started by opening ``TemplateState.java`` (for Java) or ``StatesAndCon
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/helloworld/state.kt
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/helloworld/IOUState.kt
         :language: kotlin
         :start-after: DOCSTART 01
         :end-before: DOCEND 01

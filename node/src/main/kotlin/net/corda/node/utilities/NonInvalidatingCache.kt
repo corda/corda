@@ -9,13 +9,13 @@ class NonInvalidatingCache<K, V> private constructor(
         val cache: LoadingCache<K, V>
 ) : LoadingCache<K, V> by cache {
 
-    constructor(bound: Long, loadFunction: (K) -> V) :
-            this(buildCache(bound, loadFunction))
+    constructor(cacheFactory: NamedCacheFactory, name: String, loadFunction: (K) -> V) :
+            this(buildCache(cacheFactory, name, loadFunction))
 
     private companion object {
-        private fun <K, V> buildCache(bound: Long, loadFunction: (K) -> V): LoadingCache<K, V> {
-            val builder = Caffeine.newBuilder().maximumSize(bound)
-            return builder.build(NonInvalidatingCacheLoader(loadFunction))
+        private fun <K, V> buildCache(cacheFactory: NamedCacheFactory, name: String, loadFunction: (K) -> V): LoadingCache<K, V> {
+            val builder = Caffeine.newBuilder()
+            return cacheFactory.buildNamed(builder, name, NonInvalidatingCacheLoader(loadFunction))
         }
     }
 
@@ -32,13 +32,13 @@ class NonInvalidatingCache<K, V> private constructor(
 class NonInvalidatingWeightBasedCache<K, V> private constructor(
         val cache: LoadingCache<K, V>
 ) : LoadingCache<K, V> by cache {
-    constructor (maxWeight: Long, weigher: Weigher<K, V>, loadFunction: (K) -> V) :
-            this(buildCache(maxWeight, weigher, loadFunction))
+    constructor (cacheFactory: NamedCacheFactory, name: String, weigher: Weigher<K, V>, loadFunction: (K) -> V) :
+            this(buildCache(cacheFactory, name, weigher, loadFunction))
 
     private companion object {
-        private fun <K, V> buildCache(maxWeight: Long, weigher: Weigher<K, V>, loadFunction: (K) -> V): LoadingCache<K, V> {
-            val builder = Caffeine.newBuilder().maximumWeight(maxWeight).weigher(weigher)
-            return builder.build(NonInvalidatingCache.NonInvalidatingCacheLoader(loadFunction))
+        private fun <K, V> buildCache(cacheFactory: NamedCacheFactory, name: String, weigher: Weigher<K, V>, loadFunction: (K) -> V): LoadingCache<K, V> {
+            val builder = Caffeine.newBuilder().weigher(weigher)
+            return cacheFactory.buildNamed(builder, name, NonInvalidatingCache.NonInvalidatingCacheLoader(loadFunction))
         }
     }
 }

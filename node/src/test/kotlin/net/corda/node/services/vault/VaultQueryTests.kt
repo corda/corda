@@ -9,6 +9,7 @@ import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
+import net.corda.core.node.services.Vault.ConstraintInfo.Type.*
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.*
@@ -473,6 +474,125 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     @Test
+    fun `query by contract states constraint type`() {
+        database.transaction {
+            // insert states with different constraint types
+            vaultFiller.fillWithSomeTestLinearStates(1).states.first().state.constraint
+            vaultFiller.fillWithSomeTestLinearStates(1, constraint = AlwaysAcceptAttachmentConstraint).states.first().state.constraint
+            vaultFiller.fillWithSomeTestLinearStates(1, constraint = WhitelistedByZoneAttachmentConstraint).states.first().state.constraint
+            // hash constraint
+            val linearStateHash = vaultFiller.fillWithSomeTestLinearStates(1, constraint = HashAttachmentConstraint(SecureHash.randomSHA256()))
+            val constraintHash = linearStateHash.states.first().state.constraint as HashAttachmentConstraint
+            // signature constraint (single key)
+            val linearStateSignature = vaultFiller.fillWithSomeTestLinearStates(1, constraint = SignatureAttachmentConstraint(alice.publicKey))
+            val constraintSignature = linearStateSignature.states.first().state.constraint as SignatureAttachmentConstraint
+            // signature constraint (composite key)
+            val compositeKey = CompositeKey.Builder().addKeys(alice.publicKey, bob.publicKey, charlie.publicKey, bankOfCorda.publicKey, bigCorp.publicKey, megaCorp.publicKey, miniCorp.publicKey, cashNotary.publicKey, dummyNotary.publicKey, dummyCashIssuer.publicKey).build()
+            val linearStateSignatureCompositeKey = vaultFiller.fillWithSomeTestLinearStates(1, constraint = SignatureAttachmentConstraint(compositeKey))
+            val constraintSignatureCompositeKey = linearStateSignatureCompositeKey.states.first().state.constraint as SignatureAttachmentConstraint
+
+            // default Constraint Type is ALL
+            val results = vaultService.queryBy<LinearState>()
+            assertThat(results.states).hasSize(6)
+
+            // search for states with Vault.ConstraintInfo.Type = ALWAYS_ACCEPT
+            val constraintTypeCriteria1 = VaultQueryCriteria(constraintTypes = setOf(ALWAYS_ACCEPT))
+            val constraintResults1 = vaultService.queryBy<LinearState>(constraintTypeCriteria1)
+            assertThat(constraintResults1.states).hasSize(1)
+
+            // search for states with [Vault.ConstraintInfo.Type] = HASH
+            val constraintTypeCriteria2 = VaultQueryCriteria(constraintTypes = setOf(HASH))
+            val constraintResults2 = vaultService.queryBy<LinearState>(constraintTypeCriteria2)
+            assertThat(constraintResults2.states).hasSize(2)
+            assertThat(constraintResults2.states.map { it.state.constraint }).containsOnlyOnce(constraintHash)
+
+            // search for states with [Vault.ConstraintInfo.Type] either HASH or CZ_WHITELISED
+            // DOCSTART VaultQueryExample30
+            val constraintTypeCriteria = VaultQueryCriteria(constraintTypes = setOf(HASH, CZ_WHITELISTED))
+            val sortAttribute = SortAttribute.Standard(Sort.VaultStateAttribute.CONSTRAINT_TYPE)
+            val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
+            val constraintResults = vaultService.queryBy<LinearState>(constraintTypeCriteria, sorter)
+            // DOCEND VaultQueryExample30
+            assertThat(constraintResults.states).hasSize(3)
+
+            // search for states with [Vault.ConstraintInfo.Type] = SIGNATURE
+            val constraintTypeCriteria4 = VaultQueryCriteria(constraintTypes = setOf(SIGNATURE))
+            val constraintResults4 = vaultService.queryBy<LinearState>(constraintTypeCriteria4)
+            assertThat(constraintResults4.states).hasSize(2)
+            assertThat(constraintResults4.states.map { it.state.constraint }).containsAll(listOf(constraintSignature, constraintSignatureCompositeKey))
+
+            // search for states with [Vault.ConstraintInfo.Type] = SIGNATURE or CZ_WHITELISED
+            val constraintTypeCriteria5 = VaultQueryCriteria(constraintTypes = setOf(SIGNATURE, CZ_WHITELISTED))
+            val constraintResults5 = vaultService.queryBy<LinearState>(constraintTypeCriteria5)
+            assertThat(constraintResults5.states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun `query by contract states constraint type and data`() {
+        database.transaction {
+            // insert states with different constraint types
+            vaultFiller.fillWithSomeTestLinearStates(1).states.first().state.constraint
+            val alwaysAcceptConstraint = vaultFiller.fillWithSomeTestLinearStates(1, constraint = AlwaysAcceptAttachmentConstraint).states.first().state.constraint
+            vaultFiller.fillWithSomeTestLinearStates(1, constraint = WhitelistedByZoneAttachmentConstraint)
+            // hash constraint
+            val linearStateHash = vaultFiller.fillWithSomeTestLinearStates(1, constraint = HashAttachmentConstraint(SecureHash.randomSHA256()))
+            val constraintHash = linearStateHash.states.first().state.constraint as HashAttachmentConstraint
+            // signature constraint (single key)
+            val linearStateSignature = vaultFiller.fillWithSomeTestLinearStates(1, constraint = SignatureAttachmentConstraint(alice.publicKey))
+            val constraintSignature = linearStateSignature.states.first().state.constraint as SignatureAttachmentConstraint
+            // signature constraint (composite key)
+            val compositeKey = CompositeKey.Builder().addKeys(alice.publicKey, bob.publicKey, charlie.publicKey, bankOfCorda.publicKey, bigCorp.publicKey, megaCorp.publicKey, miniCorp.publicKey, cashNotary.publicKey, dummyNotary.publicKey, dummyCashIssuer.publicKey).build()
+            val linearStateSignatureCompositeKey = vaultFiller.fillWithSomeTestLinearStates(1, constraint = SignatureAttachmentConstraint(compositeKey))
+            val constraintSignatureCompositeKey = linearStateSignatureCompositeKey.states.first().state.constraint as SignatureAttachmentConstraint
+
+            // default Constraint Type is ALL
+            val results = vaultService.queryBy<LinearState>()
+            assertThat(results.states).hasSize(6)
+
+            // search for states with AlwaysAcceptAttachmentConstraint
+            val constraintCriteria1 = VaultQueryCriteria(constraints = setOf(Vault.ConstraintInfo(AlwaysAcceptAttachmentConstraint)))
+            val constraintResults1 = vaultService.queryBy<LinearState>(constraintCriteria1)
+            assertThat(constraintResults1.states).hasSize(1)
+            assertThat(constraintResults1.states.first().state.constraint).isEqualTo(alwaysAcceptConstraint)
+
+            // search for states for a specific HashAttachmentConstraint
+            val constraintsCriteria2 = VaultQueryCriteria(constraints = setOf(Vault.ConstraintInfo(constraintHash)))
+            val constraintResults2 = vaultService.queryBy<LinearState>(constraintsCriteria2)
+            assertThat(constraintResults2.states).hasSize(1)
+            assertThat(constraintResults2.states.first().state.constraint).isEqualTo(constraintHash)
+
+            // search for states with a specific SignatureAttachmentConstraint constraint
+            val constraintCriteria3 = VaultQueryCriteria(constraints = setOf(Vault.ConstraintInfo(constraintSignatureCompositeKey)))
+            val constraintResults3 = vaultService.queryBy<LinearState>(constraintCriteria3)
+            assertThat(constraintResults3.states).hasSize(1)
+            assertThat(constraintResults3.states.first().state.constraint).isEqualTo(constraintSignatureCompositeKey)
+
+            // search for states for given set of mixed constraint types
+            // DOCSTART VaultQueryExample31
+            val constraintCriteria = VaultQueryCriteria(constraints = setOf(Vault.ConstraintInfo(constraintSignature),
+                    Vault.ConstraintInfo(constraintSignatureCompositeKey), Vault.ConstraintInfo(constraintHash)))
+            val constraintResults = vaultService.queryBy<LinearState>(constraintCriteria)
+            // DOCEND VaultQueryExample31
+            assertThat(constraintResults.states).hasSize(3)
+            assertThat(constraintResults.states.map { it.state.constraint }).containsAll(listOf(constraintHash, constraintSignature, constraintSignatureCompositeKey))
+
+            // exercise enriched query
+
+            // Base criteria
+            val baseCriteria = VaultQueryCriteria(constraints = setOf(Vault.ConstraintInfo(AlwaysAcceptAttachmentConstraint)))
+
+            // Enrich and override QueryCriteria with additional default attributes
+            val enrichedCriteria = VaultQueryCriteria(constraints = setOf(Vault.ConstraintInfo(constraintSignature)))
+
+            // Execute query
+            val enrichedResults = services.vaultService.queryBy<LinearState>(baseCriteria and enrichedCriteria).states
+            assertThat(enrichedResults).hasSize(2)
+            assertThat(enrichedResults.map { it.state.constraint }).containsAll(listOf(constraintSignature, alwaysAcceptConstraint))
+        }
+    }
+
+    @Test
     fun `consumed states`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
@@ -797,6 +917,139 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             val criteria = VaultCustomQueryCriteria(logicalExpression)
             val results = vaultService.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive EQUAL`() {
+        database.transaction {
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.equal("gBp", false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive EQUAL does not affect numbers`() {
+        database.transaction {
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.equal(10000, false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive NOT_EQUAL does not return results containing the same characters as the case insensitive string`() {
+        database.transaction {
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.notEqual("gBp", false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(2)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive NOT_EQUAL does not affect numbers`() {
+        database.transaction {
+            listOf(USD, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            vaultFiller.fillWithSomeTestCash(AMOUNT(50, GBP), notaryServices, 1, DUMMY_CASH_ISSUER)
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.notEqual(10000, false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive IN`() {
+        database.transaction {
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            val currencies = listOf("cHf", "gBp")
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.`in`(currencies, false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(2)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive IN does not affect numbers`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(AMOUNT(100, USD), notaryServices, 1, DUMMY_CASH_ISSUER)
+            vaultFiller.fillWithSomeTestCash(AMOUNT(200, CHF), notaryServices, 1, DUMMY_CASH_ISSUER)
+            vaultFiller.fillWithSomeTestCash(AMOUNT(50, GBP), notaryServices, 1, DUMMY_CASH_ISSUER)
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.`in`(listOf(10000L, 20000L), false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(2)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive NOT IN does not return results containing the same characters as the case insensitive strings`() {
+        database.transaction {
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            val currencies = listOf("cHf", "gBp")
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.notIn(currencies, false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive NOT_IN does not affect numbers`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(AMOUNT(100, USD), notaryServices, 1, DUMMY_CASH_ISSUER)
+            vaultFiller.fillWithSomeTestCash(AMOUNT(200, CHF), notaryServices, 1, DUMMY_CASH_ISSUER)
+            vaultFiller.fillWithSomeTestCash(AMOUNT(50, GBP), notaryServices, 1, DUMMY_CASH_ISSUER)
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::pennies.notIn(listOf(10000L, 20000L), false) }
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `logical operator case insensitive LIKE`() {
+        database.transaction {
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.like("%bP", false) }  // GPB
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `logical operator NOT LIKE does not return results containing the same characters as the case insensitive string`() {
+        database.transaction {
+            listOf(USD, GBP, CHF).forEach {
+                vaultFiller.fillWithSomeTestCash(AMOUNT(100, it), notaryServices, 1, DUMMY_CASH_ISSUER)
+            }
+            val logicalExpression = builder { CashSchemaV1.PersistentCashState::currency.notLike("%bP", false) }  // GPB
+            val criteria = VaultCustomQueryCriteria(logicalExpression)
+            val results = vaultService.queryBy<Cash.State>(criteria)
+            assertThat(results.states).hasSize(2)
         }
     }
 
@@ -2075,6 +2328,33 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             // Execute query
             val results = services.vaultService.queryBy<FungibleAsset<*>>(baseCriteria and enrichedCriteria, sorter).states
             assertThat(results).hasSize(4)
+        }
+    }
+
+    @Test
+    fun `sorted, enriched and overridden composite query with constraints handles defaults correctly`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestLinearStates(1, constraint = WhitelistedByZoneAttachmentConstraint)
+            vaultFiller.fillWithSomeTestLinearStates(1, constraint = SignatureAttachmentConstraint(alice.publicKey))
+            vaultFiller.fillWithSomeTestLinearStates(1, constraint = HashAttachmentConstraint( SecureHash.randomSHA256()))
+            vaultFiller.fillWithSomeTestLinearStates(1, constraint = AlwaysAcceptAttachmentConstraint)
+
+            // Base criteria
+            val baseCriteria = VaultQueryCriteria(constraintTypes = setOf(ALWAYS_ACCEPT))
+
+            // Enrich and override QueryCriteria with additional default attributes (contract constraints)
+            val enrichedCriteria = VaultQueryCriteria(constraintTypes = setOf(SIGNATURE, HASH, ALWAYS_ACCEPT)) // enrich
+
+            // Sorting
+            val sortAttribute = SortAttribute.Standard(Sort.VaultStateAttribute.CONSTRAINT_TYPE)
+            val sorter = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
+
+            // Execute query
+            val results = services.vaultService.queryBy<LinearState>(baseCriteria and enrichedCriteria, sorter).states
+            assertThat(results).hasSize(3)
+            assertThat(results[0].state.constraint is AlwaysAcceptAttachmentConstraint)
+            assertThat(results[1].state.constraint is HashAttachmentConstraint)
+            assertThat(results[2].state.constraint is SignatureAttachmentConstraint)
         }
     }
 

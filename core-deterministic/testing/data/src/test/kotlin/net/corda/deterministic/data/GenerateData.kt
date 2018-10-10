@@ -1,8 +1,8 @@
 package net.corda.deterministic.data
 
 import net.corda.core.serialization.deserialize
-import net.corda.deterministic.common.LocalSerializationRule
-import net.corda.deterministic.common.TransactionVerificationRequest
+import net.corda.deterministic.verifier.LocalSerializationRule
+import net.corda.deterministic.verifier.TransactionVerificationRequest
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test

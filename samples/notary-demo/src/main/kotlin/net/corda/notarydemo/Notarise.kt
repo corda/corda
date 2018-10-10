@@ -3,7 +3,6 @@ package net.corda.notarydemo
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.toStringShort
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
@@ -12,12 +11,13 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.TestIdentity
 import java.util.concurrent.Future
 
 fun main(args: Array<String>) {
     val address = NetworkHostAndPort("localhost", 10003)
     println("Connecting to the recipient node ($address)")
-    CordaRPCClient(address).start(notaryDemoUser.username, notaryDemoUser.password).use {
+    CordaRPCClient(address).start("demou", "demop").use {
         NotaryDemoClientApi(it.proxy).notarise(10)
     }
 }
@@ -29,13 +29,8 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
         checkNotNull(id) { "No unique notary identity, try cleaning the node directories." }
     }
 
-    private val counterparty by lazy {
-        val parties = rpc.networkMapSnapshot()
-        parties.fold(ArrayList<PartyAndCertificate>()) { acc, elem ->
-            acc.addAll(elem.legalIdentitiesAndCerts.filter { it.name == BOB_NAME })
-            acc
-        }.single().party
-    }
+    /** A dummy identity. */
+    private val counterparty = TestIdentity(BOB_NAME).party
 
     /** Makes calls to the node rpc to start transaction notarisation. */
     fun notarise(count: Int) {

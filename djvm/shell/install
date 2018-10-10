@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+file="${BASH_SOURCE[0]}"
+base_dir="$(cd "$(dirname "$file")/" && pwd)"
+version="$(cat $base_dir/../../build.gradle | sed -n 's/^[ ]*ext\.corda_release_version[ =]*"\([^"]*\)".*$/\1/p')"
+
+# Build DJVM module and CLI
+cd "$base_dir/.."
+../gradlew shadowJar
+
+# Generate auto-completion file for Bash and ZSH
+cd "$base_dir"
+java -cp "$base_dir/../cli/build/libs/corda-djvm-$version-all.jar" \
+    picocli.AutoComplete -n djvm net.corda.djvm.tools.cli.Commands -f
+
+# Create a symbolic link to the `djvm` utility
+sudo ln -sf "$base_dir/djvm" /usr/local/bin/djvm

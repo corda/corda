@@ -11,7 +11,6 @@ import net.corda.core.identity.Party;
 import net.corda.core.messaging.DataFeed;
 import net.corda.core.node.services.IdentityService;
 import net.corda.core.node.services.Vault;
-import net.corda.core.node.services.VaultQueryException;
 import net.corda.core.node.services.VaultService;
 import net.corda.core.node.services.vault.*;
 import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria;
@@ -33,7 +32,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import rx.Observable;
 
 import java.util.*;
 import java.util.stream.Collectors;

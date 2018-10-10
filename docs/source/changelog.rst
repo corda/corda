@@ -6,6 +6,25 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+
+* Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter
+
+* Introduce minimum and target platform version for CorDapps.
+
+* Vault storage of contract state constraints metadata and associated vault query functions to retrieve and sort by constraint type.
+
+* New overload for ``CordaRPCClient.start()`` method allowing to specify target legal identity to use for RPC call.
+
+* Case insensitive vault queries can be specified via a boolean on applicable SQL criteria builder operators. By default queries will be case sensitive.
+
+* Getter added to ``CordaRPCOps`` for the node's network parameters.
+
+* The RPC client library now checks at startup whether the server is of the client libraries major version or higher.
+  Therefore to connect to a Corda 4 node you must use version 4 or lower of the library. This behaviour can be overridden
+  by specifying a lower number in the ``CordaRPCClientConfiguration`` class.
+
+* Removed experimental feature ``CordformDefinition``
+
 * Vault query fix: support query by parent classes of Contract State classes (see https://github.com/corda/corda/issues/3714)
 
 * Added ``registerResponderFlow`` method to ``StartedMockNode``, to support isolated testing of responder flow behaviour.
@@ -15,7 +34,7 @@ Unreleased
 
 * Introduced ``TestCorDapp`` and utilities to support asymmetric setups for nodes through ``DriverDSL``, ``MockNetwork`` and ``MockServices``.
 
-* Change type of the `checkpoint_value` column. Please check the upgrade-notes on how to update your database.
+* Change type of the ``checkpoint_value`` column. Please check the upgrade-notes on how to update your database.
 
 * Removed buggy :serverNameTablePrefix: configuration.
 
@@ -92,6 +111,9 @@ Unreleased
 * ``WireTransaction.Companion.createComponentGroups`` has been marked as ``@CordaInternal``. It was never intended to be
   public and was already internal for Kotlin code.
 
+* RPC server will now mask internal errors to RPC clients if not in devMode. ``Throwable``s implementing ``ClientRelevantError``
+  will continue to be propagated to clients.
+
 * RPC Framework moved from Kryo to the Corda AMQP implementation [Corda-847]. This completes the removal
   of ``Kryo`` from general use within Corda, remaining only for use in flow checkpointing.
 
@@ -142,7 +164,7 @@ Unreleased
     Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
   * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
   * The deprecated web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
-  * Property keys with double quotes (e.g. `"key"`) in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
+  * Property keys with double quotes (e.g. "key") in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
 
 * Added public support for creating ``CordaRPCClient`` using SSL. For this to work the node needs to provide client applications
   a certificate to be added to a truststore. See :doc:`tutorial-clientrpc-api`
@@ -159,7 +181,7 @@ Unreleased
 
   * The whitelist.txt file is no longer needed. The existing network parameters file is used to update the current contracts
     whitelist.
-  * The CorDapp jars are also copied to each nodes' `cordapps` directory.
+  * The CorDapp jars are also copied to each nodes' ``cordapps`` directory.
 
 * Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation of internal data.
 
@@ -169,7 +191,7 @@ Unreleased
   reference to the outer class) as per the Java documentation `here <https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html>`_
   we are disallowing this as the paradigm in general makes little sense for contract states.
 
-* Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
+* Node can be shut down abruptly by ``shutdown`` function in ``CordaRPCOps`` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
 
 * API change: ``net.corda.core.schemas.PersistentStateRef`` fields (index and txId) are now non-nullable.
   The fields were always effectively non-nullable - values were set from non-nullable fields of other objects.
@@ -183,8 +205,8 @@ Unreleased
 
 * Table name with a typo changed from ``NODE_ATTCHMENTS_CONTRACTS`` to ``NODE_ATTACHMENTS_CONTRACTS``.
 
-* Node logs a warning for any ``MappedSchema`` containing a JPA entity referencing another JPA entity from a different ``MappedSchema`.
-  The log entry starts with `Cross-reference between MappedSchemas.`.
+* Node logs a warning for any ``MappedSchema`` containing a JPA entity referencing another JPA entity from a different ``MappedSchema``.
+  The log entry starts with "Cross-reference between MappedSchemas".
   API: Persistence documentation no longer suggests mapping between different schemas.
 
 * Upgraded Artemis to v2.6.2.
@@ -204,7 +226,7 @@ Version 3.1
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
   .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions
-     later than 2.12.3 (including 2.12.4) exhibit a different issue.
+later than 2.12.3 (including 2.12.4) exhibit a different issue.
 
 * Updated the api scanner gradle plugin to work the same way as the version in master. These changes make the api scanner more
   accurate and fix a couple of bugs, and change the format of the api-current.txt file slightly. Backporting these changes
@@ -1022,15 +1044,15 @@ Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsk
 to Corda in M10.
 
 .. warning:: Due to incompatibility between older version of IntelliJ and gradle 3.4, you will need to upgrade Intellij
-   to 2017.1 (with kotlin-plugin v1.1.1) in order to run Corda demos in IntelliJ. You can download the latest IntelliJ
+to 2017.1 (with kotlin-plugin v1.1.1) in order to run Corda demos in IntelliJ. You can download the latest IntelliJ
    from `JetBrains <https://www.jetbrains.com/idea/download/>`_.
 
 .. warning:: The Kapt-generated models are no longer included in our codebase. If you experience ``unresolved references``
-   errors when building in IntelliJ, please rebuild the schema model by running ``gradlew kaptKotlin`` in Windows or
+errors when building in IntelliJ, please rebuild the schema model by running ``gradlew kaptKotlin`` in Windows or
    ``./gradlew kaptKotlin`` in other systems. Alternatively, perform a full gradle build or install.
 
 .. note:: Kapt is used to generate schema model and entity code (from annotations in the codebase) using the Kotlin Annotation
-   processor.
+processor.
 
 * Corda DemoBench:
     * DemoBench is a new tool to make it easy to configure and launch local Corda nodes. A very useful tool to demonstrate

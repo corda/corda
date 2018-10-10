@@ -71,7 +71,7 @@ dependencies {
     compile project(":confidential-identities")
     compile project(':client:rpc')
     compile project(':tools:shell')
-    compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
+    compile project(':tools:cliutils')
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
@@ -79,6 +79,7 @@ dependencies {
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    runtime "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
@@ -90,6 +91,9 @@ dependencies {
 
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
+
+    // For async logging
+    compile "com.lmax:disruptor:$disruptor_version"
 
     // JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
@@ -104,9 +108,6 @@ dependencies {
         // Gains our proton-j version from core module.
         exclude group: 'org.apache.qpid', module: 'proton-j'
     }
-
-    // JAnsi: for drawing things to the terminal in nicely coloured ways.
-    compile "org.fusesource.jansi:jansi:$jansi_version"
 
     // Manifests: for reading stuff from the manifest file
     compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
@@ -152,17 +153,8 @@ dependencies {
     // We only need this dependency to compile our Caplet against.
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
 
-    // Java Atomix: RAFT library
-    compile 'io.atomix.copycat:copycat-client:1.2.8'
-    compile 'io.atomix.copycat:copycat-server:1.2.8'
-    compile 'io.atomix.catalyst:catalyst-netty:1.2.1'
-
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
-
-    // BFT-SMaRt
-    compile 'commons-codec:commons-codec:1.10'
-    compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
 
     // Apache Shiro: authentication, authorization and session management.
     compile "org.apache.shiro:shiro-core:${shiro_version}"
@@ -192,6 +184,13 @@ dependencies {
     compile "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
     // Optional New Relic JVM reporter, used to push metrics to the configured account associated with a newrelic.yml configuration. See https://mvnrepository.com/artifact/com.palominolabs.metrics/metrics-new-relic
     compile "com.palominolabs.metrics:metrics-new-relic:${metrics_new_relic_version}"
+
+    testCompile(project(':test-cli'))
+}
+
+tasks.withType(JavaCompile) {
+    // Resolves a Gradle warning about not scanning for pre-processors.
+    options.compilerArgs << '-proc:none'
 }
 
 task integrationTest(type: Test) {

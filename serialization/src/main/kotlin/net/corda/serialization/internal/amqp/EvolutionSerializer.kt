@@ -32,7 +32,7 @@ abstract class EvolutionSerializer(
         clazz: Type,
         factory: SerializerFactory,
         protected val oldReaders: Map<String, OldParam>,
-        override val kotlinConstructor: KFunction<Any>?
+        override val kotlinConstructor: KFunction<Any>
 ) : ObjectSerializer(clazz, factory) {
     // explicitly set as empty to indicate it's unused by this type of serializer
     override val propertySerializers = PropertySerializersEvolution()
@@ -74,7 +74,7 @@ abstract class EvolutionSerializer(
          * TODO: rename annotation
          */
         private fun getEvolverConstructor(type: Type, oldArgs: Map<String, OldParam>): KFunction<Any>? {
-            val clazz: Class<*> = type.asClass()!!
+            val clazz: Class<*> = type.asClass()
 
             if (!clazz.isConcreteClass) return null
 
@@ -125,7 +125,7 @@ abstract class EvolutionSerializer(
             // any particular NonNullable annotation type to indicate cross
             // compiler nullability
             val isKotlin = (new.type.javaClass.declaredAnnotations.any {
-                        it.annotationClass.qualifiedName == "kotlin.Metadata"
+                it.annotationClass.qualifiedName == "kotlin.Metadata"
             })
 
             constructor.parameters.withIndex().forEach {
@@ -189,7 +189,7 @@ abstract class EvolutionSerializer(
             // return the synthesised object which is, given the absence of a constructor, a no op
             val constructor = getEvolverConstructor(new.type, readersAsSerialized) ?: return new
 
-            val classProperties = new.type.asClass()?.propertyDescriptors() ?: emptyMap()
+            val classProperties = new.type.asClass().propertyDescriptors()
 
             return if (classProperties.isNotEmpty() && constructor.parameters.isEmpty()) {
                 makeWithSetters(new, factory, constructor, readersAsSerialized, classProperties)
@@ -210,7 +210,7 @@ class EvolutionSerializerViaConstructor(
         clazz: Type,
         factory: SerializerFactory,
         oldReaders: Map<String, EvolutionSerializer.OldParam>,
-        kotlinConstructor: KFunction<Any>?,
+        kotlinConstructor: KFunction<Any>,
         private val constructorArgs: Array<Any?>) : EvolutionSerializer(clazz, factory, oldReaders, kotlinConstructor) {
     /**
      * Unlike a normal [readObject] call where we simply apply the parameter deserialisers
@@ -242,7 +242,7 @@ class EvolutionSerializerViaSetters(
         clazz: Type,
         factory: SerializerFactory,
         oldReaders: Map<String, EvolutionSerializer.OldParam>,
-        kotlinConstructor: KFunction<Any>?,
+        kotlinConstructor: KFunction<Any>,
         private val setters: Map<String, PropertyAccessor>) : EvolutionSerializer(clazz, factory, oldReaders, kotlinConstructor) {
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
@@ -270,8 +270,8 @@ class EvolutionSerializerViaSetters(
  * be an object that returns an [EvolutionSerializer]. Of course, any implementation that
  * extends this class can be written to invoke whatever behaviour is desired.
  */
-abstract class EvolutionSerializerGetterBase {
-    abstract fun getEvolutionSerializer(
+interface EvolutionSerializerProvider {
+    fun getEvolutionSerializer(
             factory: SerializerFactory,
             typeNotation: TypeNotation,
             newSerializer: AMQPSerializer<Any>,
@@ -283,12 +283,12 @@ abstract class EvolutionSerializerGetterBase {
  * between the received schema and the class as it exists now on the class path,
  */
 @KeepForDJVM
-class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
+object DefaultEvolutionSerializerProvider : EvolutionSerializerProvider {
     override fun getEvolutionSerializer(factory: SerializerFactory,
                                         typeNotation: TypeNotation,
                                         newSerializer: AMQPSerializer<Any>,
                                         schemas: SerializationSchemas): AMQPSerializer<Any> {
-        return factory.serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
+        return factory.registerByDescriptor(typeNotation.descriptor.name!!) {
             when (typeNotation) {
                 is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
                 is RestrictedType -> {
@@ -311,4 +311,3 @@ class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
         }
     }
 }
-

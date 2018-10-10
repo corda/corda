@@ -56,13 +56,13 @@ An input state is added to a transaction as a ``StateAndRef``, which combines:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 21
         :end-before: DOCEND 21
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 21
         :end-before: DOCEND 21
@@ -75,13 +75,13 @@ A ``StateRef`` uniquely identifies an input state, allowing the notary to mark i
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 20
         :end-before: DOCEND 20
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 20
         :end-before: DOCEND 20
@@ -94,15 +94,6 @@ to "walk the chain" and verify that each input was generated through a valid seq
 Reference input states
 ~~~~~~~~~~~~~~~~~~~~~~
 
-A reference input state is a ``ContractState`` which can be referred to in a transaction by the contracts of input and
-output states but whose contract is not executed as part of the transaction verification process. Furthermore,
-reference states are not consumed when the transaction is committed to the ledger but they are checked for
-"current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a normal
-state when it occurs in an input or output position.
-
-Reference data states enable many parties to "reuse" the same state in their transactions as reference data whilst
-still allowing the reference data state owner the capability to update the state.
-
 A reference input state is added to a transaction as a ``ReferencedStateAndRef``. A ``ReferencedStateAndRef`` can be
 obtained from a ``StateAndRef`` by calling the ``StateAndRef.referenced()`` method which returns a
 ``ReferencedStateAndRef``.
@@ -111,32 +102,44 @@ obtained from a ``StateAndRef`` by calling the ``StateAndRef.referenced()`` meth
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
 :language: kotlin
             :start-after: DOCSTART 55
             :end-before: DOCEND 55
             :dedent: 8
 
-        .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
 :language: java
             :start-after: DOCSTART 55
             :end-before: DOCEND 55
             :dedent: 12
 
-**Known limitations:**
+**Handling of update races:**
 
-*Notary change:* It is likely the case that users of reference states do not have permission to change the notary assigned
-to a reference state. Even if users *did* have this permission the result would likely be a bunch of
-notary change races. As such, if a reference state is added to a transaction which is assigned to a
-different notary to the input and output states then all those inputs and outputs must be moved to the
-notary which the reference state uses.
+When using reference states in a transaction, it may be the case that a notarisation failure occurs. This is most likely
+because the creator of the state (being used as a reference state in your transaction), has just updated it.
 
-If two or more reference states assigned to different notaries are added to a transaction then it follows
-that this transaction likely *cannot* be committed to the ledger as it unlikely that the party using the
-reference state can change the assigned notary for one of the reference states.
+Typically, the creator of such reference data will have implemented flows for syndicating the updates out to users.
+However it is inevitable that there will be a delay between the state being used as a reference being consumed, and the
+nodes using it receiving the update.
 
-As such, if reference states assigned to multiple different notaries are added to a transaction builder
-then the check below will fail.
+This is where the ``WithReferencedStatesFlow`` comes in. Given a flow which uses reference states, the
+``WithReferencedStatesFlow`` will execute the the flow as a subFlow. If the flow fails due to a ``NotaryError.Conflict``
+for a reference state, then it will be suspended until the state refs for the reference states are consumed. In this
+case, a consumption means that:
+
+1. the owner of the reference state has updated the state with a valid, notarised transaction
+2. the owner of the reference state has shared the update with the node attempting to run the flow which uses the
+   reference state
+3. The node has successfully committed the transaction updating the reference state (and all the dependencies), and
+   added the updated reference state to the vault.
+
+At the point where the transaction updating the state being used as a reference is committed to storage and the vault
+update occurs, then the ``WithReferencedStatesFlow`` will wake up and re-execute the provided flow.
+
+.. warning:: Caution should be taken when using this flow as it facilitates automated re-running of flows which use
+             reference states. The flow using reference states should include checks to ensure that the reference data is
+             reasonable, especially if the economics of the transaction depends upon the data contained within a reference state.
 
 Output states
 ^^^^^^^^^^^^^
@@ -146,13 +149,13 @@ add them to the transaction directly:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 22
         :end-before: DOCEND 22
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 22
         :end-before: DOCEND 22
@@ -163,13 +166,13 @@ it on the input state:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 23
         :end-before: DOCEND 23
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 23
         :end-before: DOCEND 23
@@ -183,13 +186,13 @@ wrapping the output state in a ``StateAndContract``, which combines:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 47
         :end-before: DOCEND 47
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 47
         :end-before: DOCEND 47
@@ -204,13 +207,13 @@ A command is added to the transaction as a ``Command``, which combines:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 24
         :end-before: DOCEND 24
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 24
         :end-before: DOCEND 24
@@ -222,13 +225,13 @@ Attachments are identified by their hash:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 25
         :end-before: DOCEND 25
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 25
         :end-before: DOCEND 25
@@ -243,13 +246,13 @@ time, or be open at either end:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 26
         :end-before: DOCEND 26
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 26
         :end-before: DOCEND 26
@@ -259,13 +262,13 @@ We can also define a time window as an ``Instant`` plus/minus a time tolerance (
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 42
         :end-before: DOCEND 42
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 42
         :end-before: DOCEND 42
@@ -275,13 +278,13 @@ Or as a start-time plus a duration:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 43
         :end-before: DOCEND 43
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 43
         :end-before: DOCEND 43
@@ -299,13 +302,13 @@ that will notarise the inputs and verify the time-window:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 19
        :end-before: DOCEND 19
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 19
        :end-before: DOCEND 19
@@ -318,13 +321,13 @@ instantiated without one:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 46
         :end-before: DOCEND 46
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 46
         :end-before: DOCEND 46
@@ -362,13 +365,13 @@ Here's an example usage of ``TransactionBuilder.withItems``:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 27
        :end-before: DOCEND 27
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 27
        :end-before: DOCEND 27
@@ -380,13 +383,13 @@ Here are the methods for adding inputs and attachments:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 28
         :end-before: DOCEND 28
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 28
         :end-before: DOCEND 28
@@ -396,13 +399,13 @@ An output state can be added as a ``ContractState``, contract class name and not
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 49
         :end-before: DOCEND 49
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 49
         :end-before: DOCEND 49
@@ -412,13 +415,13 @@ We can also leave the notary field blank, in which case the transaction's defaul
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 50
         :end-before: DOCEND 50
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 50
         :end-before: DOCEND 50
@@ -428,13 +431,13 @@ Or we can add the output state as a ``TransactionState``, which already specifie
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 51
         :end-before: DOCEND 51
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 51
         :end-before: DOCEND 51
@@ -444,13 +447,13 @@ Commands can be added as a ``Command``:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 52
         :end-before: DOCEND 52
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 52
         :end-before: DOCEND 52
@@ -460,13 +463,13 @@ Or as ``CommandData`` and a ``vararg PublicKey``:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
         :language: kotlin
         :start-after: DOCSTART 53
         :end-before: DOCEND 53
         :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
         :language: java
         :start-after: DOCSTART 53
         :end-before: DOCEND 53
@@ -476,13 +479,13 @@ For the time-window, we can set a time-window directly:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 44
        :end-before: DOCEND 44
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 44
        :end-before: DOCEND 44
@@ -492,13 +495,13 @@ Or define the time-window as a time plus a duration (e.g. 45 seconds):
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 45
        :end-before: DOCEND 45
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 45
        :end-before: DOCEND 45
@@ -512,13 +515,13 @@ We can either sign with our legal identity key:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 29
        :end-before: DOCEND 29
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 29
        :end-before: DOCEND 29
@@ -528,13 +531,13 @@ Or we can also choose to use another one of our public keys:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 30
        :end-before: DOCEND 30
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 30
        :end-before: DOCEND 30
@@ -572,13 +575,13 @@ and output states:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 33
        :end-before: DOCEND 33
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 33
        :end-before: DOCEND 33
@@ -597,13 +600,13 @@ We achieve this by using the ``ServiceHub`` to convert the ``SignedTransaction``
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 32
        :end-before: DOCEND 32
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 32
        :end-before: DOCEND 32
@@ -613,13 +616,13 @@ We can now perform our additional verification. Here's a simple example:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 34
        :end-before: DOCEND 34
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 34
        :end-before: DOCEND 34
@@ -634,13 +637,13 @@ We can verify that all the transaction's required signatures are present and val
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 35
        :end-before: DOCEND 35
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 35
        :end-before: DOCEND 35
@@ -652,13 +655,13 @@ which the signatures are allowed to be missing:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 36
        :end-before: DOCEND 36
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 36
        :end-before: DOCEND 36
@@ -669,13 +672,13 @@ public keys for which the signatures are allowed to be missing:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 54
        :end-before: DOCEND 54
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 54
        :end-before: DOCEND 54
@@ -689,13 +692,13 @@ We can also choose to simply verify the signatures that are present:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 37
        :end-before: DOCEND 37
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 37
        :end-before: DOCEND 37
@@ -713,13 +716,13 @@ We can sign using our legal identity key, as follows:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 38
        :end-before: DOCEND 38
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 38
        :end-before: DOCEND 38
@@ -729,13 +732,13 @@ Or we can choose to sign using another one of our public keys:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 39
        :end-before: DOCEND 39
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 39
        :end-before: DOCEND 39
@@ -747,13 +750,13 @@ We can do this with our legal identity key:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 40
        :end-before: DOCEND 40
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 40
        :end-before: DOCEND 40
@@ -763,13 +766,13 @@ Or using another one of our public keys:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
        :language: kotlin
        :start-after: DOCSTART 41
        :end-before: DOCEND 41
        :dedent: 8
 
-    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
        :language: java
        :start-after: DOCSTART 41
        :end-before: DOCEND 41

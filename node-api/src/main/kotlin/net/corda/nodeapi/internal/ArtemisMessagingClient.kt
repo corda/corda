@@ -3,9 +3,8 @@ package net.corda.nodeapi.internal
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientProducer
@@ -18,7 +17,7 @@ interface ArtemisSessionProvider {
     val started: ArtemisMessagingClient.Started?
 }
 
-class ArtemisMessagingClient(private val config: SSLConfiguration,
+class ArtemisMessagingClient(private val config: MutualSslConfiguration,
                              private val serverAddress: NetworkHostAndPort,
                              private val maxMessageSize: Int) : ArtemisSessionProvider {
     companion object {
@@ -59,8 +58,11 @@ class ArtemisMessagingClient(private val config: SSLConfiguration,
     override fun stop() = synchronized(this) {
         started?.run {
             producer.close()
-            // Ensure any trailing messages are committed to the journal
-            session.commit()
+            // Since we are leaking the session outside of this class it may well be already closed.
+            if(!session.isClosed) {
+                // Ensure any trailing messages are committed to the journal
+                session.commit()
+            }
             // Closing the factory closes all the sessions it produced as well.
             sessionFactory.close()
         }

@@ -5,19 +5,21 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.node.services.Vault.StateModificationStatus.*
+import net.corda.core.node.services.Vault.RelevancyStatus.*
 import net.corda.core.node.services.Vault.StateStatus
 import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.toHexString
 import rx.Observable
 import java.time.Instant
 import java.util.*
@@ -107,23 +109,60 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     }
 
     /**
-     * If the querying node is a participant in a state then it is classed as [MODIFIABLE], although technically the
-     * state is only _potentially_ modifiable as the contract code may forbid them from performing any actions.
+     * If the querying node is a participant in a state then it is classed as [RELEVANT].
      *
-     * If the querying node is not a participant in a state then it is classed as [NOT_MODIFIABLE]. These types of
+     * If the querying node is not a participant in a state then it is classed as [NOT_RELEVANT]. These types of
      * states can still be recorded in the vault if the transaction containing them was recorded with the
      * [StatesToRecord.ALL_VISIBLE] flag. This will typically happen for things like reference data which can be
      * referenced in transactions as a [ReferencedStateAndRef] but cannot be modified by any party but the maintainer.
      *
-     * If both [MODIFIABLE] and [NOT_MODIFIABLE] states are required to be returned from a query, then the [ALL] flag
+     * If both [RELEVANT] and [NOT_RELEVANT] states are required to be returned from a query, then the [ALL] flag
      * can be used.
      *
      * NOTE: Default behaviour is for ALL STATES to be returned as this is how Corda behaved before the introduction of
      * this query criterion.
      */
     @CordaSerializable
-    enum class StateModificationStatus {
-        MODIFIABLE, NOT_MODIFIABLE, ALL
+    enum class RelevancyStatus {
+        RELEVANT, NOT_RELEVANT, ALL
+    }
+
+    /**
+     *  Contract constraint information associated with a [ContractState].
+     *  See [AttachmentConstraint]
+     */
+    @CordaSerializable
+    data class ConstraintInfo(val constraint: AttachmentConstraint) {
+        @CordaSerializable
+        enum class Type {
+            ALWAYS_ACCEPT, HASH, CZ_WHITELISTED, SIGNATURE
+        }
+        fun type(): Type {
+            return when (constraint::class.java) {
+                AlwaysAcceptAttachmentConstraint::class.java -> Type.ALWAYS_ACCEPT
+                HashAttachmentConstraint::class.java -> Type.HASH
+                WhitelistedByZoneAttachmentConstraint::class.java -> Type.CZ_WHITELISTED
+                SignatureAttachmentConstraint::class.java -> Type.SIGNATURE
+                else -> throw IllegalArgumentException("Invalid constraint type: $constraint")
+            }
+        }
+        fun data(): ByteArray? {
+            return when (type()) {
+                Type.HASH -> (constraint as HashAttachmentConstraint).attachmentId.bytes
+                Type.SIGNATURE -> (constraint as SignatureAttachmentConstraint).key.encoded
+                else -> null
+            }
+        }
+        companion object {
+            fun constraintInfo(type: Type, data: ByteArray?): ConstraintInfo {
+                return when (type) {
+                    Type.ALWAYS_ACCEPT -> ConstraintInfo(AlwaysAcceptAttachmentConstraint)
+                    Type.HASH -> ConstraintInfo(HashAttachmentConstraint(SecureHash.parse(data!!.toHexString())))
+                    Type.CZ_WHITELISTED -> ConstraintInfo(WhitelistedByZoneAttachmentConstraint)
+                    Type.SIGNATURE -> ConstraintInfo(SignatureAttachmentConstraint(Crypto.decodePublicKey(data!!)))
+                }
+            }
+        }
     }
 
     @CordaSerializable
@@ -152,7 +191,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                                            val otherResults: List<Any>)
 
     @CordaSerializable
-    data class StateMetadata constructor(
+    data class StateMetadata @JvmOverloads constructor(
             val ref: StateRef,
             val contractStateClassName: String,
             val recordedTime: Instant,
@@ -161,18 +200,9 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             val notary: AbstractParty?,
             val lockId: String?,
             val lockUpdateTime: Instant?,
-            val isModifiable: Vault.StateModificationStatus?
+            val relevancyStatus: Vault.RelevancyStatus? = null,
+            val constraintInfo: ConstraintInfo? = null
     ) {
-        constructor(ref: StateRef,
-                    contractStateClassName: String,
-                    recordedTime: Instant,
-                    consumedTime: Instant?,
-                    status: Vault.StateStatus,
-                    notary: AbstractParty?,
-                    lockId: String?,
-                    lockUpdateTime: Instant?
-        ) : this(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, null)
-
         fun copy(
                 ref: StateRef = this.ref,
                 contractStateClassName: String = this.contractStateClassName,
@@ -185,6 +215,19 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         ): StateMetadata {
             return StateMetadata(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, null)
         }
+        fun copy(
+                ref: StateRef = this.ref,
+                contractStateClassName: String = this.contractStateClassName,
+                recordedTime: Instant = this.recordedTime,
+                consumedTime: Instant? = this.consumedTime,
+                status: Vault.StateStatus = this.status,
+                notary: AbstractParty? = this.notary,
+                lockId: String? = this.lockId,
+                lockUpdateTime: Instant? = this.lockUpdateTime,
+                relevancyStatus: Vault.RelevancyStatus?
+        ): StateMetadata {
+            return StateMetadata(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, relevancyStatus, ConstraintInfo(AlwaysAcceptAttachmentConstraint))
+        }
     }
 
     companion object {
@@ -194,6 +237,12 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         val NoNotaryUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.NOTARY_CHANGE)
     }
 }
+
+/**
+ * The maximum permissible size of contract constraint type data (for storage in vault states database table).
+ * Maximum value equates to a CompositeKey with 10 EDDSA_ED25519_SHA512 keys stored in.
+ */
+const val MAX_CONSTRAINT_DATA_SIZE = 563
 
 /**
  * A [VaultService] is responsible for securely and safely persisting the current state of a vault to storage. The

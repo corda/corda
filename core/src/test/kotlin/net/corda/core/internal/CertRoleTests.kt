@@ -8,7 +8,7 @@ import kotlin.test.assertFailsWith
 class CertRoleTests {
     @Test
     fun `should deserialize valid value`() {
-        val expected = CertRole.INTERMEDIATE_CA
+        val expected = CertRole.DOORMAN_CA
         val actual = CertRole.getInstance(ASN1Integer(1L))
         assertEquals(expected, actual)
     }

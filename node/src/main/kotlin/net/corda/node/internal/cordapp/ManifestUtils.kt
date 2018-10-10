@@ -1,13 +1,11 @@
 package net.corda.node.internal.cordapp
 
-import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.cordapp.CordappImpl
-import java.util.*
+import net.corda.core.internal.cordapp.CordappImpl.Info.Companion.UNKNOWN_VALUE
 import java.util.jar.Attributes
 import java.util.jar.Manifest
 
 fun createTestManifest(name: String, title: String, version: String, vendor: String): Manifest {
-
     val manifest = Manifest()
 
     // Mandatory manifest attribute. If not present, all other entries are silently skipped.
@@ -26,22 +24,23 @@ fun createTestManifest(name: String, title: String, version: String, vendor: Str
     return manifest
 }
 
-operator fun Manifest.set(key: String, value: String) {
-
-    mainAttributes.putValue(key, value)
+operator fun Manifest.set(key: String, value: String): String? {
+    return mainAttributes.putValue(key, value)
 }
 
-internal fun Manifest?.toCordappInfo(defaultShortName: String): Cordapp.Info {
+operator fun Manifest.get(key: String): String? = mainAttributes.getValue(key)
 
-    var unknown = CordappImpl.Info.UNKNOWN
-    (this?.mainAttributes?.getValue("Name") ?: defaultShortName).let { shortName ->
-        unknown = unknown.copy(shortName = shortName)
-    }
-    this?.mainAttributes?.getValue("Implementation-Vendor")?.let { vendor ->
-        unknown = unknown.copy(vendor = vendor)
-    }
-    this?.mainAttributes?.getValue("Implementation-Version")?.let { version ->
-        unknown = unknown.copy(version = version)
-    }
-    return unknown
+fun Manifest.toCordappInfo(defaultShortName: String): CordappImpl.Info {
+    val shortName = this["Name"] ?: defaultShortName
+    val vendor = this["Implementation-Vendor"] ?: UNKNOWN_VALUE
+    val version = this["Implementation-Version"] ?: UNKNOWN_VALUE
+    val minPlatformVersion = this["Min-Platform-Version"]?.toIntOrNull() ?: 1
+    val targetPlatformVersion = this["Target-Platform-Version"]?.toIntOrNull() ?: minPlatformVersion
+    return CordappImpl.Info(
+            shortName = shortName,
+            vendor = vendor,
+            version = version,
+            minimumPlatformVersion = minPlatformVersion,
+            targetPlatformVersion = targetPlatformVersion
+    )
 }

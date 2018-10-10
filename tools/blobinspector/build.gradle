@@ -5,7 +5,7 @@ apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
     compile project(':client:jackson')
-    compile "info.picocli:picocli:$picocli_version"
+    compile project(':tools:cliutils')
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
@@ -23,10 +23,9 @@ jar {
         exclude "META-INF/*.DSA"
         exclude "META-INF/*.RSA"
     }
-    archiveName = "blob-inspector-${corda_release_version}.jar"
+    baseName = "blob-inspector"
     manifest {
         attributes(
-                'Automatic-Module-Name': 'net.corda.blobinspector',
                 'Main-Class': 'net.corda.blobinspector.BlobInspectorKt'
         )
     }

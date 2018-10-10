@@ -1,7 +1,6 @@
 package net.corda.nodeapi.internal.network
 
 import com.typesafe.config.ConfigFactory
-import net.corda.cordform.CordformNode.NODE_INFO_DIRECTORY
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
@@ -11,6 +10,8 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.DEV_ROOT_CA
+import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
@@ -217,7 +218,7 @@ class NetworkBootstrapperTest {
 
     private fun bootstrap(copyCordapps: Boolean = true) {
         providedCordaJar = (rootDir / "corda.jar").let { if (it.exists()) it.readAll() else null }
-        bootstrapper.bootstrap(rootDir, copyCordapps)
+        bootstrapper.bootstrap(rootDir, copyCordapps, PLATFORM_VERSION)
     }
 
     private fun createNodeConfFile(nodeDirName: String, config: FakeNodeConfig) {

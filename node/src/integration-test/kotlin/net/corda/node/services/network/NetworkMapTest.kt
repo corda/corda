@@ -1,9 +1,6 @@
 package net.corda.node.services.network
 
-import net.corda.cordform.CordformNode
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.ParametersUpdateInfo
@@ -11,8 +8,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
@@ -235,26 +231,10 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
 
     private fun NodeHandle.onlySees(vararg nodes: NodeInfo) {
         // Make sure the nodes aren't getting the node infos from their additional directories
-        val nodeInfosDir = baseDirectory / CordformNode.NODE_INFO_DIRECTORY
+        val nodeInfosDir = baseDirectory / NODE_INFO_DIRECTORY
         if (nodeInfosDir.exists()) {
             assertThat(nodeInfosDir.list()).isEmpty()
         }
         assertThat(rpc.networkMapSnapshot()).containsOnly(*nodes)
     }
-}
-
-private fun DriverDSLImpl.startNode(providedName: CordaX500Name, devMode: Boolean): CordaFuture<NodeHandle> {
-    var customOverrides = emptyMap<String, String>()
-    if (!devMode) {
-        val nodeDir = baseDirectory(providedName)
-        val nodeSslConfig = object : NodeSSLConfiguration {
-            override val baseDirectory = nodeDir
-            override val keyStorePassword = "cordacadevpass"
-            override val trustStorePassword = "trustpass"
-            override val crlCheckSoftFail = true
-        }
-        nodeSslConfig.configureDevKeyAndTrustStores(providedName)
-        customOverrides = mapOf("devMode" to "false")
-    }
-    return startNode(providedName = providedName, customOverrides = customOverrides)
 }

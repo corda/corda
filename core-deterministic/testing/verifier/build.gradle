@@ -1,0 +1,48 @@
+apply plugin: 'java-library'
+apply from: '../../../deterministic.gradle'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'idea'
+
+description 'Test utilities for deterministic contract verification'
+
+configurations {
+    deterministicArtifacts
+    runtimeArtifacts.extendsFrom api
+}
+
+dependencies {
+    deterministicArtifacts project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
+    deterministicArtifacts project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
+
+    runtimeArtifacts project(':serialization')
+    runtimeArtifacts project(':core')
+
+    // Compile against the deterministic artifacts to ensure that we use only the deterministic API subset.
+    compileOnly configurations.deterministicArtifacts
+    api "junit:junit:$junit_version"
+}
+
+jar {
+    baseName 'corda-deterministic-verifier'
+}
+
+artifacts {
+    deterministicArtifacts jar
+    runtimeArtifacts jar
+    publish jar
+}
+
+publish {
+    // Our published POM will contain dependencies on the non-deterministic Corda artifacts.
+    dependenciesFrom configurations.runtimeArtifacts
+    name jar.baseName
+}
+
+idea {
+    module {
+        if (project.hasProperty("deterministic_idea_sdk")) {
+            jdkName project.property("deterministic_idea_sdk") as String
+        }
+    }
+}

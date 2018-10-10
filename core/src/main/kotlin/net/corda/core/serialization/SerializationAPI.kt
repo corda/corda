@@ -199,10 +199,21 @@ interface SerializationContext {
     fun withEncoding(encoding: SerializationEncoding?): SerializationContext
 
     /**
+     * A shallow copy of this context but with the given encoding whitelist.
+     */
+    fun withEncodingWhitelist(encodingWhitelist: EncodingWhitelist): SerializationContext
+
+    /**
      * The use case that we are serializing for, since it influences the implementations chosen.
      */
     @KeepForDJVM
-    enum class UseCase { P2P, RPCServer, RPCClient, Storage, Checkpoint, Testing }
+    enum class UseCase {
+        P2P,
+        RPCServer,
+        RPCClient,
+        Storage,
+        Testing
+    }
 }
 
 /**
@@ -225,7 +236,6 @@ object SerializationDefaults {
     @DeleteForDJVM val RPC_SERVER_CONTEXT get() = effectiveSerializationEnv.rpcServerContext
     @DeleteForDJVM val RPC_CLIENT_CONTEXT get() = effectiveSerializationEnv.rpcClientContext
     @DeleteForDJVM val STORAGE_CONTEXT get() = effectiveSerializationEnv.storageContext
-    @DeleteForDJVM val CHECKPOINT_CONTEXT get() = effectiveSerializationEnv.checkpointContext
 }
 
 /**

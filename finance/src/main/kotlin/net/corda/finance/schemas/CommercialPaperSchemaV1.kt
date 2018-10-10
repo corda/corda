@@ -23,6 +23,9 @@ object CommercialPaperSchema
  */
 @CordaSerializable
 object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
+
+    override val migrationResource = "commercial-paper.changelog-master"
+
     @Entity
     @Table(name = "cp_states", indexes = [Index(name = "ccy_code_index", columnList = "ccy_code"), Index(name = "maturity_index", columnList = "maturity_instant"), Index(name = "face_value_index", columnList = "face_value")])
     class PersistentCommercialPaperState(

@@ -1,0 +1,76 @@
+plugins {
+    id 'com.github.johnrengelman.shadow'
+}
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'idea'
+
+description 'Corda deterministic JVM sandbox'
+
+ext {
+    // Shaded version of ASM to avoid conflict with root project.
+    asm_version = '6.2.1'
+}
+
+repositories {
+    maven {
+        url "$artifactory_contextUrl/corda-dev"
+    }
+}
+
+configurations {
+    testCompile.extendsFrom shadow
+    jdkRt.resolutionStrategy {
+        // Always check the repository for a newer SNAPSHOT.
+        cacheChangingModulesFor 0, 'seconds'
+    }
+}
+
+dependencies {
+    shadow "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    shadow "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    shadow "org.slf4j:slf4j-api:$slf4j_version"
+
+    // ASM: byte code manipulation library
+    compile "org.ow2.asm:asm:$asm_version"
+    compile "org.ow2.asm:asm-tree:$asm_version"
+    compile "org.ow2.asm:asm-commons:$asm_version"
+
+    // Classpath scanner
+    shadow "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
+
+    // Test utilities
+    testCompile "junit:junit:$junit_version"
+    testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    jdkRt "net.corda:deterministic-rt:latest.integration"
+}
+
+jar.enabled = false
+
+shadowJar {
+    baseName 'corda-djvm'
+    classifier ''
+    relocate 'org.objectweb.asm', 'djvm.org.objectweb.asm'
+}
+assemble.dependsOn shadowJar
+
+tasks.withType(Test) {
+    systemProperty 'deterministic-rt.path', configurations.jdkRt.asPath
+}
+
+artifacts {
+    publish shadowJar
+}
+
+publish {
+    dependenciesFrom configurations.shadow
+    name shadowJar.baseName
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}

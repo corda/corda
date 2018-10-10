@@ -14,12 +14,13 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.core.TestIdentity
+import net.corda.testing.internal.DEV_ROOT_CA
 import org.junit.Test
 import rx.Observable
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class InteractiveShellTest {
     companion object {
@@ -28,7 +29,7 @@ class InteractiveShellTest {
 
     @Suppress("UNUSED")
     class FlowA(val a: String) : FlowLogic<String>() {
-        constructor(b: Int?) : this(b.toString())
+        constructor(b: Int) : this(b.toString())
         constructor(b: Int?, c: String) : this(b.toString() + c)
         constructor(amount: Amount<Currency>) : this(amount.toString())
         constructor(pair: Pair<Amount<Currency>, SecureHash.SHA256>) : this(pair.toString())
@@ -48,7 +49,6 @@ class InteractiveShellTest {
     private fun check(input: String, expected: String) {
         var output: String? = null
         InteractiveShell.runFlowFromString({ clazz, args ->
-
             val instance = clazz.getConstructor(*args.map { it!!::class.java }.toTypedArray()).newInstance(*args) as FlowA
             output = instance.a
             val future = openFuture<String>()
@@ -100,6 +100,27 @@ class InteractiveShellTest {
 
     @Test(expected = InteractiveShell.NoApplicableConstructor::class)
     fun flowTooManyParams() = check("b: 12, c: Yo, d: Bar", "")
+
+    @Test
+    fun niceTypeNamesInErrors() {
+        val e = assertFailsWith<InteractiveShell.NoApplicableConstructor> {
+            check("", expected = "")
+        }
+        val correct = setOf(
+                "[amounts: Amount<InteractiveShellTest.UserValue>[]]: missing parameter amounts",
+                "[amount: Amount<Currency>]: missing parameter amount",
+                "[pair: Pair<Amount<Currency>, SecureHash.SHA256>]: missing parameter pair",
+                "[party: Party]: missing parameter party",
+                "[b: Integer, amount: Amount<InteractiveShellTest.UserValue>]: missing parameter b",
+                "[b: String[]]: missing parameter b",
+                "[b: Integer, c: String]: missing parameter b",
+                "[a: String]: missing parameter a",
+                "[b: int]: missing parameter b"
+        )
+        val errors = e.errors.toHashSet()
+        errors.removeAll(correct)
+        assert(errors.isEmpty()) { errors.joinToString(", ") }
+    }
 
     @Test
     fun party() = check("party: \"${megaCorp.name}\"", megaCorp.name.toString())

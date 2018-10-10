@@ -41,12 +41,22 @@ object X509Utilities {
     val DEFAULT_IDENTITY_SIGNATURE_SCHEME = Crypto.EDDSA_ED25519_SHA512
     val DEFAULT_TLS_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
 
-    // TODO This class is more of a general purpose utility class and as such these constants belong elsewhere
+    // TODO This class is more of a general purpose utility class and as such these constants belong elsewhere.
     // Aliases for private keys and certificates.
     const val CORDA_ROOT_CA = "cordarootca"
     const val CORDA_INTERMEDIATE_CA = "cordaintermediateca"
     const val CORDA_CLIENT_TLS = "cordaclienttls"
     const val CORDA_CLIENT_CA = "cordaclientca"
+
+    // TODO These don't need to be prefixes, but can be the full aliases. However, because they are used as key aliases
+    //      we should ensure that:
+    //      a) they always contain valid characters, preferably [A-Za-z0-9] in order to be supported by the majority of
+    //         crypto service implementations (i.e., HSMs).
+    //      b) they are at most 127 chars in length (i.e., as of 2018, Azure Key Vault does not support bigger aliases).
+    const val NODE_IDENTITY_ALIAS_PREFIX = "identity"
+    // TODO Hyphen (-) seems to be supported by the major HSM vendors, but we should consider remove it in the
+    //      future and stick to [A-Za-z0-9].
+    const val DISTRIBUTED_NOTARY_ALIAS_PREFIX = "distributed-notary"
 
     val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
 
@@ -402,7 +412,7 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.id_kp_clientAuth,
             KeyPurposeId.anyExtendedKeyUsage,
             isCA = true,
-            role = CertRole.INTERMEDIATE_CA
+            role = CertRole.DOORMAN_CA
     ),
 
     NETWORK_MAP(

@@ -248,7 +248,7 @@ class CommercialPaperTestsGeneric {
         val notaryServices = MockServices(listOf("net.corda.finance.contracts", "net.corda.finance.contracts.asset", "net.corda.finance.schemas"), dummyNotary)
         val issuerServices = MockServices(listOf("net.corda.finance.contracts", "net.corda.finance.contracts.asset", "net.corda.finance.schemas"), dummyCashIssuer, dummyNotary)
         val (aliceDatabase, aliceServices) = makeTestDatabaseAndMockServices(
-                listOf("net.corda.finance.contracts", "net.corda.finance.contracts.asset", "net.corda.finance.schemas"),
+                listOf("net.corda.finance.contracts", "net.corda.finance.schemas"),
                 makeTestIdentityService(*allIdentities),
                 alice
         )
@@ -257,7 +257,7 @@ class CommercialPaperTestsGeneric {
         }
 
         val (megaCorpDatabase, megaCorpServices) = makeTestDatabaseAndMockServices(
-                listOf("net.corda.finance.contracts", "net.corda.finance.contracts.asset", "net.corda.finance.schemas"),
+                listOf("net.corda.finance.contracts", "net.corda.finance.schemas"),
                 makeTestIdentityService(*allIdentities),
                 megaCorp
         )

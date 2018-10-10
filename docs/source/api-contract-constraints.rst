@@ -51,6 +51,8 @@ upgrade approach is that you can upgrade states regardless of their constraint, 
 anticipate a need to do so. But it requires everyone to sign, requires everyone to manually authorise the upgrade,
 consumes notary and ledger resources, and is just in general more complex.
 
+.. _implicit_constraint_types:
+
 How constraints work
 --------------------
 

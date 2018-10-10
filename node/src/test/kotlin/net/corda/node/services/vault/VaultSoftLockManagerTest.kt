@@ -34,6 +34,7 @@ import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Test
+import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.reflect.jvm.jvmName
@@ -81,7 +82,7 @@ class VaultSoftLockManagerTest {
     private val mockVault = rigorousMock<VaultServiceInternal>().also {
         doNothing().whenever(it).softLockRelease(any(), anyOrNull())
     }
-    private val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(ContractImpl::class.packageName), defaultFactory = { args, _ ->
+    private val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(ContractImpl::class.packageName), defaultFactory = { args ->
         object : InternalMockNetwork.MockNode(args) {
             override fun makeVaultService(keyManagementService: KeyManagementService, services: ServicesForResolution, database: CordaPersistence): VaultServiceInternal {
                 val node = this
@@ -127,7 +128,7 @@ class VaultSoftLockManagerTest {
         override val owner get() = participants[0]
         override fun withNewOwner(newOwner: AbstractParty) = throw UnsupportedOperationException()
         override val amount get() = Amount(1, Issued(PartyAndReference(owner, OpaqueBytes.of(1)), Unit))
-        override val exitKeys get() = throw UnsupportedOperationException()
+        override val exitKeys get() = emptyList<PublicKey>()
         override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Unit>>, newOwner: AbstractParty) = throw UnsupportedOperationException()
         override fun equals(other: Any?) = other is FungibleAssetImpl && participants == other.participants
         override fun hashCode() = participants.hashCode()

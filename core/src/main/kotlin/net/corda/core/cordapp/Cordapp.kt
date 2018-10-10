@@ -4,6 +4,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.internal.notary.NotaryService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
@@ -48,20 +49,5 @@ interface Cordapp {
     val jarPath: URL
     val cordappClasses: List<String>
     val jarHash: SecureHash.SHA256
-
-    /**
-     * CorDapp's information, including vendor and version.
-     *
-     * @property shortName Cordapp's shortName
-     * @property vendor Cordapp's vendor
-     * @property version Cordapp's version
-     */
-    @DoNotImplement
-    interface Info {
-        val shortName: String
-        val vendor: String
-        val version: String
-
-        fun hasUnknownFields(): Boolean
-    }
+    val notaryService: Class<out NotaryService>?
 }

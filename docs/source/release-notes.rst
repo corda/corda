@@ -6,6 +6,9 @@ Unreleased
 
 Significant Changes in 4.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
+* **Retirement of non-elliptic Diffie-Hellman for TLS**
+  The TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 family of ciphers is retired from the list of allowed ciphers for TLS
+  as it is a legacy cipher family not supported by all native SSL/TLS implementations.
 
 * **Reference states**:
 

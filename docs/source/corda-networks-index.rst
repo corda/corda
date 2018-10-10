@@ -4,7 +4,8 @@ Networks
 .. toctree::
    :maxdepth: 1
 
-   setting-up-a-corda-network
+   joining-a-network
+   corda-test-networks
    running-a-notary
    permissioning
    network-map

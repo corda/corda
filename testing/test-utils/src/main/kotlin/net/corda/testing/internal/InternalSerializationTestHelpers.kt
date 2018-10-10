@@ -7,7 +7,7 @@ import net.corda.core.DoNotImplement
 import net.corda.core.serialization.internal.*
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
-import net.corda.node.serialization.kryo.KryoServerSerializationScheme
+import net.corda.node.serialization.kryo.KryoCheckpointSerializer
 import net.corda.serialization.internal.*
 import net.corda.testing.core.SerializationEnvironmentRule
 import java.util.concurrent.ConcurrentHashMap
@@ -29,23 +29,20 @@ fun <T> withoutTestSerialization(callable: () -> T): T { // TODO: Delete this, s
     }
 }
 
-internal fun createTestSerializationEnv(label: String): SerializationEnvironmentImpl {
+internal fun createTestSerializationEnv(): SerializationEnvironment {
     val factory = SerializationFactoryImpl().apply {
         registerScheme(AMQPClientSerializationScheme(emptyList()))
         registerScheme(AMQPServerSerializationScheme(emptyList()))
-        // needed for checkpointing
-        registerScheme(KryoServerSerializationScheme())
     }
-    return object : SerializationEnvironmentImpl(
+    return SerializationEnvironment.with(
             factory,
             AMQP_P2P_CONTEXT,
             AMQP_RPC_SERVER_CONTEXT,
             AMQP_RPC_CLIENT_CONTEXT,
             AMQP_STORAGE_CONTEXT,
-            KRYO_CHECKPOINT_CONTEXT
-    ) {
-        override fun toString() = "testSerializationEnv($label)"
-    }
+            KRYO_CHECKPOINT_CONTEXT,
+            KryoCheckpointSerializer
+    )
 }
 
 /**
@@ -54,7 +51,7 @@ internal fun createTestSerializationEnv(label: String): SerializationEnvironment
  */
 fun setGlobalSerialization(armed: Boolean): GlobalSerializationEnvironment {
     return if (armed) {
-        object : GlobalSerializationEnvironment, SerializationEnvironment by createTestSerializationEnv("<global>") {
+        object : GlobalSerializationEnvironment, SerializationEnvironment by createTestSerializationEnv() {
             override fun unset() {
                 _globalSerializationEnv.set(null)
                 inVMExecutors.remove(this)

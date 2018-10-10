@@ -1,0 +1,158 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
+                   logicalFilePath="migration/node-services.changelog-init.xml">
+
+    <changeSet author="R3.Corda" id="1511451595465-5">
+        <createTable tableName="node_attachments">
+            <column name="att_id" type="NVARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="blob"/>
+            <column name="filename" type="NVARCHAR(255)"/>
+            <column name="insertion_date" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uploader" type="NVARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-7">
+        <createTable tableName="node_checkpoints">
+            <column name="checkpoint_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="checkpoint_value" type="blob"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-8">
+        <createTable tableName="node_contract_upgrades">
+            <column name="state_ref" type="NVARCHAR(96)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="contract_class_name" type="NVARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-9">
+        <createTable tableName="node_identities">
+            <column name="pk_hash" type="NVARCHAR(130)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="identity_value" type="blob"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="1511451595465-13">
+        <createTable tableName="node_message_ids">
+            <column name="message_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="insertion_time" type="timestamp"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-14">
+        <createTable tableName="node_message_retry">
+            <column name="message_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="message" type="blob"/>
+            <column name="recipients" type="blob"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-15">
+        <createTable tableName="node_named_identities">
+            <column name="name" type="NVARCHAR(128)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="pk_hash" type="NVARCHAR(130)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-17">
+        <createTable tableName="node_our_key_pairs">
+            <column name="public_key_hash" type="NVARCHAR(130)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="private_key" type="blob"/>
+            <column name="public_key" type="blob"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-19">
+        <createTable tableName="node_scheduled_states">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="scheduled_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-20">
+        <createTable tableName="node_transaction_mappings">
+            <column name="tx_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state_machine_run_id" type="NVARCHAR(36)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-21">
+        <createTable tableName="node_transactions">
+            <column name="tx_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_value" type="blob"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-30">
+        <addPrimaryKey columnNames="att_id" constraintName="node_attachments_pkey" tableName="node_attachments"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-32">
+        <addPrimaryKey columnNames="checkpoint_id" constraintName="node_checkpoints_pkey" tableName="node_checkpoints"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-33">
+        <addPrimaryKey columnNames="state_ref" constraintName="node_contract_upgrades_pkey"
+                       tableName="node_contract_upgrades"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-34">
+        <addPrimaryKey columnNames="pk_hash" constraintName="node_identities_pkey" tableName="node_identities"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-38">
+        <addPrimaryKey columnNames="message_id" constraintName="node_message_ids_pkey" tableName="node_message_ids"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-39">
+        <addPrimaryKey columnNames="message_id" constraintName="node_message_retry_pkey"
+                       tableName="node_message_retry"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-40">
+        <addPrimaryKey columnNames="name" constraintName="node_named_identities_pkey"
+                       tableName="node_named_identities"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-42">
+        <addPrimaryKey columnNames="public_key_hash" constraintName="node_our_key_pairs_pkey"
+                       tableName="node_our_key_pairs"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-44">
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="node_scheduled_states_pkey"
+                       tableName="node_scheduled_states"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-45">
+        <addPrimaryKey columnNames="tx_id" constraintName="node_transaction_mappings_pkey"
+                       tableName="node_transaction_mappings"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-46">
+        <addPrimaryKey columnNames="tx_id" constraintName="node_transactions_pkey" tableName="node_transactions"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-61">
+        <addForeignKeyConstraint baseColumnNames="party_name" baseTableName="node_link_nodeinfo_party"
+                                 constraintName="FK__link_ni_p__info_p_cert"
+                                 referencedColumnNames="party_name" referencedTableName="node_info_party_cert"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="add index att_id">
+        <createIndex tableName="node_attachments" indexName="att_id_idx">
+            <column name="att_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

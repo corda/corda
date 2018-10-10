@@ -4,6 +4,7 @@ import net.corda.core.flows.SignTransactionFlow;
 import net.corda.core.utilities.ProgressTracker;
 import org.jetbrains.annotations.Nullable;
 
+@SuppressWarnings("ALL")
 public class TutorialFlowStateMachines {
     // DOCSTART 1
     private final ProgressTracker progressTracker = new ProgressTracker(

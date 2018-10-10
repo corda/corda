@@ -1,21 +1,24 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
 import io.netty.handler.ssl.SslHandler
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHex
-import net.corda.nodeapi.ArtemisTcpTransport
+import net.corda.nodeapi.internal.ArtemisTcpTransport
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.toBc
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
 import java.net.Socket
-import java.security.KeyStore
-import java.security.SecureRandom
 import java.security.cert.*
 import java.util.*
 import javax.net.ssl.*
+
+private const val HOSTNAME_FORMAT = "%s.corda.net"
 
 internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager) : X509ExtendedTrustManager() {
     companion object {
@@ -103,6 +106,7 @@ internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager)
 }
 
 internal fun createClientSslHelper(target: NetworkHostAndPort,
+                                   expectedRemoteLegalNames: Set<CordaX500Name>,
                                    keyManagerFactory: KeyManagerFactory,
                                    trustManagerFactory: TrustManagerFactory): SslHandler {
     val sslContext = SSLContext.getInstance("TLS")
@@ -114,6 +118,11 @@ internal fun createClientSslHelper(target: NetworkHostAndPort,
     sslEngine.enabledProtocols = ArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
     sslEngine.enabledCipherSuites = ArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
     sslEngine.enableSessionCreation = true
+    if (expectedRemoteLegalNames.size == 1) {
+        val sslParameters = sslEngine.sslParameters
+        sslParameters.serverNames = listOf(SNIHostName(x500toHostName(expectedRemoteLegalNames.single())))
+        sslEngine.sslParameters = sslParameters
+    }
     return SslHandler(sslEngine)
 }
 
@@ -132,7 +141,7 @@ internal fun createServerSslHelper(keyManagerFactory: KeyManagerFactory,
     return SslHandler(sslEngine)
 }
 
-internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: KeyStore, crlCheckSoftFail: Boolean): ManagerFactoryParameters {
+internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateStore, crlCheckSoftFail: Boolean): ManagerFactoryParameters {
     val certPathBuilder = CertPathBuilder.getInstance("PKIX")
     val revocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
     revocationChecker.options = EnumSet.of(
@@ -145,7 +154,18 @@ internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: KeyStore, crlC
         // the following reasons: The CRL or OCSP response cannot be obtained because of a network error.
         revocationChecker.options = revocationChecker.options + PKIXRevocationChecker.Option.SOFT_FAIL
     }
-    val pkixParams = PKIXBuilderParameters(trustStore, X509CertSelector())
+    val pkixParams = PKIXBuilderParameters(trustStore.value.internal, X509CertSelector())
     pkixParams.addCertPathChecker(revocationChecker)
     return CertPathTrustManagerParameters(pkixParams)
+}
+
+fun KeyManagerFactory.init(keyStore: CertificateStore) = init(keyStore.value.internal, keyStore.password.toCharArray())
+
+fun TrustManagerFactory.init(trustStore: CertificateStore) = init(trustStore.value.internal)
+
+internal fun x500toHostName(x500Name: CordaX500Name): String {
+    val secureHash = SecureHash.sha256(x500Name.toString())
+    // RFC 1035 specifies a limit 255 bytes for hostnames with each label being 63 bytes or less. Due to this, the string
+    // representation of the SHA256 hash is truncated to 32 characters.
+    return String.format(HOSTNAME_FORMAT, secureHash.toString().take(32).toLowerCase())
 }

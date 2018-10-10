@@ -15,7 +15,7 @@ class NodeRPC(config: NodeConfigWrapper, start: (NodeConfigWrapper, CordaRPCOps)
         private val oneSecond = SECONDS.toMillis(1)
     }
 
-    private val rpcClient = CordaRPCClient(NetworkHostAndPort("localhost", config.nodeConfig.rpcAddress.port))
+    private val rpcClient = CordaRPCClient(NetworkHostAndPort("localhost", config.nodeConfig.rpcSettings.address.port))
     @Volatile
     private var rpcConnection: CordaRPCConnection? = null
     private val timer = Timer("DemoBench NodeRPC (${config.key})", true)

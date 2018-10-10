@@ -78,7 +78,8 @@ and/or composition and a rich set of operators to include:
 There are four implementations of this interface which can be chained together to define advanced filters.
 
 1. ``VaultQueryCriteria`` provides filterable criteria on attributes within the Vault states table: status (UNCONSUMED,
-   CONSUMED), state reference(s), contract state type(s), notaries, soft locked states, timestamps (RECORDED, CONSUMED).
+   CONSUMED), state reference(s), contract state type(s), notaries, soft locked states, timestamps (RECORDED, CONSUMED),
+   state constraints (see :ref:`Constraint Types <implicit_constraint_types>`).
 
 	.. note:: Sensible defaults are defined for frequently used attributes (status = UNCONSUMED, always include soft
 	   locked states).
@@ -166,6 +167,44 @@ An example of a custom query in Java is illustrated here:
    where an anonymous party does not resolve to an X500 name via the ``IdentityService``, no query results will ever be
    produced. For performance reasons, queries do not use ``PublicKey`` as search criteria.
 
+Custom queries can be either case sensitive or case insensitive. They are defined via a ``Boolean`` as one of the function parameters of each operator function. By default each operator is case sensitive.
+
+An example of a case sensitive custom query operator is illustrated here:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        val currencyIndex = PersistentCashState::currency.equal(USD.currencyCode, true)
+
+.. note:: The ``Boolean`` input of ``true`` in this example could be removed since the function will default to ``true`` when not provided.
+
+An example of a case insensitive custom query operator is illustrated here:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        val currencyIndex = PersistentCashState::currency.equal(USD.currencyCode, false)
+
+An example of a case sensitive custom query operator in Java is illustrated here:
+
+.. container:: codeset
+
+    .. sourcecode:: java
+
+        FieldInfo attributeCurrency = getField("currency", CashSchemaV1.PersistentCashState.class);
+        CriteriaExpression currencyIndex = Builder.equal(attributeCurrency, "USD", true);
+
+An example of a case insensitive custom query operator in Java is illustrated here:
+
+.. container:: codeset
+
+    .. sourcecode:: java
+
+        FieldInfo attributeCurrency = getField("currency", CashSchemaV1.PersistentCashState.class);
+        CriteriaExpression currencyIndex = Builder.equal(attributeCurrency, "USD", false);
+
 Pagination
 ----------
 The API provides support for paging where large numbers of results are expected (by default, a page size is set to 200
@@ -220,6 +259,22 @@ Query for unconsumed states for several contract state types:
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample3
     :end-before: DOCEND VaultQueryExample3
+    :dedent: 12
+
+Query for unconsumed states for specified contract state constraint types and sorted in ascending alphabetical order:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExample30
+    :end-before: DOCEND VaultQueryExample30
+    :dedent: 12
+
+Query for unconsumed states for specified contract state constraints (type and data):
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExample31
+    :end-before: DOCEND VaultQueryExample31
     :dedent: 12
 
 Query for unconsumed states for a given notary:

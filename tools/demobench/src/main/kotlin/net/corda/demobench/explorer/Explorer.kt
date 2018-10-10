@@ -43,7 +43,7 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
             val user = config.nodeConfig.rpcUsers[0]
             val p = explorerController.process(
                     "--host=localhost",
-                    "--port=${config.nodeConfig.rpcAddress.port}",
+                    "--port=${config.nodeConfig.rpcSettings.address.port}",
                     "--username=${user.username}",
                     "--password=${user.password}")
                     .directory(explorerDir.toFile())

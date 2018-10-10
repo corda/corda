@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.KeepForDJVM
+import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.core.utilities.loggerFor
 import java.io.NotSerializableException
 import java.lang.reflect.Field
@@ -19,9 +20,9 @@ abstract class PropertyReader {
  * Accessor for those properties of a class that have defined getter functions.
  */
 @KeepForDJVM
-class PublicPropertyReader(private val readMethod: Method?) : PropertyReader() {
+class PublicPropertyReader(private val readMethod: Method) : PropertyReader() {
     init {
-        readMethod?.isAccessible = true
+        readMethod.isAccessible = true
     }
 
     private fun Method.returnsNullable(): Boolean {
@@ -47,10 +48,10 @@ class PublicPropertyReader(private val readMethod: Method?) : PropertyReader() {
     }
 
     override fun read(obj: Any?): Any? {
-        return readMethod!!.invoke(obj)
+        return readMethod.invoke(obj)
     }
 
-    override fun isNullable(): Boolean = readMethod?.returnsNullable() ?: false
+    override fun isNullable(): Boolean = readMethod.returnsNullable()
 }
 
 /**
@@ -112,7 +113,6 @@ class EvolutionPropertyReader : PropertyReader() {
  * making the property accessible.
  */
 abstract class PropertyAccessor(
-        val initialPosition: Int,
         open val serializer: PropertySerializer) {
     companion object : Comparator<PropertyAccessor> {
         override fun compare(p0: PropertyAccessor?, p1: PropertyAccessor?): Int {
@@ -120,13 +120,15 @@ abstract class PropertyAccessor(
         }
     }
 
+    open val isCalculated get() = false
+
     /**
      * Override to control how the property is set on the object.
      */
     abstract fun set(instance: Any, obj: Any?)
 
     override fun toString(): String {
-        return "${serializer.name}($initialPosition)"
+        return serializer.name
     }
 }
 
@@ -135,9 +137,8 @@ abstract class PropertyAccessor(
  * is serialized and deserialized via JavaBean getter and setter style methods.
  */
 class PropertyAccessorGetterSetter(
-        initialPosition: Int,
         getter: PropertySerializer,
-        private val setter: Method) : PropertyAccessor(initialPosition, getter) {
+        private val setter: Method) : PropertyAccessor(getter) {
     init {
         /**
          * Play nicely with Java interop, public methods aren't marked as accessible
@@ -159,16 +160,34 @@ class PropertyAccessorGetterSetter(
  * of the object the property belongs to.
  */
 class PropertyAccessorConstructor(
-        initialPosition: Int,
-        override val serializer: PropertySerializer) : PropertyAccessor(initialPosition, serializer) {
+        val initialPosition: Int,
+        override val serializer: PropertySerializer) : PropertyAccessor(serializer) {
     /**
-     * Because the property should be being set on the obejct through the constructor any
+     * Because the property should be being set on the object through the constructor any
      * calls to the explicit setter should be an error.
      */
     override fun set(instance: Any, obj: Any?) {
         NotSerializableException("Attempting to access a setter on an object being instantiated " +
                 "via its constructor.")
     }
+
+    override fun toString(): String =
+            "${serializer.name}($initialPosition)"
+}
+
+/**
+ * Implementation of [PropertyAccessor] representing a calculated property of an object that is serialized
+ * so that it can be used by the class carpenter, but ignored on deserialisation as there is no setter or
+ * constructor parameter to receive its value.
+ *
+ * This will only be created for calculated properties that are accessible via no-argument methods annotated
+ * with [SerializableCalculatedProperty].
+ */
+class CalculatedPropertyAccessor(override val serializer: PropertySerializer): PropertyAccessor(serializer) {
+    override val isCalculated: Boolean
+        get() = true
+
+    override fun set(instance: Any, obj: Any?) = Unit // do nothing, as it's a calculated value
 }
 
 /**
@@ -186,7 +205,7 @@ abstract class PropertySerializers(
         val serializationOrder: List<PropertyAccessor>) {
     companion object {
         fun make(serializationOrder: List<PropertyAccessor>) =
-                when (serializationOrder.firstOrNull()) {
+                when (serializationOrder.find { !it.isCalculated }) {
                     is PropertyAccessorConstructor -> PropertySerializersConstructor(serializationOrder)
                     is PropertyAccessorGetterSetter -> PropertySerializersSetter(serializationOrder)
                     null -> PropertySerializersNoProperties()
@@ -198,6 +217,7 @@ abstract class PropertySerializers(
 
     val size get() = serializationOrder.size
     abstract val byConstructor: Boolean
+    val deserializableSize = serializationOrder.count { !it.isCalculated }
 }
 
 class PropertySerializersNoProperties : PropertySerializers(emptyList()) {

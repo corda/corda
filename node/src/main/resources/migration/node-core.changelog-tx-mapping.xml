@@ -1,0 +1,18 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+    <changeSet author="R3.Corda" id="add_tx_mapping_column">
+        <preConditions onFail="MARK_RAN"><not><columnExists tableName="node_transactions" columnName="state_machine_run_id"/></not></preConditions>
+        <addColumn tableName="node_transactions">
+            <column name="state_machine_run_id" type="NVARCHAR(36)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <!-- Copy old values from the table to the new column -->
+        <sql>update node_transactions set state_machine_run_id=(select state_machine_run_id from
+            node_transaction_mappings where node_transactions.tx_id = node_transaction_mappings.tx_id)
+        </sql>
+        <dropTable tableName="node_transaction_mappings"/>
+    </changeSet>
+</databaseChangeLog>

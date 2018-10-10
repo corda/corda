@@ -4,21 +4,11 @@ package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
-import net.corda.core.cordapp.Cordapp
-import net.corda.core.cordapp.CordappConfig
-import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.*
-import net.corda.core.flows.FlowLogic
-import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.*
-import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
-import org.slf4j.MDC
 import rx.Observable
 import rx.Observer
 import rx.subjects.PublishSubject
@@ -467,11 +457,13 @@ $trustAnchor""", e, this, e.index)
     }
 }
 
+@DeleteForDJVM
 inline fun <T : Any> T.signWithCert(signer: (SerializedBytes<T>) -> DigitalSignatureWithCert): SignedDataWithCert<T> {
     val serialised = serialize()
     return SignedDataWithCert(serialised, signer(serialised))
 }
 
+@DeleteForDJVM
 fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificate): SignedDataWithCert<T> {
     return signWithCert {
         val signature = Crypto.doSign(privateKey, it.bytes)
@@ -479,10 +471,12 @@ fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificat
     }
 }
 
+@DeleteForDJVM
 inline fun <T : Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> DigitalSignature.WithKey): SignedData<T> {
     return SignedData(this, signer(this))
 }
 
+@DeleteForDJVM
 fun <T : Any> SerializedBytes<T>.sign(keyPair: KeyPair): SignedData<T> = SignedData(this, keyPair.sign(this.bytes))
 
 fun ByteBuffer.copyBytes(): ByteArray = ByteArray(remaining()).also { get(it) }

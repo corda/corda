@@ -313,20 +313,11 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     // of gets and puts.
     private fun makeNodeWithTracking(name: CordaX500Name): TestStartedNode {
         // Create a node in the mock network ...
-        return mockNet.createNode(InternalMockNodeParameters(legalName = name), nodeFactory = { args, cordappLoader ->
-            if (cordappLoader != null) {
-                object : InternalMockNetwork.MockNode(args, cordappLoader) {
-                    // That constructs a recording tx storage
-                    override fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {
-                        return RecordingTransactionStorage(database, super.makeTransactionStorage(transactionCacheSizeBytes))
-                    }
-                }
-            } else {
-                object : InternalMockNetwork.MockNode(args) {
-                    // That constructs a recording tx storage
-                    override fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {
-                        return RecordingTransactionStorage(database, super.makeTransactionStorage(transactionCacheSizeBytes))
-                    }
+        return mockNet.createNode(InternalMockNodeParameters(legalName = name), nodeFactory = { args ->
+            object : InternalMockNetwork.MockNode(args) {
+                // That constructs a recording tx storage
+                override fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {
+                    return RecordingTransactionStorage(database, super.makeTransactionStorage(transactionCacheSizeBytes))
                 }
             }
         })
@@ -611,7 +602,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             fillUpForBuyer(bobError, issuer, bob, notary).second
         }
         val alicesFakePaper = aliceNode.database.transaction {
-            fillUpForSeller(aliceError, issuer, alice,1200.DOLLARS `issued by` issuer, null, notary).second
+            fillUpForSeller(aliceError, issuer, alice, 1200.DOLLARS `issued by` issuer, null, notary).second
         }
 
         insertFakeTransactions(bobsBadCash, bobNode, bob, notaryNode, bankNode)

@@ -1,10 +1,10 @@
 apply plugin: 'kotlin'
 
 dependencies {
-    testCompile project(path: ':core-deterministic', configuration: 'runtimeArtifacts')
-    testCompile project(path: ':serialization-deterministic', configuration: 'runtimeArtifacts')
+    testCompile project(path: ':core-deterministic', configuration: 'deterministicArtifacts')
+    testCompile project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
+    testCompile project(path: ':core-deterministic:testing:verifier', configuration: 'deterministicArtifacts')
     testCompile project(path: ':core-deterministic:testing:data', configuration: 'testData')
-    testCompile project(':core-deterministic:testing:common')
     testCompile(project(':finance')) {
         transitive = false
     }

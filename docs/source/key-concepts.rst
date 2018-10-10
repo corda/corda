@@ -24,6 +24,7 @@ This section should be read in order:
    key-concepts-node
    key-concepts-tearoffs
    key-concepts-tradeoffs
+   key-concepts-djvm
 
 The detailed thinking and rationale behind these concepts are presented in two white papers:
 

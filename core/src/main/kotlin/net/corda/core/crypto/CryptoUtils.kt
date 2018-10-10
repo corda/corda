@@ -24,6 +24,7 @@ import java.security.*
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
+@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun PrivateKey.sign(bytesToSign: ByteArray): DigitalSignature = DigitalSignature(Crypto.doSign(this, bytesToSign))
 
@@ -36,6 +37,7 @@ fun PrivateKey.sign(bytesToSign: ByteArray): DigitalSignature = DigitalSignature
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
+@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
     return DigitalSignature.WithKey(publicKey, this.sign(bytesToSign).bytes)
@@ -49,10 +51,12 @@ fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignat
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
+@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(bytesToSign: ByteArray): DigitalSignature.WithKey = private.sign(bytesToSign, public)
 
 /** Helper function to sign the bytes of [bytesToSign] with a key pair. */
+@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(bytesToSign: OpaqueBytes): DigitalSignature.WithKey = sign(bytesToSign.bytes)
 
@@ -64,6 +68,7 @@ fun KeyPair.sign(bytesToSign: OpaqueBytes): DigitalSignature.WithKey = sign(byte
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
+@DeleteForDJVM
 @Throws(InvalidKeyException::class, SignatureException::class)
 fun KeyPair.sign(signableData: SignableData): TransactionSignature = Crypto.doSign(this, signableData)
 
@@ -102,7 +107,11 @@ fun PublicKey.isValid(content: ByteArray, signature: DigitalSignature): Boolean 
 /** Render a public key to its hash (in Base58) of its serialised form using the DL prefix. */
 fun PublicKey.toStringShort(): String = "DL" + this.toSHA256Bytes().toBase58()
 
-/** Return a [Set] of the contained keys if this is a [CompositeKey]; otherwise, return a [Set] with a single element (this [PublicKey]). */
+/**
+ * Return a [Set] of the contained leaf keys if this is a [CompositeKey].
+ * Otherwise, return a [Set] with a single element (this [PublicKey]).
+ * <i>Note that leaf keys cannot be of type [CompositeKey].</i>
+ */
 val PublicKey.keys: Set<PublicKey> get() = (this as? CompositeKey)?.leafKeys ?: setOf(this)
 
 /** Return true if [otherKey] fulfils the requirements of this [PublicKey]. */
@@ -110,7 +119,12 @@ fun PublicKey.isFulfilledBy(otherKey: PublicKey): Boolean = isFulfilledBy(setOf(
 /** Return true if [otherKeys] fulfil the requirements of this [PublicKey]. */
 fun PublicKey.isFulfilledBy(otherKeys: Iterable<PublicKey>): Boolean = (this as? CompositeKey)?.isFulfilledBy(otherKeys) ?: (this in otherKeys)
 
-/** Checks whether any of the given [keys] matches a leaf on the [CompositeKey] tree or a single [PublicKey]. */
+/**
+ * Checks whether any of the given [keys] matches a leaf on the [CompositeKey] tree or a single [PublicKey].
+ *
+ * <i>Note that this function checks against leaves, which cannot be of type [CompositeKey]. Due to that, if any of the
+ * [otherKeys] is a [CompositeKey], this function will not find a match.</i>
+ */
 fun PublicKey.containsAny(otherKeys: Iterable<PublicKey>): Boolean {
     return if (this is CompositeKey) keys.intersect(otherKeys).isNotEmpty()
     else this in otherKeys
@@ -136,7 +150,6 @@ fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
  * @param entropy a [BigInteger] value.
  * @return a deterministically generated [KeyPair] for the [Crypto.DEFAULT_SIGNATURE_SCHEME].
  */
-@DeleteForDJVM
 fun entropyToKeyPair(entropy: BigInteger): KeyPair = Crypto.deriveKeyPairFromEntropy(entropy)
 
 /**

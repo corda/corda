@@ -1,0 +1,30 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
+                   logicalFilePath="migration/node-services.changelog-init.xml">
+
+    <changeSet author="R3.Corda" id="add_contract_attachment">
+        <createTable tableName="node_attchments_contracts">
+            <column name="att_id" type="NVARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="contract_class_name" type="NVARCHAR(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="att_id" baseTableName="node_attchments_contracts"
+                                 constraintName="FK__ctr_class__attachments"
+                                 referencedColumnNames="att_id" referencedTableName="node_attachments"/>
+
+        <!--this is needed because pre-v3 attachments can't be used-->
+        <delete tableName="node_attachments"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="add_dedup_columns">
+        <addColumn tableName="node_message_ids">
+            <column name="sender" type="NVARCHAR(64)"/>
+            <column name="sequence_number" type="BIGINT"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>
