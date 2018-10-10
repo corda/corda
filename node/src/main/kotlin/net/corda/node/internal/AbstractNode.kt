@@ -35,9 +35,7 @@ import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.classloading.requireAnnotation
-import net.corda.node.internal.cordapp.CordappConfigFileProvider
-import net.corda.node.internal.cordapp.CordappProviderImpl
-import net.corda.node.internal.cordapp.CordappProviderInternal
+import net.corda.node.internal.cordapp.*
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ExceptionMaskingRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ExceptionSerialisingRpcOpsProxy
