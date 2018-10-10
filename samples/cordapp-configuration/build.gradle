@@ -22,9 +22,6 @@ publishing {
         jarAndSources(MavenPublication) {
             from components.java
             artifactId 'cordapp-configuration'
-
-            artifact sourceJar
-            artifact javadocJar
         }
     }
 }

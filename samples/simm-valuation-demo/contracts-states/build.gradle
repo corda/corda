@@ -1,4 +1,6 @@
 apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'maven-publish'
 
 def javaHome = System.getProperty('java.home')
 def shrinkJar = file("$buildDir/libs/${project.name}-${project.version}-tiny.jar")
@@ -28,6 +30,15 @@ dependencies {
     // Specify your cordapp's dependencies below, including dependent cordapps
     compile "com.opengamma.strata:strata-product:$strata_version"
     compile "com.opengamma.strata:strata-market:$strata_version"
+}
+
+publishing {
+    publications {
+        jarAndSources(MavenPublication) {
+            from components.java
+            artifactId 'simm-valuation-demo-contract-states'
+        }
+    }
 }
 
 jar {

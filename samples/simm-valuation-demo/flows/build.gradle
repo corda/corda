@@ -1,5 +1,7 @@
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'maven-publish'
 
 cordapp {
     info {
@@ -30,4 +32,17 @@ dependencies {
     compile "com.opengamma.strata:strata-collect:$strata_version"
     compile "com.opengamma.strata:strata-loader:$strata_version"
     compile "com.opengamma.strata:strata-math:$strata_version"
+}
+
+publishing {
+    publications {
+        jarAndSources(MavenPublication) {
+            from components.java
+            artifactId 'simm-valuation-demo-flows'
+        }
+    }
+}
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
