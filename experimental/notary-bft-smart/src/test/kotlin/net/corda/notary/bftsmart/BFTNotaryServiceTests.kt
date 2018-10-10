@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.notary.bftsmart
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
@@ -23,8 +23,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.transactions.minClusterSize
-import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
@@ -84,7 +82,11 @@ class BFTNotaryServiceTests {
 
             val nodes = replicaIds.map { replicaId ->
                 mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = {
-                    val notary = NotaryConfig(validating = false, bftSMaRt = BFTSMaRtConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces))
+                    val notary = NotaryConfig(
+                            validating = false,
+                            bftSMaRt = BFTSMaRtConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces),
+                            className = "net.corda.notary.bftsmart.BftSmartNotaryService"
+                    )
                     doReturn(notary).whenever(it).notary
                 }))
             } + mockNet.createUnstartedNode()

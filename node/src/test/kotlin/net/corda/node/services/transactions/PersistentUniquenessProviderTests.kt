@@ -10,7 +10,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.utilities.TestingNamedCacheFactory
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -39,7 +39,7 @@ class PersistentUniquenessProviderTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(includeNotarySchemas = true))
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(NodeNotarySchemaV1)))
     }
 
     @After

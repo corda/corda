@@ -123,7 +123,8 @@ data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
                         val bftSMaRt: BFTSMaRtConfiguration? = null,
                         val custom: Boolean = false,
-                        val serviceLegalName: CordaX500Name? = null
+                        val serviceLegalName: CordaX500Name? = null,
+                        val className: String = "net.corda.node.services.transactions.SimpleNotaryService"
 ) {
     init {
         require(raft == null || bftSMaRt == null || !custom) {

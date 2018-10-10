@@ -8,7 +8,7 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.node.internal.configureDatabase
-import net.corda.node.utilities.TestingNamedCacheFactory
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
