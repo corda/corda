@@ -76,7 +76,10 @@ task deployNodesCustom(type: Cordform, dependsOn: 'jar') {
             address "localhost:10010"
             adminAddress "localhost:10110"
         }
-        notary = [validating: true, "custom": true]
+        notary = [
+                validating: true,
+                className: "net.corda.notarydemo.MyCustomValidatingNotaryService"
+        ]
     }
 }
 
