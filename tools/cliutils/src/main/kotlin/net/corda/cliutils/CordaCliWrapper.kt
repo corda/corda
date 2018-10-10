@@ -151,6 +151,12 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Cal
     @Mixin
     lateinit var installShellExtensionsParser: InstallShellExtensionsParser
 
+    @Command(name = "install-shell-extensions", aliases = [ "install" ], description = ["Install alias and autocompletion for bash and zsh"])
+    private fun installShellExtensions() {
+        installShellExtensionsParser.installShellExtensions = true
+        installShellExtensionsParser.installOrUpdateShellExtensions(alias, this.javaClass.name)
+    }
+
     // This needs to be called before loggers (See: NodeStartup.kt:51 logger called by lazy, initLogging happens before).
     // Node's logging is more rich. In corda configurations two properties, defaultLoggingLevel and consoleLogLevel, are usually used.
     open fun initLogging() {
