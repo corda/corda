@@ -6,6 +6,7 @@ import net.corda.core.internal.packageName
 import net.corda.node.VersionInfo
 import net.corda.testing.node.internal.TestCordappDirectories
 import net.corda.testing.node.internal.cordappForPackages
+import net.corda.nodeapi.internal.DEV_CERTIFICATES
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.nio.file.Paths
@@ -141,5 +142,29 @@ class JarScanningCordappLoaderTest {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 2))
         assertThat(loader.cordapps).hasSize(1)
+    }
+
+    @Test
+    fun `cordapp classloader loads app signed by allowed certificate`() {
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), blacklistedCerts = emptyList())
+        // exclude the core cordapp
+        assertThat(loader.cordapps).hasSize(2)
+    }
+
+    @Test
+    fun `cordapp classloader does not load app signed by blacklisted certificate`() {
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), blacklistedCerts = DEV_CERTIFICATES)
+        // exclude the core cordapp
+        assertThat(loader.cordapps).hasSize(1)
+    }
+
+    @Test
+    fun `cordapp classloader loads app signed by both allowed and non-blacklisted certificate`() {
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-two-keys.jar")!!
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), blacklistedCerts = DEV_CERTIFICATES)
+        // exclude the core cordapp
+        assertThat(loader.cordapps).hasSize(2)
     }
 }
