@@ -148,23 +148,20 @@ class JarScanningCordappLoaderTest {
     fun `cordapp classloader loads app signed by allowed certificate`() {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), blacklistedCerts = emptyList())
-        // exclude the core cordapp
-        assertThat(loader.cordapps).hasSize(2)
+        assertThat(loader.cordapps).hasSize(1)
     }
 
     @Test
     fun `cordapp classloader does not load app signed by blacklisted certificate`() {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), blacklistedCerts = DEV_CERTIFICATES)
-        // exclude the core cordapp
-        assertThat(loader.cordapps).hasSize(1)
+        assertThat(loader.cordapps).hasSize(0)
     }
 
     @Test
     fun `cordapp classloader loads app signed by both allowed and non-blacklisted certificate`() {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-two-keys.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), blacklistedCerts = DEV_CERTIFICATES)
-        // exclude the core cordapp
-        assertThat(loader.cordapps).hasSize(2)
+        assertThat(loader.cordapps).hasSize(1)
     }
 }
