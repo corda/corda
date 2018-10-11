@@ -3,6 +3,8 @@ package net.corda.nodeapi.internal.persistence
 import co.paralleluniverse.strands.Strand
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
+import org.hibernate.type.descriptor.java.AbstractTypeDescriptor
+import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import rx.Observable
 import rx.Subscriber
 import rx.subjects.UnicastSubject
@@ -52,7 +54,8 @@ class CordaPersistence(
         databaseConfig: DatabaseConfig,
         schemas: Set<MappedSchema>,
         val jdbcUrl: String,
-        attributeConverters: Collection<AttributeConverter<*, *>> = emptySet()
+        private val attributeConverters: Collection<AttributeConverter<*, *>> = emptySet(),
+        private val typeDescriptors: Collection<AbstractTypeDescriptor<*>> = emptySet()
 ) : Closeable {
     companion object {
         private val log = contextLogger()
@@ -177,6 +180,13 @@ class CordaPersistence(
     override fun close() {
         // DataSource doesn't implement AutoCloseable so we just have to hope that the implementation does so that we can close it
         (_dataSource as? AutoCloseable)?.close()
+
+        fun Collection<*>.closeAutoCloseables() {
+            mapNotNull { it as? AutoCloseable }.forEach { it.close() }
+        }
+
+        attributeConverters.closeAutoCloseables()
+        typeDescriptors.closeAutoCloseables()
     }
 }
 
