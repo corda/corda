@@ -5,6 +5,7 @@ import net.corda.djvm.analysis.AnalysisContext
 import net.corda.djvm.messages.Message
 import net.corda.djvm.references.ClassReference
 import net.corda.djvm.references.MemberReference
+import net.corda.djvm.references.ReferenceWithLocation
 import net.corda.djvm.rewiring.LoadedClass
 import net.corda.djvm.rewiring.SandboxClassLoader
 import net.corda.djvm.rewiring.SandboxClassLoadingException
@@ -67,12 +68,24 @@ open class SandboxExecutor<in TInput, out TOutput>(
         val context = AnalysisContext.fromConfiguration(configuration.analysisConfiguration)
         val result = IsolatedTask(runnableClass.qualifiedClassName, configuration).run {
             validate(context, classLoader, classSources)
-            val loadedClass = classLoader.loadClassAndBytes(runnableClass, context)
-            val instance = loadedClass.type.newInstance()
-            val method = loadedClass.type.getMethod("apply", Any::class.java)
+
+            // Load the "entry-point" task class into the sandbox. This task will marshall
+            // the input and outputs between Java types and sandbox wrapper types.
+            val taskClass = Class.forName("sandbox.Task", false, classLoader)
+
+            // Create the user's task object inside the sandbox.
+            val runnable = classLoader.loadForSandbox(runnableClass, context).type.newInstance()
+
+            // Fetch this sandbox's instance of Class<Function> so we can retrieve Task(Function)
+            // and then instantiate the Task.
+            val functionClass = Class.forName("sandbox.java.util.function.Function", false, classLoader)
+            val task = taskClass.getDeclaredConstructor(functionClass).newInstance(runnable)
+
+            // Execute the task...
+            val method = taskClass.getMethod("apply", Any::class.java)
             try {
                 @Suppress("UNCHECKED_CAST")
-                method.invoke(instance, input) as? TOutput
+                method.invoke(task, input) as? TOutput
             } catch (ex: InvocationTargetException) {
                 throw ex.targetException
             }
@@ -101,7 +114,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
     fun load(classSource: ClassSource): LoadedClass {
         val context = AnalysisContext.fromConfiguration(configuration.analysisConfiguration)
         val result = IsolatedTask("LoadClass", configuration).run {
-            classLoader.loadClassAndBytes(classSource, context)
+            classLoader.loadForSandbox(classSource, context)
         }
         return result.output ?: throw ClassNotFoundException(classSource.qualifiedClassName)
     }
@@ -146,7 +159,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
     ): ReferenceValidationSummary {
         processClassQueue(*classSources.toTypedArray()) { classSource, className ->
             val didLoad = try {
-                classLoader.loadClassAndBytes(classSource, context)
+                classLoader.loadForSandbox(classSource, context)
                 true
             } catch (exception: SandboxClassLoadingException) {
                 // Continue; all warnings and errors are captured in [context.messages]
@@ -155,7 +168,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
             if (didLoad) {
                 context.classes[className]?.apply {
                     context.references.referencesFromLocation(className)
-                            .map { it.reference }
+                            .map(ReferenceWithLocation::reference)
                             .filterIsInstance<ClassReference>()
                             .filter { it.className != className }
                             .distinct()
@@ -201,6 +214,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
         }
     }
 
-    private val logger = loggerFor<SandboxExecutor<TInput, TOutput>>()
-
+    private companion object {
+        private val logger = loggerFor<SandboxExecutor<*, *>>()
+    }
 }

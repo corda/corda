@@ -19,7 +19,7 @@ class StubOutReflectionMethods : MemberDefinitionProvider {
 
     private fun writeMethodBody(emitter: EmitterModule): Unit = with(emitter) {
         lineNumber(0)
-        throwException(RuleViolationError::class.java, "Disallowed reference to reflection API")
+        throwException<RuleViolationError>("Disallowed reference to reflection API")
     }
 
     // The method must be public and with a Java implementation.

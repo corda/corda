@@ -13,3 +13,5 @@ val thresholdViolationError: String = Type.getInternalName(ThresholdViolationErr
  */
 val String.asPackagePath: String get() = this.replace('/', '.')
 val String.asResourcePath: String get() = this.replace('.', '/')
+
+val String.emptyAsNull: String? get() = if (isEmpty()) null else this
