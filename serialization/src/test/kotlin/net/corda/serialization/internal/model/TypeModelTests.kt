@@ -1,105 +1,55 @@
 package net.corda.serialization.internal.model
 
+import net.corda.serialization.internal.model.LocalTypeInformation.*
 import org.junit.Test
+import kotlin.test.assertEquals
 
 class TypeModelTests {
 
-    data class Address(
-            val addressLines: List<String>,
-            val postcode: String
-    )
+    open class CollectionHolder<T>(val list: List<T>, val map: Map<String, T>)
 
-    enum class TelephoneType { HOME, WORK, MOBILE }
-
-    data class Person(
-            val name: String,
-            val age: Int,
-            val address: Address,
-            val telephone: Map<TelephoneType, String>)
-
-    sealed class Currency {
-        class USD : Currency()
-        class EUR : Currency()
-        class GBP : Currency()
-    }
-
-    data class CurrencyAmount<C: Currency>(val amount: Int)
-
-    interface Salaried<C: Currency> {
-        val baseSalary: CurrencyAmount<C>
-    }
-
-    enum class UKPayGrade constructor(baseSalaryGBP: Int): Salaried<Currency.GBP> {
-        BAND_A(15000),
-        BAND_B(30000),
-        BAND_C(45000);
-
-        override val baseSalary = CurrencyAmount<Currency.GBP>(baseSalaryGBP)
-    }
-
-    class Employee<C: Currency, R: Salaried<C>>(val person: Person, val payGrade: R, val currency: C)
-
-    class PointedSet<T>(
-            val leader: T,
-            val followers: Array<T>)
-
-    open class Team<C: Currency>(
-            val name: String,
-            val members: PointedSet<out Employee<C, *>>,
-            val salaries: Array<out Salaried<C>>)
-
-    class UKTeam(
-            name: String,
-            members: PointedSet<Employee<Currency.GBP, UKPayGrade>>): Team<Currency.GBP>(name, members, members.followers.map { it.payGrade }.toTypedArray())
+    class StringCollectionHolder(list: List<String>, map: Map<String, String>): CollectionHolder<String>(list, map)
 
     @Test
-    fun describeComplexType() {
-        val interpreter = LocalTypeInterpreter()
-        val info = interpreter.interpret(UKTeam::class.java)
-        println(info.prettyPrint())
+    fun `Primitives and collections`() {
+        val string = interpret<String>()
+        assertEquals(APrimitive(classOf<String>(), TypeIdentifier.Unparameterised("java.lang.String")), string)
+
+        println(interpret<StringCollectionHolder>().prettyPrint())
+        println(interpret<CollectionHolder<Int>>().prettyPrint())
     }
 
-    data class ValueHolder<T>(val value: T)
-
-    interface WithArray<V> {
-        val values: Array<ValueHolder<V>>
-    }
-
-    class ConcreteClass(override val values: Array<ValueHolder<String>>) : WithArray<String>
-
-    @Test
-    fun arrayTypeResolution() {
-        val interpreter = LocalTypeInterpreter()
-        val info = interpreter.interpret(ConcreteClass::class.java)
-        println(info.prettyPrint())
-    }
-
-    fun LocalTypeInformation.prettyPrint(): String {
-        val sb = StringBuilder()
-        var indent = 0
-        for (c in this.toString().replace(", ", ",").replace("[]", "EMPTYLIST").replace("=", ": ")) {
-            when (c) {
-                '(', '[' -> {
-                    indent += 1
-                    sb.append(c).append("\n").append("  ".repeat(indent))
+    fun TypeIdentifier.prettyPrint(indent: Int = 0): String =
+        "  ".repeat(indent) + when(this) {
+            is TypeIdentifier.Unknown -> "Object"
+            is TypeIdentifier.Any -> "?"
+            is TypeIdentifier.Unparameterised -> "${className}"
+            is TypeIdentifier.Erased -> "${className} (erased)"
+            is TypeIdentifier.ArrayOf -> this.componentType.prettyPrint() + "[]"
+            is TypeIdentifier.Parameterised ->
+                "${this.className}" + this.parameters.joinToString(", ", "[", "]") {
+                    it.prettyPrint()
                 }
-                ')', ']' -> {
-                    indent -=1
-                    sb.append("\n").append("  ".repeat(indent)).append(c)
-                }
-                '{' -> {
-                    indent += 1
-                    sb.append("\n").append("  ".repeat(indent))
-                }
-                '}' -> {
-                    indent -= 1
-                }
-                ',' -> {
-                    sb.append("\n").append("  ".repeat(indent))
-                }
-                else -> sb.append(c)
-            }
         }
-        return sb.toString().replace("EMPTYLIST", "[]")
+
+    fun LocalTypeInformation.prettyPrint(indent: Int = 0): String {
+        return when(this) {
+            is LocalTypeInformation.Any,
+            is LocalTypeInformation.Unknown,
+            is LocalTypeInformation.APrimitive,
+            is LocalTypeInformation.AnInterface,
+            is LocalTypeInformation.AnArray,
+            is LocalTypeInformation.ACollection -> typeIdentifier.prettyPrint(indent)
+            is LocalTypeInformation.AnObject -> typeIdentifier.prettyPrint(indent) +
+                    this.interfaces.joinToString("\n", "\n-\n", "\n-\n") { it.prettyPrint(indent + 1) } + "\n" +
+                    this.properties.entries.joinToString("\n", "\n", "") { it.prettyPrint(indent + 1) }
+            else -> typeIdentifier.prettyPrint(indent)
+        }
     }
+
+    fun Map.Entry<String, LocalTypeInformation>.prettyPrint(indent: Int): String =
+            "  ".repeat(indent) + key + ": " + value.prettyPrint(indent + 1).trimStart()
+
+    private inline fun <reified T> interpret() = LocalTypeModel().interpret(T::class.java)
+    private inline fun <reified T> classOf(): Class<*> = T::class.java
 }
