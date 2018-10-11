@@ -52,39 +52,40 @@ private class ConfigPropertySchema(private val strict: Boolean, unorderedPropert
 
     override fun description(): String {
 
-        val description = StringBuilder()
-        var rootDescription = configObject()
-        properties.forEach { property ->
-            rootDescription = rootDescription.withValue(property.key, ConfigValueFactory.fromAnyRef(typeRef(property)))
-        }
-        description.append(rootDescription.toConfig().serialize())
-
-        val nestedProperties = (properties + properties.flatMap(::nestedProperties)).filterIsInstance<NestedConfigProperty<*>>().distinctBy(NestedConfigProperty<*>::schema)
-        nestedProperties.forEach { property ->
-            description.append(System.lineSeparator())
-            description.append("${property.typeName}: ")
-            description.append(property.schema.description())
-            description.append(System.lineSeparator())
-        }
-        return description.toString()
+        TODO("not implemented")
+//        val description = StringBuilder()
+//        var rootDescription = configObject()
+//        properties.forEach { property ->
+//            rootDescription = rootDescription.withValue(property.key, ConfigValueFactory.fromAnyRef(typeRef(property)))
+//        }
+//        description.append(rootDescription.toConfig().serialize())
+//
+//        val nestedProperties = (properties + properties.flatMap(::nestedProperties)).filterIsInstance<NestedConfigProperty<*>>().distinctBy(NestedConfigProperty<*>::schema)
+//        nestedProperties.forEach { property ->
+//            description.append(System.lineSeparator())
+//            description.append("${property.typeName}: ")
+//            description.append(property.schema.description())
+//            description.append(System.lineSeparator())
+//        }
+//        return description.toString()
     }
 
-    private fun nestedProperties(property: ConfigProperty<*>): Set<ConfigProperty<*>> {
+//    private fun nestedProperties(property: ConfigProperty<*>): Set<ConfigProperty<*>> {
+//
+//        return when (property) {
+//            is NestedConfigProperty<*> -> (property.schema as ConfigPropertySchema).properties
+//            else -> emptySet()
+//        }
+//    }
 
-        return when (property) {
-            is NestedConfigProperty<*> -> (property.schema as ConfigPropertySchema).properties
-            else -> emptySet()
-        }
-    }
-
-    private fun typeRef(property: ConfigProperty<*>): String {
-
-        return if (property is NestedConfigProperty<*>) {
-            "#${property.typeName}"
-        } else {
-            property.typeName
-        }
-    }
+//    private fun typeRef(property: ConfigProperty<*>): String {
+//
+//        return if (property is NestedConfigProperty<*>) {
+//            "#${property.typeName}"
+//        } else {
+//            property.typeName
+//        }
+//    }
 
     @Suppress("UNCHECKED_CAST")
     private fun <TYPE> createProxy(configuration: Config, type: Class<TYPE>, properties: Set<ConfigProperty<*>>): TYPE {

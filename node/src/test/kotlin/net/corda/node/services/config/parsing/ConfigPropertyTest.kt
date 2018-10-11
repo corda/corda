@@ -40,6 +40,70 @@ class ConfigPropertyTest {
     }
 
     @Test
+    fun present_value_of_list_type() {
+
+        val key = "a.b.c"
+        val value = listOf(1, 2, 3)
+        val configuration = configObject(key to value).toConfig()
+
+        val property = ConfigProperty.int(key).list()
+        println(property)
+
+        assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isTrue()
+        assertThat(property.isSpecifiedBy(configuration)).isTrue()
+        assertThat(property.valueIn(configuration)).isEqualTo(value)
+    }
+
+    @Test
+    fun optional_present_value_of_list_type() {
+
+        val key = "a.b.c"
+        val value = listOf(1, 2, 3)
+        val configuration = configObject(key to value).toConfig()
+
+        val property = ConfigProperty.int(key).list().optional()
+        println(property)
+
+        assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isFalse()
+        assertThat(property.isSpecifiedBy(configuration)).isTrue()
+        assertThat(property.valueIn(configuration)).isEqualTo(value)
+    }
+
+    @Test
+    fun optional_absent_value_of_list_type() {
+
+        val key = "a.b.c"
+        val configuration = configObject(key to null).toConfig()
+
+        val property = ConfigProperty.int(key).list().optional()
+        println(property)
+
+        assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isFalse()
+        assertThat(property.isSpecifiedBy(configuration)).isFalse()
+        assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.Missing::class.java)
+
+    }
+
+    @Test
+    fun optional_absent_value_of_list_type_with_default_value() {
+
+        val key = "a.b.c"
+        val configuration = configObject(key to null).toConfig()
+
+        val defaultValue = listOf(1, 2, 3)
+        val property = ConfigProperty.int(key).list().optional(defaultValue)
+        println(property)
+
+        assertThat(property.key).isEqualTo(key)
+        assertThat(property.mandatory).isFalse()
+        assertThat(property.isSpecifiedBy(configuration)).isFalse()
+        assertThat(property.valueIn(configuration)).isEqualTo(defaultValue)
+    }
+
+    @Test
     fun absent_value() {
 
         val key = "a.b.c"
@@ -54,54 +118,54 @@ class ConfigPropertyTest {
         assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.Missing::class.java)
     }
 
-    @Test
-    fun map_with_present_value_with_correct_value() {
-
-        val key = "a.b.c"
-        val value = 1
-        val configuration = configObject(key to value).toConfig()
-
-        val property = ConfigProperty.int(key).map(Boolean::class.java.simpleName) { integer -> integer == value }
-        println(property)
-        val expectedValue = true
-
-        assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isTrue()
-        assertThat(property.isSpecifiedBy(configuration)).isTrue()
-        assertThat(property.valueIn(configuration)).isEqualTo(expectedValue)
-    }
-
-    @Test
-    fun map_with_present_value_with_wrong_value() {
-
-        val key = "a.b.c"
-        val value = 1
-        val configuration = configObject(key to value).toConfig()
-
-        val property = ConfigProperty.boolean(key).map { boolean -> boolean.hashCode() }
-        println(property)
-
-        assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isTrue()
-        assertThat(property.isSpecifiedBy(configuration)).isTrue()
-        assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.WrongType::class.java)
-    }
-
-    @Test
-    fun map_with_absent_value() {
-
-        val key = "a.b.c"
-        val value = 1
-        val configuration = configObject(key to null).toConfig()
-
-        val property = ConfigProperty.int(key).map { integer -> integer == value }
-        println(property)
-
-        assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isTrue()
-        assertThat(property.isSpecifiedBy(configuration)).isFalse()
-        assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.Missing::class.java)
-    }
+//    @Test
+//    fun map_with_present_value_with_correct_value() {
+//
+//        val key = "a.b.c"
+//        val value = 1
+//        val configuration = configObject(key to value).toConfig()
+//
+//        val property = ConfigProperty.int(key).map(Boolean::class.java.simpleName) { integer -> integer == value }
+//        println(property)
+//        val expectedValue = true
+//
+//        assertThat(property.key).isEqualTo(key)
+//        assertThat(property.mandatory).isTrue()
+//        assertThat(property.isSpecifiedBy(configuration)).isTrue()
+//        assertThat(property.valueIn(configuration)).isEqualTo(expectedValue)
+//    }
+//
+//    @Test
+//    fun map_with_present_value_with_wrong_value() {
+//
+//        val key = "a.b.c"
+//        val value = 1
+//        val configuration = configObject(key to value).toConfig()
+//
+//        val property = ConfigProperty.boolean(key).map { boolean -> boolean.hashCode() }
+//        println(property)
+//
+//        assertThat(property.key).isEqualTo(key)
+//        assertThat(property.mandatory).isTrue()
+//        assertThat(property.isSpecifiedBy(configuration)).isTrue()
+//        assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.WrongType::class.java)
+//    }
+//
+//    @Test
+//    fun map_with_absent_value() {
+//
+//        val key = "a.b.c"
+//        val value = 1
+//        val configuration = configObject(key to null).toConfig()
+//
+//        val property = ConfigProperty.int(key).map { integer -> integer == value }
+//        println(property)
+//
+//        assertThat(property.key).isEqualTo(key)
+//        assertThat(property.mandatory).isTrue()
+//        assertThat(property.isSpecifiedBy(configuration)).isFalse()
+//        assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.Missing::class.java)
+//    }
 
     @Test
     fun optional_present_value_with_correct_type() {
@@ -147,55 +211,71 @@ class ConfigPropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.mandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
-        assertThat(property.valueIn(configuration)).isNull()
+        assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.Missing::class.java)
     }
 
     @Test
-    fun optional_map_with_present_value_with_correct_value() {
+    fun optional_absent_with_default_value() {
 
         val key = "a.b.c"
-        val value = 1
-        val configuration = configObject(key to value).toConfig()
-
-        val property = ConfigProperty.int(key).optional().map(Boolean::class.java.simpleName) { integer -> integer == value }
-        println(property)
-        val expectedValue = true
-
-        assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isFalse()
-        assertThat(property.isSpecifiedBy(configuration)).isTrue()
-        assertThat(property.valueIn(configuration)).isEqualTo(expectedValue)
-    }
-
-    @Test
-    fun optional_map_with_present_value_with_wrong_value() {
-
-        val key = "a.b.c"
-        val value = 1
-        val configuration = configObject(key to value).toConfig()
-
-        val property = ConfigProperty.boolean(key).optional().map { boolean -> boolean?.hashCode() }
-        println(property)
-
-        assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isFalse()
-        assertThat(property.isSpecifiedBy(configuration)).isTrue()
-        assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.WrongType::class.java)
-    }
-
-    @Test
-    fun optional_map_with_absent_value() {
-
-        val key = "a.b.c"
-        val value: Int? = null
         val configuration = configObject(key to null).toConfig()
 
-        val property = ConfigProperty.int(key).optional().map { integer -> integer == value }
+        val defaultValue = 23
+        val property = ConfigProperty.int(key).optional(defaultValue)
         println(property)
 
         assertThat(property.key).isEqualTo(key)
         assertThat(property.mandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
-        assertThat(property.valueIn(configuration)).isTrue()
+        assertThat(property.valueIn(configuration)).isEqualTo(defaultValue)
     }
+
+//    @Test
+//    fun optional_map_with_present_value_with_correct_value() {
+//
+//        val key = "a.b.c"
+//        val value = 1
+//        val configuration = configObject(key to value).toConfig()
+//
+//        val property = ConfigProperty.int(key).optional().map(Boolean::class.java.simpleName) { integer -> integer == value }
+//        println(property)
+//        val expectedValue = true
+//
+//        assertThat(property.key).isEqualTo(key)
+//        assertThat(property.mandatory).isFalse()
+//        assertThat(property.isSpecifiedBy(configuration)).isTrue()
+//        assertThat(property.valueIn(configuration)).isEqualTo(expectedValue)
+//    }
+//
+//    @Test
+//    fun optional_map_with_present_value_with_wrong_value() {
+//
+//        val key = "a.b.c"
+//        val value = 1
+//        val configuration = configObject(key to value).toConfig()
+//
+//        val property = ConfigProperty.boolean(key).optional().map { boolean -> boolean?.hashCode() }
+//        println(property)
+//
+//        assertThat(property.key).isEqualTo(key)
+//        assertThat(property.mandatory).isFalse()
+//        assertThat(property.isSpecifiedBy(configuration)).isTrue()
+//        assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.WrongType::class.java)
+//    }
+//
+//    @Test
+//    fun optional_map_with_absent_value() {
+//
+//        val key = "a.b.c"
+//        val value: Int? = null
+//        val configuration = configObject(key to null).toConfig()
+//
+//        val property = ConfigProperty.int(key).optional().map { integer -> integer == value }
+//        println(property)
+//
+//        assertThat(property.key).isEqualTo(key)
+//        assertThat(property.mandatory).isFalse()
+//        assertThat(property.isSpecifiedBy(configuration)).isFalse()
+//        assertThat(property.valueIn(configuration)).isTrue()
+//    }
 }

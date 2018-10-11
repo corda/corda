@@ -3,10 +3,10 @@ package net.corda.node.services.config.parsing
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigObject
-import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import java.time.Duration
 import kotlin.reflect.KClass
 
+// TODO sollecitom add a `validValueIn(config: Config): Valid<TYPE>`, with `Valid<TYPE>` including yes/no, error set, `fun <MAPPED> map(transform: (TYPE) -> MAPPED): Valid<MAPPED>` and `fun <MAPPED> flatMap(transform: (TYPE) -> Valid<MAPPED>): Valid<MAPPED>`
 interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError> {
 
     val key: String
@@ -16,11 +16,28 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError> {
     @Throws(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
     fun valueIn(configuration: Config): TYPE
 
-    fun <MAPPED> map(mappedTypeName: String? = null, function: (TYPE) -> MAPPED): ConfigProperty<MAPPED>
+    @Throws(ConfigException.WrongType::class, ConfigException.BadValue::class)
+    fun valueInOrNull(configuration: Config): TYPE? {
+
+        return when {
+            isSpecifiedBy(configuration) -> valueIn(configuration)
+            else -> null
+        }
+    }
+
+    interface Required<TYPE> : ConfigProperty<TYPE> {
+
+        fun optional(defaultValue: TYPE? = null): ConfigProperty<TYPE?>
+    }
+
+    interface Single<TYPE> : ConfigProperty<TYPE> {
+
+        fun list(): ConfigProperty.Required<List<TYPE>>
+    }
+
+    interface Standard<TYPE> : ConfigProperty.Required<TYPE>, ConfigProperty.Single<TYPE>
 
     fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
-
-    fun optional(): ConfigProperty<TYPE?> = OptionalConfigProperty(this)
 
     override fun validate(target: Config): Set<ConfigValidationError> {
 
@@ -41,151 +58,148 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError> {
 
         internal val expectedExceptionTypes: Set<KClass<*>> = setOf(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
 
-        fun int(key: String): ConfigProperty<Int> = IntConfigProperty(key)
-        fun intList(key: String): ConfigProperty<List<Int>> = IntListConfigProperty(key)
+        fun int(key: String): ConfigProperty.Standard<Int> = StandardConfigProperty(key, Int::class.javaObjectType.simpleName, Config::getInt, Config::getIntList)
 
-        fun boolean(key: String): ConfigProperty<Boolean> = BooleanConfigProperty(key)
-        fun booleanList(key: String): ConfigProperty<List<Boolean>> = BooleanListConfigProperty(key)
+        fun boolean(key: String): ConfigProperty.Standard<Boolean> = StandardConfigProperty(key, Boolean::class.javaObjectType.simpleName, Config::getBoolean, Config::getBooleanList)
 
-        fun double(key: String): ConfigProperty<Double> = DoubleConfigProperty(key)
-        fun doubleList(key: String): ConfigProperty<List<Double>> = DoubleListConfigProperty(key)
+        fun double(key: String): ConfigProperty.Standard<Double> = StandardConfigProperty(key, Double::class.javaObjectType.simpleName, Config::getDouble, Config::getDoubleList)
 
-        fun string(key: String): ConfigProperty<String> = StringConfigProperty(key)
-        fun stringList(key: String): ConfigProperty<List<String>> = StringListConfigProperty(key)
+        fun string(key: String): ConfigProperty.Standard<String> = StandardConfigProperty(key, String::class.java.simpleName, Config::getString, Config::getStringList)
 
-        fun duration(key: String): ConfigProperty<Duration> = DurationConfigProperty(key)
-        fun durationList(key: String): ConfigProperty<List<Duration>> = DurationListConfigProperty(key)
+        fun duration(key: String): ConfigProperty.Standard<Duration> = StandardConfigProperty(key, Duration::class.java.simpleName, Config::getDuration, Config::getDurationList)
 
-        fun value(key: String): ConfigProperty<ConfigObject> = ObjectConfigProperty(key)
-        fun valueList(key: String): ConfigProperty<List<ConfigObject>> = ObjectListConfigProperty(key)
+        // TODO sollecitom change `ConfigObject::class.java.simpleName` to something more human-friendly, like "Configuration" perhaps.
+        fun value(key: String): ConfigProperty.Standard<ConfigObject> = StandardConfigProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList)
 
-        fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>): ConfigProperty<ENUM> = EnumConfigProperty(key, enumClass)
-        fun <ENUM : Enum<ENUM>> enumList(key: String, enumClass: KClass<ENUM>): ConfigProperty<List<ENUM>> = EnumListConfigProperty(key, enumClass)
+        fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>): ConfigProperty.Standard<ENUM> = StandardConfigProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) })
 
-        inline fun <reified TYPE> nested(key: String, schema: ConfigSchema): ConfigProperty<TYPE> = nested(key, TYPE::class.java, schema)
-        fun <TYPE> nested(key: String, type: Class<TYPE>, schema: ConfigSchema): ConfigProperty<TYPE> = ProxiedNestedConfigProperty(key, type, schema)
-        fun <TYPE> nestedList(key: String, type: Class<TYPE>, schema: ConfigSchema): ConfigProperty<List<TYPE>> = ProxiedNestedListConfigProperty(key, type, schema)
-
-        fun <TYPE> functional(key: String, typeName: String, extractValue: (Config, String) -> TYPE): ConfigProperty<TYPE> = FunctionalConfigProperty(key, typeName, extractValue, true)
+//        // TODO sollecitom remove this and provide rawNested without schema and nested with schema, with only difference in validation
+//        inline fun <reified TYPE> nested(key: String, schema: ConfigSchema): ConfigProperty.Standard<TYPE> = nested(key, TYPE::class.java, schema)
+//
+//        fun <TYPE> nested(key: String, type: Class<TYPE>, schema: ConfigSchema): ConfigProperty.Standard<TYPE> = ProxiedNestedConfigProperty(key, type, schema)
     }
 }
 
-private class ProxiedNestedConfigProperty<TYPE>(key: String, type: Class<TYPE>, schema: ConfigSchema, mandatory: Boolean = true) : NestedConfigProperty<TYPE>(key, type.simpleName, schema, { configObj -> schema.proxy(configObj.toConfig(), type) }, mandatory)
+internal class StandardConfigProperty<TYPE>(override val key: String, override val typeName: String, private val extractSingleValue: (Config, String) -> TYPE, private val extractListValue: (Config, String) -> List<TYPE>, override val mandatory: Boolean = true) : ConfigProperty.Standard<TYPE> {
 
-internal open class NestedConfigProperty<TYPE>(key: String, typeName: String, val schema: ConfigSchema, extractValue: (ConfigObject) -> TYPE, mandatory: Boolean = true) : FunctionalConfigProperty<TYPE>(key, typeName, { configArg, keyArg -> extractValue.invoke(configArg.getObject(keyArg)) }, mandatory) {
+    override fun valueIn(configuration: Config) = extractSingleValue.invoke(configuration, key)
 
-    final override fun validate(target: Config): Set<ConfigValidationError> {
+    override fun optional(defaultValue: TYPE?): ConfigProperty<TYPE?> = OptionalConfigProperty(key, typeName, defaultValue, extractSingleValue)
 
-        val standardErrors = super.validate(target)
-        try {
-            return standardErrors + schema.validate(target.getObject(key).toConfig())
-        } catch (exception: ConfigException) {
-            if (ConfigProperty.expectedExceptionTypes.any { expected -> expected.isInstance(exception) }) {
-                return setOf(exception.toValidationError(key, typeName))
-            }
-            throw exception
-        }
-    }
-
-    final override fun contextualize(currentContext: String?) = currentContext?.let { "$it.$key" } ?: key
-}
-
-private class ProxiedNestedListConfigProperty<TYPE>(key: String, type: Class<TYPE>, schema: ConfigSchema, mandatory: Boolean = true) : NestedListConfigProperty<List<TYPE>>(key, type.simpleName, schema, { configObjList -> configObjList.map { configObj -> schema.proxy(configObj.toConfig(), type) } }, mandatory)
-
-internal open class NestedListConfigProperty<TYPE>(key: String, typeName: String, val schema: ConfigSchema, extractValue: (List<ConfigObject>) -> TYPE, mandatory: Boolean = true) : FunctionalConfigProperty<TYPE>(key, typeName, { configArg, keyArg -> extractValue.invoke(configArg.getObjectList(keyArg)) }, mandatory) {
-
-    final override fun validate(target: Config): Set<ConfigValidationError> {
-
-        val standardErrors = super.validate(target)
-        try {
-            return standardErrors + schema.validate(target.getObject(key).toConfig())
-        } catch (exception: ConfigException) {
-            if (ConfigProperty.expectedExceptionTypes.any { expected -> expected.isInstance(exception) }) {
-                return setOf(exception.toValidationError(key, typeName))
-            }
-            throw exception
-        }
-    }
-
-    final override fun contextualize(currentContext: String?) = currentContext?.let { "$it.$key" } ?: key
-}
-
-internal open class FunctionalConfigProperty<TYPE>(override val key: String, typeName: String, private val extractValue: (Config, String) -> TYPE, override val mandatory: Boolean = true) : ConfigProperty<TYPE> {
-
-    override val typeName = typeName.capitalize()
-
-    override fun valueIn(configuration: Config) = extractValue.invoke(configuration, key)
-
-    override fun <MAPPED> map(mappedTypeName: String?, function: (TYPE) -> MAPPED): ConfigProperty<MAPPED> {
-
-        return FunctionalConfigProperty(key, compositeMappedName(mappedTypeName, typeName), { config, keyArg -> function.invoke(extractValue.invoke(config, keyArg)) }, mandatory)
-    }
+    override fun list(): ConfigProperty.Required<List<TYPE>> = ListConfigProperty(key, typeName, extractListValue, mandatory)
 
     override fun toString() = "\"$key\": \"$typeName\""
 }
 
-private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<TYPE>) : ConfigProperty<TYPE?> {
+class ListConfigProperty<TYPE>(override val key: String, elementTypeName: String, private val extractListValue: (Config, String) -> List<TYPE>, override val mandatory: Boolean = true) : ConfigProperty.Required<List<TYPE>> {
 
-    override val key = delegate.key
-    override val typeName = "${delegate.typeName}?"
-    override val mandatory = false
+    override val typeName = "List<${elementTypeName.capitalize()}>"
 
-    @Throws(ConfigException.WrongType::class)
-    override fun valueIn(configuration: Config): TYPE? {
+    override fun valueIn(configuration: Config): List<TYPE> = extractListValue.invoke(configuration, key)
 
-        return if (delegate.isSpecifiedBy(configuration)) {
-            delegate.valueIn(configuration)
-        } else {
-            null
-        }
-    }
-
-    override fun <MAPPED> map(mappedTypeName: String?, function: (TYPE?) -> MAPPED): ConfigProperty<MAPPED> {
-
-        return FunctionalConfigProperty(key, "${compositeMappedName(mappedTypeName, delegate.typeName)}?", { configuration, _ -> function.invoke(valueIn(configuration)) }, mandatory)
-    }
-
-    override fun toString() = "\"$key\": \"$typeName\""
+    override fun optional(defaultValue: List<TYPE>?): ConfigProperty<List<TYPE>?> = OptionalConfigProperty(key, typeName, defaultValue, extractListValue)
 }
 
-private fun compositeMappedName(mappedTypeName: String?, originalTypeName: String) = mappedTypeName?.let { "[$originalTypeName => ${it.capitalize()}]" } ?: originalTypeName
+class OptionalConfigProperty<TYPE>(override val key: String, override val typeName: String, private val defaultValue: TYPE?, private val extractValue: (Config, String) -> TYPE) : ConfigProperty<TYPE> {
 
-private class IntConfigProperty(key: String) : FunctionalConfigProperty<Int>(key, Int::class.java.simpleName, Config::getInt)
-private class IntListConfigProperty(key: String) : FunctionalConfigProperty<List<Int>>(key, "List<${Int::class.java.simpleName}>", Config::getIntList)
+    override val mandatory: Boolean = false
 
-private class DoubleConfigProperty(key: String) : FunctionalConfigProperty<Double>(key, Double::class.java.simpleName, Config::getDouble)
-private class DoubleListConfigProperty(key: String) : FunctionalConfigProperty<List<Double>>(key, "List<${Double::class.java.simpleName}>", Config::getDoubleList)
+    override fun valueIn(configuration: Config): TYPE {
 
-private class EnumConfigProperty<ENUM : Enum<ENUM>>(key: String, enumClass: KClass<ENUM>) : FunctionalConfigProperty<ENUM>(key, String::class.java.simpleName, { configArg, keyArg -> configArg.getEnum<ENUM>(enumClass.java, keyArg) })
-private class EnumListConfigProperty<ENUM : Enum<ENUM>>(key: String, enumClass: KClass<ENUM>) : FunctionalConfigProperty<List<ENUM>>(key, String::class.java.simpleName, { configArg, keyArg -> configArg.getEnumList<ENUM>(enumClass.java, keyArg) })
-
-private class StringConfigProperty(key: String) : FunctionalConfigProperty<String>(key, String::class.java.simpleName, Config::getString)
-private class StringListConfigProperty(key: String) : FunctionalConfigProperty<List<String>>(key, "List<${String::class.java.simpleName}>", Config::getStringList)
-
-private class BooleanConfigProperty(key: String, caseSensitive: Boolean = true) : FunctionalConfigProperty<Boolean>(key, Boolean::class.java.simpleName, extract(caseSensitive)) {
-
-    private companion object {
-
-        fun extract(caseSensitive: Boolean): (Config, String) -> Boolean {
-
-            return { configuration: Config, key: String ->
-
-                when {
-                    caseSensitive -> configuration.getBoolean(key)
-                    else -> configuration.getBooleanCaseInsensitive(key)
-                }
-            }
+        return when {
+            isSpecifiedBy(configuration) -> extractValue.invoke(configuration, key)
+            else -> defaultValue ?: throw ConfigException.Missing(key)
         }
     }
 }
 
-private class BooleanListConfigProperty(key: String) : FunctionalConfigProperty<List<Boolean>>(key, "List<${Boolean::class.java.simpleName}>", Config::getBooleanList)
+//private class ProxiedNestedConfigProperty<TYPE>(key: String, type: Class<TYPE>, schema: ConfigSchema, mandatory: Boolean = true) : NestedConfigProperty<TYPE>(key, type.simpleName, schema, { configObj -> schema.proxy(configObj.toConfig(), type) }, mandatory)
 
-private class DurationConfigProperty(key: String) : FunctionalConfigProperty<Duration>(key, Duration::class.java.simpleName, Config::getDuration)
-private class DurationListConfigProperty(key: String) : FunctionalConfigProperty<List<Duration>>(key, "List<${Duration::class.java.simpleName}>", Config::getDurationList)
+//internal open class NestedConfigProperty<TYPE>(key: String, typeName: String, val schema: ConfigSchema, extractValue: (ConfigObject) -> TYPE, mandatory: Boolean = true) : FunctionalConfigProperty<TYPE>(key, typeName, { configArg, keyArg -> extractValue.invoke(configArg.getObject(keyArg)) }, mandatory) {
+//
+//    final override fun validate(target: Config): Set<ConfigValidationError> {
+//
+//        val standardErrors = super.validate(target)
+//        try {
+//            return standardErrors + schema.validate(target.getObject(key).toConfig())
+//        } catch (exception: ConfigException) {
+//            if (ConfigProperty.expectedExceptionTypes.any { expected -> expected.isInstance(exception) }) {
+//                return setOf(exception.toValidationError(key, typeName))
+//            }
+//            throw exception
+//        }
+//    }
+//
+//    final override fun contextualize(currentContext: String?) = currentContext?.let { "$it.$key" } ?: key
+//}
 
-private class ObjectConfigProperty(key: String) : FunctionalConfigProperty<ConfigObject>(key, "Object", Config::getObject)
+//private class ProxiedNestedListConfigProperty<TYPE>(key: String, type: Class<TYPE>, schema: ConfigSchema, mandatory: Boolean = true) : NestedListConfigProperty<List<TYPE>>(key, type.simpleName, schema, { configObjList -> configObjList.map { configObj -> schema.proxy(configObj.toConfig(), type) } }, mandatory)
 
-private class ObjectListConfigProperty(key: String) : FunctionalConfigProperty<List<ConfigObject>>(key, "List<Object>", Config::getObjectList)
+//internal open class NestedListConfigProperty<TYPE>(key: String, typeName: String, val schema: ConfigSchema, extractValue: (List<ConfigObject>) -> TYPE, mandatory: Boolean = true) : FunctionalConfigProperty<TYPE>(key, typeName, { configArg, keyArg -> extractValue.invoke(configArg.getObjectList(keyArg)) }, mandatory) {
+//
+//    final override fun validate(target: Config): Set<ConfigValidationError> {
+//
+//        val standardErrors = super.validate(target)
+//        try {
+//            return standardErrors + schema.validate(target.getObject(key).toConfig())
+//        } catch (exception: ConfigException) {
+//            if (ConfigProperty.expectedExceptionTypes.any { expected -> expected.isInstance(exception) }) {
+//                return setOf(exception.toValidationError(key, typeName))
+//            }
+//            throw exception
+//        }
+//    }
+//
+//    final override fun contextualize(currentContext: String?) = currentContext?.let { "$it.$key" } ?: key
+//}
+
+//internal open class FunctionalConfigProperty<TYPE>(override val key: String, typeName: String, private val extractValue: (Config, String) -> TYPE, override val mandatory: Boolean = true) : ConfigProperty.Standard<TYPE> {
+//
+//    override val typeName = typeName.capitalize()
+//
+//    override fun valueIn(configuration: Config) = extractValue.invoke(configuration, key)
+//
+//    override fun <MAPPED> map(mappedTypeName: String?, function: (TYPE) -> MAPPED): ConfigProperty<MAPPED> {
+//
+//        return FunctionalConfigProperty(key, compositeMappedName(mappedTypeName, typeName), { config, keyArg -> function.invoke(extractValue.invoke(config, keyArg)) }, mandatory)
+//    }
+//
+//    override fun optional(defaultValue: TYPE?): ConfigProperty<TYPE?> {
+//        TODO("sollecitom not implemented") //To change body of created functions use File | Settings | File Templates.
+//    }
+//
+//    override fun list(): ConfigProperty.Required<List<TYPE>> {
+//        TODO("sollecitom not implemented") //To change body of created functions use File | Settings | File Templates.
+//    }
+//
+//    override fun toString() = "\"$key\": \"$typeName\""
+//}
+
+//private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty<TYPE>) : ConfigProperty<TYPE?> {
+//
+//    override val key = delegate.key
+//    override val typeName = "${delegate.typeName}?"
+//    override val mandatory = false
+//
+//    @Throws(ConfigException.WrongType::class)
+//    override fun valueIn(configuration: Config): TYPE? {
+//
+//        return if (delegate.isSpecifiedBy(configuration)) {
+//            delegate.valueIn(configuration)
+//        } else {
+//            null
+//        }
+//    }
+//
+//    override fun <MAPPED> map(mappedTypeName: String?, function: (TYPE?) -> MAPPED): ConfigProperty<MAPPED> {
+//
+//        return FunctionalConfigProperty(key, "${compositeMappedName(mappedTypeName, delegate.typeName)}?", { configuration, _ -> function.invoke(valueIn(configuration)) }, mandatory)
+//    }
+//
+//    override fun toString() = "\"$key\": \"$typeName\""
+//}
+
+private fun compositeMappedName(mappedTypeName: String?, originalTypeName: String) = mappedTypeName?.let { "[$originalTypeName => ${it.capitalize()}]" }
+        ?: originalTypeName
 
 private fun ConfigException.toValidationError(keyName: String, typeName: String) = ConfigValidationError(keyName, typeName, message!!)
