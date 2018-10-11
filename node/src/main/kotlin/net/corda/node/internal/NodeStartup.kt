@@ -35,6 +35,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
+import picocli.CommandLine
 import picocli.CommandLine.Mixin
 import sun.misc.VMSupport
 import java.io.Console
@@ -47,9 +48,22 @@ import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
 import java.util.*
+import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
+@CommandLine.Command(name="clear-network-cache", description=["clears network cache"])
+class NetworkCacheClearer: Callable<Int> {
+    @CommandLine.ParentCommand
+    private var node: NodeStartup? = null
+
+    override fun call(): Int {
+        node?.cmdLineOptions?.clearNetworkMapCache = true
+        return node?.runProgram() ?: ExitCodes.FAILURE
+    }
+}
+
 /** This class is responsible for starting a Node from command line arguments. */
+@CommandLine.Command(subcommands = [ NetworkCacheClearer::class ])
 open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
     companion object {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
