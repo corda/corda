@@ -28,6 +28,8 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError> {
     interface Required<TYPE> : ConfigProperty<TYPE> {
 
         fun optional(defaultValue: TYPE? = null): ConfigProperty<TYPE?>
+
+        override val mandatory: Boolean get() = true
     }
 
     interface Single<TYPE> : ConfigProperty<TYPE> {
@@ -69,7 +71,7 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError> {
         fun duration(key: String): ConfigProperty.Standard<Duration> = StandardConfigProperty(key, Duration::class.java.simpleName, Config::getDuration, Config::getDurationList)
 
         // TODO sollecitom change `ConfigObject::class.java.simpleName` to something more human-friendly, like "Configuration" perhaps.
-        fun value(key: String): ConfigProperty.Standard<ConfigObject> = StandardConfigProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList)
+        fun value(key: String, schema: ConfigSchema? = null): ConfigProperty.Standard<ConfigObject> = StandardConfigProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList)
 
         fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>): ConfigProperty.Standard<ENUM> = StandardConfigProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) })
 
@@ -80,35 +82,52 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError> {
     }
 }
 
-internal class StandardConfigProperty<TYPE>(override val key: String, override val typeName: String, private val extractSingleValue: (Config, String) -> TYPE, private val extractListValue: (Config, String) -> List<TYPE>, override val mandatory: Boolean = true) : ConfigProperty.Standard<TYPE> {
+private class StandardConfigProperty<TYPE>(override val key: String, override val typeName: String, private val extractSingleValue: (Config, String) -> TYPE, private val extractListValue: (Config, String) -> List<TYPE>, private val schema: ConfigSchema? = null) : ConfigProperty.Standard<TYPE> {
 
     override fun valueIn(configuration: Config) = extractSingleValue.invoke(configuration, key)
 
-    override fun optional(defaultValue: TYPE?): ConfigProperty<TYPE?> = OptionalConfigProperty(key, typeName, defaultValue, extractSingleValue)
+    override fun optional(defaultValue: TYPE?): ConfigProperty<TYPE?> = OptionalConfigProperty(key, typeName, defaultValue, ::validate, extractSingleValue)
 
-    override fun list(): ConfigProperty.Required<List<TYPE>> = ListConfigProperty(key, typeName, extractListValue, mandatory)
+    override fun list(): ConfigProperty.Required<List<TYPE>> = ListConfigProperty(key, typeName, extractListValue)
 
     override fun toString() = "\"$key\": \"$typeName\""
+
+    override fun validate(target: Config): Set<ConfigValidationError> {
+
+        // TODO sollecitom use schema here
+        return super.validate(target)
+    }
 }
 
-class ListConfigProperty<TYPE>(override val key: String, elementTypeName: String, private val extractListValue: (Config, String) -> List<TYPE>, override val mandatory: Boolean = true) : ConfigProperty.Required<List<TYPE>> {
+private class ListConfigProperty<TYPE>(override val key: String, elementTypeName: String, private val extractListValue: (Config, String) -> List<TYPE>) : ConfigProperty.Required<List<TYPE>> {
 
     override val typeName = "List<${elementTypeName.capitalize()}>"
 
     override fun valueIn(configuration: Config): List<TYPE> = extractListValue.invoke(configuration, key)
 
-    override fun optional(defaultValue: List<TYPE>?): ConfigProperty<List<TYPE>?> = OptionalConfigProperty(key, typeName, defaultValue, extractListValue)
+    override fun optional(defaultValue: List<TYPE>?): ConfigProperty<List<TYPE>?> = OptionalConfigProperty(key, typeName, defaultValue, ::validate, extractListValue)
 }
 
-class OptionalConfigProperty<TYPE>(override val key: String, override val typeName: String, private val defaultValue: TYPE?, private val extractValue: (Config, String) -> TYPE) : ConfigProperty<TYPE> {
+private class OptionalConfigProperty<TYPE>(override val key: String, valueTypeName: String, private val defaultValue: TYPE?, private val validate: (Config) -> Set<ConfigValidationError>, private val extractValue: (Config, String) -> TYPE) : ConfigProperty<TYPE?> {
 
     override val mandatory: Boolean = false
 
-    override fun valueIn(configuration: Config): TYPE {
+    override val typeName: String = "$valueTypeName?"
+
+    override fun valueIn(configuration: Config): TYPE? {
 
         return when {
             isSpecifiedBy(configuration) -> extractValue.invoke(configuration, key)
             else -> defaultValue ?: throw ConfigException.Missing(key)
+        }
+    }
+
+    override fun validate(target: Config): Set<ConfigValidationError> {
+
+        return when {
+            isSpecifiedBy(target) -> validate.invoke(target)
+            defaultValue != null -> emptySet()
+            else -> setOf(ConfigException.Missing(key).toValidationError(key, typeName))
         }
     }
 }
