@@ -3,6 +3,7 @@ apply plugin: 'kotlin-jpa'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'maven-publish'
 
 configurations {
     integrationTestCompile.extendsFrom testCompile
@@ -32,4 +33,14 @@ idea {
 
 publish {
     name 'corda-notary-bft-smart'
+}
+
+
+cordapp {
+    info {
+        name "net/corda/experimental/notary-bft-smart"
+        vendor "Corda Open Source"
+        targetPlatformVersion corda_platform_version.toInteger()
+        minimumPlatformVersion 1
+    }
 }
