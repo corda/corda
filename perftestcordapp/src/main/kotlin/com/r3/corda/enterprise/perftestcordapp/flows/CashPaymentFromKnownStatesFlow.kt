@@ -21,6 +21,7 @@ import java.util.*
 class CashPaymentFromKnownStatesFlow(
         val inputs: Set<StateRef>,
         val numberOfStates: Int,
+        val numberOfChangeStates: Int,
         val amountPerState: Amount<Currency>,
         val recipient: Party,
         val anonymous: Boolean,
@@ -28,9 +29,10 @@ class CashPaymentFromKnownStatesFlow(
 
     constructor(inputs: Set<StateRef>,
                 numberOfStates: Int,
+                numberOfChangeStates: Int,
                 amountPerState: Amount<Currency>,
                 recipient: Party,
-                anonymous: Boolean) : this(inputs, numberOfStates, amountPerState, recipient, anonymous, tracker())
+                anonymous: Boolean) : this(inputs, numberOfStates, numberOfChangeStates, amountPerState, recipient, anonymous, tracker())
 
     @Suspendable
     override fun call(): AbstractCashFlow.Result {
@@ -46,12 +48,15 @@ class CashPaymentFromKnownStatesFlow(
         progressTracker.currentStep = AbstractCashFlow.Companion.GENERATING_TX
         val builder = TransactionBuilder(notary = null)
 
+        // TODO: this needs to use a bulk call
         val cashStateAndRef = inputs.map { serviceHub.toStateAndRef<Cash.State>(it) }
         val amounts = ArrayList(Collections.nCopies(numberOfStates, PartyAndAmount(anonymousRecipient, amountPerState)))
-        val changeIdentity = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
-
+        val changeParty = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false).party.anonymise()
+        if (numberOfChangeStates > 1) {
+            amounts += Collections.nCopies(numberOfChangeStates - 1, PartyAndAmount(changeParty, amountPerState))
+        }
         val (spendTx, keysForSigning) = OnLedgerAsset.generateSpend(builder, amounts, cashStateAndRef,
-                changeIdentity.party.anonymise(),
+                changeParty,
                 { state, quantity, owner -> deriveState(state, quantity, owner) },
                 { Cash().generateMoveCommand() })
 

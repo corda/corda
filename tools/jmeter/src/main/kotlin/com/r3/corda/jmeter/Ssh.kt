@@ -71,15 +71,15 @@ class Ssh {
 
                 // For tunnelling the RMI registry on the remote agent
                 // ssh ${remoteHostAndPort.host} -L 0.0.0.0:${localHostAndPort.port}:localhost:$serverRmiPort -N
-                createOutboundTunnel(session, NetworkHostAndPort("0.0.0.0", localHostAndPort.port), NetworkHostAndPort("localhost", serverRmiPort))
+                createOutboundTunnel(session, NetworkHostAndPort("localhost", localHostAndPort.port), NetworkHostAndPort("localhost", serverRmiPort))
 
                 // For tunnelling the actual connection to the remote agent
                 // ssh ${remoteHostAndPort.host} -L 0.0.0.0:$serverRmiLocalPort:localhost:$serverRmiLocalPort -N
-                createOutboundTunnel(session, NetworkHostAndPort("0.0.0.0", serverRmiLocalPort), NetworkHostAndPort("localhost", serverRmiLocalPort))
+                createOutboundTunnel(session, NetworkHostAndPort("localhost", serverRmiLocalPort), NetworkHostAndPort("localhost", serverRmiLocalPort))
 
                 // For returning results to the client
                 // ssh ${remoteHostAndPort.host} -R 0.0.0.0:clientRmiLocalPort:localhost:clientRmiLocalPort -N
-                createInboundTunnel(session, NetworkHostAndPort("0.0.0.0", clientRmiLocalPort), NetworkHostAndPort("localhost", clientRmiLocalPort))
+                createInboundTunnel(session, NetworkHostAndPort("localhost", clientRmiLocalPort), NetworkHostAndPort("localhost", clientRmiLocalPort))
             }
 
             if (wait) {

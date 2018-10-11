@@ -237,18 +237,22 @@ class CashPaySampler : AbstractSampler() {
     companion object JMeterProperties {
         val otherParty = Argument("otherPartyName", "", "<meta>", "The X500 name of the payee.")
         val numberOfStatesPerTx = Argument("numberOfStatesPerTx", "1", "<meta>", "The number of payment states per transaction.")
+        val numberOfChangeStatesPerTx = Argument("numberOfChangeStatesPerTx", "1", "<meta>", "The number of change states per transaction.")
         val anonymousIdentities = Argument("anonymousIdentities", "false", "<meta>", "True to use anonymous identities and false (or anything else) to use well known identities.")
     }
 
     lateinit var counterParty: Party
     var numberOfStatesPerTxCount: Int = 1
+    var numberOfChangeStatesPerTxCount: Int = 1
     var useAnonymousIdentities: Boolean = true
-    private var inputIndex = 0
+    private var inputStartIndex = 0
+    private var inputEndIndex = 0
 
     override fun setupTest(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext) {
         getNotaryIdentity(rpcProxy, testContext)
         counterParty = getIdentity(rpcProxy, testContext, otherParty)
         numberOfStatesPerTxCount = testContext.getParameter(numberOfStatesPerTx.name, numberOfStatesPerTx.value).toInt()
+        numberOfChangeStatesPerTxCount = testContext.getParameter(numberOfChangeStatesPerTx.name, numberOfChangeStatesPerTx.value).toInt()
         useAnonymousIdentities = testContext.getParameter(anonymousIdentities.name, anonymousIdentities.value).toBoolean()
 
         // Now issue lots of USD
@@ -259,16 +263,18 @@ class CashPaySampler : AbstractSampler() {
     }
 
     override fun createFlowInvoke(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext): FlowInvoke<*> {
-        // Change is always Nth output
-        val input = StateRef((flowResult as AbstractCashFlow.Result).id, inputIndex)
+        // Change is always the latter outputs
+        val txId = (flowResult as AbstractCashFlow.Result).id
+        val inputs = (inputStartIndex..inputEndIndex).map { StateRef(txId, it) }.toSet()
         val amount = 1.DOLLARS
-        inputIndex = numberOfStatesPerTxCount
-        return FlowInvoke<CashPaymentFromKnownStatesFlow>(CashPaymentFromKnownStatesFlow::class.java, arrayOf(setOf(input), numberOfStatesPerTxCount, amount, counterParty, useAnonymousIdentities))
+        inputStartIndex = numberOfStatesPerTxCount
+        inputEndIndex = inputStartIndex + (numberOfChangeStatesPerTxCount - 1)
+        return FlowInvoke<CashPaymentFromKnownStatesFlow>(CashPaymentFromKnownStatesFlow::class.java, arrayOf(inputs, numberOfStatesPerTxCount, numberOfChangeStatesPerTxCount, amount, counterParty, useAnonymousIdentities))
     }
 
     override fun teardownTest(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext) {
     }
 
     override val additionalArgs: Set<Argument>
-        get() = setOf(notary, otherParty, numberOfStatesPerTx, anonymousIdentities)
+        get() = setOf(notary, otherParty, numberOfStatesPerTx, numberOfChangeStatesPerTx, anonymousIdentities)
 }
