@@ -400,7 +400,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val keyPairs = mutableSetOf(identityKeyPair)
 
         val myNotaryIdentity = configuration.notary?.let {
-            if (it.isClusterConfig) {
+            if (it.pregeneratedIdentity) {
                 val (notaryIdentity, notaryIdentityKeyPair) = obtainIdentity(it)
                 keyPairs += notaryIdentityKeyPair
                 notaryIdentity
@@ -843,7 +843,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private fun obtainIdentity(notaryConfig: NotaryConfig?): Pair<PartyAndCertificate, KeyPair> {
         val keyStore = configuration.signingCertificateStore.get()
 
-        val (id, singleName) = if (notaryConfig == null || !notaryConfig.isClusterConfig) {
+        val (id, singleName) = if (notaryConfig == null || !notaryConfig.pregeneratedIdentity) {
             // Node's main identity or if it's a single node notary.
             Pair(NODE_IDENTITY_ALIAS_PREFIX, configuration.myLegalName)
         } else {
@@ -883,7 +883,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val subject = CordaX500Name.build(certificates[0].subjectX500Principal)
         if (singleName != null && subject != singleName) {
             throw ConfigurationException("The name '$singleName' for $id doesn't match what's in the key store: $subject")
-        } else if (notaryConfig != null && notaryConfig.isClusterConfig && notaryConfig.serviceLegalName != null && subject != notaryConfig.serviceLegalName) {
+        } else if (notaryConfig != null && notaryConfig.pregeneratedIdentity && notaryConfig.serviceLegalName != null && subject != notaryConfig.serviceLegalName) {
             // Note that we're not checking if `notaryConfig.serviceLegalName` is not present for backwards compatibility.
             throw ConfigurationException("The name of the notary service '${notaryConfig.serviceLegalName}' for $id doesn't " +
                     "match what's in the key store: $subject. You might need to adjust the configuration of `notary.serviceLegalName`.")

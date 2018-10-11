@@ -15,9 +15,7 @@ import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.TrustedAuthorityNotaryService
 import net.corda.core.internal.notary.UniquenessProvider
-import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.CordaService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
@@ -88,7 +86,7 @@ class TimedFlowTests {
 
             val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryIdentity, true))))
             val notaryConfig = mock<NotaryConfig> {
-                whenever(it.isClusterConfig).thenReturn(true)
+                whenever(it.pregeneratedIdentity).thenReturn(true)
                 whenever(it.validating).thenReturn(true)
                 whenever(it.className).thenReturn(TestNotaryService::class.java.name)
             }

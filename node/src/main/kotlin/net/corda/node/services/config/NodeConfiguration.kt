@@ -120,33 +120,14 @@ fun NodeConfiguration.shouldStartLocalShell() = !this.noLocalShell && System.con
 fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || shouldStartSSHDaemon()
 
 data class NotaryConfig(val validating: Boolean,
-                        val raft: RaftConfig? = null,
-                        val bftSMaRt: BFTSMaRtConfiguration? = null,
                         val serviceLegalName: CordaX500Name? = null,
-                        val className: String = "net.corda.node.services.transactions.SimpleNotaryService"
-) {
-    init {
-        require(raft == null || bftSMaRt == null) {
-            "raft and bftSMaRt configs cannot be specified together"
-        }
-    }
-
-    val isClusterConfig: Boolean get() = raft != null || bftSMaRt != null
-}
-
-data class RaftConfig(val nodeAddress: NetworkHostAndPort, val clusterAddresses: List<NetworkHostAndPort>)
-
-/** @param exposeRaces for testing only, so its default is not in reference.conf but here. */
-data class BFTSMaRtConfiguration(
-        val replicaId: Int,
-        val clusterAddresses: List<NetworkHostAndPort>,
-        val debug: Boolean = false,
-        val exposeRaces: Boolean = false
-) {
-    init {
-        require(replicaId >= 0) { "replicaId cannot be negative" }
-    }
-}
+                        /** The name of the notary service class to load. */
+                        val className: String = "net.corda.node.services.transactions.SimpleNotaryService",
+                        /** Notary implementation-specific configuration parameters. */
+                        val extraConfig: Config? = null,
+                        /** True if this node is part of a notary cluster with a pre-generated identity. */
+                        val pregeneratedIdentity: Boolean = false
+)
 
 /**
  * Used as an alternative to the older compatibilityZoneURL to allow the doorman and network map
