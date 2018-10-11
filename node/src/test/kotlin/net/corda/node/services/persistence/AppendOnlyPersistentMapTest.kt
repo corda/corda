@@ -1,5 +1,6 @@
 package net.corda.node.services.persistence
 
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.configureDatabase
@@ -57,7 +58,7 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
 
     private val database = configureDatabase(makeTestDataSourceProperties(),
             DatabaseConfig(),
-            { null }, { null },
+            mock(),
             NodeSchemaService(setOf(MappedSchema(AppendOnlyPersistentMapTest::class.java, 1, listOf(PersistentMapEntry::class.java)))))
 
     @After

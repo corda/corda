@@ -128,7 +128,7 @@ class MockScheduledFlowRepository : ScheduledFlowRepository {
 }
 
 class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
-    private val database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+    private val database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(), mock())
 
     @After
     fun closeDatabase() {
@@ -279,7 +279,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
     @Test
     fun `test that correct item is returned`() {
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
-        val database = configureDatabase(dataSourceProps, databaseConfig, { null }, { null })
+        val database = configureDatabase(dataSourceProps, databaseConfig, mock())
         database.transaction {
             val repo = PersistentScheduledFlowRepository(database)
             val stateRef = StateRef(SecureHash.randomSHA256(), 0)
@@ -298,7 +298,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         val timeInTheFuture = mark + 1.days
         val stateRef = StateRef(SecureHash.zeroHash, 0)
 
-        configureDatabase(dataSourceProps, databaseConfig, { null }, { null }).use { database ->
+        configureDatabase(dataSourceProps, databaseConfig, mock()).use { database ->
             val scheduler = database.transaction {
                 createScheduler(database)
             }
@@ -320,7 +320,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         transactionStates[stateRef] = transactionStateMock(logicRef, timeInTheFuture)
         flows[logicRef] = flowLogic
 
-        configureDatabase(dataSourceProps, DatabaseConfig(), { null }, { null }).use { database ->
+        configureDatabase(dataSourceProps, DatabaseConfig(), mock()).use { database ->
             val newScheduler = database.transaction {
                 createScheduler(database)
             }
@@ -343,7 +343,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         val logicRef = rigorousMock<FlowLogicRef>()
         val flowLogic = rigorousMock<FlowLogic<*>>()
 
-        configureDatabase(dataSourceProps, databaseConfig, { null }, { null }).use { database ->
+        configureDatabase(dataSourceProps, databaseConfig, mock()).use { database ->
             val scheduler = database.transaction {
                 createScheduler(database)
             }

@@ -1,5 +1,6 @@
 package net.corda.irs.api
 
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
@@ -67,7 +68,7 @@ class NodeInterestRatesTest {
 
     @Before
     fun setUp() {
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), mock())
         database.transaction {
             oracle = createMockCordaService(services, NodeInterestRates::Oracle)
             oracle.knownFixes = TEST_DATA

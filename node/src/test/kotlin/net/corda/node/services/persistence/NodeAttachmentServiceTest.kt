@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
@@ -50,7 +51,7 @@ class NodeAttachmentServiceTest {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
 
         val dataSourceProperties = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProperties, DatabaseConfig(), { null }, { null })
+        database = configureDatabase(dataSourceProperties, DatabaseConfig(), mock())
         fs = Jimfs.newFileSystem(Configuration.unix())
         storage = NodeAttachmentService(MetricRegistry(), TestingNamedCacheFactory(), database).also {
             database.transaction {

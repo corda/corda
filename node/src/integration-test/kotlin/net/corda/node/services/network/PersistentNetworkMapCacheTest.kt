@@ -1,5 +1,6 @@
 package net.corda.node.services.network
 
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.configureDatabase
@@ -27,7 +28,7 @@ class PersistentNetworkMapCacheTest {
     val testSerialization = SerializationEnvironmentRule()
 
     private var portCounter = 1000
-    private val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+    private val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), mock())
     private val charlieNetMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
 
     @After

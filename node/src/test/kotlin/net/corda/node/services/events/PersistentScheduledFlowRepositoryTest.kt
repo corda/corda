@@ -1,5 +1,6 @@
 package net.corda.node.services.events
 
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
@@ -21,7 +22,7 @@ class PersistentScheduledFlowRepositoryTest {
     fun `test that earliest item is returned`() {
         val laterTime = mark + 1.days
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
-        val database = configureDatabase(dataSourceProps, databaseConfig, { null }, { null })
+        val database = configureDatabase(dataSourceProps, databaseConfig, mock())
 
         database.transaction {
             val repo = PersistentScheduledFlowRepository(database)
@@ -43,7 +44,7 @@ class PersistentScheduledFlowRepositoryTest {
     fun `test that item is rescheduled`() {
         val laterTime = mark + 1.days
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
-        val database = configureDatabase(dataSourceProps, databaseConfig, { null }, { null })
+        val database = configureDatabase(dataSourceProps, databaseConfig, mock())
         database.transaction {
             val repo = PersistentScheduledFlowRepository(database)
             val stateRef = StateRef(SecureHash.randomSHA256(), 0)

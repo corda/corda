@@ -14,7 +14,7 @@ import java.security.cert.CertificateExpiredException
 import java.security.cert.CertificateNotYetValidException
 import java.security.cert.TrustAnchor
 
-interface IdentityServiceInternal : IdentityService {
+interface IdentityServiceInternal : IdentityService, AutoCloseable {
 
     private companion object {
         val log = contextLogger()

@@ -1,6 +1,7 @@
 package net.corda.node.utilities
 
 import com.google.common.util.concurrent.SettableFuture
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.tee
 import net.corda.node.internal.configureDatabase
@@ -19,7 +20,7 @@ class ObservablesTests {
     private val toBeClosed = mutableListOf<Closeable>()
 
     private fun createDatabase(): CordaPersistence {
-        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), mock())
         toBeClosed += database
         return database
     }

@@ -2,6 +2,7 @@ package net.corda.node.services.messaging
 
 import com.codahale.metrics.MetricRegistry
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.div
@@ -89,7 +90,7 @@ class ArtemisMessagingTest {
             doReturn(FlowTimeoutConfiguration(5.seconds, 3, backoffBase = 1.0)).whenever(it).flowTimeout
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), mock())
         networkMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, rigorousMock()).apply { start(emptyList()) }
     }
 

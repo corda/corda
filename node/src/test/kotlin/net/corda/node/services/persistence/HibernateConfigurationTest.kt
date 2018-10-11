@@ -30,6 +30,7 @@ import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
 import net.corda.node.internal.configureDatabase
+import net.corda.node.internal.identity.IdentityServiceWellKnownPartyTranslatorAdaptor
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.schema.ContractStateAndRef
@@ -113,7 +114,7 @@ class HibernateConfigurationTest {
             }
         }
         val schemaService = NodeSchemaService(extraSchemas = setOf(CashSchemaV1, SampleCashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, DummyLinearStateSchemaV1, DummyLinearStateSchemaV2, DummyDealStateSchemaV1))
-        database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
+        database = configureDatabase(dataSourceProps, DatabaseConfig(), IdentityServiceWellKnownPartyTranslatorAdaptor(identityService), schemaService)
         database.transaction {
             hibernateConfig = database.hibernateConfig
 

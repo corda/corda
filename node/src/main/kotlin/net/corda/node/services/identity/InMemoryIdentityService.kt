@@ -68,4 +68,9 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         }
         return results
     }
+
+    override fun close() {
+        keyToParties.clear()
+        principalToParties.clear()
+    }
 }

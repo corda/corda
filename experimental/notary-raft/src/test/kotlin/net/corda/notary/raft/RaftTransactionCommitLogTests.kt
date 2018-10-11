@@ -1,5 +1,6 @@
 package net.corda.notary.raft
 
+import com.nhaarman.mockito_kotlin.mock
 import io.atomix.catalyst.transport.Address
 import io.atomix.copycat.client.ConnectionStrategies
 import io.atomix.copycat.client.CopycatClient
@@ -154,7 +155,7 @@ class RaftTransactionCommitLogTests {
     private fun createReplica(myAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): CompletableFuture<Member> {
         val storage = Storage.builder().withStorageLevel(StorageLevel.MEMORY).build()
         val address = Address(myAddress.host, myAddress.port)
-        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(RaftNotarySchemaV1)))
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), mock(), NodeSchemaService(extraSchemas = setOf(RaftNotarySchemaV1)))
         databases.add(database)
         val stateMachineFactory = { RaftTransactionCommitLog(database, Clock.systemUTC(), { RaftUniquenessProvider.createMap(TestingNamedCacheFactory()) }) }
 

@@ -1,5 +1,6 @@
 package net.corda.node.services.persistence
 
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
@@ -50,7 +51,7 @@ class DBCheckpointStorageTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), mock())
         newCheckpointStorage()
     }
 

@@ -51,8 +51,7 @@ interface IdentityService {
     }
 
     /**
-     * Get all identities known to the service. This is expensive, and [partyFromKey] or [partyFromX500Name] should be
-     * used in preference where possible.
+     * Get all identities known to the service. This is expensive [partyFromKey] should be used in preference where possible.
      */
     fun getAllIdentities(): Iterable<PartyAndCertificate>
 
