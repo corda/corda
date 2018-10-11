@@ -72,7 +72,7 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError> {
         fun duration(key: String): ConfigProperty.Standard<Duration> = StandardConfigProperty(key, Duration::class.java.simpleName, Config::getDuration, Config::getDurationList)
 
         // TODO sollecitom change `ConfigObject::class.java.simpleName` to something more human-friendly, like "Configuration" perhaps.
-        fun value(key: String, schema: ConfigSchema? = null): ConfigProperty.Standard<ConfigObject> = StandardConfigProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList)
+        fun value(key: String, schema: ConfigSchema? = null): ConfigProperty.Standard<ConfigObject> = StandardConfigProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList, schema)
 
         fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>): ConfigProperty.Standard<ENUM> = StandardConfigProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) })
     }
@@ -104,8 +104,11 @@ private open class StandardConfigProperty<TYPE>(override val key: String, overri
 
         val errors = mutableSetOf<ConfigValidationError>()
         errors += super.validate(target)
-        schema?.let {
-            errors += it.validate(target).map { error -> error.withContainingPath(key) }
+        schema?.let { nestedSchema ->
+            val nestedConfig: Config? = target.getConfig(key)
+            nestedConfig?.let {
+                errors += nestedSchema.validate(nestedConfig).map { error -> error.withContainingPath(key) }
+            }
         }
         return errors
     }

@@ -14,11 +14,11 @@ interface ConfigSchema : Validator<Config, ConfigValidationError> {
 
     companion object {
 
-        fun withProperties(strict: Boolean = false, properties: Iterable<ConfigProperty<*>>): ConfigSchema = ConfigPropertySchema(strict, properties)
+        fun withProperties(properties: Iterable<ConfigProperty<*>>, strict: Boolean = false): ConfigSchema = ConfigPropertySchema(strict, properties)
 
-        fun withProperties(strict: Boolean = false, vararg properties: ConfigProperty<*>): ConfigSchema = withProperties(strict, properties.toSet())
+        fun withProperties(vararg properties: ConfigProperty<*>, strict: Boolean = false): ConfigSchema = withProperties(properties.toSet(), strict)
 
-        fun withProperties(strict: Boolean = false, builder: ConfigProperty.Companion.() -> Iterable<ConfigProperty<*>>): ConfigSchema = withProperties(strict, builder.invoke(ConfigProperty.Companion))
+        fun withProperties(strict: Boolean = false, builder: ConfigProperty.Companion.() -> Iterable<ConfigProperty<*>>): ConfigSchema = withProperties(builder.invoke(ConfigProperty.Companion), strict)
     }
 }
 

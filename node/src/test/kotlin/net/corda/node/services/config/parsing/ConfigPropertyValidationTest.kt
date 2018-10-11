@@ -262,5 +262,93 @@ class ConfigPropertyValidationTest {
         assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
     }
 
-    // TODO sollecitom add tests for nested properties with schema
+    @Test
+    fun wrong_type_in_nested_properties() {
+
+        val key = "a.b.c"
+
+        val nestedKey = "d"
+        val nestedPropertySchema = ConfigSchema.withProperties(ConfigProperty.long(nestedKey))
+
+        val property: Validator<Config, ConfigValidationError> = ConfigProperty.value(key, nestedPropertySchema)
+
+        val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
+
+        assertThat(property.isValid(configuration)).isFalse()
+
+        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+
+            assertThat(errors).hasSize(1)
+            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
+
+                assertThat(error.keyName).isEqualTo(nestedKey)
+                assertThat(error.path).containsExactly(key, nestedKey)
+            }
+        }
+
+        assertThat(property.validate(configuration)).satisfies(::assertErrors)
+
+        val exception = IllegalArgumentException()
+        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
+    }
+
+    @Test
+    fun absent_value_in_nested_properties() {
+
+        val key = "a.b.c"
+
+        val nestedKey = "d"
+        val nestedPropertySchema = ConfigSchema.withProperties(ConfigProperty.long(nestedKey))
+
+        val property: Validator<Config, ConfigValidationError> = ConfigProperty.value(key, nestedPropertySchema)
+
+        val configuration = configObject(key to configObject()).toConfig()
+
+        assertThat(property.isValid(configuration)).isFalse()
+
+        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+
+            assertThat(errors).hasSize(1)
+            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
+
+                assertThat(error.keyName).isEqualTo(nestedKey)
+                assertThat(error.path).containsExactly(key, nestedKey)
+            }
+        }
+
+        assertThat(property.validate(configuration)).satisfies(::assertErrors)
+
+        val exception = IllegalArgumentException()
+        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
+    }
+
+    @Test
+    fun missing_value_in_nested_properties() {
+
+        val key = "a.b.c"
+
+        val nestedKey = "d"
+        val nestedPropertySchema = ConfigSchema.withProperties(ConfigProperty.long(nestedKey))
+
+        val property: Validator<Config, ConfigValidationError> = ConfigProperty.value(key, nestedPropertySchema)
+
+        val configuration = configObject(key to configObject(nestedKey to null)).toConfig()
+
+        assertThat(property.isValid(configuration)).isFalse()
+
+        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+
+            assertThat(errors).hasSize(1)
+            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
+
+                assertThat(error.keyName).isEqualTo(nestedKey)
+                assertThat(error.path).containsExactly(key, nestedKey)
+            }
+        }
+
+        assertThat(property.validate(configuration)).satisfies(::assertErrors)
+
+        val exception = IllegalArgumentException()
+        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
+    }
 }
