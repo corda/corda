@@ -7,7 +7,6 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
@@ -22,9 +21,7 @@ import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
-import rx.subjects.PublishSubject
 import kotlin.test.assertEquals
 
 class PersistentStateServiceTests {
@@ -66,7 +63,7 @@ class PersistentStateServiceTests {
                 return parent
             }
         }
-        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock(), rigorousMock(), schemaService)
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock(), schemaService)
         val persistentStateService = PersistentStateService(schemaService)
         database.transaction {
             val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party

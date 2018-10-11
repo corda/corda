@@ -12,7 +12,6 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sign
 import net.corda.core.flows.*
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -146,8 +145,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val identityService = PersistentIdentityService(cacheFactory).tokenize()
     val database: CordaPersistence = createCordaPersistence(
             configuration.database,
-            identityService::wellKnownPartyFromX500Name,
-            identityService::wellKnownPartyFromAnonymous,
+            identityService,
             schemaService,
             configuration.dataSourceProperties
     )
@@ -1001,26 +999,24 @@ class ConfigurationException(message: String) : CordaException(message)
 // TODO This is no longer used by AbstractNode and can be moved elsewhere
 fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
-                      wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
-                      wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
+                      wellKnownPartyTranslator: WellKnownPartyTranslator,
                       schemaService: SchemaService = NodeSchemaService(),
                       internalSchemas: Set<MappedSchema> = NodeSchemaService().internalSchemas()): CordaPersistence {
-    val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, hikariProperties)
+    val persistence = createCordaPersistence(databaseConfig, wellKnownPartyTranslator, schemaService, hikariProperties)
     persistence.startHikariPool(hikariProperties, databaseConfig, internalSchemas)
     return persistence
 }
 
 fun createCordaPersistence(databaseConfig: DatabaseConfig,
-                           wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
-                           wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
+                           wellKnownPartyTranslator: WellKnownPartyTranslator,
                            schemaService: SchemaService,
                            hikariProperties: Properties): CordaPersistence {
     // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
     // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
     // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
-    val typeDescriptors = listOf(AbstractPartyDescriptor(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
-    val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
+    val typeDescriptors = listOf(AbstractPartyDescriptor(wellKnownPartyTranslator))
+    val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(wellKnownPartyTranslator))
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
     return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters, typeDescriptors)
 }

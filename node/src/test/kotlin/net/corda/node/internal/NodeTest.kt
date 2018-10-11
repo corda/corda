@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.delete
@@ -59,7 +60,7 @@ class NodeTest {
     fun `generateAndSaveNodeInfo works`() {
         val configuration = createConfig(ALICE_NAME)
         val info = VersionInfo(789, "3.0", "SNAPSHOT", "R3")
-        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
+        configureDatabase(configuration.dataSourceProperties, configuration.database, mock()).use {
             val node = Node(configuration, info, initialiseSerialization = false)
             assertEquals(node.generateNodeInfo(), node.generateNodeInfo())  // Node info doesn't change (including the serial)
         }
@@ -69,7 +70,7 @@ class NodeTest {
     fun `clear network map cache works`() {
         val configuration = createConfig(ALICE_NAME)
         val (nodeInfo, _) = createNodeInfoAndSigned(ALICE_NAME)
-        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
+        configureDatabase(configuration.dataSourceProperties, configuration.database, mock()).use {
             it.transaction {
                 val persistentNodeInfo = NodeInfoSchemaV1.PersistentNodeInfo(
                         id = 0,
@@ -121,7 +122,7 @@ class NodeTest {
                 serial = nodeInfo1.serial
         )
 
-        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
+        configureDatabase(configuration.dataSourceProperties, configuration.database, mock()).use {
             it.transaction {
                 session.save(persistentNodeInfo1)
             }

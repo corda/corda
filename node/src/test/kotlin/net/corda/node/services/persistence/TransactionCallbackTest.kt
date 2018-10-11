@@ -1,5 +1,6 @@
 package net.corda.node.services.persistence
 
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -9,7 +10,7 @@ import kotlin.test.assertEquals
 
 
 class TransactionCallbackTest {
-    private val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+    private val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), mock())
 
     @After
     fun closeDatabase() {

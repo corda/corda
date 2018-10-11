@@ -186,7 +186,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     @Ignore
     @Test
     fun createPersistentTestDb() {
-        val database = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), identitySvc::wellKnownPartyFromX500Name, identitySvc::wellKnownPartyFromAnonymous)
+        val database = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), identitySvc)
         setUpDb(database, 5000)
 
         database.close()

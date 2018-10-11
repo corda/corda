@@ -1,5 +1,6 @@
 package net.corda.node.services.transactions
 
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.SecureHash
@@ -39,7 +40,7 @@ class PersistentUniquenessProviderTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(NodeNotarySchemaV1)))
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), mock(), NodeSchemaService(extraSchemas = setOf(NodeNotarySchemaV1)))
     }
 
     @After

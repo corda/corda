@@ -51,8 +51,7 @@ class PersistentIdentityServiceTests {
         database = configureDatabase(
                 makeTestDataSourceProperties(),
                 DatabaseConfig(),
-                identityService::wellKnownPartyFromX500Name,
-                identityService::wellKnownPartyFromAnonymous
+                identityService
         )
         identityService.database = database
         identityService.ourNames = setOf(ALICE_NAME)

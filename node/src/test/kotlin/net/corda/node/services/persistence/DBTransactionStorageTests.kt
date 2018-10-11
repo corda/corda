@@ -1,5 +1,6 @@
 package net.corda.node.services.persistence
 
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -40,7 +41,7 @@ class DBTransactionStorageTests {
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps, DatabaseConfig(), { null }, { null })
+        database = configureDatabase(dataSourceProps, DatabaseConfig(), mock())
         newTransactionStorage()
     }
 

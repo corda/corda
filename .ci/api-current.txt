@@ -3004,7 +3004,7 @@ public interface net.corda.core.node.services.ContractUpgradeService
 public @interface net.corda.core.node.services.CordaService
 ##
 @DoNotImplement
-public interface net.corda.core.node.services.IdentityService
+public interface net.corda.core.node.services.IdentityService extends net.corda.core.node.services.WellKnownPartyTranslator
   public abstract void assertOwnership(net.corda.core.identity.Party, net.corda.core.identity.AnonymousParty)
   @Nullable
   public abstract net.corda.core.identity.PartyAndCertificate certificateFromKey(java.security.PublicKey)
@@ -3371,6 +3371,12 @@ public interface net.corda.core.node.services.VaultService
   public abstract net.corda.core.concurrent.CordaFuture<net.corda.core.node.services.Vault$Update<net.corda.core.contracts.ContractState>> whenConsumed(net.corda.core.contracts.StateRef)
 ##
 public final class net.corda.core.node.services.VaultServiceKt extends java.lang.Object
+##
+public interface net.corda.core.node.services.WellKnownPartyTranslator
+  @Nullable
+  public abstract net.corda.core.identity.Party wellKnownPartyFromAnonymous(net.corda.core.identity.AbstractParty)
+  @Nullable
+  public abstract net.corda.core.identity.Party wellKnownPartyFromX500Name(net.corda.core.identity.CordaX500Name)
 ##
 @CordaSerializable
 public final class net.corda.core.node.services.vault.AggregateFunctionType extends java.lang.Enum

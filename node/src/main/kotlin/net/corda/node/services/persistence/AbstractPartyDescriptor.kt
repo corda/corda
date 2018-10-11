@@ -2,28 +2,22 @@ package net.corda.node.services.persistence
 
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.node.services.WellKnownPartyTranslator
 import net.corda.core.utilities.contextLogger
 import org.hibernate.type.descriptor.WrapperOptions
 import org.hibernate.type.descriptor.java.AbstractTypeDescriptor
 import org.hibernate.type.descriptor.java.ImmutableMutabilityPlan
 import org.hibernate.type.descriptor.java.MutabilityPlan
 
-class AbstractPartyDescriptor(private var wellKnownPartyFromX500Name: ((CordaX500Name) -> Party?)?,
-                              private var wellKnownPartyFromAnonymous: ((AbstractParty) -> Party?)?) : AbstractTypeDescriptor<AbstractParty>(AbstractParty::class.java), AutoCloseable {
+class AbstractPartyDescriptor(private val partyTranslator: WellKnownPartyTranslator) : AbstractTypeDescriptor<AbstractParty>(AbstractParty::class.java), AutoCloseable {
     companion object {
         private val log = contextLogger()
     }
 
-    init {
-        require(wellKnownPartyFromX500Name != null)
-        require(wellKnownPartyFromAnonymous != null)
-    }
-
     override fun fromString(dbData: String?): AbstractParty? {
         return if (dbData != null) {
-            val party = wellKnownPartyFromX500Name!!(CordaX500Name.parse(dbData))
+            val party = partyTranslator.wellKnownPartyFromX500Name(CordaX500Name.parse(dbData))
             if (party == null) log.warn("Identity service unable to resolve X500name: $dbData")
             party
         } else {
@@ -35,7 +29,7 @@ class AbstractPartyDescriptor(private var wellKnownPartyFromX500Name: ((CordaX50
 
     override fun toString(party: AbstractParty?): String? {
         return if (party != null) {
-            val partyName = party.nameOrNull() ?: wellKnownPartyFromAnonymous!!(party)?.name
+            val partyName = party.nameOrNull() ?: partyTranslator.wellKnownPartyFromAnonymous(party)?.name
             if (partyName == null) log.warn("Identity service unable to resolve AbstractParty: $party")
             partyName.toString()
         } else {
@@ -74,7 +68,5 @@ class AbstractPartyDescriptor(private var wellKnownPartyFromX500Name: ((CordaX50
     override fun close() {
         // Forget about callbacks that been previously provided.
         log.info("Closing AbstractPartyDescriptor")
-        wellKnownPartyFromX500Name = null
-        wellKnownPartyFromAnonymous = null
     }
 }
