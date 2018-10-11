@@ -100,7 +100,7 @@ associate a ``StateRef`` with a persisted representation of a ``ContractState`` 
 unconsumed states in the vault.
 
 The ``PersistentState`` subclass should be marked up as a JPA 2.1 *Entity* with a defined table name and having
-properties (in Kotlin, getters/setters in Java) annotated to map to the appropriate columns and SQL types.  Additional
+properties (in Kotlin, getters/setters in Java) annotated to map to the appropriate columns and SQL types. Additional
 entities can be included to model these properties where they are more complex, for example collections, so the mapping
 does not have to be *flat*. The ``MappedSchema`` must provide a list of all of the JPA entity classes for that schema
 in order to initialise the ORM layer.
@@ -110,6 +110,10 @@ Several examples of entities and mappings are provided in the codebase, includin
 
 .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/schemas/CashSchemaV1.kt
     :language: kotlin
+
+.. note:: If Cordapp needs to be portable between Corda OS (running against H2) and Corda Enterprise (running against a standalone database), consider database vendors specific requirements.
+          Ensure that table and column names are compatible with the naming convention of database vendors for which the Cordapp will be deployed,
+          e.g. prior to Oracle 12.2 the maximum length of table/column name is 30 bytes.
 
 Identity mapping
 ----------------
