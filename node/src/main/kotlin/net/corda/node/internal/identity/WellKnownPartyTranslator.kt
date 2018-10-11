@@ -1,4 +1,4 @@
-package net.corda.core.node.services
+package net.corda.node.internal.identity
 
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name

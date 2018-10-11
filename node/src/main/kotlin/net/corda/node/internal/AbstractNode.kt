@@ -34,6 +34,8 @@ import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.*
+import net.corda.node.internal.identity.IdentityServiceWellKnownPartyTranslatorAdaptor
+import net.corda.node.internal.identity.WellKnownPartyTranslator
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ExceptionMaskingRpcOpsProxy
 import net.corda.node.internal.rpc.proxies.ExceptionSerialisingRpcOpsProxy
@@ -145,7 +147,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val identityService = PersistentIdentityService(cacheFactory).tokenize()
     val database: CordaPersistence = createCordaPersistence(
             configuration.database,
-            identityService,
+            IdentityServiceWellKnownPartyTranslatorAdaptor(identityService),
             schemaService,
             configuration.dataSourceProperties
     )

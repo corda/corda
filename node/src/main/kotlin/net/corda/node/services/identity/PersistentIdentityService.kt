@@ -4,7 +4,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.*
 import net.corda.core.internal.hash
 import net.corda.core.node.services.UnknownAnonymousPartyException
-import net.corda.core.node.services.WellKnownPartyTranslator
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
@@ -31,7 +30,7 @@ import javax.persistence.Lob
  * cached for efficient lookup.
  */
 @ThreadSafe
-class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), IdentityServiceInternal, WellKnownPartyTranslator {
+class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), IdentityServiceInternal {
     companion object {
         private val log = contextLogger()
 

@@ -3,7 +3,7 @@ package net.corda.node.services.persistence
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.node.services.WellKnownPartyTranslator
+import net.corda.node.internal.identity.WellKnownPartyTranslator
 import net.corda.core.utilities.contextLogger
 import org.hibernate.type.descriptor.WrapperOptions
 import org.hibernate.type.descriptor.java.AbstractTypeDescriptor

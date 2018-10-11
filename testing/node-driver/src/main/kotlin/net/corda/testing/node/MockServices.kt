@@ -23,6 +23,7 @@ import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
+import net.corda.node.internal.identity.IdentityServiceWellKnownPartyTranslatorAdaptor
 import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.schema.NodeSchemaService
@@ -111,7 +112,8 @@ open class MockServices private constructor(
             val cordappLoader = cordappLoaderForPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
-            val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService, schemaService.internalSchemas())
+            val database = configureDatabase(dataSourceProps, DatabaseConfig(),
+                    IdentityServiceWellKnownPartyTranslatorAdaptor(identityService), schemaService, schemaService.internalSchemas())
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
                     override val vaultService: VaultService = makeVaultService(schemaService, database)

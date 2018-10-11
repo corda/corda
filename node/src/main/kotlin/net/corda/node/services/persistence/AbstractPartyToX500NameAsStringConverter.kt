@@ -2,8 +2,7 @@ package net.corda.node.services.persistence
 
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
-import net.corda.core.node.services.WellKnownPartyTranslator
+import net.corda.node.internal.identity.WellKnownPartyTranslator
 import net.corda.core.utilities.contextLogger
 import javax.persistence.AttributeConverter
 import javax.persistence.Converter

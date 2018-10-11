@@ -19,7 +19,7 @@ import java.security.cert.*
  * a transaction being built). See [NetworkMapCache] for retrieving well known identities from the network map.
  */
 @DoNotImplement
-interface IdentityService : WellKnownPartyTranslator {
+interface IdentityService {
     val trustRoot: X509Certificate
     val trustAnchor: TrustAnchor
     val caCertStore: CertStore
@@ -80,7 +80,7 @@ interface IdentityService : WellKnownPartyTranslator {
      * @param name The [CordaX500Name] to determine well known identity for.
      * @return If known the canonical [Party] with that name, else null.
      */
-    override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party?
+    fun wellKnownPartyFromX500Name(name: CordaX500Name): Party?
 
     /**
      * Resolves a (optionally) confidential identity to the corresponding well known identity [Party].
@@ -89,7 +89,7 @@ interface IdentityService : WellKnownPartyTranslator {
      * @param party identity to determine well known identity for.
      * @return well known identity, if found.
      */
-    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
+    fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
         // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
         // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
         // into a party, and from there figure out the well known party.

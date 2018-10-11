@@ -8,6 +8,7 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.node.internal.configureDatabase
+import net.corda.node.internal.identity.IdentityServiceWellKnownPartyTranslatorAdaptor
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -51,7 +52,7 @@ class PersistentIdentityServiceTests {
         database = configureDatabase(
                 makeTestDataSourceProperties(),
                 DatabaseConfig(),
-                identityService
+                IdentityServiceWellKnownPartyTranslatorAdaptor(identityService)
         )
         identityService.database = database
         identityService.ourNames = setOf(ALICE_NAME)

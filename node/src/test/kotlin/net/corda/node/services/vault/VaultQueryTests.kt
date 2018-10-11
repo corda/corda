@@ -25,6 +25,7 @@ import net.corda.finance.schemas.CommercialPaperSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.node.internal.configureDatabase
+import net.corda.node.internal.identity.IdentityServiceWellKnownPartyTranslatorAdaptor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
@@ -186,7 +187,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     @Ignore
     @Test
     fun createPersistentTestDb() {
-        val database = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), identitySvc)
+        val database = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), IdentityServiceWellKnownPartyTranslatorAdaptor(identitySvc))
         setUpDb(database, 5000)
 
         database.close()
