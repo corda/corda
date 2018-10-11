@@ -785,14 +785,19 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
+    /** Installs a custom serialization filter defined by a notary service implementation. Only supported in dev mode. */
     private fun maybeInstallSerializationFilter(serviceClass: Class<out NotaryService>) {
         try {
             @Suppress("UNCHECKED_CAST")
             val filter = serviceClass.getDeclaredMethod("getSerializationFilter").invoke(null) as ((Class<*>) -> Boolean)
-            log.warn("Installing a custom Java serialization filter, required by ${serviceClass.name}. Note this may introduce additional security vulnerabilities.")
-            SerialFilter.install(filter)
+            if (configuration.devMode) {
+                log.warn("Installing a custom Java serialization filter, required by ${serviceClass.name}. Note this is only supported in dev mode.")
+                SerialFilter.install(filter)
+            } else {
+                log.warn("Unable to install a custom Java serialization filter, not in dev mode.")
+            }
         } catch (e: NoSuchMethodException) {
-            log.debug("No custom serialization filter declared in ${serviceClass.name}")
+            // No custom serialization filter declared
         }
     }
 
