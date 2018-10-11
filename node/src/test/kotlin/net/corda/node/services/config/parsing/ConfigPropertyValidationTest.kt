@@ -22,6 +22,7 @@ class ConfigPropertyValidationTest {
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key)
+                assertThat(error.path).containsExactly(key)
             }
         }
 
@@ -47,6 +48,7 @@ class ConfigPropertyValidationTest {
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key)
+                assertThat(error.path).containsExactly(key)
             }
         }
 
@@ -72,6 +74,7 @@ class ConfigPropertyValidationTest {
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key)
+                assertThat(error.path).containsExactly(key)
             }
         }
 
@@ -97,6 +100,7 @@ class ConfigPropertyValidationTest {
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key)
+                assertThat(error.path).containsExactly(key)
             }
         }
 
@@ -123,6 +127,7 @@ class ConfigPropertyValidationTest {
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key)
+                assertThat(error.path).containsExactly(key)
             }
         }
 
@@ -149,6 +154,7 @@ class ConfigPropertyValidationTest {
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key)
+                assertThat(error.path).containsExactly(key)
             }
         }
 
@@ -192,6 +198,7 @@ class ConfigPropertyValidationTest {
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key)
+                assertThat(error.path).containsExactly(key)
             }
         }
 
@@ -218,6 +225,7 @@ class ConfigPropertyValidationTest {
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key)
+                assertThat(error.path).containsExactly(key)
             }
         }
 
@@ -244,6 +252,7 @@ class ConfigPropertyValidationTest {
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key)
+                assertThat(error.path).containsExactly(key)
             }
         }
 
@@ -252,4 +261,6 @@ class ConfigPropertyValidationTest {
         val exception = IllegalArgumentException()
         assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
     }
+
+    // TODO sollecitom add tests for nested properties with schema
 }
