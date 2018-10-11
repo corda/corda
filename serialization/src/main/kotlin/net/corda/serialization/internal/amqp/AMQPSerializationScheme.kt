@@ -2,11 +2,12 @@
 
 package net.corda.serialization.internal.amqp
 
-import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
+import io.github.classgraph.ClassGraph
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.internal.isAbstractClass
 import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
@@ -16,7 +17,6 @@ import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.serialization.internal.MutableClassWhitelist
 import net.corda.serialization.internal.SerializationScheme
-import java.lang.reflect.Modifier
 import java.util.*
 
 val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == amqpMagic
@@ -72,10 +72,16 @@ abstract class AbstractAMQPSerializationScheme(
         @StubOutForDJVM
         private fun scanClasspathForSerializers(scanSpec: String): List<SerializationCustomSerializer<*, *>> =
                 this::class.java.classLoader.let { cl ->
-                    FastClasspathScanner(scanSpec).addClassLoader(cl).scan()
-                            .getNamesOfClassesImplementing(SerializationCustomSerializer::class.java)
-                            .map { cl.loadClass(it).asSubclass(SerializationCustomSerializer::class.java) }
-                            .filterNot { Modifier.isAbstract(it.modifiers) }
+                    ClassGraph()
+                            .whitelistPackages(scanSpec)
+                            .addClassLoader(cl)
+                            .enableAllInfo()
+                            .scan()
+                            .use {
+                                val serializerClass = SerializationCustomSerializer::class.java
+                                it.getClassesImplementing(serializerClass.name).loadClasses(serializerClass)
+                            }
+                            .filterNot { it.isAbstractClass }
                             .map { it.kotlin.objectOrNewInstance() }
                 }
 
