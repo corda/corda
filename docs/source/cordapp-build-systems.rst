@@ -143,8 +143,15 @@ Cordapp signing can disabled or configured to use an external keystore.
 Cordapp auto-signing allows to use signature constraints for contracts from the CorDapp
 without need to create a keyStore and configure the task.
 For production deployment ensure to sign CorDapp using own certificate e.g. by configuring options to point to external keyStore
-or by disabling signing in `corpapp`` plugin and require the Cordapp JAR is signed downstream in your build/deploymnet pipeline.
+or by disabling signing in `corpapp`` plugin and require the Cordapp JAR is signed downstream in your build/deployment pipeline.
 CorDapp signed by Corda development certificate is accepted by Corda node only when running in the development mode.
+
+`JAR file specification <https://docs.oracle.com/javase/8/docs/technotes/guides/jar/jar.html>`_
+requires a signature block file name to conform one of the following formats: \*.DSA, \*.RSA or SIG-\*.
+`jarSigner tool <https://docs.oracle.com/javase/8/docs/technotes/tools/windows/jarsigner.html>`_ (used internally by ``cordapp`` plugin)
+may create a file with \*.EC extension, if the signers key’s are EC keys.
+This file name is however incompatible with the JAR file format (as it expects SIG-\*).
+In such case use the option ``sigfile`` with value SIG-\* to create the accepted file name for EC (the value will be truncated to 8 characters).
 
 Cordformation plugin can also sign CorDapps JARs, when deploying set of nodes, see :doc:`generating-a-node`.
 
