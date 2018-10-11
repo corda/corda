@@ -159,17 +159,27 @@ tasks.withType(CreateStartScripts).each { task ->
 
 idea {
     module {
-        downloadJavadoc = true // defaults to false
+        downloadJavadoc = true
         downloadSources = true
     }
 }
 
 jar {
     from sourceSets.test.output
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 artifacts {
     demoArtifacts jar
+}
+
+publishing {
+    publications {
+        jarAndSources(MavenPublication) {
+            from components.java
+            artifactId 'irs-demo-cordapp'
+        }
+    }
 }
 
 cordapp {
