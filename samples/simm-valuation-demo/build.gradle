@@ -38,7 +38,8 @@ dependencies {
     compile project(':webserver')
 
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-
+    runtime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:$jersey_version"
 
