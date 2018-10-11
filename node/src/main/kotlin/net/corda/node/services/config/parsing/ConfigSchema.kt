@@ -1,7 +1,6 @@
 package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigValueFactory
 import java.lang.reflect.Proxy
 
 // Additional benefits of going this way:
@@ -40,7 +39,7 @@ private class ConfigPropertySchema(private val strict: Boolean, unorderedPropert
 
     override fun validate(target: Config): Set<ConfigValidationError> {
 
-        val propertyErrors = properties.flatMap { property -> property.validate(target).map { error -> error.withContainingPath(property.contextualize(error.containingPath)) } }.toSet()
+        val propertyErrors = properties.flatMap { property -> property.validate(target) }.toSet()
         if (strict) {
             val unknownKeys = target.root().keys - properties.map(ConfigProperty<*>::key)
             return propertyErrors + unknownKeys.map(::unknownPropertyError)
@@ -48,7 +47,7 @@ private class ConfigPropertySchema(private val strict: Boolean, unorderedPropert
         return propertyErrors
     }
 
-    private fun unknownPropertyError(key: String) = ConfigValidationError(key, message = "Unknown configuration key: \"$key\".")
+    private fun unknownPropertyError(key: String) = ConfigValidationError.Unknown(key)
 
     override fun description(): String {
 

@@ -54,13 +54,14 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError> {
         }
     }
 
+    // TODO sollecitom change
     fun contextualize(currentContext: String?): String? = currentContext
 
     companion object {
 
         internal val expectedExceptionTypes: Set<KClass<*>> = setOf(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
 
-        fun int(key: String): ConfigProperty.Standard<Int> = StandardConfigProperty(key, Int::class.javaObjectType.simpleName, Config::getInt, Config::getIntList)
+        fun long(key: String): ConfigProperty.Standard<Long> = LongConfigProperty(key)
 
         fun boolean(key: String): ConfigProperty.Standard<Boolean> = StandardConfigProperty(key, Boolean::class.javaObjectType.simpleName, Config::getBoolean, Config::getBooleanList)
 
@@ -74,38 +75,59 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError> {
         fun value(key: String, schema: ConfigSchema? = null): ConfigProperty.Standard<ConfigObject> = StandardConfigProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList)
 
         fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>): ConfigProperty.Standard<ENUM> = StandardConfigProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) })
-
-//        // TODO sollecitom remove this and provide rawNested without schema and nested with schema, with only difference in validation
-//        inline fun <reified TYPE> nested(key: String, schema: ConfigSchema): ConfigProperty.Standard<TYPE> = nested(key, TYPE::class.java, schema)
-//
-//        fun <TYPE> nested(key: String, type: Class<TYPE>, schema: ConfigSchema): ConfigProperty.Standard<TYPE> = ProxiedNestedConfigProperty(key, type, schema)
     }
 }
 
-private class StandardConfigProperty<TYPE>(override val key: String, override val typeName: String, private val extractSingleValue: (Config, String) -> TYPE, private val extractListValue: (Config, String) -> List<TYPE>, private val schema: ConfigSchema? = null) : ConfigProperty.Standard<TYPE> {
+private class LongConfigProperty(key: String) : StandardConfigProperty<Long>(key, Long::class.javaObjectType.simpleName, Config::getLong, Config::getLongList) {
+
+    override fun validate(target: Config): Set<ConfigValidationError> {
+
+        val errors = super.validate(target)
+        if (errors.isEmpty() && target.getValue(key).unwrapped().toString().contains(".")) {
+            return setOf(ConfigException.WrongType(target.origin(), key, Long::class.javaObjectType.simpleName, Double::class.javaObjectType.simpleName).toValidationError(key, typeName))
+        }
+        return errors
+    }
+}
+
+private open class StandardConfigProperty<TYPE>(override val key: String, override val typeName: String, private val extractSingleValue: (Config, String) -> TYPE, private val extractListValue: (Config, String) -> List<TYPE>, private val schema: ConfigSchema? = null) : ConfigProperty.Standard<TYPE> {
 
     override fun valueIn(configuration: Config) = extractSingleValue.invoke(configuration, key)
 
     override fun optional(defaultValue: TYPE?): ConfigProperty<TYPE?> = OptionalConfigProperty(key, typeName, defaultValue, ::validate, extractSingleValue)
 
-    override fun list(): ConfigProperty.Required<List<TYPE>> = ListConfigProperty(key, typeName, extractListValue)
+    override fun list(): ConfigProperty.Required<List<TYPE>> = ListConfigProperty(key, typeName, extractListValue, schema)
 
     override fun toString() = "\"$key\": \"$typeName\""
 
     override fun validate(target: Config): Set<ConfigValidationError> {
 
-        // TODO sollecitom use schema here
-        return super.validate(target)
+        val errors = mutableSetOf<ConfigValidationError>()
+        errors += super.validate(target)
+        schema?.let {
+            errors += it.validate(target).map { error -> error.withContainingPath(key) }
+        }
+        return errors
     }
 }
 
-private class ListConfigProperty<TYPE>(override val key: String, elementTypeName: String, private val extractListValue: (Config, String) -> List<TYPE>) : ConfigProperty.Required<List<TYPE>> {
+private class ListConfigProperty<TYPE>(override val key: String, elementTypeName: String, private val extractListValue: (Config, String) -> List<TYPE>, private val elementSchema: ConfigSchema?) : ConfigProperty.Required<List<TYPE>> {
 
     override val typeName = "List<${elementTypeName.capitalize()}>"
 
     override fun valueIn(configuration: Config): List<TYPE> = extractListValue.invoke(configuration, key)
 
     override fun optional(defaultValue: List<TYPE>?): ConfigProperty<List<TYPE>?> = OptionalConfigProperty(key, typeName, defaultValue, ::validate, extractListValue)
+
+    override fun validate(target: Config): Set<ConfigValidationError> {
+
+        val errors = mutableSetOf<ConfigValidationError>()
+        errors += super.validate(target)
+        elementSchema?.let { schema ->
+            errors += valueIn(target).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).mapIndexed { index, targetConfig -> schema.validate(targetConfig).map { error -> error.withContainingPath(key, "[$index]") } }.reduce { one, other -> one + other }
+        }
+        return errors
+    }
 }
 
 private class OptionalConfigProperty<TYPE>(override val key: String, valueTypeName: String, private val defaultValue: TYPE?, private val validate: (Config) -> Set<ConfigValidationError>, private val extractValue: (Config, String) -> TYPE) : ConfigProperty<TYPE?> {
@@ -221,4 +243,12 @@ private class OptionalConfigProperty<TYPE>(override val key: String, valueTypeNa
 private fun compositeMappedName(mappedTypeName: String?, originalTypeName: String) = mappedTypeName?.let { "[$originalTypeName => ${it.capitalize()}]" }
         ?: originalTypeName
 
-private fun ConfigException.toValidationError(keyName: String, typeName: String) = ConfigValidationError(keyName, typeName, message!!)
+private fun ConfigException.toValidationError(keyName: String, typeName: String): ConfigValidationError {
+
+    return when (this) {
+        is ConfigException.Missing -> ConfigValidationError.MissingValue(keyName, typeName, message!!)
+        is ConfigException.WrongType -> ConfigValidationError.WrongType(keyName, typeName, message!!)
+        is ConfigException.BadValue -> ConfigValidationError.MissingValue(keyName, typeName, message!!)
+        else -> throw IllegalStateException("Unsupported ConfigException of type ${this::class.java.name}")
+    }
+}

@@ -11,10 +11,10 @@ class ConfigPropertyTest {
     fun present_value_with_correct_type() {
 
         val key = "a.b.c"
-        val value = 1
+        val value = 1L
         val configuration = configObject(key to value).toConfig()
 
-        val property = ConfigProperty.int(key)
+        val property = ConfigProperty.long(key)
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -43,10 +43,10 @@ class ConfigPropertyTest {
     fun present_value_of_list_type() {
 
         val key = "a.b.c"
-        val value = listOf(1, 2, 3)
+        val value = listOf(1L, 2L, 3L)
         val configuration = configObject(key to value).toConfig()
 
-        val property = ConfigProperty.int(key).list()
+        val property = ConfigProperty.long(key).list()
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -59,10 +59,10 @@ class ConfigPropertyTest {
     fun optional_present_value_of_list_type() {
 
         val key = "a.b.c"
-        val value = listOf(1, 2, 3)
+        val value = listOf(1L, 2L, 3L)
         val configuration = configObject(key to value).toConfig()
 
-        val property = ConfigProperty.int(key).list().optional()
+        val property = ConfigProperty.long(key).list().optional()
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -77,7 +77,7 @@ class ConfigPropertyTest {
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
-        val property = ConfigProperty.int(key).list().optional()
+        val property = ConfigProperty.long(key).list().optional()
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -93,8 +93,8 @@ class ConfigPropertyTest {
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
-        val defaultValue = listOf(1, 2, 3)
-        val property = ConfigProperty.int(key).list().optional(defaultValue)
+        val defaultValue = listOf(1L, 2L, 3L)
+        val property = ConfigProperty.long(key).list().optional(defaultValue)
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -109,7 +109,7 @@ class ConfigPropertyTest {
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
-        val property = ConfigProperty.int(key)
+        val property = ConfigProperty.long(key)
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -122,10 +122,10 @@ class ConfigPropertyTest {
     fun optional_present_value_with_correct_type() {
 
         val key = "a.b.c"
-        val value = 1
+        val value = 1L
         val configuration = configObject(key to value).toConfig()
 
-        val property = ConfigProperty.int(key).optional()
+        val property = ConfigProperty.long(key).optional()
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -156,7 +156,7 @@ class ConfigPropertyTest {
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
-        val property = ConfigProperty.int(key).optional()
+        val property = ConfigProperty.long(key).optional()
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -171,8 +171,8 @@ class ConfigPropertyTest {
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
-        val defaultValue = 23
-        val property = ConfigProperty.int(key).optional(defaultValue)
+        val defaultValue = 23L
+        val property = ConfigProperty.long(key).optional(defaultValue)
         println(property)
 
         assertThat(property.key).isEqualTo(key)
