@@ -1,6 +1,6 @@
 package net.corda.testing.node.internal
 
-import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
+import io.github.classgraph.ClassGraph
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.outputStream
@@ -69,9 +69,12 @@ fun Iterable<TestCorDapp>.packageInDirectory(directory: Path) {
  * Returns all classes within the [targetPackage].
  */
 fun allClassesForPackage(targetPackage: String): Set<Class<*>> {
-
-    val scanResult = FastClasspathScanner(targetPackage).strictWhitelist().scan()
-    return scanResult.namesOfAllClasses.filter { className -> className.startsWith(targetPackage) }.map(scanResult::classNameToClassRef).toSet()
+    return ClassGraph()
+            .whitelistPackages(targetPackage)
+            .enableAllInfo()
+            .scan()
+            .use { it.allClasses.loadClasses() }
+            .toSet()
 }
 
 /**

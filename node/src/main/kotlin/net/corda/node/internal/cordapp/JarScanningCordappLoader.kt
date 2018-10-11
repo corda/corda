@@ -1,7 +1,7 @@
 package net.corda.node.internal.cordapp
 
-import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
-import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
+import io.github.classgraph.ClassGraph
+import io.github.classgraph.ScanResult
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -95,7 +95,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     }
     private fun loadCordapps(): List<CordappImpl> {
         val cordapps = cordappJarPaths
-                .map { scanCordapp(it).toCordapp(it) }
+                .map { url -> scanCordapp(url).use { it.toCordapp(url) } }
                 .filter {
                     if (it.info.minimumPlatformVersion > versionInfo.platformVersion) {
                         logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it requires minimum " +
@@ -202,7 +202,8 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     private fun scanCordapp(cordappJarPath: RestrictedURL): RestrictedScanResult {
         logger.info("Scanning CorDapp in ${cordappJarPath.url}")
         return cachedScanResult.computeIfAbsent(cordappJarPath) {
-            RestrictedScanResult(FastClasspathScanner().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).scan(), cordappJarPath.qualifiedNamePrefix)
+            val scanResult = ClassGraph().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).enableAllInfo().scan()
+            RestrictedScanResult(scanResult, cordappJarPath.qualifiedNamePrefix)
         }
     }
 
@@ -239,40 +240,49 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         return map { it.kotlin.objectOrNewInstance() }
     }
 
-    private inner class RestrictedScanResult(private val scanResult: ScanResult, private val qualifiedNamePrefix: String) {
+    private inner class RestrictedScanResult(private val scanResult: ScanResult, private val qualifiedNamePrefix: String) : AutoCloseable {
         fun getNamesOfClassesImplementing(type: KClass<*>): List<String> {
-            return scanResult.getNamesOfClassesImplementing(type.java)
-                    .filter { it.startsWith(qualifiedNamePrefix) }
+            return scanResult.getClassesImplementing(type.java.name).names.filter { it.startsWith(qualifiedNamePrefix) }
         }
 
         fun <T : Any> getClassesWithSuperclass(type: KClass<T>): List<Class<out T>> {
-            return scanResult.getNamesOfSubclassesOf(type.java)
+            return scanResult
+                    .getSubclasses(type.java.name)
+                    .names
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
-                    .filterNot { Modifier.isAbstract(it.modifiers) }
+                    .filterNot { it.isAbstractClass }
         }
 
         fun <T : Any> getClassesImplementing(type: KClass<T>): List<T> {
-            return scanResult.getNamesOfClassesImplementing(type.java)
+            return scanResult
+                    .getClassesImplementing(type.java.name)
+                    .names
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
-                    .filterNot { Modifier.isAbstract(it.modifiers) }
+                    .filterNot { it.isAbstractClass }
                     .map { it.kotlin.objectOrNewInstance() }
         }
 
         fun <T : Any> getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {
-            return scanResult.getNamesOfClassesWithAnnotation(annotation.java)
+            return scanResult
+                    .getClassesWithAnnotation(annotation.java.name)
+                    .names
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
                     .filterNot { Modifier.isAbstract(it.modifiers) }
         }
 
         fun <T : Any> getConcreteClassesOfType(type: KClass<T>): List<Class<out T>> {
-            return scanResult.getNamesOfSubclassesOf(type.java)
+            return scanResult
+                    .getSubclasses(type.java.name)
+                    .names
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
-                    .filterNot { Modifier.isAbstract(it.modifiers) }
+                    .filterNot { it.isAbstractClass }
         }
+
+        override fun close() = scanResult.close()
     }
 }
 

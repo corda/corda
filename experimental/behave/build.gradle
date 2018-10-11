@@ -51,8 +51,8 @@ dependencies {
     // JOptSimple: command line option parsing
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
-    // FastClasspathScanner: classpath scanning
-    compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
+    // ClassGraph: classpath scanning
+    compile "io.github.classgraph:classgraph:$class_graph_version"
 
     compile "commons-io:commons-io:$commonsio_version"
     compile "com.spotify:docker-client:$docker_client_version"
