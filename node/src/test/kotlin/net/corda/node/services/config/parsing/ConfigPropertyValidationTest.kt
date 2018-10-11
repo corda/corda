@@ -263,7 +263,7 @@ class ConfigPropertyValidationTest {
     }
 
     @Test
-    fun wrong_type_in_nested_properties() {
+    fun wrong_type_in_nested_property() {
 
         val key = "a.b.c"
 
@@ -293,7 +293,7 @@ class ConfigPropertyValidationTest {
     }
 
     @Test
-    fun absent_value_in_nested_properties() {
+    fun absent_value_in_nested_property() {
 
         val key = "a.b.c"
 
@@ -323,7 +323,7 @@ class ConfigPropertyValidationTest {
     }
 
     @Test
-    fun missing_value_in_nested_properties() {
+    fun missing_value_in_nested_property() {
 
         val key = "a.b.c"
 
@@ -350,5 +350,24 @@ class ConfigPropertyValidationTest {
 
         val exception = IllegalArgumentException()
         assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
+    }
+
+    @Test
+    fun nested_property_without_schema_does_not_validate() {
+
+        val key = "a.b.c"
+
+        val nestedKey = "d"
+
+        val property: Validator<Config, ConfigValidationError> = ConfigProperty.value(key)
+
+        val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
+
+        assertThat(property.isValid(configuration)).isTrue()
+
+        assertThat(property.validate(configuration)).isEmpty()
+
+        val exception = IllegalArgumentException()
+        assertThatCode { property.rejectIfInvalid(configuration) { exception } }.doesNotThrowAnyException()
     }
 }
