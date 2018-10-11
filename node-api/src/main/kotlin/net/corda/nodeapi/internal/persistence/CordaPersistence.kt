@@ -61,6 +61,10 @@ class CordaPersistence(
         private val log = contextLogger()
     }
 
+    init {
+        typeDescriptors.forEach { JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(it) }
+    }
+
     private val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
@@ -182,7 +186,7 @@ class CordaPersistence(
         (_dataSource as? AutoCloseable)?.close()
 
         fun Collection<*>.closeAutoCloseables() {
-            mapNotNull { it as? AutoCloseable }.forEach { it.close() }
+            forEach { (it as? AutoCloseable)?.close() }
         }
 
         attributeConverters.closeAutoCloseables()

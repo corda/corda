@@ -104,6 +104,8 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     // CordaPersistence is not a c'tor parameter to work around the cyclic dependency
     var database: CordaPersistence? = null
 
+    lateinit var ourNames: Set<CordaX500Name>
+
     private val keyToParties = createPKMap(cacheFactory)
     private val principalToParties = createX500Map(cacheFactory)
 
@@ -132,7 +134,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate, isNewRandomIdentity: Boolean): PartyAndCertificate? {
-        return database!!.transaction {
+        return onPersistentStore().transaction {
             verifyAndRegisterIdentity(trustAnchor, identity, isNewRandomIdentity)
         }
     }
@@ -153,10 +155,10 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return keyToParties[parentId]
     }
 
-    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = database!!.transaction { keyToParties[mapToKey(owningKey)] }
+    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = onPersistentStore().transaction { keyToParties[mapToKey(owningKey)] }
 
     private fun certificateFromCordaX500Name(name: CordaX500Name): PartyAndCertificate? {
-        return database!!.transaction {
+        return onPersistentStore().transaction {
             val partyId = principalToParties[name]
             if (partyId != null) {
                 keyToParties[partyId]
@@ -165,14 +167,14 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     // We give the caller a copy of the data set to avoid any locking problems
-    override fun getAllIdentities(): Iterable<PartyAndCertificate> = database!!.transaction { keyToParties.allPersisted().map { it.second }.asIterable() }
+    override fun getAllIdentities(): Iterable<PartyAndCertificate> = onPersistentStore().transaction { keyToParties.allPersisted().map { it.second }.asIterable() }
 
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
 
-    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? = database!!.transaction { super.wellKnownPartyFromAnonymous(party) }
+    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? = onPersistentStore().transaction { super.wellKnownPartyFromAnonymous(party) }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
-        return database!!.transaction {
+        return onPersistentStore().transaction {
             val results = LinkedHashSet<Party>()
             for ((x500name, partyId) in principalToParties.allPersisted()) {
                 partiesFromName(query, exactMatch, x500name, results, keyToParties[partyId]!!.party)
@@ -182,9 +184,11 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     }
 
     @Throws(UnknownAnonymousPartyException::class)
-    override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) = database!!.transaction { super.assertOwnership(party, anonymousParty) }
+    override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) = onPersistentStore().transaction { super.assertOwnership(party, anonymousParty) }
 
-    lateinit var ourNames: Set<CordaX500Name>
+    private fun onPersistentStore(): CordaPersistence {
+        return database ?: throw IllegalStateException("Persistence store within identity service has not yet been been initialised or been already closed.")
+    }
 
     // Allows us to cheaply eliminate keys we know belong to others by using the cache contents without triggering loading.
     fun stripCachedPeerKeys(keys: Iterable<PublicKey>): Iterable<PublicKey> {
