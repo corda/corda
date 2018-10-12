@@ -18,17 +18,35 @@ A typical Java application, seen from the JVM level, has a flat namespace in whi
 
 More complex Java applications may have a nested namespace using classloaders, thus inside a JVM a class is actually a pair of (classloader pointer, class name) and this can be used to support tricks like having two different versions of the same class in use simultaneously. The downside is more complexity for the developer to deal with. When things get mixed up this can surface (in Java 8) as nonsensical error messages like "com.example.Person cannot be casted to com.example.Person". In Java 9 classloaders were finally given names so these errors make more sense.
 
+
+
 #### Corda namespaces
 
-Corda has an even more complex namespace. States are identified using ordinary Java class names because programmers have to be able to write source code that works with them. But because there's no centralised coordination point and Java package namespacing is just a convention, the true name of a class when loaded and run includes the hash of the JAR that defines it. These "attached JARs" are a property of a *transaction* not a state, thus a state only has specific meaning within the context of a transaction. In this way the code that defines a state/contract can evolve over time without needing to constantly edit the ledger when new versions are released. We call this type of just-in-time selection of final logic when building a transaction as "implicit upgrades". The assumption is that data may live for much longer than code.
+Corda faces an extension of the Java namespace problem - we have a global namespace in which malicious adversaries might be choosing names to be deliberately confusing. Nothing forces an app developer to follow the standard conventions for Java package or class names - someone could make an app that uses the same class name as one of your own apps. Corda needs to keep these two different classes, from different origins, separated.
 
-The node maps attachments to class paths to classloaders, which ensures that the JVM's namespace is synced with the ledger during verification and it will interpret names relative to the transaction being processed. States outside of a transaction are bound to these true "decentralised names" using an indirection intended to allow for smooth migration between versions called *contract constraints*. 
+On the core ledger this is done by associating each state with an _attachment_. The attachment is the JAR file that contains the class files used by states. To load a state, a classloader is defined that uses the attachments on a transaction, and then the state class is loaded via that classloader.
 
-A constraint specifies what attachments can be used to implement the state's class name, with differing levels of ambiguity. Therefore a transaction's attachments must satisfy the included state's constraints. This scheme is somewhat complex, but gives developers freedom to combine multiple applications together in an agile environment where software is constantly changing, might be malicious and where trust relationships can be complex.
+With this infrastructure in place, the Corda node and JVM can internally keep two classes that share the same name separated. The name of the state is, in effect, a list of attachments (hashes of JAR files) combined with a regular class name.
 
-The problem is that working with these sorts of sophisticated namespaces is hard, including for platform developers. 
 
-As the Java 8 error message example shows, even implementors of complex namespaces often don't get every detail right. Corda expects developers to understand that a `com.megacorp.token.MegaToken` class they find in a transaction or deserialise out of the vault might *not* have been the same as the `com.megacorp.token.MegaToken` class they had in mind when writing a program. It might be a legitimate later version, but it may also be a totally different class in the worst case written by an adversary e.g. one that gives the adversary the right to spend the token.
+
+#### Namespaces and versioning
+
+Names and namespaces are a critical part of how platforms of any kind handle software evolution. If component A is verifying the precise content of component B, e.g. by hashing it, then there can be no agility - component B can never be upgraded. Sometimes this is what's wanted. But usually you want the indirection of a name or set of names that stands in for some behaviour. Exactly how that behaviour is provided is abstracted away behind the mapping of the namespace to concrete artifacts.
+
+Versioning and resistance to malicious attack are likewise heavily interrelated, because given two different codebases that export the same names, it's possible that one is a legitimate upgrade which changes the logic behind the names in beneficial ways, and the other is an imposter that changes the logic in malicious ways. It's important to keep the differences straight, which can be hard because by their very nature, two versions of the same app tend to be nearly identical.
+
+
+
+#### Namespace complexity
+
+Reasoning about namespaces is hard and has historically led to security flaws in many platforms.
+
+Although the Corda namespace system _can_ keep overlapping but distinct apps separated, that unfortunately doesn't mean that everywhere it actually does. In a few places Corda does not currently provide all the data needed to work with full state names, although we are adding this data to RPC in Corda 4. 
+
+Even if Corda was sure to get every detail of this right in every area, a full ecosystem consists of many programs written by app developers - not just contracts and flows, but also RPC clients, bridges from internal systems and so on. It is unreasonable to expect developers to fully keep track of Corda compound names everywhere throughout the entire pipeline of tools and processes that may surround the node: some of them will lose track of the attachments list and end up with only a class name, and others will do things like serialise to JSON in which even type names go missing.
+
+Although we can work on improving our support and APIs for working with sophisticated compound names, we should also allow people to work with simpler namespaces again - like just Java class names. This involves a small sacrifice of decentralisation but the increase in security is probably worth it for most developers.
 
 ## Goals
 
@@ -38,7 +56,7 @@ As the Java 8 error message example shows, even implementors of complex namespac
 
 ## Non-goals
 
-* Directly make it easier to work with "decentralised names". This might come later.
+* Directly make it easier to work with "decentralised names". This can be a project that comes later.
 
 ## Design
 
