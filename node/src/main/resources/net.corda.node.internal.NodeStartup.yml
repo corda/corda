@@ -104,11 +104,6 @@
     required: false
     multiParam: true
     acceptableValues: []
-  - parameterName: "-c"
-    parameterType: "boolean"
-    required: false
-    multiParam: false
-    acceptableValues: []
   - parameterName: "-d"
     parameterType: "java.lang.Boolean"
     required: false
