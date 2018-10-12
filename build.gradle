@@ -324,6 +324,7 @@ bintrayConfig {
             'corda-shell',
             'corda-serialization',
             'corda-tools-blob-inspector',
+            'corda-tools-explorer',
             'corda-tools-network-bootstrapper'
     ]
     license {
