@@ -69,7 +69,7 @@ dependencies {
     compile project(':node-api')
 
     // For caches rather than guava
-    compile "com.github.corda.caffeine:caffeine:fifty_weight-SNAPSHOT"
+    compile "com.github.corda.caffeine:caffeine:cfca283c984d93d520bfcde234920ea0840402ee"
 
     // Unit testing helpers.
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
