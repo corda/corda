@@ -32,9 +32,6 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes"
-        signing {
-            enabled false
-        }
         node {
             name "O=Notary,L=London,C=GB"
             // The notary will offer a validating notary service.
