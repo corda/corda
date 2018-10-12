@@ -11,6 +11,8 @@ import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
@@ -340,3 +342,25 @@ class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
  */
 @KeepForDJVM
 data class StateAndContract(val state: ContractState, val contract: ContractClassName)
+
+/**
+ * [LinearPointer] allows a [ContractState] to "point" to another [LinearState] creating a "many-to-one" relationship
+ * between all the states containing the pointer to a particular [LinearState] and the [LinearState] being pointed to.
+ *
+ * Using the [LinearPointer] is useful when one state depends on the data contained within another state that evolves
+ * independently.
+ */
+interface LinearPointer {
+
+    /** The [UniqueIdentifier] of the [LinearState] that this [LinearPointer] points to. */
+    val pointer: UniqueIdentifier
+
+    /**
+     * Resolves a [LinearPointer] using the [UniqueIdentifier] contained in the [pointer] property. returns a
+     * [StateAndRef] containing the latest version of the [LinearState] that the node calling [resolve] is aware of.
+     * There are two issues to note with [LinearPointer]:
+     *
+     * @param services a minimal [ServiceHub] implementation to resolve the
+     */
+    fun resolve(services: ServicesForResolution): StateAndRef<LinearState>
+}
