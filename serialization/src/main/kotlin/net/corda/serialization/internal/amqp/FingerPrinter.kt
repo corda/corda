@@ -7,6 +7,8 @@ import net.corda.core.internal.isConcreteClass
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.utilities.toBase64
 import net.corda.serialization.internal.amqp.SerializerFactory.Companion.isPrimitive
+import net.corda.serialization.internal.model.TypeIdentifier
+import net.corda.serialization.internal.model.prettyPrint
 import java.lang.reflect.*
 import java.util.*
 
@@ -53,14 +55,25 @@ internal class FingerPrintingState(private val factory: SerializerFactory) {
 
     private val typesSeen: MutableSet<Type> = mutableSetOf()
     private var currentContext: Type? = null
+    private val buffer = StringBuilder()
     private var hasher: Hasher = newDefaultHasher()
 
     // Fingerprint the type recursively, and return the encoded fingerprint written into the hasher.
-    fun fingerprint(type: Type) = fingerprintType(type).hasher.fingerprint
+    fun fingerprint(type: Type): String {
+        val header = TypeIdentifier.forGenericType(type).prettyPrint()
+        println("=".repeat(header.length))
+        println(header)
+        println("=".repeat(header.length))
+        fingerprintType(type)
+        val result = buffer.toString()
+        println(result)
+        return newDefaultHasher().putUnencodedChars(result).fingerprint
+    }
 
     // This method concatenates various elements of the types recursively as unencoded strings into the hasher,
     // effectively creating a unique string for a type which we then hash in the calling function above.
     private fun fingerprintType(type: Type): FingerPrintingState = apply {
+        println(TypeIdentifier.forGenericType(type).prettyPrint())
         // Don't go round in circles.
         if (hasSeen(type)) append(ALREADY_SEEN_HASH)
         else ifThrowsAppend(
@@ -125,6 +138,8 @@ internal class FingerPrintingState(private val factory: SerializerFactory) {
         append(type.asClass().name)
 
         orderedPropertiesForSerialization(type).forEach { prop ->
+            print(prop.serializer.name)
+            print(" -> ")
             fingerprintType(prop.serializer.resolvedType)
             fingerprintPropSerialiser(prop)
         }
@@ -149,7 +164,8 @@ internal class FingerPrintingState(private val factory: SerializerFactory) {
 
     // Write the given character sequence into the hasher.
     private fun append(chars: CharSequence) {
-        hasher = hasher.putUnencodedChars(chars)
+        buffer.append(chars)
+        //hasher = hasher.putUnencodedChars(chars)
     }
 
     // Give any custom serializers loaded into the factory the chance to supply their own type-descriptors
@@ -181,7 +197,6 @@ internal class FingerPrintingState(private val factory: SerializerFactory) {
     }
 
 }
-
 // region Utility functions
 
 // Create a new instance of the [Hasher] used for fingerprinting by the default [SerializerFingerPrinter]
@@ -190,12 +205,10 @@ private fun newDefaultHasher() = Hashing.murmur3_128().newHasher()
 // We obtain a fingerprint from a [Hasher] by taking the Base 64 encoding of its hash bytes
 private val Hasher.fingerprint get() = hash().asBytes().toBase64()
 
-internal fun fingerprintForDescriptors(vararg typeDescriptors: String): String =
-        newDefaultHasher().putUnencodedChars(typeDescriptors.joinToString()).fingerprint
-
 private val Class<*>.isCollectionOrMap get() =
     (Collection::class.java.isAssignableFrom(this) || Map::class.java.isAssignableFrom(this))
             && !EnumSet::class.java.isAssignableFrom(this)
+
 
 private val Class<*>.isPrimitiveOrCollection get() =
     isPrimitive(this) || isCollectionOrMap
