@@ -95,7 +95,7 @@ class NodeCmdLineOptions {
     var bootstrapRaftCluster: Boolean = false
 
     @Option(
-            names = ["-c", "--clear-network-map-cache"],
+            names = ["--clear-network-map-cache"],
             description = ["DEPRECATED. Clears local copy of network map, on node startup it will be restored from server or file system."],
             hidden = true
     )
