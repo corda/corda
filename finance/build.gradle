@@ -88,6 +88,17 @@ cordapp {
         name "net/corda/finance"
         vendor "Corda Open Source"
     }
+    // TODO enable once plugin with signing DSL entry is released
+    // Pass system properties via ./gradlew -DsigningKeystore="/path/to/keystore.jks" -DsigningAlias="alias" -DsigningStorepass="password" -DsigningKeypass="password"
+    //signing {
+    //    enabled System.getProperty('signingEnabled')
+    //    options {
+    //        keystore System.getProperty('signingKeystore')
+    //        alias System.getProperty('signingAlias')
+    //        storepass System.getProperty('signingStorepass')
+    //        keypass System.getProperty('signingKeypass')
+    //    }
+    //}
 }
 
 publish {

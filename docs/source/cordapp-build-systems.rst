@@ -111,8 +111,6 @@ For further information about managing dependencies, see
 
 Signing the CorDapp JAR
 ^^^^^^^^^^^^^^^^^^^^^^^
-*Since corda-gradle-plugins 4.0.31*
-
 The ``cordapp`` plugin signs the generated Cordapp JAR with well known Corda development certificate.
 Cordapp signing can disabled or configured to use an external keystore.
 `signing`` entry may contain the following parameters:
@@ -121,7 +119,7 @@ Cordapp signing can disabled or configured to use an external keystore.
  * ``options`` - any relevant task parameters as for ANT task `SignJar <https://ant.apache.org/manual/Tasks/signjar.html>`_ ,
  the minimal set of options to sign using external keyStore is:
 
-     * ``keystore`` - path to the keystore file, by default cordadevcakeys.jks keyStore shipped with the plugin is used
+     * ``keystore`` - path to the keystore file, by default cordadevcakeys.jks keyStore is shipped with the plugin
      * ``alias`` - the alias to sign under, the default value is `cordaintermediateca`
      * ``storepass`` - password for keystore, the default value is `cordacadevpass`
      * ``keypass``  - password for private key if different than password for the keyStore, the dafualt value is `cordacadevkeypass`
@@ -143,15 +141,45 @@ Cordapp signing can disabled or configured to use an external keystore.
 Cordapp auto-signing allows to use signature constraints for contracts from the CorDapp
 without need to create a keyStore and configure the task.
 For production deployment ensure to sign CorDapp using own certificate e.g. by configuring options to point to external keyStore
-or by disabling signing in `corpapp`` plugin and require the Cordapp JAR is signed downstream in your build/deployment pipeline.
+or by disabling signing in ``corpapp`` plugin and require the CordDapp JAR is signed downstream in your build/deployment pipeline.
 CorDapp signed by Corda development certificate is accepted by Corda node only when running in the development mode.
 
-`JAR file specification <https://docs.oracle.com/javase/8/docs/technotes/guides/jar/jar.html>`_
-requires a signature block file name to conform one of the following formats: \*.DSA, \*.RSA or SIG-\*.
-`jarSigner tool <https://docs.oracle.com/javase/8/docs/technotes/tools/windows/jarsigner.html>`_ (used internally by ``cordapp`` plugin)
-may create a file with \*.EC extension, if the signers key’s are EC keys.
-This file name is however incompatible with the JAR file format (as it expects SIG-\*).
-In such case use the option ``sigfile`` with value SIG-\* to create the accepted file name for EC (the value will be truncated to 8 characters).
+Signing options can be contextually overwritten by system properties allowing a single ``gradle.build`` file to be used
+for development build (defaulting to Corda development keyStore) and production build (using external keyStore).
+This can achieved be assigning system properties to signing options, if a system property is not set then the default value is used.
+The example configuration using system properties:
+
+.. sourcecode:: groovy
+
+    cordapp {
+        signing {
+            enabled System.getProperty('signingEnabled')
+            options {
+                keystore System.getProperty('signingKeystore')
+                alias System.getProperty('signingAlias')
+                storepass System.getProperty('signingStorepass')
+                keypass System.getProperty('signingKeypass')
+            }
+        }
+    }
+
+The above configuration can leverage system properties pointing to a custom keyStore, by the following command line (for Linux/Mac OS):
+
+.. sourcecode:: shell
+
+    ./gradlew -DsigningKeystore="/path/to/keystore.jks" -DsigningAlias="alias" -DsigningStorepass="password" -DsigningKeypass="password"
+
+To disable CorDapp signing:
+
+.. sourcecode:: shell
+
+    ./gradlew signingEnabled=false
+
+Not providing any system properties will trigger signing with default Corda development keyStore:
+
+.. sourcecode:: shell
+
+    ./gradlew
 
 Cordformation plugin can also sign CorDapps JARs, when deploying set of nodes, see :doc:`generating-a-node`.
 
