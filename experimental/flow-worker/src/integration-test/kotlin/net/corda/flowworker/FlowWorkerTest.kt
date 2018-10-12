@@ -20,11 +20,14 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.USD
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.node.internal.NetworkParametersReader.NetworkParametersAndSigned
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
+import net.corda.nodeapi.internal.createDevNetworkMapCa
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
@@ -53,16 +56,22 @@ class FlowWorkerTest {
 
     private val portAllocation = PortAllocation.Incremental(10000)
 
-    // TODO: Convert to Signed Network Parameters and pass into FlowWorkerServiceHub constructor.
-    private val networkParameters = NetworkParameters(
-            minimumPlatformVersion = 1,
-            notaries = listOf(),
-            modifiedTime = Instant.now(),
-            maxMessageSize = MAX_MESSAGE_SIZE,
-            maxTransactionSize = 4000000,
-            epoch = 1,
-            whitelistedContractImplementations = emptyMap()
-    )
+    companion object {
+        private val networkParameters = NetworkParameters(
+                minimumPlatformVersion = 1,
+                notaries = listOf(),
+                modifiedTime = Instant.now(),
+                maxMessageSize = MAX_MESSAGE_SIZE,
+                maxTransactionSize = 4000000,
+                epoch = 1,
+                whitelistedContractImplementations = emptyMap()
+        )
+
+        private fun signNetworkParams(certKeyPair: CertificateAndKeyPair, trustRoot: X509Certificate): NetworkParametersAndSigned {
+            val signedParams = certKeyPair.sign(networkParameters)
+            return NetworkParametersAndSigned(signedParams, trustRoot)
+        }
+    }
 
     private val bankAKeyPair = generateKeyPair()
     private val bankBKeyPair = generateKeyPair()
@@ -103,7 +112,9 @@ class FlowWorkerTest {
 
         val (session, consumer, producer) = createArtemisClient(config, flowWorkerReplyQueueAddress)
 
-        val (flowWorker, flowWorkerServiceHub) = createFlowWorker(config, bankAInfo, networkParameters, bankAKeyPair, trustRoot, nodeCa)
+        val signedNetworkParameters = signNetworkParams(createDevNetworkMapCa(), trustRoot)
+
+        val (flowWorker, flowWorkerServiceHub) = createFlowWorker(config, bankAInfo, signedNetworkParameters, bankAKeyPair, trustRoot, nodeCa)
         try {
             flowWorkerServiceHub.database.transaction {
                 flowWorkerServiceHub.identityService.registerIdentity(notaryPartyAndCertificate)
@@ -152,7 +163,9 @@ class FlowWorkerTest {
 
         val bankABroker = createFlowWorkerBroker(bankAConfig, networkParameters.maxMessageSize)
         val bankABridgeControlListener = createBridgeControlListener(bankAConfig, networkParameters.maxMessageSize)
-        val (bankAFlowWorker, bankAFlowWorkerServiceHub) = createFlowWorker(bankAConfig, bankAInfo, networkParameters, bankAKeyPair, bankATrustRoot, bankANodeCa)
+        val signedNetworkParameters = signNetworkParams(createDevNetworkMapCa(), bankATrustRoot)
+
+        val (bankAFlowWorker, bankAFlowWorkerServiceHub) = createFlowWorker(bankAConfig, bankAInfo, signedNetworkParameters, bankAKeyPair, bankATrustRoot, bankANodeCa)
 
         val bankARequestQueueAddress = "${FlowWorker.FLOW_WORKER_QUEUE_ADDRESS_PREFIX}${bankAKeyPair.public.toStringShort()}"
         val bankAReplyQueueAddress = "${FlowWorker.FLOW_WORKER_QUEUE_ADDRESS_PREFIX}reply"
@@ -173,7 +186,7 @@ class FlowWorkerTest {
 
         val bankBBroker = createFlowWorkerBroker(bankBConfig, networkParameters.maxMessageSize)
         val bankBBridgeControlListener = createBridgeControlListener(bankBConfig, networkParameters.maxMessageSize)
-        val (bankBFlowWorker, bankBFlowWorkerServiceHub) = createFlowWorker(bankBConfig, bankBInfo, networkParameters, bankBKeyPair, bankBTrustRoot, bankBNodeCa)
+        val (bankBFlowWorker, bankBFlowWorkerServiceHub) = createFlowWorker(bankBConfig, bankBInfo, signedNetworkParameters, bankBKeyPair, bankBTrustRoot, bankBNodeCa)
 
         try {
             bankAFlowWorkerServiceHub.database.transaction {
@@ -227,8 +240,8 @@ class FlowWorkerTest {
         return broker
     }
 
-    private fun createFlowWorker(config: NodeConfiguration, myInfo: NodeInfo, networkParameters: NetworkParameters, ourKeyPair: KeyPair, trustRoot: X509Certificate, nodeCa: X509Certificate): Pair<FlowWorker, FlowWorkerServiceHub> {
-        val flowWorkerServiceHub = FlowWorkerServiceHub(config, myInfo, ourKeyPair, trustRoot, nodeCa, TODO())
+    private fun createFlowWorker(config: NodeConfiguration, myInfo: NodeInfo, signedNetworkParameters: NetworkParametersAndSigned, ourKeyPair: KeyPair, trustRoot: X509Certificate, nodeCa: X509Certificate): Pair<FlowWorker, FlowWorkerServiceHub> {
+        val flowWorkerServiceHub = FlowWorkerServiceHub(config, myInfo, ourKeyPair, trustRoot, nodeCa, signedNetworkParameters)
         val flowWorker = FlowWorker(UUID.randomUUID().toString(), flowWorkerServiceHub)
         flowWorker.start()
         return Pair(flowWorker, flowWorkerServiceHub)

@@ -18,7 +18,6 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.createDirectories
-import net.corda.core.internal.createDirectory
 import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
@@ -166,7 +165,7 @@ data class RpcFlowWorkerDriverDSL(private val driverDSL: DriverDSLImpl) : Intern
         val flowWorkerBrokerAddress = NetworkHostAndPort("localhost", driverDSL.portAllocation.nextPort())
 
         val baseDirectory = driverDSL.driverDirectory / myLegalName.organisation
-        baseDirectory.createDirectory()
+        baseDirectory.createDirectories()
 
         val dataSourceProperties = MockServices.makeTestDataSourceProperties()
         dataSourceProperties.setProperty("maximumPoolSize", "10")
