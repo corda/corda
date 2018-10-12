@@ -411,7 +411,8 @@ class StartedFlowTransition(
 
     private fun executeAsyncOperation(flowIORequest: FlowIORequest.ExecuteAsyncOperation<*>): TransitionResult {
         return builder {
-            actions.add(Action.ExecuteAsyncOperation(flowIORequest.operation))
+            val deduplicationId = context.id.toString() +":"+ currentState.checkpoint.numberOfSuspends.toString()
+            actions.add(Action.ExecuteAsyncOperation(deduplicationId, flowIORequest.operation))
             FlowContinuation.ProcessEvents
         }
     }

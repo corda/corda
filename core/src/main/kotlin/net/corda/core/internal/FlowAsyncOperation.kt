@@ -13,7 +13,7 @@ import net.corda.core.serialization.CordaSerializable
 @CordaSerializable
 interface FlowAsyncOperation<R : Any> {
     /** Performs the operation in a non-blocking fashion. */
-    fun execute(): CordaFuture<R>
+    fun execute(deduplicationId: String): CordaFuture<R>
 }
 // DOCEND FlowAsyncOperation
 
