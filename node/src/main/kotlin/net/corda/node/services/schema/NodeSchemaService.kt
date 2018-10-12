@@ -17,7 +17,6 @@ import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.RunOnceService
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.VaultSchemaV1
 

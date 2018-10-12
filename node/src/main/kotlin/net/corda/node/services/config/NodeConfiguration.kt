@@ -138,7 +138,12 @@ data class NotaryConfig(val validating: Boolean,
                         val custom: Boolean = false,
                         val mysql: MySQLConfiguration? = null,
                         val serviceLegalName: CordaX500Name? = null,
-                        val className: String = "net.corda.node.services.transactions.SimpleNotaryService"
+                        val className: String = "net.corda.node.services.transactions.SimpleNotaryService",
+                        val batchSize: Int = 128,
+                        val batchTimeoutMs: Long = 1L,
+                        val maxInputStates: Int = 2000,
+                        val maxDBTransactionRetryCount: Int = 10,
+                        val backOffBaseMs: Long = 20L
 ) {
     init {
         require(raft == null || bftSMaRt == null || !custom || mysql == null) {

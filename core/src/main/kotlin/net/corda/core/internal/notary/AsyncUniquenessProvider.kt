@@ -18,7 +18,7 @@ interface AsyncUniquenessProvider : UniquenessProvider {
 
     /** Commits all input states of the given transaction synchronously. Use [commitAsync] for better performance. */
     override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef>) {
-        val result = commitAsync(states, txId, callerIdentity, requestSignature, timeWindow,references).get()
+        val result = commitAsync(states, txId, callerIdentity, requestSignature, timeWindow, references).get()
         if (result is Result.Failure) {
             throw NotaryInternalException(result.error)
         }

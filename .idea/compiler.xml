@@ -187,6 +187,8 @@
       <module name="jfx_test" target="1.8" />
       <module name="jmeter_main" target="1.8" />
       <module name="jmeter_test" target="1.8" />
+      <module name="jpa_main" target="1.8" />
+      <module name="jpa_test" target="1.8" />
       <module name="kryo-hook_main" target="1.8" />
       <module name="kryo-hook_test" target="1.8" />
       <module name="launcher_main" target="1.8" />

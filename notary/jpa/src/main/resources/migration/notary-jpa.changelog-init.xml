@@ -4,32 +4,16 @@
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
                    logicalFilePath="migration/node-services.changelog-init.xml">
-
-    <changeSet author="R3.Corda" id="1511451595465-6">
-        <createTable tableName="node_bft_committed_states">
-            <column name="output_index" type="INT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="transaction_id" type="NVARCHAR(64)">
+    <changeSet author="R3.Corda" id="create-node-jpa-notary-committed-states">
+        <createTable tableName="node_jpa_notary_committed_states">
+            <column name="state_ref" type="NVARCHAR(73)">
                 <constraints nullable="false"/>
             </column>
             <column name="consuming_transaction_id" type="NVARCHAR(64)"/>
         </createTable>
-    </changeSet>
-    <changeSet author="R3.Corda" id="1511451595465-16">
-        <createTable tableName="node_notary_committed_states">
-            <column name="output_index" type="INT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="transaction_id" type="NVARCHAR(64)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="consuming_transaction_id" type="NVARCHAR(64)"/>
-        </createTable>
-    </changeSet>
-    <changeSet author="R3.Corda" id="1521131680317-17">
-        <createTable tableName="node_notary_request_log">
-            <column name="id" type="INT">
+        <addPrimaryKey columnNames="state_ref" constraintName="node_jpa_notary_committed_states_pkey" tableName="node_jpa_notary_committed_states"/>
+        <createTable tableName="node_jpa_notary_request_log">
+            <column name="id" type="NVARCHAR(76)">
                 <constraints nullable="false"/>
             </column>
             <column name="consuming_transaction_id" type="NVARCHAR(64)">
@@ -45,14 +29,6 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-    </changeSet>
-
-    <changeSet author="R3.Corda" id="1511451595465-41">
-        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="node_notary_states_pkey"
-                       tableName="node_notary_committed_states"/>
-    </changeSet>
-    <changeSet author="R3.Corda" id="1521131680317-48">
-        <addPrimaryKey columnNames="id" constraintName="node_notary_request_log_pkey"
-                       tableName="node_notary_request_log"/>
+        <addPrimaryKey columnNames="id" constraintName="node_jpa_notary_request_log_pkey" tableName="node_jpa_notary_request_log"/>
     </changeSet>
 </databaseChangeLog>

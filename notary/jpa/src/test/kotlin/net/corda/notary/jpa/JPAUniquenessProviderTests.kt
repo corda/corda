@@ -1,4 +1,4 @@
-package net.corda.node.services.transactions
+package net.corda.notary.jpa
 
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.NullKeys
@@ -9,8 +9,10 @@ import net.corda.core.flows.NotaryError
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.node.internal.configureDatabase
+import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.testing.internal.TestingNamedCacheFactory
+import net.corda.notary.jpa.JPAUniquenessProvider.Companion.decodeStateRef
+import net.corda.notary.jpa.JPAUniquenessProvider.Companion.encodeStateRef
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -26,31 +28,32 @@ import java.time.Clock
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class PersistentUniquenessProviderTests {
+class JPAUniquenessProviderTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(inheritable = true)
     private val identity = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
     private val txID = SecureHash.randomSHA256()
     private val requestSignature = NotarisationRequestSignature(DigitalSignature.WithKey(NullKeys.NullPublicKey, ByteArray(32)), 0)
+    private val notaryConfig = NotaryConfig(validating=false, maxInputStates = 10)
 
     private lateinit var database: CordaPersistence
 
     @Before
     fun setUp() {
-        LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(extraSchemas = setOf(NodeNotarySchemaV1)))
+        LogHelper.setLevel(JPAUniquenessProvider::class)
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(extraSchemas = setOf(JPANotarySchemaV1)))
     }
 
     @After
     fun tearDown() {
         database.close()
-        LogHelper.reset(PersistentUniquenessProvider::class)
+        LogHelper.reset(JPAUniquenessProvider::class)
     }
 
     @Test
     fun `should commit a transaction with unused inputs without exception`() {
-        val provider = PersistentUniquenessProvider(Clock.systemUTC(), database, TestingNamedCacheFactory())
+            val provider = JPAUniquenessProvider(Clock.systemUTC(), database, notaryConfig)
             val inputState = generateStateRef()
 
             provider.commit(listOf(inputState), txID, identity, requestSignature)
@@ -58,13 +61,11 @@ class PersistentUniquenessProviderTests {
 
     @Test
     fun `should report a conflict for a transaction with previously used inputs`() {
-        val provider = PersistentUniquenessProvider(Clock.systemUTC(), database, TestingNamedCacheFactory())
+        val provider = JPAUniquenessProvider(Clock.systemUTC(), database, notaryConfig)
         val inputState = generateStateRef()
 
         val inputs = listOf(inputState)
         val firstTxId = txID
-        provider.commit(inputs, firstTxId, identity, requestSignature)
-
         provider.commit(inputs, firstTxId, identity, requestSignature)
 
         val secondTxId = SecureHash.randomSHA256()
@@ -75,5 +76,27 @@ class PersistentUniquenessProviderTests {
 
         val conflictCause = error.consumedStates[inputState]!!
         assertEquals(conflictCause.hashOfTransactionId, firstTxId.sha256())
+    }
+
+    @Test
+    fun `serializes and deserializes state ref`() {
+        val stateRef = generateStateRef()
+        assertEquals(stateRef, decodeStateRef(encodeStateRef(stateRef)))
+    }
+
+    @Test
+    fun `all conflicts are found with batching`() {
+        val nrStates = notaryConfig.maxInputStates + notaryConfig.maxInputStates/2
+        val stateRefs = (1..nrStates).map { generateStateRef() }
+        println(stateRefs.size)
+        val firstTxId = SecureHash.randomSHA256()
+        val provider = JPAUniquenessProvider(Clock.systemUTC(), database, notaryConfig)
+        provider.commit(stateRefs, firstTxId, identity, requestSignature)
+        val secondTxId = SecureHash.randomSHA256()
+        val ex = assertFailsWith<NotaryInternalException> {
+            provider.commit(stateRefs, secondTxId, identity, requestSignature)
+        }
+        val error = ex.error as NotaryError.Conflict
+        assertEquals(nrStates, error.consumedStates.size)
     }
 }

@@ -1,5 +1,6 @@
 package net.corda.core.internal.notary
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.*
@@ -22,11 +23,12 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
     protected abstract val uniquenessProvider: UniquenessProvider
 
     /**
-     * A NotaryException is thrown if any of the states have been consumed by a different transaction. Note that
+     * @throws NotaryException if any of the states have been consumed by a different transaction. Note that
      * this method does not throw an exception when input states are present multiple times within the transaction.
      */
     @JvmOverloads
-    fun commitInputStates(
+    @Suspendable
+    open fun commitInputStates(
             inputs: List<StateRef>,
             txId: SecureHash,
             caller: Party,
