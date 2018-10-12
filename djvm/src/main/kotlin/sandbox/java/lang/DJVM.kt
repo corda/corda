@@ -2,19 +2,24 @@
 @file:Suppress("unused")
 package sandbox.java.lang
 
+import net.corda.djvm.analysis.AnalysisConfiguration.Companion.JVM_EXCEPTIONS
+import net.corda.djvm.analysis.ExceptionResolver.Companion.getDJVMException
+import net.corda.djvm.rules.implementation.*
 import org.objectweb.asm.Opcodes.ACC_ENUM
+import org.objectweb.asm.Type
+import sandbox.net.corda.djvm.rules.RuleViolationError
 
 private const val SANDBOX_PREFIX = "sandbox."
 
 fun Any.unsandbox(): Any {
     return when (this) {
-        is Enum<*> -> fromDJVMEnum()
         is Object -> fromDJVM()
         is Array<*> -> fromDJVMArray()
         else -> this
     }
 }
 
+@Throws(ClassNotFoundException::class)
 fun Any.sandbox(): Any {
     return when (this) {
         is kotlin.String -> String.toDJVM(this)
@@ -38,8 +43,11 @@ private fun Array<*>.fromDJVMArray(): Array<*> = Object.fromDJVM(this)
  * These functions use the "current" classloader, i.e. classloader
  * that owns this DJVM class.
  */
-private fun Class<*>.toDJVMType(): Class<*> = Class.forName(name.toSandboxPackage())
-private fun Class<*>.fromDJVMType(): Class<*> = Class.forName(name.fromSandboxPackage())
+@Throws(ClassNotFoundException::class)
+internal fun Class<*>.toDJVMType(): Class<*> = Class.forName(name.toSandboxPackage())
+
+@Throws(ClassNotFoundException::class)
+internal fun Class<*>.fromDJVMType(): Class<*> = Class.forName(name.fromSandboxPackage())
 
 private fun kotlin.String.toSandboxPackage(): kotlin.String {
     return if (startsWith(SANDBOX_PREFIX)) {
@@ -66,10 +74,12 @@ private inline fun <reified T : Object> Array<*>.toDJVMArray(): Array<out T?> {
     }
 }
 
-private fun Enum<*>.fromDJVMEnum(): kotlin.Enum<*> {
+@Throws(ClassNotFoundException::class)
+internal fun Enum<*>.fromDJVMEnum(): kotlin.Enum<*> {
     return javaClass.fromDJVMType().enumConstants[ordinal()] as kotlin.Enum<*>
 }
 
+@Throws(ClassNotFoundException::class)
 private fun kotlin.Enum<*>.toDJVMEnum(): Enum<*> {
     @Suppress("unchecked_cast")
     return (getEnumConstants(javaClass.toDJVMType() as Class<Enum<*>>) as Array<Enum<*>>)[ordinal]
@@ -156,3 +166,83 @@ private val bannedClasses = setOf(
     "^net\\.corda\\.djvm\\..*\$".toRegex(),
     "^Task\$".toRegex()
 )
+
+/**
+ * Exception Management.
+ */
+fun fromDJVM(t: Throwable?): kotlin.Throwable {
+    return if (t is DJVMThrowableWrapper) {
+        // We must be exiting a finally block.
+        t.fromDJVM()
+    } else {
+        try {
+            val sandboxedName = t!!.javaClass.name
+            if (Type.getInternalName(t.javaClass) in JVM_EXCEPTIONS) {
+                Class.forName(sandboxedName.fromSandboxPackage()).createJavaThrowable(t)
+            } else {
+                Class.forName(getDJVMException(sandboxedName))
+                    .getDeclaredConstructor(sandboxThrowable)
+                    .newInstance(t) as kotlin.Throwable
+            }
+        } catch (e: Exception) {
+            RuleViolationError(e.message)
+        }
+    }
+}
+
+/**
+ * Wraps a [java.lang.Throwable] inside a [sandbox.java.lang.Throwable].
+ * This function is invoked at the beginning of a finally block, and
+ * so does not need to return a reference to the equivalent sandboxed
+ * exception. The finally block only needs to be able to re-throw the
+ * original exception when it finishes.
+ */
+fun finally(t: kotlin.Throwable): Throwable = DJVMThrowableWrapper(t)
+
+/**
+ * Converts a [java.lang.Throwable] into a [sandbox.java.lang.Throwable].
+ * It is invoked at the start of each catch block.
+ *
+ * Note: [DisallowCatchingBlacklistedExceptions] means that we don't
+ * need to handle [ThreadDeath] here.
+ */
+fun catch(t: kotlin.Throwable): Throwable {
+    try {
+        return convertToDJVM(t)
+    } catch (e: Exception) {
+        throw RuleViolationError(e.message)
+    }
+}
+
+/**
+ * Worker functions to convert [java.lang.Throwable] into [sandbox.java.lang.Throwable].
+ */
+private fun convertToDJVM(t: kotlin.Throwable): Throwable {
+    return (t as? DJVMException)?.getThrowable() ?: t.javaClass.toDJVMType().createDJVMThrowable(t)
+}
+
+private fun Class<*>.createDJVMThrowable(t: kotlin.Throwable): Throwable {
+    return (try {
+        getDeclaredConstructor(String::class.java).newInstance(String.toDJVM(t.message))
+    } catch (e: NoSuchMethodException) {
+        newInstance()
+    } as Throwable).apply {
+        t.cause?.also {
+            initCause(convertToDJVM(it))
+        }
+    }
+}
+
+private fun Class<*>.createJavaThrowable(t: Throwable): kotlin.Throwable {
+    return (try {
+        getDeclaredConstructor(kotlin.String::class.java).newInstance(String.fromDJVM(t.message))
+    } catch (e: NoSuchMethodException) {
+        newInstance()
+    } as kotlin.Throwable).apply {
+        t.cause?.also {
+            initCause(fromDJVM(it))
+        }
+    }
+}
+
+private val sandboxThrowable: Class<*> = Throwable::class.java

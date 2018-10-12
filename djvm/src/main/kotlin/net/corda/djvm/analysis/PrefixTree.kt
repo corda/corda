@@ -1,7 +1,7 @@
 package net.corda.djvm.analysis
 
 /**
- * Trie data structure to make prefix matching more efficient.
+ * Tree data structure to make prefix matching more efficient.
  */
 class PrefixTree {
 

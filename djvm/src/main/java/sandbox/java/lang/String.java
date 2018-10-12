@@ -7,6 +7,7 @@ import sandbox.java.util.Locale;
 
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Constructor;
 
 @SuppressWarnings("unused")
 public final class String extends Object implements Comparable<String>, CharSequence, Serializable {
@@ -21,6 +22,17 @@ public final class String extends Object implements Comparable<String>, CharSequ
 
     private static final String TRUE = new String("true");
     private static final String FALSE = new String("false");
+
+    private static final Constructor SHARED;
+
+    static {
+        try {
+            SHARED = java.lang.String.class.getDeclaredConstructor(char[].class, java.lang.Boolean.TYPE);
+            SHARED.setAccessible(true);
+        } catch (NoSuchMethodException e) {
+            throw new NoSuchMethodError(e.getMessage());
+        }
+    }
 
     private final java.lang.String value;
 
@@ -86,6 +98,17 @@ public final class String extends Object implements Comparable<String>, CharSequ
 
     public String(StringBuilder builder) {
         this.value = builder.toString();
+    }
+
+    String(char[] value, boolean share) {
+        java.lang.String newValue;
+        try {
+            // This is (presumably) an optimisation for memory usage.
+            newValue = (java.lang.String) SHARED.newInstance(value, share);
+        } catch (Exception e) {
+            newValue = new java.lang.String(value);
+        }
+        this.value = newValue;
     }
 
     @Override

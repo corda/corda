@@ -3,6 +3,9 @@ package net.corda.djvm.rewiring
 import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.analysis.AnalysisContext
 import net.corda.djvm.analysis.ClassAndMemberVisitor
+import net.corda.djvm.analysis.ExceptionResolver.Companion.getDJVMExceptionOwner
+import net.corda.djvm.analysis.ExceptionResolver.Companion.isDJVMException
+import net.corda.djvm.code.asPackagePath
 import net.corda.djvm.code.asResourcePath
 import net.corda.djvm.references.ClassReference
 import net.corda.djvm.source.ClassSource
@@ -33,7 +36,7 @@ class SandboxClassLoader(
     /**
      * The analyzer used to traverse the class hierarchy.
      */
-    val analyzer: ClassAndMemberVisitor
+    private val analyzer: ClassAndMemberVisitor
         get() = ruleValidator
 
     /**
@@ -57,6 +60,18 @@ class SandboxClassLoader(
     private val rewriter: ClassRewriter = ClassRewriter(configuration, supportingClassLoader)
 
     /**
+     * We need to load this class up front, so that we can identify sandboxed exception classes.
+     */
+    private val throwableClass: Class<*>
+
+    init {
+        // Bootstrap the loading of the sandboxed Throwable class.
+        loadClassAndBytes(ClassSource.fromClassName("sandbox.java.lang.Object"), context)
+        loadClassAndBytes(ClassSource.fromClassName("sandbox.java.lang.StackTraceElement"), context)
+        throwableClass = loadClassAndBytes(ClassSource.fromClassName("sandbox.java.lang.Throwable"), context).type
+    }
+
+    /**
      * Given a class name, provide its corresponding [LoadedClass] for the sandbox.
      */
     fun loadForSandbox(name: String, context: AnalysisContext): LoadedClass {
@@ -78,10 +93,35 @@ class SandboxClassLoader(
     @Throws(ClassNotFoundException::class)
     override fun loadClass(name: String, resolve: Boolean): Class<*> {
         val source = ClassSource.fromClassName(name)
-        return if (name.startsWith("sandbox.") && !analysisConfiguration.isPinnedClass(source.internalClassName)) {
-            loadClassAndBytes(source, context).type
+        return if (analysisConfiguration.isSandboxClass(source.internalClassName)) {
+            loadSandboxClass(source, context).type
         } else {
             super.loadClass(name, resolve)
+        }
+    }
+
+    private fun loadSandboxClass(source: ClassSource, context: AnalysisContext): LoadedClass {
+        return if (isDJVMException(source.internalClassName)) {
+            /**
+             * We need to load a DJVMException's owner class before we can create
+             * its wrapper exception. And loading the owner should also create the
+             * wrapper class automatically.
+             */
+            loadedClasses.getOrElse(source.internalClassName) {
+                loadSandboxClass(ClassSource.fromClassName(getDJVMExceptionOwner(source.qualifiedClassName)), context)
+                loadedClasses[source.internalClassName]
+            } ?: throw ClassNotFoundException(source.qualifiedClassName)
+        } else {
+            loadClassAndBytes(source, context).also { clazz ->
+                /**
+                 * Check whether we've just loaded an unpinned sandboxed throwable class.
+                 * If we have, we may also need to synthesise a throwable wrapper for it.
+                 */
+                if (throwableClass.isAssignableFrom(clazz.type) && !analysisConfiguration.isJvmException(source.internalClassName)) {
+                    logger.debug("Generating synthetic throwable for ${source.qualifiedClassName}")
+                    loadWrapperFor(clazz.type)
+                }
+            }
         }
     }
 
@@ -134,7 +174,7 @@ class SandboxClassLoader(
         }
 
         // Try to define the transformed class.
-        val clazz = try {
+        val clazz: Class<*> = try {
             when {
                 whitelistedClasses.matches(sourceName.asResourcePath) -> supportingClassLoader.loadClass(sourceName)
                 else -> defineClass(resolvedName, byteCode.bytes, 0, byteCode.bytes.size)
@@ -164,6 +204,15 @@ class SandboxClassLoader(
     private fun loadUnmodifiedClass(className: String): LoadedClass {
         return LoadedClass(supportingClassLoader.loadClass(className), UNMODIFIED).apply {
             loadedClasses[className] = this
+        }
+    }
+
+    private fun loadWrapperFor(throwable: Class<*>): LoadedClass {
+        val className = analysisConfiguration.exceptionResolver.getThrowableName(throwable)
+        return loadedClasses.getOrPut(className) {
+            val superName = analysisConfiguration.exceptionResolver.getThrowableSuperName(throwable)
+            val byteCode = ThrowableWrapperFactory.toByteCode(className, superName)
+            LoadedClass(defineClass(className.asPackagePath, byteCode.bytes, 0, byteCode.bytes.size), byteCode)
         }
     }
 

@@ -37,22 +37,29 @@ abstract class TestBase {
         val ALL_EMITTERS = Discovery.find<Emitter>()
 
         // We need at least these emitters to handle the Java API classes.
+        @JvmField
         val BASIC_EMITTERS: List<Emitter> = listOf(
             ArgumentUnwrapper(),
+            HandleExceptionUnwrapper(),
             ReturnTypeWrapper(),
             RewriteClassMethods(),
-            StringConstantWrapper()
+            StringConstantWrapper(),
+            ThrowExceptionWrapper()
         )
 
         val ALL_DEFINITION_PROVIDERS = Discovery.find<DefinitionProvider>()
 
         // We need at least these providers to handle the Java API classes.
+        @JvmField
         val BASIC_DEFINITION_PROVIDERS: List<DefinitionProvider> = listOf(StaticConstantRemover())
 
+        @JvmField
         val BLANK = emptySet<Any>()
 
+        @JvmField
         val DEFAULT = (ALL_RULES + ALL_EMITTERS + ALL_DEFINITION_PROVIDERS).distinctBy(Any::javaClass)
 
+        @JvmField
         val DETERMINISTIC_RT: Path = Paths.get(
                 System.getProperty("deterministic-rt.path") ?: throw AssertionError("deterministic-rt.path property not set"))
 
