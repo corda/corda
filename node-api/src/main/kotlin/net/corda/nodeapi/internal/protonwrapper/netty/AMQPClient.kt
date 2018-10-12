@@ -14,14 +14,18 @@ import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.config.CertificateStore
+import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import net.corda.nodeapi.internal.requireMessageSize
 import rx.Observable
 import rx.subjects.PublishSubject
+import sun.security.x509.X500Name
 import java.lang.Long.min
 import java.net.InetSocketAddress
+import java.security.KeyStore
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -158,7 +162,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                 }
             }
 
-            val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory)
+            val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory, parent.configuration)
             val target = parent.currentTarget
             val handler = if (parent.configuration.useOpenSsl){
                 createClientOpenSslHandler(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory, ch.alloc())
@@ -169,7 +173,8 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
             pipeline.addLast(AMQPChannelHandler(false,
                     parent.allowedRemoteLegalNames,
-                    wrappedKeyManagerFactory,
+                    // Single entry, key can be anything.
+                    mapOf(DEFAULT to wrappedKeyManagerFactory),
                     conf.userName,
                     conf.password,
                     conf.trace,

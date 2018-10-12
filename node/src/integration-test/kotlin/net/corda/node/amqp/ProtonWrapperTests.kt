@@ -17,6 +17,7 @@ import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisTcpTransport
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
@@ -26,10 +27,7 @@ import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import net.corda.nodeapi.internal.protonwrapper.netty.init
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.nodeapi.internal.registerDevSigningCertificates
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.CHARLIE_NAME
-import net.corda.testing.core.MAX_MESSAGE_SIZE
+import net.corda.testing.core.*
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
@@ -422,6 +420,76 @@ class ProtonWrapperTests(val sslSetup: SslSetup) {
         server.stop()
     }
 
+    @Test
+    fun `SNI AMQP client to SNI AMQP server`() {
+        println(sslSetup)
+        val amqpServer = createServerWithMultipleNames(serverPort, listOf(ALICE_NAME, CHARLIE_NAME))
+        amqpServer.use {
+            amqpServer.start()
+            val receiveSubs = amqpServer.onReceive.subscribe {
+                assertEquals(BOB_NAME.toString(), it.sourceLegalName)
+                assertEquals(P2P_PREFIX + "Test", it.topic)
+                assertEquals("Test", String(it.payload))
+                it.complete(true)
+            }
+            createClient(MAX_MESSAGE_SIZE, setOf(ALICE_NAME)).use { amqpClient ->
+                val serverConnected = amqpServer.onConnection.toFuture()
+                val clientConnected = amqpClient.onConnection.toFuture()
+                amqpClient.start()
+                val serverConnect = serverConnected.get()
+                assertEquals(true, serverConnect.connected)
+                assertEquals(BOB_NAME, CordaX500Name.build(serverConnect.remoteCert!!.subjectX500Principal))
+                val clientConnect = clientConnected.get()
+                assertEquals(true, clientConnect.connected)
+                assertEquals(ALICE_NAME, CordaX500Name.build(clientConnect.remoteCert!!.subjectX500Principal))
+                val msg = amqpClient.createMessage("Test".toByteArray(),
+                        P2P_PREFIX + "Test",
+                        ALICE_NAME.toString(),
+                        emptyMap())
+                amqpClient.write(msg)
+                assertEquals(MessageStatus.Acknowledged, msg.onComplete.get())
+
+            }
+
+            createClientWithMultipleCerts(listOf(BOC_NAME, BOB_NAME), BOB_NAME, setOf(ALICE_NAME)).use { amqpClient ->
+                val serverConnected = amqpServer.onConnection.toFuture()
+                val clientConnected = amqpClient.onConnection.toFuture()
+                amqpClient.start()
+                val serverConnect = serverConnected.get()
+                assertEquals(true, serverConnect.connected)
+                assertEquals(BOB_NAME, CordaX500Name.build(serverConnect.remoteCert!!.subjectX500Principal))
+                val clientConnect = clientConnected.get()
+                assertEquals(true, clientConnect.connected)
+                assertEquals(ALICE_NAME, CordaX500Name.build(clientConnect.remoteCert!!.subjectX500Principal))
+                val msg = amqpClient.createMessage("Test".toByteArray(),
+                        P2P_PREFIX + "Test",
+                        ALICE_NAME.toString(),
+                        emptyMap())
+                amqpClient.write(msg)
+                assertEquals(MessageStatus.Acknowledged, msg.onComplete.get())
+            }
+            receiveSubs.unsubscribe()
+        }
+    }
+
+    @Test
+    fun `non-existent SNI AMQP client to SNI AMQP server with multiple identities`() {
+        val amqpServer = createServerWithMultipleNames(serverPort, listOf(ALICE_NAME, CHARLIE_NAME))
+        amqpServer.use {
+            amqpServer.start()
+            val amqpClient = createClientWithMultipleCerts(listOf(BOC_NAME, BOB_NAME), BOB_NAME, setOf(DUMMY_BANK_A_NAME))
+            amqpClient.use {
+                val serverConnected = amqpServer.onConnection.toFuture()
+                val clientConnected = amqpClient.onConnection.toFuture()
+                amqpClient.start()
+                val serverConnect = serverConnected.get()
+                assertEquals(false, serverConnect.connected)
+                val clientConnect = clientConnected.get()
+                assertEquals(false, clientConnect.connected)
+            }
+        }
+    }
+
     private fun createArtemisServerAndClient(maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
         val baseDirectory = temporaryFolder.root.toPath() / "artemis"
         val certificatesDirectory = baseDirectory / "certificates"
@@ -447,7 +515,8 @@ class ProtonWrapperTests(val sslSetup: SslSetup) {
         return Pair(server, client)
     }
 
-    private fun createClient(maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPClient {
+    private fun createClient(maxMessageSize: Int = MAX_MESSAGE_SIZE,
+                             expectedRemoteLegalNames: Set<CordaX500Name> = setOf(ALICE_NAME, CHARLIE_NAME)): AMQPClient {
         val baseDirectory = temporaryFolder.root.toPath() / "client"
         val certificatesDirectory = baseDirectory / "certificates"
         val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
@@ -469,13 +538,14 @@ class ProtonWrapperTests(val sslSetup: SslSetup) {
             override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
+            override val sourceX500Name = BOB_NAME.toString()
             override val useOpenSsl: Boolean = sslSetup.clientNative
         }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort),
                         NetworkHostAndPort("localhost", serverPort2),
                         NetworkHostAndPort("localhost", artemisPort)),
-                setOf(ALICE_NAME, CHARLIE_NAME),
+                expectedRemoteLegalNames,
                 amqpConfig)
     }
 
@@ -541,5 +611,76 @@ class ProtonWrapperTests(val sslSetup: SslSetup) {
                 "0.0.0.0",
                 port,
                 amqpConfig)
+    }
+
+    private fun createAmqpConfigWithMultipleCerts(legalNames: List<CordaX500Name>,
+                                                  sourceLegalName: String? = null,
+                                                  maxMessageSize: Int = MAX_MESSAGE_SIZE,
+                                                  crlCheckSoftFail: Boolean = true,
+                                                  useOpenSsl: Boolean) :AMQPConfiguration {
+        val tempFolders = legalNames.map { it to temporaryFolder.root.toPath() / it.organisation }.toMap()
+        val baseDirectories = tempFolders.mapValues { it.value / "node" }
+        val certificatesDirectories = baseDirectories.mapValues { it.value / "certificates" }
+        val signingCertificateStores = certificatesDirectories.mapValues { CertificateStoreStubs.Signing.withCertificatesDirectory(it.value) }
+        val pspSslConfigurations = certificatesDirectories.mapValues { CertificateStoreStubs.P2P.withCertificatesDirectory(it.value, useOpenSsl = sslSetup.serverNative) }
+        val serverConfigs = legalNames.map { name ->
+            val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
+                doReturn(baseDirectories[name]).whenever(it).baseDirectory
+                doReturn(certificatesDirectories[name]).whenever(it).certificatesDirectory
+                doReturn(name).whenever(it).myLegalName
+                doReturn(signingCertificateStores[name]).whenever(it).signingCertificateStore
+                doReturn(pspSslConfigurations[name]).whenever(it).p2pSslOptions
+
+                doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
+            }
+            serverConfig.configureWithDevSSLCertificate()
+            serverConfig
+        }
+
+        val serverTruststore = serverConfigs.first().p2pSslOptions.trustStore.get(true)
+        val serverKeystore = serverConfigs.first().p2pSslOptions.keyStore.get(true)
+        // Merge rest of keystores into the first
+        serverConfigs.subList(1, serverConfigs.size).forEach {
+            mergeKeyStores(serverKeystore, it.p2pSslOptions.keyStore.get(true), it.myLegalName.toString())
+        }
+
+        return object : AMQPConfiguration {
+            override val keyStore: CertificateStore = serverKeystore
+            override val trustStore: CertificateStore = serverTruststore
+            override val trace: Boolean = true
+            override val maxMessageSize: Int = maxMessageSize
+            override val useOpenSsl: Boolean = useOpenSsl
+            override val sourceX500Name: String? = sourceLegalName
+        }
+    }
+
+    private fun createServerWithMultipleNames(port: Int,
+                                              serverNames: List<CordaX500Name>,
+                                              maxMessageSize: Int = MAX_MESSAGE_SIZE,
+                                              crlCheckSoftFail: Boolean = true): AMQPServer {
+        return AMQPServer(
+                "0.0.0.0",
+                port,
+                createAmqpConfigWithMultipleCerts(serverNames, null, maxMessageSize, crlCheckSoftFail, sslSetup.serverNative))
+    }
+
+    private fun createClientWithMultipleCerts(clientNames: List<CordaX500Name>,
+                                              sourceLegalName: CordaX500Name,
+                                              expectedRemoteLegalNames: Set<CordaX500Name> = setOf(ALICE_NAME, CHARLIE_NAME)): AMQPClient {
+        return AMQPClient(
+                listOf(NetworkHostAndPort("localhost", serverPort),
+                        NetworkHostAndPort("localhost", serverPort2),
+                        NetworkHostAndPort("localhost", artemisPort)),
+                expectedRemoteLegalNames,
+                createAmqpConfigWithMultipleCerts(clientNames, sourceLegalName.toString(), MAX_MESSAGE_SIZE, true, sslSetup.clientNative))
+    }
+
+    private fun mergeKeyStores(newKeyStore: CertificateStore, oldKeyStore: CertificateStore, newAlias: String) {
+        val keyStore = oldKeyStore.value.internal
+        keyStore.aliases().toList().forEach {
+            val key = keyStore.getKey(it, oldKeyStore.password.toCharArray())
+            val certs = keyStore.getCertificateChain(it)
+            newKeyStore.value.internal.setKeyEntry(newAlias, key, oldKeyStore.password.toCharArray(), certs)
+        }
     }
 }

@@ -5,7 +5,9 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.internal.div
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.junit.Rule
@@ -41,8 +43,8 @@ class TestKeyManagerFactoryWrapper {
         config.configureWithDevSSLCertificate()
 
         val underlyingKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-
-        val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(underlyingKeyManagerFactory)
+        val amqpConfig = AMQPConfigurationImpl(config.p2pSslOptions.keyStore.get(true), config.p2pSslOptions.trustStore.get(true), MAX_MESSAGE_SIZE)
+        val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(underlyingKeyManagerFactory, amqpConfig)
         wrappedKeyManagerFactory.init(config.p2pSslOptions.keyStore.get())
         val keyManagers = wrappedKeyManagerFactory.keyManagers
         assertFalse(keyManagers.isEmpty())
@@ -74,11 +76,11 @@ class TestKeyManagerFactoryWrapper {
         config.configureWithDevSSLCertificate()
 
         val underlyingKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-
-        val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(underlyingKeyManagerFactory)
+        val amqpConfig = AMQPConfigurationImpl(config.p2pSslOptions.keyStore.get(true), config.p2pSslOptions.trustStore.get(true), MAX_MESSAGE_SIZE)
+        val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(underlyingKeyManagerFactory, amqpConfig)
         wrappedKeyManagerFactory.init(config.p2pSslOptions.keyStore.get())
 
-        val otherWrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(underlyingKeyManagerFactory)
+        val otherWrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(underlyingKeyManagerFactory, amqpConfig)
 
         val keyManagers = wrappedKeyManagerFactory.keyManagers
         assertFalse(keyManagers.isEmpty())
@@ -92,4 +94,5 @@ class TestKeyManagerFactoryWrapper {
         assertNull(otherWrappedKeyManagerFactory.getCurrentCertChain())
     }
 
+    private class AMQPConfigurationImpl(override val keyStore: CertificateStore, override val trustStore: CertificateStore, override val maxMessageSize: Int) : AMQPConfiguration
 }

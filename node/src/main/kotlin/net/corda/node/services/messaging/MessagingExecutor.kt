@@ -9,6 +9,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.services.statemachine.FlowMessagingImpl
+import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import org.apache.activemq.artemis.api.core.ActiveMQDuplicateIdException
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -142,7 +143,7 @@ class MessagingExecutor(
 
     private fun sendJob(job: Job.Send) {
         val mqAddress = resolver.resolveTargetToArtemisQueue(job.target)
-        val artemisMessage = cordaToArtemisMessage(job.message)
+        val artemisMessage = cordaToArtemisMessage(job.message, job.target)
         log.trace {
             "Send to: $mqAddress topic: ${job.message.topic} " +
                     "sessionID: ${job.message.topic} id: ${job.message.uniqueMessageId}"
@@ -150,13 +151,20 @@ class MessagingExecutor(
         producer.send(SimpleString(mqAddress), artemisMessage, { job.sentFuture.set(Unit) })
     }
 
-    fun cordaToArtemisMessage(message: Message): ClientMessage? {
+    fun cordaToArtemisMessage(message: Message, target: MessageRecipients? = null): ClientMessage? {
         return session.createMessage(true).apply {
             putStringProperty(P2PMessagingHeaders.cordaVendorProperty, cordaVendor)
             putStringProperty(P2PMessagingHeaders.releaseVersionProperty, releaseVersion)
             putIntProperty(P2PMessagingHeaders.platformVersionProperty, versionInfo.platformVersion)
             putStringProperty(P2PMessagingHeaders.topicProperty, SimpleString(message.topic))
             putStringProperty(P2PMessagingHeaders.bridgedCertificateSubject, SimpleString(myLegalName))
+            // Add a group ID to messages to be able to have multiple filtered consumers  while preventing reordering.
+            // This header will be dropped off during transit through the bridge, which is fine as it's needed locally only.
+            if (target != null && target is ArtemisMessagingComponent.ServiceAddress) {
+                putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_GROUP_ID, SimpleString(message.uniqueMessageId.toString))
+            } else {
+                putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_GROUP_ID, SimpleString(myLegalName))
+            }
             sendMessageSizeMetric.update(message.data.bytes.size)
             writeBodyBufferBytes(message.data.bytes)
             // Use the magic deduplication property built into Artemis as our message identity too

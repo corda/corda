@@ -49,6 +49,8 @@ dependencies {
     smokeTestCompile project(':test-utils')
     smokeTestCompile "org.apache.curator:curator-test:${curator_version}"
     smokeTestCompile "junit:junit:$junit_version"
+    // Adding native SSL library to allow using native SSL with Artemis and AMQP
+    smokeTestCompile "io.netty:netty-tcnative-boringssl-static:$tcnative_version"
 
 }
 

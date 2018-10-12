@@ -34,6 +34,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CON
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.bridging.BridgeControl
@@ -215,6 +216,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // Create a queue, consumer and producer for handling P2P network messages.
             // Create a general purpose producer.
             producer = producerSession!!.createProducer()
+
 
             inboxes += RemoteInboxAddress(myIdentity).queueName
             serviceIdentity?.let {
@@ -543,7 +545,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             val internalTargetQueue = (address as? ArtemisAddress)?.queueName
                     ?: throw IllegalArgumentException("Not an Artemis address")
             state.locked {
-                createQueueIfAbsent(internalTargetQueue, producerSession!!, exclusive = address !is ServiceAddress)
+                createQueueIfAbsent(internalTargetQueue, producerSession!!, exclusive = false)
             }
             internalTargetQueue
         }
@@ -572,8 +574,10 @@ class P2PMessagingClient(val config: NodeConfiguration,
                     session.createQueue(queueName, RoutingType.ANYCAST, queueName, null, true, false,
                             ActiveMQDefaultConfiguration.getDefaultMaxQueueConsumers(),
                             ActiveMQDefaultConfiguration.getDefaultPurgeOnNoConsumers(), exclusive, null)
-                    sendBridgeCreateMessage()
                 }
+                // When there are multiple nodes sharing the firewall, the peer queue may already exist as it was created when
+                // another node tried communicating with the target. A bridge is still needed as there has to be one per source-queue-target
+                sendBridgeCreateMessage()
             }
             knownQueues += queueName
         }

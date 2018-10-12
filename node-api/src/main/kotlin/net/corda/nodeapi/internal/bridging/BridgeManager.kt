@@ -9,7 +9,7 @@ import net.corda.core.utilities.NetworkHostAndPort
  */
 @VisibleForTesting
 interface BridgeManager : AutoCloseable {
-    fun deployBridge(queueName: String, targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>)
+    fun deployBridge(sourceX500Name: String, queueName: String, targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>)
 
     fun destroyBridge(queueName: String, targets: List<NetworkHostAndPort>)
 

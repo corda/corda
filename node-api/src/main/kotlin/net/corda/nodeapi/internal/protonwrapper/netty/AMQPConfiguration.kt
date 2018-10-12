@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.protonwrapper.netty
 
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.config.CertificateStore
-import java.security.KeyStore
 
 interface AMQPConfiguration {
     /**
@@ -54,6 +53,10 @@ interface AMQPConfiguration {
 
     @JvmDefault
     val socksProxyConfig: SocksProxyConfig?
+        get() = null
+
+    @JvmDefault
+    val sourceX500Name: String?
         get() = null
 
     /**

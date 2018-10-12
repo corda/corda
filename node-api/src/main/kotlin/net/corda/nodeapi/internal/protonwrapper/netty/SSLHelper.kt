@@ -1,9 +1,8 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
 import io.netty.buffer.ByteBufAllocator
-import io.netty.handler.ssl.SslContextBuilder
-import io.netty.handler.ssl.SslHandler
-import io.netty.handler.ssl.SslProvider
+import io.netty.handler.ssl.*
+import io.netty.util.DomainNameMappingBuilder
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
@@ -13,15 +12,19 @@ import net.corda.core.utilities.toHex
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.toBc
+import net.corda.nodeapi.internal.crypto.x509
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
+import sun.security.x509.X500Name
 import java.net.Socket
+import java.security.KeyStore
 import java.security.cert.*
 import java.util.*
 import javax.net.ssl.*
 
 private const val HOSTNAME_FORMAT = "%s.corda.net"
+internal const val DEFAULT = "default"
 
 internal class LoggingTrustManagerWrapper(val wrapped: X509ExtendedTrustManager) : X509ExtendedTrustManager() {
     companion object {
@@ -146,7 +149,8 @@ internal fun createClientOpenSslHandler(target: NetworkHostAndPort,
     return SslHandler(sslEngine)
 }
 
-internal fun createServerSslHelper(keyManagerFactory: KeyManagerFactory,
+internal fun createServerSslHelper(keyStore: CertificateStore,
+                                   keyManagerFactory: KeyManagerFactory,
                                    trustManagerFactory: TrustManagerFactory): SslHandler {
     val sslContext = SSLContext.getInstance("TLS")
     val keyManagers = keyManagerFactory.keyManagers
@@ -158,6 +162,9 @@ internal fun createServerSslHelper(keyManagerFactory: KeyManagerFactory,
     sslEngine.enabledProtocols = ArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
     sslEngine.enabledCipherSuites = ArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
     sslEngine.enableSessionCreation = true
+    val sslParameters = sslEngine.sslParameters
+    sslParameters.sniMatchers = listOf(ServerSNIMatcher(keyStore))
+    sslEngine.sslParameters = sslParameters
     return SslHandler(sslEngine)
 }
 
@@ -191,10 +198,55 @@ internal fun createServerOpenSslHandler(keyManagerFactory: KeyManagerFactory,
     return SslHandler(sslEngine)
 }
 
+/**
+ * Creates a special SNI handler used only when openSSL is used for AMQPServer
+ */
+internal fun createServerSNIOpenSslHandler(keyManagerFactoriesMap: Map<String, KeyManagerFactory>,
+                                           trustManagerFactory: TrustManagerFactory): SniHandler {
+
+    // Default value can be any in the map.
+    val sslCtxBuilder = SslContextBuilder.forServer(keyManagerFactoriesMap.values.first())
+            .sslProvider(SslProvider.OPENSSL)
+            .trustManager(LoggingTrustManagerFactoryWrapper(trustManagerFactory))
+            .clientAuth(ClientAuth.REQUIRE)
+            .ciphers(ArtemisTcpTransport.CIPHER_SUITES)
+            .protocols(*ArtemisTcpTransport.TLS_VERSIONS.toTypedArray())
+
+    val mapping = DomainNameMappingBuilder(sslCtxBuilder.build())
+
+    keyManagerFactoriesMap.forEach {
+        mapping.add(it.key, sslCtxBuilder.keyManager(it.value).build())
+    }
+
+    return SniHandler(mapping.build())
+}
+
+internal fun splitKeystore(config: AMQPConfiguration): Map<String, CertHoldingKeyManagerFactoryWrapper> {
+    val keyStore = config.keyStore.value.internal
+    val password = config.keyStore.password.toCharArray()
+    return keyStore.aliases().toList().map { alias ->
+        val key = keyStore.getKey(alias, password)
+        val certs = keyStore.getCertificateChain(alias)
+        val x500Name = keyStore.getCertificate(alias).x509.subjectDN as X500Name
+        val cordaX500Name = CordaX500Name.build(x500Name.asX500Principal())
+        val newKeyStore = KeyStore.getInstance("JKS")
+        newKeyStore.load(null)
+        newKeyStore.setKeyEntry(alias, key, password, certs)
+        val newKeyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
+        newKeyManagerFactory.init(newKeyStore, password)
+        x500toHostName(cordaX500Name) to CertHoldingKeyManagerFactoryWrapper(newKeyManagerFactory, config)
+    }.toMap()
+}
+
 fun KeyManagerFactory.init(keyStore: CertificateStore) = init(keyStore.value.internal, keyStore.password.toCharArray())
 
 fun TrustManagerFactory.init(trustStore: CertificateStore) = init(trustStore.value.internal)
 
+/**
+ * Method that converts a [CordaX500Name] to a a valid hostname (RFC-1035). It's used for SNI to indicate the target
+ * when trying to communicate with nodes that reside behind the same firewall. This is a solution to TLS's extension not
+ * yet supporting x500 names as server names
+ */
 internal fun x500toHostName(x500Name: CordaX500Name): String {
     val secureHash = SecureHash.sha256(x500Name.toString())
     // RFC 1035 specifies a limit 255 bytes for hostnames with each label being 63 bytes or less. Due to this, the string

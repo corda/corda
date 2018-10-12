@@ -23,7 +23,6 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.net.BindException
 import java.net.InetSocketAddress
-import java.security.cert.X509Certificate
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.KeyManagerFactory
@@ -66,18 +65,37 @@ class AMQPServer(val hostName: String,
         }
 
         override fun initChannel(ch: SocketChannel) {
+            val amqpConfiguration = parent.configuration
+            val keyStore = amqpConfiguration.keyStore
             val pipeline = ch.pipeline()
-            val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory)
-            val handler = if (parent.configuration.useOpenSsl){
-                createServerOpenSslHandler(wrappedKeyManagerFactory, trustManagerFactory, ch.alloc())
+            // Used for SNI matching with javaSSL.
+            val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory, amqpConfiguration)
+            // Used to create a mapping for SNI matching with openSSL.
+            val keyManagerFactoriesMap = splitKeystore(amqpConfiguration)
+            val handler = if (amqpConfiguration.useOpenSsl){
+                // SNI matching needed only when multiple nodes exist behind the server.
+                if (keyStore.aliases().size > 1) {
+                    createServerSNIOpenSslHandler(keyManagerFactoriesMap, trustManagerFactory)
+                } else {
+                    createServerOpenSslHandler(wrappedKeyManagerFactory, trustManagerFactory, ch.alloc())
+                }
             } else {
-                createServerSslHelper(wrappedKeyManagerFactory, trustManagerFactory)
+                // For javaSSL, SNI matching is handled at key manager level.
+                createServerSslHelper(keyStore, wrappedKeyManagerFactory, trustManagerFactory)
             }
+
             pipeline.addLast("sslHandler", handler)
+
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
             pipeline.addLast(AMQPChannelHandler(true,
                     null,
-                    wrappedKeyManagerFactory,
+                    // Passing a mapping of legal names to key managers to be able to pick the correct one after
+                    // SNI completion event is fired up.
+                    if (keyStore.aliases().size > 1 && amqpConfiguration.useOpenSsl)
+                        keyManagerFactoriesMap
+                    else
+                        // Single entry, key can be anything.
+                        mapOf(DEFAULT to wrappedKeyManagerFactory),
                     conf.userName,
                     conf.password,
                     conf.trace,

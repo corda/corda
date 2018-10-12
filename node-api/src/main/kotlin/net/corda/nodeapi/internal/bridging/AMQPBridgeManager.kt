@@ -42,11 +42,12 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
     private val lock = ReentrantLock()
     private val queueNamesToBridgesMap = mutableMapOf<String, MutableList<AMQPBridge>>()
 
-    private class AMQPConfigurationImpl private constructor(override val keyStore: CertificateStore,
-                                                            override val trustStore: CertificateStore,
-                                                            override val socksProxyConfig: SocksProxyConfig?,
-                                                            override val maxMessageSize: Int,
-                                                            override val useOpenSsl: Boolean) : AMQPConfiguration {
+    private class AMQPConfigurationImpl (override val keyStore: CertificateStore,
+                                         override val trustStore: CertificateStore,
+                                         override val socksProxyConfig: SocksProxyConfig?,
+                                         override val maxMessageSize: Int,
+                                         override val useOpenSsl: Boolean,
+                                         override val sourceX500Name: String? = null) : AMQPConfiguration {
         constructor(config: MutualSslConfiguration, socksProxyConfig: SocksProxyConfig?, maxMessageSize: Int) : this(config.keyStore.get(),
                 config.trustStore.get(),
                 socksProxyConfig,
@@ -72,7 +73,8 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
      * If the delivery fails the session is rolled back to prevent loss of the message. This may cause duplicate delivery,
      * however Artemis and the remote Corda instanced will deduplicate these messages.
      */
-    private class AMQPBridge(val queueName: String,
+    private class AMQPBridge(val sourceX500Name: String,
+                             val queueName: String,
                              val targets: List<NetworkHostAndPort>,
                              val legalNames: Set<CordaX500Name>,
                              private val amqpConfig: AMQPConfiguration,
@@ -87,6 +89,7 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
             val oldMDC = MDC.getCopyOfContextMap()
             try {
                 MDC.put("queueName", queueName)
+                MDC.put("source", amqpConfig.sourceX500Name)
                 MDC.put("targets", targets.joinToString(separator = ";") { it.toString() })
                 MDC.put("legalNames", legalNames.joinToString(separator = ";") { it.toString() })
                 MDC.put("maxMessageSize", amqpConfig.maxMessageSize.toString())
@@ -150,7 +153,8 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
                         val sessionFactory = artemis.started!!.sessionFactory
                         val session = sessionFactory.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
                         this.session = session
-                        val consumer = session.createConsumer(queueName)
+                        // Several producers (in the case of shared bridge) can put messages in the same outbound p2p queue. The consumers are created using the source x500 name as a filter
+                        val consumer = session.createConsumer(queueName, "hyphenated_props:sender-subject-name = '${amqpConfig.sourceX500Name}'")
                         this.consumer = consumer
                         consumer.setMessageHandler(this@AMQPBridge::clientArtemisMessageHandler)
                         session.start()
@@ -219,15 +223,16 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
         }
     }
 
-    override fun deployBridge(queueName: String, targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>) {
+    override fun deployBridge(sourceX500Name: String, queueName: String, targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>) {
         val newBridge = lock.withLock {
             val bridges = queueNamesToBridgesMap.getOrPut(queueName) { mutableListOf() }
             for (target in targets) {
-                if (bridges.any { it.targets.contains(target) }) {
+                if (bridges.any { it.targets.contains(target) && it.sourceX500Name == sourceX500Name }) {
                     return
                 }
             }
-            val newBridge = AMQPBridge(queueName, targets, legalNames, amqpConfig, sharedEventLoopGroup!!, artemis!!, bridgeMetricsService)
+            val newAMQPConfig = AMQPConfigurationImpl(amqpConfig.keyStore, amqpConfig.trustStore, amqpConfig.socksProxyConfig, amqpConfig.maxMessageSize, amqpConfig.useOpenSsl, sourceX500Name)
+            val newBridge = AMQPBridge(sourceX500Name, queueName, targets, legalNames, newAMQPConfig, sharedEventLoopGroup!!, artemis!!, bridgeMetricsService)
             bridges += newBridge
             bridgeMetricsService?.bridgeCreated(targets, legalNames)
             newBridge

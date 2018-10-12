@@ -159,7 +159,7 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                     return
                 }
                 for (outQueue in controlMessage.sendQueues) {
-                    bridgeManager.deployBridge(outQueue.queueName, outQueue.targets, outQueue.legalNames.toSet())
+                    bridgeManager.deployBridge(controlMessage.nodeIdentity, outQueue.queueName, outQueue.targets, outQueue.legalNames.toSet())
                 }
                 val wasActive = active
                 validInboundQueues.addAll(controlMessage.inboxQueues)
@@ -175,7 +175,7 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                     log.error("Invalid queue names in control message $controlMessage")
                     return
                 }
-                bridgeManager.deployBridge(controlMessage.bridgeInfo.queueName, controlMessage.bridgeInfo.targets, controlMessage.bridgeInfo.legalNames.toSet())
+                bridgeManager.deployBridge(controlMessage.nodeIdentity, controlMessage.bridgeInfo.queueName, controlMessage.bridgeInfo.targets, controlMessage.bridgeInfo.legalNames.toSet())
             }
             is BridgeControl.Delete -> {
                 if (!controlMessage.bridgeInfo.queueName.startsWith(PEERS_PREFIX)) {

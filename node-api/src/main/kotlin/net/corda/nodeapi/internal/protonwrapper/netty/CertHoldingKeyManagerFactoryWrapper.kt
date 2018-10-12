@@ -5,7 +5,7 @@ import java.security.cert.X509Certificate
 import javax.net.ssl.*
 
 
-class CertHoldingKeyManagerFactorySpiWrapper(private val factorySpi: KeyManagerFactorySpi) : KeyManagerFactorySpi() {
+class CertHoldingKeyManagerFactorySpiWrapper(private val factorySpi: KeyManagerFactorySpi, private val amqpConfig: AMQPConfiguration) : KeyManagerFactorySpi() {
     override fun engineInit(keyStore: KeyStore?, password: CharArray?) {
         val engineInitMethod = KeyManagerFactorySpi::class.java.getDeclaredMethod("engineInit", KeyStore::class.java, CharArray::class.java)
         engineInitMethod.isAccessible = true
@@ -23,14 +23,30 @@ class CertHoldingKeyManagerFactorySpiWrapper(private val factorySpi: KeyManagerF
         engineGetKeyManagersMethod.isAccessible = true
         @Suppress("UNCHECKED_CAST")
         val keyManagers = engineGetKeyManagersMethod.invoke(factorySpi) as Array<KeyManager>
-        return if (factorySpi is CertHoldingKeyManagerFactorySpiWrapper) keyManagers else keyManagers.mapNotNull {
-            @Suppress("USELESS_CAST") // the casts to KeyManager are not useless - without them, the typed array will be of type Any
-            when (it) {
-                is X509ExtendedKeyManager -> AliasProvidingExtendedKeyMangerWrapper(it) as KeyManager
-                is X509KeyManager -> AliasProvidingKeyMangerWrapperImpl(it) as KeyManager
-                else -> null
+        return if (factorySpi is CertHoldingKeyManagerFactorySpiWrapper) keyManagers else keyManagers.map {
+            val aliasProvidingKeyManager = getDefaultKeyManager(it)
+            // Use the SNIKeyManager if keystore has several entries and only for clients and non-openSSL servers.
+            if (amqpConfig.keyStore.aliases().size > 1) {
+                // Clients
+                if (amqpConfig.sourceX500Name != null) {
+                    SNIKeyManager(aliasProvidingKeyManager as X509ExtendedKeyManager, amqpConfig)
+                } else if (!amqpConfig.useOpenSsl) { // JDK SSL servers
+                    SNIKeyManager(aliasProvidingKeyManager as X509ExtendedKeyManager, amqpConfig)
+                } else {
+                    aliasProvidingKeyManager
+                }
+            } else {
+                aliasProvidingKeyManager
             }
         }.toTypedArray()
+    }
+
+    private fun getDefaultKeyManager(keyManager: KeyManager): KeyManager {
+        return when (keyManager) {
+            is X509ExtendedKeyManager -> AliasProvidingExtendedKeyMangerWrapper(keyManager)
+            is X509KeyManager -> AliasProvidingKeyMangerWrapperImpl(keyManager)
+            else -> throw UnsupportedOperationException("Supported key manager types are: X509ExtendedKeyManager, X509KeyManager. Provided ${keyManager::class.java.name}")
+        }
     }
 
     private val keyManagers = lazy { getKeyManagersImpl() }
@@ -46,12 +62,12 @@ class CertHoldingKeyManagerFactorySpiWrapper(private val factorySpi: KeyManagerF
  * the wrapper is not thread safe as in it will return the last used alias/cert chain and has itself no notion
  * of belonging to a certain channel.
  */
-class CertHoldingKeyManagerFactoryWrapper(factory: KeyManagerFactory) : KeyManagerFactory(getFactorySpi(factory), factory.provider, factory.algorithm) {
+class CertHoldingKeyManagerFactoryWrapper(factory: KeyManagerFactory, amqpConfig: AMQPConfiguration) : KeyManagerFactory(getFactorySpi(factory, amqpConfig), factory.provider, factory.algorithm) {
     companion object {
-        private fun getFactorySpi(factory: KeyManagerFactory): KeyManagerFactorySpi {
+        private fun getFactorySpi(factory: KeyManagerFactory, amqpConfig: AMQPConfiguration): KeyManagerFactorySpi {
             val spiField = KeyManagerFactory::class.java.getDeclaredField("factorySpi")
             spiField.isAccessible = true
-            return CertHoldingKeyManagerFactorySpiWrapper(spiField.get(factory) as KeyManagerFactorySpi)
+            return CertHoldingKeyManagerFactorySpiWrapper(spiField.get(factory) as KeyManagerFactorySpi, amqpConfig)
         }
     }
 

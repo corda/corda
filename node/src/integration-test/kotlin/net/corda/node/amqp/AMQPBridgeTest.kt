@@ -72,6 +72,7 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean) {
         val artemis = artemisClient.started!!
         for (i in 0 until 3) {
             val artemisMessage = artemis.session.createMessage(true).apply {
+                putStringProperty(P2PMessagingHeaders.bridgedCertificateSubject, ALICE_NAME.toString())
                 putIntProperty(P2PMessagingHeaders.senderUUID, i)
                 writeBodyBufferBytes("Test$i".toByteArray())
                 // Use the magic deduplication property built into Artemis as our message identity too
@@ -149,6 +150,7 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean) {
 
         // Send a fresh item and check receive
         val artemisMessage = artemis.session.createMessage(true).apply {
+            putStringProperty(P2PMessagingHeaders.bridgedCertificateSubject, ALICE_NAME.toString())
             putIntProperty(P2PMessagingHeaders.senderUUID, 3)
             writeBodyBufferBytes("Test3".toByteArray())
             // Use the magic deduplication property built into Artemis as our message identity too
@@ -287,7 +289,7 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean) {
         if (sourceQueueName != null) {
             // Local queue for outgoing messages
             artemis.session.createQueue(sourceQueueName, RoutingType.ANYCAST, sourceQueueName, true)
-            bridgeManager.deployBridge(sourceQueueName, listOf(amqpAddress), setOf(BOB.name))
+            bridgeManager.deployBridge(ALICE_NAME.toString(), sourceQueueName, listOf(amqpAddress), setOf(BOB.name))
         }
         return Triple(artemisServer, artemisClient, bridgeManager)
     }
