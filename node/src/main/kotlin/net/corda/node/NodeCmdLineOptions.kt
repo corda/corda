@@ -96,7 +96,8 @@ class NodeCmdLineOptions {
 
     @Option(
             names = ["-c", "--clear-network-map-cache"],
-            description = ["Clears local copy of network map, on node startup it will be restored from server or file system."]
+            description = ["DEPRECATED. Clears local copy of network map, on node startup it will be restored from server or file system."],
+            hidden = true
     )
     var clearNetworkMapCache: Boolean = false
 
