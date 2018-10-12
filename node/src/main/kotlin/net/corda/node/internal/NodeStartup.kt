@@ -7,6 +7,7 @@ import io.netty.channel.unix.Errors
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
+import net.corda.cliutils.ShellConstants
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
@@ -27,7 +28,6 @@ import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
-import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
@@ -35,7 +35,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
-import picocli.CommandLine
+import picocli.CommandLine.Command
 import picocli.CommandLine.Mixin
 import sun.misc.VMSupport
 import java.io.Console
@@ -48,22 +48,9 @@ import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
 import java.util.*
-import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
-@CommandLine.Command(name="clear-network-cache", description=["clears network cache"])
-class NetworkCacheClearer: Callable<Int> {
-    @CommandLine.ParentCommand
-    private var node: NodeStartup? = null
-
-    override fun call(): Int {
-        node?.cmdLineOptions?.clearNetworkMapCache = true
-        return node?.runProgram() ?: ExitCodes.FAILURE
-    }
-}
-
 /** This class is responsible for starting a Node from command line arguments. */
-@CommandLine.Command(subcommands = [ NetworkCacheClearer::class ])
 open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
     companion object {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
@@ -79,6 +66,15 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
      * @return exit code based on the success of the node startup. This value is intended to be the exit code of the process.
      */
     override fun runProgram(): Int {
+        return initialiseAndRun { node, startupTime -> startNode(node, startupTime)}
+    }
+
+    @Command(name="clear-network-map-cache", description=["Clears local copy of network map, on node startup it will be restored from server or file system."])
+    fun clearNetworkCache(): Int {
+        return initialiseAndRun { node, _ -> node.clearNetworkMapCache() }
+    }
+
+    fun initialiseAndRun(mainFunction: (Node, Long) -> Unit): Int {
         val startTime = System.currentTimeMillis()
         // Step 1. Check for supported Java version.
         if (!isValidJavaVersion()) return ExitCodes.FAILURE
@@ -121,7 +117,10 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         logStartupInfo(versionInfo, configuration)
 
         // Step 10. Start node: create the node, check for other command-line options, add extra logging etc.
-        attempt { startNode(configuration, versionInfo, startTime) }.doOnSuccess { logger.info("Node exiting successfully") }.doOnException(handleStartError) as? Try.Success ?: return ExitCodes.FAILURE
+        attempt {
+            cmdLineOptions.baseDirectory.createDirectories()
+            mainFunction(createNode(configuration, versionInfo), startTime)
+        }.doOnException(handleStartError) as? Try.Success ?: return ExitCodes.FAILURE
 
         return ExitCodes.SUCCESS
     }
@@ -240,10 +239,9 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
 
     protected open fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
 
-    protected open fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long) {
-        cmdLineOptions.baseDirectory.createDirectories()
-        val node = createNode(conf, versionInfo)
+    private fun startNode(node: Node, startTime: Long) {
         if (cmdLineOptions.clearNetworkMapCache) {
+            Node.printWarning("${ShellConstants.RED}The --clear-network-map-cache flag has been deprecated and will be removed in a future version. Use the clear-network-map-cache command instead.${ShellConstants.RESET}")
             node.clearNetworkMapCache()
             return
         }
@@ -253,11 +251,11 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
             return
         }
         if (cmdLineOptions.justGenerateRpcSslCerts) {
-            generateRpcSslCertificates(conf)
+            generateRpcSslCertificates(node.configuration)
             return
         }
 
-        if (conf.devMode) {
+        if (node.configuration.devMode) {
             Emoji.renderIfSupported {
                 Node.printWarning("This node is running in developer mode! ${Emoji.developer} This is not safe for production deployment.")
             }
@@ -276,7 +274,7 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.
-            if (conf.shouldStartLocalShell()) {
+            if (node.configuration.shouldStartLocalShell()) {
                 node.startupComplete.then {
                     try {
                         InteractiveShell.runLocalShell(node::stop)
@@ -285,8 +283,8 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
                     }
                 }
             }
-            if (conf.shouldStartSSHDaemon()) {
-                Node.printBasicNodeInfo("SSH server listening on port", conf.sshd!!.port.toString())
+            if (node.configuration.shouldStartSSHDaemon()) {
+                Node.printBasicNodeInfo("SSH server listening on port", node.configuration.sshd!!.port.toString())
             }
         },
                 { th ->
