@@ -60,11 +60,11 @@ author = u'R3 DLG'
 # built documents.
 #
 # The short X.Y version.
-version = 'V3.1'
+version = 'V3.3'
 # The full version, including alpha/beta/rc tags.
-release = 'V3.1'
+release = 'V3.3'
 # The version for use in the dropdown html.
-html_context = {'version': 'V3.1'}
+html_context = {'version': 'V3.3'}
 
 # Properties.
 kotlin_version = '1.2.51'
