@@ -9,7 +9,6 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.node.VersionInfo
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeWithInfo
@@ -108,9 +107,9 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
         val existingCorDappDirectoriesOption = if (config.hasPath(NodeConfiguration.cordappDirectoriesKey)) config.getStringList(NodeConfiguration.cordappDirectoriesKey) else emptyList()
 
-        val cordappDirectories = existingCorDappDirectoriesOption + TestCordappDirectories.cached(cordapps).map { it.toString() }
+        val cordappDirectories = existingCorDappDirectoriesOption + cordapps.map { TestCordappDirectories.getJarDirectory(it).toString() }
 
-        val specificConfig = config.withValue(NodeConfiguration.cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories))
+        val specificConfig = config.withValue(NodeConfiguration.cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories.toSet()))
 
         val parsedConfig = specificConfig.parseAsNodeConfiguration().also { nodeConfiguration ->
             val errors = nodeConfiguration.validate()

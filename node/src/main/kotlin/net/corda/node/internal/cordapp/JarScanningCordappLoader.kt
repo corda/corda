@@ -61,11 +61,13 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         /**
          * Creates a CordappLoader from multiple directories.
          *
-         * @param corDappDirectories Directories used to scan for CorDapp JARs.
+         * @param cordappDirs Directories used to scan for CorDapp JARs.
          */
-        fun fromDirectories(corDappDirectories: Iterable<Path>, versionInfo: VersionInfo = VersionInfo.UNKNOWN, extraCordapps: List<CordappImpl> = emptyList()): JarScanningCordappLoader {
-            logger.info("Looking for CorDapps in ${corDappDirectories.distinct().joinToString(", ", "[", "]")}")
-            val paths = corDappDirectories.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() }
+        fun fromDirectories(cordappDirs: Collection<Path>,
+                            versionInfo: VersionInfo = VersionInfo.UNKNOWN,
+                            extraCordapps: List<CordappImpl> = emptyList()): JarScanningCordappLoader {
+            logger.info("Looking for CorDapps in ${cordappDirs.distinct().joinToString(", ", "[", "]")}")
+            val paths = cordappDirs.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() }
             return JarScanningCordappLoader(paths, versionInfo, extraCordapps)
         }
 

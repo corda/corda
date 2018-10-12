@@ -51,8 +51,8 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.testing.node.TestCordapp
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.driver.TestCorDapp
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.stubs.CertificateStoreStubs
@@ -89,7 +89,7 @@ data class InternalMockNodeParameters(
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
         val configOverrides: (NodeConfiguration) -> Any? = {},
         val version: VersionInfo = MOCK_VERSION_INFO,
-        val additionalCordapps: Set<TestCorDapp>? = null) {
+        val additionalCordapps: Collection<TestCordapp>? = null) {
     constructor(mockNodeParameters: MockNodeParameters) : this(
             mockNodeParameters.forcedID,
             mockNodeParameters.legalName,
@@ -148,7 +148,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                                val testDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
                                val networkParameters: NetworkParameters = testNetworkParameters(),
                                val defaultFactory: (MockNodeArgs) -> MockNode = { args -> MockNode(args) },
-                               val cordappsForAllNodes: Set<TestCorDapp> = emptySet(),
+                               val cordappsForAllNodes: Collection<TestCordapp> = emptySet(),
                                val autoVisibleNodes: Boolean = true) : AutoCloseable {
     init {
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
@@ -173,10 +173,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         throw IllegalStateException("Using more than one InternalMockNetwork simultaneously is not supported.", e)
     }
     private val sharedUserCount = AtomicInteger(0)
-
-    private val sharedCorDappsDirectories: Iterable<Path> by lazy {
-        TestCordappDirectories.cached(cordappsForAllNodes)
-    }
 
     /** A read only view of the current set of nodes. */
     val nodes: List<MockNode> get() = _nodes
@@ -453,8 +449,8 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             parameters.configOverrides(it)
         }
 
-        val cordapps: Set<TestCorDapp> = parameters.additionalCordapps ?: emptySet()
-        val cordappDirectories = sharedCorDappsDirectories + TestCordappDirectories.cached(cordapps)
+        val cordapps = (parameters.additionalCordapps ?: emptySet()) + cordappsForAllNodes
+        val cordappDirectories = cordapps.map { TestCordappDirectories.getJarDirectory(it) }.distinct()
         doReturn(cordappDirectories).whenever(config).cordappDirectories
 
         val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version))
