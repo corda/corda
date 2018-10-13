@@ -13,7 +13,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import co.paralleluniverse.fibers.Suspendable
 
-
 @StartableByRPC
 class TestNotaryFlow : FlowLogic<String>() {
 
@@ -28,37 +27,33 @@ class TestNotaryFlow : FlowLogic<String>() {
     override fun call(): String {
         val issueBuilder = TransactionBuilder()
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
-        issueBuilder.notary = notary;
+        issueBuilder.notary = notary
         val myIdentity = serviceHub.myInfo.legalIdentities.first()
-        issueBuilder.addOutputState(NotaryTestState(notary.name.toString(), myIdentity), NotaryTestContract::class.qualifiedName!!)
+        issueBuilder.addOutputState(NotaryTestState(notary.name.toString(), myIdentity), NotaryTestContract::class.java.name)
         issueBuilder.addCommand(NotaryTestCommand, myIdentity.owningKey)
         val signedTx = serviceHub.signInitialTransaction(issueBuilder)
         val issueResult = subFlow(FinalityFlow(signedTx))
         progressTracker.currentStep = ISSUED
         val destroyBuilder = TransactionBuilder()
-        destroyBuilder.notary = notary;
+        destroyBuilder.notary = notary
         destroyBuilder.addInputState(issueResult.tx.outRefsOfType<NotaryTestState>().first())
         destroyBuilder.addCommand(NotaryTestCommand, myIdentity.owningKey)
         val signedDestroyT = serviceHub.signInitialTransaction(destroyBuilder)
         val result = subFlow(FinalityFlow(signedDestroyT))
         progressTracker.currentStep = DESTROYING
         progressTracker.currentStep = FINALIZED
-        return "notarised: " + result.notary.toString() + "::" + result.tx.id
+        return "notarised: ${result.notary}::${result.tx.id}"
     }
 }
-
 
 @CordaSerializable
 data class NotaryTestState(val id: String, val issuer: AbstractParty) : ContractState {
     override val participants: List<AbstractParty>
         get() = listOf(issuer)
-
 }
-
 
 @CordaSerializable
 object NotaryTestCommand : CommandData
-
 
 class NotaryTestContract : Contract {
     override fun verify(tx: LedgerTransaction) {

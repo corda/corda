@@ -52,7 +52,7 @@ class NodePair(private val mockNet: InternalMockNetwork) {
 
     @InitiatingFlow
     abstract class AbstractClientLogic<out T>(nodePair: NodePair) : FlowLogic<T>() {
-        protected val server = nodePair.server.info.singleIdentity()
+        private val server = nodePair.server.info.singleIdentity()
         protected abstract fun callImpl(): T
         @Suspendable
         override fun call() = callImpl().also {
@@ -82,9 +82,12 @@ class VaultSoftLockManagerTest {
     private val mockVault = rigorousMock<VaultServiceInternal>().also {
         doNothing().whenever(it).softLockRelease(any(), anyOrNull())
     }
+
     private val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(ContractImpl::class.packageName), defaultFactory = { args ->
         object : InternalMockNetwork.MockNode(args) {
-            override fun makeVaultService(keyManagementService: KeyManagementService, services: ServicesForResolution, database: CordaPersistence): VaultServiceInternal {
+            override fun makeVaultService(keyManagementService: KeyManagementService,
+                                          services: ServicesForResolution,
+                                          database: CordaPersistence): VaultServiceInternal {
                 val node = this
                 val realVault = super.makeVaultService(keyManagementService, services, database)
                 return object : VaultServiceInternal by realVault {
@@ -97,13 +100,11 @@ class VaultSoftLockManagerTest {
             }
         }
     })
+
     private val nodePair = NodePair(mockNet)
-    @After
-    fun tearDown() {
-        mockNet.stopNodes()
-    }
 
     object CommandDataImpl : CommandData
+
     class ClientLogic(nodePair: NodePair, val state: ContractState) : NodePair.AbstractClientLogic<List<ContractState>>(nodePair) {
         override fun callImpl() = run {
             subFlow(FinalityFlow(serviceHub.signInitialTransaction(TransactionBuilder(notary = ourIdentity).apply {
@@ -149,6 +150,11 @@ class VaultSoftLockManagerTest {
             // In this case we don't want softLockRelease called so that we avoid its expensive query, even after restore from checkpoint.
         }
         verifyNoMoreInteractions(mockVault)
+    }
+
+    @After
+    fun tearDown() {
+        mockNet.stopNodes()
     }
 
     @Test

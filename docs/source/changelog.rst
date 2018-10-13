@@ -15,7 +15,8 @@ Unreleased
 
 * New overload for ``CordaRPCClient.start()`` method allowing to specify target legal identity to use for RPC call.
 
-* Case insensitive vault queries can be specified via a boolean on applicable SQL criteria builder operators. By default queries will be case sensitive.
+* Case insensitive vault queries can be specified via a boolean on applicable SQL criteria builder operators. By default
+  queries will be case sensitive.
 
 * Getter added to ``CordaRPCOps`` for the node's network parameters.
 
@@ -32,7 +33,8 @@ Unreleased
 * "app", "rpc", "p2p" and "unknown" are no longer allowed as uploader values when importing attachments. These are used
   internally in security sensitive code.
 
-* Introduced ``TestCorDapp`` and utilities to support asymmetric setups for nodes through ``DriverDSL``, ``MockNetwork`` and ``MockServices``.
+* Introduced ``TestCorDapp`` and utilities to support asymmetric setups for nodes through ``DriverDSL``, ``MockNetwork``
+  and ``MockServices``.
 
 * Change type of the ``checkpoint_value`` column. Please check the upgrade-notes on how to update your database.
 
@@ -46,7 +48,8 @@ Unreleased
   rather than IllegalStateException.
 
 * The Corda JPA entities no longer implement java.io.Serializable, as this was causing persistence errors in obscure cases.
-  Java serialization is disabled globally in the node, but in the unlikely event you were relying on these types being Java serializable please contact us.
+  Java serialization is disabled globally in the node, but in the unlikely event you were relying on these types being Java
+  serializable please contact us.
 
 * Remove all references to the out-of-process transaction verification.
 
@@ -104,7 +107,8 @@ Unreleased
 * The node's configuration is only printed on startup if ``devMode`` is ``true``, avoiding the risk of printing passwords
   in a production setup.
 
-* ``NodeStartup`` will now only print node's configuration if ``devMode`` is ``true``, avoiding the risk of printing passwords in a production setup.
+* ``NodeStartup`` will now only print node's configuration if ``devMode`` is ``true``, avoiding the risk of printing passwords
+  in a production setup.
 
 * SLF4J's MDC will now only be printed to the console if not empty. No more log lines ending with "{}".
 
@@ -169,13 +173,15 @@ Unreleased
 * Added public support for creating ``CordaRPCClient`` using SSL. For this to work the node needs to provide client applications
   a certificate to be added to a truststore. See :doc:`tutorial-clientrpc-api`
 
-* The node RPC broker opens 2 endpoints that are configured with ``address`` and ``adminAddress``. RPC Clients would connect to the address, while the node will connect
-  to the adminAddress. Previously if ssl was enabled for RPC the ``adminAddress`` was equal to ``address``.
+*The node RPC broker opens 2 endpoints that are configured with ``address`` and ``adminAddress``. RPC Clients would connect
+  to the address, while the node will connect to the adminAddress. Previously if ssl was enabled for RPC the ``adminAddress``
+  was equal to ``address``.
 
 * Upgraded H2 to v1.4.197
 
-* Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
-  To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
+* Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps``
+  object directly. To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings
+  are present.
 
 * Changes to the network bootstrapper:
 
@@ -183,7 +189,8 @@ Unreleased
     whitelist.
   * The CorDapp jars are also copied to each nodes' ``cordapps`` directory.
 
-* Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation of internal data.
+* Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation
+  of internal data.
 
 * Serializing an inner class (non-static nested class in Java, inner class in Kotlin) will be rejected explicitly by the serialization
   framework. Prior to this change it didn't work, but the error thrown was opaque (complaining about too few arguments
@@ -191,13 +198,15 @@ Unreleased
   reference to the outer class) as per the Java documentation `here <https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html>`_
   we are disallowing this as the paradigm in general makes little sense for contract states.
 
-* Node can be shut down abruptly by ``shutdown`` function in ``CordaRPCOps`` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
+* Node can be shut down abruptly by ``shutdown`` function in ``CordaRPCOps`` or gracefully (draining flows first) through
+  ``gracefulShutdown`` command from shell.
 
 * API change: ``net.corda.core.schemas.PersistentStateRef`` fields (index and txId) are now non-nullable.
   The fields were always effectively non-nullable - values were set from non-nullable fields of other objects.
   The class is used as database Primary Key columns of other entities and databases already impose those columns as non-nullable
   (even if JPA annotation nullable=false was absent).
-  In case your Cordapps use this entity class to persist data in own custom tables as non Primary Key columns refer to :doc:`upgrade-notes` for upgrade instructions.
+  In case your Cordapps use this entity class to persist data in own custom tables as non Primary Key columns refer to
+  :doc:`upgrade-notes` for upgrade instructions.
 
 * Adding a public method to check if a public key satisfies Corda recommended algorithm specs, `Crypto.validatePublicKey(java.security.PublicKey)`.
   For instance, this method will check if an ECC key lies on a valid curve or if an RSA key is >= 2048bits. This might
@@ -248,9 +257,10 @@ Version 3.0
 * Per CorDapp configuration is now exposed. ``CordappContext`` now exposes a ``CordappConfig`` object that is populated
   at CorDapp context creation time from a file source during runtime.
 
-* Introduced Flow Draining mode, in which a node continues executing existing flows, but does not start new. This is to support graceful node shutdown/restarts.
-  In particular, when this mode is on, new flows through RPC will be rejected, scheduled flows will be ignored, and initial session messages will not be consumed.
-  This will ensure that the number of checkpoints will strictly diminish with time, allowing for a clean shutdown.
+* Introduced Flow Draining mode, in which a node continues executing existing flows, but does not start new. This is to
+  support graceful node shutdown/restarts. In particular, when this mode is on, new flows through RPC will be rejected,
+  scheduled flows will be ignored, and initial session messages will not be consumed. This will ensure that the number of
+  checkpoints will strictly diminish with time, allowing for a clean shutdown.
 
 * Make the serialisation finger-printer a pluggable entity rather than hard wiring into the factory
 
@@ -261,17 +271,19 @@ Version 3.0
 * Refactored ``NodeConfiguration`` to expose ``NodeRpcOptions`` (using top-level "rpcAddress" property still works with warning).
 * Modified ``CordaRPCClient`` constructor to take a ``SSLConfiguration?`` additional parameter, defaulted to ``null``.
 
-* Introduced ``CertificateChainCheckPolicy.UsernameMustMatchCommonName`` sub-type, allowing customers to optionally enforce username == CN condition on RPC SSL certificates.
+* Introduced ``CertificateChainCheckPolicy.UsernameMustMatchCommonName`` sub-type, allowing customers to optionally enforce
+  username == CN condition on RPC SSL certificates.
 
 * Modified ``DriverDSL`` and sub-types to allow specifying RPC settings for the Node.
 
-* Modified the ``DriverDSL`` to start Cordformation nodes allowing automatic generation of "rpcSettings.adminAddress" in case "rcpSettings.useSsl" is ``false`` (the default).
+* Modified the ``DriverDSL`` to start Cordformation nodes allowing automatic generation of "rpcSettings.adminAddress" in case
+  "rcpSettings.useSsl" is ``false`` (the default).
 
 * Introduced ``UnsafeCertificatesFactory`` allowing programmatic generation of X509 certificates for test purposes.
 
 * JPA Mapping annotations for States extending ``CommonSchemaV1.LinearState`` and ``CommonSchemaV1.FungibleState`` on the
-  `participants` collection need to be moved to the actual class. This allows to properly specify the unique table name per a collection.
-  See: DummyDealStateSchemaV1.PersistentDummyDealState
+  `participants` collection need to be moved to the actual class. This allows to properly specify the unique table name per
+  a collection. See: DummyDealStateSchemaV1.PersistentDummyDealState
 
 * X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
   hierarchy is now enforced in the validation code. See ``net.corda.core.internal.CertRole`` for the current implementation
@@ -556,7 +568,9 @@ Release 1.0
 * Vault query soft locking enhancements and deprecations
 
   * removed original ``VaultService`` ``softLockedStates`` query mechanism.
-  * introduced improved ``SoftLockingCondition`` filterable attribute in ``VaultQueryCriteria`` to enable specification of different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified by set of lock ids)
+  * introduced improved ``SoftLockingCondition`` filterable attribute in ``VaultQueryCriteria`` to enable specification of
+    different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified by set
+    of lock ids)
 
 * Trader demo now issues cash and commercial paper directly from the bank node, rather than the seller node self-issuing
   commercial paper but labelling it as if issued by the bank.
@@ -586,7 +600,8 @@ Release 1.0
   This may require adjusting imports of Cash flow references and also of ``StartFlow`` permission in ``gradle.build`` files.
 
 * Removed the concept of relevancy from ``LinearState``. The ``ContractState``'s relevancy to the vault can be determined
-  by the flow context, the vault will process any transaction from a flow which is not derived from transaction resolution verification.
+  by the flow context, the vault will process any transaction from a flow which is not derived from transaction resolution
+  verification.
 
 * Removed the tolerance attribute from ``TimeWindowChecker`` and thus, there is no extra tolerance on the notary side anymore.
 
@@ -769,9 +784,11 @@ Milestone 14
 
     * Pagination simplification. Pagination continues to be optional, with following changes:
 
-      - If no PageSpecification provided then a maximum of MAX_PAGE_SIZE (200) results will be returned, otherwise we fail-fast with a ``VaultQueryException`` to alert the API user to the need to specify a PageSpecification.
-        Internally, we no longer need to calculate a results count (thus eliminating an expensive SQL query) unless a PageSpecification is supplied (note: that a value of -1 is returned for total_results in this scenario).
-        Internally, we now use the AggregateFunction capability to perform the count.
+      - If no PageSpecification provided then a maximum of MAX_PAGE_SIZE (200) results will be returned, otherwise we fail-fast
+        with a ``VaultQueryException`` to alert the API user to the need to specify a PageSpecification. Internally, we no
+        longer need to calculate a results count (thus eliminating an expensive SQL query) unless a PageSpecification is
+        supplied (note: that a value of -1 is returned for total_results in this scenario). Internally, we now use the
+        AggregateFunction capability to perform the count.
       - Paging now starts from 1 (was previously 0).
 
     * Additional Sort criteria: by StateRef (or constituents: txId, index)

@@ -28,11 +28,11 @@ import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Collections.*;
 import static net.corda.core.contracts.ContractsDSL.requireThat;
 import static net.corda.core.crypto.Crypto.generateKeyPair;
 
@@ -528,7 +528,7 @@ public class FlowCookbook {
             // other required signers using ``CollectSignaturesFlow``.
             // The responder flow will need to call ``SignTransactionFlow``.
             // DOCSTART 15
-            SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(twiceSignedTx, Collections.emptySet(), SIGS_GATHERING.childProgressTracker()));
+            SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(twiceSignedTx, emptySet(), SIGS_GATHERING.childProgressTracker()));
             // DOCEND 15
 
             /*------------------------
@@ -557,7 +557,7 @@ public class FlowCookbook {
                 // ``Arrays.asList(counterpartyPubKey)`` instead of
                 // ``Collections.singletonList(counterpartyPubKey)``.
                 // DOCSTART 54
-                onceSignedTx.verifySignaturesExcept(Collections.singletonList(counterpartyPubKey));
+                onceSignedTx.verifySignaturesExcept(singletonList(counterpartyPubKey));
                 // DOCEND 54
 
                 // We can also choose to only check the signatures that are
@@ -583,7 +583,7 @@ public class FlowCookbook {
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             // DOCSTART 10
-            Set<Party> additionalParties = Collections.singleton(regulator);
+            Set<Party> additionalParties = singleton(regulator);
             SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(fullySignedTx, additionalParties, FINALISATION.childProgressTracker()));
             // DOCEND 10
 
