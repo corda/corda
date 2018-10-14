@@ -4,7 +4,6 @@ allprojects {
     }
 }
 
-apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
@@ -60,6 +59,10 @@ dependencies {
     testCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
+}
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')

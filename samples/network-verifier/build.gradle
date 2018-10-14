@@ -13,6 +13,10 @@ dependencies {
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 }
 
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
     ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
@@ -61,8 +65,5 @@ cordapp {
         vendor "Corda Open Source"
         targetPlatformVersion corda_platform_version.toInteger()
         minimumPlatformVersion 1
-    }
-    signing {
-        enabled false
     }
 }
