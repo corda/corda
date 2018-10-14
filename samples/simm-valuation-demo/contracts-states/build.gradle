@@ -8,6 +8,9 @@ cordapp {
         vendor = 'R3'
         targetPlatformVersion = corda_platform_version.toInteger()
     }
+    signing {
+        enabled false
+    }
 }
 
 configurations {
