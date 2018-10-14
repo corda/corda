@@ -5,7 +5,6 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'net.corda.plugins.cordapp'
-apply plugin: 'maven-publish'
 apply plugin: 'application'
 
 mainClassName = 'net.corda.irs.IRSDemo'
@@ -171,15 +170,6 @@ jar {
 
 artifacts {
     demoArtifacts jar
-}
-
-publishing {
-    publications {
-        jarAndSources(MavenPublication) {
-            from components.java
-            artifactId 'irs-demo-cordapp'
-        }
-    }
 }
 
 cordapp {

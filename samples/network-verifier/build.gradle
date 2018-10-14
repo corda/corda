@@ -1,9 +1,7 @@
 apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.quasar-utils'
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
-apply plugin: 'maven-publish'
 
 dependencies {
     testCompile "junit:junit:$junit_version"
@@ -13,18 +11,6 @@ dependencies {
     cordaRuntime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
     cordaCompile project(':node-driver')
-}
-
-publishing {
-    publications {
-        jarAndSources(MavenPublication) {
-            from components.java
-            artifactId 'network-verifier'
-
-            artifact sourceJar
-            artifact javadocJar
-        }
-    }
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
