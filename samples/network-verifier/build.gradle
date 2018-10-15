@@ -13,18 +13,11 @@ dependencies {
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 }
 
-jar {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
     ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
 
     directory "./build/nodes"
-    signing {
-        enabled false
-    }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : false]

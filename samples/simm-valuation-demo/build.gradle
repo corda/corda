@@ -61,10 +61,6 @@ dependencies {
     testCompile "org.assertj:assertj-core:$assertj_version"
 }
 
-jar {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':webserver:webcapsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {

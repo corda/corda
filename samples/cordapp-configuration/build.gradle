@@ -12,10 +12,6 @@ dependencies {
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
 }
 
-jar {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':webserver:webcapsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
@@ -23,10 +19,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
     nodeDefaults {
         cordapps = []
         rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
-
-    }
-    signing {
-        enabled false
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
