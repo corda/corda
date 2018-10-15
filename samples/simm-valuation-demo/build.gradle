@@ -4,7 +4,6 @@ allprojects {
     }
 }
 
-apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
@@ -27,7 +26,7 @@ configurations {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     // The SIMM demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance')
@@ -62,13 +61,18 @@ dependencies {
     testCompile "org.assertj:assertj-core:$assertj_version"
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+def nodeTask = tasks.getByPath(':node:capsule:assemble')
+def webTask = tasks.getByPath(':webserver:webcapsule:assemble')
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     directory file("$buildDir/nodes")
     nodeDefaults {
         cordapp project(':finance')
         cordapp project(':samples:simm-valuation-demo:contracts-states')
         cordapp project(':samples:simm-valuation-demo:flows')
         rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
+    }
+    signing {
+        enabled false
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
@@ -136,4 +140,11 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+cordapp {
+    info {
+        vendor = 'R3'
+        targetPlatformVersion = corda_platform_version.toInteger()
+    }
 }
