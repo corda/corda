@@ -8,7 +8,6 @@ import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.toLedgerTransaction
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
@@ -16,7 +15,6 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappProviderImpl
@@ -24,8 +22,11 @@ import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverDSL
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.*
 import net.corda.testing.node.internal.cordappsForPackages
@@ -55,7 +56,6 @@ class AttachmentLoadingTests : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName(),
                 DUMMY_NOTARY_NAME.toDatabaseSchemaName())
 
-        private val logger = contextLogger()
         val isolatedJAR = AttachmentLoadingTests::class.java.getResource("isolated.jar")!!
         const val ISOLATED_CONTRACT_ID = "net.corda.finance.contracts.isolated.AnotherDummyContract"
 
@@ -66,12 +66,6 @@ class AttachmentLoadingTests : IntegrationTest() {
                         .asSubclass(FlowLogic::class.java)
         val DUMMY_BANK_A = TestIdentity(DUMMY_BANK_A_NAME, 40).party
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
-        private fun DriverDSL.createTwoNodes(): List<NodeHandle> {
-            return listOf(
-                    startNode(providedName = bankAName),
-                    startNode(providedName = bankBName)
-            ).transpose().getOrThrow()
-        }
     }
 
     private val services = object : ServicesForResolution {

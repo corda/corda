@@ -1,8 +1,9 @@
 @file:JvmName("Utilities")
 package net.corda.djvm.tools.cli
 
-import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
-import java.lang.reflect.Modifier
+import io.github.classgraph.ClassGraph
+import java.lang.reflect.Modifier.isAbstract
+import java.lang.reflect.Modifier.isStatic
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -92,13 +93,10 @@ val userClassPath: String = System.getProperty("java.class.path")
  * Get a reference of each concrete class that implements interface or class [T].
  */
 inline fun <reified T> find(scanSpec: String = "net/corda/djvm"): List<Class<*>> {
-    val references = mutableListOf<Class<*>>()
-    FastClasspathScanner(scanSpec)
-            .matchClassesImplementing(T::class.java) { clazz ->
-                if (!Modifier.isAbstract(clazz.modifiers) && !Modifier.isStatic(clazz.modifiers)) {
-                    references.add(clazz)
-                }
-            }
+    return ClassGraph()
+            .whitelistPaths(scanSpec)
+            .enableAllInfo()
             .scan()
-    return references
+            .use { it.getClassesImplementing(T::class.java.name).loadClasses(T::class.java) }
+            .filter { !isAbstract(it.modifiers) && !isStatic(it.modifiers) }
 }

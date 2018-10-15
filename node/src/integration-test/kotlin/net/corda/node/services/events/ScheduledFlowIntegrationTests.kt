@@ -46,11 +46,14 @@ class ScheduledFlowIntegrationTests : IntegrationTest() {
     }
 
     @StartableByRPC
-    class InsertInitialStateFlow(private val destination: Party, private val notary: Party, private val identity: Int = 1, private val scheduledFor: Instant? = null) : FlowLogic<Unit>() {
+    class InsertInitialStateFlow(private val destination: Party,
+                                 private val notary: Party,
+                                 private val identity: Int = 1,
+                                 private val scheduledFor: Instant? = null) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            val scheduledState = ScheduledState(scheduledFor
-                    ?: serviceHub.clock.instant(), ourIdentity, destination, identity.toString())
+            val creationTime = scheduledFor ?: serviceHub.clock.instant()
+            val scheduledState = ScheduledState(creationTime, ourIdentity, destination, identity.toString())
             val builder = TransactionBuilder(notary)
                     .addOutputState(scheduledState, DummyContract.PROGRAM_ID)
                     .addCommand(dummyCommand(ourIdentity.owningKey))
@@ -104,8 +107,20 @@ class ScheduledFlowIntegrationTests : IntegrationTest() {
             val scheduledFor = Instant.now().plusSeconds(10)
             val initialiseFutures = mutableListOf<CordaFuture<*>>()
             for (i in 0 until N) {
-                initialiseFutures.add(aliceClient.proxy.startFlow(::InsertInitialStateFlow, bob.nodeInfo.legalIdentities.first(), defaultNotaryIdentity, i, scheduledFor).returnValue)
-                initialiseFutures.add(bobClient.proxy.startFlow(::InsertInitialStateFlow, alice.nodeInfo.legalIdentities.first(), defaultNotaryIdentity, i + 100, scheduledFor).returnValue)
+                initialiseFutures.add(aliceClient.proxy.startFlow(
+                        ::InsertInitialStateFlow,
+                        bob.nodeInfo.legalIdentities.first(),
+                        defaultNotaryIdentity,
+                        i,
+                        scheduledFor
+                ).returnValue)
+                initialiseFutures.add(bobClient.proxy.startFlow(
+                        ::InsertInitialStateFlow,
+                        alice.nodeInfo.legalIdentities.first(),
+                        defaultNotaryIdentity,
+                        i + 100,
+                        scheduledFor
+                ).returnValue)
             }
             initialiseFutures.getOrThrowAll()
 

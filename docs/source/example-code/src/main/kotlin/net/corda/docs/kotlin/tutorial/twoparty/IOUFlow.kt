@@ -14,7 +14,6 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-
 // DOCEND 01
 
 @InitiatingFlow

@@ -11,8 +11,11 @@ import java.util.jar.JarInputStream
  */
 object JarSignatureCollector {
 
-    /** @see <https://docs.oracle.com/javase/8/docs/technotes/guides/jar/jar.html#Signed_JAR_File> */
-    private val unsignableEntryName = "META-INF/(?:.*[.](?:SF|DSA|RSA)|SIG-.*)".toRegex()
+    /**
+     * @see <https://docs.oracle.com/javase/8/docs/technotes/guides/jar/jar.html#Signed_JAR_File>
+     * also accepting *.EC as this can be created and accepted by jarsigner tool @see https://docs.oracle.com/javase/8/docs/technotes/tools/windows/jarsigner.html
+     * and Java Security Manager. */
+    private val unsignableEntryName = "META-INF/(?:.*[.](?:SF|DSA|RSA|EC)|SIG-.*)".toRegex()
 
     /**
      * Returns an ordered list of every [Party] which has signed every signable item in the given [JarInputStream].

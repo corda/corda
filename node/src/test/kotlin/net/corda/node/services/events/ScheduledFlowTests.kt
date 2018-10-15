@@ -33,7 +33,6 @@ import kotlin.test.assertEquals
 
 class ScheduledFlowTests {
     companion object {
-        const val PAGE_SIZE = 20
         val SORTING = Sort(listOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID), Sort.Direction.DESC)))
     }
 
@@ -168,6 +167,7 @@ class ScheduledFlowTests {
         assertTrue("Expect all states have run the scheduled task", statesFromB.all { it.state.data.processed })
     }
 
-    private fun queryStates(vaultService: VaultService): List<StateAndRef<ScheduledState>> =
-        vaultService.queryBy<ScheduledState>(VaultQueryCriteria(), sorting = SORTING).states
+    private fun queryStates(vaultService: VaultService): List<StateAndRef<ScheduledState>> {
+        return vaultService.queryBy<ScheduledState>(VaultQueryCriteria(), sorting = SORTING).states
+    }
 }
