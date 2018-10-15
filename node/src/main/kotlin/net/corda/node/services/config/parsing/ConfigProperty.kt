@@ -116,7 +116,7 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
 
 private class ListConfigProperty<TYPE>(override val key: String, elementTypeName: String, private val extractListValue: (Config, String) -> List<TYPE>, private val elementSchema: ConfigSchema?) : ConfigProperty.Required<List<TYPE>> {
 
-    override val typeName = "List<${elementTypeName.capitalize()}>"
+    override val typeName: String = elementSchema?.let { "List<#${it.name ?: "Object@$key"}>" } ?: "List<${elementTypeName.capitalize()}>"
 
     override fun valueIn(configuration: Config): List<TYPE> = extractListValue.invoke(configuration, key)
 
