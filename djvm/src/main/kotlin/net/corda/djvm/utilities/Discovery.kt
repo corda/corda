@@ -7,7 +7,7 @@ import java.lang.reflect.Modifier
  * Find and instantiate types that implement a certain interface.
  */
 object Discovery {
-    const val FORBIDDEN_CLASS_MASK = (Modifier.STATIC or Modifier.ABSTRACT)
+    const val FORBIDDEN_CLASS_MASK = (Modifier.STATIC or Modifier.ABSTRACT or Modifier.PRIVATE or Modifier.PROTECTED)
 
     /**
      * Get an instance of each concrete class that implements interface or class [T].

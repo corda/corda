@@ -5,25 +5,25 @@ import org.junit.Test
 
 class ClassResolverTest {
 
-    private val resolver = ClassResolver(emptySet(), Whitelist.MINIMAL, "sandbox/")
+    private val resolver = ClassResolver(emptySet(), emptySet(), Whitelist.MINIMAL, "sandbox/")
 
     @Test
     fun `can resolve class name`() {
         assertThat(resolver.resolve("java/lang/Object")).isEqualTo("java/lang/Object")
-        assertThat(resolver.resolve("java/lang/String")).isEqualTo("java/lang/String")
+        assertThat(resolver.resolve("java/lang/String")).isEqualTo("sandbox/java/lang/String")
         assertThat(resolver.resolve("foo/bar/Test")).isEqualTo("sandbox/foo/bar/Test")
     }
 
     @Test
     fun `can resolve class name for arrays`() {
         assertThat(resolver.resolve("[Ljava/lang/Object;")).isEqualTo("[Ljava/lang/Object;")
-        assertThat(resolver.resolve("[Ljava/lang/String;")).isEqualTo("[Ljava/lang/String;")
+        assertThat(resolver.resolve("[Ljava/lang/String;")).isEqualTo("[Lsandbox/java/lang/String;")
         assertThat(resolver.resolve("[Lfoo/bar/Test;")).isEqualTo("[Lsandbox/foo/bar/Test;")
         assertThat(resolver.resolve("[[Ljava/lang/Object;")).isEqualTo("[[Ljava/lang/Object;")
-        assertThat(resolver.resolve("[[Ljava/lang/String;")).isEqualTo("[[Ljava/lang/String;")
+        assertThat(resolver.resolve("[[Ljava/lang/String;")).isEqualTo("[[Lsandbox/java/lang/String;")
         assertThat(resolver.resolve("[[Lfoo/bar/Test;")).isEqualTo("[[Lsandbox/foo/bar/Test;")
         assertThat(resolver.resolve("[[[Ljava/lang/Object;")).isEqualTo("[[[Ljava/lang/Object;")
-        assertThat(resolver.resolve("[[[Ljava/lang/String;")).isEqualTo("[[[Ljava/lang/String;")
+        assertThat(resolver.resolve("[[[Ljava/lang/String;")).isEqualTo("[[[Lsandbox/java/lang/String;")
         assertThat(resolver.resolve("[[[Lfoo/bar/Test;")).isEqualTo("[[[Lsandbox/foo/bar/Test;")
     }
 

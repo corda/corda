@@ -52,14 +52,6 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
 
     override fun runProgram() = run(System.out)
 
-    override fun initLogging() {
-        if (verbose) {
-            loggingLevel = Level.TRACE
-        }
-        val loggingLevel = loggingLevel.name.toLowerCase(Locale.ENGLISH)
-        System.setProperty("logLevel", loggingLevel) // This property is referenced from the XML config file.
-    }
-
     fun run(out: PrintStream): Int {
         val inputBytes = source!!.readBytes()
         val bytes = parseToBinaryRelaxed(inputFormatType, inputBytes)
