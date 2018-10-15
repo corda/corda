@@ -34,10 +34,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.MockCordappProvider
-import net.corda.testing.node.internal.MockKeyManagementService
-import net.corda.testing.node.internal.MockTransactionStorage
-import net.corda.testing.node.internal.TestCordappDirectories
-import net.corda.testing.node.internal.getCallerPackage
+import net.corda.testing.node.internal.*
 import net.corda.testing.services.MockAttachmentStorage
 import java.security.KeyPair
 import java.sql.Connection
@@ -70,8 +67,7 @@ open class MockServices private constructor(
     companion object {
 
         private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): CordappLoader {
-
-            val cordappPaths = TestCordappDirectories.forPackages(packages)
+            val cordappPaths = cordappsForPackages(packages).map { TestCordappDirectories.getJarDirectory(it) }
             return JarScanningCordappLoader.fromDirectories(cordappPaths, versionInfo)
         }
 
