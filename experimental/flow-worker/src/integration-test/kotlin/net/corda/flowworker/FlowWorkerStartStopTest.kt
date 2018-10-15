@@ -34,8 +34,8 @@ import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.internal.FINANCE_CORDAPP
 import net.corda.testing.node.internal.TestCordappDirectories
-import net.corda.testing.node.internal.cordappsForPackages
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientProducer
@@ -50,7 +50,6 @@ import java.util.*
 import kotlin.test.assertEquals
 
 class FlowWorkerStartStopTest {
-
     @Rule
     @JvmField
     val serializationEnvironment = SerializationEnvironmentRule(true)
@@ -80,7 +79,7 @@ class FlowWorkerStartStopTest {
     private val notaryKeyPair = generateKeyPair()
     private val notary = Party(DUMMY_NOTARY_NAME, notaryKeyPair.public)
     private val notaryPartyAndCertificate = getTestPartyAndCertificate(notary)
-    private val cordappDirectories = TestCordappDirectories.cached(cordappsForPackages(listOf("net.corda.finance"))).toList()
+    private val cordappDirectories = listOf(TestCordappDirectories.getJarDirectory(FINANCE_CORDAPP))
 
     @Test
     fun startStop() {

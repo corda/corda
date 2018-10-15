@@ -1,24 +1,11 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.testMessage.MESSAGE_CONTRACT_PROGRAM_ID
-import net.corda.testMessage.Message
-import net.corda.testMessage.MessageContract
-import net.corda.testMessage.MessageState
-import net.corda.RpcInfo
-import net.corda.client.rpc.CordaRPCClient
 import net.corda.RpcInfo
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.ReceiveTransactionFlow
-import net.corda.core.flows.SendTransactionFlow
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
@@ -31,7 +18,10 @@ import net.corda.testMessage.MESSAGE_CONTRACT_PROGRAM_ID
 import net.corda.testMessage.Message
 import net.corda.testMessage.MessageContract
 import net.corda.testMessage.MessageState
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver

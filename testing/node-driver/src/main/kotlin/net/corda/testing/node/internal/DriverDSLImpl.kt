@@ -34,7 +34,6 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
-import net.corda.testing.node.TestCordapp
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -47,6 +46,7 @@ import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import okhttp3.OkHttpClient
@@ -234,7 +234,7 @@ class DriverDSLImpl(
             customOverrides: Map<String, Any?>,
             startInSameProcess: Boolean?,
             maximumHeapSize: String,
-            additionalCordapps: Set<TestCorDapp>,
+            additionalCordapps: Collection<TestCordapp>,
             regenerateCordappsOnStart: Boolean,
             bytemanPort: Int?
     ): CordaFuture<NodeHandle> {
@@ -1021,7 +1021,7 @@ interface InternalDriverDSL : DriverDSL {
             customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
             startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
             maximumHeapSize: String = defaultParameters.maximumHeapSize,
-            additionalCordapps: Set<TestCorDapp> = defaultParameters.additionalCordapps,
+            additionalCordapps: Collection<TestCordapp> = defaultParameters.additionalCordapps,
             regenerateCordappsOnStart: Boolean = defaultParameters.regenerateCordappsOnStart,
             bytemanPort: Int? = null
     ): CordaFuture<NodeHandle>
