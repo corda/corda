@@ -25,7 +25,7 @@ class ConfigSchemaTest {
         println(configuration.serialize())
 
         val fooConfigSchema = ConfigSchema.withProperties(name = "Foo") { setOf(boolean("prop4"), double("prop5")) }
-        val barConfigSchema = ConfigSchema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), value("prop3", fooConfigSchema)) }
+        val barConfigSchema = ConfigSchema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
         val errors = barConfigSchema.validate(configuration)
         println(barConfigSchema.description())
@@ -57,7 +57,7 @@ class ConfigSchemaTest {
         println(configuration.serialize())
 
         val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
-        val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), long(prop2), value("prop3", fooConfigSchema)) }
+        val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
         val strict = ConfigProperty.ValidationOptions(strict = true)
 
@@ -92,7 +92,7 @@ class ConfigSchemaTest {
         println(configuration.serialize())
 
         val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
-        val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), long(prop2), value("prop3", fooConfigSchema)) }
+        val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
         val errors = barConfigSchema.validate(configuration)
 
@@ -123,7 +123,7 @@ class ConfigSchemaTest {
         println(configuration.serialize())
 
         val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
-        val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), long(prop2), value("prop3", fooConfigSchema)) }
+        val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
         val errors = barConfigSchema.validate(configuration)
         errors.forEach(::println)

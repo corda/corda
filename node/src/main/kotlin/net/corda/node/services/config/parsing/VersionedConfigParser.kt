@@ -9,15 +9,21 @@ typealias ExtractConfigVersion = (Config) -> Int?
 class VersionedConfigParser<TYPED>(private val extractVersion: ExtractConfigVersion, private val versionToParseFunction: Map<Int, ParseConfig<out TYPED>>, private val defaultVersion: Int? = 0) : ParseConfig<TYPED> {
 
     companion object {
+
         fun <T> mapping(extractVersion: ExtractConfigVersion, vararg parseFunctions: Pair<Int, ParseConfig<out T>>, defaultVersion: Int? = 0) = VersionedConfigParser(extractVersion, mapOf(*parseFunctions), defaultVersion)
     }
 
     override fun invoke(configuration: Config): TYPED {
 
-        // TODO sollecitom change this exception type to something sensible.
-        val version = extractVersion.invoke(configuration) ?: defaultVersion ?: throw IllegalArgumentException("No version header found and no default version specified.")
-        // TODO sollecitom change this exception type to something sensible.
-        val parseConfiguration = versionToParseFunction[version] ?: throw IllegalArgumentException("Unsupported configuration version $version.")
+        val version = extractVersion.invoke(configuration) ?: defaultVersion ?: throw VersionedConfigParser.Exception.MissingVersionHeader()
+        val parseConfiguration = versionToParseFunction[version] ?: throw VersionedConfigParser.Exception.UnsupportedVersion(version)
         return parseConfiguration.invoke(configuration)
+    }
+
+    sealed class Exception(message: String) : kotlin.Exception(message) {
+
+        class MissingVersionHeader : VersionedConfigParser.Exception("No version header found and no default version specified.")
+
+        class UnsupportedVersion(val version: Int) : VersionedConfigParser.Exception("Unsupported configuration version $version.")
     }
 }

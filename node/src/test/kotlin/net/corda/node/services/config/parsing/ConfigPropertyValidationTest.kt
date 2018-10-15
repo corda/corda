@@ -270,7 +270,7 @@ class ConfigPropertyValidationTest {
         val nestedKey = "d"
         val nestedPropertySchema = ConfigSchema.withProperties(ConfigProperty.long(nestedKey))
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.value(key, nestedPropertySchema)
+        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.nestedObject(key, nestedPropertySchema)
 
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
@@ -300,7 +300,7 @@ class ConfigPropertyValidationTest {
         val nestedKey = "d"
         val nestedPropertySchema = ConfigSchema.withProperties(ConfigProperty.long(nestedKey))
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.value(key, nestedPropertySchema)
+        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.nestedObject(key, nestedPropertySchema)
 
         val configuration = configObject(key to configObject()).toConfig()
 
@@ -330,7 +330,7 @@ class ConfigPropertyValidationTest {
         val nestedKey = "d"
         val nestedPropertySchema = ConfigSchema.withProperties(ConfigProperty.long(nestedKey))
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.value(key, nestedPropertySchema)
+        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.nestedObject(key, nestedPropertySchema)
 
         val configuration = configObject(key to configObject(nestedKey to null)).toConfig()
 
@@ -360,7 +360,7 @@ class ConfigPropertyValidationTest {
 
         val nestedKey = "d"
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.value(key)
+        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.nestedObject(key)
 
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
