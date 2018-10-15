@@ -9,6 +9,7 @@ import net.corda.node.services.config.parsing.Validated.Companion.valid
 import java.time.Duration
 import kotlin.reflect.KClass
 
+// TODO sollecitom introduce either a PasswordProperty type or a "sensitive" boolean resulting in "*****" being printed instead of the value when the configuration is serialized.
 interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> {
 
     val key: String
