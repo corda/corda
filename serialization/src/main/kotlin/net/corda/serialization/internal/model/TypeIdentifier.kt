@@ -55,12 +55,12 @@ sealed class TypeIdentifier {
          * [java.lang.reflect.Field.getGenericType] or
          * [java.lang.reflect.Method.getGenericReturnType]). Wildcard types and type variables are converted to [Unknown].
          */
-        fun forGenericType(type: Type): TypeIdentifier = when(type) {
+        fun forGenericType(type: Type, resolutionContext: Type = type): TypeIdentifier = when(type) {
             is ParameterizedType -> Parameterised((type.rawType as Class<*>).name, type.actualTypeArguments.map {
-                forGenericType(it.resolveAgainst(type))
+                forGenericType(it.resolveAgainst(resolutionContext))
             })
             is Class<*> -> forClass(type)
-            is GenericArrayType -> ArrayOf(forGenericType(type.genericComponentType.resolveAgainst(type)))
+            is GenericArrayType -> ArrayOf(forGenericType(type.genericComponentType.resolveAgainst(resolutionContext)))
             else -> Unknown
         }
     }

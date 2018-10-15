@@ -122,10 +122,12 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
             is TypeIdentifier.Unknown -> LocalTypeInformation.Unknown
             is TypeIdentifier.Unparameterised,
             is TypeIdentifier.Erased -> buildForClass(rawType, typeIdentifier)
-            is TypeIdentifier.ArrayOf -> LocalTypeInformation.AnArray(
-                    type,
-                    typeIdentifier,
-                    build(type.componentType(), typeIdentifier.componentType))
+            is TypeIdentifier.ArrayOf -> {
+                LocalTypeInformation.AnArray(
+                        type,
+                        typeIdentifier,
+                        build(type.componentType().resolveAgainst(resolutionContext ?: type), typeIdentifier.componentType))
+            }
             is TypeIdentifier.Parameterised -> buildForParameterised(rawType, type as ParameterizedType, typeIdentifier)
         }
     }
@@ -197,7 +199,7 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
             type.allInterfaces.mapNotNull {
                 if (it == type) return@mapNotNull null
                 val resolved = it.resolveAgainst(resolutionContext ?: type)
-                build(resolved, TypeIdentifier.forGenericType(resolved))
+                build(resolved, TypeIdentifier.forGenericType(resolved, resolutionContext ?: type))
             }.toList()
 
     private val Type.allInterfaces: Set<Type> get() = exploreType(this)
@@ -214,7 +216,7 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
 
         (clazz.genericInterfaces.asSequence() + clazz.genericSuperclass)
                 .filterNotNull()
-                .forEach { exploreType(it.resolveAgainst(type), interfaces) }
+                .forEach { exploreType(it.resolveAgainst(resolutionContext ?: type), interfaces) }
 
         return interfaces
     }
@@ -224,7 +226,7 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
                 if (descriptor.field == null || descriptor.getter == null) null
                 else {
                     val paramType = (descriptor.getter.genericReturnType).resolveAgainst(resolutionContext ?: rawType)
-                    val paramTypeInformation = build(paramType, TypeIdentifier.forGenericType(paramType))
+                    val paramTypeInformation = build(paramType, TypeIdentifier.forGenericType(paramType, resolutionContext ?: rawType))
                     val isMandatory = paramType.asClass().isPrimitive || !descriptor.getter.returnsNullable()
                     name to LocalPropertyInformation.ReadOnlyProperty(descriptor.getter, paramTypeInformation, isMandatory)
                 }
@@ -244,7 +246,7 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
             if (descriptor.field == null || descriptor.getter == null) return@mapNotNull null
 
             val paramType = (descriptor.getter.genericReturnType).resolveAgainst(resolutionContext ?: rawType)
-            val paramTypeInformation = build(paramType, TypeIdentifier.forGenericType(paramType))
+            val paramTypeInformation = build(paramType, TypeIdentifier.forGenericType(paramType, resolutionContext ?: rawType))
             val isMandatory = paramType.asClass().isPrimitive || !descriptor.getter.returnsNullable()
 
             name to LocalPropertyInformation.ConstructorPairedProperty(
@@ -259,7 +261,7 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
                 if (descriptor.getter == null || descriptor.setter == null || descriptor.field == null) null
                 else {
                     val paramType = (descriptor.getter.genericReturnType).resolveAgainst(resolutionContext ?: rawType)
-                    val paramTypeInformation = build(paramType, TypeIdentifier.forGenericType(paramType))
+                    val paramTypeInformation = build(paramType, TypeIdentifier.forGenericType(paramType, resolutionContext ?: rawType))
                     val isMandatory = paramType.asClass().isPrimitive || !descriptor.getter.returnsNullable()
 
                     name to LocalPropertyInformation.GetterSetterProperty(
@@ -273,7 +275,7 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
     private fun calculatedProperties(rawType: Class<*>): Map<String, LocalPropertyInformation> =
             rawType.calculatedPropertyDescriptors().mapValues { (_, v) ->
                 val paramType = v.getter!!.genericReturnType.resolveAgainst(resolutionContext ?: rawType)
-                val paramTypeInformation = build(paramType, TypeIdentifier.forGenericType(paramType))
+                val paramTypeInformation = build(paramType, TypeIdentifier.forGenericType(paramType, resolutionContext ?: rawType))
                 val isMandatory = paramType.asClass().isPrimitive || !v.getter.returnsNullable()
 
                 LocalPropertyInformation.CalculatedProperty(v.getter, paramTypeInformation, isMandatory)
@@ -282,16 +284,16 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
     private fun buildTypeParameterInformation(type: ParameterizedType): List<LocalTypeInformation> =
             type.actualTypeArguments.map {
                 val upperBound = it.upperBound
-                build(upperBound, TypeIdentifier.forGenericType(upperBound))
+                build(upperBound, TypeIdentifier.forGenericType(upperBound, resolutionContext ?: type))
             }
 
     private fun buildConstructorInformation(type: Type): LocalConstructorInformation {
         val observedConstructor = constructorForDeserialization(type)
         return LocalConstructorInformation(observedConstructor, observedConstructor.parameters.map {
-            val parameterType = it.type.javaType.resolveAgainst(type)
+            val parameterType = it.type.javaType.resolveAgainst(resolutionContext ?: type)
             LocalConstructorParameterInformation(
                     it.name!!,
-                    build(parameterType, TypeIdentifier.forGenericType(parameterType)),
+                    build(parameterType, TypeIdentifier.forGenericType(parameterType, resolutionContext ?: type)),
                     parameterType.asClass().isPrimitive || !it.type.isMarkedNullable)
         })
     }

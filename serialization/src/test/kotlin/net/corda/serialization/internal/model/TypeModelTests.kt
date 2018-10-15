@@ -29,7 +29,15 @@ class TypeModelTests {
         assertEquals("CollectionHolder<UUID, LocalDateTime>",
                 model.inspect(typeOf<CollectionHolder<UUID, LocalDateTime>>()).prettyPrint())
 
-        println(model.inspect(typeOf<StringKeyedCollectionHolder<Int>>()).prettyPrint())
+        assertEquals(
+                """
+                StringKeyedCollectionHolder<Integer>: CollectionHolder<String, Integer>
+                  array: List<Integer>[]
+                  map: Map<String, Integer>
+                  list: List<Integer>
+                """.trimIndent(), model.inspect(typeOf<StringKeyedCollectionHolder<Int>>()).prettyPrint()
+        )
+
         assertEquals(
                 """
                 Nested
