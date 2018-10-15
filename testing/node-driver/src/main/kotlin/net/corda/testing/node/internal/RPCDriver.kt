@@ -28,8 +28,10 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.TestCorDapp
+import net.corda.testing.internal.TestingNamedCacheFactory
+import net.corda.testing.internal.fromUserList
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -118,7 +120,7 @@ fun <A> rpcDriver(
         networkParameters: NetworkParameters = testNetworkParameters(),
         notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         inMemoryDB: Boolean = true,
-        cordappsForAllNodes: Set<TestCorDapp> = cordappsInCurrentAndAdditionalPackages(),
+        cordappsForAllNodes: Collection<TestCordapp> = cordappsInCurrentAndAdditionalPackages(),
         dsl: RPCDriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -485,7 +487,8 @@ data class RPCDriverDSL(
                 locator,
                 rpcSecurityManager,
                 nodeLegalName,
-                configuration
+                configuration,
+                TestingNamedCacheFactory()
         )
         driverDSL.shutdownManager.registerShutdown {
             rpcServer.close(queueDrainTimeout)

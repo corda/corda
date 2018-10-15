@@ -4,9 +4,8 @@ import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.utilities.days
-import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices
 import org.junit.Test
 import java.time.Instant

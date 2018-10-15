@@ -2,11 +2,11 @@ package net.corda.node.services.persistence
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.loggerFor
-import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
 import org.junit.Assert.*

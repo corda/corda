@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.CacheLoader
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
 import com.github.benmanes.caffeine.cache.Weigher
+import net.corda.core.internal.NamedCacheFactory
 
 class NonInvalidatingCache<K, V> private constructor(
         val cache: LoadingCache<K, V>

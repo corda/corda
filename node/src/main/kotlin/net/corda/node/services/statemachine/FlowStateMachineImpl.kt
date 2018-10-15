@@ -14,6 +14,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
@@ -205,6 +206,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun run() {
+        logic.progressTracker?.currentStep = ProgressTracker.STARTING
         logic.stateMachine = this
 
         setLoggingContext()
@@ -263,7 +265,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         processEventImmediately(
                 Event.EnterSubFlow(subFlow.javaClass,
                         createSubFlowVersion(
-                               serviceHub.cordappProvider.getCordappForFlow(subFlow), serviceHub.myInfo.platformVersion
+                                serviceHub.cordappProvider.getCordappForFlow(subFlow), serviceHub.myInfo.platformVersion
                         )
                 ),
                 isDbTransactionOpenOnEntry = true,
@@ -435,7 +437,7 @@ val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out F
             current = current.superclass
                     ?: return found
                     ?: throw IllegalArgumentException("$name, as a flow that initiates other flows, must be annotated with " +
-                    "${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
+                            "${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
         }
     }
 

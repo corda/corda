@@ -2,10 +2,8 @@ apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
-apply plugin: 'maven-publish'
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
@@ -14,8 +12,8 @@ dependencies {
     cordapp project(':finance')
 
     // Corda integration dependencies
-    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaRuntime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
     cordaCompile project(':client:jfx')
     cordaCompile project(':client:rpc')
@@ -32,7 +30,9 @@ dependencies {
     testCompile "junit:junit:$junit_version"
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+def nodeTask = tasks.getByPath(':node:capsule:assemble')
+def webTask = tasks.getByPath(':webserver:webcapsule:assemble')
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     nodeDefaults {
         cordapp project(':finance')
     }
@@ -82,18 +82,6 @@ idea {
     }
 }
 
-publishing {
-    publications {
-        jarAndSources(MavenPublication) {
-            from components.java
-            artifactId 'bankofcorda'
-
-            artifact sourceJar
-            artifact javadocJar
-        }
-    }
-}
-
 task runRPCCashIssue(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.bank.IssueCash'
@@ -121,5 +109,14 @@ jar {
         attributes(
                 'Automatic-Module-Name': 'net.corda.samples.demos.bankofcorda'
         )
+    }
+}
+
+cordapp {
+    info {
+        name "net/corda/samples/bank-of-corda-demo"
+        vendor "Corda Open Source"
+        targetPlatformVersion corda_platform_version.toInteger()
+        minimumPlatformVersion 1
     }
 }

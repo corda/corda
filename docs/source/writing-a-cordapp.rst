@@ -1,5 +1,5 @@
-CorDapp structure
-=================
+Structuring a CorDapp
+=====================
 
 .. contents::
 

@@ -2,14 +2,12 @@ package net.corda.node.internal.cordapp
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
+import net.corda.core.internal.packageName
 import net.corda.node.VersionInfo
-import net.corda.node.cordapp.CordappLoader
-import net.corda.testing.node.internal.cordappsForPackages
-import net.corda.testing.node.internal.getTimestampAsDirectoryName
-import net.corda.testing.node.internal.packageInDirectory
+import net.corda.testing.node.internal.TestCordappDirectories
+import net.corda.testing.node.internal.cordappForPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import java.nio.file.Path
 import java.nio.file.Paths
 
 @InitiatingFlow
@@ -38,7 +36,6 @@ class DummyRPCFlow : FlowLogic<Unit>() {
 
 class JarScanningCordappLoaderTest {
     private companion object {
-        const val testScanPackage = "net.corda.node.internal.cordapp"
         const val isolatedContractId = "net.corda.finance.contracts.isolated.AnotherDummyContract"
         const val isolatedFlowName = "net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator"
     }
@@ -70,30 +67,16 @@ class JarScanningCordappLoaderTest {
 
     @Test
     fun `flows are loaded by loader`() {
-        val loader = cordappLoaderForPackages(listOf(testScanPackage))
+        val dir = TestCordappDirectories.getJarDirectory(cordappForPackages(javaClass.packageName))
+        val loader = JarScanningCordappLoader.fromDirectories(listOf(dir))
 
-        val actual = loader.cordapps.toTypedArray()
         // One cordapp from this source tree. In gradle it will also pick up the node jar.
-        assertThat(actual.size == 0 || actual.size == 1).isTrue()
+        assertThat(loader.cordapps).isNotEmpty
 
-        val actualCordapp = actual.single { !it.initiatedFlows.isEmpty() }
+        val actualCordapp = loader.cordapps.single { !it.initiatedFlows.isEmpty() }
         assertThat(actualCordapp.initiatedFlows).first().hasSameClassAs(DummyFlow::class.java)
         assertThat(actualCordapp.rpcFlows).first().hasSameClassAs(DummyRPCFlow::class.java)
         assertThat(actualCordapp.schedulableFlows).first().hasSameClassAs(DummySchedulableFlow::class.java)
-    }
-
-    @Test
-    fun `duplicate packages are ignored`() {
-        val loader = cordappLoaderForPackages(listOf(testScanPackage, testScanPackage))
-        val cordapps = loader.cordapps.filter { LoaderTestFlow::class.java in it.initiatedFlows }
-        assertThat(cordapps).hasSize(1)
-    }
-
-    @Test
-    fun `sub-packages are ignored`() {
-        val loader = cordappLoaderForPackages(listOf("net.corda.core", testScanPackage))
-        val cordapps = loader.cordapps.filter { LoaderTestFlow::class.java in it.initiatedFlows }
-        assertThat(cordapps).hasSize(1)
     }
 
     // This test exists because the appClassLoader is used by serialisation and we need to ensure it is the classloader
@@ -158,17 +141,5 @@ class JarScanningCordappLoaderTest {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 2))
         assertThat(loader.cordapps).hasSize(1)
-    }
-
-    private fun cordappLoaderForPackages(packages: Iterable<String>): CordappLoader {
-        val cordapps = cordappsForPackages(packages)
-        return testDirectory().let { directory ->
-            cordapps.packageInDirectory(directory)
-            JarScanningCordappLoader.fromDirectories(listOf(directory))
-        }
-    }
-
-    private fun testDirectory(): Path {
-        return Paths.get("build", getTimestampAsDirectoryName())
     }
 }

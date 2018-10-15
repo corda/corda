@@ -424,15 +424,19 @@ object Crypto {
         }
         require(clearData.isNotEmpty()) { "Signing of an empty array is not permitted!" }
         val signature = Signature.getInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
-        // Note that deterministic signature schemes, such as EdDSA, do not require extra randomness, but we have to
-        // ensure that non-deterministic algorithms (i.e., ECDSA) use non-blocking SecureRandom implementations (if possible).
-        // TODO consider updating this when the related BC issue for Sphincs is fixed.
-        if (signatureScheme != SPHINCS256_SHA256) {
-            signature.initSign(privateKey, newSecureRandom())
-        } else {
-            // Special handling for Sphincs, due to a BC implementation issue.
-            // As Sphincs is deterministic, it does not require RNG input anyway.
+        // Note that deterministic signature schemes, such as EdDSA, original SPHINCS-256 and RSA PKCS#1, do not require
+        // extra randomness, but we have to ensure that non-deterministic algorithms (i.e., ECDSA) use non-blocking
+        // SecureRandom implementation. Also, SPHINCS-256 implementation in BouncyCastle 1.60 fails with
+        // ClassCastException if we invoke initSign with a SecureRandom as an input.
+        // TODO Although we handle the above issue here, consider updating to BC 1.61+ which provides a fix.
+        if (signatureScheme == EDDSA_ED25519_SHA512
+                || signatureScheme == SPHINCS256_SHA256
+                || signatureScheme == RSA_SHA256) {
             signature.initSign(privateKey)
+        } else {
+            // The rest of the algorithms will require a SecureRandom input (i.e., ECDSA or any new algorithm for which
+            // we don't know if it's deterministic).
+            signature.initSign(privateKey, newSecureRandom())
         }
         signature.update(clearData)
         return signature.sign()

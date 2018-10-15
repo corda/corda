@@ -2,6 +2,7 @@ package net.corda.node.utilities
 
 import com.github.benmanes.caffeine.cache.RemovalCause
 import com.github.benmanes.caffeine.cache.RemovalListener
+import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.util.*
@@ -14,7 +15,8 @@ class PersistentMap<K : Any, V, E, out EK>(
         val toPersistentEntityKey: (K) -> EK,
         val fromPersistentEntity: (E) -> Pair<K, V>,
         val toPersistentEntity: (key: K, value: V) -> E,
-        val persistentEntityClass: Class<E>
+        val persistentEntityClass: Class<E>,
+        cacheFactory: NamedCacheFactory
 ) : MutableMap<K, V>, AbstractMap<K, V>() {
 
     private companion object {
@@ -24,7 +26,8 @@ class PersistentMap<K : Any, V, E, out EK>(
     private val cache = NonInvalidatingUnboundCache(
             name,
             loadFunction = { key -> Optional.ofNullable(loadValue(key)) },
-            removalListener = ExplicitRemoval(toPersistentEntityKey, persistentEntityClass)
+            removalListener = ExplicitRemoval(toPersistentEntityKey, persistentEntityClass),
+            cacheFactory = cacheFactory
     )
 
     /** Preload to allow [all] to take data only from the cache (cache is unbound) */

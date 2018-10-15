@@ -15,17 +15,13 @@ import net.corda.node.services.statemachine.StaffedFlowHospital.MedicalRecord.Ke
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.driver.TestCorDapp
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.TestStartedNode
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
 
 class FinalityHandlerTest {
-    private lateinit var mockNet: InternalMockNetwork
+    private val mockNet = InternalMockNetwork()
 
     @After
     fun cleanUp() {
@@ -36,10 +32,7 @@ class FinalityHandlerTest {
     fun `sent to flow hospital on error and attempted retry on node restart`() {
         // Setup a network where only Alice has the finance CorDapp and it sends a cash tx to Bob who doesn't have the
         // CorDapp. Bob's FinalityHandler will error when validating the tx.
-        mockNet = InternalMockNetwork()
-
-        val assertCordapp = TestCorDapp.Factory.create("net.corda.finance.contracts.asset", "1.0").plusPackage("net.corda.finance.contracts.asset")
-        val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, additionalCordapps = setOf(assertCordapp)))
+        val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, additionalCordapps = setOf(FINANCE_CORDAPP)))
 
         var bob = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
 
@@ -87,8 +80,6 @@ class FinalityHandlerTest {
     }
 
     private fun TestStartedNode.getTransaction(id: SecureHash): SignedTransaction? {
-        return database.transaction {
-            services.validatedTransactions.getTransaction(id)
-        }
+        return services.validatedTransactions.getTransaction(id)
     }
 }

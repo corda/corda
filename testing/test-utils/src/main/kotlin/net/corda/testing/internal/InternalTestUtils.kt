@@ -1,26 +1,42 @@
 package net.corda.testing.internal
 
+import net.corda.core.context.AuthServiceId
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.node.NodeInfo
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
+import net.corda.node.internal.createCordaPersistence
+import net.corda.node.internal.security.RPCSecurityManagerImpl
+import net.corda.node.internal.startHikariPool
+import net.corda.node.services.api.SchemaService
+import net.corda.node.services.config.SecurityConfiguration
+import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.registerDevP2pCertificates
+import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.createDevNodeCa
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.loadDevCaTrustStore
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
+import java.util.*
 import javax.security.auth.x500.X500Principal
 
 @Suppress("unused")
@@ -135,4 +151,25 @@ fun createWireTransaction(inputs: List<StateRef>,
                           privacySalt: PrivacySalt = PrivacySalt()): WireTransaction {
     val componentGroups = WireTransaction.createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow)
     return WireTransaction(componentGroups, privacySalt)
+}
+
+/**
+ * Instantiate RPCSecurityManager initialised with users data from a list of [User]
+ */
+fun RPCSecurityManagerImpl.Companion.fromUserList(id: AuthServiceId, users: List<User>) =
+        RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(users).copy(id = id), TestingNamedCacheFactory())
+
+/**
+ * Convenience method for configuring a database for some tests.
+ */
+fun configureDatabase(hikariProperties: Properties,
+                      databaseConfig: DatabaseConfig,
+                      wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
+                      wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
+                      schemaService: SchemaService = NodeSchemaService(),
+                      internalSchemas: Set<MappedSchema> = NodeSchemaService().internalSchemas(),
+                      cacheFactory: NamedCacheFactory = TestingNamedCacheFactory()): CordaPersistence {
+    val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, hikariProperties, cacheFactory)
+    persistence.startHikariPool(hikariProperties, databaseConfig, internalSchemas)
+    return persistence
 }

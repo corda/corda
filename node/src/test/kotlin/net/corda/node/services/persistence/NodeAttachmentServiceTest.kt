@@ -13,12 +13,12 @@ import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.configureDatabase
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow

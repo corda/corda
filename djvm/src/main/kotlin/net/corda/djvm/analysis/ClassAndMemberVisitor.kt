@@ -85,8 +85,12 @@ open class ClassAndMemberVisitor(
 
     /**
      * Process class after it has been fully traversed and analyzed.
+     * The [classVisitor] has finished visiting all of the class's
+     * existing elements (i.e. methods, fields, inner classes etc)
+     * and is about to complete. However, it can still add new
+     * elements to the class, if required.
      */
-    open fun visitClassEnd(clazz: ClassRepresentation) {}
+    open fun visitClassEnd(classVisitor: ClassVisitor, clazz: ClassRepresentation) {}
 
     /**
      * Extract the meta-data indicating the source file of the traversed class (i.e., where it is compiled from).
@@ -136,7 +140,7 @@ open class ClassAndMemberVisitor(
      */
     protected fun shouldBeProcessed(className: String): Boolean {
         return !configuration.whitelist.inNamespace(className) &&
-                className !in configuration.pinnedClasses
+                !configuration.isPinnedClass(className)
     }
 
     /**
@@ -241,7 +245,7 @@ open class ClassAndMemberVisitor(
                     .getClassReferencesFromClass(currentClass!!, configuration.analyzeAnnotations)
                     .forEach(::recordTypeReference)
             captureExceptions {
-                visitClassEnd(currentClass!!)
+                visitClassEnd(this, currentClass!!)
             }
             super.visitEnd()
         }
@@ -385,7 +389,9 @@ open class ClassAndMemberVisitor(
          */
         override fun visitCode() {
             tryReplaceMethodBody()
-            super.visitCode()
+            visit(MethodEntry(method)) {
+                super.visitCode()
+            }
         }
 
         /**
@@ -491,6 +497,15 @@ open class ClassAndMemberVisitor(
         override fun visitIincInsn(`var`: Int, increment: Int) {
             visit(IntegerInstruction(Opcodes.IINC, increment)) {
                 super.visitIincInsn(`var`, increment)
+            }
+        }
+
+        /**
+         * Transform values loaded from the constants pool.
+         */
+        override fun visitLdcInsn(value: Any) {
+            visit(ConstantInstruction(value), defaultFirst = true) {
+                super.visitLdcInsn(value)
             }
         }
 

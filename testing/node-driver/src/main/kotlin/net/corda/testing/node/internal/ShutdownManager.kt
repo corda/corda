@@ -48,7 +48,12 @@ class ShutdownManager(private val executorService: ExecutorService) {
                 emptyList<CordaFuture<() -> Unit>>()
             } else {
                 isShutdown = true
-                registeredShutdowns
+                val result = ArrayList(registeredShutdowns)
+                // It is important to clear `registeredShutdowns` that has been actioned upon as more than 1 driver can be created per test.
+                // Given that `ShutdownManager` is reachable from `ApplicationShutdownHooks`, everything that was scheduled for shutdown
+                // during 1st driver launch will not be eligible for GC during second driver launch therefore retained in memory.
+                registeredShutdowns.clear()
+                result
             }
         }
 

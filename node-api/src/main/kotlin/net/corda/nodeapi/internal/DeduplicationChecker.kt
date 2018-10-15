@@ -2,7 +2,7 @@ package net.corda.nodeapi.internal
 
 import com.github.benmanes.caffeine.cache.CacheLoader
 import com.github.benmanes.caffeine.cache.Caffeine
-import net.corda.core.internal.buildNamed
+import net.corda.core.internal.NamedCacheFactory
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
@@ -10,11 +10,10 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * A class allowing the deduplication of a strictly incrementing sequence number.
  */
-class DeduplicationChecker(cacheExpiry: Duration, name: String = "DeduplicationChecker") {
+class DeduplicationChecker(cacheExpiry: Duration, name: String = "DeduplicationChecker", cacheFactory: NamedCacheFactory) {
     // dedupe identity -> watermark cache
-    private val watermarkCache = Caffeine.newBuilder()
-            .expireAfterAccess(cacheExpiry.toNanos(), TimeUnit.NANOSECONDS)
-            .buildNamed("${name}_watermark", WatermarkCacheLoader)
+    private val watermarkCache = cacheFactory.buildNamed(Caffeine.newBuilder()
+            .expireAfterAccess(cacheExpiry.toNanos(), TimeUnit.NANOSECONDS), "${name}_watermark", WatermarkCacheLoader)
 
     private object WatermarkCacheLoader : CacheLoader<Any, AtomicLong> {
         override fun load(key: Any) = AtomicLong(-1)

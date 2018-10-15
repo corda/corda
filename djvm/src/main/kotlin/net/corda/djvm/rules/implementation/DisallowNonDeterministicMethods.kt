@@ -17,7 +17,7 @@ class DisallowNonDeterministicMethods : Emitter {
     override fun emit(context: EmitterContext, instruction: Instruction) = context.emit {
         if (instruction is MemberAccessInstruction && isForbidden(instruction)) {
             when (instruction.operation) {
-                INVOKEVIRTUAL -> {
+                INVOKEVIRTUAL, INVOKESPECIAL -> {
                     throwException<RuleViolationError>("Disallowed reference to API; ${memberFormatter.format(instruction.member)}")
                     preventDefault()
                 }
@@ -31,12 +31,20 @@ class DisallowNonDeterministicMethods : Emitter {
                             || instruction.signature.contains("Ljava/lang/reflect/"))
                     )
 
+    private fun isClassLoading(instruction: MemberAccessInstruction): Boolean =
+            (instruction.owner == "java/lang/ClassLoader") && instruction.memberName in CLASSLOADING_METHODS
+
     private fun isObjectMonitor(instruction: MemberAccessInstruction): Boolean =
-            (instruction.signature == "()V" && (instruction.memberName == "notify" || instruction.memberName == "notifyAll" || instruction.memberName == "wait"))
+            (instruction.signature == "()V" && instruction.memberName in MONITOR_METHODS)
                     || (instruction.memberName == "wait" && (instruction.signature == "(J)V" || instruction.signature == "(JI)V"))
 
     private fun isForbidden(instruction: MemberAccessInstruction): Boolean
-            = instruction.isMethod && (isClassReflection(instruction) || isObjectMonitor(instruction))
+            = instruction.isMethod && (isClassReflection(instruction) || isObjectMonitor(instruction) || isClassLoading(instruction))
 
     private val memberFormatter = MemberFormatter()
+
+    private companion object {
+        private val MONITOR_METHODS = setOf("notify", "notifyAll", "wait")
+        private val CLASSLOADING_METHODS = setOf("defineClass", "loadClass", "findClass")
+    }
 }

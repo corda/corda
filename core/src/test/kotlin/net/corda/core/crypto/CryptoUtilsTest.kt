@@ -1,6 +1,12 @@
 package net.corda.core.crypto
 
 import com.google.common.collect.Sets
+import net.corda.core.crypto.Crypto.ECDSA_SECP256K1_SHA256
+import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
+import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
+import net.corda.core.crypto.Crypto.RSA_SHA256
+import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
+import net.corda.core.utilities.OpaqueBytes
 import net.i2p.crypto.eddsa.EdDSAKey
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -30,17 +36,20 @@ import kotlin.test.*
  */
 class CryptoUtilsTest {
 
-    private val testBytes = "Hello World".toByteArray()
+    companion object {
+        private val testBytes = "Hello World".toByteArray()
+        private val test100ZeroBytes = ByteArray(100)
+    }
 
     // key generation test
     @Test
     fun `Generate key pairs`() {
         // testing supported algorithms
-        val rsaKeyPair = Crypto.generateKeyPair(Crypto.RSA_SHA256)
-        val ecdsaKKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
-        val ecdsaRKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
-        val eddsaKeyPair = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
-        val sphincsKeyPair = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
+        val rsaKeyPair = Crypto.generateKeyPair(RSA_SHA256)
+        val ecdsaKKeyPair = Crypto.generateKeyPair(ECDSA_SECP256K1_SHA256)
+        val ecdsaRKeyPair = Crypto.generateKeyPair(ECDSA_SECP256R1_SHA256)
+        val eddsaKeyPair = Crypto.generateKeyPair(EDDSA_ED25519_SHA512)
+        val sphincsKeyPair = Crypto.generateKeyPair(SPHINCS256_SHA256)
 
         // not null private keys
         assertNotNull(rsaKeyPair.private)
@@ -69,7 +78,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `RSA full process keygen-sign-verify`() {
-        val keyPair = Crypto.generateKeyPair(Crypto.RSA_SHA256)
+        val keyPair = Crypto.generateKeyPair(RSA_SHA256)
         val (privKey, pubKey) = keyPair
         // test for some data
         val signedData = Crypto.doSign(privKey, testBytes)
@@ -101,8 +110,8 @@ class CryptoUtilsTest {
         }
 
         // test for zero bytes data
-        val signedDataZeros = Crypto.doSign(privKey, ByteArray(100))
-        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, ByteArray(100))
+        val signedDataZeros = Crypto.doSign(privKey, test100ZeroBytes)
+        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, test100ZeroBytes)
         assertTrue(verificationZeros)
 
         // test for 1MB of data (I successfully tested it locally for 1GB as well)
@@ -124,7 +133,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `ECDSA secp256k1 full process keygen-sign-verify`() {
-        val keyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val keyPair = Crypto.generateKeyPair(ECDSA_SECP256K1_SHA256)
         val (privKey, pubKey) = keyPair
         // test for some data
         val signedData = Crypto.doSign(privKey, testBytes)
@@ -156,8 +165,8 @@ class CryptoUtilsTest {
         }
 
         // test for zero bytes data
-        val signedDataZeros = Crypto.doSign(privKey, ByteArray(100))
-        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, ByteArray(100))
+        val signedDataZeros = Crypto.doSign(privKey, test100ZeroBytes)
+        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, test100ZeroBytes)
         assertTrue(verificationZeros)
 
         // test for 1MB of data (I successfully tested it locally for 1GB as well)
@@ -179,7 +188,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `ECDSA secp256r1 full process keygen-sign-verify`() {
-        val keyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val keyPair = Crypto.generateKeyPair(ECDSA_SECP256R1_SHA256)
         val (privKey, pubKey) = keyPair
         // test for some data
         val signedData = Crypto.doSign(privKey, testBytes)
@@ -211,8 +220,8 @@ class CryptoUtilsTest {
         }
 
         // test for zero bytes data
-        val signedDataZeros = Crypto.doSign(privKey, ByteArray(100))
-        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, ByteArray(100))
+        val signedDataZeros = Crypto.doSign(privKey, test100ZeroBytes)
+        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, test100ZeroBytes)
         assertTrue(verificationZeros)
 
         // test for 1MB of data (I successfully tested it locally for 1GB as well)
@@ -234,7 +243,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `EDDSA ed25519 full process keygen-sign-verify`() {
-        val keyPair = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val keyPair = Crypto.generateKeyPair(EDDSA_ED25519_SHA512)
         val (privKey, pubKey) = keyPair
         // test for some data
         val signedData = Crypto.doSign(privKey, testBytes)
@@ -266,8 +275,8 @@ class CryptoUtilsTest {
         }
 
         // test for zero bytes data
-        val signedDataZeros = Crypto.doSign(privKey, ByteArray(100))
-        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, ByteArray(100))
+        val signedDataZeros = Crypto.doSign(privKey, test100ZeroBytes)
+        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, test100ZeroBytes)
         assertTrue(verificationZeros)
 
         // test for 1MB of data (I successfully tested it locally for 1GB as well)
@@ -289,7 +298,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `SPHINCS-256 full process keygen-sign-verify`() {
-        val keyPair = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
+        val keyPair = Crypto.generateKeyPair(SPHINCS256_SHA256)
         val (privKey, pubKey) = keyPair
         // test for some data
         val signedData = Crypto.doSign(privKey, testBytes)
@@ -321,8 +330,8 @@ class CryptoUtilsTest {
         }
 
         // test for zero bytes data
-        val signedDataZeros = Crypto.doSign(privKey, ByteArray(100))
-        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, ByteArray(100))
+        val signedDataZeros = Crypto.doSign(privKey, test100ZeroBytes)
+        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, test100ZeroBytes)
         assertTrue(verificationZeros)
 
         // test for 1MB of data (I successfully tested it locally for 1GB as well)
@@ -354,7 +363,7 @@ class CryptoUtilsTest {
     @Test
     fun `RSA encode decode keys - required for serialization`() {
         // Generate key pair.
-        val keyPair = Crypto.generateKeyPair(Crypto.RSA_SHA256)
+        val keyPair = Crypto.generateKeyPair(RSA_SHA256)
         val (privKey, pubKey) = keyPair
 
         // Encode and decode private key.
@@ -369,7 +378,7 @@ class CryptoUtilsTest {
     @Test
     fun `ECDSA secp256k1 encode decode keys - required for serialization`() {
         // Generate key pair.
-        val keyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val keyPair = Crypto.generateKeyPair(ECDSA_SECP256K1_SHA256)
         val (privKey, pubKey) = keyPair
 
         // Encode and decode private key.
@@ -384,7 +393,7 @@ class CryptoUtilsTest {
     @Test
     fun `ECDSA secp256r1 encode decode keys - required for serialization`() {
         // Generate key pair.
-        val keyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val keyPair = Crypto.generateKeyPair(ECDSA_SECP256R1_SHA256)
         val (privKey, pubKey) = keyPair
 
         // Encode and decode private key.
@@ -399,7 +408,7 @@ class CryptoUtilsTest {
     @Test
     fun `EdDSA encode decode keys - required for serialization`() {
         // Generate key pair.
-        val keyPair = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val keyPair = Crypto.generateKeyPair(EDDSA_ED25519_SHA512)
         val (privKey, pubKey) = keyPair
 
         // Encode and decode private key.
@@ -414,7 +423,7 @@ class CryptoUtilsTest {
     @Test
     fun `SPHINCS-256 encode decode keys - required for serialization`() {
         // Generate key pair.
-        val keyPair = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
+        val keyPair = Crypto.generateKeyPair(SPHINCS256_SHA256)
         val privKey: BCSphincs256PrivateKey = keyPair.private as BCSphincs256PrivateKey
         val pubKey: BCSphincs256PublicKey = keyPair.public as BCSphincs256PublicKey
 
@@ -443,7 +452,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `RSA scheme finder by key type`() {
-        val keyPairRSA = Crypto.generateKeyPair(Crypto.RSA_SHA256)
+        val keyPairRSA = Crypto.generateKeyPair(RSA_SHA256)
         val (privRSA, pubRSA) = keyPairRSA
         assertEquals(privRSA.algorithm, "RSA")
         assertEquals(pubRSA.algorithm, "RSA")
@@ -451,7 +460,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `ECDSA secp256k1 scheme finder by key type`() {
-        val keyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val keyPair = Crypto.generateKeyPair(ECDSA_SECP256K1_SHA256)
         val (privKey, pubKey) = keyPair
 
         // Encode and decode private key.
@@ -466,7 +475,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `ECDSA secp256r1 scheme finder by key type`() {
-        val keyPairR1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val keyPairR1 = Crypto.generateKeyPair(ECDSA_SECP256R1_SHA256)
         val (privR1, pubR1) = keyPairR1
         assertEquals(privR1.algorithm, "ECDSA")
         assertEquals((privR1 as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256r1"))
@@ -476,7 +485,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `EdDSA scheme finder by key type`() {
-        val keyPairEd = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val keyPairEd = Crypto.generateKeyPair(EDDSA_ED25519_SHA512)
         val (privEd, pubEd) = keyPairEd
 
         assertEquals(privEd.algorithm, "EdDSA")
@@ -487,7 +496,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `SPHINCS-256 scheme finder by key type`() {
-        val keyPairSP = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
+        val keyPairSP = Crypto.generateKeyPair(SPHINCS256_SHA256)
         val (privSP, pubSP) = keyPairSP
         assertEquals(privSP.algorithm, "SPHINCS-256")
         assertEquals(pubSP.algorithm, "SPHINCS-256")
@@ -495,7 +504,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `Automatic EdDSA key-type detection and decoding`() {
-        val keyPairEd = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val keyPairEd = Crypto.generateKeyPair(EDDSA_ED25519_SHA512)
         val (privEd, pubEd) = keyPairEd
         val encodedPrivEd = privEd.encoded
         val encodedPubEd = pubEd.encoded
@@ -511,7 +520,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `Automatic ECDSA secp256k1 key-type detection and decoding`() {
-        val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val keyPairK1 = Crypto.generateKeyPair(ECDSA_SECP256K1_SHA256)
         val (privK1, pubK1) = keyPairK1
         val encodedPrivK1 = privK1.encoded
         val encodedPubK1 = pubK1.encoded
@@ -527,7 +536,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `Automatic ECDSA secp256r1 key-type detection and decoding`() {
-        val keyPairR1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val keyPairR1 = Crypto.generateKeyPair(ECDSA_SECP256R1_SHA256)
         val (privR1, pubR1) = keyPairR1
         val encodedPrivR1 = privR1.encoded
         val encodedPubR1 = pubR1.encoded
@@ -543,7 +552,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `Automatic RSA key-type detection and decoding`() {
-        val keyPairRSA = Crypto.generateKeyPair(Crypto.RSA_SHA256)
+        val keyPairRSA = Crypto.generateKeyPair(RSA_SHA256)
         val (privRSA, pubRSA) = keyPairRSA
         val encodedPrivRSA = privRSA.encoded
         val encodedPubRSA = pubRSA.encoded
@@ -559,7 +568,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `Automatic SPHINCS-256 key-type detection and decoding`() {
-        val keyPairSP = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
+        val keyPairSP = Crypto.generateKeyPair(SPHINCS256_SHA256)
         val (privSP, pubSP) = keyPairSP
         val encodedPrivSP = privSP.encoded
         val encodedPubSP = pubSP.encoded
@@ -575,12 +584,12 @@ class CryptoUtilsTest {
 
     @Test
     fun `Failure test between K1 and R1 keys`() {
-        val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val keyPairK1 = Crypto.generateKeyPair(ECDSA_SECP256K1_SHA256)
         val privK1 = keyPairK1.private
         val encodedPrivK1 = privK1.encoded
         val decodedPrivK1 = Crypto.decodePrivateKey(encodedPrivK1)
 
-        val keyPairR1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val keyPairR1 = Crypto.generateKeyPair(ECDSA_SECP256R1_SHA256)
         val privR1 = keyPairR1.private
         val encodedPrivR1 = privR1.encoded
         val decodedPrivR1 = Crypto.decodePrivateKey(encodedPrivR1)
@@ -590,7 +599,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `Decoding Failure on randomdata as key`() {
-        val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val keyPairK1 = Crypto.generateKeyPair(ECDSA_SECP256K1_SHA256)
         val privK1 = keyPairK1.private
         val encodedPrivK1 = privK1.encoded
 
@@ -610,7 +619,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `Decoding Failure on malformed keys`() {
-        val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val keyPairK1 = Crypto.generateKeyPair(ECDSA_SECP256K1_SHA256)
         val privK1 = keyPairK1.private
         val encodedPrivK1 = privK1.encoded
 
@@ -630,25 +639,25 @@ class CryptoUtilsTest {
 
     @Test
     fun `Check ECDSA public key on curve`() {
-        val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val keyPairK1 = Crypto.generateKeyPair(ECDSA_SECP256K1_SHA256)
         val pubK1 = keyPairK1.public as BCECPublicKey
-        assertTrue(Crypto.publicKeyOnCurve(Crypto.ECDSA_SECP256K1_SHA256, pubK1))
+        assertTrue(Crypto.publicKeyOnCurve(ECDSA_SECP256K1_SHA256, pubK1))
         // use R1 curve for check.
-        assertFalse(Crypto.publicKeyOnCurve(Crypto.ECDSA_SECP256R1_SHA256, pubK1))
+        assertFalse(Crypto.publicKeyOnCurve(ECDSA_SECP256R1_SHA256, pubK1))
         // use ed25519 curve for check.
-        assertFalse(Crypto.publicKeyOnCurve(Crypto.EDDSA_ED25519_SHA512, pubK1))
+        assertFalse(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, pubK1))
     }
 
     @Test
     fun `Check EdDSA public key on curve`() {
-        val keyPairEdDSA = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val keyPairEdDSA = Crypto.generateKeyPair(EDDSA_ED25519_SHA512)
         val pubEdDSA = keyPairEdDSA.public
-        assertTrue(Crypto.publicKeyOnCurve(Crypto.EDDSA_ED25519_SHA512, pubEdDSA))
+        assertTrue(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, pubEdDSA))
         // Use R1 curve for check.
-        assertFalse(Crypto.publicKeyOnCurve(Crypto.ECDSA_SECP256R1_SHA256, pubEdDSA))
+        assertFalse(Crypto.publicKeyOnCurve(ECDSA_SECP256R1_SHA256, pubEdDSA))
         // Check for point at infinity.
-        val pubKeySpec = EdDSAPublicKeySpec((Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3), Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec)
-        assertFalse(Crypto.publicKeyOnCurve(Crypto.EDDSA_ED25519_SHA512, EdDSAPublicKey(pubKeySpec)))
+        val pubKeySpec = EdDSAPublicKeySpec((EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3), EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec)
+        assertFalse(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, EdDSAPublicKey(pubKeySpec)))
     }
 
     @Test(expected = IllegalArgumentException::class)
@@ -658,12 +667,12 @@ class CryptoUtilsTest {
         val pairSun = keyGen.generateKeyPair()
         val pubSun = pairSun.public
         // Should fail as pubSun is not a BCECPublicKey.
-        Crypto.publicKeyOnCurve(Crypto.ECDSA_SECP256R1_SHA256, pubSun)
+        Crypto.publicKeyOnCurve(ECDSA_SECP256R1_SHA256, pubSun)
     }
 
     @Test
     fun `ECDSA secp256R1 deterministic key generation`() {
-        val (priv, pub) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val (priv, pub) = Crypto.generateKeyPair(ECDSA_SECP256R1_SHA256)
         val (dpriv, dpub) = Crypto.deriveKeyPair(priv, "seed-1".toByteArray())
 
         // Check scheme.
@@ -673,11 +682,11 @@ class CryptoUtilsTest {
         assertTrue(dpub is BCECPublicKey)
         assertEquals((dpriv as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256r1"))
         assertEquals((dpub as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256r1"))
-        assertEquals(Crypto.findSignatureScheme(dpriv), Crypto.ECDSA_SECP256R1_SHA256)
-        assertEquals(Crypto.findSignatureScheme(dpub), Crypto.ECDSA_SECP256R1_SHA256)
+        assertEquals(Crypto.findSignatureScheme(dpriv), ECDSA_SECP256R1_SHA256)
+        assertEquals(Crypto.findSignatureScheme(dpub), ECDSA_SECP256R1_SHA256)
 
         // Validate public key.
-        assertTrue(Crypto.publicKeyOnCurve(Crypto.ECDSA_SECP256R1_SHA256, dpub))
+        assertTrue(Crypto.publicKeyOnCurve(ECDSA_SECP256R1_SHA256, dpub))
 
         // Try to sign/verify.
         val signedData = Crypto.doSign(dpriv, testBytes)
@@ -704,7 +713,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `ECDSA secp256K1 deterministic key generation`() {
-        val (priv, pub) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val (priv, pub) = Crypto.generateKeyPair(ECDSA_SECP256K1_SHA256)
         val (dpriv, dpub) = Crypto.deriveKeyPair(priv, "seed-1".toByteArray())
 
         // Check scheme.
@@ -714,11 +723,11 @@ class CryptoUtilsTest {
         assertTrue(dpub is BCECPublicKey)
         assertEquals((dpriv as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256k1"))
         assertEquals((dpub as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256k1"))
-        assertEquals(Crypto.findSignatureScheme(dpriv), Crypto.ECDSA_SECP256K1_SHA256)
-        assertEquals(Crypto.findSignatureScheme(dpub), Crypto.ECDSA_SECP256K1_SHA256)
+        assertEquals(Crypto.findSignatureScheme(dpriv), ECDSA_SECP256K1_SHA256)
+        assertEquals(Crypto.findSignatureScheme(dpub), ECDSA_SECP256K1_SHA256)
 
         // Validate public key.
-        assertTrue(Crypto.publicKeyOnCurve(Crypto.ECDSA_SECP256K1_SHA256, dpub))
+        assertTrue(Crypto.publicKeyOnCurve(ECDSA_SECP256K1_SHA256, dpub))
 
         // Try to sign/verify.
         val signedData = Crypto.doSign(dpriv, testBytes)
@@ -745,7 +754,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `EdDSA ed25519 deterministic key generation`() {
-        val (priv, pub) = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val (priv, pub) = Crypto.generateKeyPair(EDDSA_ED25519_SHA512)
         val (dpriv, dpub) = Crypto.deriveKeyPair(priv, "seed-1".toByteArray())
 
         // Check scheme.
@@ -755,11 +764,11 @@ class CryptoUtilsTest {
         assertTrue(dpub is EdDSAPublicKey)
         assertEquals((dpriv as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
         assertEquals((dpub as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
-        assertEquals(Crypto.findSignatureScheme(dpriv), Crypto.EDDSA_ED25519_SHA512)
-        assertEquals(Crypto.findSignatureScheme(dpub), Crypto.EDDSA_ED25519_SHA512)
+        assertEquals(Crypto.findSignatureScheme(dpriv), EDDSA_ED25519_SHA512)
+        assertEquals(Crypto.findSignatureScheme(dpub), EDDSA_ED25519_SHA512)
 
         // Validate public key.
-        assertTrue(Crypto.publicKeyOnCurve(Crypto.EDDSA_ED25519_SHA512, dpub))
+        assertTrue(Crypto.publicKeyOnCurve(EDDSA_ED25519_SHA512, dpub))
 
         // Try to sign/verify.
         val signedData = Crypto.doSign(dpriv, testBytes)
@@ -786,110 +795,131 @@ class CryptoUtilsTest {
 
     @Test
     fun `EdDSA ed25519 keyPair from entropy`() {
-        val keyPairPositive = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("10"))
+        val keyPairPositive = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("10"))
         assertEquals("DLBL3iHCp9uRReWhhCGfCsrxZZpfAm9h9GLbfN8ijqXTq", keyPairPositive.public.toStringShort())
 
-        val keyPairNegative = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("-10"))
+        val keyPairNegative = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("-10"))
         assertEquals("DLC5HXnYsJAFqmM9hgPj5G8whQ4TpyE9WMBssqCayLBwA2", keyPairNegative.public.toStringShort())
 
-        val keyPairZero = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("0"))
+        val keyPairZero = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("0"))
         assertEquals("DL4UVhGh4tqu1G86UVoGNaDDNCMsBtNHzE6BSZuNNJN7W2", keyPairZero.public.toStringShort())
 
-        val keyPairOne = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("1"))
+        val keyPairOne = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("1"))
         assertEquals("DL8EZUdHixovcCynKMQzrMWBnXQAcbVDHi6ArPphqwJVzq", keyPairOne.public.toStringShort())
 
-        val keyPairBiggerThan256bits = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("2").pow(258).minus(BigInteger.TEN))
+        val keyPairBiggerThan256bits = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("2").pow(258).minus(BigInteger.TEN))
         assertEquals("DLB9K1UiBrWonn481z6NzkqoWHjMBXpfDeaet3wiwRNWSU", keyPairBiggerThan256bits.public.toStringShort())
         // The underlying implementation uses the first 256 bytes of the entropy. Thus, 2^258-10 and 2^258-50 and 2^514-10 have the same impact.
-        val keyPairBiggerThan256bitsV2 = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("2").pow(258).minus(BigInteger("50")))
+        val keyPairBiggerThan256bitsV2 = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("2").pow(258).minus(BigInteger("50")))
         assertEquals("DLB9K1UiBrWonn481z6NzkqoWHjMBXpfDeaet3wiwRNWSU", keyPairBiggerThan256bitsV2.public.toStringShort())
-        val keyPairBiggerThan512bits = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("2").pow(514).minus(BigInteger.TEN))
+        val keyPairBiggerThan512bits = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("2").pow(514).minus(BigInteger.TEN))
         assertEquals("DLB9K1UiBrWonn481z6NzkqoWHjMBXpfDeaet3wiwRNWSU", keyPairBiggerThan512bits.public.toStringShort())
 
         // Try another big number.
-        val keyPairBiggerThan258bits = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, BigInteger("2").pow(259).plus(BigInteger.ONE))
+        val keyPairBiggerThan258bits = Crypto.deriveKeyPairFromEntropy(EDDSA_ED25519_SHA512, BigInteger("2").pow(259).plus(BigInteger.ONE))
         assertEquals("DL5tEFVMXMGrzwjfCAW34JjkhsRkPfFyJ38iEnmpB6L2Z9", keyPairBiggerThan258bits.public.toStringShort())
     }
 
     @Test
     fun `ECDSA R1 keyPair from entropy`() {
-        val keyPairPositive = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("10"))
+        val keyPairPositive = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256R1_SHA256, BigInteger("10"))
         assertEquals("DLHDcxuSt9J3cbjd2Dsx4rAgYYA7BAP7A8VLrFiq1tH9yy", keyPairPositive.public.toStringShort())
         // The underlying implementation uses the hash of entropy if it is out of range 2 < entropy < N, where N the order of the group.
-        val keyPairNegative = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("-10"))
+        val keyPairNegative = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256R1_SHA256, BigInteger("-10"))
         assertEquals("DLBASmjiMZuu1g3EtdHJxfSueXE8PRoUWbkdU61Qcnpamt", keyPairNegative.public.toStringShort())
 
-        val keyPairZero = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("0"))
+        val keyPairZero = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256R1_SHA256, BigInteger("0"))
         assertEquals("DLH2FEHEnsT3MpCJt2gfyNjpqRqcBxeupK4YRPXvDsVEkb", keyPairZero.public.toStringShort())
         // BigIntenger.Zero is out or range, so 1 and hash(1.toByteArray) would have the same impact.
         val zeroHashed = BigInteger(1, BigInteger("0").toByteArray().sha256().bytes)
         // Check oneHashed < N (order of the group), otherwise we would need an extra hash.
-        assertEquals(-1, zeroHashed.compareTo((Crypto.ECDSA_SECP256R1_SHA256.algSpec as ECNamedCurveParameterSpec).n))
-        val keyPairZeroHashed = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, zeroHashed)
+        assertEquals(-1, zeroHashed.compareTo((ECDSA_SECP256R1_SHA256.algSpec as ECNamedCurveParameterSpec).n))
+        val keyPairZeroHashed = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256R1_SHA256, zeroHashed)
         assertEquals("DLH2FEHEnsT3MpCJt2gfyNjpqRqcBxeupK4YRPXvDsVEkb", keyPairZeroHashed.public.toStringShort())
 
-        val keyPairOne = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("1"))
+        val keyPairOne = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256R1_SHA256, BigInteger("1"))
         assertEquals("DLHrtKwjv6onq9HcrQDJPs8Cgtai5mZU5ZU6sb1ivJjx3z", keyPairOne.public.toStringShort())
         // BigIntenger.ONE is out or range, so 1 and hash(1.toByteArray) would have the same impact.
         val oneHashed = BigInteger(1, BigInteger("1").toByteArray().sha256().bytes)
         // Check oneHashed < N (order of the group), otherwise we would need an extra hash.
-        assertEquals(-1, oneHashed.compareTo((Crypto.ECDSA_SECP256R1_SHA256.algSpec as ECNamedCurveParameterSpec).n))
-        val keyPairOneHashed = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, oneHashed)
+        assertEquals(-1, oneHashed.compareTo((ECDSA_SECP256R1_SHA256.algSpec as ECNamedCurveParameterSpec).n))
+        val keyPairOneHashed = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256R1_SHA256, oneHashed)
         assertEquals("DLHrtKwjv6onq9HcrQDJPs8Cgtai5mZU5ZU6sb1ivJjx3z", keyPairOneHashed.public.toStringShort())
 
         // 2 is in the range.
-        val keyPairTwo = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("2"))
+        val keyPairTwo = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256R1_SHA256, BigInteger("2"))
         assertEquals("DLFoz6txJ3vHcKNSM1vFxHJUoEQ69PorBwW64dHsAnEoZB", keyPairTwo.public.toStringShort())
 
         // Try big numbers that are out of range.
-        val keyPairBiggerThan256bits = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("2").pow(258).minus(BigInteger.TEN))
+        val keyPairBiggerThan256bits = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256R1_SHA256, BigInteger("2").pow(258).minus(BigInteger.TEN))
         assertEquals("DLBv6fZqaCTbE4L7sgjbt19biXHMgU9CzR5s8g8XBJjZ11", keyPairBiggerThan256bits.public.toStringShort())
-        val keyPairBiggerThan256bitsV2 = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("2").pow(258).minus(BigInteger("50")))
+        val keyPairBiggerThan256bitsV2 = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256R1_SHA256, BigInteger("2").pow(258).minus(BigInteger("50")))
         assertEquals("DLANmjhGSVdLyghxcPHrn3KuGatscf6LtvqifUDxw7SGU8", keyPairBiggerThan256bitsV2.public.toStringShort())
-        val keyPairBiggerThan512bits = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("2").pow(514).minus(BigInteger.TEN))
+        val keyPairBiggerThan512bits = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256R1_SHA256, BigInteger("2").pow(514).minus(BigInteger.TEN))
         assertEquals("DL9sKwMExBTD3MnJN6LWGqo496Erkebs9fxZtXLVJUBY9Z", keyPairBiggerThan512bits.public.toStringShort())
-        val keyPairBiggerThan258bits = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256R1_SHA256, BigInteger("2").pow(259).plus(BigInteger.ONE))
+        val keyPairBiggerThan258bits = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256R1_SHA256, BigInteger("2").pow(259).plus(BigInteger.ONE))
         assertEquals("DLBwjWwPJSF9E7b1NWaSbEJ4oK8CF7RDGWd648TiBhZoL1", keyPairBiggerThan258bits.public.toStringShort())
     }
 
     @Test
     fun `ECDSA K1 keyPair from entropy`() {
-        val keyPairPositive = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("10"))
+        val keyPairPositive = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256K1_SHA256, BigInteger("10"))
         assertEquals("DL6pYKUgH17az8MLdonvvUtUPN8TqwpCGcdgLr7vg3skCU", keyPairPositive.public.toStringShort())
         // The underlying implementation uses the hash of entropy if it is out of range 2 <= entropy < N, where N the order of the group.
-        val keyPairNegative = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("-10"))
+        val keyPairNegative = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256K1_SHA256, BigInteger("-10"))
         assertEquals("DLnpXhxece69Nyqgm3pPt3yV7ESQYDJKoYxs1hKgfBAEu", keyPairNegative.public.toStringShort())
 
-        val keyPairZero = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("0"))
+        val keyPairZero = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256K1_SHA256, BigInteger("0"))
         assertEquals("DLBC28e18T6KsYwjTFfUWJfhvHjvYVapyVf6antnqUkbgd", keyPairZero.public.toStringShort())
         // BigIntenger.Zero is out or range, so 1 and hash(1.toByteArray) would have the same impact.
         val zeroHashed = BigInteger(1, BigInteger("0").toByteArray().sha256().bytes)
         // Check oneHashed < N (order of the group), otherwise we would need an extra hash.
-        assertEquals(-1, zeroHashed.compareTo((Crypto.ECDSA_SECP256K1_SHA256.algSpec as ECNamedCurveParameterSpec).n))
-        val keyPairZeroHashed = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, zeroHashed)
+        assertEquals(-1, zeroHashed.compareTo((ECDSA_SECP256K1_SHA256.algSpec as ECNamedCurveParameterSpec).n))
+        val keyPairZeroHashed = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256K1_SHA256, zeroHashed)
         assertEquals("DLBC28e18T6KsYwjTFfUWJfhvHjvYVapyVf6antnqUkbgd", keyPairZeroHashed.public.toStringShort())
 
-        val keyPairOne = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("1"))
+        val keyPairOne = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256K1_SHA256, BigInteger("1"))
         assertEquals("DLBimRXdEQhJUTpL6f9ri9woNdsze6mwkRrhsML13Eh7ET", keyPairOne.public.toStringShort())
         // BigIntenger.ONE is out or range, so 1 and hash(1.toByteArray) would have the same impact.
         val oneHashed = BigInteger(1, BigInteger("1").toByteArray().sha256().bytes)
         // Check oneHashed < N (order of the group), otherwise we would need an extra hash.
-        assertEquals(-1, oneHashed.compareTo((Crypto.ECDSA_SECP256K1_SHA256.algSpec as ECNamedCurveParameterSpec).n))
-        val keyPairOneHashed = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, oneHashed)
+        assertEquals(-1, oneHashed.compareTo((ECDSA_SECP256K1_SHA256.algSpec as ECNamedCurveParameterSpec).n))
+        val keyPairOneHashed = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256K1_SHA256, oneHashed)
         assertEquals("DLBimRXdEQhJUTpL6f9ri9woNdsze6mwkRrhsML13Eh7ET", keyPairOneHashed.public.toStringShort())
 
         // 2 is in the range.
-        val keyPairTwo = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("2"))
+        val keyPairTwo = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256K1_SHA256, BigInteger("2"))
         assertEquals("DLG32UWaevGw9YY7w1Rf9mmK88biavgpDnJA9bG4GapVPs", keyPairTwo.public.toStringShort())
 
         // Try big numbers that are out of range.
-        val keyPairBiggerThan256bits = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("2").pow(258).minus(BigInteger.TEN))
+        val keyPairBiggerThan256bits = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256K1_SHA256, BigInteger("2").pow(258).minus(BigInteger.TEN))
         assertEquals("DLGHsdv2xeAuM7n3sBc6mFfiphXe6VSf3YxqvviKDU6Vbd", keyPairBiggerThan256bits.public.toStringShort())
-        val keyPairBiggerThan256bitsV2 = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("2").pow(258).minus(BigInteger("50")))
+        val keyPairBiggerThan256bitsV2 = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256K1_SHA256, BigInteger("2").pow(258).minus(BigInteger("50")))
         assertEquals("DL9yJfiNGqteRrKPjGUkRQkeqzuQ4kwcYQWMCi5YKuUHrk", keyPairBiggerThan256bitsV2.public.toStringShort())
-        val keyPairBiggerThan512bits = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("2").pow(514).minus(BigInteger.TEN))
+        val keyPairBiggerThan512bits = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256K1_SHA256, BigInteger("2").pow(514).minus(BigInteger.TEN))
         assertEquals("DL3Wr5EQGrMTaKBy5XMvG8rvSfKX1AYZLCRU8kixGbxt1E", keyPairBiggerThan512bits.public.toStringShort())
-        val keyPairBiggerThan258bits = Crypto.deriveKeyPairFromEntropy(Crypto.ECDSA_SECP256K1_SHA256, BigInteger("2").pow(259).plus(BigInteger.ONE))
+        val keyPairBiggerThan258bits = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256K1_SHA256, BigInteger("2").pow(259).plus(BigInteger.ONE))
         assertEquals("DL7NbssqvuuJ4cqFkkaVYu9j1MsVswESGgCfbqBS9ULwuM", keyPairBiggerThan258bits.public.toStringShort())
+    }
+    
+    @Test
+    fun `Ensure deterministic signatures of EdDSA, SPHINCS-256 and RSA PKCS1`() {
+        listOf(EDDSA_ED25519_SHA512, SPHINCS256_SHA256, RSA_SHA256)
+                .forEach { testDeterministicSignatures(it) }
+    }
+
+    private fun testDeterministicSignatures(signatureScheme: SignatureScheme) {
+        val privateKey = Crypto.generateKeyPair(signatureScheme).private
+        val signedData1stTime = Crypto.doSign(privateKey, testBytes)
+        val signedData2ndTime = Crypto.doSign(privateKey, testBytes)
+        assertEquals(OpaqueBytes(signedData1stTime), OpaqueBytes(signedData2ndTime))
+
+        // Try for the special case of signing a zero array.
+        val signedZeroArray1stTime = Crypto.doSign(privateKey, test100ZeroBytes)
+        val signedZeroArray2ndTime = Crypto.doSign(privateKey, test100ZeroBytes)
+        assertEquals(OpaqueBytes(signedZeroArray1stTime), OpaqueBytes(signedZeroArray2ndTime))
+
+        // Just in case, test that signatures of different messages are not the same.
+        assertNotEquals(OpaqueBytes(signedData1stTime), OpaqueBytes(signedZeroArray1stTime))
     }
 }
