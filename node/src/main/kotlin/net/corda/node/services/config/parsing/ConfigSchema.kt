@@ -3,7 +3,7 @@ package net.corda.node.services.config.parsing
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigValueFactory
 
-interface ConfigSchema : Validator<Config, ConfigValidationError> {
+interface ConfigSchema : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> {
 
     val name: String?
 
@@ -11,16 +11,15 @@ interface ConfigSchema : Validator<Config, ConfigValidationError> {
 
     companion object {
 
-        fun withProperties(properties: Iterable<ConfigProperty<*>>, name: String? = null, strict: Boolean = false): ConfigSchema = ConfigPropertySchema(name, strict, properties)
+        fun withProperties(name: String? = null, properties: Iterable<ConfigProperty<*>>): ConfigSchema = ConfigPropertySchema(name, properties)
 
-        fun withProperties(vararg properties: ConfigProperty<*>, strict: Boolean = false, name: String? = null): ConfigSchema = withProperties(properties.toSet(), name, strict)
+        fun withProperties(vararg properties: ConfigProperty<*>, name: String? = null): ConfigSchema = withProperties(name, properties.toSet())
 
-        fun withProperties(strict: Boolean = false, name: String? = null, builder: ConfigProperty.Companion.() -> Iterable<ConfigProperty<*>>): ConfigSchema = withProperties(builder.invoke(ConfigProperty.Companion), name, strict)
+        fun withProperties(name: String? = null, builder: ConfigProperty.Companion.() -> Iterable<ConfigProperty<*>>): ConfigSchema = withProperties(name, builder.invoke(ConfigProperty.Companion))
     }
 }
 
-// TODO sollecitom: move `strict` from field to `validate()` argument
-private class ConfigPropertySchema(override val name: String?, private val strict: Boolean, unorderedProperties: Iterable<ConfigProperty<*>>) : ConfigSchema {
+private class ConfigPropertySchema(override val name: String?, unorderedProperties: Iterable<ConfigProperty<*>>) : ConfigSchema {
 
     private val properties = unorderedProperties.sortedBy(ConfigProperty<*>::key).toSet()
 
@@ -31,10 +30,10 @@ private class ConfigPropertySchema(override val name: String?, private val stric
         }
     }
 
-    override fun validate(target: Config): Set<ConfigValidationError> {
+    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Set<ConfigValidationError> {
 
-        val propertyErrors = properties.flatMap { property -> property.validate(target) }.toSet()
-        if (strict) {
+        val propertyErrors = properties.flatMap { property -> property.validate(target, options) }.toSet()
+        if (options?.strict == true) {
             val unknownKeys = target.root().keys - properties.map(ConfigProperty<*>::key)
             return propertyErrors + unknownKeys.map(::unknownPropertyError)
         }

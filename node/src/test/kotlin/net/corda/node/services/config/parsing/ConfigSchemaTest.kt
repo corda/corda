@@ -1,8 +1,6 @@
 package net.corda.node.services.config.parsing
 
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatCode
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.*
 import org.junit.Test
 
 class ConfigSchemaTest {
@@ -58,14 +56,16 @@ class ConfigSchemaTest {
         val configuration = configObject(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value, "prop4" to "value4").toConfig()
         println(configuration.serialize())
 
-        val fooConfigSchema = ConfigSchema.withProperties(true) { setOf(boolean("prop4"), double("prop5")) }
-        val barConfigSchema = ConfigSchema.withProperties(true) { setOf(string(prop1), long(prop2), value("prop3", fooConfigSchema)) }
+        val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
+        val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), long(prop2), value("prop3", fooConfigSchema)) }
 
-        val errors = barConfigSchema.validate(configuration)
+        val strict = ConfigProperty.ValidationOptions(strict = true)
+
+        val errors = barConfigSchema.validate(configuration, strict)
 
         assertThat(errors).hasSize(2)
-        assertThat(barConfigSchema.isValid(configuration)).isFalse()
-        assertThatThrownBy { barConfigSchema.rejectIfInvalid(configuration) { _ -> IllegalArgumentException() } }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(barConfigSchema.isValid(configuration, strict)).isFalse()
+        assertThatThrownBy { barConfigSchema.rejectIfInvalid(configuration, strict) { _ -> IllegalArgumentException() } }.isInstanceOf(IllegalArgumentException::class.java)
         assertThat(errors.filter { error -> error.keyName == "prop4" }).hasSize(1)
         assertThat(errors.filter { error -> error.keyName == "prop6" }).hasSize(1)
     }
