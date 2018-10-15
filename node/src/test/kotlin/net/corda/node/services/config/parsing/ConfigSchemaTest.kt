@@ -126,7 +126,7 @@ class ConfigSchemaTest {
     }
 
     @Test
-    fun describe_with_nested_properties() {
+    fun describe_with_nested_properties_does_not_show_sensitive_values() {
 
         val prop1 = "prop1"
         val prop1Value = "value1"
@@ -138,17 +138,18 @@ class ConfigSchemaTest {
         val prop4 = "prop4"
         val prop4Value = true
         val prop5 = "prop5"
-        val prop5Value = -17.3
+        val prop5Value = "sensitive!"
         val prop3Value = configObject(prop4 to prop4Value, prop5 to prop5Value)
 
         val configuration = configObject(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
 
-        val fooConfigSchema = ConfigSchema.withProperties(name = "Foo") { setOf(boolean("prop4"), double("prop5")) }
+        val fooConfigSchema = ConfigSchema.withProperties(name = "Foo") { setOf(boolean("prop4"), string("prop5", sensitive = true)) }
         val barConfigSchema = ConfigSchema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
         val description = barConfigSchema.describe(configuration)
 
-        // TODO sollecitom assert on sensitive data here
         println(description.toConfig().serialize())
+        assertThat(description.toConfig().getAnyRef("prop3.prop5")).isEqualTo(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
+        assertThat(description.toConfig().serialize()).doesNotContain(prop5Value)
     }
 }

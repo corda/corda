@@ -12,13 +12,14 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
     val key: String
     val typeName: String
     val mandatory: Boolean
+    val sensitive: Boolean
 
     @Throws(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
     fun valueIn(configuration: Config): TYPE
 
     fun valueDescriptionIn(configuration: Config): ConfigValue {
 
-        return ConfigValueFactory.fromAnyRef(valueIn(configuration))
+        return if (sensitive) ConfigValueFactory.fromAnyRef(SENSITIVE_DATA_PLACEHOLDER) else ConfigValueFactory.fromAnyRef(valueIn(configuration))
     }
 
     @Throws(ConfigException.WrongType::class, ConfigException.BadValue::class)
@@ -64,27 +65,29 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
 
     companion object {
 
+        const val SENSITIVE_DATA_PLACEHOLDER = "*****"
+
         internal val expectedExceptionTypes: Set<KClass<*>> = setOf(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
 
-        fun long(key: String): ConfigProperty.Standard<Long> = LongConfigProperty(key)
+        fun long(key: String, sensitive: Boolean = false): ConfigProperty.Standard<Long> = LongConfigProperty(key, sensitive)
 
-        fun boolean(key: String): ConfigProperty.Standard<Boolean> = StandardConfigProperty(key, Boolean::class.javaObjectType.simpleName, Config::getBoolean, Config::getBooleanList)
+        fun boolean(key: String, sensitive: Boolean = false): ConfigProperty.Standard<Boolean> = StandardConfigProperty(key, Boolean::class.javaObjectType.simpleName, Config::getBoolean, Config::getBooleanList, sensitive)
 
-        fun double(key: String): ConfigProperty.Standard<Double> = StandardConfigProperty(key, Double::class.javaObjectType.simpleName, Config::getDouble, Config::getDoubleList)
+        fun double(key: String, sensitive: Boolean = false): ConfigProperty.Standard<Double> = StandardConfigProperty(key, Double::class.javaObjectType.simpleName, Config::getDouble, Config::getDoubleList, sensitive)
 
-        fun string(key: String): ConfigProperty.Standard<String> = StandardConfigProperty(key, String::class.java.simpleName, Config::getString, Config::getStringList)
+        fun string(key: String, sensitive: Boolean = false): ConfigProperty.Standard<String> = StandardConfigProperty(key, String::class.java.simpleName, Config::getString, Config::getStringList, sensitive)
 
-        fun duration(key: String): ConfigProperty.Standard<Duration> = StandardConfigProperty(key, Duration::class.java.simpleName, Config::getDuration, Config::getDurationList)
+        fun duration(key: String, sensitive: Boolean = false): ConfigProperty.Standard<Duration> = StandardConfigProperty(key, Duration::class.java.simpleName, Config::getDuration, Config::getDurationList, sensitive)
 
-        fun nestedObject(key: String, schema: ConfigSchema? = null): ConfigProperty.Standard<ConfigObject> = StandardConfigProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList, schema)
+        fun nestedObject(key: String, schema: ConfigSchema? = null, sensitive: Boolean = false): ConfigProperty.Standard<ConfigObject> = StandardConfigProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList, sensitive, schema)
 
-        fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>): ConfigProperty.Standard<ENUM> = StandardConfigProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) })
+        fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>, sensitive: Boolean = false): ConfigProperty.Standard<ENUM> = StandardConfigProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) }, sensitive)
     }
 
     data class ValidationOptions(val strict: Boolean)
 }
 
-private class LongConfigProperty(key: String) : StandardConfigProperty<Long>(key, Long::class.javaObjectType.simpleName, Config::getLong, Config::getLongList) {
+private class LongConfigProperty(key: String, sensitive: Boolean = false) : StandardConfigProperty<Long>(key, Long::class.javaObjectType.simpleName, Config::getLong, Config::getLongList, sensitive) {
 
     override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
@@ -96,7 +99,7 @@ private class LongConfigProperty(key: String) : StandardConfigProperty<Long>(key
     }
 }
 
-internal open class StandardConfigProperty<TYPE>(override val key: String, typeNameArg: String, private val extractSingleValue: (Config, String) -> TYPE, private val extractListValue: (Config, String) -> List<TYPE>, internal val schema: ConfigSchema? = null) : ConfigProperty.Standard<TYPE> {
+internal open class StandardConfigProperty<TYPE>(override val key: String, typeNameArg: String, private val extractSingleValue: (Config, String) -> TYPE, private val extractListValue: (Config, String) -> List<TYPE>, override val sensitive: Boolean = false, internal val schema: ConfigSchema? = null) : ConfigProperty.Standard<TYPE> {
 
     override fun valueIn(configuration: Config) = extractSingleValue.invoke(configuration, key)
 
@@ -106,13 +109,16 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
 
     override fun optional(defaultValue: TYPE?): ConfigProperty<TYPE?> = OptionalConfigProperty(this, defaultValue)
 
-    override fun list(): ConfigProperty.Required<List<TYPE>> = ListConfigProperty(key, typeName, extractListValue, schema)
+    override fun list(): ConfigProperty.Required<List<TYPE>> = ListConfigProperty(key, typeName, extractListValue, sensitive, schema)
 
     override fun toString() = "\"$key\": \"$typeName\""
 
     override fun valueDescriptionIn(configuration: Config): ConfigValue {
 
-        return schema?.let { configObject(key to it.describe(configuration.getConfig(key))) } ?: super.valueDescriptionIn(configuration)
+        if (sensitive) {
+            return ConfigValueFactory.fromAnyRef(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
+        }
+        return schema?.describe(configuration.getConfig(key)) ?: super.valueDescriptionIn(configuration)
     }
 
     override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
@@ -129,8 +135,7 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
     }
 }
 
-// TODO sollecitom make it take a delegate property instead
-private class ListConfigProperty<TYPE>(override val key: String, elementTypeName: String, private val extractListValue: (Config, String) -> List<TYPE>, private val elementSchema: ConfigSchema?) : ConfigProperty.Required<List<TYPE>> {
+private class ListConfigProperty<TYPE>(override val key: String, elementTypeName: String, private val extractListValue: (Config, String) -> List<TYPE>, override val sensitive: Boolean, private val elementSchema: ConfigSchema?) : ConfigProperty.Required<List<TYPE>> {
 
     override val typeName: String = elementSchema?.let { "List<#${it.name ?: "Object@$key"}>" } ?: "List<${elementTypeName.capitalize()}>"
 
@@ -150,6 +155,9 @@ private class ListConfigProperty<TYPE>(override val key: String, elementTypeName
 
     override fun valueDescriptionIn(configuration: Config): ConfigValue {
 
+        if (sensitive) {
+            return ConfigValueFactory.fromAnyRef(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
+        }
         return elementSchema?.let { schema -> configObject(key to ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) })) } ?: super.valueDescriptionIn(configuration)
     }
 
@@ -163,6 +171,8 @@ private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty.
     override val mandatory: Boolean = false
 
     override val typeName: String = "${delegate.typeName}?"
+
+    override val sensitive = delegate.sensitive
 
     override fun valueIn(configuration: Config): TYPE? {
 
@@ -192,6 +202,8 @@ private class FunctionalConfigProperty<TYPE, MAPPED : Any>(private val delegate:
 
     override val typeName: String = if (delegate.typeName == "#$mappedTypeName") delegate.typeName else "$mappedTypeName(${delegate.typeName})"
 
+    override val sensitive = delegate.sensitive
+
     override fun <M : Any> map(mappedTypeName: String, convert: (String, MAPPED) -> Validated<M, ConfigValidationError>): ConfigProperty.Standard<M> = FunctionalConfigProperty(delegate, mappedTypeName, extractListValue, { key: String, target: TYPE -> this.convert.invoke(key, target).flatMap { convert(key, it) } })
 
     override fun optional(defaultValue: MAPPED?): ConfigProperty<MAPPED?> = OptionalConfigProperty(this, defaultValue)
@@ -216,6 +228,8 @@ private class FunctionalListConfigProperty<RAW, TYPE : Any>(private val delegate
     override val key = delegate.key
 
     override val typeName: String = "List<${delegate.typeName}>"
+
+    override val sensitive = delegate.sensitive
 
     override fun valueIn(configuration: Config): List<TYPE> = extractListValue.invoke(configuration, key).asSequence().map { configObject(key to ConfigValueFactory.fromAnyRef(it)) }.map(ConfigObject::toConfig).map(delegate::valueIn).toList()
 
