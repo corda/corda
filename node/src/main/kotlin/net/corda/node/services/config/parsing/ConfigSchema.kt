@@ -1,30 +1,26 @@
 package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
-import java.lang.reflect.Proxy
+import com.typesafe.config.ConfigValueFactory
 
-// Additional benefits of going this way:
-// - Allows to validate a raw configuration object.
-// - Allows to display the structure of the configuration.
 interface ConfigSchema : Validator<Config, ConfigValidationError> {
 
-    fun <TYPE> proxy(configuration: Config, type: Class<TYPE>): TYPE
+    val name: String?
 
     fun description(): String
 
     companion object {
 
-        fun withProperties(properties: Iterable<ConfigProperty<*>>, strict: Boolean = false): ConfigSchema = ConfigPropertySchema(strict, properties)
+        fun withProperties(properties: Iterable<ConfigProperty<*>>, name: String? = null, strict: Boolean = false): ConfigSchema = ConfigPropertySchema(name, strict, properties)
 
-        fun withProperties(vararg properties: ConfigProperty<*>, strict: Boolean = false): ConfigSchema = withProperties(properties.toSet(), strict)
+        fun withProperties(vararg properties: ConfigProperty<*>, strict: Boolean = false, name: String? = null): ConfigSchema = withProperties(properties.toSet(), name, strict)
 
-        fun withProperties(strict: Boolean = false, builder: ConfigProperty.Companion.() -> Iterable<ConfigProperty<*>>): ConfigSchema = withProperties(builder.invoke(ConfigProperty.Companion), strict)
+        fun withProperties(strict: Boolean = false, name: String? = null, builder: ConfigProperty.Companion.() -> Iterable<ConfigProperty<*>>): ConfigSchema = withProperties(builder.invoke(ConfigProperty.Companion), name, strict)
     }
 }
 
-inline fun <reified TYPE> ConfigSchema.proxy(configuration: Config): TYPE = proxy(configuration, TYPE::class.java)
-
-private class ConfigPropertySchema(private val strict: Boolean, unorderedProperties: Iterable<ConfigProperty<*>>) : ConfigSchema {
+// TODO sollecitom: move `strict` from field to `validate()` argument
+private class ConfigPropertySchema(override val name: String?, private val strict: Boolean, unorderedProperties: Iterable<ConfigProperty<*>>) : ConfigSchema {
 
     private val properties = unorderedProperties.sortedBy(ConfigProperty<*>::key).toSet()
 
@@ -34,8 +30,6 @@ private class ConfigPropertySchema(private val strict: Boolean, unorderedPropert
             throw IllegalArgumentException("More than one property was found for keys ${invalid.keys}.")
         }
     }
-
-    override fun <TYPE> proxy(configuration: Config, type: Class<TYPE>): TYPE = createProxy(configuration, type, properties)
 
     override fun validate(target: Config): Set<ConfigValidationError> {
 
@@ -49,48 +43,33 @@ private class ConfigPropertySchema(private val strict: Boolean, unorderedPropert
 
     private fun unknownPropertyError(key: String) = ConfigValidationError.Unknown.of(key)
 
+    // TODO sollecitom refactor
     override fun description(): String {
 
-        TODO("not implemented")
-//        val description = StringBuilder()
-//        var rootDescription = configObject()
-//        properties.forEach { property ->
-//            rootDescription = rootDescription.withValue(property.key, ConfigValueFactory.fromAnyRef(typeRef(property)))
-//        }
-//        description.append(rootDescription.toConfig().serialize())
-//
-//        val nestedProperties = (properties + properties.flatMap(::nestedProperties)).filterIsInstance<NestedConfigProperty<*>>().distinctBy(NestedConfigProperty<*>::schema)
-//        nestedProperties.forEach { property ->
-//            description.append(System.lineSeparator())
-//            description.append("${property.typeName}: ")
-//            description.append(property.schema.description())
-//            description.append(System.lineSeparator())
-//        }
-//        return description.toString()
+        val description = StringBuilder()
+        var rootDescription = configObject()
+        properties.forEach { property ->
+            rootDescription = rootDescription.withValue(property.key, ConfigValueFactory.fromAnyRef(property.typeName))
+        }
+        description.append(rootDescription.toConfig().serialize())
+
+        val nestedProperties = (properties + properties.flatMap(::nestedProperties)).asSequence().filterIsInstance<StandardConfigProperty<*>>().filter { it.schema != null }.distinctBy(StandardConfigProperty<*>::schema).toList()
+        nestedProperties.forEach { property ->
+            description.append(System.lineSeparator())
+            description.append("${property.typeName}: ")
+            description.append(property.schema!!.description())
+            description.append(System.lineSeparator())
+        }
+        return description.toString()
     }
 
-//    private fun nestedProperties(property: ConfigProperty<*>): Set<ConfigProperty<*>> {
-//
-//        return when (property) {
-//            is NestedConfigProperty<*> -> (property.schema as ConfigPropertySchema).properties
-//            else -> emptySet()
-//        }
-//    }
+    // TODO sollecitom refactor
+    private fun nestedProperties(property: ConfigProperty<*>): Set<ConfigProperty<*>> {
 
-//    private fun typeRef(property: ConfigProperty<*>): String {
-//
-//        return if (property is NestedConfigProperty<*>) {
-//            "#${property.typeName}"
-//        } else {
-//            property.typeName
-//        }
-//    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun <TYPE> createProxy(configuration: Config, type: Class<TYPE>, properties: Set<ConfigProperty<*>>): TYPE {
-
-        // TODO sollecitom wrap with with a caching proxy (see how to do this with regards to dynamic values).
-        return Proxy.newProxyInstance(Thread.currentThread().contextClassLoader, arrayOf(type), PropertiesInvocationHandler(configuration, properties)) as TYPE
+        return when (property) {
+            is StandardConfigProperty<*> -> (property.schema as? ConfigPropertySchema)?.properties ?: emptySet()
+            else -> emptySet()
+        }
     }
 
     override fun equals(other: Any?): Boolean {

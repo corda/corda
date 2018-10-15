@@ -90,9 +90,11 @@ private class LongConfigProperty(key: String) : StandardConfigProperty<Long>(key
     }
 }
 
-private open class StandardConfigProperty<TYPE>(override val key: String, override val typeName: String, private val extractSingleValue: (Config, String) -> TYPE, private val extractListValue: (Config, String) -> List<TYPE>, private val schema: ConfigSchema? = null) : ConfigProperty.Standard<TYPE> {
+internal open class StandardConfigProperty<TYPE>(override val key: String, typeNameArg: String, private val extractSingleValue: (Config, String) -> TYPE, private val extractListValue: (Config, String) -> List<TYPE>, internal val schema: ConfigSchema? = null) : ConfigProperty.Standard<TYPE> {
 
     override fun valueIn(configuration: Config) = extractSingleValue.invoke(configuration, key)
+
+    override val typeName: String = schema?.let { "#${it.name ?: "Object@$key"}" } ?: typeNameArg
 
     override fun optional(defaultValue: TYPE?): ConfigProperty<TYPE?> = OptionalConfigProperty(key, typeName, defaultValue, ::validate, extractSingleValue)
 
