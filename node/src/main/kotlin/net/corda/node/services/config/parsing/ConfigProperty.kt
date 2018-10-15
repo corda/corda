@@ -1,9 +1,6 @@
 package net.corda.node.services.config.parsing
 
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigException
-import com.typesafe.config.ConfigObject
-import com.typesafe.config.ConfigValueFactory
+import com.typesafe.config.*
 import net.corda.node.services.config.parsing.Validated.Companion.invalid
 import net.corda.node.services.config.parsing.Validated.Companion.valid
 import java.time.Duration
@@ -18,6 +15,11 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
 
     @Throws(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
     fun valueIn(configuration: Config): TYPE
+
+    fun valueDescriptionIn(configuration: Config): ConfigValue {
+
+        return ConfigValueFactory.fromAnyRef(valueIn(configuration))
+    }
 
     @Throws(ConfigException.WrongType::class, ConfigException.BadValue::class)
     fun valueInOrNull(configuration: Config): TYPE? {
@@ -108,6 +110,11 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
 
     override fun toString() = "\"$key\": \"$typeName\""
 
+    override fun valueDescriptionIn(configuration: Config): ConfigValue {
+
+        return schema?.let { configObject(key to it.describe(configuration.getConfig(key))) } ?: super.valueDescriptionIn(configuration)
+    }
+
     override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
         val errors = mutableSetOf<ConfigValidationError>()
@@ -139,6 +146,11 @@ private class ListConfigProperty<TYPE>(override val key: String, elementTypeName
             errors += valueIn(target).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).mapIndexed { index, targetConfig -> schema.validate(targetConfig, options).errors.map { error -> error.withContainingPath(key, "[$index]") } }.reduce { one, other -> one + other }
         }
         return if (errors.isEmpty()) valid(target) else invalid(errors)
+    }
+
+    override fun valueDescriptionIn(configuration: Config): ConfigValue {
+
+        return elementSchema?.let { schema -> configObject(key to ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) })) } ?: super.valueDescriptionIn(configuration)
     }
 
     override fun toString() = "\"$key\": \"$typeName\""

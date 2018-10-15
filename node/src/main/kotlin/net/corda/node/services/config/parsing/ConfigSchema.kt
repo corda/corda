@@ -1,6 +1,8 @@
 package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigObject
+import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 import net.corda.node.services.config.parsing.Validated.Companion.invalid
 import net.corda.node.services.config.parsing.Validated.Companion.valid
@@ -10,6 +12,8 @@ interface ConfigSchema : Validator<Config, ConfigValidationError, ConfigProperty
     val name: String?
 
     fun description(): String
+
+    fun describe(configuration: Config): ConfigObject
 
     companion object {
 
@@ -62,6 +66,15 @@ private class ConfigPropertySchema(override val name: String?, unorderedProperti
             description.append(System.lineSeparator())
         }
         return description.toString()
+    }
+
+    override fun describe(configuration: Config): ConfigObject {
+
+        var rootDescription = configObject()
+        properties.forEach { property ->
+            rootDescription = rootDescription.withValue(property.key, property.valueDescriptionIn(configuration))
+        }
+        return rootDescription
     }
 
     // TODO sollecitom refactor
