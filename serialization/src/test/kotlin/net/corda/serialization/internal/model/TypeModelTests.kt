@@ -1,6 +1,12 @@
 package net.corda.serialization.internal.model
 
+import com.google.common.reflect.TypeToken
+import net.corda.serialization.internal.AllWhitelist
+import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.lang.reflect.Type
+import java.time.LocalDateTime
+import java.util.*
 
 class TypeModelTests {
 
@@ -18,13 +24,20 @@ class TypeModelTests {
 
     @Test
     fun `Primitives and collections`() {
-        val model = LocalTypeModel()
-        model.interpret(classOf<Nested>())
+        val model = LocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist))
 
-        model.knownIdentifiers.asSequence().mapNotNull { model[it]?.prettyPrint() }
-                .sorted()
-                .forEach { println(it) }
+        assertEquals("CollectionHolder<UUID, LocalDateTime>",
+                model.inspect(typeOf<CollectionHolder<UUID, LocalDateTime>>()).prettyPrint())
+
+        println(model.inspect(typeOf<StringKeyedCollectionHolder<Int>>()).prettyPrint())
+        assertEquals(
+                """
+                Nested
+                  collectionHolders: StringKeyedCollectionHolder<Integer>[]
+                """.trimIndent(),
+                model.inspect(classOf<Nested>()).prettyPrint())
     }
 
+    private inline fun <reified T> typeOf(): Type = object : TypeToken<T>() {}.type
     private inline fun <reified T> classOf(): Class<*> = T::class.java
 }
