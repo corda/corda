@@ -28,4 +28,9 @@ class AssertiveClassWithByteCode(private val loadedClass: LoadedClass) {
         assertThat(loadedClass.type.name).isEqualTo(className)
         return this
     }
+
+    fun hasInterface(className: String): AssertiveClassWithByteCode {
+        assertThat(loadedClass.type.interfaces.map(Class<*>::getName)).contains(className)
+        return this
+    }
 }

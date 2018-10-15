@@ -11,8 +11,8 @@ class WhitelistTest : TestBase() {
         val whitelist = Whitelist.MINIMAL
         assertThat(whitelist.matches("java/lang/Object")).isTrue()
         assertThat(whitelist.matches("java/lang/Object.<init>:()V")).isTrue()
-        assertThat(whitelist.matches("java/lang/Integer")).isTrue()
-        assertThat(whitelist.matches("java/lang/Integer.<init>:(I)V")).isTrue()
+        assertThat(whitelist.matches("java/lang/reflect/Array")).isTrue()
+        assertThat(whitelist.matches("java/lang/reflect/Array.setInt(Ljava/lang/Object;II)V")).isTrue()
     }
 
     @Test

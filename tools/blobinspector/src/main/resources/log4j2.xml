@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="info">
     <Properties>
-        <Property name="logLevel">off</Property>
+        <Property name="consoleLogLevel">${sys:consoleLogLevel:-error}</Property>
+        <Property name="defaultLogLevel">${sys:defaultLogLevel:-info}</Property>
     </Properties>
     <Appenders>
         <Console name="STDOUT" target="SYSTEM_OUT" ignoreExceptions="false">
@@ -9,7 +10,7 @@
         </Console>
     </Appenders>
     <Loggers>
-        <Root level="${sys:logLevel}">
+        <Root level="${sys:consoleLogLevel}">
             <AppenderRef ref="STDOUT"/>
         </Root>
     </Loggers>

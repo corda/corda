@@ -1,12 +1,9 @@
 package foo.bar.sandbox
 
-import java.util.*
-
-fun testRandom(): Int {
-    val random = Random()
-    return random.nextInt()
+fun testClock(): Long {
+    return System.nanoTime()
 }
 
-fun String.toNumber(): Int {
-    return this.toInt()
+fun String.toNumber(): Long {
+    return this.toLong()
 }

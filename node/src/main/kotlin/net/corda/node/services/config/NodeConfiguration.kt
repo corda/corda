@@ -135,7 +135,6 @@ fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || should
 data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
                         val bftSMaRt: BFTSMaRtConfiguration? = null,
-                        val custom: Boolean = false,
                         val mysql: MySQLConfiguration? = null,
                         val serviceLegalName: CordaX500Name? = null,
                         val className: String = "net.corda.node.services.transactions.SimpleNotaryService",
@@ -146,8 +145,8 @@ data class NotaryConfig(val validating: Boolean,
                         val backOffBaseMs: Long = 20L
 ) {
     init {
-        require(raft == null || bftSMaRt == null || !custom || mysql == null) {
-            "raft, bftSMaRt, custom, and mysql configs cannot be specified together"
+        require(raft == null || bftSMaRt == null || mysql == null) {
+            "raft, bftSMaRt, and mysql configs cannot be specified together"
         }
     }
 
