@@ -19,8 +19,8 @@ dependencies {
     // For AMQP serialisation.
     compile "org.apache.qpid:proton-j:$protonj_version"
 
-    // FastClasspathScanner: classpath scanning
-    compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
+    // ClassGraph: classpath scanning
+    compile "io.github.classgraph:classgraph:$class_graph_version"
 
     // Pure-Java Snappy compression
     compile "org.iq80.snappy:snappy:$snappy_version"

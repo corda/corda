@@ -44,8 +44,8 @@ dependencies {
     shadow "org.apache.curator:curator-recipes:${curator_version}"
     testCompile "org.apache.curator:curator-test:${curator_version}"
 
-    // FastClasspathScanner: classpath scanning - needed for the NetworkBootstrapper.
-    compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
+    // ClassGraph: classpath scanning
+    compile "io.github.classgraph:classgraph:$class_graph_version"
 
     compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 

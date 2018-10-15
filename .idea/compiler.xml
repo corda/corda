@@ -57,6 +57,8 @@
       <module name="common_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
       <module name="confidential-identities_test" target="1.8" />
+      <module name="consensus-benchmark_main" target="1.8" />
+      <module name="consensus-benchmark_test" target="1.8" />
       <module name="contract_main" target="1.8" />
       <module name="contract_test" target="1.8" />
       <module name="contracts-states_integrationTest" target="1.8" />

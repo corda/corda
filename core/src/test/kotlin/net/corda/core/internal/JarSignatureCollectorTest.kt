@@ -4,6 +4,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.AfterClass
@@ -38,15 +39,18 @@ class JarSignatureCollectorTest {
         private const val ALICE_PASS = "alicepass"
         private const val BOB = "bob"
         private const val BOB_PASS = "bobpass"
+        private const val CHARLIE = "Charlie"
+        private const val CHARLIE_PASS = "charliepass"
 
-        private fun generateKey(alias: String, password: String, name: CordaX500Name) =
-                execute("keytool", "-genkey", "-keystore", "_teststore", "-storepass", "storepass", "-keyalg", "RSA", "-alias", alias, "-keypass", password, "-dname", name.toString())
+        private fun generateKey(alias: String, password: String, name: CordaX500Name, keyalg: String = "RSA") =
+                execute("keytool", "-genkey", "-keystore", "_teststore", "-storepass", "storepass", "-keyalg", keyalg, "-alias", alias, "-keypass", password, "-dname", name.toString())
 
         @BeforeClass
         @JvmStatic
         fun beforeClass() {
             generateKey(ALICE, ALICE_PASS, ALICE_NAME)
             generateKey(BOB, BOB_PASS, BOB_NAME)
+            generateKey(CHARLIE, CHARLIE_PASS, CHARLIE_NAME, "EC")
 
             (dir / "_signable1").writeLines(listOf("signable1"))
             (dir / "_signable2").writeLines(listOf("signable2"))
@@ -139,6 +143,18 @@ class JarSignatureCollectorTest {
         signAsBob()
         // The JDK doesn't care that BOB has correctly signed the whole thing, it won't let us process the entry with ALICE's bad signature:
         assertFailsWith<SecurityException> { getJarSigners() }
+    }
+
+    // Signing using EC algorithm produced JAR File spec incompatible signature block (META-INF/*.EC) which is anyway accepted by jarsiner, see [JarSignatureCollector]
+    @Test
+    fun `one signer with EC sign algorithm`() {
+        createJar("_signable1", "_signable2")
+        signJar(CHARLIE, CHARLIE_PASS)
+        assertEquals(listOf(CHARLIE_NAME), getJarSigners().names) // We only reused CHARLIE's distinguished name, so the keys will be different.
+
+        (dir / "my-dir").createDirectory()
+        updateJar("my-dir")
+        assertEquals(listOf(CHARLIE_NAME), getJarSigners().names) // Unsigned directory is irrelevant.
     }
 
     //region Helper functions

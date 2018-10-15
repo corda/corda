@@ -18,7 +18,7 @@ import net.corda.core.utilities.ProgressTracker
 
 import com.template.TemplateContract.TEMPLATE_CONTRACT_ID
 
-// Replace TemplateFlow's definition with:
+// Replace Initiator's definition with:
 @InitiatingFlow
 @StartableByRPC
 class IOUFlow(val iouValue: Int,

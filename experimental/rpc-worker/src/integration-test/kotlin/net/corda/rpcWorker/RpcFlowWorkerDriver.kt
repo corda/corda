@@ -160,7 +160,7 @@ data class RpcFlowWorkerDriverDSL(private val driverDSL: DriverDSLImpl) : Intern
     }
 
     private fun generateNodeAndFlowConfigs(myLegalName: CordaX500Name, numberOfFlowWorkers: Int): Pair<NodeConfiguration, List<NodeConfiguration>> {
-        val cordappDirectories = TestCordappDirectories.cached(driverDSL.cordappsForAllNodes).toList()
+        val cordappDirectories = driverDSL.cordappsForAllNodes.map { TestCordappDirectories.getJarDirectory(it) }
 
         val flowWorkerBrokerAddress = NetworkHostAndPort("localhost", driverDSL.portAllocation.nextPort())
 

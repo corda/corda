@@ -33,8 +33,8 @@ import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.internal.FINANCE_CORDAPP
 import net.corda.testing.node.internal.TestCordappDirectories
-import net.corda.testing.node.internal.cordappsForPackages
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientProducer
@@ -49,7 +49,6 @@ import java.util.*
 import kotlin.test.assertEquals
 
 class FlowWorkerTest {
-
     @Rule
     @JvmField
     val serializationEnvironment = SerializationEnvironmentRule(true)
@@ -86,7 +85,7 @@ class FlowWorkerTest {
     private val bankAInfo = NodeInfo(listOf(NetworkHostAndPort("localhost", 1111)), listOf(bankAPartyAndCertificate), 1, 1)
     private val bankBInfo = NodeInfo(listOf(NetworkHostAndPort("localhost", 1112)), listOf(bankBPartyAndCertificate), 1, 1)
 
-    private val cordappDirectories = TestCordappDirectories.cached(cordappsForPackages(listOf("net.corda.finance"))).toList()
+    private val cordappDirectories = listOf(TestCordappDirectories.getJarDirectory(FINANCE_CORDAPP))
 
     @Test
     fun `cash issue`() {

@@ -36,8 +36,8 @@ dependencies {
     compile "org.ow2.asm:asm-tree:$asm_version"
     compile "org.ow2.asm:asm-commons:$asm_version"
 
-    // Classpath scanner
-    shadow "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
+    // ClassGraph: classpath scanning
+    shadow "io.github.classgraph:classgraph:$class_graph_version"
 
     // Test utilities
     testCompile "junit:junit:$junit_version"

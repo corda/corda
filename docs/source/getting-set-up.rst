@@ -1,5 +1,5 @@
-Getting set up
-==============
+Getting set up for CorDapp development
+======================================
 
 Software requirements
 ---------------------
