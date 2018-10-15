@@ -1,4 +1,4 @@
-package net.corda.finance.contracts.asset
+package net.corda.finance.contracts.asset.test
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.toStringShort
@@ -8,9 +8,10 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.finance.schemas.SampleCashSchemaV1
-import net.corda.finance.schemas.SampleCashSchemaV2
-import net.corda.finance.schemas.SampleCashSchemaV3
+import net.corda.finance.contracts.asset.OnLedgerAsset
+import net.corda.finance.schemas.test.SampleCashSchemaV1
+import net.corda.finance.schemas.test.SampleCashSchemaV2
+import net.corda.finance.schemas.test.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
 import net.corda.finance.utils.sumCashOrNull
 import net.corda.finance.utils.sumCashOrZero
@@ -18,7 +19,7 @@ import java.security.PublicKey
 import java.util.*
 
 class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Commands, DummyFungibleContract.State>() {
-    override fun extractCommands(commands: Collection<CommandWithParties<CommandData>>): List<CommandWithParties<DummyFungibleContract.Commands>>
+    override fun extractCommands(commands: Collection<CommandWithParties<CommandData>>): List<CommandWithParties<Commands>>
             = commands.select()
 
     data class State(

@@ -1,4 +1,4 @@
-package net.corda.finance.schemas
+package net.corda.finance.schemas.test
 
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
