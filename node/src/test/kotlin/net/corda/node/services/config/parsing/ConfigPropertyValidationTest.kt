@@ -21,8 +21,8 @@ class ConfigPropertyValidationTest {
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
 
-                assertThat(error.keyName).isEqualTo(key)
-                assertThat(error.path).containsExactly(key)
+                assertThat(error.keyName).isEqualTo(key.split(".").last())
+                assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
 
@@ -47,8 +47,8 @@ class ConfigPropertyValidationTest {
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
 
-                assertThat(error.keyName).isEqualTo(key)
-                assertThat(error.path).containsExactly(key)
+                assertThat(error.keyName).isEqualTo(key.split(".").last())
+                assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
 
@@ -73,8 +73,8 @@ class ConfigPropertyValidationTest {
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
 
-                assertThat(error.keyName).isEqualTo(key)
-                assertThat(error.path).containsExactly(key)
+                assertThat(error.keyName).isEqualTo(key.split(".").last())
+                assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
 
@@ -99,8 +99,8 @@ class ConfigPropertyValidationTest {
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
 
-                assertThat(error.keyName).isEqualTo(key)
-                assertThat(error.path).containsExactly(key)
+                assertThat(error.keyName).isEqualTo(key.split(".").last())
+                assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
 
@@ -126,8 +126,8 @@ class ConfigPropertyValidationTest {
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
 
-                assertThat(error.keyName).isEqualTo(key)
-                assertThat(error.path).containsExactly(key)
+                assertThat(error.keyName).isEqualTo(key.split(".").last())
+                assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
 
@@ -153,8 +153,8 @@ class ConfigPropertyValidationTest {
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
 
-                assertThat(error.keyName).isEqualTo(key)
-                assertThat(error.path).containsExactly(key)
+                assertThat(error.keyName).isEqualTo(key.split(".").last())
+                assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
 
@@ -197,8 +197,8 @@ class ConfigPropertyValidationTest {
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
 
-                assertThat(error.keyName).isEqualTo(key)
-                assertThat(error.path).containsExactly(key)
+                assertThat(error.keyName).isEqualTo(key.split(".").last())
+                assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
 
@@ -224,8 +224,8 @@ class ConfigPropertyValidationTest {
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
 
-                assertThat(error.keyName).isEqualTo(key)
-                assertThat(error.path).containsExactly(key)
+                assertThat(error.keyName).isEqualTo(key.split(".").last())
+                assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
 
@@ -251,8 +251,8 @@ class ConfigPropertyValidationTest {
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
 
-                assertThat(error.keyName).isEqualTo(key)
-                assertThat(error.path).containsExactly(key)
+                assertThat(error.keyName).isEqualTo(key.split(".").last())
+                assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
 
@@ -342,6 +342,7 @@ class ConfigPropertyValidationTest {
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(nestedKey)
+                // TODO sollecitom here
                 assertThat(error.path).containsExactly(key, nestedKey)
             }
         }

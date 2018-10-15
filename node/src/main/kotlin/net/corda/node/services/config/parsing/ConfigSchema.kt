@@ -47,7 +47,7 @@ private class ConfigPropertySchema(private val strict: Boolean, unorderedPropert
         return propertyErrors
     }
 
-    private fun unknownPropertyError(key: String) = ConfigValidationError.Unknown(key)
+    private fun unknownPropertyError(key: String) = ConfigValidationError.Unknown.of(key)
 
     override fun description(): String {
 

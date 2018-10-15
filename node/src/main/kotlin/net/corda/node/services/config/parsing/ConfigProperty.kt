@@ -249,9 +249,9 @@ private fun compositeMappedName(mappedTypeName: String?, originalTypeName: Strin
 private fun ConfigException.toValidationError(keyName: String, typeName: String): ConfigValidationError {
 
     return when (this) {
-        is ConfigException.Missing -> ConfigValidationError.MissingValue(keyName, typeName, message!!)
-        is ConfigException.WrongType -> ConfigValidationError.WrongType(keyName, typeName, message!!)
-        is ConfigException.BadValue -> ConfigValidationError.MissingValue(keyName, typeName, message!!)
+        is ConfigException.Missing -> ConfigValidationError.MissingValue.of(keyName, typeName, message!!)
+        is ConfigException.WrongType -> ConfigValidationError.WrongType.of(keyName, typeName, message!!)
+        is ConfigException.BadValue -> ConfigValidationError.MissingValue.of(keyName, typeName, message!!)
         else -> throw IllegalStateException("Unsupported ConfigException of type ${this::class.java.name}")
     }
 }
