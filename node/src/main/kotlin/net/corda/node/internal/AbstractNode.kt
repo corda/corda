@@ -87,6 +87,7 @@ import org.slf4j.Logger
 import rx.Observable
 import rx.Scheduler
 import java.io.IOException
+import java.lang.UnsupportedOperationException
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 import java.security.KeyPair
@@ -791,10 +792,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             @Suppress("UNCHECKED_CAST")
             val filter = serviceClass.getDeclaredMethod("getSerializationFilter").invoke(null) as ((Class<*>) -> Boolean)
             if (configuration.devMode) {
-                log.warn("Installing a custom Java serialization filter, required by ${serviceClass.name}. Note this is only supported in dev mode.")
+                log.warn("Installing a custom Java serialization filter, required by ${serviceClass.name}. " +
+                        "Note this is only supported in dev mode – a production node will fail to start if serialization filters are used.")
                 SerialFilter.install(filter)
             } else {
-                log.warn("Unable to install a custom Java serialization filter, not in dev mode.")
+                throw UnsupportedOperationException("Unable to install a custom Java serialization filter, not in dev mode.")
             }
         } catch (e: NoSuchMethodException) {
             // No custom serialization filter declared

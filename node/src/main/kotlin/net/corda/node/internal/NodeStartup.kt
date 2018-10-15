@@ -408,6 +408,7 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
     protected open fun loadConfigFile(): Pair<Config, Try<NodeConfiguration>> = cmdLineOptions.loadConfig()
 
     protected open fun banJavaSerialisation(conf: NodeConfiguration) {
+        // Note that in dev mode this filter can be overridden by a notary service implementation.
         SerialFilter.install(::defaultSerialFilter)
     }
 
