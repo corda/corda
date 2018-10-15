@@ -2,7 +2,6 @@ package net.corda.node.services.config.parsing
 
 // TODO sollecitom move to commons
 // TODO sollecitom test
-// TODO sollecitom add flatMap and map
 interface Validated<TARGET : Any, ERROR> {
 
     val valueIfValid: TARGET?
@@ -14,6 +13,21 @@ interface Validated<TARGET : Any, ERROR> {
     val isInvalid: Boolean get() = !isValid
 
     fun orElseThrow(exceptionOnErrors: (Set<ERROR>) -> Exception = { errors -> IllegalArgumentException(errors.joinToString(System.lineSeparator())) }): TARGET = valueIfValid ?: throw exceptionOnErrors.invoke(errors)
+
+    fun <MAPPED : Any> map(convert: (TARGET) -> MAPPED): Validated<MAPPED, ERROR> {
+
+        return valueIfValid?.let(convert)?.let { valid<MAPPED, ERROR>(it) } ?: invalid(errors)
+    }
+
+    fun <MAPPED : Any> flatMap(convert: (TARGET) -> Validated<MAPPED, ERROR>): Validated<MAPPED, ERROR> {
+
+        return valueIfValid?.let(convert) ?: invalid(errors)
+    }
+
+    fun <MAPPED : Any, MAPPED_ERROR> flatMapErrors(convert: (TARGET) -> Validated<MAPPED, MAPPED_ERROR>, convertError: (ERROR) -> MAPPED_ERROR): Validated<MAPPED, MAPPED_ERROR> {
+
+        return valueIfValid?.let(convert) ?: invalid(errors.asSequence().map(convertError).toSet())
+    }
 
     companion object {
 
