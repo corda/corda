@@ -4,8 +4,8 @@ import sandbox.java.util.function.Supplier;
 
 /**
  * Everything inside the sandbox is single-threaded, so this
- * implementation of ThreadLocal<T> is sufficient.
- * @param <T>
+ * implementation of ThreadLocal is sufficient.
+ * @param <T> Underlying type of this thread-local variable.
  */
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class ThreadLocal<T> extends Object {
