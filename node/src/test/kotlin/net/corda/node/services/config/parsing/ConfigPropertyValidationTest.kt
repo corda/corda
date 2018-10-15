@@ -1,7 +1,10 @@
 package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
-import org.assertj.core.api.Assertions.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.node.services.config.parsing.Validated.Companion.invalid
+import net.corda.node.services.config.parsing.Validated.Companion.valid
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
 class ConfigPropertyValidationTest {
@@ -275,5 +278,60 @@ class ConfigPropertyValidationTest {
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
         assertThat(property.validate(configuration).isValid).isTrue()
+    }
+
+    @Test
+    fun valid_mapped_property() {
+
+        val key = "a"
+
+        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.string(key).map(::parseNetworkHostAndPort)
+
+        val host = "localhost"
+        val port = 8080
+        val value = "$host:$port"
+
+        val configuration = configObject(key to value).toConfig()
+
+        assertThat(property.validate(configuration).isValid).isTrue()
+    }
+
+    @Test
+    fun invalid_mapped_property() {
+
+        val key = "a.b.c"
+
+        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.string(key).map(::parseNetworkHostAndPort)
+
+        val host = "localhost"
+        val port = 8080
+        // No ":" separating the 2 parts.
+        val value = "$host$port"
+
+        val configuration = configObject(key to value).toConfig()
+
+        val result = property.validate(configuration)
+
+        assertThat(result.errors).satisfies { errors ->
+
+            assertThat(errors).hasSize(1)
+            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.BadValue::class.java) { error ->
+
+                assertThat(error.keyName).isEqualTo(key.split(".").last())
+                assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
+            }
+        }
+    }
+
+    private fun parseNetworkHostAndPort(key: String, value: String): Validated<NetworkHostAndPort, ConfigValidationError> {
+
+        return try {
+            val parts = value.split(":")
+            val host = parts[0].also { require(it.isNotBlank()) }
+            val port = parts[1].toInt().also { require(it > 0) }
+            valid(NetworkHostAndPort(host, port))
+        } catch (e: Exception) {
+            return invalid(ConfigValidationError.BadValue.of(key, value::class.java.simpleName, "Value must be of format \"host(String):port(Int > 0)\" e.g., \"127.0.0.1:8080\""))
+        }
     }
 }
