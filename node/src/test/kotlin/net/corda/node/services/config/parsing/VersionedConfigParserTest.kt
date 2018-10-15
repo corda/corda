@@ -43,8 +43,7 @@ class VersionedConfigParserTest {
 
         val parseConfig: ParseConfig<String> = VersionedConfigParser.mapping({ _ -> null }, 0 to { _ -> expectedParsedConfiguration }, defaultVersion = null)
 
-        // TODO sollecitom fix here.
-        assertThatThrownBy { parseConfig.invoke(rawConfiguration) }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy { parseConfig.invoke(rawConfiguration) }.isInstanceOf(VersionedConfigParser.Exception.MissingVersionHeader::class.java)
     }
 
     @Test
@@ -69,7 +68,6 @@ class VersionedConfigParserTest {
 
         val parseConfig: ParseConfig<String> = VersionedConfigParser.mapping({ _ -> 2 }, 1 to { _ -> expectedParsedConfiguration }, 3 to { _ -> expectedParsedConfiguration })
 
-        // TODO sollecitom fix here.
-        assertThatThrownBy { parseConfig.invoke(rawConfiguration) }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy { parseConfig.invoke(rawConfiguration) }.isInstanceOf(VersionedConfigParser.Exception.UnsupportedVersion::class.java)
     }
 }
