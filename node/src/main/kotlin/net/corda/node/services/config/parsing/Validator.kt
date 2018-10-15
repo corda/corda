@@ -1,16 +1,7 @@
 package net.corda.node.services.config.parsing
 
-interface Validator<TARGET, ERROR, OPTIONS> {
+// TODO sollecitom move
+interface Validator<TARGET : Any, ERROR : Any, OPTIONS> {
 
-    fun validate(target: TARGET, options: OPTIONS? = null): Set<ERROR>
-
-    fun isValid(target: TARGET, options: OPTIONS? = null): Boolean = validate(target, options).isEmpty()
-
-    fun rejectIfInvalid(target: TARGET, options: OPTIONS? = null, toException: (Set<ERROR>) -> Exception) {
-
-        val errors = validate(target, options)
-        if (errors.isNotEmpty()) {
-            throw toException(errors)
-        }
-    }
+    fun validate(target: TARGET, options: OPTIONS? = null): Validated<TARGET, ERROR>
 }

@@ -3,6 +3,8 @@ package net.corda.node.services.config.parsing
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigObject
+import net.corda.node.services.config.parsing.Validated.Companion.invalid
+import net.corda.node.services.config.parsing.Validated.Companion.valid
 import java.time.Duration
 import kotlin.reflect.KClass
 
@@ -41,14 +43,14 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
 
     fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
-    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Set<ConfigValidationError> {
+    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
         try {
             valueIn(target)
-            return emptySet()
+            return valid(target)
         } catch (exception: ConfigException) {
             if (expectedExceptionTypes.any { expected -> expected.isInstance(exception) }) {
-                return setOf(exception.toValidationError(key, typeName))
+                return invalid(exception.toValidationError(key, typeName))
             }
             throw exception
         }
@@ -78,13 +80,13 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
 
 private class LongConfigProperty(key: String) : StandardConfigProperty<Long>(key, Long::class.javaObjectType.simpleName, Config::getLong, Config::getLongList) {
 
-    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Set<ConfigValidationError> {
+    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
-        val errors = super.validate(target, options)
-        if (errors.isEmpty() && target.getValue(key).unwrapped().toString().contains(".")) {
-            return setOf(ConfigException.WrongType(target.origin(), key, Long::class.javaObjectType.simpleName, Double::class.javaObjectType.simpleName).toValidationError(key, typeName))
+        val validated = super.validate(target, options)
+        if (validated.isValid && target.getValue(key).unwrapped().toString().contains(".")) {
+            return invalid(ConfigException.WrongType(target.origin(), key, Long::class.javaObjectType.simpleName, Double::class.javaObjectType.simpleName).toValidationError(key, typeName))
         }
-        return errors
+        return validated
     }
 }
 
@@ -100,17 +102,17 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
 
     override fun toString() = "\"$key\": \"$typeName\""
 
-    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Set<ConfigValidationError> {
+    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
         val errors = mutableSetOf<ConfigValidationError>()
-        errors += super.validate(target, options)
+        errors += super.validate(target, options).errors
         schema?.let { nestedSchema ->
             val nestedConfig: Config? = target.getConfig(key)
             nestedConfig?.let {
-                errors += nestedSchema.validate(nestedConfig, options).map { error -> error.withContainingPath(key) }
+                errors += nestedSchema.validate(nestedConfig, options).errors.map { error -> error.withContainingPath(*key.split(".").toTypedArray()) }
             }
         }
-        return errors
+        return if (errors.isEmpty()) valid(target) else invalid(errors)
     }
 }
 
@@ -122,18 +124,18 @@ private class ListConfigProperty<TYPE>(override val key: String, elementTypeName
 
     override fun optional(defaultValue: List<TYPE>?): ConfigProperty<List<TYPE>?> = OptionalConfigProperty(key, typeName, defaultValue, ::validate, extractListValue)
 
-    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Set<ConfigValidationError> {
+    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
         val errors = mutableSetOf<ConfigValidationError>()
-        errors += super.validate(target, options)
+        errors += super.validate(target, options).errors
         elementSchema?.let { schema ->
-            errors += valueIn(target).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).mapIndexed { index, targetConfig -> schema.validate(targetConfig).map { error -> error.withContainingPath(key, "[$index]") } }.reduce { one, other -> one + other }
+            errors += valueIn(target).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).mapIndexed { index, targetConfig -> schema.validate(targetConfig, options).errors.map { error -> error.withContainingPath(key, "[$index]") } }.reduce { one, other -> one + other }
         }
-        return errors
+        return if (errors.isEmpty()) valid(target) else invalid(errors)
     }
 }
 
-private class OptionalConfigProperty<TYPE>(override val key: String, valueTypeName: String, private val defaultValue: TYPE?, private val validate: (Config, ConfigProperty.ValidationOptions?) -> Set<ConfigValidationError>, private val extractValue: (Config, String) -> TYPE) : ConfigProperty<TYPE?> {
+private class OptionalConfigProperty<TYPE>(override val key: String, valueTypeName: String, private val defaultValue: TYPE?, private val validate: (Config, ConfigProperty.ValidationOptions?) -> Validated<Config, ConfigValidationError>, private val extractValue: (Config, String) -> TYPE) : ConfigProperty<TYPE?> {
 
     override val mandatory: Boolean = false
 
@@ -147,12 +149,12 @@ private class OptionalConfigProperty<TYPE>(override val key: String, valueTypeNa
         }
     }
 
-    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Set<ConfigValidationError> {
+    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
         return when {
             isSpecifiedBy(target) -> validate.invoke(target, options)
-            defaultValue != null -> emptySet()
-            else -> setOf(ConfigException.Missing(key).toValidationError(key, typeName))
+            defaultValue != null -> valid(target)
+            else -> invalid(ConfigException.Missing(key).toValidationError(key, typeName))
         }
     }
 }

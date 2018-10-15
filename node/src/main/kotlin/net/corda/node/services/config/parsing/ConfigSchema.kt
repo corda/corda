@@ -2,6 +2,8 @@ package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigValueFactory
+import net.corda.node.services.config.parsing.Validated.Companion.invalid
+import net.corda.node.services.config.parsing.Validated.Companion.valid
 
 interface ConfigSchema : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> {
 
@@ -30,14 +32,14 @@ private class ConfigPropertySchema(override val name: String?, unorderedProperti
         }
     }
 
-    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Set<ConfigValidationError> {
+    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
-        val propertyErrors = properties.flatMap { property -> property.validate(target, options) }.toSet()
+        var propertyErrors = properties.flatMap { property -> property.validate(target, options).errors }.toSet()
         if (options?.strict == true) {
             val unknownKeys = target.root().keys - properties.map(ConfigProperty<*>::key)
-            return propertyErrors + unknownKeys.map(::unknownPropertyError)
+            propertyErrors += unknownKeys.map(::unknownPropertyError)
         }
-        return propertyErrors
+        return if (propertyErrors.isEmpty()) valid(target) else invalid(propertyErrors)
     }
 
     private fun unknownPropertyError(key: String) = ConfigValidationError.Unknown.of(key)

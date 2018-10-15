@@ -14,9 +14,7 @@ class ConfigPropertyValidationTest {
 
         val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.long(key)
 
-        assertThat(property.isValid(configuration)).isFalse()
-
-        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+        assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
@@ -25,11 +23,6 @@ class ConfigPropertyValidationTest {
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
-
-        assertThat(property.validate(configuration)).satisfies(::assertErrors)
-
-        val exception = IllegalArgumentException()
-        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
     }
 
     @Test
@@ -40,9 +33,7 @@ class ConfigPropertyValidationTest {
 
         val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.long(key)
 
-        assertThat(property.isValid(configuration)).isFalse()
-
-        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+        assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
@@ -51,11 +42,6 @@ class ConfigPropertyValidationTest {
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
-
-        assertThat(property.validate(configuration)).satisfies(::assertErrors)
-
-        val exception = IllegalArgumentException()
-        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
     }
 
     @Test
@@ -66,9 +52,7 @@ class ConfigPropertyValidationTest {
 
         val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.long(key).list()
 
-        assertThat(property.isValid(configuration)).isFalse()
-
-        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+        assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
@@ -77,11 +61,6 @@ class ConfigPropertyValidationTest {
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
-
-        assertThat(property.validate(configuration)).satisfies(::assertErrors)
-
-        val exception = IllegalArgumentException()
-        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
     }
 
     @Test
@@ -92,9 +71,7 @@ class ConfigPropertyValidationTest {
 
         val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.long(key).list()
 
-        assertThat(property.isValid(configuration)).isFalse()
-
-        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+        assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
@@ -103,11 +80,6 @@ class ConfigPropertyValidationTest {
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
-
-        assertThat(property.validate(configuration)).satisfies(::assertErrors)
-
-        val exception = IllegalArgumentException()
-        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
     }
 
     @Test
@@ -119,9 +91,7 @@ class ConfigPropertyValidationTest {
 
         val configuration = configObject(key to false).toConfig()
 
-        assertThat(property.isValid(configuration)).isFalse()
-
-        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+        assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
@@ -130,11 +100,6 @@ class ConfigPropertyValidationTest {
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
-
-        assertThat(property.validate(configuration)).satisfies(::assertErrors)
-
-        val exception = IllegalArgumentException()
-        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
     }
 
     @Test
@@ -146,9 +111,7 @@ class ConfigPropertyValidationTest {
 
         val configuration = configObject(key to 1.2).toConfig()
 
-        assertThat(property.isValid(configuration)).isFalse()
-
-        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+        assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
@@ -157,11 +120,6 @@ class ConfigPropertyValidationTest {
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
-
-        assertThat(property.validate(configuration)).satisfies(::assertErrors)
-
-        val exception = IllegalArgumentException()
-        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
     }
 
     @Test
@@ -173,12 +131,7 @@ class ConfigPropertyValidationTest {
 
         val configuration = configObject(key to 1).toConfig()
 
-        assertThat(property.isValid(configuration)).isTrue()
-
-        assertThat(property.validate(configuration)).isEmpty()
-
-        val exception = IllegalArgumentException()
-        assertThatCode { property.rejectIfInvalid(configuration) { exception } }.doesNotThrowAnyException()
+        assertThat(property.validate(configuration).isValid).isTrue()
     }
 
     @Test
@@ -190,9 +143,7 @@ class ConfigPropertyValidationTest {
 
         val configuration = configObject(key to listOf(false, true)).toConfig()
 
-        assertThat(property.isValid(configuration)).isFalse()
-
-        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+        assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
@@ -201,11 +152,6 @@ class ConfigPropertyValidationTest {
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
-
-        assertThat(property.validate(configuration)).satisfies(::assertErrors)
-
-        val exception = IllegalArgumentException()
-        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
     }
 
     @Test
@@ -217,9 +163,7 @@ class ConfigPropertyValidationTest {
 
         val configuration = configObject(key to listOf(1, 2, 3)).toConfig()
 
-        assertThat(property.isValid(configuration)).isFalse()
-
-        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+        assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
@@ -228,11 +172,6 @@ class ConfigPropertyValidationTest {
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
-
-        assertThat(property.validate(configuration)).satisfies(::assertErrors)
-
-        val exception = IllegalArgumentException()
-        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
     }
 
     @Test
@@ -244,9 +183,7 @@ class ConfigPropertyValidationTest {
 
         val configuration = configObject(key to 1).toConfig()
 
-        assertThat(property.isValid(configuration)).isFalse()
-
-        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+        assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
@@ -255,11 +192,6 @@ class ConfigPropertyValidationTest {
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
             }
         }
-
-        assertThat(property.validate(configuration)).satisfies(::assertErrors)
-
-        val exception = IllegalArgumentException()
-        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
     }
 
     @Test
@@ -274,22 +206,15 @@ class ConfigPropertyValidationTest {
 
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
-        assertThat(property.isValid(configuration)).isFalse()
-
-        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+        assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(nestedKey)
-                assertThat(error.path).containsExactly(key, nestedKey)
+                assertThat(error.path).containsExactly(*key.split(".").toTypedArray(), nestedKey)
             }
         }
-
-        assertThat(property.validate(configuration)).satisfies(::assertErrors)
-
-        val exception = IllegalArgumentException()
-        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
     }
 
     @Test
@@ -304,22 +229,15 @@ class ConfigPropertyValidationTest {
 
         val configuration = configObject(key to configObject()).toConfig()
 
-        assertThat(property.isValid(configuration)).isFalse()
-
-        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+        assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(nestedKey)
-                assertThat(error.path).containsExactly(key, nestedKey)
+                assertThat(error.path).containsExactly(*key.split(".").toTypedArray(), nestedKey)
             }
         }
-
-        assertThat(property.validate(configuration)).satisfies(::assertErrors)
-
-        val exception = IllegalArgumentException()
-        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
     }
 
     @Test
@@ -334,23 +252,15 @@ class ConfigPropertyValidationTest {
 
         val configuration = configObject(key to configObject(nestedKey to null)).toConfig()
 
-        assertThat(property.isValid(configuration)).isFalse()
-
-        fun assertErrors(errors: Iterable<ConfigValidationError>) {
+        assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
             assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(nestedKey)
-                // TODO sollecitom here
-                assertThat(error.path).containsExactly(key, nestedKey)
+                assertThat(error.path).containsExactly(*key.split(".").toTypedArray(), nestedKey)
             }
         }
-
-        assertThat(property.validate(configuration)).satisfies(::assertErrors)
-
-        val exception = IllegalArgumentException()
-        assertThatThrownBy { property.rejectIfInvalid(configuration) { errors -> exception.also { assertErrors(errors) } } }.isSameAs(exception)
     }
 
     @Test
@@ -364,11 +274,6 @@ class ConfigPropertyValidationTest {
 
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
-        assertThat(property.isValid(configuration)).isTrue()
-
-        assertThat(property.validate(configuration)).isEmpty()
-
-        val exception = IllegalArgumentException()
-        assertThatCode { property.rejectIfInvalid(configuration) { exception } }.doesNotThrowAnyException()
+        assertThat(property.validate(configuration).isValid).isTrue()
     }
 }
