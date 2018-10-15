@@ -2,8 +2,10 @@ package net.corda.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.IdempotentFlow
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
@@ -16,6 +18,8 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.hibernate.exception.ConstraintViolationException
 import org.junit.Before
 import org.junit.Test
 import java.lang.management.ManagementFactory
@@ -51,6 +55,42 @@ class FlowRetryTest {
         assertNotNull(result)
         assertEquals("$numSessions:$numIterations", result)
     }
+
+    @Test
+    fun `flow gives up after number of exceptions, even if this is the first line of the flow`() {
+        val user = User("mark", "dadada", setOf(Permissions.startFlow<RetryFlow>()))
+        assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
+            driver(DriverParameters(
+                    startNodesInProcess = isQuasarAgentSpecified(),
+                    notarySpecs = emptyList()
+            )) {
+                val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+
+                val result = CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                    it.proxy.startFlow(::RetryFlow).returnValue.getOrThrow()
+                }
+                result
+            }
+        }
+    }
+
+    @Test
+    fun `flow that throws in constructor throw for the RPC client that attempted to start them`() {
+        val user = User("mark", "dadada", setOf(Permissions.startFlow<ThrowingFlow>()))
+        assertThatExceptionOfType(CordaRuntimeException::class.java).isThrownBy {
+            driver(DriverParameters(
+                    startNodesInProcess = isQuasarAgentSpecified(),
+                    notarySpecs = emptyList()
+            )) {
+                val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+
+                val result = CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                    it.proxy.startFlow(::ThrowingFlow).returnValue.getOrThrow()
+                }
+                result
+            }
+        }
+    }
 }
 
 fun isQuasarAgentSpecified(): Boolean {
@@ -59,6 +99,8 @@ fun isQuasarAgentSpecified(): Boolean {
 }
 
 class ExceptionToCauseRetry : SQLException("deadlock")
+
+class ExceptionToCauseFiniteRetry : ConstraintViolationException("Faked violation", SQLException("Fake"), "Fake name")
 
 @StartableByRPC
 @InitiatingFlow
@@ -157,3 +199,42 @@ data class SessionInfo(val sessionNum: Int, val iterationsCount: Int)
 enum class Step { First, BeforeInitiate, AfterInitiate, AfterInitiateSendReceive, BeforeSend, AfterSend, BeforeReceive, AfterReceive }
 
 data class Visited(val sessionNum: Int, val iterationNum: Int, val step: Step)
+
+@StartableByRPC
+class RetryFlow() : FlowLogic<String>(), IdempotentFlow {
+    companion object {
+        object FIRST_STEP : ProgressTracker.Step("Step one")
+
+        fun tracker() = ProgressTracker(FIRST_STEP)
+    }
+
+    override val progressTracker = tracker()
+
+    @Suspendable
+    override fun call(): String {
+        progressTracker.currentStep = FIRST_STEP
+        throw ExceptionToCauseFiniteRetry()
+        return "Result"
+    }
+}
+
+@StartableByRPC
+class ThrowingFlow() : FlowLogic<String>(), IdempotentFlow {
+    companion object {
+        object FIRST_STEP : ProgressTracker.Step("Step one")
+
+        fun tracker() = ProgressTracker(FIRST_STEP)
+    }
+
+    override val progressTracker = tracker()
+
+    init {
+        throw IllegalStateException("This flow can never be ")
+    }
+
+    @Suspendable
+    override fun call(): String {
+        progressTracker.currentStep = FIRST_STEP
+        return "Result"
+    }
+}
