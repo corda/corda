@@ -225,3 +225,25 @@ then the check below will fail.
                      transaction that references the encumbered state. This is because the data contained within the
                      encumbered state may take on a different meaning, and likely would do, once the encumbrance state
                      is taken into account.
+
+State Pointers
+--------------
+
+A `StatePointer` contains a pointer to a `ContractState`. The `StatePointer` can be included in a `ContractState` as a
+property, or included in an off-ledger data structure. `StatePointer` s can be resolved to a `StateAndRef` by performing
+a look-up. There are two types of pointers; linear and static.
+
+1. `StaticPointer` s are for use with any type of `ContractState`. The `StaticPointer` does as it suggests, it always
+   points to the same `ContractState`.
+2. The `LinearPointer` is for use with `LinearState` s. They are particularly useful because due to the way `LinearState` s
+   work, the pointer will automatically point you to the latest version of a `LinearState` that the node performing `resolve`
+   is aware of. In effect, the pointer "moves" as the `LinearState` is updated.
+
+ `StatePointer` s do not enable a feature in Corda which was unavailable before. Rather, they help to formalise a pattern
+ which was already possible. In that light it is worth nothing some issues which you may encounter with `StatePointer` s:
+
+* If the node calling `resolve` has not seen any transactions containing a `ContractState` which the `StatePointer`
+  points to, then `resolve` will return an exception. Here, the node calling `resolve` might be missing some crucial data.
+* The node calling `resolve` for a `LinearPointer` may have seen and stored transactions containing a `LinearState` with
+  the specified `linearId`. However, there is no guarantee the `StateAndRef<T>` returned by `resolve` is the most recent
+  version of the `LinearState`. The node only returns the most recent version that _it_ is aware of.

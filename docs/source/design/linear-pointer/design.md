@@ -1,55 +1,125 @@
 # LinearPointer
 
-## Background
+## Problem
 
-Occasionally there is a need to link two `ContractState`s. This has the
-effect of creating a "one-to-one" or "one-to-many" relationship between
-the two states.
+Occasionally there is a need to create a link from one `ContractState` to another. This has the effect of creating a uni-directional "one-to-one" relationship between a pair of `ContractState`s.
 
-The linking can be done by including a `StateRef` in a `ContractState`
-as follows:
+A first attempt to do this might be to link one `ContractState` to another by including a `StateRef` or a `StateAndRef<T>` as follows:
 
-    data class FooState(val ref: StateRef)
+```kotlin
+// StateRef.
+data class FooState(val ref: StateRef)
+// StateAndRef.
+data class FooState(val ref: StateAndRef<BarState>)
+```
 
-or if the by including a `StateAndRef<T>`:
+Linking to a `StateRef` or `StateAndRef<T>` is only recommended if a specific version of a state is required in perpetuity. Clearly, linking to a `StateAndRef` embeds the data directly so there is no need to "resolve" the `StateRef`.
 
-    data class FooState(val ref: StateAndRef<BarState>)
+But what if the linked state is updated? The the `StateRef` will be pointing to an older version of the data and this could be a problem for the `ContractState` which requires the link.
 
-Linking to a `StateRef` or `StateAndRef<T>` is only recommended if a
-specific version of a state is required.
+## Solution
 
-The process to resolve the `StateRef`
+The solution is to include a `linearId` which references a `LinearState`. This is because all `LinearState`s contain a `linearId` which refers to a particular lineage of `LinearState`.
 
-If the most up-to-date version of a `ContractState` is required, the
-referenced state must be a `LinearState`. This means it is possible to
-query the vault for the most
+The trade-off here is that the data being pointed to (in the`LinearState`) cannot be immediately seen. To see the data contained within the `LinearState`, it must be "resolved".
 
-some on-ledger data contained within a `ContractState` with a
-`ContractState` and that data, for whatever reason, cannot be included
-_within_ the referring `ContractState`.
+## Design
 
-Typically the data which is being referred to will exist in a different
-state, usually a `LinearState` and it will be managed by and evolve
-independently to the `ContractState` which refers to it.
+Introduce a `LinearPointer` interface.
 
-A relationship between a [ContractState] and a [LinearState] can be
-modelled without any special types. However,
+The `LinearPointer` contains the `linearId` of the `LinearState` being pointed to and a `resolve` method. Resolving a `LinearPointer` returns a `StateAndRef<T>` containing the latest version of the `LinearState` that the node calling `resolve` is aware of.
 
-
-
-`LinearPointer` allows a `ContractState` to "point" to another `LinearState` creating a "many- to-one" relationship between all the states containing the pointer to a particular `LinearState` and the `LinearState` being pointed to.
-
-It is a useful pattern when one state depends on the contained data within another state and there is an expectation that the state being depended upon will involve independently to the depending state.
-
-abstract class LinearPointer {
-    abstract val pointer: UniqueIdentifier
-    inline fun<reified T : LinearState>resolve(services: ServiceHub): T? {
-        val query = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(pointer))
-        return services.vaultService.queryBy<T>(query).states.singleOrNull()?.state?.data
-    }
+```kotlin
+@CordaSerializable
+interface LinearPointer {
+    
+    /* The [linearId] of the pointed-to [LinearState]. */
+    val pointer: UniqueIdentifier
+    
+    /* 
+     * Resolves the [LinearPointer] to the latest known version of the pointed-to 
+     * [LinearState].
+     */
+    fun resolve(services: ServiceHub): StateAndRef<LinearState>?
 }
-The LinearPointer contains the linearId of the LinearState being pointed to and a resolve() method. Resolving a LinearPointer returns a StateAndRef containing the latest version of the LinearState that the node calling resolve() is aware of. There are two issues to note with LinearPointer s:
+```
 
-If the node calling resolve() has not seen any transactions containing a LinearState with the specified linearId then resolve() will return null .
-Even if the node calling resolve() has seen and stored transactions containing a LinearState with the specified linearId, there is no guarantee the StateAndRef returned is the most recent version of the LinearState.
-Both of the above problems can be resolved by adding the pointed-to LinearState as a reference state to the transaction containing the state with the LinearPointer. This way, the pointed-to state travels around with the pointer, such that the LinearPointer can always be resolved. Furthermore, the reference states feature will ensure that the pointed-to state remains current. It's worth noting that embedding the pointed-to state may not always be preferable, especially if it is quite large.
+To use `LinearPointer`s developers must implemnent the above interface. A typical implementation of `resolve` would look like:
+
+```kotlin
+fun resolve(services: ServiceHub): StateAndRef<LinearState>? {
+	val query = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(pointer))
+	val result = services.vaultService.queryBy<LinearState>(query)
+    return result.states.singleOrNull()?
+}
+```
+
+#### Bi-directional link
+
+Symmetrical relationships can be modelled by embedding a `LinearPointer` in the pointed-to `LinearState` which points in the "opposite" direction. **Note:** this can only work if both states are `LinearState`s.
+
+## Use-cases
+
+It is important to note that this design only standardises a pattern which is currently possible with the platform. In other words, this design does not enable anything new.
+
+#### Tokens
+
+Uncoupling token type definitions from the notion of ownership. Using the `LinearPointer`, `Token` states can include an `Amount` of some pointed-to type. The pointed-to type can evolve independently from the `Token` state which should just be concerned with teh question of ownership.
+
+## Issues and resolutions
+
+Some issue to be aware of and their resolutions:
+
+| Problem                                                      | Resolution                                                   |
+| :----------------------------------------------------------- | ------------------------------------------------------------ |
+| If the node calling `resolve` has not seen any transactions containing a `LinearState` with the specified `linearId` then `resolve` will return `null`. Here, the node calling `resolve` might be missing some crucial data. | Use data distribution groups. Assuming the creator of the reference data in the `LinearState` publishes updates to a data distribution group, subscribing to that group ensures that the node calling resolve will eventually have the required data. |
+| The node calling `resolve` has seen and stored transactions containing a `LinearState` with the specified `linearId`. However, there is no guarantee the `StateAndRef<T>` returned by `resolve` is the most recent version of the `LinearState`. | Embed the pointed-to `LinearState` in transactions containing the `LinearPointer` as a reference state. The reference states feature will ensure the pointed-to state is the latest version. |
+| The creator of the pointed-to `LinearState` exits the state from the ledger. If the pointed-to state is included a reference state then notaries will reject transactions containing it. | Add a `ContractState` interface called `IrremovableState` (or something). Platform logic checks for existence of this interface and if so, ensures the state cannot be exited from the ledger. |
+
+All of the noted resolutions rely on additional paltform features:
+
+* Reference states which will be available in V4
+* Data distribution groups which are not currently available. However, there is an early prototype
+* Additional state interface
+
+### Additional concerns and responses
+
+#### Embedding reference states in transactions
+
+**Concern:** Embedding reference states for pointed-to states in transactions could cause transactions to increase by some unbounded size. 
+
+**Response:** The introduction of this feature doesn't create a new platform capability. It merely formalises a pattern which is currently possible. Futhermore, there is a possibility that _any_ type of state can cause a transaction to increase by some un-bounded size. It is also worth remembering that the maximum transaction size is 10MB.
+
+#### `LinearPointer`s are not human readable
+
+**Concern:** Users won't know what sits behind the pointer.
+
+**Response:** When the state containing the pointer is used in a flow, the pointer can be easily resolved. When the state needs to be displayed on a UI, the pointer can be resolved via vault query.
+
+#### This feature adds complexity to the platform
+
+**Concern:** This all seems quite complicated.
+
+**Response:** It's possible anyway. Use of this feature is optional.
+
+#### Coinselection will be slow.
+
+**Concern:** We'll need to join on other tables to perform coinselection, making it slower.
+
+**Response:** This is probably not true in most cases. Take the existing coinselection code from `CashSelectionH2Impl.kt`:
+
+```sql
+SELECT vs.transaction_id, vs.output_index, ccs.pennies, SET(@t, ifnull(@t,0)+ccs.pennies) total_pennies, vs.lock_id
+FROM vault_states AS vs, contract_cash_states AS ccs
+WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
+AND vs.state_status = 0
+AND vs.relevancy_status = 0
+AND ccs.ccy_code = ? and @t < ?
+AND (vs.lock_id = ? OR vs.lock_id is null)
+```
+
+Notice that the only property required which is not accessible from the `LinearPointer` is the `ccy_code`. This is not necessarily a problem though, as the `linearId` specified in the pointer can be used as a proxy for the `ccy_code` or "token type".
+
+
+
+
