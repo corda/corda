@@ -1,4 +1,4 @@
-package net.corda.finance.schemas
+package net.corda.finance.schemas.test
 
 import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.schemas.MappedSchema
