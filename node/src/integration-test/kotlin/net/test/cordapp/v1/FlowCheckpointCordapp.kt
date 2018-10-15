@@ -46,12 +46,12 @@ class SendMessageFlow(private val message: Message, private val notary: Party, p
 
         progressTracker.currentStep = FINALISING_TRANSACTION
 
-        if (reciepent != null) {
+        return if (reciepent != null) {
             val session = initiateFlow(reciepent)
             subFlow(SendTransactionFlow(session, signedTx))
-            return  subFlow(FinalityFlow(signedTx, setOf(reciepent), FINALISING_TRANSACTION.childProgressTracker()))
+            subFlow(FinalityFlow(signedTx, setOf(reciepent), FINALISING_TRANSACTION.childProgressTracker()))
         } else {
-            return subFlow(FinalityFlow(signedTx, FINALISING_TRANSACTION.childProgressTracker()))
+            subFlow(FinalityFlow(signedTx, FINALISING_TRANSACTION.childProgressTracker()))
         }
     }
 }
@@ -59,7 +59,6 @@ class SendMessageFlow(private val message: Message, private val notary: Party, p
 
 @InitiatedBy(SendMessageFlow::class)
 class Record(private val session: FlowSession) : FlowLogic<Unit>() {
-
     @Suspendable
     override fun call() {
         val tx = subFlow(ReceiveTransactionFlow(session, statesToRecord = StatesToRecord.ALL_VISIBLE))

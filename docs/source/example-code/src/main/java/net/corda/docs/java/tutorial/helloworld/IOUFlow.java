@@ -15,7 +15,7 @@ import net.corda.core.utilities.ProgressTracker;
 
 import static com.template.TemplateContract.TEMPLATE_CONTRACT_ID;
 
-// Replace TemplateFlow's definition with:
+// Replace Initiator's definition with:
 @InitiatingFlow
 @StartableByRPC
 public class IOUFlow extends FlowLogic<Void> {
@@ -44,7 +44,7 @@ public class IOUFlow extends FlowLogic<Void> {
     @Override
     public Void call() throws FlowException {
         // We retrieve the notary identity from the network map.
-        final Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
+        Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
 
         // We create the transaction components.
         IOUState outputState = new IOUState(iouValue, getOurIdentity(), otherParty);
@@ -52,12 +52,12 @@ public class IOUFlow extends FlowLogic<Void> {
         Command cmd = new Command<>(cmdType, getOurIdentity().getOwningKey());
 
         // We create a transaction builder and add the components.
-        final TransactionBuilder txBuilder = new TransactionBuilder(notary)
+        TransactionBuilder txBuilder = new TransactionBuilder(notary)
                 .addOutputState(outputState, TEMPLATE_CONTRACT_ID)
                 .addCommand(cmd);
 
         // Signing the transaction.
-        final SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
+        SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
 
         // Finalising the transaction.
         subFlow(new FinalityFlow(signedTx));
