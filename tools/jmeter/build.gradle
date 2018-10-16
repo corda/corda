@@ -26,6 +26,9 @@ dependencies {
     compile "org.apache.logging.log4j:log4j-1.2-api:$log4j_version"
     compile "org.apache.logging.log4j:log4j-core:$log4j_version"
 
+    //Picocli for command line interface
+    compile "info.picocli:picocli:$picocli_version"
+
     // JMeter
     ext.jmVersion = "3.3"
 
@@ -71,21 +74,6 @@ task runServer(dependsOn: 'classes', type: JavaExec) {
              "-s" ]
 }
 
-// Just start ssh tunnels, without JMeter.
-task runSsh(dependsOn: 'classes', type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
-    main = 'com.r3.corda.jmeter.Ssh'
-    if ( project.hasProperty("sshUser") ){
-        args+= "-XsshUser"
-        args+= Eval.me(sshUser)
-    }
-    if ( project.hasProperty("jmeterHosts") ) {
-        args+= "-Xssh"
-        args+= Eval.me(jmeterHosts)
-    }
-    standardInput = System.in
-}
-
 // Use the driver to launch 2 local nodes and the notary running the perftestcordapp.
 // To use for development of samplers and flows locally.
 task runDriver(dependsOn: 'classes', type: JavaExec) {
@@ -109,11 +97,7 @@ run {
     systemProperty "java.rmi.server.hostname", "localhost"
     systemProperty "jmeter.home", sourceSets.main.resources.getSrcDirs().first().getPath()
     // If you want to debug: jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
-    args+= [ "-p", sourceSets.main.resources.getSrcDirs().first().getPath()+"/jmeter.properties",
-             "-d", sourceSets.main.resources.getSrcDirs().first().getPath() ]
-    if ( project.hasProperty("jmeterArgs") ) {
-        args+= Eval.me(jmeterArgs)
-    }
+
     if ( project.hasProperty("sshUser") ){
         args+= "-XsshUser"
         args+= Eval.me(sshUser)
@@ -121,6 +105,13 @@ run {
     if ( project.hasProperty("jmeterHosts") ) {
         args+= "-Xssh"
         args+= Eval.me(jmeterHosts)
+    }
+
+    args+= [ "-XjmeterProperties", sourceSets.main.resources.getSrcDirs().first().getPath()+"/jmeter.properties",
+             "--",
+             "-d", sourceSets.main.resources.getSrcDirs().first().getPath() ]
+    if ( project.hasProperty("jmeterArgs") ) {
+        args+= Eval.me(jmeterArgs)
     }
 }
 
@@ -149,6 +140,8 @@ task buildJMeterJAR(type: FatCapsule) {
     from(processResources) {
         include "log4j2.xml"
         include "*.properties"
+        include "server-rmi.config"
+        include "bin/*.properties"
     }
 
     capsuleManifest {

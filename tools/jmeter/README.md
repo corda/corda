@@ -48,10 +48,6 @@ for each host listed in jmeterHosts. Some additional ports are also opened based
 parts of the configuration to access the RMI registry and to allow return traffic
 from remote agents.
 
-The SSH tunnels can be started independently with:
-
-`./gradlew tools:jmeter:runSsh -PjmeterHosts="['hostname1', 'hostname2']"`
-
 For the ssh tunneling to work, an ssh agent must be running on your local machine with the 
 appropriate private key loaded. If the environment variable `SSH_AUTH_SOCK` is set, the code 
 assumes that a posix sshagent process is being used, if it is not set, it assumes that 
@@ -59,7 +55,7 @@ assumes that a posix sshagent process is being used, if it is not set, it assume
 remote user name is different from the current user name, `-XsshUser <remote user name>` 
 can be used to set this, or in the gradle call:
 
-`./gradlew tools:jmeter:runSsh -PjmeterHosts="['hostname1', 'hostname2']" -PsshUser="'username'"`
+`./gradlew tools:jmeter:run -PjmeterHosts="['hostname1', 'hostname2']" -PsshUser="'username'"`
 
 #### Running locally with driver
 
