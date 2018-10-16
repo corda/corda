@@ -2,21 +2,27 @@ package net.corda.serialization.internal.amqp
 
 import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
+import com.google.common.primitives.Primitives
 import net.corda.core.KeepForDJVM
 import net.corda.core.utilities.toBase64
 import net.corda.serialization.internal.model.*
-import java.lang.StringBuilder
+import org.apache.qpid.proton.amqp.*
 import java.lang.reflect.*
+import java.util.*
 
-fun getTypeModellingFingerPrinter(factory: SerializerFactory): FingerPrinter {
-    return TypeModellingFingerPrinter(LocalTypeModel(WhitelistBasedTypeModelConfiguration(factory.whitelist)), object : CustomTypeDescriptorLookup {
+// Bridges between [SerializerFactory] and [TypeModellingFingerPrinter].
+internal fun getTypeModellingFingerPrinter(factory: SerializerFactory): FingerPrinter {
+    val customTypeDescriptorLookup = object : CustomTypeDescriptorLookup {
         override fun getCustomTypeDescriptor(type: Type): String? =
                 factory.findCustomSerializer(type.asClass(), type)?.typeDescriptor?.toString()
-    })
-}
-
-interface CustomTypeDescriptorLookup {
-    fun getCustomTypeDescriptor(type: Type): String?
+    }
+    return TypeModellingFingerPrinter(
+            LocalTypeModel(
+                    WhitelistBasedTypeModelConfiguration(
+                            factory.whitelist
+                    ) { Primitives.unwrap(it.asClass()) in opaqueTypes ||
+                            customTypeDescriptorLookup.getCustomTypeDescriptor(it) != null }),
+            customTypeDescriptorLookup)
 }
 
 /**
@@ -71,8 +77,7 @@ private class TypeModellingFingerPrintingState(private val customTypeDescriptorL
 
     // For a type we haven't seen before, determine the correct path depending on the type of type it is.
     private fun fingerprintNewType(type: LocalTypeInformation) = when (type) {
-        is LocalTypeInformation.Cycle -> throw IllegalStateException(
-                "Fingerprinter should never hit a cyclic reference, but hit $type")
+        is LocalTypeInformation.Cycle -> append(ALREADY_SEEN_HASH)
         is LocalTypeInformation.Unknown,
         is LocalTypeInformation.Any -> append("?$ANY_TYPE_HASH")
         is LocalTypeInformation.AnArray -> fingerprintType(type.componentType).append(ARRAY_HASH)
@@ -177,3 +182,27 @@ private val Hasher.fingerprint get() = hash().asBytes().toBase64()
 internal fun fingerprintForDescriptors(vararg typeDescriptors: String): String =
         newDefaultHasher().putUnencodedChars(typeDescriptors.joinToString()).fingerprint
 // endregion
+
+private val opaqueTypes = setOf(
+        Character::class.java,
+        Char::class.java,
+        Boolean::class.java,
+        Byte::class.java,
+        UnsignedByte::class.java,
+        Short::class.java,
+        UnsignedShort::class.java,
+        Int::class.java,
+        UnsignedInteger::class.java,
+        Long::class.java,
+        UnsignedLong::class.java,
+        Float::class.java,
+        Double::class.java,
+        Decimal32::class.java,
+        Decimal64::class.java,
+        Decimal128::class.java,
+        Date::class.java,
+        UUID::class.java,
+        ByteArray::class.java,
+        String::class.java,
+        Symbol::class.java
+)

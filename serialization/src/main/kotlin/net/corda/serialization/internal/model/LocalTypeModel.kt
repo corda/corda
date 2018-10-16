@@ -25,11 +25,20 @@ class LocalTypeModel(private val typeModelConfiguration: TypeModelConfiguration)
     operator fun get(typeIdentifier: TypeIdentifier): LocalTypeInformation? = cache[typeIdentifier]
 }
 
+
+interface CustomTypeDescriptorLookup {
+    fun getCustomTypeDescriptor(type: Type): String?
+}
+
 interface TypeModelConfiguration {
-    fun isOpaque(type: Type): Boolean = !type.asClass().isCollectionOrMap && type.typeName.startsWith("java")
+    fun isOpaque(type: Type): Boolean
     fun isExcluded(type: Type): Boolean
 }
 
-class WhitelistBasedTypeModelConfiguration(private val whitelist: ClassWhitelist): TypeModelConfiguration {
+class WhitelistBasedTypeModelConfiguration(
+        private val whitelist: ClassWhitelist,
+        private val opaqueTest: (Type) -> Boolean = { !it.asClass().isCollectionOrMap && it.typeName.startsWith("java") })
+    : TypeModelConfiguration {
     override fun isExcluded(type: Type): Boolean = whitelist.isNotWhitelisted(type.asClass())
+    override fun isOpaque(type: Type): Boolean = opaqueTest(type)
 }

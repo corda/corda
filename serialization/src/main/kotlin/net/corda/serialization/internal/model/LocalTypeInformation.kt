@@ -4,10 +4,12 @@ import com.google.common.reflect.TypeToken
 import net.corda.core.internal.isAbstractClass
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.serialization.internal.amqp.*
+import java.io.NotSerializableException
 import java.lang.reflect.*
 import java.util.*
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.javaConstructor
 import kotlin.reflect.jvm.javaGetter
 import kotlin.reflect.jvm.javaType
 
@@ -23,10 +25,10 @@ sealed class LocalPropertyInformation(val isCalculated: Boolean) {
     abstract val type: LocalTypeInformation
     abstract val isMandatory: Boolean
 
-    data class ReadOnlyProperty(val observedGetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean): LocalPropertyInformation(false)
-    data class ConstructorPairedProperty(val observedGetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean): LocalPropertyInformation(false)
-    data class GetterSetterProperty(val observedGetter: Method, val observedSetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean): LocalPropertyInformation(false)
-    data class CalculatedProperty(val observedGetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean): LocalPropertyInformation(true)
+    data class ReadOnlyProperty(val observedGetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(false)
+    data class ConstructorPairedProperty(val observedGetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(false)
+    data class GetterSetterProperty(val observedGetter: Method, val observedSetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(false)
+    data class CalculatedProperty(val observedGetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(true)
 }
 
 data class LocalConstructorParameterInformation(
@@ -48,52 +50,78 @@ sealed class LocalTypeInformation {
     abstract val observedType: Type
     abstract val typeIdentifier: TypeIdentifier
 
+    //region Pretty printing
     fun prettyPrint(indent: Int = 0): String {
-        return when(this) {
+        return when (this) {
+            is LocalTypeInformation.Abstract ->
+                typeIdentifier.prettyPrint() + printInterfaces(interfaces) + printProperties(properties, indent + 1)
+            is LocalTypeInformation.AnInterface ->
+                typeIdentifier.prettyPrint() + printInterfaces(interfaces)
             is LocalTypeInformation.APojo -> typeIdentifier.prettyPrint() +
-                    (if (interfaces.isEmpty()) "" else  interfaces.joinToString(", ", ": ", "") { it.prettyPrint() }) +
-                    this.properties.entries.joinToString("\n", "\n", "") { it.prettyPrint(indent + 1) }
+                    printConstructor(constructor) +
+                    printInterfaces(interfaces) +
+                    printProperties(properties, indent + 1)
             else -> typeIdentifier.prettyPrint()
         }
     }
 
-    private fun Map.Entry<String, LocalPropertyInformation>.prettyPrint(indent: Int): String =
-            "  ".repeat(indent) + key + ": " + value.type.prettyPrint(indent + 1).trimStart()
+    private fun printConstructor(constructor: LocalConstructorInformation) =
+            constructor.parameters.joinToString(", ", "(", ")") {
+                it.name +
+                ": " + it.type.typeIdentifier.prettyPrint() +
+                (if (!it.isMandatory) "?" else "")
+            }
 
-    object Unknown: LocalTypeInformation() {
+    private fun printInterfaces(interfaces: List<LocalTypeInformation>) =
+            if (interfaces.isEmpty()) ""
+            else interfaces.joinToString(", ", ": ", "") { it.typeIdentifier.prettyPrint() }
+
+    private fun printProperties(properties: Map<String, LocalPropertyInformation>, indent: Int) =
+            properties.entries.sortedBy { it.key }.joinToString("\n", "\n", "") {
+                it.prettyPrint(indent)
+            }
+
+    private fun Map.Entry<String, LocalPropertyInformation>.prettyPrint(indent: Int): String =
+            "  ".repeat(indent) + key +
+                    (if(!value.isMandatory) " (optional)" else "") +
+                    (if (value.isCalculated) " (calculated)" else "") +
+                    ": " + value.type.prettyPrint(indent)
+    //endregion
+
+    object Unknown : LocalTypeInformation() {
         override val observedType get() = throw UnsupportedOperationException("Type is unknown")
         override val typeIdentifier = TypeIdentifier.Unknown
     }
 
-    object Any: LocalTypeInformation() {
+    object Any : LocalTypeInformation() {
         override val observedType = Any::class.java
         override val typeIdentifier = TypeIdentifier.Any
     }
 
-    data class Cycle(override val observedType: Type, override val typeIdentifier: TypeIdentifier): LocalTypeInformation()
+    data class Cycle(override val observedType: Type, override val typeIdentifier: TypeIdentifier) : LocalTypeInformation()
 
     /**
      * May in fact be a more complex class, but is treated like a primitive, i.e. we don't further expand its properties.
      */
-    data class Opaque(override val observedType: Class<*>, override val typeIdentifier: TypeIdentifier): LocalTypeInformation()
+    data class Opaque(override val observedType: Class<*>, override val typeIdentifier: TypeIdentifier) : LocalTypeInformation()
 
-    data class APrimitive(override val observedType: Class<*>, override val typeIdentifier: TypeIdentifier): LocalTypeInformation()
+    data class APrimitive(override val observedType: Class<*>, override val typeIdentifier: TypeIdentifier) : LocalTypeInformation()
 
-    data class AnArray(override val observedType: Type, override val typeIdentifier: TypeIdentifier, val componentType: LocalTypeInformation): LocalTypeInformation()
+    data class AnArray(override val observedType: Type, override val typeIdentifier: TypeIdentifier, val componentType: LocalTypeInformation) : LocalTypeInformation()
 
     data class AnEnum(override val observedType: Class<*>, override val typeIdentifier: TypeIdentifier, val interfaces: List<LocalTypeInformation>, val members: List<String>)
         : LocalTypeInformation()
 
-    data class AnInterface(override val observedType: Type, override val typeIdentifier: TypeIdentifier, val interfaces: List<LocalTypeInformation>, val typeParameters: List<LocalTypeInformation>): LocalTypeInformation()
+    data class AnInterface(override val observedType: Type, override val typeIdentifier: TypeIdentifier, val interfaces: List<LocalTypeInformation>, val typeParameters: List<LocalTypeInformation>) : LocalTypeInformation()
 
     data class Abstract(
             override val observedType: Type,
             override val typeIdentifier: TypeIdentifier,
             val properties: Map<PropertyName, LocalPropertyInformation>,
             val interfaces: List<LocalTypeInformation>,
-            val typeParameters: List<LocalTypeInformation>): LocalTypeInformation()
+            val typeParameters: List<LocalTypeInformation>) : LocalTypeInformation()
 
-    data class AnObject(override val observedType: Type, override val typeIdentifier: TypeIdentifier, val interfaces: List<LocalTypeInformation>, val typeParameters: List<LocalTypeInformation>): LocalTypeInformation()
+    data class AnObject(override val observedType: Type, override val typeIdentifier: TypeIdentifier, val interfaces: List<LocalTypeInformation>, val typeParameters: List<LocalTypeInformation>) : LocalTypeInformation()
 
     data class APojo(
             override val observedType: Type,
@@ -101,23 +129,31 @@ sealed class LocalTypeInformation {
             val constructor: LocalConstructorInformation,
             val properties: Map<PropertyName, LocalPropertyInformation>,
             val interfaces: List<LocalTypeInformation>,
-            val typeParameters: List<LocalTypeInformation>): LocalTypeInformation()
+            val typeParameters: List<LocalTypeInformation>) : LocalTypeInformation()
 
-    data class ACollection(override val observedType: Type, override val typeIdentifier: TypeIdentifier, val typeParameters: List<LocalTypeInformation>): LocalTypeInformation()
+    data class ACollection(override val observedType: Type, override val typeIdentifier: TypeIdentifier, val typeParameters: List<LocalTypeInformation>) : LocalTypeInformation()
 }
 
 private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val resolutionContext: Type? = null, val visited: Set<TypeIdentifier> = emptySet()) {
 
     fun build(type: Type, typeIdentifier: TypeIdentifier): LocalTypeInformation {
         return if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier) else
-            lookup.lookup(type, typeIdentifier)  {
+            lookup.lookup(type, typeIdentifier) {
                 copy(visited = visited + typeIdentifier).buildIfNotFound(type, typeIdentifier)
             }
     }
 
+    private fun resolveAndBuild(type: Type): LocalTypeInformation {
+        val resolved = type.resolveAgainstContext()
+        return build(resolved, TypeIdentifier.forGenericType(resolved, resolutionContext ?: type))
+    }
+
+    private fun Type.resolveAgainstContext(): Type =
+            if (resolutionContext == null) this else resolveAgainst(resolutionContext)
+
     private fun buildIfNotFound(type: Type, typeIdentifier: TypeIdentifier): LocalTypeInformation {
         val rawType = type.asClass()
-        return when(typeIdentifier) {
+        return when (typeIdentifier) {
             is TypeIdentifier.Any -> LocalTypeInformation.Any
             is TypeIdentifier.Unknown -> LocalTypeInformation.Unknown
             is TypeIdentifier.Unparameterised,
@@ -126,80 +162,86 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
                 LocalTypeInformation.AnArray(
                         type,
                         typeIdentifier,
-                        build(type.componentType().resolveAgainst(resolutionContext ?: type), typeIdentifier.componentType))
+                        resolveAndBuild(type.componentType()))
             }
             is TypeIdentifier.Parameterised -> buildForParameterised(rawType, type as ParameterizedType, typeIdentifier)
         }
     }
 
-    private fun buildForClass(type: Class<*>, typeIdentifier: TypeIdentifier): LocalTypeInformation = when {
-        type.isInterface -> LocalTypeInformation.AnInterface(type, typeIdentifier, buildInterfaceInformation(type), emptyList())
-        type.isPrimitive -> LocalTypeInformation.APrimitive(type, typeIdentifier)
-        type.isEnum ->
-            LocalTypeInformation.AnEnum(
+    private fun buildForClass(type: Class<*>, typeIdentifier: TypeIdentifier): LocalTypeInformation = withContext(type) {
+        when {
+            type.isInterface -> LocalTypeInformation.AnInterface(type, typeIdentifier, buildInterfaceInformation(type), emptyList())
+            type.isPrimitive -> LocalTypeInformation.APrimitive(type, typeIdentifier)
+            type.isEnum -> LocalTypeInformation.AnEnum(
                     type,
                     typeIdentifier,
                     buildInterfaceInformation(type),
                     type.enumConstants.map { it.toString() })
-        type.isAbstractClass -> LocalTypeInformation.Abstract(
-                type,
-                typeIdentifier,
-                buildAbstractProperties(type),
-                buildInterfaceInformation(type),
-                emptyList())
-        type.kotlinObjectInstance != null -> LocalTypeInformation.AnObject(
-                type,
-                typeIdentifier,
-                buildInterfaceInformation(type),
-                emptyList())
-        else -> copy(resolutionContext = type).run {
-            val constructorInformation = buildConstructorInformation(type)
-            LocalTypeInformation.APojo(
+            type.isAbstractClass -> LocalTypeInformation.Abstract(
                     type,
                     typeIdentifier,
-                    constructorInformation,
-                    buildObjectProperties(type, constructorInformation),
+                    buildAbstractProperties(type),
                     buildInterfaceInformation(type),
-                    emptyList()
-            )
+                    emptyList())
+            type.kotlinObjectInstance != null -> LocalTypeInformation.AnObject(
+                    type,
+                    typeIdentifier,
+                    buildInterfaceInformation(type),
+                    emptyList())
+            else -> {
+                val constructorInformation = buildConstructorInformation(type)
+                LocalTypeInformation.APojo(
+                        type,
+                        typeIdentifier,
+                        constructorInformation,
+                        buildObjectProperties(type, constructorInformation),
+                        buildInterfaceInformation(type),
+                        emptyList())
+            }
         }
     }
 
-    private fun buildForParameterised(rawType: Class<*>, type: ParameterizedType, typeIdentifier: TypeIdentifier.Parameterised): LocalTypeInformation =
-            when {
-                rawType.isCollectionOrMap -> LocalTypeInformation.ACollection(rawType, typeIdentifier, buildTypeParameterInformation(type))
-                rawType.isInterface -> LocalTypeInformation.AnInterface(rawType, typeIdentifier, buildInterfaceInformation(type), buildTypeParameterInformation(type))
-                rawType.isAbstractClass -> {
-                    LocalTypeInformation.Abstract(
-                            type,
-                            typeIdentifier,
-                            buildAbstractProperties(rawType),
-                            buildInterfaceInformation(type),
-                            buildTypeParameterInformation(type)
-                    )
-                }
-                rawType.kotlinObjectInstance != null -> LocalTypeInformation.AnObject(
+    private inline fun <T> withContext(newContext: Type, block: LocalTypeInformationBuilder.() -> T): T =
+            copy(resolutionContext = newContext).run(block)
+
+    private fun buildForParameterised(
+            rawType: Class<*>,
+            type: ParameterizedType,
+            typeIdentifier: TypeIdentifier.Parameterised): LocalTypeInformation = withContext(type) {
+        when {
+            rawType.isCollectionOrMap -> LocalTypeInformation.ACollection(rawType, typeIdentifier, buildTypeParameterInformation(type))
+            rawType.isInterface -> LocalTypeInformation.AnInterface(rawType, typeIdentifier, buildInterfaceInformation(type), buildTypeParameterInformation(type))
+            rawType.isAbstractClass -> {
+                LocalTypeInformation.Abstract(
                         type,
                         typeIdentifier,
+                        buildAbstractProperties(rawType),
+                        buildInterfaceInformation(type),
+                        buildTypeParameterInformation(type)
+                )
+            }
+            rawType.kotlinObjectInstance != null -> LocalTypeInformation.AnObject(
+                    type,
+                    typeIdentifier,
+                    buildInterfaceInformation(type),
+                    buildTypeParameterInformation(type))
+            else -> {
+                val constructorInformation = buildConstructorInformation(type)
+                LocalTypeInformation.APojo(
+                        rawType,
+                        typeIdentifier,
+                        constructorInformation,
+                        buildObjectProperties(rawType, constructorInformation),
                         buildInterfaceInformation(type),
                         buildTypeParameterInformation(type))
-                else -> copy(resolutionContext = type).run {
-                    val constructorInformation = buildConstructorInformation(type)
-                    LocalTypeInformation.APojo(
-                            rawType,
-                            typeIdentifier,
-                            constructorInformation,
-                            buildObjectProperties(rawType, constructorInformation),
-                            buildInterfaceInformation(type),
-                            buildTypeParameterInformation(type))
-                }
             }
+        }
+    }
 
     private fun buildInterfaceInformation(type: Type) =
             type.allInterfaces.mapNotNull {
                 if (it == type) return@mapNotNull null
-                val resolved = it.resolveAgainst(resolutionContext ?: type)
-                build(resolved, TypeIdentifier.forGenericType(resolved, resolutionContext ?: type))
+                resolveAndBuild(it)
             }.toList()
 
     private val Type.allInterfaces: Set<Type> get() = exploreType(this)
@@ -216,7 +258,7 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
 
         (clazz.genericInterfaces.asSequence() + clazz.genericSuperclass)
                 .filterNotNull()
-                .forEach { exploreType(it.resolveAgainst(resolutionContext ?: type), interfaces) }
+                .forEach { exploreType(it.resolveAgainstContext(), interfaces) }
 
         return interfaces
     }
@@ -225,8 +267,9 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
             rawType.propertyDescriptors().asSequence().mapNotNull { (name, descriptor) ->
                 if (descriptor.field == null || descriptor.getter == null) null
                 else {
-                    val paramType = (descriptor.getter.genericReturnType).resolveAgainst(resolutionContext ?: rawType)
-                    val paramTypeInformation = build(paramType, TypeIdentifier.forGenericType(paramType, resolutionContext ?: rawType))
+                    val paramType = (descriptor.getter.genericReturnType).resolveAgainstContext()
+                    val paramTypeInformation = build(paramType, TypeIdentifier.forGenericType(paramType, resolutionContext
+                            ?: rawType))
                     val isMandatory = paramType.asClass().isPrimitive || !descriptor.getter.returnsNullable()
                     name to LocalPropertyInformation.ReadOnlyProperty(descriptor.getter, paramTypeInformation, isMandatory)
                 }
@@ -245,8 +288,8 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
             if (name !in constructorParameterNames) return@mapNotNull null
             if (descriptor.field == null || descriptor.getter == null) return@mapNotNull null
 
-            val paramType = (descriptor.getter.genericReturnType).resolveAgainst(resolutionContext ?: rawType)
-            val paramTypeInformation = build(paramType, TypeIdentifier.forGenericType(paramType, resolutionContext ?: rawType))
+            val paramType = descriptor.getter.genericReturnType
+            val paramTypeInformation = resolveAndBuild(paramType)
             val isMandatory = paramType.asClass().isPrimitive || !descriptor.getter.returnsNullable()
 
             name to LocalPropertyInformation.ConstructorPairedProperty(
@@ -260,8 +303,8 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
             rawType.propertyDescriptors().asSequence().mapNotNull { (name, descriptor) ->
                 if (descriptor.getter == null || descriptor.setter == null || descriptor.field == null) null
                 else {
-                    val paramType = (descriptor.getter.genericReturnType).resolveAgainst(resolutionContext ?: rawType)
-                    val paramTypeInformation = build(paramType, TypeIdentifier.forGenericType(paramType, resolutionContext ?: rawType))
+                    val paramType = descriptor.getter.genericReturnType
+                    val paramTypeInformation = resolveAndBuild(paramType)
                     val isMandatory = paramType.asClass().isPrimitive || !descriptor.getter.returnsNullable()
 
                     name to LocalPropertyInformation.GetterSetterProperty(
@@ -274,8 +317,8 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
 
     private fun calculatedProperties(rawType: Class<*>): Map<String, LocalPropertyInformation> =
             rawType.calculatedPropertyDescriptors().mapValues { (_, v) ->
-                val paramType = v.getter!!.genericReturnType.resolveAgainst(resolutionContext ?: rawType)
-                val paramTypeInformation = build(paramType, TypeIdentifier.forGenericType(paramType, resolutionContext ?: rawType))
+                val paramType = v.getter!!.genericReturnType
+                val paramTypeInformation = resolveAndBuild(paramType)
                 val isMandatory = paramType.asClass().isPrimitive || !v.getter.returnsNullable()
 
                 LocalPropertyInformation.CalculatedProperty(v.getter, paramTypeInformation, isMandatory)
@@ -283,23 +326,25 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
 
     private fun buildTypeParameterInformation(type: ParameterizedType): List<LocalTypeInformation> =
             type.actualTypeArguments.map {
-                val upperBound = it.upperBound
-                build(upperBound, TypeIdentifier.forGenericType(upperBound, resolutionContext ?: type))
+                resolveAndBuild(it)
             }
 
     private fun buildConstructorInformation(type: Type): LocalConstructorInformation {
         val observedConstructor = constructorForDeserialization(type)
+        if (observedConstructor.javaConstructor?.parameters?.getOrNull(0)?.name == "this$0")
+            throw NotSerializableException("Type '${type.typeName} has synthetic fields and is likely a nested inner class.")
+
         return LocalConstructorInformation(observedConstructor, observedConstructor.parameters.map {
-            val parameterType = it.type.javaType.resolveAgainst(resolutionContext ?: type)
+            val parameterType = it.type.javaType
             LocalConstructorParameterInformation(
-                    it.name!!,
-                    build(parameterType, TypeIdentifier.forGenericType(parameterType, resolutionContext ?: type)),
+                    it.name ?: throw IllegalStateException("Unnamed parameter in constructor $observedConstructor"),
+                    resolveAndBuild(parameterType),
                     parameterType.asClass().isPrimitive || !it.type.isMarkedNullable)
         })
     }
 }
 
-internal fun Type.resolveAgainst(context: Type): Type = when(this) {
+internal fun Type.resolveAgainst(context: Type): Type = when (this) {
     is WildcardType -> this.upperBound
     is ParameterizedType,
     is TypeVariable<*> -> TypeToken.of(context).resolveType(this).type.upperBound
@@ -307,7 +352,7 @@ internal fun Type.resolveAgainst(context: Type): Type = when(this) {
 }
 
 private val Type.upperBound: Type
-    get() = when(this) {
+    get() = when (this) {
         is TypeVariable<*> -> when {
             this.bounds.isEmpty() ||
                     this.bounds.size > 1 -> this
@@ -335,6 +380,7 @@ private fun Method.returnsNullable(): Boolean = try {
     true
 }
 
-internal val Class<*>.isCollectionOrMap get() =
-    (Collection::class.java.isAssignableFrom(this) || Map::class.java.isAssignableFrom(this))
-            && !EnumSet::class.java.isAssignableFrom(this)
+internal val Class<*>.isCollectionOrMap
+    get() =
+        (Collection::class.java.isAssignableFrom(this) || Map::class.java.isAssignableFrom(this))
+                && !EnumSet::class.java.isAssignableFrom(this)
