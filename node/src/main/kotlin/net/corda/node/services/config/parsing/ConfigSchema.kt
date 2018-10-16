@@ -12,6 +12,8 @@ interface ConfigSchema : Validator<Config, ConfigValidationError, ConfigProperty
 
     fun describe(configuration: Config): ConfigObject
 
+    val properties: Set<ConfigProperty<*>>
+
     companion object {
 
         fun withProperties(name: String? = null, properties: Iterable<ConfigProperty<*>>): ConfigSchema = ConfigPropertySchema(name, properties)
@@ -24,7 +26,7 @@ interface ConfigSchema : Validator<Config, ConfigValidationError, ConfigProperty
 
 private class ConfigPropertySchema(override val name: String?, unorderedProperties: Iterable<ConfigProperty<*>>) : ConfigSchema {
 
-    private val properties = unorderedProperties.sortedBy(ConfigProperty<*>::key).toSet()
+    override val properties = unorderedProperties.sortedBy(ConfigProperty<*>::key).toSet()
 
     init {
         val invalid = properties.groupBy(ConfigProperty<*>::key).mapValues { entry -> entry.value.size }.filterValues { propertiesForKey -> propertiesForKey > 1 }
@@ -55,7 +57,7 @@ private class ConfigPropertySchema(override val name: String?, unorderedProperti
         }
         description.append(rootDescription.toConfig().serialize())
 
-        val nestedProperties = (properties + properties.flatMap(::nestedProperties)).asSequence().filterIsInstance<StandardConfigProperty<*>>().filter { it.schema != null }.distinctBy(StandardConfigProperty<*>::schema).toList()
+        val nestedProperties = (properties + properties.flatMap(ConfigProperty<*>::nestedProperties)).asSequence().filterIsInstance<StandardConfigProperty<*>>().filter { it.schema != null }.distinctBy(StandardConfigProperty<*>::schema).toList()
         nestedProperties.forEach { property ->
             description.append(System.lineSeparator())
             description.append("${property.typeName}: ")
@@ -72,15 +74,6 @@ private class ConfigPropertySchema(override val name: String?, unorderedProperti
             rootDescription = rootDescription.withValue(property.key, property.valueDescriptionIn(configuration))
         }
         return rootDescription
-    }
-
-    // TODO sollecitom refactor
-    private fun nestedProperties(property: ConfigProperty<*>): Set<ConfigProperty<*>> {
-
-        return when (property) {
-            is StandardConfigProperty<*> -> (property.schema as? ConfigPropertySchema)?.properties ?: emptySet()
-            else -> emptySet()
-        }
     }
 
     override fun equals(other: Any?): Boolean {
