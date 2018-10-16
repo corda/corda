@@ -114,10 +114,12 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
 
         val errors = mutableSetOf<ConfigValidationError>()
         errors += errorsWhenExtractingValue(target)
-        schema?.let { nestedSchema ->
-            val nestedConfig: Config? = target.getConfig(key)
-            nestedConfig?.let {
-                errors += nestedSchema.validate(nestedConfig, options).errors.map { error -> error.withContainingPath(*key.split(".").toTypedArray()) }
+        if (errors.isEmpty()) {
+            schema?.let { nestedSchema ->
+                val nestedConfig: Config? = target.getConfig(key)
+                nestedConfig?.let {
+                    errors += nestedSchema.validate(nestedConfig, options).errors.map { error -> error.withContainingPath(*key.split(".").toTypedArray()) }
+                }
             }
         }
         return Validated.withResult(target, errors)
@@ -146,8 +148,10 @@ private class ListConfigProperty<TYPE>(delegate: StandardConfigProperty<TYPE>) :
 
         val errors = mutableSetOf<ConfigValidationError>()
         errors += errorsWhenExtractingValue(target)
-        delegate.schema?.let { schema ->
-            errors += valueIn(target).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).mapIndexed { index, targetConfig -> schema.validate(targetConfig, options).errors.map { error -> error.withContainingPath(key, "[$index]") } }.reduce { one, other -> one + other }
+        if (errors.isEmpty()) {
+            delegate.schema?.let { schema ->
+                errors += valueIn(target).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).mapIndexed { index, targetConfig -> schema.validate(targetConfig, options).errors.map { error -> error.withContainingPath(key, "[$index]") } }.reduce { one, other -> one + other }
+            }
         }
         return Validated.withResult(target, errors)
     }
