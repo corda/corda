@@ -758,9 +758,9 @@ class MultiThreadedStateMachineManager(
     private fun makeTransitionExecutor(): TransitionExecutor {
         val interceptors = ArrayList<TransitionInterceptor>()
         interceptors.add { HospitalisingInterceptor(flowHospital, it) }
+        interceptors.add { MetricInterceptor(metrics, it) }
         if (serviceHub.configuration.devMode) {
             interceptors.add { DumpHistoryOnErrorInterceptor(it) }
-            interceptors.add { MetricInterceptor(metrics, it) }
         }
         if (serviceHub.configuration.shouldCheckCheckpoints()) {
             interceptors.add { FiberDeserializationCheckingInterceptor(fiberDeserializationChecker!!, it) }

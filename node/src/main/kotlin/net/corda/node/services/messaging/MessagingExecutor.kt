@@ -2,7 +2,9 @@ package net.corda.node.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.SettableFuture
+import com.codahale.metrics.Gauge
 import com.codahale.metrics.MetricRegistry
+import com.codahale.metrics.Timer
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -49,7 +51,8 @@ class MessagingExecutor(
         data class Send(
                 val message: Message,
                 val target: MessageRecipients,
-                val sentFuture: SettableFuture<Unit>
+                val sentFuture: SettableFuture<Unit>,
+                val timer: Timer.Context
         ) : Job() {
             override fun toString() = "Send(${message.uniqueMessageId}, target=$target)"
         }
@@ -60,8 +63,16 @@ class MessagingExecutor(
     private var executor: Thread? = null
     private val cordaVendor = SimpleString(versionInfo.vendor)
     private val releaseVersion = SimpleString(versionInfo.releaseVersion)
-    private val sendMessageSizeMetric = metricRegistry.histogram("SendMessageSize")
-    private val sendLatencyMetric = metricRegistry.timer("SendLatency")
+    private val sendMessageSizeMetric = metricRegistry.histogram("P2P.SendMessageSize")
+    private val sendLatencyMetric = metricRegistry.timer("P2P.SendLatency")
+    private val sendQueueSizeOnInsert = metricRegistry.histogram("P2P.SendQueueSizeOnInsert")
+
+    init {
+        metricRegistry.register("P2P.SendQueueSize", Gauge<Int> {
+            queue.size
+        })
+    }
+
     private val ourSenderSeqNo = AtomicLong()
 
     private companion object {
@@ -76,15 +87,13 @@ class MessagingExecutor(
     @Suspendable
     fun send(message: Message, target: MessageRecipients) {
         val sentFuture = SettableFuture<Unit>()
-        val job = Job.Send(message, target, sentFuture)
-        val context = sendLatencyMetric.time()
+        val job = Job.Send(message, target, sentFuture, sendLatencyMetric.time())
         try {
+            sendQueueSizeOnInsert.update(queue.size)
             queue.put(job)
             sentFuture.get()
         } catch (executionException: ExecutionException) {
             throw executionException.cause!!
-        } finally {
-            context.stop()
         }
     }
 
@@ -112,7 +121,7 @@ class MessagingExecutor(
                                 sendJob(job)
                             } catch (duplicateException: ActiveMQDuplicateIdException) {
                                 log.warn("Message duplication", duplicateException)
-                                job.sentFuture.set(Unit)
+                                job.sentFuture.set(Unit) // Intentionally don't stop the timer.
                             }
                         }
                         Job.Shutdown -> {
@@ -148,7 +157,10 @@ class MessagingExecutor(
             "Send to: $mqAddress topic: ${job.message.topic} " +
                     "sessionID: ${job.message.topic} id: ${job.message.uniqueMessageId}"
         }
-        producer.send(SimpleString(mqAddress), artemisMessage, { job.sentFuture.set(Unit) })
+        producer.send(SimpleString(mqAddress), artemisMessage, {
+            job.timer.stop()
+            job.sentFuture.set(Unit)
+        })
     }
 
     fun cordaToArtemisMessage(message: Message, target: MessageRecipients? = null): ClientMessage? {

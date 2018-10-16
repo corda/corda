@@ -1,6 +1,7 @@
 package net.corda.node.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
+import com.codahale.metrics.Clock
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
@@ -56,6 +57,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -414,15 +416,30 @@ class P2PMessagingClient(val config: NodeConfiguration,
         override fun toString() = "$topic#$data"
     }
 
+    private val receiverDurationTimer = metricRegistry.timer("P2P.ReceiveDuration")
+    private val receiverIntervalTimer = metricRegistry.timer("P2P.ReceiveInterval")
+    private val receiveTimerClock = Clock.defaultClock()
+    private var lastReceiveTimerTick = receiveTimerClock.tick
+    private val receiveMessageSizeMetric = metricRegistry.histogram("P2P.ReceiveMessageSize")
+
     fun deliver(artemisMessage: ClientMessage) {
-        artemisToCordaMessage(artemisMessage)?.let { cordaMessage ->
-            if (!deduplicator.isDuplicate(cordaMessage)) {
-                deduplicator.signalMessageProcessStart(cordaMessage)
-                deliver(cordaMessage, artemisMessage)
-            } else {
-                log.trace { "Discard duplicate message ${cordaMessage.uniqueMessageId} for ${cordaMessage.topic}" }
-                messagingExecutor!!.acknowledge(artemisMessage)
+        val elapsed = receiveTimerClock.tick - lastReceiveTimerTick
+        receiverIntervalTimer.update(elapsed, TimeUnit.NANOSECONDS)
+        receiveMessageSizeMetric.update(artemisMessage.encodeSize)
+        val latency = receiverDurationTimer.time()
+        try {
+            artemisToCordaMessage(artemisMessage)?.let { cordaMessage ->
+                if (!deduplicator.isDuplicate(cordaMessage)) {
+                    deduplicator.signalMessageProcessStart(cordaMessage)
+                    deliver(cordaMessage, artemisMessage)
+                } else {
+                    log.trace { "Discard duplicate message ${cordaMessage.uniqueMessageId} for ${cordaMessage.topic}" }
+                    messagingExecutor!!.acknowledge(artemisMessage)
+                }
             }
+        } finally {
+            latency.stop()
+            lastReceiveTimerTick = receiveTimerClock.tick
         }
     }
 

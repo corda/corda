@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
+import com.codahale.metrics.MetricRegistry
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
@@ -145,7 +146,7 @@ class FlowStateMachineComparatorTest {
 
     @Test
     fun `test executor`() {
-        val executor = MultiThreadedStateMachineExecutor(1)
+        val executor = MultiThreadedStateMachineExecutor(MetricRegistry(), 1)
         val scheduler = FiberExecutorScheduler("TestScheduler", executor)
         val clock = TestClock(Clock.systemUTC())
         val blockerLogic = BlockerFlow()

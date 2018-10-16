@@ -173,7 +173,7 @@ D""".trimStart()
 
     private fun makeStateMachineExecutorService(): ExecutorService {
         log.info("Multi-threaded state machine manager with ${configuration.enterpriseConfiguration.tuning.flowThreadPoolSize} threads.")
-        return MultiThreadedStateMachineExecutor(configuration.enterpriseConfiguration.tuning.flowThreadPoolSize)
+        return MultiThreadedStateMachineExecutor(metricRegistry, configuration.enterpriseConfiguration.tuning.flowThreadPoolSize)
     }
 
     override fun makeStateMachineManager(): StateMachineManager {

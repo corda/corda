@@ -170,7 +170,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
     val smm = makeStateMachineManager()
 
     private fun makeStateMachineManager(): StateMachineManager {
-        val executor = MultiThreadedStateMachineExecutor(configuration.enterpriseConfiguration.tuning.flowThreadPoolSize)
+        val executor = MultiThreadedStateMachineExecutor(metricRegistry, configuration.enterpriseConfiguration.tuning.flowThreadPoolSize)
         runOnStop += { executor.shutdown() }
         return MultiThreadedStateMachineManager(
                 this,
