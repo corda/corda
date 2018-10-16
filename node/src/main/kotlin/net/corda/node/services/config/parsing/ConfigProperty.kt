@@ -105,7 +105,7 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
         if (sensitive) {
             return ConfigValueFactory.fromAnyRef(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
         }
-        return schema?.describe(configuration.getConfig(key)) ?: super.valueDescriptionIn(configuration)
+        return schema?.serialize(configuration.getConfig(key)) ?: super.valueDescriptionIn(configuration)
     }
 
     override val mandatory = true
@@ -157,7 +157,7 @@ private class ListConfigProperty<TYPE>(delegate: StandardConfigProperty<TYPE>) :
         if (sensitive) {
             return ConfigValueFactory.fromAnyRef(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
         }
-        return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) }.toList()) } ?: super.valueDescriptionIn(configuration)
+        return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.serialize(it) }.toList()) } ?: super.valueDescriptionIn(configuration)
     }
 }
 
@@ -245,7 +245,7 @@ private class FunctionalListConfigProperty<RAW, TYPE : Any>(delegate: Functional
         if (sensitive) {
             return ConfigValueFactory.fromAnyRef(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
         }
-        return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) }.toList()) } ?: super.valueDescriptionIn(configuration)
+        return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.serialize(it) }.toList()) } ?: super.valueDescriptionIn(configuration)
     }
 }
 

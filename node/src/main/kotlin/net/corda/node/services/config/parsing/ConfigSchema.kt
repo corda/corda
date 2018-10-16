@@ -11,7 +11,7 @@ interface ConfigSchema : Validator<Config, ConfigValidationError, ConfigProperty
 
     fun description(): String
 
-    fun describe(configuration: Config): ConfigObject
+    fun serialize(configuration: Config): ConfigObject
 
     val properties: Set<ConfigProperty<*>>
 
@@ -65,7 +65,7 @@ private class ConfigPropertySchema(override val name: String?, unorderedProperti
         return description.toString()
     }
 
-    override fun describe(configuration: Config): ConfigObject {
+    override fun serialize(configuration: Config): ConfigObject {
 
         return properties.asSequence().map { it.key to it.valueDescriptionIn(configuration) }.fold(configObject()) { config, (key, value) -> config.withValue(key, value) }
     }

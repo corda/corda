@@ -147,7 +147,7 @@ class ConfigSchemaTest {
         val fooConfigSchema = ConfigSchema.withProperties(name = "Foo") { setOf(boolean("prop4"), string("prop5", sensitive = true)) }
         val barConfigSchema = ConfigSchema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
-        val description = barConfigSchema.describe(configuration)
+        val description = barConfigSchema.serialize(configuration)
 
         println(description.toConfig().serialize())
         assertThat(description.toConfig().getAnyRef("prop3.prop5")).isEqualTo(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
@@ -175,7 +175,7 @@ class ConfigSchemaTest {
         val fooConfigSchema = ConfigSchema.withProperties(name = "Foo") { setOf(boolean("prop4"), string("prop5", sensitive = true)) }
         val barConfigSchema = ConfigSchema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema).list()) }
 
-        val description = barConfigSchema.describe(configuration)
+        val description = barConfigSchema.serialize(configuration)
 
         println(description.toConfig().serialize())
 
