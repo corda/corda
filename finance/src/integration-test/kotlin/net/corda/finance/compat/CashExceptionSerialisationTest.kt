@@ -1,10 +1,9 @@
 package net.corda.finance.compat
 
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.flows.CashException
+import net.corda.finance.flows.test.CashExceptionThrowingFlow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -39,12 +38,5 @@ class CashExceptionSerialisationTest : IntegrationTest() {
                 assertThat(thrown.stackTrace).isEmpty()
             }
         }
-    }
-}
-
-@StartableByRPC
-class CashExceptionThrowingFlow : FlowLogic<Unit>() {
-    override fun call() {
-        throw CashException("BOOM!", IllegalStateException("Nope dude!"))
     }
 }

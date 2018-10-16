@@ -1,4 +1,4 @@
-package net.corda.finance.flows
+package net.corda.finance.flows.test
 
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
@@ -8,6 +8,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.finance.flows.CashConfigDataFlow
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
@@ -26,7 +27,9 @@ class CashConfigDataFlowTest : IntegrationTest() {
     }
     @Test
     fun `issuable currencies are read in from node config`() {
-        driver(DriverParameters(notarySpecs = emptyList())) {
+        driver(DriverParameters(
+                extraCordappPackagesToScan = listOf("net.corda.finance.flows"),
+                notarySpecs = emptyList())) {
             val node = startNode(customOverrides = mapOf("custom" to mapOf("issuableCurrencies" to listOf("EUR", "USD")))).getOrThrow()
             val config = node.rpc.startFlow(::CashConfigDataFlow).returnValue.getOrThrow()
             assertThat(config.issuableCurrencies).containsExactly(EUR, USD)
