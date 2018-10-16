@@ -54,19 +54,6 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
 
     fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
-    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
-
-        try {
-            valueIn(target)
-            return valid(target)
-        } catch (exception: ConfigException) {
-            if (expectedExceptionTypes.any { expected -> expected.isInstance(exception) }) {
-                return invalid(exception.toValidationError(key, typeName))
-            }
-            throw exception
-        }
-    }
-
     companion object {
 
         const val SENSITIVE_DATA_PLACEHOLDER = "*****"
@@ -130,7 +117,7 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
     override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
         val errors = mutableSetOf<ConfigValidationError>()
-        errors += super.validate(target, options).errors
+        errors += errorsWhenExtractingValue(target)
         schema?.let { nestedSchema ->
             val nestedConfig: Config? = target.getConfig(key)
             nestedConfig?.let {
@@ -162,7 +149,7 @@ private class ListConfigProperty<TYPE>(delegate: StandardConfigProperty<TYPE>) :
     override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
         val errors = mutableSetOf<ConfigValidationError>()
-        errors += super.validate(target, options).errors
+        errors += errorsWhenExtractingValue(target)
         delegate.schema?.let { schema ->
             errors += valueIn(target).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).mapIndexed { index, targetConfig -> schema.validate(targetConfig, options).errors.map { error -> error.withContainingPath(key, "[$index]") } }.reduce { one, other -> one + other }
         }
@@ -175,6 +162,19 @@ private class ListConfigProperty<TYPE>(delegate: StandardConfigProperty<TYPE>) :
             return ConfigValueFactory.fromAnyRef(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
         }
         return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) }.toList()) } ?: super.valueDescriptionIn(configuration)
+    }
+}
+
+private fun ConfigProperty<*>.errorsWhenExtractingValue(target: Config): Set<ConfigValidationError> {
+
+    try {
+        valueIn(target)
+        return emptySet()
+    } catch (exception: ConfigException) {
+        if (ConfigProperty.expectedExceptionTypes.any { expected -> expected.isInstance(exception) }) {
+            return setOf(exception.toValidationError(key, typeName))
+        }
+        throw exception
     }
 }
 
