@@ -26,6 +26,12 @@ class ConfigSpecificationTest {
                 Validated.valid<NetworkHostAndPort, ConfigValidationError>(NetworkHostAndPort(host, port))
             }
 
+            // TODO sollecitom find a better way to eagerly load this values...
+            init {
+                principal
+                admin
+            }
+
             // TODO sollecitom pull in interface
             fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings.Addresses, ConfigValidationError> {
 
@@ -41,6 +47,12 @@ class ConfigSpecificationTest {
         val useSsl by boolean()
 
         val addresses by nestedObject(AddressesSpec.schema).map("Addresses") { _, rawValue -> AddressesSpec.parse(rawValue.toConfig(), false) }
+
+        // TODO sollecitom find a better way to eagerly load this values...
+        init {
+            useSsl
+            addresses
+        }
 
         // TODO sollecitom pull in interface
         fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings, ConfigValidationError> {
@@ -74,6 +86,24 @@ class ConfigSpecificationTest {
                 assertThat(addresses.principal).isEqualTo(principalAddressValue)
                 assertThat(addresses.admin).isEqualTo(adminAddressValue)
             }
+        }
+    }
+
+    @Test
+    fun validate() {
+
+        val principalAddressValue = NetworkHostAndPort("localhost", 8080)
+        val adminAddressValue = NetworkHostAndPort("127.0.0.1", 8081)
+        val addressesValue = configObject("principal" to "${principalAddressValue.host}:${principalAddressValue.port}", "admin" to "${adminAddressValue.host}:${adminAddressValue.port}")
+        // Here "useSsl" shouldn't be `null`, hence causing the validation to fail.
+        val configuration = configObject("useSsl" to null, "addresses" to addressesValue).toConfig()
+
+        val rpcSettings = RpcSettingsSpec.parse(configuration, strict = false)
+
+        assertThat(rpcSettings.errors).hasSize(1)
+        assertThat(rpcSettings.errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
+
+            assertThat(error.path).containsExactly("useSsl")
         }
     }
 
