@@ -38,7 +38,10 @@ import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
-import org.junit.*
+import org.junit.After
+import org.junit.Before
+import org.junit.Ignore
+import org.junit.Test
 import rx.Notification
 import rx.Observable
 import java.time.Instant
@@ -423,6 +426,7 @@ class FlowFrameworkTests {
         }
         assertThat(receiveFlowException.message).doesNotContain("evil bug!")
         assertThat(receiveFlowSteps.get()).containsExactly(
+                Notification.createOnNext(ProgressTracker.STARTING),
                 Notification.createOnNext(ReceiveFlow.START_STEP),
                 Notification.createOnError(receiveFlowException)
         )

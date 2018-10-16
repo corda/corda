@@ -206,7 +206,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun run() {
-        logic.progressTracker?.currentStep = ProgressTracker.UNSTARTED
+        logic.progressTracker?.currentStep = ProgressTracker.STARTING
         logic.stateMachine = this
 
         setLoggingContext()
@@ -217,7 +217,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val startTime = System.nanoTime()
         val resultOrError = try {
             val result = logic.call()
-            logic.progressTracker?.currentStep = ProgressTracker.DONE
             suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = true)
             Try.Success(result)
         } catch (throwable: Throwable) {
@@ -266,7 +265,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         processEventImmediately(
                 Event.EnterSubFlow(subFlow.javaClass,
                         createSubFlowVersion(
-                               serviceHub.cordappProvider.getCordappForFlow(subFlow), serviceHub.myInfo.platformVersion
+                                serviceHub.cordappProvider.getCordappForFlow(subFlow), serviceHub.myInfo.platformVersion
                         )
                 ),
                 isDbTransactionOpenOnEntry = true,
@@ -438,7 +437,7 @@ val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out F
             current = current.superclass
                     ?: return found
                     ?: throw IllegalArgumentException("$name, as a flow that initiates other flows, must be annotated with " +
-                    "${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
+                            "${InitiatingFlow::class.java.name}. See https://docs.corda.net/api-flows.html#flowlogic-annotations.")
         }
     }
 

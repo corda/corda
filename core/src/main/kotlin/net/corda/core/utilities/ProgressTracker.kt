@@ -30,10 +30,11 @@ import java.util.*
  * using the [Observable] subscribeOn call.
  */
 @CordaSerializable
-class ProgressTracker(vararg steps: Step) {
+class ProgressTracker(vararg inputSteps: Step) {
+
     @CordaSerializable
     sealed class Change(val progressTracker: ProgressTracker) {
-        data class Position(val tracker: ProgressTracker,  val newStep: Step) : Change(tracker) {
+        data class Position(val tracker: ProgressTracker, val newStep: Step) : Change(tracker) {
             override fun toString() = newStep.label
         }
 
@@ -64,6 +65,10 @@ class ProgressTracker(vararg steps: Step) {
         override fun equals(other: Any?) = other === UNSTARTED
     }
 
+    object STARTING : Step("Starting") {
+        override fun equals(other: Any?) = other === STARTING
+    }
+
     object DONE : Step("Done") {
         override fun equals(other: Any?) = other === DONE
     }
@@ -74,7 +79,7 @@ class ProgressTracker(vararg steps: Step) {
     private val childProgressTrackers = mutableMapOf<Step, Child>()
 
     /** The steps in this tracker, same as the steps passed to the constructor but with UNSTARTED and DONE inserted. */
-    val steps = arrayOf(UNSTARTED, *steps, DONE)
+    val steps = arrayOf(UNSTARTED, STARTING, *inputSteps, DONE)
 
     private var _allStepsCache: List<Pair<Int, Step>> = _allSteps()
 
@@ -83,42 +88,16 @@ class ProgressTracker(vararg steps: Step) {
     private val _stepsTreeChanges by transient { PublishSubject.create<List<Pair<Int, String>>>() }
     private val _stepsTreeIndexChanges by transient { PublishSubject.create<Int>() }
 
-
-
-    init {
-        steps.forEach {
-            val childTracker = it.childProgressTracker()
-            if (childTracker != null) {
-                setChildProgressTracker(it, childTracker)
-            }
-        }
-    }
-
-    /** The zero-based index of the current step in the [steps] array (i.e. with UNSTARTED and DONE) */
-    var stepIndex: Int = 0
-        private set(value) {
-            field = value
-        }
-
-    /** The zero-bases index of the current step in a [allStepsLabels] list */
-    var stepsTreeIndex: Int = -1
-        private set(value) {
-            field = value
-            _stepsTreeIndexChanges.onNext(value)
-        }
-
-    /**
-     * Reading returns the value of steps[stepIndex], writing moves the position of the current tracker. Once moved to
-     * the [DONE] state, this tracker is finished and the current step cannot be moved again.
-     */
     var currentStep: Step
         get() = steps[stepIndex]
         set(value) {
-            check(!hasEnded) { "Cannot rewind a progress tracker once it has ended" }
+            check((value === DONE && hasEnded) || !hasEnded) {
+                "Cannot rewind a progress tracker once it has ended"
+            }
             if (currentStep == value) return
 
             val index = steps.indexOf(value)
-            require(index != -1, { "Step ${value.label} not found in progress tracker." })
+            require(index != -1) { "Step ${value.label} not found in progress tracker." }
 
             if (index < stepIndex) {
                 // We are going backwards: unlink and unsubscribe from any child nodes that we're rolling back
@@ -143,6 +122,39 @@ class ProgressTracker(vararg steps: Step) {
                 _stepsTreeChanges.onCompleted()
             }
         }
+
+
+    init {
+        steps.forEach {
+            configureChildTrackerForStep(it)
+        }
+        this.currentStep = UNSTARTED
+    }
+
+    private fun configureChildTrackerForStep(it: Step) {
+        val childTracker = it.childProgressTracker()
+        if (childTracker != null) {
+            setChildProgressTracker(it, childTracker)
+        }
+    }
+
+    /** The zero-based index of the current step in the [steps] array (i.e. with UNSTARTED and DONE) */
+    var stepIndex: Int = 0
+        private set(value) {
+            field = value
+        }
+
+    /** The zero-bases index of the current step in a [allStepsLabels] list */
+    var stepsTreeIndex: Int = -1
+        private set(value) {
+            field = value
+            _stepsTreeIndexChanges.onNext(value)
+        }
+
+    /**
+     * Reading returns the value of steps[stepIndex], writing moves the position of the current tracker. Once moved to
+     * the [DONE] state, this tracker is finished and the current step cannot be moved again.
+     */
 
     /** Returns the current step, descending into children to find the deepest step we are up to. */
     val currentStepRecursive: Step
@@ -263,7 +275,7 @@ class ProgressTracker(vararg steps: Step) {
     /**
      * An observable stream of changes to the [allStepsLabels]
      */
-    val stepsTreeChanges: Observable<List<Pair<Int,String>>> get() = _stepsTreeChanges
+    val stepsTreeChanges: Observable<List<Pair<Int, String>>> get() = _stepsTreeChanges
 
     /**
      * An observable stream of changes to the [stepsTreeIndex]
@@ -272,6 +284,10 @@ class ProgressTracker(vararg steps: Step) {
 
     /** Returns true if the progress tracker has ended, either by reaching the [DONE] step or prematurely with an error */
     val hasEnded: Boolean get() = _changes.hasCompleted() || _changes.hasThrowable()
+
+    companion object {
+        val DEFAULT_TRACKER = { ProgressTracker() }
+    }
 }
 // TODO: Expose the concept of errors.
 // TODO: It'd be helpful if this class was at least partly thread safe.

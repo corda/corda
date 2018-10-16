@@ -347,7 +347,7 @@ abstract class FlowLogic<out T> {
      * Note that this has to return a tracker before the flow is invoked. You can't change your mind half way
      * through.
      */
-    open val progressTracker: ProgressTracker? = ProgressTracker(ProgressTracker.UNSTARTED, ProgressTracker.DONE)
+    open val progressTracker: ProgressTracker? = ProgressTracker.DEFAULT_TRACKER()
 
     /**
      * This is where you fill out your business logic.
