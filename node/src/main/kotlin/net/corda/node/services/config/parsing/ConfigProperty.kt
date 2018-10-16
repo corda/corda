@@ -16,12 +16,12 @@ interface ConfigPropertyMetadata {
     val schema: ConfigSchema?
 }
 
-interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions>, ConfigPropertyMetadata, ConfigDescriber {
+interface ConfigValueExtractor<TYPE> {
 
     @Throws(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
     fun valueIn(configuration: Config): TYPE
 
-    fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
+    fun isSpecifiedBy(configuration: Config): Boolean
 
     @Throws(ConfigException.WrongType::class, ConfigException.BadValue::class)
     fun valueInOrNull(configuration: Config): TYPE? {
@@ -31,6 +31,11 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
             else -> null
         }
     }
+}
+
+interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions>, ConfigPropertyMetadata, ConfigDescriber, ConfigValueExtractor<TYPE> {
+
+    override fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
     interface Required<TYPE> : ConfigProperty<TYPE> {
 
