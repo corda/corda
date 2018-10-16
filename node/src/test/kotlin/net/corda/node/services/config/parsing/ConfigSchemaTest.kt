@@ -1,5 +1,6 @@
 package net.corda.node.services.config.parsing
 
+import com.typesafe.config.ConfigValueFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
@@ -150,6 +151,41 @@ class ConfigSchemaTest {
 
         println(description.toConfig().serialize())
         assertThat(description.toConfig().getAnyRef("prop3.prop5")).isEqualTo(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
+        assertThat(description.toConfig().serialize()).doesNotContain(prop5Value)
+    }
+
+    @Test
+    fun describe_with_nested_properties_list_does_not_show_sensitive_values() {
+
+        val prop1 = "prop1"
+        val prop1Value = "value1"
+
+        val prop2 = "prop2"
+        val prop2Value = 3L
+
+        val prop3 = "prop3"
+        val prop4 = "prop4"
+        val prop4Value = true
+        val prop5 = "prop5"
+        val prop5Value = "sensitive!"
+        val prop3Value = ConfigValueFactory.fromIterable(listOf(configObject(prop4 to prop4Value, prop5 to prop5Value), configObject(prop4 to prop4Value, prop5 to prop5Value)))
+
+        val configuration = configObject(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
+
+        val fooConfigSchema = ConfigSchema.withProperties(name = "Foo") { setOf(boolean("prop4"), string("prop5", sensitive = true)) }
+        val barConfigSchema = ConfigSchema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema).list()) }
+
+        val description = barConfigSchema.describe(configuration)
+
+        println(description.toConfig().serialize())
+
+        assertThat(description.toConfig().getObjectList("prop3")).satisfies { objects ->
+
+            objects.forEach { obj ->
+
+                assertThat(obj.toConfig().getString("prop5")).isEqualTo(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
+            }
+        }
         assertThat(description.toConfig().serialize()).doesNotContain(prop5Value)
     }
 }

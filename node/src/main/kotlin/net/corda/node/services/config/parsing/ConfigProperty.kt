@@ -158,7 +158,7 @@ private class ListConfigProperty<TYPE>(override val key: String, elementTypeName
         if (sensitive) {
             return ConfigValueFactory.fromAnyRef(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
         }
-        return elementSchema?.let { schema -> configObject(key to ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) })) } ?: super.valueDescriptionIn(configuration)
+        return elementSchema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) }.toList()) } ?: super.valueDescriptionIn(configuration)
     }
 
     override fun toString() = "\"$key\": \"$typeName\""
