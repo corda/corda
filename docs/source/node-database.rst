@@ -6,6 +6,8 @@ Node database
 Configuring the node database
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+H2
+--
 By default, nodes store their data in an H2 database. See :doc:`node-database-access-h2`.
 
 Nodes can also be configured to use PostgreSQL and SQL Server. However, these are experimental community contributions.
