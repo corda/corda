@@ -53,7 +53,7 @@ private class ConfigPropertySchema(override val name: String?, unorderedProperti
 
         description.append(root.toConfig().serialize())
 
-        val nestedProperties = (properties + properties.flatMap(ConfigProperty<*>::nestedProperties)).asSequence().distinctBy(ConfigProperty<*>::schema)
+        val nestedProperties = (properties + properties.flatMap { it.schema?.properties ?: emptySet() }).asSequence().distinctBy(ConfigProperty<*>::schema)
         nestedProperties.forEach { property ->
             property.schema?.let {
                 description.append(System.lineSeparator())

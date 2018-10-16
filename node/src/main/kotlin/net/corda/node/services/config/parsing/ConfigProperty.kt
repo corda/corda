@@ -14,8 +14,6 @@ interface ConfigPropertyMetadata {
     val sensitive: Boolean
 
     val schema: ConfigSchema?
-
-    fun nestedProperties(): Set<ConfigProperty<*>>
 }
 
 interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions>, ConfigPropertyMetadata {
@@ -23,10 +21,7 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
     @Throws(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
     fun valueIn(configuration: Config): TYPE
 
-    fun valueDescriptionIn(configuration: Config): ConfigValue {
-
-        return if (sensitive) ConfigValueFactory.fromAnyRef(SENSITIVE_DATA_PLACEHOLDER) else ConfigValueFactory.fromAnyRef(valueIn(configuration))
-    }
+    fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
     @Throws(ConfigException.WrongType::class, ConfigException.BadValue::class)
     fun valueInOrNull(configuration: Config): TYPE? {
@@ -35,6 +30,11 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
             isSpecifiedBy(configuration) -> valueIn(configuration)
             else -> null
         }
+    }
+
+    fun valueDescriptionIn(configuration: Config): ConfigValue {
+
+        return if (sensitive) ConfigValueFactory.fromAnyRef(SENSITIVE_DATA_PLACEHOLDER) else ConfigValueFactory.fromAnyRef(valueIn(configuration))
     }
 
     interface Required<TYPE> : ConfigProperty<TYPE> {
@@ -51,8 +51,6 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
 
         fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, ConfigValidationError>): ConfigProperty.Standard<MAPPED>
     }
-
-    fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
     companion object {
 
@@ -109,8 +107,6 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
         }
         return schema?.describe(configuration.getConfig(key)) ?: super.valueDescriptionIn(configuration)
     }
-
-    override fun nestedProperties(): Set<ConfigProperty<*>> = schema?.properties ?: emptySet()
 
     override val mandatory = true
 
