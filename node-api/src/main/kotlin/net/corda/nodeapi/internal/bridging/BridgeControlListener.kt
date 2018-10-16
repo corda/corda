@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.bridging
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -10,10 +11,11 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CON
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
 import net.corda.nodeapi.internal.ArtemisSessionProvider
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
 import org.apache.activemq.artemis.api.core.ActiveMQQueueExistsException
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -31,19 +33,16 @@ class BridgeControlListener(val config: MutualSslConfiguration,
     private val bridgeId: String = UUID.randomUUID().toString()
     private val bridgeControlQueue = "$BRIDGE_CONTROL.$bridgeId"
     private val bridgeNotifyQueue = "$BRIDGE_NOTIFY.$bridgeId"
-    private val bridgeManager: BridgeManager = AMQPBridgeManager(config, socksProxyConfig, maxMessageSize,
-            artemisMessageClientFactory, bridgeMetricsService)
     private val validInboundQueues = mutableSetOf<String>()
+    private val bridgeManager = LoopbackBridgeManagerWrapper(config, socksProxyConfig, maxMessageSize, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic)
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
     private var notifyConsumer: ClientConsumer? = null
 
     constructor(config: MutualSslConfiguration,
                 p2pAddress: NetworkHostAndPort,
-
                 maxMessageSize: Int,
                 socksProxy: SocksProxyConfig? = null) : this(config, socksProxy, maxMessageSize, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
-
 
     companion object {
         private val log = contextLogger()
@@ -163,6 +162,8 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                 }
                 val wasActive = active
                 validInboundQueues.addAll(controlMessage.inboxQueues)
+                log.info("Added inbox: ${controlMessage.inboxQueues}")
+                bridgeManager.inboxesAdded(controlMessage.inboxQueues)
                 if (!wasActive && active) {
                     _activeChange.onNext(true)
                 }
@@ -187,4 +188,53 @@ class BridgeControlListener(val config: MutualSslConfiguration,
         }
     }
 
+    private class LoopbackBridgeManagerWrapper(config: MutualSslConfiguration,
+                                               socksProxyConfig: SocksProxyConfig? = null,
+                                               maxMessageSize: Int,
+                                               artemisMessageClientFactory: () -> ArtemisSessionProvider,
+                                               bridgeMetricsService: BridgeMetricsService? = null,
+                                               private val isLocalInbox: (String) -> Boolean) : BridgeManager {
+
+        private val bridgeManager = AMQPBridgeManager(config, socksProxyConfig, maxMessageSize, artemisMessageClientFactory, bridgeMetricsService)
+        private val loopbackBridgeManager = LoopbackBridgeManager(artemisMessageClientFactory, bridgeMetricsService)
+
+        override fun deployBridge(sourceX500Name: String, queueName: String, targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>) {
+            val inboxAddress = translateLocalQueueToInboxAddress(queueName)
+            if (isLocalInbox(inboxAddress)) {
+                log.info("Deploying loopback bridge for $queueName, source $sourceX500Name")
+                loopbackBridgeManager.deployBridge(sourceX500Name, queueName, targets, legalNames)
+            } else {
+                log.info("Deploying AMQP bridge for $queueName, source $sourceX500Name")
+                bridgeManager.deployBridge(sourceX500Name, queueName, targets, legalNames)
+            }
+        }
+
+        override fun destroyBridge(queueName: String, targets: List<NetworkHostAndPort>) {
+            bridgeManager.destroyBridge(queueName, targets)
+            loopbackBridgeManager.destroyBridge(queueName, targets)
+        }
+
+        override fun start() {
+            bridgeManager.start()
+            loopbackBridgeManager.start()
+        }
+
+        override fun stop() {
+            bridgeManager.stop()
+            loopbackBridgeManager.stop()
+        }
+
+        override fun close() = stop()
+
+        /**
+         * Remove any AMQP bridge for the local inbox and create a loopback bridge for that queue.
+         */
+        fun inboxesAdded(inboxes: List<String>) {
+            for (inbox in inboxes) {
+                bridgeManager.destroyAllBridge(inbox).forEach { source, bridgeEntry ->
+                    loopbackBridgeManager.deployBridge(source, bridgeEntry.queueName, bridgeEntry.targets, bridgeEntry.legalNames.toSet())
+                }
+            }
+        }
+    }
 }

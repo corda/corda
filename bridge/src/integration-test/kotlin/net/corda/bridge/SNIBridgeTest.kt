@@ -169,11 +169,15 @@ class SNIBridgeTest {
             CordaRPCClient(a.rpcAddress).use(demoUser.username, demoUser.password) {
                 val handle = it.proxy.startFlow(::Ping, c.nodeInfo.singleIdentity(), 5)
                 handle.returnValue.getOrThrow()
+                // Loopback flow test.
+                it.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity(), 5).returnValue.getOrThrow()
             }
 
             CordaRPCClient(b.rpcAddress).use(demoUser.username, demoUser.password) {
                 val handle = it.proxy.startFlow(::Ping, c.nodeInfo.singleIdentity(), 5)
                 handle.returnValue.getOrThrow()
+                // Loopback flow test.
+                it.proxy.startFlow(::Ping, a.nodeInfo.singleIdentity(), 5).returnValue.getOrThrow()
             }
         }
     }

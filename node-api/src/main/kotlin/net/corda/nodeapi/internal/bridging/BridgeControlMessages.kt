@@ -11,7 +11,7 @@ import net.corda.core.utilities.NetworkHostAndPort
  * @property legalNames The list of acceptable [CordaX500Name] names that should be presented as subject of the validated peer TLS certificate.
  */
 @CordaSerializable
-data class BridgeEntry(val queueName: String, val targets: List<NetworkHostAndPort>, val legalNames: List<CordaX500Name>)
+data class BridgeEntry(val queueName: String, val targets: List<NetworkHostAndPort>, val legalNames: List<CordaX500Name>, val serviceAddress: Boolean)
 
 sealed class BridgeControl {
     /**

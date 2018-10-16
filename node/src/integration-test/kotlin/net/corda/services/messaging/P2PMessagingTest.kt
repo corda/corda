@@ -31,7 +31,7 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 class P2PMessagingTest : IntegrationTest() {
-     private companion object {
+    private companion object {
         @ClassRule
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), "DistributedService_0", "DistributedService_1")
@@ -41,18 +41,19 @@ class P2PMessagingTest : IntegrationTest() {
 
     @Test
     fun `communicating with a distributed service which we're part of`() {
-        startDriverWithDistributedService { distributedService ->
-            assertAllNodesAreUsed(distributedService, DISTRIBUTED_SERVICE_NAME, distributedService[0])
+        startDriverWithDistributedService { originatingNode, distributedService ->
+            assertAllNodesAreUsed(distributedService, DISTRIBUTED_SERVICE_NAME, originatingNode)
         }
     }
 
-    private fun startDriverWithDistributedService(dsl: DriverDSL.(List<InProcess>) -> Unit) {
+    private fun startDriverWithDistributedService(dsl: DriverDSL.(InProcess, List<InProcess>) -> Unit) {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.notary.raft"),
                 notarySpecs = listOf(NotarySpec(DISTRIBUTED_SERVICE_NAME, cluster = ClusterSpec.Raft(clusterSize = 2)))
         )) {
-            dsl(defaultNotaryHandle.nodeHandles.getOrThrow().map { (it as InProcess) })
+            val originatingNode = startNode().get() as InProcess
+            dsl(originatingNode, defaultNotaryHandle.nodeHandles.getOrThrow().map { (it as InProcess) })
         }
     }
 

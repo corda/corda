@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.bridging
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.utilities.NetworkHostAndPort
+import org.apache.activemq.artemis.api.core.client.ClientMessage
 
 /**
  * Provides an internal interface that the [BridgeControlListener] delegates to for Bridge activities.
@@ -17,3 +18,5 @@ interface BridgeManager : AutoCloseable {
 
     fun stop()
 }
+
+fun ClientMessage.payload() = ByteArray(bodySize).apply { bodyBuffer.readBytes(this) }

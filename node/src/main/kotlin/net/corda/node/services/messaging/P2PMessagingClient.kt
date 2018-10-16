@@ -5,6 +5,7 @@ import com.codahale.metrics.Clock
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
@@ -35,7 +36,6 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CON
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.bridging.BridgeControl
@@ -225,7 +225,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 inboxes += RemoteInboxAddress(it).queueName
             }
 
-            inboxes.forEach { createQueueIfAbsent(it, producerSession!!, exclusive = true) }
+            inboxes.forEach { createQueueIfAbsent(it, producerSession!!, exclusive = true, isServiceAddress = false) }
 
             p2pConsumer = P2PMessagingConsumer(inboxes, createNewSession, isDrainingModeOn, drainingModeWasChangedEvents)
 
@@ -282,10 +282,10 @@ class P2PMessagingClient(val config: NodeConfiguration,
         log.info("Updating bridges on network map change: ${change.node}")
         fun gatherAddresses(node: NodeInfo): Sequence<BridgeEntry> {
             return state.locked {
-                node.legalIdentitiesAndCerts.map {
+                node.legalIdentitiesAndCerts.asSequence().map {
                     val messagingAddress = NodeAddress(it.party.owningKey)
-                    BridgeEntry(messagingAddress.queueName, node.addresses, node.legalIdentities.map { it.name })
-                }.filter { producerSession!!.queueQuery(SimpleString(it.queueName)).isExists }.asSequence()
+                    BridgeEntry(messagingAddress.queueName, node.addresses, node.legalIdentities.map(Party::name), serviceAddress = false)
+                }.filter { producerSession!!.queueQuery(SimpleString(it.queueName)).isExists }
             }
         }
 
@@ -323,7 +323,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             val keyHash = queueName.substring(PEERS_PREFIX.length)
             val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
             for (node in peers) {
-                val bridge = BridgeEntry(queueName.toString(), node.addresses, node.legalIdentities.map { it.name })
+                val bridge = BridgeEntry(queueName.toString(), node.addresses, node.legalIdentities.map { it.name }, serviceAddress = false)
                 requiredBridges += bridge
                 knownQueues += queueName.toString()
             }
@@ -377,7 +377,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
             requireMessageSize(message.bodySize, maxMessageSize)
             val topic = message.required(P2PMessagingHeaders.topicProperty) { getStringProperty(it) }
             val user = requireNotNull(if (externalBridge) {
-                message.getStringProperty(P2PMessagingHeaders.bridgedCertificateSubject) ?: message.getStringProperty(HDR_VALIDATED_USER)
+                message.getStringProperty(P2PMessagingHeaders.bridgedCertificateSubject)
+                        ?: message.getStringProperty(HDR_VALIDATED_USER)
             } else {
                 message.getStringProperty(HDR_VALIDATED_USER)
             }) { "Message is not authenticated" }
@@ -562,19 +563,20 @@ class P2PMessagingClient(val config: NodeConfiguration,
             val internalTargetQueue = (address as? ArtemisAddress)?.queueName
                     ?: throw IllegalArgumentException("Not an Artemis address")
             state.locked {
-                createQueueIfAbsent(internalTargetQueue, producerSession!!, exclusive = false)
+                createQueueIfAbsent(internalTargetQueue, producerSession!!, exclusive = false, isServiceAddress = address is ServiceAddress)
             }
             internalTargetQueue
         }
     }
 
     /** Attempts to create a durable queue on the broker which is bound to an address of the same name. */
-    private fun createQueueIfAbsent(queueName: String, session: ClientSession, exclusive: Boolean) {
+    private fun createQueueIfAbsent(queueName: String, session: ClientSession, exclusive: Boolean, isServiceAddress: Boolean) {
         fun sendBridgeCreateMessage() {
             val keyHash = queueName.substring(PEERS_PREFIX.length)
             val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
             for (node in peers) {
-                val bridge = BridgeEntry(queueName, node.addresses, node.legalIdentities.map { it.name })
+
+                val bridge = BridgeEntry(queueName, node.addresses, node.legalIdentities.map { it.name }, isServiceAddress)
                 val createBridgeMessage = BridgeControl.Create(config.myLegalName.toString(), bridge)
                 sendBridgeControl(createBridgeMessage)
             }

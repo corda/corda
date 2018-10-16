@@ -1,0 +1,169 @@
+package net.corda.nodeapi.internal.bridging
+
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.ConcurrentBox
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.ArtemisMessagingComponent
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
+import net.corda.nodeapi.internal.ArtemisSessionProvider
+import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
+import org.apache.activemq.artemis.api.core.SimpleString
+import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
+import org.apache.activemq.artemis.api.core.client.ClientConsumer
+import org.apache.activemq.artemis.api.core.client.ClientMessage
+import org.apache.activemq.artemis.api.core.client.ClientProducer
+import org.apache.activemq.artemis.api.core.client.ClientSession
+import org.slf4j.MDC
+
+/**
+ *  The LoopbackBridgeManager holds the list of independent LoopbackBridge objects that actively loopback messages to local Artemis
+ *  inboxes.
+ */
+@VisibleForTesting
+class LoopbackBridgeManager(private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
+                            private val bridgeMetricsService: BridgeMetricsService? = null) : BridgeManager {
+
+    private val queueNamesToBridgesMap = ConcurrentBox(mutableMapOf<String, MutableList<LoopbackBridge>>())
+    private var artemis: ArtemisSessionProvider? = null
+
+    /**
+     * Each LoopbackBridge is an independent consumer of messages from the Artemis local queue per designated endpoint.
+     * It attempts to loopback these messages via ArtemisClient to the local inbox.
+     */
+    private class LoopbackBridge(val sourceX500Name: String,
+                                 val queueName: String,
+                                 val targets: List<NetworkHostAndPort>,
+                                 val legalNames: Set<CordaX500Name>,
+                                 artemis: ArtemisSessionProvider,
+                                 private val bridgeMetricsService: BridgeMetricsService?) {
+        companion object {
+            private val log = contextLogger()
+        }
+
+        // TODO: refactor MDC support, duplicated in AMQPBridgeManager.
+        private fun withMDC(block: () -> Unit) {
+            val oldMDC = MDC.getCopyOfContextMap()
+            try {
+                MDC.put("queueName", queueName)
+                MDC.put("source", sourceX500Name)
+                MDC.put("targets", targets.joinToString(separator = ";") { it.toString() })
+                MDC.put("legalNames", legalNames.joinToString(separator = ";") { it.toString() })
+                MDC.put("bridgeType", "loopback")
+                block()
+            } finally {
+                MDC.setContextMap(oldMDC)
+            }
+        }
+
+        private fun logDebugWithMDC(msg: () -> String) {
+            if (log.isDebugEnabled) {
+                withMDC { log.debug(msg()) }
+            }
+        }
+
+        private fun logInfoWithMDC(msg: String) = withMDC { log.info(msg) }
+
+        private fun logWarnWithMDC(msg: String) = withMDC { log.warn(msg) }
+
+        private val artemis = ConcurrentBox(artemis)
+        private var session: ClientSession? = null
+        private var consumer: ClientConsumer? = null
+        private var producer: ClientProducer? = null
+
+        fun start() {
+            logInfoWithMDC("Create new Artemis loopback bridge")
+            artemis.exclusive {
+                logInfoWithMDC("Bridge Connected")
+                bridgeMetricsService?.bridgeConnected(targets, legalNames)
+                val sessionFactory = started!!.sessionFactory
+                val session = sessionFactory.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
+                this@LoopbackBridge.session = session
+                // Several producers (in the case of shared bridge) can put messages in the same outbound p2p queue. The consumers are created using the source x500 name as a filter
+                val consumer = session.createConsumer(queueName, "hyphenated_props:sender-subject-name = '$sourceX500Name'")
+                this@LoopbackBridge.consumer = consumer
+                consumer.setMessageHandler(this@LoopbackBridge::clientArtemisMessageHandler)
+                this@LoopbackBridge.producer = session.createProducer()
+                session.start()
+            }
+        }
+
+        fun stop() {
+            logInfoWithMDC("Stopping AMQP bridge")
+            artemis.exclusive {
+                consumer?.apply { if (!isClosed) close() }
+                consumer = null
+                session?.apply { if (!isClosed) stop() }
+                session = null
+            }
+        }
+
+        private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
+            logDebugWithMDC { "Loopback Send to ${legalNames.first()} uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}" }
+            val peerInbox = translateLocalQueueToInboxAddress(queueName)
+            producer?.send(SimpleString(peerInbox), artemisMessage) { artemisMessage.acknowledge() }
+            bridgeMetricsService?.let { metricsService ->
+                val properties = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.mapNotNull { key ->
+                    if (artemisMessage.containsProperty(key)) {
+                        key to artemisMessage.getObjectProperty(key).let { (it as? SimpleString)?.toString() ?: it }
+                    } else {
+                        null
+                    }
+                }.toMap()
+                metricsService.packetAcceptedEvent(SendableMessageImpl(artemisMessage.payload(), peerInbox, legalNames.first().toString(), targets.first(), properties))
+            }
+        }
+    }
+
+    override fun deployBridge(sourceX500Name: String, queueName: String, targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>) {
+        queueNamesToBridgesMap.exclusive {
+            val bridges = getOrPut(queueName) { mutableListOf() }
+            for (target in targets) {
+                if (bridges.any { it.targets.contains(target) && it.sourceX500Name == sourceX500Name }) {
+                    return
+                }
+            }
+            val newBridge = LoopbackBridge(sourceX500Name, queueName, targets, legalNames, artemis!!, bridgeMetricsService)
+            bridges += newBridge
+            bridgeMetricsService?.bridgeCreated(targets, legalNames)
+            newBridge
+        }.start()
+    }
+
+    override fun destroyBridge(queueName: String, targets: List<NetworkHostAndPort>) {
+        queueNamesToBridgesMap.exclusive {
+            val bridges = this[queueName] ?: mutableListOf()
+            for (target in targets) {
+                val bridge = bridges.firstOrNull { it.targets.contains(target) }
+                if (bridge != null) {
+                    bridges -= bridge
+                    if (bridges.isEmpty()) {
+                        remove(queueName)
+                    }
+                    bridge.stop()
+                    bridgeMetricsService?.bridgeDestroyed(bridge.targets, bridge.legalNames)
+                }
+            }
+        }
+    }
+
+    override fun start() {
+        val artemis = artemisMessageClientFactory()
+        this.artemis = artemis
+        artemis.start()
+    }
+
+    override fun stop() = close()
+
+    override fun close() {
+        queueNamesToBridgesMap.exclusive {
+            for (bridge in values.flatten()) {
+                bridge.stop()
+            }
+            clear()
+            artemis?.stop()
+        }
+    }
+}

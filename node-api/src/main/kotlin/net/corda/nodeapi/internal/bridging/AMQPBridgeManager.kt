@@ -42,12 +42,12 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
     private val lock = ReentrantLock()
     private val queueNamesToBridgesMap = mutableMapOf<String, MutableList<AMQPBridge>>()
 
-    private class AMQPConfigurationImpl (override val keyStore: CertificateStore,
-                                         override val trustStore: CertificateStore,
-                                         override val socksProxyConfig: SocksProxyConfig?,
-                                         override val maxMessageSize: Int,
-                                         override val useOpenSsl: Boolean,
-                                         override val sourceX500Name: String? = null) : AMQPConfiguration {
+    private class AMQPConfigurationImpl(override val keyStore: CertificateStore,
+                                        override val trustStore: CertificateStore,
+                                        override val socksProxyConfig: SocksProxyConfig?,
+                                        override val maxMessageSize: Int,
+                                        override val useOpenSsl: Boolean,
+                                        override val sourceX500Name: String? = null) : AMQPConfiguration {
         constructor(config: MutualSslConfiguration, socksProxyConfig: SocksProxyConfig?, maxMessageSize: Int) : this(config.keyStore.get(),
                 config.trustStore.get(),
                 socksProxyConfig,
@@ -188,7 +188,6 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
                 artemisMessage.acknowledge()
                 return
             }
-            val data = ByteArray(artemisMessage.bodySize).apply { artemisMessage.bodyBuffer.readBytes(this) }
             val properties = HashMap<String, Any?>()
             for (key in P2PMessagingHeaders.whitelistedHeaders) {
                 if (artemisMessage.containsProperty(key)) {
@@ -201,7 +200,7 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
             }
             logDebugWithMDC { "Bridged Send to ${legalNames.first()} uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}" }
             val peerInbox = translateLocalQueueToInboxAddress(queueName)
-            val sendableMessage = amqpClient.createMessage(data, peerInbox,
+            val sendableMessage = amqpClient.createMessage(artemisMessage.payload(), peerInbox,
                     legalNames.first().toString(),
                     properties)
             sendableMessage.onComplete.then {
@@ -224,7 +223,7 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
     }
 
     override fun deployBridge(sourceX500Name: String, queueName: String, targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>) {
-        val newBridge = lock.withLock {
+        lock.withLock {
             val bridges = queueNamesToBridgesMap.getOrPut(queueName) { mutableListOf() }
             for (target in targets) {
                 if (bridges.any { it.targets.contains(target) && it.sourceX500Name == sourceX500Name }) {
@@ -236,8 +235,7 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
             bridges += newBridge
             bridgeMetricsService?.bridgeCreated(targets, legalNames)
             newBridge
-        }
-        newBridge.start()
+        }.start()
     }
 
     override fun destroyBridge(queueName: String, targets: List<NetworkHostAndPort>) {
@@ -255,6 +253,14 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
                 }
             }
         }
+    }
+
+    fun destroyAllBridge(queueName: String): Map<String, BridgeEntry> {
+        val bridges = queueNamesToBridgesMap[queueName]
+        destroyBridge(queueName, queueNamesToBridgesMap[queueName]?.flatMap { it.targets } ?: emptyList())
+        return bridges?.map {
+            it.sourceX500Name to BridgeEntry(it.queueName, it.targets, it.legalNames.toList(), serviceAddress = false)
+        }?.toMap() ?: emptyMap()
     }
 
     override fun start() {
