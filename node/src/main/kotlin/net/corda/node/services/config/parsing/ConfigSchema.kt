@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValueFactory
 
+// TODO sollecitom allow extension with delegated properties
 interface ConfigSchema : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> {
 
     val name: String?
