@@ -37,15 +37,13 @@ private class ConfigPropertySchema(override val name: String?, unorderedProperti
 
     override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
-        var propertyErrors = properties.flatMap { property -> property.validate(target, options).errors }.toSet()
+        val propertyErrors = properties.flatMap { property -> property.validate(target, options).errors }.toMutableSet()
         if (options?.strict == true) {
             val unknownKeys = target.root().keys - properties.map(ConfigProperty<*>::key)
-            propertyErrors += unknownKeys.map(::unknownPropertyError)
+            propertyErrors += unknownKeys.map { ConfigValidationError.Unknown.of(it) }
         }
         return Validated.withResult(target, propertyErrors)
     }
-
-    private fun unknownPropertyError(key: String) = ConfigValidationError.Unknown.of(key)
 
     override fun description(): String {
 
@@ -68,11 +66,7 @@ private class ConfigPropertySchema(override val name: String?, unorderedProperti
 
     override fun describe(configuration: Config): ConfigObject {
 
-        var rootDescription = configObject()
-        properties.forEach { property ->
-            rootDescription = rootDescription.withValue(property.key, property.valueDescriptionIn(configuration))
-        }
-        return rootDescription
+        return properties.asSequence().map { it.key to it.valueDescriptionIn(configuration) }.fold(configObject()) { config, (key, value) -> config.withValue(key, value) }
     }
 
     override fun equals(other: Any?): Boolean {
