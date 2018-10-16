@@ -1,17 +1,15 @@
 package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigObject
+import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 
 // TODO sollecitom allow extension with delegated properties
-interface ConfigSchema : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> {
+interface ConfigSchema : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions>, ConfigDescriber {
 
     val name: String?
 
     fun description(): String
-
-    fun serialize(configuration: Config): ConfigObject
 
     val properties: Set<ConfigProperty<*>>
 
@@ -65,9 +63,9 @@ private class ConfigPropertySchema(override val name: String?, unorderedProperti
         return description.toString()
     }
 
-    override fun serialize(configuration: Config): ConfigObject {
+    override fun describe(configuration: Config): ConfigValue {
 
-        return properties.asSequence().map { it.key to it.valueDescriptionIn(configuration) }.fold(configObject()) { config, (key, value) -> config.withValue(key, value) }
+        return properties.asSequence().map { it.key to it.describe(configuration) }.fold(configObject()) { config, (key, value) -> config.withValue(key, value) }
     }
 
     override fun equals(other: Any?): Boolean {

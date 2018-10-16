@@ -16,7 +16,7 @@ interface ConfigPropertyMetadata {
     val schema: ConfigSchema?
 }
 
-interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions>, ConfigPropertyMetadata {
+interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions>, ConfigPropertyMetadata, ConfigDescriber {
 
     @Throws(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
     fun valueIn(configuration: Config): TYPE
@@ -30,11 +30,6 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
             isSpecifiedBy(configuration) -> valueIn(configuration)
             else -> null
         }
-    }
-
-    fun valueDescriptionIn(configuration: Config): ConfigValue {
-
-        return if (sensitive) ConfigValueFactory.fromAnyRef(SENSITIVE_DATA_PLACEHOLDER) else ConfigValueFactory.fromAnyRef(valueIn(configuration))
     }
 
     interface Required<TYPE> : ConfigProperty<TYPE> {
@@ -100,12 +95,12 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
 
     override fun list(): ConfigProperty.Required<List<TYPE>> = ListConfigProperty(this)
 
-    override fun valueDescriptionIn(configuration: Config): ConfigValue {
+    override fun describe(configuration: Config): ConfigValue {
 
         if (sensitive) {
             return ConfigValueFactory.fromAnyRef(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
         }
-        return schema?.serialize(configuration.getConfig(key)) ?: super.valueDescriptionIn(configuration)
+        return schema?.describe(configuration.getConfig(key)) ?: ConfigValueFactory.fromAnyRef(valueIn(configuration))
     }
 
     override val mandatory = true
@@ -152,12 +147,12 @@ private class ListConfigProperty<TYPE>(delegate: StandardConfigProperty<TYPE>) :
         return Validated.withResult(target, errors)
     }
 
-    override fun valueDescriptionIn(configuration: Config): ConfigValue {
+    override fun describe(configuration: Config): ConfigValue {
 
         if (sensitive) {
             return ConfigValueFactory.fromAnyRef(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
         }
-        return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.serialize(it) }.toList()) } ?: super.valueDescriptionIn(configuration)
+        return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) }.toList()) } ?: ConfigValueFactory.fromAnyRef(valueIn(configuration))
     }
 }
 
@@ -179,6 +174,8 @@ private class OptionalConfigProperty<TYPE>(delegate: ConfigProperty.Required<TYP
     override val mandatory: Boolean = false
 
     override val typeName: String = "${super.typeName}?"
+
+    override fun describe(configuration: Config) = delegate.describe(configuration)
 
     override fun valueIn(configuration: Config): TYPE? {
 
@@ -217,6 +214,8 @@ private class FunctionalConfigProperty<TYPE, MAPPED : Any>(delegate: ConfigPrope
         }
         return Validated.withResult(target, errors)
     }
+
+    override fun describe(configuration: Config) = delegate.describe(configuration)
 }
 
 private class FunctionalListConfigProperty<RAW, TYPE : Any>(delegate: FunctionalConfigProperty<RAW, TYPE>) : RequiredDelegatedProperty<List<TYPE>, FunctionalConfigProperty<RAW, TYPE>>(delegate) {
@@ -240,12 +239,12 @@ private class FunctionalListConfigProperty<RAW, TYPE : Any>(delegate: Functional
         return Validated.withResult(target, errors)
     }
 
-    override fun valueDescriptionIn(configuration: Config): ConfigValue {
+    override fun describe(configuration: Config): ConfigValue {
 
         if (sensitive) {
             return ConfigValueFactory.fromAnyRef(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
         }
-        return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.serialize(it) }.toList()) } ?: super.valueDescriptionIn(configuration)
+        return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) }.toList()) } ?: ConfigValueFactory.fromAnyRef(valueIn(configuration))
     }
 }
 

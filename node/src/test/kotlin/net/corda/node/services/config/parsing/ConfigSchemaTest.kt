@@ -1,5 +1,6 @@
 package net.corda.node.services.config.parsing
 
+import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValueFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -147,11 +148,14 @@ class ConfigSchemaTest {
         val fooConfigSchema = ConfigSchema.withProperties(name = "Foo") { setOf(boolean("prop4"), string("prop5", sensitive = true)) }
         val barConfigSchema = ConfigSchema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
-        val description = barConfigSchema.serialize(configuration)
+        val printedConfiguration = barConfigSchema.describe(configuration)
 
-        println(description.toConfig().serialize())
-        assertThat(description.toConfig().getAnyRef("prop3.prop5")).isEqualTo(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
-        assertThat(description.toConfig().serialize()).doesNotContain(prop5Value)
+        val description = printedConfiguration.serialize().also { println(it) }
+
+        val descriptionObj = (printedConfiguration as ConfigObject).toConfig()
+
+        assertThat(descriptionObj.getAnyRef("prop3.prop5")).isEqualTo(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
+        assertThat(description).doesNotContain(prop5Value)
     }
 
     @Test
@@ -175,17 +179,19 @@ class ConfigSchemaTest {
         val fooConfigSchema = ConfigSchema.withProperties(name = "Foo") { setOf(boolean("prop4"), string("prop5", sensitive = true)) }
         val barConfigSchema = ConfigSchema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema).list()) }
 
-        val description = barConfigSchema.serialize(configuration)
+        val printedConfiguration = barConfigSchema.describe(configuration)
 
-        println(description.toConfig().serialize())
+        val description = printedConfiguration.serialize().also { println(it) }
 
-        assertThat(description.toConfig().getObjectList("prop3")).satisfies { objects ->
+        val descriptionObj = (printedConfiguration as ConfigObject).toConfig()
+
+        assertThat(descriptionObj.getObjectList("prop3")).satisfies { objects ->
 
             objects.forEach { obj ->
 
                 assertThat(obj.toConfig().getString("prop5")).isEqualTo(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
             }
         }
-        assertThat(description.toConfig().serialize()).doesNotContain(prop5Value)
+        assertThat(description).doesNotContain(prop5Value)
     }
 }
