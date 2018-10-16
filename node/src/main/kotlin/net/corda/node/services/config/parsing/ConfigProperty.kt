@@ -272,8 +272,15 @@ private class FunctionalListConfigProperty<RAW, TYPE : Any>(private val delegate
             }
         }
         val errors = list.asSequence().map { configObject(key to ConfigValueFactory.fromAnyRef(it)) }.mapIndexed { index, value -> delegate.validate(value.toConfig(), options).errors.map { error -> error.withContainingPath(key, "[$index]") } }.reduce { one, other -> one + other }.toSet()
-
         return Validated.withResult(target, errors)
+    }
+
+    override fun valueDescriptionIn(configuration: Config): ConfigValue {
+
+        if (sensitive) {
+            return ConfigValueFactory.fromAnyRef(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
+        }
+        return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) }.toList()) } ?: super.valueDescriptionIn(configuration)
     }
 
     override fun toString() = "\"$key\": \"$typeName\""
