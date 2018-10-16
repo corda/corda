@@ -33,7 +33,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class FlowRetryTest {
-
     @Before
     fun resetCounters() {
         InitiatorFlow.seen.clear()
