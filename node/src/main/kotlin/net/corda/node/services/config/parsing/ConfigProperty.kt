@@ -6,7 +6,6 @@ import net.corda.node.services.config.parsing.Validated.Companion.valid
 import java.time.Duration
 import kotlin.reflect.KClass
 
-// TODO sollecitom introduce either a PasswordProperty type or a "sensitive" boolean resulting in "*****" being printed instead of the value when the configuration is serialized.
 interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> {
 
     val key: String
@@ -131,7 +130,7 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
                 errors += nestedSchema.validate(nestedConfig, options).errors.map { error -> error.withContainingPath(*key.split(".").toTypedArray()) }
             }
         }
-        return if (errors.isEmpty()) valid(target) else invalid(errors)
+        return Validated.withResult(target, errors)
     }
 }
 
@@ -150,7 +149,7 @@ private class ListConfigProperty<TYPE>(override val key: String, elementTypeName
         elementSchema?.let { schema ->
             errors += valueIn(target).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).mapIndexed { index, targetConfig -> schema.validate(targetConfig, options).errors.map { error -> error.withContainingPath(key, "[$index]") } }.reduce { one, other -> one + other }
         }
-        return if (errors.isEmpty()) valid(target) else invalid(errors)
+        return Validated.withResult(target, errors)
     }
 
     override fun valueDescriptionIn(configuration: Config): ConfigValue {
@@ -217,7 +216,7 @@ private class FunctionalConfigProperty<TYPE, MAPPED : Any>(private val delegate:
         if (errors.isEmpty()) {
             errors += convert.invoke(key, delegate.valueIn(target)).errors
         }
-        return if (errors.isEmpty()) valid(target) else invalid(errors)
+        return Validated.withResult(target, errors)
     }
 
     override fun toString() = "\"$key\": \"$typeName\""
@@ -248,7 +247,7 @@ private class FunctionalListConfigProperty<RAW, TYPE : Any>(private val delegate
         }
         val errors = list.asSequence().map { configObject(key to ConfigValueFactory.fromAnyRef(it)) }.mapIndexed { index, value -> delegate.validate(value.toConfig(), options).errors.map { error -> error.withContainingPath(key, "[$index]") } }.reduce { one, other -> one + other }.toSet()
 
-        return if (errors.isEmpty()) valid(target) else invalid(errors)
+        return Validated.withResult(target, errors)
     }
 
     override fun toString() = "\"$key\": \"$typeName\""

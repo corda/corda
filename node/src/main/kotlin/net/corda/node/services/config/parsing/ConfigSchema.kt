@@ -2,10 +2,7 @@ package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigObject
-import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
-import net.corda.node.services.config.parsing.Validated.Companion.invalid
-import net.corda.node.services.config.parsing.Validated.Companion.valid
 
 interface ConfigSchema : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> {
 
@@ -43,7 +40,7 @@ private class ConfigPropertySchema(override val name: String?, unorderedProperti
             val unknownKeys = target.root().keys - properties.map(ConfigProperty<*>::key)
             propertyErrors += unknownKeys.map(::unknownPropertyError)
         }
-        return if (propertyErrors.isEmpty()) valid(target) else invalid(propertyErrors)
+        return Validated.withResult(target, propertyErrors)
     }
 
     private fun unknownPropertyError(key: String) = ConfigValidationError.Unknown.of(key)
