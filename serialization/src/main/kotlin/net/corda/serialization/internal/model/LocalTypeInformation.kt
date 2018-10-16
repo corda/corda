@@ -344,28 +344,6 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
     }
 }
 
-internal fun Type.resolveAgainst(context: Type): Type = when (this) {
-    is WildcardType -> this.upperBound
-    is ParameterizedType,
-    is TypeVariable<*> -> TypeToken.of(context).resolveType(this).type.upperBound
-    else -> this
-}
-
-private val Type.upperBound: Type
-    get() = when (this) {
-        is TypeVariable<*> -> when {
-            this.bounds.isEmpty() ||
-                    this.bounds.size > 1 -> this
-            else -> this.bounds[0]
-        }
-        is WildcardType -> when {
-            this.upperBounds.isEmpty() ||
-                    this.upperBounds.size > 1 -> this
-            else -> this.upperBounds[0]
-        }
-        else -> this
-    }
-
 private fun Method.returnsNullable(): Boolean = try {
     val returnTypeString = this.declaringClass.kotlin.memberProperties.firstOrNull {
         it.javaGetter == this

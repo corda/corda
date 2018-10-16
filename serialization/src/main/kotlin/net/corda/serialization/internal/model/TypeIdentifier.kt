@@ -1,8 +1,7 @@
 package net.corda.serialization.internal.model
 
-import java.lang.reflect.GenericArrayType
-import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Type
+import com.google.common.reflect.TypeToken
+import java.lang.reflect.*
 
 /**
  * Used as a key for retrieving cached type information. We need slightly more information than the bare classname,
@@ -106,3 +105,25 @@ sealed class TypeIdentifier {
      */
     data class Parameterised(override val name: String, val parameters: List<TypeIdentifier>): TypeIdentifier()
 }
+
+internal fun Type.resolveAgainst(context: Type): Type = when (this) {
+    is WildcardType -> this.upperBound
+    is ParameterizedType,
+    is TypeVariable<*> -> TypeToken.of(context).resolveType(this).type.upperBound
+    else -> this
+}
+
+private val Type.upperBound: Type
+    get() = when (this) {
+        is TypeVariable<*> -> when {
+            this.bounds.isEmpty() ||
+                    this.bounds.size > 1 -> this
+            else -> this.bounds[0]
+        }
+        is WildcardType -> when {
+            this.upperBounds.isEmpty() ||
+                    this.upperBounds.size > 1 -> this
+            else -> this.upperBounds[0]
+        }
+        else -> this
+    }
