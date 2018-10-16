@@ -134,9 +134,3 @@ fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
 } catch (e: ExecutionException) {
     throw e.cause!!
 }
-
-/** Check for duplicate elements. */
-internal fun <T> List<T>.hasDuplicates(): Boolean {
-    val set = mutableSetOf<T>()
-    return this.any { !set.add(it) }
-}

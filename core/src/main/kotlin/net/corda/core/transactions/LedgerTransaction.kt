@@ -10,7 +10,6 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.Try
-import net.corda.core.utilities.hasDuplicates
 import java.util.*
 import java.util.function.Predicate
 
@@ -170,60 +169,68 @@ data class LedgerTransaction @JvmOverloads constructor(
 
     private fun checkEncumbrancesValid() {
         // Validate that all encumbrances exist within the set of input states.
-        val encumberedInputs = inputs.filter { it.state.encumbrance != null }
-        encumberedInputs.forEach { (state, ref) ->
-            val encumbranceStateExists = inputs.any {
-                it.ref.txhash == ref.txhash && it.ref.index == state.encumbrance
-            }
-            if (!encumbranceStateExists) {
-                throw TransactionVerificationException.TransactionMissingEncumbranceException(
-                        id,
-                        state.encumbrance!!,
-                        TransactionVerificationException.Direction.INPUT
-                )
-            }
-        }
+        inputs.filter { it.state.encumbrance != null }
+                .forEach { (state, ref) -> checkInputEncumbranceStateExists(state, ref) }
 
-        // Check that, in the outputs, an encumbered state does not refer to itself as the encumbrance,
-        // and that the number of outputs can contain the encumbrance.
-        for ((i, output) in outputs.withIndex()) {
-            val encumbranceIndex = output.encumbrance ?: continue
-            if (encumbranceIndex == i || encumbranceIndex >= outputs.size) {
-                throw TransactionVerificationException.TransactionMissingEncumbranceException(
-                        id,
-                        encumbranceIndex,
-                        TransactionVerificationException.Direction.OUTPUT)
-            }
+        // Check that in the outputs,
+        // a) an encumbered state does not refer to itself as the encumbrance
+        // b) the number of outputs can contain the encumbrance
+        // c) the bi-directionality (full cycle) property is satisfied.
+        val statesAndEncumbrance = outputs.withIndex().filter { it.value.encumbrance != null }.map { Pair(it.index, it.value.encumbrance!!) }
+        if (!statesAndEncumbrance.isEmpty()) {
+            checkOutputEncumbrances(statesAndEncumbrance)
         }
     }
 
-    // A state is allowed to be encumbered by only one other state.
+    private fun checkInputEncumbranceStateExists(state: TransactionState<ContractState>, ref: StateRef) {
+        val encumbranceStateExists = inputs.any {
+            it.ref.txhash == ref.txhash && it.ref.index == state.encumbrance
+        }
+        if (!encumbranceStateExists) {
+            throw TransactionVerificationException.TransactionMissingEncumbranceException(
+                    id,
+                    state.encumbrance!!,
+                    TransactionVerificationException.Direction.INPUT
+            )
+        }
+    }
+
     // Using basic graph theory, a full cycle of encumbered (co-dependent) states should exist to achieve bi-directional
-    // encumbrance. Bi-directional encumbrance is important to ensure that no states involved in an
-    // encumbrance-relationship can be spent on their own. Briefly, if any of the states is having more than one
-    // encumbrance references by other states, a full cycle detection will fail.
-    // As a result, all of the encumbered states must be present as "from" and "to" only once
-    // (or zero times if no encumbrance takes place)! For instance,
+    // encumbrances. This property is important to ensure that no states involved in an encumbrance-relationship
+    // can be spent on their own. Briefly, if any of the states is having more than one encumbrance references by
+    // other states, a full cycle detection will fail. As a result, all of the encumbered states must be present
+    // as "from" and "to" only once (or zero times if no encumbrance takes place). For instance,
     // b -> a               b -> a
     // c -> a               c -> a
-    // d -> a      or       d -> b
+    // d -> a      and      d -> b
     // a -> b               a -> d
-    // do not satisfy the bi-directionality property.
+    // do not satisfy the bi-directionality (full cycle) property.
     // but,
     // a -> b               a -> b
     // b -> c               b -> d
-    // c -> d      or       c -> a
+    // c -> d      and      c -> a
     // d -> a               d -> c
     // form a full cycle and the bi-directionality property is satisfied.
-    private fun checkBiDirectionalEncumbrance() {
-        // Get the [Pair]s of "from" and "to".
-        val statesAndEncumbrance = outputs.asSequence().withIndex().filter { it.value.encumbrance != null }.map { Pair(it.index, it.value.encumbrance) }.toList()
-        // Get the [Set] of "from" (encumbered states).
-        val withEncumbrance = statesAndEncumbrance.asSequence().map { it.first }.toSet() // We are sure this contains distinct indices.
-        // Get the [Set] of "to" (encumbered states).
-        val beingEncumbered = statesAndEncumbrance.map { it.second }
-        // Check that "from" and "to" do match.
-        if (beingEncumbered.hasDuplicates() || withEncumbrance.size != beingEncumbered.size || !withEncumbrance.containsAll(beingEncumbered))
+    private fun checkOutputEncumbrances(statesAndEncumbrance: List<Pair<Int, Int>>) {
+        // [Set] of "from" (encumbered states).
+        val encumberedSet = mutableSetOf<Int>()
+        // [Set] of "to" (encumbrance states).
+        val encumbranceSet = mutableSetOf<Int>()
+        // Update both [Set]s.
+        statesAndEncumbrance.forEach {
+            // Check it does not refer to itself.
+            if (it.first == it.second || it.first >= outputs.size) {
+                throw TransactionVerificationException.TransactionMissingEncumbranceException(
+                        id,
+                        it.first,
+                        TransactionVerificationException.Direction.OUTPUT)
+            } else {
+                encumberedSet.add(it.first)
+                encumbranceSet.add(it.second)
+            }
+        }
+        // Check that "from" and "to" do indeed match.
+        if (encumberedSet.size != encumbranceSet.size || !encumberedSet.containsAll(encumbranceSet))
             throw TransactionVerificationException.TransactionBiDirectionalEncumbranceException(id)
     }
 
