@@ -197,12 +197,32 @@ data class LedgerTransaction @JvmOverloads constructor(
         }
     }
 
-    // A State is only allowed to be encumbered by only one other states.
-    // A full cycle of encumbered (co-dependent) States should exist to achieve bi-directional encumbrance.
+    // A state is allowed to be encumbered by only one other state.
+    // Using basic graph theory, a full cycle of encumbered (co-dependent) states should exist to achieve bi-directional
+    // encumbrance. Bi-directional encumbrance is important to ensure that no states involved in an
+    // encumbrance-relationship can be spent on their own. Briefly, if any of the states is having more than one
+    // encumbrance references by other states, a full cycle detection will fail.
+    // As a result, all of the encumbered states must be present as "from" and "to" only once
+    // (or zero times if no encumbrance takes place)! For instance,
+    // b -> a               b -> a
+    // c -> a               c -> a
+    // d -> a      or       d -> b
+    // a -> b               a -> d
+    // do not satisfy the bi-directionality property.
+    // but,
+    // a -> b               a -> b
+    // b -> c               b -> d
+    // c -> d      or       c -> a
+    // d -> a               d -> c
+    // form a full cycle and the bi-directionality property is satisfied.
     private fun checkBiDirectionalEncumbrance() {
-        val statesAndEncumbrance = outputs.withIndex().filter { it.value.encumbrance != null }.map { Pair(it.index, it.value.encumbrance) }
-        val withEncumbrance = statesAndEncumbrance.map { it.first }.toSet() // We are sure this contains distinct indices.
+        // Get the [Pair]s of "from" and "to".
+        val statesAndEncumbrance = outputs.asSequence().withIndex().filter { it.value.encumbrance != null }.map { Pair(it.index, it.value.encumbrance) }.toList()
+        // Get the [Set] of "from" (encumbered states).
+        val withEncumbrance = statesAndEncumbrance.asSequence().map { it.first }.toSet() // We are sure this contains distinct indices.
+        // Get the [Set] of "to" (encumbered states).
         val beingEncumbered = statesAndEncumbrance.map { it.second }
+        // Check that "from" and "to" do match.
         if (beingEncumbered.hasDuplicates() || withEncumbrance.size != beingEncumbered.size || !withEncumbrance.containsAll(beingEncumbered))
             throw TransactionVerificationException.TransactionBiDirectionalEncumbranceException(id)
     }
