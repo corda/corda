@@ -4,6 +4,10 @@ apply plugin: 'net.corda.plugins.cordapp'
 cordapp {
     info {
         vendor = 'R3'
+        targetPlatformVersion = corda_platform_version.toInteger()
+    }
+    signing {
+        enabled false
     }
 }
 

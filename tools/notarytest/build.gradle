@@ -2,16 +2,15 @@ import net.corda.plugins.Cordform
 
 apply plugin: 'kotlin'
 apply plugin: 'idea'
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
-    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
     cordaCompile project(':client:rpc')
     cordaCompile project(':node-driver')
@@ -28,20 +27,9 @@ idea {
     }
 }
 
-publishing {
-    publications {
-        jarAndSources(MavenPublication) {
-            from components.java
-            artifactId 'notarytest'
-
-            artifact sourceJar
-            artifact javadocJar
-        }
-    }
-}
-
-task deployJDBC(type: Cordform, dependsOn: 'jar') {
-    definitionClass = 'net.corda.notarytest.JDBCNotaryCordform'
+def nodeTask = tasks.getByPath(':node:capsule:assemble')
+task deployJDBC(type: Cordform, dependsOn: ['jar', nodeTask]) {
+    // Nodes require porting from net.corda.notarytest.JDBCNotaryCordform
 }
 
 task runTest(type: JavaExec) {
@@ -54,5 +42,15 @@ jar {
         attributes(
                 'Automatic-Module-Name': 'net.corda.notarytest'
         )
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+cordapp {
+    info {
+        name "net/corda/notarytest"
+        vendor "R3"
+        targetPlatformVersion corda_platform_version.toInteger()
+        minimumPlatformVersion 1
     }
 }

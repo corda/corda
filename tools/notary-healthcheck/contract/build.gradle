@@ -18,6 +18,8 @@ cordapp {
     info {
         vendor "R3"
         version corda_release_version
+        targetPlatformVersion corda_platform_version.toInteger()
+        minimumPlatformVersion 1
     }
 }
 

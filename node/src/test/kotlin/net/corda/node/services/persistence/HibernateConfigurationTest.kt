@@ -23,11 +23,11 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.DummyFungibleContract
+import net.corda.finance.contracts.asset.test.DummyFungibleContract
 import net.corda.finance.schemas.CashSchemaV1
-import net.corda.finance.schemas.SampleCashSchemaV1
-import net.corda.finance.schemas.SampleCashSchemaV2
-import net.corda.finance.schemas.SampleCashSchemaV3
+import net.corda.finance.schemas.test.SampleCashSchemaV1
+import net.corda.finance.schemas.test.SampleCashSchemaV2
+import net.corda.finance.schemas.test.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.api.IdentityServiceInternal

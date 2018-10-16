@@ -21,7 +21,6 @@ ext['jackson.version'] = "$jackson_version"
 ext['dropwizard-metrics.version'] = "$metrics_version"
 ext['mockito.version'] = "$mockito_version"
 
-apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'idea'
 apply plugin: 'org.springframework.boot'

@@ -15,10 +15,7 @@ sourceSets {
 }
 
 dependencies {
-    cordaCompile(project(":node")) { // Not node-api so we get metrics.
-        // The Node only needs this for binary compatibility with Cordapps written in Kotlin 1.1.
-        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jre8'
-    }
+    cordaCompile project(":node") // Not node-api so we get metrics.
     cordapp project(":tools:notary-healthcheck:contract")
     testCompile project(":node-driver")
 }
@@ -32,6 +29,8 @@ cordapp {
     info {
         vendor "R3"
         version corda_release_version
+        targetPlatformVersion corda_platform_version.toInteger()
+        minimumPlatformVersion 1
     }
 }
 

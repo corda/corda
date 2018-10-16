@@ -27,3 +27,12 @@ idea {
 publish {
     name 'corda-notary-mysql'
 }
+
+cordapp {
+    info {
+        name "net/corda/notary/mysql"
+        vendor "R3"
+        targetPlatformVersion corda_platform_version.toInteger()
+        minimumPlatformVersion 1
+    }
+}
