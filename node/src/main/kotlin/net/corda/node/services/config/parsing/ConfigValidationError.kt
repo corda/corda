@@ -2,8 +2,6 @@ package net.corda.node.services.config.parsing
 
 sealed class ConfigValidationError constructor(val keyName: String, open val typeName: String? = null, open val message: String, val containingPath: List<String> = emptyList()) {
 
-    constructor(keyName: String, typeName: String? = null, message: String, containingPath: String? = null) : this(keyName, typeName, message, containingPath?.let(::listOf) ?: emptyList())
-
     val path: List<String> = containingPath + keyName
 
     val containingPathAsString: String = containingPath.joinToString(".")
