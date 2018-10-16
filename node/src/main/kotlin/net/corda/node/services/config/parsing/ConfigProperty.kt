@@ -6,7 +6,7 @@ import net.corda.node.services.config.parsing.Validated.Companion.valid
 import java.time.Duration
 import kotlin.reflect.KClass
 
-interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> {
+interface ConfigPropertyMetadata {
 
     val key: String
     val typeName: String
@@ -14,6 +14,11 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
     val sensitive: Boolean
 
     val schema: ConfigSchema?
+
+    fun nestedProperties(): Set<ConfigProperty<*>>
+}
+
+interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions>, ConfigPropertyMetadata {
 
     @Throws(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
     fun valueIn(configuration: Config): TYPE
@@ -32,13 +37,9 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
         }
     }
 
-    fun nestedProperties(): Set<ConfigProperty<*>>
-
     interface Required<TYPE> : ConfigProperty<TYPE> {
 
         fun optional(defaultValue: TYPE? = null): ConfigProperty<TYPE?>
-
-        override val mandatory: Boolean get() = true
     }
 
     interface Single<TYPE> : ConfigProperty<TYPE> {
@@ -114,8 +115,6 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
 
     override fun list(): ConfigProperty.Required<List<TYPE>> = ListConfigProperty(this)
 
-    override fun toString() = "\"$key\": \"$typeName\""
-
     override fun valueDescriptionIn(configuration: Config): ConfigValue {
 
         if (sensitive) {
@@ -125,6 +124,8 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
     }
 
     override fun nestedProperties(): Set<ConfigProperty<*>> = schema?.properties ?: emptySet()
+
+    override val mandatory = true
 
     override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
@@ -138,23 +139,25 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
         }
         return Validated.withResult(target, errors)
     }
+
+    override fun toString() = "\"$key\": \"$typeName\""
 }
 
-private class ListConfigProperty<TYPE>(private val delegate: StandardConfigProperty<TYPE>) : ConfigProperty.Required<List<TYPE>> {
+private abstract class DelegatedProperty<TYPE, DELEGATE : ConfigPropertyMetadata>(protected val delegate: DELEGATE) : ConfigPropertyMetadata by delegate, ConfigProperty<TYPE> {
 
-    override val key = delegate.key
+    final override fun toString() = "\"$key\": \"$typeName\""
+}
 
-    override val sensitive = delegate.sensitive
+private abstract class RequiredDelegatedProperty<TYPE, DELEGATE : ConfigProperty.Required<*>>(delegate: DELEGATE) : DelegatedProperty<TYPE, DELEGATE>(delegate), ConfigProperty.Required<TYPE> {
 
-    override val schema: ConfigSchema? = delegate.schema
+    final override fun optional(defaultValue: TYPE?): ConfigProperty<TYPE?> = OptionalConfigProperty(this, defaultValue)
+}
 
-    override val typeName: String = delegate.schema?.let { "List<#${it.name ?: "Object@$key"}>" } ?: "List<${delegate.typeName.capitalize()}>"
+private class ListConfigProperty<TYPE>(delegate: StandardConfigProperty<TYPE>) : RequiredDelegatedProperty<List<TYPE>, StandardConfigProperty<TYPE>>(delegate) {
 
-    override fun nestedProperties() = delegate.nestedProperties()
+    override val typeName: String = "List<${delegate.typeName}>"
 
     override fun valueIn(configuration: Config): List<TYPE> = delegate.extractListValue.invoke(configuration, key)
-
-    override fun optional(defaultValue: List<TYPE>?): ConfigProperty<List<TYPE>?> = OptionalConfigProperty(this, defaultValue)
 
     override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
@@ -173,21 +176,13 @@ private class ListConfigProperty<TYPE>(private val delegate: StandardConfigPrope
         }
         return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) }.toList()) } ?: super.valueDescriptionIn(configuration)
     }
-
-    override fun toString() = "\"$key\": \"$typeName\""
 }
 
-private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty.Required<TYPE>, private val defaultValue: TYPE?) : ConfigProperty<TYPE?> {
-
-    override val key = delegate.key
+private class OptionalConfigProperty<TYPE>(delegate: ConfigProperty.Required<TYPE>, private val defaultValue: TYPE?) : DelegatedProperty<TYPE?, ConfigProperty.Required<TYPE>>(delegate) {
 
     override val mandatory: Boolean = false
 
-    override val typeName: String = "${delegate.typeName}?"
-
-    override val sensitive = delegate.sensitive
-
-    override val schema: ConfigSchema? = delegate.schema
+    override val typeName: String = "${super.typeName}?"
 
     override fun valueIn(configuration: Config): TYPE? {
 
@@ -205,31 +200,17 @@ private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty.
             else -> invalid(ConfigException.Missing(key).toValidationError(key, typeName))
         }
     }
-
-    override fun nestedProperties() = delegate.nestedProperties()
-
-    override fun toString() = "\"$key\": \"$typeName\""
 }
 
-private class FunctionalConfigProperty<TYPE, MAPPED : Any>(private val delegate: ConfigProperty.Standard<TYPE>, mappedTypeName: String, internal val extractListValue: (Config, String) -> List<TYPE>, private val convert: (String, TYPE) -> Validated<MAPPED, ConfigValidationError>) : ConfigProperty.Standard<MAPPED> {
-
-    override val key = delegate.key
+private class FunctionalConfigProperty<TYPE, MAPPED : Any>(delegate: ConfigProperty.Standard<TYPE>, mappedTypeName: String, internal val extractListValue: (Config, String) -> List<TYPE>, private val convert: (String, TYPE) -> Validated<MAPPED, ConfigValidationError>) : RequiredDelegatedProperty<MAPPED, ConfigProperty.Standard<TYPE>>(delegate), ConfigProperty.Standard<MAPPED> {
 
     override fun valueIn(configuration: Config) = convert.invoke(key, delegate.valueIn(configuration)).orElseThrow()
 
-    override val typeName: String = if (delegate.typeName == "#$mappedTypeName") delegate.typeName else "$mappedTypeName(${delegate.typeName})"
-
-    override val sensitive = delegate.sensitive
-
-    override val schema: ConfigSchema? = delegate.schema
+    override val typeName: String = if (super.typeName == "#$mappedTypeName") super.typeName else "$mappedTypeName(${super.typeName})"
 
     override fun <M : Any> map(mappedTypeName: String, convert: (String, MAPPED) -> Validated<M, ConfigValidationError>): ConfigProperty.Standard<M> = FunctionalConfigProperty(delegate, mappedTypeName, extractListValue, { key: String, target: TYPE -> this.convert.invoke(key, target).flatMap { convert(key, it) } })
 
-    override fun optional(defaultValue: MAPPED?): ConfigProperty<MAPPED?> = OptionalConfigProperty(this, defaultValue)
-
     override fun list(): ConfigProperty.Required<List<MAPPED>> = FunctionalListConfigProperty(this)
-
-    override fun nestedProperties() = delegate.nestedProperties()
 
     override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
@@ -240,25 +221,13 @@ private class FunctionalConfigProperty<TYPE, MAPPED : Any>(private val delegate:
         }
         return Validated.withResult(target, errors)
     }
-
-    override fun toString() = "\"$key\": \"$typeName\""
 }
 
-private class FunctionalListConfigProperty<RAW, TYPE : Any>(private val delegate: FunctionalConfigProperty<RAW, TYPE>) : ConfigProperty.Required<List<TYPE>> {
+private class FunctionalListConfigProperty<RAW, TYPE : Any>(delegate: FunctionalConfigProperty<RAW, TYPE>) : RequiredDelegatedProperty<List<TYPE>, FunctionalConfigProperty<RAW, TYPE>>(delegate) {
 
-    override val key = delegate.key
-
-    override val typeName: String = "List<${delegate.typeName}>"
-
-    override val sensitive = delegate.sensitive
-
-    override val schema: ConfigSchema? = delegate.schema
-
-    override fun nestedProperties() = delegate.nestedProperties()
+    override val typeName: String = "List<${super.typeName}>"
 
     override fun valueIn(configuration: Config): List<TYPE> = delegate.extractListValue.invoke(configuration, key).asSequence().map { configObject(key to ConfigValueFactory.fromAnyRef(it)) }.map(ConfigObject::toConfig).map(delegate::valueIn).toList()
-
-    override fun optional(defaultValue: List<TYPE>?): ConfigProperty<List<TYPE>?> = OptionalConfigProperty(this, defaultValue)
 
     override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
 
@@ -282,8 +251,6 @@ private class FunctionalListConfigProperty<RAW, TYPE : Any>(private val delegate
         }
         return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) }.toList()) } ?: super.valueDescriptionIn(configuration)
     }
-
-    override fun toString() = "\"$key\": \"$typeName\""
 }
 
 private fun ConfigException.toValidationError(keyName: String, typeName: String): ConfigValidationError {
