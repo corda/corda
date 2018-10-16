@@ -13,6 +13,8 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
     val mandatory: Boolean
     val sensitive: Boolean
 
+    val schema: ConfigSchema?
+
     @Throws(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
     fun valueIn(configuration: Config): TYPE
 
@@ -100,7 +102,7 @@ private class LongConfigProperty(key: String, sensitive: Boolean = false) : Stan
     }
 }
 
-internal open class StandardConfigProperty<TYPE>(override val key: String, typeNameArg: String, private val extractSingleValue: (Config, String) -> TYPE, internal val extractListValue: (Config, String) -> List<TYPE>, override val sensitive: Boolean = false, internal val schema: ConfigSchema? = null) : ConfigProperty.Standard<TYPE> {
+internal open class StandardConfigProperty<TYPE>(override val key: String, typeNameArg: String, private val extractSingleValue: (Config, String) -> TYPE, internal val extractListValue: (Config, String) -> List<TYPE>, override val sensitive: Boolean = false, final override val schema: ConfigSchema? = null) : ConfigProperty.Standard<TYPE> {
 
     override fun valueIn(configuration: Config) = extractSingleValue.invoke(configuration, key)
 
@@ -144,6 +146,8 @@ private class ListConfigProperty<TYPE>(private val delegate: StandardConfigPrope
 
     override val sensitive = delegate.sensitive
 
+    override val schema: ConfigSchema? = delegate.schema
+
     override val typeName: String = delegate.schema?.let { "List<#${it.name ?: "Object@$key"}>" } ?: "List<${delegate.typeName.capitalize()}>"
 
     override fun nestedProperties() = delegate.nestedProperties()
@@ -183,6 +187,8 @@ private class OptionalConfigProperty<TYPE>(private val delegate: ConfigProperty.
 
     override val sensitive = delegate.sensitive
 
+    override val schema: ConfigSchema? = delegate.schema
+
     override fun valueIn(configuration: Config): TYPE? {
 
         return when {
@@ -215,6 +221,8 @@ private class FunctionalConfigProperty<TYPE, MAPPED : Any>(private val delegate:
 
     override val sensitive = delegate.sensitive
 
+    override val schema: ConfigSchema? = delegate.schema
+
     override fun <M : Any> map(mappedTypeName: String, convert: (String, MAPPED) -> Validated<M, ConfigValidationError>): ConfigProperty.Standard<M> = FunctionalConfigProperty(delegate, mappedTypeName, extractListValue, { key: String, target: TYPE -> this.convert.invoke(key, target).flatMap { convert(key, it) } })
 
     override fun optional(defaultValue: MAPPED?): ConfigProperty<MAPPED?> = OptionalConfigProperty(this, defaultValue)
@@ -243,6 +251,8 @@ private class FunctionalListConfigProperty<RAW, TYPE : Any>(private val delegate
     override val typeName: String = "List<${delegate.typeName}>"
 
     override val sensitive = delegate.sensitive
+
+    override val schema: ConfigSchema? = delegate.schema
 
     override fun nestedProperties() = delegate.nestedProperties()
 

@@ -47,22 +47,21 @@ private class ConfigPropertySchema(override val name: String?, unorderedProperti
 
     private fun unknownPropertyError(key: String) = ConfigValidationError.Unknown.of(key)
 
-    // TODO sollecitom refactor
     override fun description(): String {
 
         val description = StringBuilder()
-        var rootDescription = configObject()
-        properties.forEach { property ->
-            rootDescription = rootDescription.withValue(property.key, ConfigValueFactory.fromAnyRef(property.typeName))
-        }
-        description.append(rootDescription.toConfig().serialize())
+        val root = properties.asSequence().map { it.key to ConfigValueFactory.fromAnyRef(it.typeName) }.fold(configObject()) { config, (key, value) -> config.withValue(key, value) }
 
-        val nestedProperties = (properties + properties.flatMap(ConfigProperty<*>::nestedProperties)).asSequence().filterIsInstance<StandardConfigProperty<*>>().filter { it.schema != null }.distinctBy(StandardConfigProperty<*>::schema).toList()
+        description.append(root.toConfig().serialize())
+
+        val nestedProperties = (properties + properties.flatMap(ConfigProperty<*>::nestedProperties)).asSequence().distinctBy(ConfigProperty<*>::schema)
         nestedProperties.forEach { property ->
-            description.append(System.lineSeparator())
-            description.append("${property.typeName}: ")
-            description.append(property.schema!!.description())
-            description.append(System.lineSeparator())
+            property.schema?.let {
+                description.append(System.lineSeparator())
+                description.append("${property.typeName}: ")
+                description.append(it.description())
+                description.append(System.lineSeparator())
+            }
         }
         return description.toString()
     }
