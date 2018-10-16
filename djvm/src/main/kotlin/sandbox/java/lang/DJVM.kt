@@ -97,10 +97,11 @@ fun getEnumConstants(clazz: Class<out Enum<*>>): Array<*>? {
 
 internal fun enumConstantDirectory(clazz: Class<out Enum<*>>): sandbox.java.util.Map<String, out Enum<*>>? {
     // DO NOT replace get with Kotlin's [] because Kotlin would use java.util.Map.
+    @Suppress("ReplaceGetOrSet")
     return allEnumDirectories.get(clazz) ?: createEnumDirectory(clazz)
 }
 
-@Suppress("unchecked_cast")
+@Suppress("unchecked_cast", "ReplaceGetOrSet")
 internal fun getEnumConstantsShared(clazz: Class<out Enum<*>>): Array<out Enum<*>>? {
     return if (isEnum(clazz)) {
         // DO NOT replace get with Kotlin's [] because Kotlin would use java.util.Map.
@@ -110,7 +111,7 @@ internal fun getEnumConstantsShared(clazz: Class<out Enum<*>>): Array<out Enum<*
     }
 }
 
-@Suppress("unchecked_cast")
+@Suppress("unchecked_cast", "ReplacePutWithAssignment" )
 private fun createEnum(clazz: Class<out Enum<*>>): Array<out Enum<*>>? {
     return clazz.getMethod("values").let { method ->
         method.isAccessible = true
@@ -119,6 +120,7 @@ private fun createEnum(clazz: Class<out Enum<*>>): Array<out Enum<*>>? {
     }?.apply { allEnums.put(clazz, this) }
 }
 
+@Suppress("ReplacePutWithAssignment")
 private fun createEnumDirectory(clazz: Class<out Enum<*>>): sandbox.java.util.Map<String, out Enum<*>> {
     val universe = getEnumConstantsShared(clazz) ?: throw IllegalArgumentException("${clazz.name} is not an enum type")
     val directory = sandbox.java.util.LinkedHashMap<String, Enum<*>>(2 * universe.size)
