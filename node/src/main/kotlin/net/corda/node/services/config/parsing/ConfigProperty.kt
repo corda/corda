@@ -73,6 +73,7 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
         fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>, sensitive: Boolean = false): ConfigProperty.Standard<ENUM> = StandardConfigProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) }, sensitive)
     }
 
+    // TODO sollecitom move
     data class ValidationOptions(val strict: Boolean)
 }
 
@@ -206,7 +207,7 @@ private class OptionalConfigProperty<TYPE>(delegate: ConfigProperty.Required<TYP
 
 private class FunctionalConfigProperty<TYPE, MAPPED : Any>(delegate: ConfigProperty.Standard<TYPE>, mappedTypeName: String, internal val extractListValue: (Config, String) -> List<TYPE>, private val convert: (String, TYPE) -> Validated<MAPPED, ConfigValidationError>) : RequiredDelegatedProperty<MAPPED, ConfigProperty.Standard<TYPE>>(delegate), ConfigProperty.Standard<MAPPED> {
 
-    override fun valueIn(configuration: Config) = convert.invoke(key, delegate.valueIn(configuration)).orElseThrow()
+    override fun valueIn(configuration: Config) = convert.invoke(key, delegate.valueIn(configuration)).valueOrThrow()
 
     override val typeName: String = if (super.typeName == "#$mappedTypeName") super.typeName else "$mappedTypeName(${super.typeName})"
 

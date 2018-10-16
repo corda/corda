@@ -11,7 +11,7 @@ interface Validated<TARGET : Any, ERROR> {
 
     val isInvalid: Boolean get() = !isValid
 
-    fun orElseThrow(exceptionOnErrors: (Set<ERROR>) -> Exception = { errors -> IllegalArgumentException(errors.joinToString(System.lineSeparator())) }): TARGET = valueIfValid ?: throw exceptionOnErrors.invoke(errors)
+    fun valueOrThrow(exceptionOnErrors: (Set<ERROR>) -> Exception = { errors -> IllegalArgumentException(errors.joinToString(System.lineSeparator())) }): TARGET = valueIfValid ?: throw exceptionOnErrors.invoke(errors)
 
     fun <MAPPED : Any> map(convert: (TARGET) -> MAPPED): Validated<MAPPED, ERROR> {
 
