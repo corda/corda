@@ -154,7 +154,7 @@ class ConfigSchemaTest {
 
         val descriptionObj = (printedConfiguration as ConfigObject).toConfig()
 
-        assertThat(descriptionObj.getAnyRef("prop3.prop5")).isEqualTo(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
+        assertThat(descriptionObj.getAnyRef("prop3.prop5")).isEqualTo(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER)
         assertThat(description).doesNotContain(prop5Value)
     }
 
@@ -189,7 +189,7 @@ class ConfigSchemaTest {
 
             objects.forEach { obj ->
 
-                assertThat(obj.toConfig().getString("prop5")).isEqualTo(ConfigProperty.SENSITIVE_DATA_PLACEHOLDER)
+                assertThat(obj.toConfig().getString("prop5")).isEqualTo(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER)
             }
         }
         assertThat(description).doesNotContain(prop5Value)

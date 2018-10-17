@@ -10,24 +10,24 @@ interface ConfigSchema : Validator<Config, Configuration.Validation.Error, Confi
 
     fun description(): String
 
-    val properties: Set<ConfigProperty<*>>
+    val properties: Set<Configuration.Property.Definition<*>>
 
     companion object {
 
-        fun withProperties(name: String? = null, properties: Iterable<ConfigProperty<*>>): ConfigSchema = ConfigPropertySchema(name, properties)
+        fun withProperties(name: String? = null, properties: Iterable<Configuration.Property.Definition<*>>): ConfigSchema = ConfigPropertySchema(name, properties)
 
-        fun withProperties(vararg properties: ConfigProperty<*>, name: String? = null): ConfigSchema = withProperties(name, properties.toSet())
+        fun withProperties(vararg properties: Configuration.Property.Definition<*>, name: String? = null): ConfigSchema = withProperties(name, properties.toSet())
 
-        fun withProperties(name: String? = null, builder: ConfigProperty.Companion.() -> Iterable<ConfigProperty<*>>): ConfigSchema = withProperties(name, builder.invoke(ConfigProperty.Companion))
+        fun withProperties(name: String? = null, builder: Configuration.Property.Definition.Companion.() -> Iterable<Configuration.Property.Definition<*>>): ConfigSchema = withProperties(name, builder.invoke(Configuration.Property.Definition.Companion))
     }
 }
 
-internal class ConfigPropertySchema(override val name: String?, unorderedProperties: Iterable<ConfigProperty<*>>) : ConfigSchema {
+internal class ConfigPropertySchema(override val name: String?, unorderedProperties: Iterable<Configuration.Property.Definition<*>>) : ConfigSchema {
 
-    override val properties = unorderedProperties.sortedBy(ConfigProperty<*>::key).toSet()
+    override val properties = unorderedProperties.sortedBy(Configuration.Property.Definition<*>::key).toSet()
 
     init {
-        val invalid = properties.groupBy(ConfigProperty<*>::key).mapValues { entry -> entry.value.size }.filterValues { propertiesForKey -> propertiesForKey > 1 }
+        val invalid = properties.groupBy(Configuration.Property.Definition<*>::key).mapValues { entry -> entry.value.size }.filterValues { propertiesForKey -> propertiesForKey > 1 }
         if (invalid.isNotEmpty()) {
             throw IllegalArgumentException("More than one property was found for keys ${invalid.keys}.")
         }
@@ -37,7 +37,7 @@ internal class ConfigPropertySchema(override val name: String?, unorderedPropert
 
         val propertyErrors = properties.flatMap { property -> property.validate(target, options).errors }.toMutableSet()
         if (options?.strict == true) {
-            val unknownKeys = target.root().keys - properties.map(ConfigProperty<*>::key)
+            val unknownKeys = target.root().keys - properties.map(Configuration.Property.Definition<*>::key)
             propertyErrors += unknownKeys.map { Configuration.Validation.Error.Unknown.of(it) }
         }
         return Validated.withResult(target, propertyErrors)
@@ -50,7 +50,7 @@ internal class ConfigPropertySchema(override val name: String?, unorderedPropert
 
         description.append(root.toConfig().serialize())
 
-        val nestedProperties = (properties + properties.flatMap { it.schema?.properties ?: emptySet() }).asSequence().distinctBy(ConfigProperty<*>::schema)
+        val nestedProperties = (properties + properties.flatMap { it.schema?.properties ?: emptySet() }).asSequence().distinctBy(Configuration.Property.Definition<*>::schema)
         nestedProperties.forEach { property ->
             property.schema?.let {
                 description.append(System.lineSeparator())

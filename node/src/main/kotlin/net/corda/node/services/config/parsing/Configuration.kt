@@ -2,7 +2,10 @@ package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
+import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
+import java.time.Duration
+import kotlin.reflect.KClass
 
 object Configuration {
 
@@ -48,8 +51,45 @@ object Configuration {
             val schema: ConfigSchema?
         }
 
-        interface Definition : Metadata {
+        interface Definition<TYPE> : Configuration.Property.Metadata, Configuration.Validator, Configuration.Value.Extractor<TYPE>, Configuration.Describer {
 
+            override fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
+
+            interface Required<TYPE> : Configuration.Property.Definition<TYPE> {
+
+                fun optional(defaultValue: TYPE? = null): Configuration.Property.Definition<TYPE?>
+            }
+
+            interface Single<TYPE> : Configuration.Property.Definition<TYPE> {
+
+                fun list(): Configuration.Property.Definition.Required<List<TYPE>>
+            }
+
+            interface Standard<TYPE> : Configuration.Property.Definition.Required<TYPE>, Configuration.Property.Definition.Single<TYPE> {
+
+                fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>): Configuration.Property.Definition.Standard<MAPPED>
+            }
+
+            companion object {
+
+                const val SENSITIVE_DATA_PLACEHOLDER = "*****"
+
+                internal val expectedExceptionTypes: Set<KClass<*>> = setOf(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
+
+                fun long(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<Long> = LongConfigProperty(key, sensitive)
+
+                fun boolean(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<Boolean> = StandardConfigProperty(key, Boolean::class.javaObjectType.simpleName, Config::getBoolean, Config::getBooleanList, sensitive)
+
+                fun double(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<Double> = StandardConfigProperty(key, Double::class.javaObjectType.simpleName, Config::getDouble, Config::getDoubleList, sensitive)
+
+                fun string(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<String> = StandardConfigProperty(key, String::class.java.simpleName, Config::getString, Config::getStringList, sensitive)
+
+                fun duration(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<Duration> = StandardConfigProperty(key, Duration::class.java.simpleName, Config::getDuration, Config::getDurationList, sensitive)
+
+                fun nestedObject(key: String, schema: ConfigSchema? = null, sensitive: Boolean = false): Configuration.Property.Definition.Standard<ConfigObject> = StandardConfigProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList, sensitive, schema)
+
+                fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>, sensitive: Boolean = false): Configuration.Property.Definition.Standard<ENUM> = StandardConfigProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) }, sensitive)
+            }
         }
     }
 

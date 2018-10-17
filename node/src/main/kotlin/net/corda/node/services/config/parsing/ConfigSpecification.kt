@@ -9,28 +9,28 @@ import kotlin.reflect.KProperty
 
 abstract class ConfigSpecification<VALUE>(name: String?) : ConfigSchema, Configuration.Value.Parser<VALUE> {
 
-    private val mutableProperties = mutableSetOf<ConfigProperty<*>>()
+    private val mutableProperties = mutableSetOf<Configuration.Property.Definition<*>>()
 
-    override val properties: Set<ConfigProperty<*>> = mutableProperties
+    override val properties: Set<Configuration.Property.Definition<*>> = mutableProperties
 
     private val schema: ConfigSchema by lazy {
 
         ConfigPropertySchema(name, properties)
     }
 
-    fun long(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Long> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, ConfigProperty.Companion::long)
+    fun long(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Long> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, Configuration.Property.Definition.Companion::long)
 
-    fun boolean(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Boolean> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, ConfigProperty.Companion::boolean)
+    fun boolean(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Boolean> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, Configuration.Property.Definition.Companion::boolean)
 
-    fun double(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Double> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, ConfigProperty.Companion::double)
+    fun double(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Double> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, Configuration.Property.Definition.Companion::double)
 
-    fun string(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<String> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, ConfigProperty.Companion::string)
+    fun string(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<String> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, Configuration.Property.Definition.Companion::string)
 
-    fun duration(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Duration> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, ConfigProperty.Companion::duration)
+    fun duration(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Duration> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, Configuration.Property.Definition.Companion::duration)
 
-    fun nestedObject(schema: ConfigSchema? = null, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ConfigObject> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, { k, s -> ConfigProperty.nestedObject(k, schema, s) })
+    fun nestedObject(schema: ConfigSchema? = null, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ConfigObject> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, { k, s -> Configuration.Property.Definition.nestedObject(k, schema, s) })
 
-    fun <ENUM : Enum<ENUM>> enum(key: String? = null, enumClass: KClass<ENUM>, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, { k, s -> ConfigProperty.enum(k, enumClass, s) })
+    fun <ENUM : Enum<ENUM>> enum(key: String? = null, enumClass: KClass<ENUM>, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, { k, s -> Configuration.Property.Definition.enum(k, enumClass, s) })
 
     override val name: String? get() = schema.name
 
@@ -45,25 +45,25 @@ inline fun <reified ENUM : Enum<ENUM>, VALUE : Any> ConfigSpecification<VALUE>.e
 
 interface PropertyDelegate<TYPE> {
 
-    operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, ConfigProperty<TYPE>>
+    operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition<TYPE>>
 
     interface Required<TYPE> {
 
-        operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, ConfigProperty.Required<TYPE>>
+        operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Required<TYPE>>
 
         fun optional(defaultValue: TYPE? = null): PropertyDelegate<TYPE?>
     }
 
     interface Single<TYPE> {
 
-        operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, ConfigProperty.Single<TYPE>>
+        operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Single<TYPE>>
 
         fun list(): PropertyDelegate.Required<List<TYPE>>
     }
 
     interface Standard<TYPE> : PropertyDelegate.Required<TYPE>, PropertyDelegate.Single<TYPE> {
 
-        override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, ConfigProperty.Standard<TYPE>>
+        override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Standard<TYPE>>
 
         fun <MAPPED : Any> map(mappedTypeName: String, convert: (key: String, typeName: String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>): PropertyDelegate.Standard<MAPPED>
     }
@@ -71,14 +71,14 @@ interface PropertyDelegate<TYPE> {
 
 inline fun <TYPE, reified MAPPED : Any> PropertyDelegate.Standard<TYPE>.map(noinline convert: (key: String, typeName: String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>): PropertyDelegate.Standard<MAPPED> = map(MAPPED::class.java.simpleName, convert)
 
-private class PropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (ConfigProperty<*>) -> Unit, private val construct: (String, Boolean) -> ConfigProperty.Standard<TYPE>) : PropertyDelegate.Standard<TYPE> {
+private class PropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.Standard<TYPE>) : PropertyDelegate.Standard<TYPE> {
 
-    override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, ConfigProperty.Standard<TYPE>> {
+    override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Standard<TYPE>> {
 
         val prop = construct.invoke(key ?: property.name, sensitive).also(addToProperties)
-        return object : ReadOnlyProperty<Any?, ConfigProperty.Standard<TYPE>> {
+        return object : ReadOnlyProperty<Any?, Configuration.Property.Definition.Standard<TYPE>> {
 
-            override fun getValue(thisRef: Any?, property: KProperty<*>): ConfigProperty.Standard<TYPE> = prop
+            override fun getValue(thisRef: Any?, property: KProperty<*>): Configuration.Property.Definition.Standard<TYPE> = prop
         }
     }
 
@@ -89,26 +89,26 @@ private class PropertyDelegateImpl<TYPE>(private val key: String?, private val s
     override fun <MAPPED : Any> map(mappedTypeName: String, convert: (key: String, typeName: String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>): PropertyDelegate.Standard<MAPPED> = PropertyDelegateImpl(key, sensitive, addToProperties, { k, s -> construct.invoke(k, s).map(mappedTypeName) { k1, t1 -> convert.invoke(k1, mappedTypeName, t1) } })
 }
 
-private class OptionalPropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (ConfigProperty<*>) -> Unit, private val construct: (String, Boolean) -> ConfigProperty<TYPE?>) : PropertyDelegate<TYPE?> {
+private class OptionalPropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition<TYPE?>) : PropertyDelegate<TYPE?> {
 
-    override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, ConfigProperty<TYPE?>> {
+    override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition<TYPE?>> {
 
         val prop = construct.invoke(key ?: property.name, sensitive).also(addToProperties)
-        return object : ReadOnlyProperty<Any?, ConfigProperty<TYPE?>> {
+        return object : ReadOnlyProperty<Any?, Configuration.Property.Definition<TYPE?>> {
 
-            override fun getValue(thisRef: Any?, property: KProperty<*>): ConfigProperty<TYPE?> = prop
+            override fun getValue(thisRef: Any?, property: KProperty<*>): Configuration.Property.Definition<TYPE?> = prop
         }
     }
 }
 
-private class ListPropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (ConfigProperty<*>) -> Unit, private val construct: (String, Boolean) -> ConfigProperty.Required<TYPE>) : PropertyDelegate.Required<TYPE> {
+private class ListPropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.Required<TYPE>) : PropertyDelegate.Required<TYPE> {
 
-    override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, ConfigProperty.Required<TYPE>> {
+    override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Required<TYPE>> {
 
         val prop = construct.invoke(key ?: property.name, sensitive).also(addToProperties)
-        return object : ReadOnlyProperty<Any?, ConfigProperty.Required<TYPE>> {
+        return object : ReadOnlyProperty<Any?, Configuration.Property.Definition.Required<TYPE>> {
 
-            override fun getValue(thisRef: Any?, property: KProperty<*>): ConfigProperty.Required<TYPE> = prop
+            override fun getValue(thisRef: Any?, property: KProperty<*>): Configuration.Property.Definition.Required<TYPE> = prop
         }
     }
 

@@ -14,7 +14,7 @@ class ConfigPropertyTest {
         val value = 1L
         val configuration = configObject(key to value).toConfig()
 
-        val property = ConfigProperty.long(key)
+        val property = Configuration.Property.Definition.long(key)
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -30,7 +30,7 @@ class ConfigPropertyTest {
         val value = 1
         val configuration = configObject(key to value).toConfig()
 
-        val property = ConfigProperty.boolean(key)
+        val property = Configuration.Property.Definition.boolean(key)
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -46,7 +46,7 @@ class ConfigPropertyTest {
         val value = listOf(1L, 2L, 3L)
         val configuration = configObject(key to value).toConfig()
 
-        val property = ConfigProperty.long(key).list()
+        val property = Configuration.Property.Definition.long(key).list()
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -62,7 +62,7 @@ class ConfigPropertyTest {
         val value = listOf(1L, 2L, 3L)
         val configuration = configObject(key to value).toConfig()
 
-        val property = ConfigProperty.long(key).list().optional()
+        val property = Configuration.Property.Definition.long(key).list().optional()
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -77,7 +77,7 @@ class ConfigPropertyTest {
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
-        val property = ConfigProperty.long(key).list().optional()
+        val property = Configuration.Property.Definition.long(key).list().optional()
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -94,7 +94,7 @@ class ConfigPropertyTest {
         val configuration = configObject(key to null).toConfig()
 
         val defaultValue = listOf(1L, 2L, 3L)
-        val property = ConfigProperty.long(key).list().optional(defaultValue)
+        val property = Configuration.Property.Definition.long(key).list().optional(defaultValue)
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -109,7 +109,7 @@ class ConfigPropertyTest {
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
-        val property = ConfigProperty.long(key)
+        val property = Configuration.Property.Definition.long(key)
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -125,7 +125,7 @@ class ConfigPropertyTest {
         val value = 1L
         val configuration = configObject(key to value).toConfig()
 
-        val property = ConfigProperty.long(key).optional()
+        val property = Configuration.Property.Definition.long(key).optional()
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -141,7 +141,7 @@ class ConfigPropertyTest {
         val value = 1
         val configuration = configObject(key to value).toConfig()
 
-        val property = ConfigProperty.boolean(key).optional()
+        val property = Configuration.Property.Definition.boolean(key).optional()
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -156,7 +156,7 @@ class ConfigPropertyTest {
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
-        val property = ConfigProperty.long(key).optional()
+        val property = Configuration.Property.Definition.long(key).optional()
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -172,7 +172,7 @@ class ConfigPropertyTest {
         val configuration = configObject(key to null).toConfig()
 
         val defaultValue = 23L
-        val property = ConfigProperty.long(key).optional(defaultValue)
+        val property = Configuration.Property.Definition.long(key).optional(defaultValue)
         println(property)
 
         assertThat(property.key).isEqualTo(key)
