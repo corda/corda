@@ -62,11 +62,13 @@ include 'samples:cordapp-configuration'
 include 'samples:network-verifier'
 include 'serialization'
 
+// Common libraries - start
 include 'common-validation'
 project(":common-validation").projectDir = new File("$settingsDir/common/validation")
 
 include 'common-configuration-parsing'
 project(":common-configuration-parsing").projectDir = new File("$settingsDir/common/configuration-parsing")
+// Common libraries - end
 
 apply from: 'buildCacheSettings.gradle'
 
