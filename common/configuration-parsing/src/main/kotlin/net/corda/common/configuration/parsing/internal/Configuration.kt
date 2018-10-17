@@ -255,5 +255,10 @@ object Configuration {
         }
     }
 
+    object Version {
+
+        interface Extractor : Configuration.Value.Parser<Int>
+    }
+
     interface Validator : net.corda.common.validation.internal.Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options>
 }
