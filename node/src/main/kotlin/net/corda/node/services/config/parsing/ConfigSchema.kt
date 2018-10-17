@@ -4,25 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 
-interface ConfigSchema : Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options>, Configuration.Describer {
-
-    val name: String?
-
-    fun description(): String
-
-    val properties: Set<Configuration.Property.Definition<*>>
-
-    companion object {
-
-        fun withProperties(name: String? = null, properties: Iterable<Configuration.Property.Definition<*>>): ConfigSchema = ConfigPropertySchema(name, properties)
-
-        fun withProperties(vararg properties: Configuration.Property.Definition<*>, name: String? = null): ConfigSchema = withProperties(name, properties.toSet())
-
-        fun withProperties(name: String? = null, builder: Configuration.Property.Definition.Companion.() -> Iterable<Configuration.Property.Definition<*>>): ConfigSchema = withProperties(name, builder.invoke(Configuration.Property.Definition.Companion))
-    }
-}
-
-internal class ConfigPropertySchema(override val name: String?, unorderedProperties: Iterable<Configuration.Property.Definition<*>>) : ConfigSchema {
+internal class ConfigPropertySchema(override val name: String?, unorderedProperties: Iterable<Configuration.Property.Definition<*>>) : Configuration.Schema {
 
     override val properties = unorderedProperties.sortedBy(Configuration.Property.Definition<*>::key).toSet()
 

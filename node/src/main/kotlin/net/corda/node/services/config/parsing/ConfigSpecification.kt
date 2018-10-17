@@ -7,13 +7,13 @@ import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
-abstract class ConfigSpecification<VALUE>(name: String?) : ConfigSchema, Configuration.Value.Parser<VALUE> {
+abstract class ConfigSpecification<VALUE>(name: String?) : Configuration.Schema, Configuration.Value.Parser<VALUE> {
 
     private val mutableProperties = mutableSetOf<Configuration.Property.Definition<*>>()
 
     override val properties: Set<Configuration.Property.Definition<*>> = mutableProperties
 
-    private val schema: ConfigSchema by lazy {
+    private val schema: Configuration.Schema by lazy {
 
         ConfigPropertySchema(name, properties)
     }
@@ -28,7 +28,7 @@ abstract class ConfigSpecification<VALUE>(name: String?) : ConfigSchema, Configu
 
     fun duration(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Duration> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, Configuration.Property.Definition.Companion::duration)
 
-    fun nestedObject(schema: ConfigSchema? = null, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ConfigObject> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, { k, s -> Configuration.Property.Definition.nestedObject(k, schema, s) })
+    fun nestedObject(schema: Configuration.Schema? = null, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ConfigObject> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, { k, s -> Configuration.Property.Definition.nestedObject(k, schema, s) })
 
     fun <ENUM : Enum<ENUM>> enum(key: String? = null, enumClass: KClass<ENUM>, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, { k, s -> Configuration.Property.Definition.enum(k, enumClass, s) })
 

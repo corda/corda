@@ -26,8 +26,8 @@ class ConfigSchemaTest {
         val configuration = configObject(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
         println(configuration.serialize())
 
-        val fooConfigSchema = ConfigSchema.withProperties(name = "Foo") { setOf(boolean("prop4"), double("prop5")) }
-        val barConfigSchema = ConfigSchema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
+        val fooConfigSchema = Configuration.Schema.withProperties(name = "Foo") { setOf(boolean("prop4"), double("prop5")) }
+        val barConfigSchema = Configuration.Schema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
         val result = barConfigSchema.validate(configuration)
         println(barConfigSchema.description())
@@ -56,8 +56,8 @@ class ConfigSchemaTest {
         val configuration = configObject(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value, "prop4" to "value4").toConfig()
         println(configuration.serialize())
 
-        val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
-        val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
+        val fooConfigSchema = Configuration.Schema.withProperties { setOf(boolean("prop4"), double("prop5")) }
+        val barConfigSchema = Configuration.Schema.withProperties { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
         val strict = Configuration.Validation.Options(strict = true)
 
@@ -89,8 +89,8 @@ class ConfigSchemaTest {
         val configuration = configObject(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value, "prop4" to "value4").toConfig()
         println(configuration.serialize())
 
-        val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
-        val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
+        val fooConfigSchema = Configuration.Schema.withProperties { setOf(boolean("prop4"), double("prop5")) }
+        val barConfigSchema = Configuration.Schema.withProperties { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
         val result = barConfigSchema.validate(configuration)
 
@@ -118,8 +118,8 @@ class ConfigSchemaTest {
         val configuration = configObject(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
         println(configuration.serialize())
 
-        val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
-        val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
+        val fooConfigSchema = Configuration.Schema.withProperties { setOf(boolean("prop4"), double("prop5")) }
+        val barConfigSchema = Configuration.Schema.withProperties { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
         val errors = barConfigSchema.validate(configuration).errors
         errors.forEach(::println)
@@ -145,8 +145,8 @@ class ConfigSchemaTest {
 
         val configuration = configObject(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
 
-        val fooConfigSchema = ConfigSchema.withProperties(name = "Foo") { setOf(boolean("prop4"), string("prop5", sensitive = true)) }
-        val barConfigSchema = ConfigSchema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
+        val fooConfigSchema = Configuration.Schema.withProperties(name = "Foo") { setOf(boolean("prop4"), string("prop5", sensitive = true)) }
+        val barConfigSchema = Configuration.Schema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
         val printedConfiguration = barConfigSchema.describe(configuration)
 
@@ -176,8 +176,8 @@ class ConfigSchemaTest {
 
         val configuration = configObject(prop1 to prop1Value, prop2 to prop2Value, prop3 to prop3Value).toConfig()
 
-        val fooConfigSchema = ConfigSchema.withProperties(name = "Foo") { setOf(boolean("prop4"), string("prop5", sensitive = true)) }
-        val barConfigSchema = ConfigSchema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema).list()) }
+        val fooConfigSchema = Configuration.Schema.withProperties(name = "Foo") { setOf(boolean("prop4"), string("prop5", sensitive = true)) }
+        val barConfigSchema = Configuration.Schema.withProperties(name = "Bar") { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema).list()) }
 
         val printedConfiguration = barConfigSchema.describe(configuration)
 

@@ -203,7 +203,7 @@ class ConfigPropertyValidationTest {
         val key = "a.b.c"
 
         val nestedKey = "d"
-        val nestedPropertySchema = ConfigSchema.withProperties(Configuration.Property.Definition.long(nestedKey))
+        val nestedPropertySchema = Configuration.Schema.withProperties(Configuration.Property.Definition.long(nestedKey))
 
         val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.nestedObject(key, nestedPropertySchema)
 
@@ -226,7 +226,7 @@ class ConfigPropertyValidationTest {
         val key = "a.b.c"
 
         val nestedKey = "d"
-        val nestedPropertySchema = ConfigSchema.withProperties(Configuration.Property.Definition.long(nestedKey))
+        val nestedPropertySchema = Configuration.Schema.withProperties(Configuration.Property.Definition.long(nestedKey))
 
         val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.nestedObject(key, nestedPropertySchema)
 
@@ -249,7 +249,7 @@ class ConfigPropertyValidationTest {
         val key = "a.b.c"
 
         val nestedKey = "d"
-        val nestedPropertySchema = ConfigSchema.withProperties(Configuration.Property.Definition.long(nestedKey))
+        val nestedPropertySchema = Configuration.Schema.withProperties(Configuration.Property.Definition.long(nestedKey))
 
         val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.nestedObject(key, nestedPropertySchema)
 

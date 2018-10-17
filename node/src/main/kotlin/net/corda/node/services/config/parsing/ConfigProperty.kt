@@ -16,7 +16,7 @@ internal class LongConfigProperty(key: String, sensitive: Boolean = false) : Sta
     }
 }
 
-internal open class StandardConfigProperty<TYPE>(override val key: String, typeNameArg: String, private val extractSingleValue: (Config, String) -> TYPE, internal val extractListValue: (Config, String) -> List<TYPE>, override val sensitive: Boolean = false, final override val schema: ConfigSchema? = null) : Configuration.Property.Definition.Standard<TYPE> {
+internal open class StandardConfigProperty<TYPE>(override val key: String, typeNameArg: String, private val extractSingleValue: (Config, String) -> TYPE, internal val extractListValue: (Config, String) -> List<TYPE>, override val sensitive: Boolean = false, final override val schema: Configuration.Schema? = null) : Configuration.Property.Definition.Standard<TYPE> {
 
     override fun valueIn(configuration: Config) = extractSingleValue.invoke(configuration, key)
 

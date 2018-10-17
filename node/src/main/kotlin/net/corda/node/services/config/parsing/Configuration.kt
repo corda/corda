@@ -48,7 +48,7 @@ object Configuration {
             val mandatory: Boolean
             val sensitive: Boolean
 
-            val schema: ConfigSchema?
+            val schema: Configuration.Schema?
         }
 
         interface Definition<TYPE> : Configuration.Property.Metadata, Configuration.Validator, Configuration.Value.Extractor<TYPE>, Configuration.Describer {
@@ -86,15 +86,29 @@ object Configuration {
 
                 fun duration(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<Duration> = StandardConfigProperty(key, Duration::class.java.simpleName, Config::getDuration, Config::getDurationList, sensitive)
 
-                fun nestedObject(key: String, schema: ConfigSchema? = null, sensitive: Boolean = false): Configuration.Property.Definition.Standard<ConfigObject> = StandardConfigProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList, sensitive, schema)
+                fun nestedObject(key: String, schema: Configuration.Schema? = null, sensitive: Boolean = false): Configuration.Property.Definition.Standard<ConfigObject> = StandardConfigProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList, sensitive, schema)
 
                 fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>, sensitive: Boolean = false): Configuration.Property.Definition.Standard<ENUM> = StandardConfigProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) }, sensitive)
             }
         }
     }
 
-    interface Schema {
+    interface Schema : Configuration.Validator, Configuration.Describer {
 
+        val name: String?
+
+        fun description(): String
+
+        val properties: Set<Configuration.Property.Definition<*>>
+
+        companion object {
+
+            fun withProperties(name: String? = null, properties: Iterable<Configuration.Property.Definition<*>>): Configuration.Schema = ConfigPropertySchema(name, properties)
+
+            fun withProperties(vararg properties: Configuration.Property.Definition<*>, name: String? = null): Configuration.Schema = withProperties(name, properties.toSet())
+
+            fun withProperties(name: String? = null, builder: Configuration.Property.Definition.Companion.() -> Iterable<Configuration.Property.Definition<*>>): Configuration.Schema = withProperties(name, builder.invoke(Configuration.Property.Definition.Companion))
+        }
     }
 
     abstract class Specification {
