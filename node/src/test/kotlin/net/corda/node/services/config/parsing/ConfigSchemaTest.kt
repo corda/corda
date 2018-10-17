@@ -59,7 +59,7 @@ class ConfigSchemaTest {
         val fooConfigSchema = ConfigSchema.withProperties { setOf(boolean("prop4"), double("prop5")) }
         val barConfigSchema = ConfigSchema.withProperties { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
-        val strict = ConfigProperty.ValidationOptions(strict = true)
+        val strict = Configuration.Validation.Options(strict = true)
 
         val errors = barConfigSchema.validate(configuration, strict).errors
 

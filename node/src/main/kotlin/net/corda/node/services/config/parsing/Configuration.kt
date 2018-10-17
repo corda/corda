@@ -32,4 +32,9 @@ object Configuration {
     abstract class Specification {
 
     }
+
+    object Validation {
+
+        data class Options(val strict: Boolean)
+    }
 }

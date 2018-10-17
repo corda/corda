@@ -18,7 +18,7 @@ class ConfigSpecificationTest {
 
             override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings.Addresses, ConfigValidationError> {
 
-                return validate(configuration, ConfigProperty.ValidationOptions(strict)).map { RpcSettings.Addresses(principal.valueIn(it), admin.valueIn(it)) }
+                return validate(configuration, Configuration.Validation.Options(strict)).map { RpcSettings.Addresses(principal.valueIn(it), admin.valueIn(it)) }
             }
 
             @Suppress("UNUSED_PARAMETER")
@@ -30,7 +30,7 @@ class ConfigSpecificationTest {
 
         override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings, ConfigValidationError> {
 
-            return validate(configuration, ConfigProperty.ValidationOptions(strict)).map { RpcSettingsImpl(addresses.valueIn(it), useSsl.valueIn(it)) }
+            return validate(configuration, Configuration.Validation.Options(strict)).map { RpcSettingsImpl(addresses.valueIn(it), useSsl.valueIn(it)) }
         }
     }
 

@@ -33,7 +33,7 @@ interface ConfigValueExtractor<TYPE> {
     }
 }
 
-interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions>, ConfigPropertyMetadata, Configuration.Describer, ConfigValueExtractor<TYPE> {
+interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Configuration.Validation.Options>, ConfigPropertyMetadata, Configuration.Describer, ConfigValueExtractor<TYPE> {
 
     override fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
@@ -72,14 +72,11 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
 
         fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>, sensitive: Boolean = false): ConfigProperty.Standard<ENUM> = StandardConfigProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) }, sensitive)
     }
-
-    // TODO sollecitom move
-    data class ValidationOptions(val strict: Boolean)
 }
 
 private class LongConfigProperty(key: String, sensitive: Boolean = false) : StandardConfigProperty<Long>(key, Long::class.javaObjectType.simpleName, Config::getLong, Config::getLongList, sensitive) {
 
-    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, ConfigValidationError> {
 
         val validated = super.validate(target, options)
         if (validated.isValid && target.getValue(key).unwrapped().toString().contains(".")) {
@@ -111,7 +108,7 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
 
     override val mandatory = true
 
-    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, ConfigValidationError> {
 
         val errors = mutableSetOf<ConfigValidationError>()
         errors += errorsWhenExtractingValue(target)
@@ -145,7 +142,7 @@ private class ListConfigProperty<TYPE>(delegate: StandardConfigProperty<TYPE>) :
 
     override fun valueIn(configuration: Config): List<TYPE> = delegate.extractListValue.invoke(configuration, key)
 
-    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, ConfigValidationError> {
 
         val errors = mutableSetOf<ConfigValidationError>()
         errors += errorsWhenExtractingValue(target)
@@ -195,7 +192,7 @@ private class OptionalConfigProperty<TYPE>(delegate: ConfigProperty.Required<TYP
         }
     }
 
-    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, ConfigValidationError> {
 
         return when {
             isSpecifiedBy(target) -> delegate.validate(target, options)
@@ -215,7 +212,7 @@ private class FunctionalConfigProperty<TYPE, MAPPED : Any>(delegate: ConfigPrope
 
     override fun list(): ConfigProperty.Required<List<MAPPED>> = FunctionalListConfigProperty(this)
 
-    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, ConfigValidationError> {
 
         val errors = mutableSetOf<ConfigValidationError>()
         errors += delegate.validate(target, options).errors
@@ -234,7 +231,7 @@ private class FunctionalListConfigProperty<RAW, TYPE : Any>(delegate: Functional
 
     override fun valueIn(configuration: Config): List<TYPE> = delegate.extractListValue.invoke(configuration, key).asSequence().map { configObject(key to ConfigValueFactory.fromAnyRef(it)) }.map(ConfigObject::toConfig).map(delegate::valueIn).toList()
 
-    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?): Validated<Config, ConfigValidationError> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, ConfigValidationError> {
 
         val list = try {
             delegate.extractListValue.invoke(target, key)

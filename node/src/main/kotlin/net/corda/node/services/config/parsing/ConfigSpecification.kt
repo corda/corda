@@ -36,7 +36,7 @@ abstract class ConfigSpecification(name: String?) : ConfigSchema {
 
     override fun description() = schema.description()
 
-    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?) = schema.validate(target, options)
+    override fun validate(target: Config, options: Configuration.Validation.Options?) = schema.validate(target, options)
 
     override fun describe(configuration: Config) = schema.describe(configuration)
 }

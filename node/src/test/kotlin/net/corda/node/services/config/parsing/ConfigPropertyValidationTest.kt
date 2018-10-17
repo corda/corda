@@ -15,7 +15,7 @@ class ConfigPropertyValidationTest {
         val key = "a.b.c"
         val configuration = configObject().toConfig()
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.long(key)
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key)
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
@@ -34,7 +34,7 @@ class ConfigPropertyValidationTest {
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.long(key)
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key)
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
@@ -53,7 +53,7 @@ class ConfigPropertyValidationTest {
         val key = "a.b.c"
         val configuration = configObject().toConfig()
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.long(key).list()
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key).list()
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
@@ -72,7 +72,7 @@ class ConfigPropertyValidationTest {
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.long(key).list()
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key).list()
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
@@ -90,7 +90,7 @@ class ConfigPropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.long(key)
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key)
 
         val configuration = configObject(key to false).toConfig()
 
@@ -110,7 +110,7 @@ class ConfigPropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.long(key)
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key)
 
         val configuration = configObject(key to 1.2).toConfig()
 
@@ -130,7 +130,7 @@ class ConfigPropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.double(key)
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.double(key)
 
         val configuration = configObject(key to 1).toConfig()
 
@@ -142,7 +142,7 @@ class ConfigPropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.long(key).list()
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key).list()
 
         val configuration = configObject(key to listOf(false, true)).toConfig()
 
@@ -162,7 +162,7 @@ class ConfigPropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.long(key)
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key)
 
         val configuration = configObject(key to listOf(1, 2, 3)).toConfig()
 
@@ -182,7 +182,7 @@ class ConfigPropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.long(key).list()
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key).list()
 
         val configuration = configObject(key to 1).toConfig()
 
@@ -205,7 +205,7 @@ class ConfigPropertyValidationTest {
         val nestedKey = "d"
         val nestedPropertySchema = ConfigSchema.withProperties(ConfigProperty.long(nestedKey))
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.nestedObject(key, nestedPropertySchema)
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.nestedObject(key, nestedPropertySchema)
 
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
@@ -228,7 +228,7 @@ class ConfigPropertyValidationTest {
         val nestedKey = "d"
         val nestedPropertySchema = ConfigSchema.withProperties(ConfigProperty.long(nestedKey))
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.nestedObject(key, nestedPropertySchema)
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.nestedObject(key, nestedPropertySchema)
 
         val configuration = configObject(key to configObject()).toConfig()
 
@@ -251,7 +251,7 @@ class ConfigPropertyValidationTest {
         val nestedKey = "d"
         val nestedPropertySchema = ConfigSchema.withProperties(ConfigProperty.long(nestedKey))
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.nestedObject(key, nestedPropertySchema)
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.nestedObject(key, nestedPropertySchema)
 
         val configuration = configObject(key to configObject(nestedKey to null)).toConfig()
 
@@ -273,7 +273,7 @@ class ConfigPropertyValidationTest {
 
         val nestedKey = "d"
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.nestedObject(key)
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.nestedObject(key)
 
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
@@ -285,7 +285,7 @@ class ConfigPropertyValidationTest {
 
         val key = "a"
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.string(key).map(::parseNetworkHostAndPort)
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.string(key).map(::parseNetworkHostAndPort)
 
         val host = "localhost"
         val port = 8080
@@ -301,7 +301,7 @@ class ConfigPropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions> = ConfigProperty.string(key).map(::parseNetworkHostAndPort)
+        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.string(key).map(::parseNetworkHostAndPort)
 
         val host = "localhost"
         val port = 8080
