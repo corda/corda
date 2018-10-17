@@ -33,7 +33,7 @@ interface ConfigValueExtractor<TYPE> {
     }
 }
 
-interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions>, ConfigPropertyMetadata, ConfigDescriber, ConfigValueExtractor<TYPE> {
+interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions>, ConfigPropertyMetadata, Configuration.Describer, ConfigValueExtractor<TYPE> {
 
     override fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 

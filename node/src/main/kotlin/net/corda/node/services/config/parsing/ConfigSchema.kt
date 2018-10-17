@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 
-interface ConfigSchema : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions>, ConfigDescriber {
+interface ConfigSchema : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions>, Configuration.Describer {
 
     val name: String?
 
