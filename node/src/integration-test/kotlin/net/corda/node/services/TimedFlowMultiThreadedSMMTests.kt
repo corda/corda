@@ -117,7 +117,7 @@ class TimedFlowMultiThreadedSMMTests : IntegrationTest() {
     private fun whenInvokedDirectlyAndTracked(rpc: CordaRPCConnection, nodeBHandle: NodeHandle) {
         val flowHandle = rpc.proxy.startTrackedFlow(::TimedInitiatorFlow, nodeBHandle.nodeInfo.singleIdentity())
 
-        val stepsCount = 4
+        val stepsCount = 5
         assertEquals(stepsCount, flowHandle.stepsTreeFeed!!.snapshot.size, "Expected progress tracker to return the last step")
 
         val doneIndex = 3
