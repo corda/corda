@@ -199,7 +199,8 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
                 if (idlePeriodDuration != null) {
                     Thread.sleep(idlePeriodDuration.toMillis())
                 } else {
-                    throw NodeRegistrationException(null, e)
+                    throw NodeRegistrationException("Compatibility Zone registration service is currently unavailable, "
+                            + "try again later!.", e)
                 }
             }
         }
