@@ -1,13 +1,8 @@
 package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
-import java.time.Duration
-import kotlin.properties.ReadOnlyProperty
-import kotlin.reflect.KClass
-import kotlin.reflect.KProperty
 
 // TODO sollecitom allow extension with delegated properties
 interface ConfigSchema : Validator<Config, ConfigValidationError, ConfigProperty.ValidationOptions>, ConfigDescriber {

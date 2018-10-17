@@ -331,7 +331,7 @@ class ConfigPropertyValidationTest {
             val port = parts[1].toInt().also { require(it > 0) }
             valid(NetworkHostAndPort(host, port))
         } catch (e: Exception) {
-            return invalid(ConfigValidationError.BadValue.of(key, value::class.java.simpleName, "Value must be of format \"host(String):port(Int > 0)\" e.g., \"127.0.0.1:8080\""))
+            return invalid(ConfigValidationError.BadValue.of(key, "Value must be of format \"host(String):port(Int > 0)\" e.g., \"127.0.0.1:8080\""))
         }
     }
 }

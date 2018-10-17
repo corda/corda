@@ -1,6 +1,7 @@
 package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
+import net.corda.node.services.config.parsing.Validated.Companion.invalid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
@@ -8,30 +9,13 @@ class ConfigSpecificationTest {
 
     private object AddressesSpec : ConfigSpecification("Addresses"), ConfigValueParser<RpcSettings.Addresses> {
 
-        val principal by string().map { key, rawValue ->
+        val principal by string().map { key, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> ConfigValidationError.BadValue.of(key, error) as ConfigValidationError } }
 
-            val parts = rawValue.split(":")
-            val host = parts[0]
-            val port = parts[1].toInt()
-            Validated.valid<NetworkHostAndPort, ConfigValidationError>(NetworkHostAndPort(host, port))
-        }
-
-        val admin by string().map { key, rawValue ->
-
-            val parts = rawValue.split(":")
-            val host = parts[0]
-            val port = parts[1].toInt()
-            Validated.valid<NetworkHostAndPort, ConfigValidationError>(NetworkHostAndPort(host, port))
-        }
+        val admin by string().map { key, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> ConfigValidationError.BadValue.of(key, error) as ConfigValidationError } }
 
         override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings.Addresses, ConfigValidationError> {
 
-            return validate(configuration, ConfigProperty.ValidationOptions(strict)).map {
-
-                val principal = principal.valueIn(it)
-                val admin = admin.valueIn(it)
-                RpcSettings.Addresses(principal, admin)
-            }
+            return validate(configuration, ConfigProperty.ValidationOptions(strict)).map { RpcSettings.Addresses(principal.valueIn(it), admin.valueIn(it)) }
         }
     }
 
@@ -42,12 +26,7 @@ class ConfigSpecificationTest {
 
         override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings, ConfigValidationError> {
 
-            return validate(configuration, ConfigProperty.ValidationOptions(strict)).map {
-
-                val useSsl = useSsl.valueIn(it)
-                val addresses = addresses.valueIn(it)
-                RpcSettingsImpl(addresses, useSsl)
-            }
+            return validate(configuration, ConfigProperty.ValidationOptions(strict)).map { RpcSettingsImpl(addresses.valueIn(it), useSsl.valueIn(it)) }
         }
     }
 
@@ -107,6 +86,24 @@ class ConfigSpecificationTest {
         init {
             require(host.isNotBlank())
             require(port > 0)
+        }
+
+        companion object {
+
+            fun <ERROR> validFromRawValue(rawValue: String, mapError: (String) -> ERROR): Validated<NetworkHostAndPort, ERROR> {
+
+                val parts = rawValue.split(":")
+                if (parts.size != 2 || parts[0].isBlank() || parts[1].isBlank() || parts[1].toIntOrNull() == null) {
+                    return invalid(sequenceOf("Value format is \"<host(String)>:<port:(Int)>\"").map(mapError).toSet())
+                }
+                val host = parts[0]
+                val port = parts[1].toInt()
+                if (port <= 0) {
+                    return invalid(sequenceOf("Port value must be greater than zero").map(mapError).toSet())
+                }
+
+                return Validated.valid(NetworkHostAndPort(host, port))
+            }
         }
     }
 }
