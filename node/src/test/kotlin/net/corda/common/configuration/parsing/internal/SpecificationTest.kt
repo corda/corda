@@ -1,9 +1,9 @@
-package net.corda.node.services.config.parsing
+package net.corda.common.configuration.parsing.internal
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigObject
-import net.corda.node.services.config.parsing.common.validation.Validated
-import net.corda.node.services.config.parsing.common.validation.Validated.Companion.invalid
+import net.corda.common.validation.internal.Validated
+import net.corda.common.validation.internal.Validated.Companion.invalid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
@@ -116,7 +116,7 @@ class SpecificationTest {
 
     private interface RpcSettings {
 
-        val addresses: RpcSettings.Addresses
+        val addresses: Addresses
         val useSsl: Boolean
 
         data class Addresses(val principal: NetworkHostAndPort, val admin: NetworkHostAndPort)

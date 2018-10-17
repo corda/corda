@@ -1,9 +1,9 @@
-package net.corda.node.services.config.parsing
+package net.corda.common.configuration.parsing.internal
 
 import com.typesafe.config.*
-import net.corda.node.services.config.parsing.common.validation.Validated
-import net.corda.node.services.config.parsing.common.validation.Validated.Companion.invalid
-import net.corda.node.services.config.parsing.common.validation.Validated.Companion.valid
+import net.corda.common.validation.internal.Validated
+import net.corda.common.validation.internal.Validated.Companion.invalid
+import net.corda.common.validation.internal.Validated.Companion.valid
 
 internal class LongProperty(key: String, sensitive: Boolean = false) : StandardProperty<Long>(key, Long::class.javaObjectType.simpleName, Config::getLong, Config::getLongList, sensitive) {
 

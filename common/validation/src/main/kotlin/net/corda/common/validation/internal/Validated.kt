@@ -1,6 +1,7 @@
-package net.corda.node.services.config.parsing.common.validation
+package net.corda.common.validation.internal
 
-// TODO sollecitom move
+import java.util.Collections.emptySet
+
 interface Validated<TARGET, ERROR> {
 
     val valueIfValid: TARGET?
@@ -23,7 +24,7 @@ interface Validated<TARGET, ERROR> {
         return valueIfValid?.let(convert) ?: invalid(errors)
     }
 
-    fun <MAPPED : Any, MAPPED_ERROR> flatMapErrors(convert: (TARGET) -> Validated<MAPPED, MAPPED_ERROR>, convertError: (ERROR) -> MAPPED_ERROR): Validated<MAPPED, MAPPED_ERROR> {
+    fun <MAPPED : Any, MAPPED_ERROR> flatMapWithErrors(convert: (TARGET) -> Validated<MAPPED, MAPPED_ERROR>, convertError: (ERROR) -> MAPPED_ERROR): Validated<MAPPED, MAPPED_ERROR> {
 
         return valueIfValid?.let(convert) ?: invalid(errors.asSequence().map(convertError).toSet())
     }

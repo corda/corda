@@ -1,4 +1,4 @@
-package net.corda.node.services.config.parsing
+package net.corda.common.configuration.parsing.internal.versioned
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigObject

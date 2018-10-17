@@ -1,6 +1,9 @@
-package net.corda.node.services.config.parsing
+package net.corda.common.configuration.parsing.internal.versioned
 
 import com.typesafe.config.ConfigFactory
+import net.corda.common.configuration.parsing.internal.configObject
+import net.corda.common.configuration.parsing.internal.plus
+import net.corda.common.configuration.parsing.internal.serialize
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 

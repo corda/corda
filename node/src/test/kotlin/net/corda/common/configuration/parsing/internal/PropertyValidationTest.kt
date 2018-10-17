@@ -1,11 +1,11 @@
-package net.corda.node.services.config.parsing
+package net.corda.common.configuration.parsing.internal
 
 import com.typesafe.config.Config
+import net.corda.common.validation.internal.Validated
+import net.corda.common.validation.internal.Validated.Companion.invalid
+import net.corda.common.validation.internal.Validated.Companion.valid
+import net.corda.common.validation.internal.Validator
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.config.parsing.common.validation.Validated
-import net.corda.node.services.config.parsing.common.validation.Validated.Companion.invalid
-import net.corda.node.services.config.parsing.common.validation.Validated.Companion.valid
-import net.corda.node.services.config.parsing.common.validation.Validator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 

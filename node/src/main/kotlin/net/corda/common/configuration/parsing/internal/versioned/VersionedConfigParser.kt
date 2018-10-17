@@ -1,4 +1,4 @@
-package net.corda.node.services.config.parsing
+package net.corda.common.configuration.parsing.internal.versioned
 
 import com.typesafe.config.Config
 
@@ -16,15 +16,15 @@ class VersionedConfigParser<TYPED>(private val extractVersion: ExtractConfigVers
 
     override fun invoke(configuration: Config): TYPED {
 
-        val version = extractVersion.invoke(configuration) ?: defaultVersion ?: throw VersionedConfigParser.Exception.MissingVersionHeader()
-        val parseConfiguration = versionToParseFunction[version] ?: throw VersionedConfigParser.Exception.UnsupportedVersion(version)
+        val version = extractVersion.invoke(configuration) ?: defaultVersion ?: throw Exception.MissingVersionHeader()
+        val parseConfiguration = versionToParseFunction[version] ?: throw Exception.UnsupportedVersion(version)
         return parseConfiguration.invoke(configuration)
     }
 
     sealed class Exception(message: String) : kotlin.Exception(message) {
 
-        class MissingVersionHeader : VersionedConfigParser.Exception("No version header found and no default version specified.")
+        class MissingVersionHeader : Exception("No version header found and no default version specified.")
 
-        class UnsupportedVersion(val version: Int) : VersionedConfigParser.Exception("Unsupported configuration version $version.")
+        class UnsupportedVersion(val version: Int) : Exception("Unsupported configuration version $version.")
     }
 }

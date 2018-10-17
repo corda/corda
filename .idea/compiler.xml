@@ -30,6 +30,12 @@
       <module name="client_test" target="1.8" />
       <module name="cliutils_main" target="1.8" />
       <module name="cliutils_test" target="1.8" />
+      <module name="common-common-validation_main" target="1.8" />
+      <module name="common-common-validation_test" target="1.8" />
+      <module name="common-configuration-parsing_main" target="1.8" />
+      <module name="common-configuration-parsing_test" target="1.8" />
+      <module name="common-validation_main" target="1.8" />
+      <module name="common-validation_test" target="1.8" />
       <module name="common_main" target="1.8" />
       <module name="common_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
@@ -40,6 +46,8 @@
       <module name="corda-core_integrationTest" target="1.8" />
       <module name="corda-core_smokeTest" target="1.8" />
       <module name="corda-finance_integrationTest" target="1.8" />
+      <module name="corda-project-common-validation_main" target="1.8" />
+      <module name="corda-project-common-validation_test" target="1.8" />
       <module name="corda-project_main" target="1.8" />
       <module name="corda-project_test" target="1.8" />
       <module name="corda-smoke-test-utils_main" target="1.8" />

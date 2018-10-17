@@ -1,9 +1,9 @@
-package net.corda.node.services.config.parsing
+package net.corda.common.configuration.parsing.internal
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
-import net.corda.node.services.config.parsing.common.validation.Validated
+import net.corda.common.validation.internal.Validated
 
 internal class Schema(override val name: String?, unorderedProperties: Iterable<Configuration.Property.Definition<*>>) : Configuration.Schema {
 
