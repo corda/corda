@@ -104,11 +104,18 @@ data class NotaryChangeLedgerTransaction(
 
     /** We compute the outputs on demand by applying the notary field modification to the inputs. */
     override val outputs: List<TransactionState<ContractState>>
-        get() = inputs.mapIndexed { pos, (state) ->
-            if (state.encumbrance != null) {
-                state.copy(notary = newNotary, encumbrance = pos + 1)
-            } else state.copy(notary = newNotary)
+        get() = computeOutputs()
+
+    private fun computeOutputs(): List<TransactionState<ContractState>> {
+        val encumberedStates = inputs.asSequence().mapIndexed { index, it -> Pair(index, it) }
+                .filter { it.second.state.encumbrance != null }
+                .associateBy { it.second.ref }
+        return inputs.map {
+            if (it.state.encumbrance != null) {
+                it.state.copy(notary = newNotary, encumbrance = encumberedStates[StateRef(it.ref.txhash, it.state.encumbrance)]!!.first)
+            } else it.state.copy(notary = newNotary)
         }
+    }
 
     override val requiredSigningKeys: Set<PublicKey>
         get() = inputs.flatMap { it.state.data.participants }.map { it.owningKey }.toSet() + notary.owningKey

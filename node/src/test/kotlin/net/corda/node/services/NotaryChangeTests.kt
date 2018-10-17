@@ -109,20 +109,13 @@ class NotaryChangeTests {
         // Check that all encumbrances have been propagated to the outputs
         val originalOutputs = issueTx.outputStates
         val newOutputs = notaryChangeTx.outputStates
-        assertTrue(originalOutputs.minus(newOutputs).isEmpty())
+        assertTrue(originalOutputs.size == newOutputs.size && originalOutputs.containsAll(newOutputs))
 
-        // Check that encumbrance links aren't broken after notary change
-        val encumbranceLink = HashMap<ContractState, ContractState?>()
-        issueTx.outputs.forEach {
-            val currentState = it.data
-            val encumbranceState = it.encumbrance?.let { issueTx.outputs[it].data }
-            encumbranceLink[currentState] = encumbranceState
-        }
-        notaryChangeTx.outputs.forEach {
-            val currentState = it.data
-            val encumbranceState = it.encumbrance?.let { notaryChangeTx.outputs[it].data }
-            assertEquals(encumbranceLink[currentState], encumbranceState)
-        }
+        // Check if encumbrance linking between states has not changed.
+        val originalLinkedStates = issueTx.outputs.asSequence().filter { it.encumbrance != null }.map { Pair(it.data, issueTx.outputs[it.encumbrance!!].data) }.toSet()
+        val notaryChangeLinkedStates = notaryChangeTx.outputs.asSequence().filter { it.encumbrance != null }.map { Pair(it.data, notaryChangeTx.outputs[it.encumbrance!!].data) }.toSet()
+
+        assertTrue { originalLinkedStates.size == notaryChangeLinkedStates.size && originalLinkedStates.containsAll(notaryChangeLinkedStates) }
     }
 
     @Test
@@ -172,10 +165,11 @@ class NotaryChangeTests {
         val stateB = DummyContract.SingleOwnerState(Random().nextInt(), owner.party)
         val stateC = DummyContract.SingleOwnerState(Random().nextInt(), owner.party)
 
+        // Ensure encumbrances form a cycle.
         val tx = TransactionBuilder(null).apply {
             addCommand(Command(DummyContract.Commands.Create(), owner.party.owningKey))
             addOutputState(stateA, DummyContract.PROGRAM_ID, notaryIdentity, encumbrance = 2) // Encumbered by stateB
-            addOutputState(stateC, DummyContract.PROGRAM_ID, notaryIdentity)
+            addOutputState(stateC, DummyContract.PROGRAM_ID, notaryIdentity, encumbrance = 0) // Encumbered by stateA
             addOutputState(stateB, DummyContract.PROGRAM_ID, notaryIdentity, encumbrance = 1) // Encumbered by stateC
         }
         val stx = services.signInitialTransaction(tx)
