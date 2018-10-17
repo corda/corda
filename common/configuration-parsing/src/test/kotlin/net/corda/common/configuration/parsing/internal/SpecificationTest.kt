@@ -17,10 +17,7 @@ class SpecificationTest {
 
             val admin by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) as Configuration.Validation.Error } }
 
-            override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings.Addresses, Configuration.Validation.Error> {
-
-                return validate(configuration, Configuration.Validation.Options(strict)).map { RpcSettings.Addresses(principal.valueIn(it), admin.valueIn(it)) }
-            }
+            override fun parseValid(configuration: Config) = RpcSettings.Addresses(principal.valueIn(configuration), admin.valueIn(configuration))
 
             @Suppress("UNUSED_PARAMETER")
             fun parse(key: String, typeName: String, rawValue: ConfigObject): Validated<RpcSettings.Addresses, Configuration.Validation.Error> = parse(rawValue.toConfig(), false)
@@ -29,10 +26,7 @@ class SpecificationTest {
         val useSsl by boolean()
         val addresses by nestedObject(AddressesSpec).map(AddressesSpec::parse)
 
-        override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings, Configuration.Validation.Error> {
-
-            return validate(configuration, Configuration.Validation.Options(strict)).map { RpcSettingsImpl(addresses.valueIn(it), useSsl.valueIn(it)) }
-        }
+        override fun parseValid(configuration: Config) = RpcSettingsImpl(addresses.valueIn(configuration), useSsl.valueIn(configuration))
     }
 
     @Test
@@ -105,10 +99,7 @@ class SpecificationTest {
             @Suppress("unused")
             val myProp by string().list().optional()
 
-            override fun parse(configuration: Config, strict: Boolean): Validated<List<String>?, Configuration.Validation.Error> {
-
-                return myProp.validate(configuration).map { myProp.valueIn(configuration) }
-            }
+            override fun parseValid(configuration: Config) = myProp.valueIn(configuration)
         }
 
         assertThat(spec.properties).hasSize(1)

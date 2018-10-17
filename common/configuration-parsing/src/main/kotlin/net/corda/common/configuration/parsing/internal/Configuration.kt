@@ -52,7 +52,7 @@ object Configuration {
             val schema: Schema?
         }
 
-        interface Definition<TYPE> : Metadata, Validator, Value.Extractor<TYPE>, Describer {
+        interface Definition<TYPE> : Configuration.Property.Metadata, Configuration.Validator, Configuration.Value.Extractor<TYPE>, Configuration.Describer {
 
             override fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
@@ -94,7 +94,7 @@ object Configuration {
         }
     }
 
-    interface Schema : Validator, Describer {
+    interface Schema : Configuration.Validator, Configuration.Describer {
 
         val name: String?
 
@@ -112,7 +112,7 @@ object Configuration {
         }
     }
 
-    abstract class Specification<VALUE>(name: String?) : Schema, Value.Parser<VALUE> {
+    abstract class Specification<VALUE>(name: String?) : Configuration.Schema, Configuration.Value.Parser<VALUE> {
 
         private val mutableProperties = mutableSetOf<Property.Definition<*>>()
 
@@ -141,6 +141,13 @@ object Configuration {
         override fun validate(target: Config, options: Validation.Options?) = schema.validate(target, options)
 
         override fun describe(configuration: Config) = schema.describe(configuration)
+
+        final override fun parse(configuration: Config, strict: Boolean): Validated<VALUE, Configuration.Validation.Error> {
+
+            return validate(configuration, Configuration.Validation.Options(strict)).map(::parseValid)
+        }
+
+        protected abstract fun parseValid(configuration: Config): VALUE
     }
 
     object Validation {
@@ -161,7 +168,7 @@ object Configuration {
                 return "(keyName='$keyName', typeName='$typeName', path=$path, message='$message')"
             }
 
-            class WrongType private constructor(keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Error(keyName, typeName, message, containingPath) {
+            class WrongType private constructor(keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
 
                 internal companion object {
 
@@ -181,7 +188,7 @@ object Configuration {
                 override fun withContainingPath(vararg containingPath: String) = WrongType(keyName, typeName, message, containingPath.toList() + this.containingPath)
             }
 
-            class MissingValue private constructor(keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Error(keyName, typeName, message, containingPath) {
+            class MissingValue private constructor(keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
 
                 internal companion object {
 
@@ -201,7 +208,7 @@ object Configuration {
                 override fun withContainingPath(vararg containingPath: String) = MissingValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
             }
 
-            class BadValue private constructor(keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Error(keyName, typeName, message, containingPath) {
+            class BadValue private constructor(keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
 
                 internal companion object {
 
@@ -221,7 +228,7 @@ object Configuration {
                 override fun withContainingPath(vararg containingPath: String) = BadValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
             }
 
-            class Unknown private constructor(keyName: String, containingPath: List<String> = emptyList()) : Error(keyName, null, message(keyName), containingPath) {
+            class Unknown private constructor(keyName: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, null, message(keyName), containingPath) {
 
                 internal companion object {
 
@@ -248,5 +255,5 @@ object Configuration {
         }
     }
 
-    interface Validator : net.corda.common.validation.internal.Validator<Config, Validation.Error, Validation.Options>
+    interface Validator : net.corda.common.validation.internal.Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options>
 }
