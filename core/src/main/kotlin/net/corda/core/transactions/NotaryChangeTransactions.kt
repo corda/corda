@@ -102,7 +102,7 @@ data class NotaryChangeLedgerTransaction(
 
     override val references: List<StateAndRef<ContractState>> = emptyList()
 
-    /** We compute the outputs on demand by applying the notary field modification to the inputs */
+    /** We compute the outputs on demand by applying the notary field modification to the inputs. */
     override val outputs: List<TransactionState<ContractState>>
         get() = inputs.mapIndexed { pos, (state) ->
             if (state.encumbrance != null) {
@@ -118,18 +118,16 @@ data class NotaryChangeLedgerTransaction(
     }
 
     /**
-     * Check that encumbrances have been included in the inputs. The [NotaryChangeFlow] guarantees that an encumbrance
-     * will follow its encumbered state in the inputs.
+     * Check that encumbrances have been included in the inputs.
      */
     private fun checkEncumbrances() {
-        inputs.forEachIndexed { i, (state, ref) ->
-            state.encumbrance?.let {
-                val nextIndex = i + 1
-                fun nextStateIsEncumbrance() = (inputs[nextIndex].ref.txhash == ref.txhash) && (inputs[nextIndex].ref.index == it)
-                if (nextIndex >= inputs.size || !nextStateIsEncumbrance()) {
+        val encumberedStates = inputs.asSequence().filter { it.state.encumbrance != null }.associateBy { it.ref }
+        if (encumberedStates.isNotEmpty()) {
+            inputs.forEach {
+                if (StateRef(it.ref.txhash, it.state.encumbrance!!) !in encumberedStates) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(
                             id,
-                            it,
+                            it.state.encumbrance,
                             TransactionVerificationException.Direction.INPUT)
                 }
             }
