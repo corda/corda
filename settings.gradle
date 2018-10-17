@@ -62,13 +62,14 @@ include 'samples:cordapp-configuration'
 include 'samples:network-verifier'
 include 'serialization'
 
-['validation', 'configuration-parsing'].each {
-    include "common-$it"
-    project(":common-$it").projectDir = new File("$settingsDir/common/$it")
-}
+include 'common-validation'
+project(":common-validation").projectDir = new File("$settingsDir/common/validation")
+
+include 'common-configuration-parsing'
+project(":common-configuration-parsing").projectDir = new File("$settingsDir/common/configuration-parsing")
 
 include 'common:validation'
-findProject(':common:validation')?.name = 'common-validation'
+findProject(':common-validation')?.name = 'common-validation'
 
 apply from: 'buildCacheSettings.gradle'
 
