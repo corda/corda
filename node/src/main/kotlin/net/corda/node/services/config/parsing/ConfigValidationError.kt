@@ -1,6 +1,5 @@
 package net.corda.node.services.config.parsing
 
-// TODO sollecitom remove `typeName`?
 sealed class ConfigValidationError constructor(val keyName: String, open val typeName: String? = null, open val message: String, val containingPath: List<String> = emptyList()) {
 
     val path: List<String> = containingPath + keyName
