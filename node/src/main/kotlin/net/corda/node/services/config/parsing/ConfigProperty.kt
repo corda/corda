@@ -6,7 +6,7 @@ import net.corda.node.services.config.parsing.Validated.Companion.valid
 import java.time.Duration
 import kotlin.reflect.KClass
 
-interface ConfigProperty<TYPE> : Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options>, Configuration.Property.Metadata, Configuration.Describer, Configuration.Value.Extractor<TYPE> {
+interface ConfigProperty<TYPE> : Configuration.Validator, Configuration.Property.Metadata, Configuration.Describer, Configuration.Value.Extractor<TYPE> {
 
     override fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 

@@ -61,10 +61,12 @@ object Configuration {
 
     }
 
+    interface Validator : net.corda.node.services.config.parsing.Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options>
+
     object Validation {
 
         data class Options(val strict: Boolean)
-        
+
         sealed class Error constructor(val keyName: String, open val typeName: String? = null, open val message: String, val containingPath: List<String> = emptyList()) {
 
             val path: List<String> = containingPath + keyName
