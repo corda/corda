@@ -3,8 +3,9 @@ package net.corda.node.services.config.parsing
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
+import net.corda.node.services.config.parsing.common.validation.Validated
 
-internal class ConfigPropertySchema(override val name: String?, unorderedProperties: Iterable<Configuration.Property.Definition<*>>) : Configuration.Schema {
+internal class Schema(override val name: String?, unorderedProperties: Iterable<Configuration.Property.Definition<*>>) : Configuration.Schema {
 
     override val properties = unorderedProperties.sortedBy(Configuration.Property.Definition<*>::key).toSet()
 
@@ -58,7 +59,7 @@ internal class ConfigPropertySchema(override val name: String?, unorderedPropert
             return false
         }
 
-        other as ConfigPropertySchema
+        other as Schema
 
         if (properties != other.properties) {
             return false

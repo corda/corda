@@ -6,6 +6,7 @@ typealias ParseConfig<TYPED> = (Config) -> TYPED
 
 typealias ExtractConfigVersion = (Config) -> Int?
 
+// TODO sollecitom create one that gets a map<version, spec> to allow easy versioned parsing
 class VersionedConfigParser<TYPED>(private val extractVersion: ExtractConfigVersion, private val versionToParseFunction: Map<Int, ParseConfig<out TYPED>>, private val defaultVersion: Int? = 0) : ParseConfig<TYPED> {
 
     companion object {

@@ -2,15 +2,16 @@ package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigObject
-import net.corda.node.services.config.parsing.Validated.Companion.invalid
+import net.corda.node.services.config.parsing.common.validation.Validated
+import net.corda.node.services.config.parsing.common.validation.Validated.Companion.invalid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
-class ConfigSpecificationTest {
+class SpecificationTest {
 
-    private object RpcSettingsSpec : ConfigSpecification<RpcSettings>("RpcSettings") {
+    private object RpcSettingsSpec : Specification<RpcSettings>("RpcSettings") {
 
-        private object AddressesSpec : ConfigSpecification<RpcSettings.Addresses>("Addresses") {
+        private object AddressesSpec : Specification<RpcSettings.Addresses>("Addresses") {
 
             val principal by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) as Configuration.Validation.Error } }
 
@@ -99,7 +100,7 @@ class ConfigSpecificationTest {
     @Test
     fun chained_delegated_properties_are_not_added_multiple_times() {
 
-        val spec = object : ConfigSpecification<List<String>?>("Test") {
+        val spec = object : Specification<List<String>?>("Test") {
 
             @Suppress("unused")
             val myProp by string().list().optional()

@@ -2,12 +2,14 @@ package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.config.parsing.Validated.Companion.invalid
-import net.corda.node.services.config.parsing.Validated.Companion.valid
+import net.corda.node.services.config.parsing.common.validation.Validated
+import net.corda.node.services.config.parsing.common.validation.Validated.Companion.invalid
+import net.corda.node.services.config.parsing.common.validation.Validated.Companion.valid
+import net.corda.node.services.config.parsing.common.validation.Validator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
-class ConfigPropertyValidationTest {
+class PropertyValidationTest {
 
     @Test
     fun absent_value() {

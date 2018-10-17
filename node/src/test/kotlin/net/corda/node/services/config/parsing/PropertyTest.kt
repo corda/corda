@@ -5,7 +5,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 
-class ConfigPropertyTest {
+class PropertyTest {
 
     @Test
     fun present_value_with_correct_type() {

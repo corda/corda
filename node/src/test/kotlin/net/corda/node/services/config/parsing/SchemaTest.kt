@@ -5,7 +5,7 @@ import com.typesafe.config.ConfigValueFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
-class ConfigSchemaTest {
+class SchemaTest {
 
     @Test
     fun validation_with_nested_properties() {

@@ -1,4 +1,4 @@
-package net.corda.node.services.config.parsing
+package net.corda.node.services.config.parsing.common.validation
 
 // TODO sollecitom move
 interface Validator<TARGET : Any, ERROR : Any, OPTIONS> {

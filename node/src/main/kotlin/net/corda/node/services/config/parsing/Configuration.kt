@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
+import net.corda.node.services.config.parsing.common.validation.Validated
 import java.time.Duration
 import kotlin.reflect.KClass
 
@@ -35,7 +36,7 @@ object Configuration {
 
         interface Parser<VALUE> {
 
-            fun parse(configuration: Config, strict: Boolean): Validated<VALUE, Configuration.Validation.Error>
+            fun parse(configuration: Config, strict: Boolean): Validated<VALUE, Validation.Error>
         }
     }
 
@@ -67,7 +68,7 @@ object Configuration {
 
             interface Standard<TYPE> : Configuration.Property.Definition.Required<TYPE>, Configuration.Property.Definition.Single<TYPE> {
 
-                fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>): Configuration.Property.Definition.Standard<MAPPED>
+                fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, Validation.Error>): Configuration.Property.Definition.Standard<MAPPED>
             }
 
             companion object {
@@ -76,19 +77,19 @@ object Configuration {
 
                 internal val expectedExceptionTypes: Set<KClass<*>> = setOf(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
 
-                fun long(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<Long> = LongConfigProperty(key, sensitive)
+                fun long(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<Long> = LongProperty(key, sensitive)
 
-                fun boolean(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<Boolean> = StandardConfigProperty(key, Boolean::class.javaObjectType.simpleName, Config::getBoolean, Config::getBooleanList, sensitive)
+                fun boolean(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<Boolean> = StandardProperty(key, Boolean::class.javaObjectType.simpleName, Config::getBoolean, Config::getBooleanList, sensitive)
 
-                fun double(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<Double> = StandardConfigProperty(key, Double::class.javaObjectType.simpleName, Config::getDouble, Config::getDoubleList, sensitive)
+                fun double(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<Double> = StandardProperty(key, Double::class.javaObjectType.simpleName, Config::getDouble, Config::getDoubleList, sensitive)
 
-                fun string(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<String> = StandardConfigProperty(key, String::class.java.simpleName, Config::getString, Config::getStringList, sensitive)
+                fun string(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<String> = StandardProperty(key, String::class.java.simpleName, Config::getString, Config::getStringList, sensitive)
 
-                fun duration(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<Duration> = StandardConfigProperty(key, Duration::class.java.simpleName, Config::getDuration, Config::getDurationList, sensitive)
+                fun duration(key: String, sensitive: Boolean = false): Configuration.Property.Definition.Standard<Duration> = StandardProperty(key, Duration::class.java.simpleName, Config::getDuration, Config::getDurationList, sensitive)
 
-                fun nestedObject(key: String, schema: Configuration.Schema? = null, sensitive: Boolean = false): Configuration.Property.Definition.Standard<ConfigObject> = StandardConfigProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList, sensitive, schema)
+                fun nestedObject(key: String, schema: Configuration.Schema? = null, sensitive: Boolean = false): Configuration.Property.Definition.Standard<ConfigObject> = StandardProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList, sensitive, schema)
 
-                fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>, sensitive: Boolean = false): Configuration.Property.Definition.Standard<ENUM> = StandardConfigProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) }, sensitive)
+                fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>, sensitive: Boolean = false): Configuration.Property.Definition.Standard<ENUM> = StandardProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) }, sensitive)
             }
         }
     }
@@ -103,7 +104,7 @@ object Configuration {
 
         companion object {
 
-            fun withProperties(name: String? = null, properties: Iterable<Configuration.Property.Definition<*>>): Configuration.Schema = ConfigPropertySchema(name, properties)
+            fun withProperties(name: String? = null, properties: Iterable<Configuration.Property.Definition<*>>): Configuration.Schema = Schema(name, properties)
 
             fun withProperties(vararg properties: Configuration.Property.Definition<*>, name: String? = null): Configuration.Schema = withProperties(name, properties.toSet())
 
@@ -115,7 +116,7 @@ object Configuration {
 
     }
 
-    interface Validator : net.corda.node.services.config.parsing.Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options>
+    interface Validator : net.corda.node.services.config.parsing.common.validation.Validator<Config, Validation.Error, Validation.Options>
 
     object Validation {
 

@@ -1,6 +1,6 @@
-package net.corda.node.services.config.parsing
+package net.corda.node.services.config.parsing.common.validation
 
-// TODO sollecitom move to commons
+// TODO sollecitom move
 interface Validated<TARGET, ERROR> {
 
     val valueIfValid: TARGET?
