@@ -17,6 +17,14 @@ final class DJVMThrowableWrapper extends Throwable {
         throwable = t;
     }
 
+    /**
+     * Prevent this wrapper from creating its own stack trace.
+     */
+    @Override
+    public final Throwable fillInStackTrace() {
+        return this;
+    }
+
     @Override
     @NotNull
     final java.lang.Throwable fromDJVM() {

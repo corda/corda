@@ -6,7 +6,10 @@ import sandbox.java.lang.unsandbox
 
 typealias SandboxFunction<TInput, TOutput> = sandbox.java.util.function.Function<TInput, TOutput>
 
-@Suppress("unused")
+internal fun isEntryPoint(elt: java.lang.StackTraceElement): Boolean {
+    return elt.className == "sandbox.Task" && elt.methodName == "apply"
+}
+
 class Task(private val function: SandboxFunction<in Any?, out Any?>?) : SandboxFunction<Any?, Any?> {
 
     /**

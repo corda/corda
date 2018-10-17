@@ -55,6 +55,11 @@ class ThrowableWrapperFactory(
      *         public final sandbox.java.lang.Throwable getThrowable() {
      *             return t;
      *         }
+     *
+     *         @Override
+     *         public final java.lang.Throwable fillInStackTrace() {
+     *             return this;
+     *         }
      *     }
      * </code>
      */
@@ -90,6 +95,15 @@ class ThrowableWrapperFactory(
             mv.visitCode()
             mv.visitVarInsn(ALOAD, 0)
             mv.visitFieldInsn(GETFIELD, className, THROWABLE_FIELD, FIELD_TYPE)
+            mv.visitInsn(ARETURN)
+            mv.visitMaxs(1, 1)
+            mv.visitEnd()
+        }
+
+        // Prevent these wrappers from generating their own stack traces.
+        visitMethod(ACC_PUBLIC or ACC_FINAL, "fillInStackTrace", "()Ljava/lang/Throwable;", null, null).also { mv ->
+            mv.visitCode()
+            mv.visitVarInsn(ALOAD, 0)
             mv.visitInsn(ARETURN)
             mv.visitMaxs(1, 1)
             mv.visitEnd()

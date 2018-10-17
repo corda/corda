@@ -1,6 +1,7 @@
 package sandbox.java.lang;
 
 import org.jetbrains.annotations.NotNull;
+import sandbox.TaskTypes;
 
 import java.io.Serializable;
 
@@ -14,7 +15,7 @@ public class Throwable extends Object implements Serializable {
 
     public Throwable() {
         this.cause = this;
-        this.stackTrace = NO_STACK_TRACE;
+        fillInStackTrace();
     }
 
     public Throwable(String message) {
@@ -25,13 +26,23 @@ public class Throwable extends Object implements Serializable {
     public Throwable(Throwable cause) {
         this.cause = cause;
         this.message = (cause == null) ? null : cause.toDJVMString();
-        this.stackTrace = NO_STACK_TRACE;
+        fillInStackTrace();
     }
 
     public Throwable(String message, Throwable cause) {
         this.message = message;
         this.cause = cause;
-        this.stackTrace = NO_STACK_TRACE;
+        fillInStackTrace();
+    }
+
+    protected Throwable(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+        if (writableStackTrace) {
+            fillInStackTrace();
+        } else {
+            stackTrace = NO_STACK_TRACE;
+        }
+        this.message = message;
+        this.cause = cause;
     }
 
     public String getMessage() {
@@ -67,7 +78,7 @@ public class Throwable extends Object implements Serializable {
     }
 
     public StackTraceElement[] getStackTrace() {
-        return stackTrace.clone();
+        return (stackTrace == NO_STACK_TRACE) ? stackTrace : stackTrace.clone();
     }
 
     public void setStackTrace(StackTraceElement[] stackTrace) {
@@ -75,15 +86,48 @@ public class Throwable extends Object implements Serializable {
 
         for (int i = 0; i < traceCopy.length; ++i) {
             if (traceCopy[i] == null) {
-                throw new java.lang.NullPointerException("stackTrace[" + i + "]");
+                throw new java.lang.NullPointerException("stackTrace[" + i + ']');
             }
         }
 
         this.stackTrace = traceCopy;
     }
 
+    @SuppressWarnings({"ThrowableNotThrown", "UnusedReturnValue"})
+    public Throwable fillInStackTrace() {
+        if (stackTrace == null) {
+            /*
+             * We have been invoked from within this exception's constructor.
+             * Work our way up the stack trace until we find this constructor,
+             * and then find out who actually invoked it. This is where our
+             * sandboxed stack trace will start from.
+             *
+             * Our stack trace will end at the point where we entered the sandbox.
+             */
+            final java.lang.StackTraceElement[] elements = new java.lang.Throwable().getStackTrace();
+            final java.lang.String exceptionName = getClass().getName();
+            int startIdx = 1;
+            while (startIdx < elements.length && !isConstructorFor(elements[startIdx], exceptionName)) {
+                ++startIdx;
+            }
+            while (startIdx < elements.length && isConstructorFor(elements[startIdx], exceptionName)) {
+                ++startIdx;
+            }
+
+            int endIdx = startIdx;
+            while (endIdx < elements.length && !TaskTypes.isEntryPoint(elements[endIdx])) {
+                ++endIdx;
+            }
+            stackTrace = (startIdx == elements.length) ? NO_STACK_TRACE : DJVM.copyToDJVM(elements, startIdx, endIdx);
+        }
+        return this;
+    }
+
+    private static boolean isConstructorFor(java.lang.StackTraceElement elt, java.lang.String className) {
+        return elt.getClassName().equals(className) && elt.getMethodName().equals("<init>");
+    }
+
     public void printStackTrace() {}
-    public Throwable fillInStackTrace() { return this; }
 
     @Override
     @NotNull

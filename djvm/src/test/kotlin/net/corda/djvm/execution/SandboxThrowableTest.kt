@@ -17,12 +17,44 @@ class SandboxThrowableTest : TestBase() {
     }
 
     @Test
+    fun `test rethrowing an exception`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<String, Array<String>>(configuration)
+        contractExecutor.run<ThrowAndRethrowExample>("Hello World").apply {
+            assertThat(result)
+                .isEqualTo(arrayOf("FIRST CATCH", "FIRST FINALLY", "SECOND CATCH", "Hello World", "SECOND FINALLY"))
+        }
+    }
+
+    @Test
     fun `test JVM exceptions still propagate`() = sandbox(DEFAULT) {
         val contractExecutor = DeterministicSandboxExecutor<Int, String>(configuration)
         contractExecutor.run<TriggerJVMException>(-1).apply {
             assertThat(result)
                 .isEqualTo("sandbox.java.lang.ArrayIndexOutOfBoundsException:-1")
         }
+    }
+}
+
+class ThrowAndRethrowExample : Function<String, Array<String>> {
+    override fun apply(input: String): Array<String> {
+        val data = mutableListOf<String>()
+        try {
+            try {
+                throw MyExampleException(input)
+            } catch (e: Exception) {
+                data += "FIRST CATCH"
+                throw e
+            } finally {
+                data += "FIRST FINALLY"
+            }
+        } catch (e: MyExampleException) {
+            data += "SECOND CATCH"
+            e.message?.apply { data += this }
+        } finally {
+            data += "SECOND FINALLY"
+        }
+
+        return data.toTypedArray()
     }
 }
 

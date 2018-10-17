@@ -39,10 +39,10 @@ open class ClassRewriter(
             analysisConfig
         )
         val visitor = ClassMutator(
-                classRemapper,
-                analysisConfig,
-                configuration.definitionProviders,
-                configuration.emitters
+            classRemapper,
+            analysisConfig,
+            configuration.definitionProviders,
+            configuration.emitters
         )
         visitor.analyze(reader, context, options = ClassReader.EXPAND_FRAMES)
         return ByteCode(writer.toByteArray(), visitor.hasBeenModified)
@@ -91,6 +91,9 @@ open class ClassRewriter(
         }
     }
 
+    /**
+     * Map exceptions in method signatures to their sandboxed equivalents.
+     */
     private inner class ClassExceptionRemapper(parent: ClassVisitor) : ClassVisitor(API_VERSION, parent) {
         override fun visitMethod(access: Int, name: String, descriptor: String, signature: String?, exceptions: Array<out String>?): MethodVisitor? {
             val mappedExceptions = exceptions?.map(analysisConfig.exceptionResolver::getThrowableOwnerName)?.toTypedArray()
@@ -100,6 +103,9 @@ open class ClassRewriter(
         }
     }
 
+    /**
+     * Map exceptions in method try-catch blocks to their sandboxed equivalents.
+     */
     private inner class MethodExceptionRemapper(parent: MethodVisitor) : MethodVisitor(API_VERSION, parent) {
         override fun visitTryCatchBlock(start: Label, end: Label, handler: Label, exceptionType: String?) {
             val mappedExceptionType = exceptionType?.let(analysisConfig.exceptionResolver::getThrowableOwnerName)

@@ -33,7 +33,6 @@ dependencies {
 
     // ASM: byte code manipulation library
     compile "org.ow2.asm:asm:$asm_version"
-    compile "org.ow2.asm:asm-tree:$asm_version"
     compile "org.ow2.asm:asm-commons:$asm_version"
 
     // ClassGraph: classpath scanning

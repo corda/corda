@@ -130,6 +130,7 @@ class AnalysisConfiguration(
             sun.misc.SharedSecrets::class.java
         ).sandboxed() + setOf(
             "sandbox/Task",
+            "sandbox/TaskTypes",
             "sandbox/java/lang/DJVM",
             "sandbox/java/lang/DJVMException",
             "sandbox/java/lang/DJVMThrowableWrapper",
