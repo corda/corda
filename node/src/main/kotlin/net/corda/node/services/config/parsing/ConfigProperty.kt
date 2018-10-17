@@ -16,24 +16,7 @@ interface ConfigPropertyMetadata {
     val schema: ConfigSchema?
 }
 
-interface ConfigValueExtractor<TYPE> {
-
-    @Throws(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
-    fun valueIn(configuration: Config): TYPE
-
-    fun isSpecifiedBy(configuration: Config): Boolean
-
-    @Throws(ConfigException.WrongType::class, ConfigException.BadValue::class)
-    fun valueInOrNull(configuration: Config): TYPE? {
-
-        return when {
-            isSpecifiedBy(configuration) -> valueIn(configuration)
-            else -> null
-        }
-    }
-}
-
-interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Configuration.Validation.Options>, ConfigPropertyMetadata, Configuration.Describer, ConfigValueExtractor<TYPE> {
+interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Configuration.Validation.Options>, ConfigPropertyMetadata, Configuration.Describer, Configuration.Value.Extractor<TYPE> {
 
     override fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
