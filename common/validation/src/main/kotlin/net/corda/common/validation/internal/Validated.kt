@@ -12,7 +12,7 @@ interface Validated<TARGET, ERROR> {
 
     val isInvalid: Boolean get() = !isValid
 
-    fun valueOrThrow(exceptionOnErrors: (Set<ERROR>) -> Exception = { errors -> IllegalArgumentException(errors.joinToString(System.lineSeparator())) }): TARGET = valueIfValid ?: throw exceptionOnErrors.invoke(errors)
+    fun valueOrThrow(exceptionOnErrors: (Set<ERROR>) -> Exception = { errors -> IllegalArgumentException(errors.joinToString(System.lineSeparator())) }): TARGET
 
     fun <MAPPED> map(convert: (TARGET) -> MAPPED): Validated<MAPPED, ERROR> {
 
@@ -31,19 +31,33 @@ interface Validated<TARGET, ERROR> {
 
     companion object {
 
-        fun <T, E> valid(target: T): Validated<T, E> = Result(target, emptySet())
+        fun <T, E> valid(target: T): Validated.Result<T, E> = Validated.Result.Successful(target)
 
-        fun <T, E> invalid(errors: Set<E>): Validated<T, E> = Result(null, errors)
+        fun <T, E> invalid(errors: Set<E>): Validated.Result<T, E> = Validated.Result.Unsuccessful(errors)
 
-        fun <T, E> invalid(vararg errors: E): Validated<T, E> = invalid(errors.toSet())
+        fun <T, E> invalid(vararg errors: E): Validated.Result<T, E> = invalid(errors.toSet())
 
         fun <T, E> withResult(target: T, errors: Set<E>): Validated<T, E> = if (errors.isEmpty()) valid(target) else invalid(errors)
     }
 
-    private class Result<TARGET, ERROR>(override val valueIfValid: TARGET?, override val errors: Set<ERROR>) : Validated<TARGET, ERROR> {
+    sealed class Result<TARGET, ERROR> : Validated<TARGET, ERROR> {
 
-        init {
-            require(valueIfValid != null && errors.isEmpty() || valueIfValid == null && errors.isNotEmpty())
+        class Successful<TARGET, ERROR>(override val valueIfValid: TARGET) : Result<TARGET, ERROR>(), Validated<TARGET, ERROR> {
+
+            override val errors: Set<ERROR> = emptySet<ERROR>()
+
+            override fun valueOrThrow(exceptionOnErrors: (Set<ERROR>) -> Exception) = valueIfValid
+        }
+
+        class Unsuccessful<TARGET, ERROR>(override val errors: Set<ERROR>) : Result<TARGET, ERROR>(), Validated<TARGET, ERROR> {
+
+            init {
+                require(errors.isNotEmpty())
+            }
+
+            override val valueIfValid: TARGET? = null
+
+            override fun valueOrThrow(exceptionOnErrors: (Set<ERROR>) -> Exception) = throw exceptionOnErrors.invoke(errors)
         }
     }
 }
