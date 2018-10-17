@@ -7,6 +7,7 @@ import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 
 class VersionedConfigurationParserTest {
@@ -26,7 +27,27 @@ class VersionedConfigurationParserTest {
     @Test
     fun missing_version_raises_exception() {
 
+        val defaultVersion = null
 
+        val configuration = configObject().toConfig()
+        val parser = VersionedConfigurationParser.mapping<String>(extractMissingVersion, defaultVersion)
+
+        assertThatThrownBy { parser.parse(configuration, Configuration.Validation.Options(strict = false)) }.isInstanceOf(VersionedConfigurationParser.Exception.MissingVersionHeader::class.java)
+    }
+
+    @Test
+    fun invalid_version_errors_are_propagated() {
+
+        val configuration = configObject().toConfig()
+
+        val error = Configuration.Validation.Error.WrongType.of("blah.version", "Version property must be of type <Int>, not <Boolean>", "Int")
+        val extractVersion = extractValueWithErrors<Int?>(setOf(error))
+        val parser = VersionedConfigurationParser.mapping<String>(extractVersion)
+
+        val errors = parser.parse(configuration, Configuration.Validation.Options(strict = false)).errors
+
+        assertThat(errors).hasSize(1)
+        assertThat(errors.first()).isEqualTo(error)
     }
 
     @Test

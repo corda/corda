@@ -3,6 +3,7 @@ package net.corda.common.configuration.parsing.internal.versioned
 import com.typesafe.config.Config
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.validation.internal.Validated
+import net.corda.common.validation.internal.Validated.Companion.invalid
 
 class VersionedConfigurationParser<TYPE> private constructor(private val versionParser: Configuration.Value.Parser<Int?>, private val parsersForVersion: Map<Int, Configuration.Value.Parser<TYPE>>, private val defaultVersion: Int?) : Configuration.Value.Parser<TYPE> {
 
@@ -16,7 +17,11 @@ class VersionedConfigurationParser<TYPE> private constructor(private val version
 
     override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<TYPE, Configuration.Validation.Error> {
 
-        val version = extractVersion.invoke(configuration).valueOrThrow() ?: defaultVersion ?: throw Exception.MissingVersionHeader()
+        val versionRead = extractVersion.invoke(configuration)
+        if (versionRead.isInvalid) {
+            return invalid(versionRead.errors)
+        }
+        val version = versionRead.valueIfValid ?: defaultVersion ?: throw Exception.MissingVersionHeader()
         val parseConfiguration = parsersForVersion[version] ?: throw Exception.UnsupportedVersion(version)
         return parseConfiguration.parse(configuration, options)
     }
