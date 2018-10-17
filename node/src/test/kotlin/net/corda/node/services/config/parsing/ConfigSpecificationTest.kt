@@ -9,9 +9,9 @@ class ConfigSpecificationTest {
 
     private object AddressesSpec : ConfigSpecification("Addresses"), ConfigValueParser<RpcSettings.Addresses> {
 
-        val principal by string().map { key, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> ConfigValidationError.BadValue.of(key, error) as ConfigValidationError } }
+        val principal by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> ConfigValidationError.BadValue.of(key, typeName, error) as ConfigValidationError } }
 
-        val admin by string().map { key, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> ConfigValidationError.BadValue.of(key, error) as ConfigValidationError } }
+        val admin by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> ConfigValidationError.BadValue.of(key, typeName, error) as ConfigValidationError } }
 
         override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings.Addresses, ConfigValidationError> {
 
@@ -22,7 +22,7 @@ class ConfigSpecificationTest {
     private object RpcSettingsSpec : ConfigSpecification("RpcSettings"), ConfigValueParser<RpcSettings> {
 
         val useSsl by boolean()
-        val addresses by nestedObject(AddressesSpec).map { _, rawValue -> AddressesSpec.parse(rawValue.toConfig(), false) }
+        val addresses by nestedObject(AddressesSpec).map { _, _, rawValue -> AddressesSpec.parse(rawValue.toConfig(), false) }
 
         override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings, ConfigValidationError> {
 
@@ -87,6 +87,8 @@ class ConfigSpecificationTest {
         assertThat(rpcSettings.errors.first()).isInstanceOfSatisfying(ConfigValidationError.BadValue::class.java) { error ->
 
             assertThat(error.path).containsExactly("addresses", "principal")
+            assertThat(error.keyName).isEqualTo("principal")
+            assertThat(error.typeName).isEqualTo(NetworkHostAndPort::class.java.simpleName)
         }
     }
 

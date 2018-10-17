@@ -55,24 +55,24 @@ sealed class ConfigValidationError constructor(val keyName: String, open val typ
         override fun withContainingPath(vararg containingPath: String) = ConfigValidationError.MissingValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
     }
 
-    class BadValue private constructor(keyName: String, message: String, containingPath: List<String> = emptyList()) : ConfigValidationError(keyName, null, message, containingPath) {
+    class BadValue private constructor(keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : ConfigValidationError(keyName, typeName, message, containingPath) {
 
         internal companion object {
 
-            internal fun of(keyName: String, message: String, containingPath: List<String> = emptyList()): ConfigValidationError.BadValue {
+            internal fun of(keyName: String, typeName: String, message: String, containingPath: List<String> = emptyList()): ConfigValidationError.BadValue {
 
                 val keyParts = keyName.split(".")
                 return if (keyParts.size > 1) {
                     val fullContainingPath = containingPath + keyParts.subList(0, keyParts.size - 1)
                     val keySegment = keyParts.last()
-                    return ConfigValidationError.BadValue(keySegment, message, fullContainingPath)
+                    return ConfigValidationError.BadValue(keySegment, typeName, message, fullContainingPath)
                 } else {
-                    ConfigValidationError.BadValue(keyName, message, containingPath)
+                    ConfigValidationError.BadValue(keyName, typeName, message, containingPath)
                 }
             }
         }
 
-        override fun withContainingPath(vararg containingPath: String) = ConfigValidationError.BadValue(keyName, message, containingPath.toList() + this.containingPath)
+        override fun withContainingPath(vararg containingPath: String) = ConfigValidationError.BadValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
     }
 
     class Unknown private constructor(keyName: String, containingPath: List<String> = emptyList()) : ConfigValidationError(keyName, null, message(keyName), containingPath) {
