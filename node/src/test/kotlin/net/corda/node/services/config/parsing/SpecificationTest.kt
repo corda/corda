@@ -9,9 +9,9 @@ import org.junit.Test
 
 class SpecificationTest {
 
-    private object RpcSettingsSpec : Specification<RpcSettings>("RpcSettings") {
+    private object RpcSettingsSpec : Configuration.Specification<RpcSettings>("RpcSettings") {
 
-        private object AddressesSpec : Specification<RpcSettings.Addresses>("Addresses") {
+        private object AddressesSpec : Configuration.Specification<RpcSettings.Addresses>("Addresses") {
 
             val principal by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) as Configuration.Validation.Error } }
 
@@ -100,7 +100,7 @@ class SpecificationTest {
     @Test
     fun chained_delegated_properties_are_not_added_multiple_times() {
 
-        val spec = object : Specification<List<String>?>("Test") {
+        val spec = object : Configuration.Specification<List<String>?>("Test") {
 
             @Suppress("unused")
             val myProp by string().list().optional()

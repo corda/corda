@@ -112,11 +112,36 @@ object Configuration {
         }
     }
 
-    abstract class Specification {
+    abstract class Specification<VALUE>(name: String?) : Configuration.Schema, Configuration.Value.Parser<VALUE> {
 
+        private val mutableProperties = mutableSetOf<Configuration.Property.Definition<*>>()
+
+        override val properties: Set<Configuration.Property.Definition<*>> = mutableProperties
+
+        private val schema: Configuration.Schema by lazy { Schema(name, properties) }
+
+        fun long(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Long> = PropertyDelegate.long(key, sensitive) { mutableProperties.add(it) }
+
+        fun boolean(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Boolean> = PropertyDelegate.boolean(key, sensitive) { mutableProperties.add(it) }
+
+        fun double(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Double> = PropertyDelegate.double(key, sensitive) { mutableProperties.add(it) }
+
+        fun string(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<String> = PropertyDelegate.string(key, sensitive) { mutableProperties.add(it) }
+
+        fun duration(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Duration> = PropertyDelegate.duration(key, sensitive) { mutableProperties.add(it) }
+
+        fun nestedObject(schema: Configuration.Schema? = null, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ConfigObject> = PropertyDelegate.nestedObject(schema, key, sensitive) { mutableProperties.add(it) }
+
+        fun <ENUM : Enum<ENUM>> enum(key: String? = null, enumClass: KClass<ENUM>, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = PropertyDelegate.enum(key, enumClass, sensitive) { mutableProperties.add(it) }
+
+        override val name: String? get() = schema.name
+
+        override fun description() = schema.description()
+
+        override fun validate(target: Config, options: Configuration.Validation.Options?) = schema.validate(target, options)
+
+        override fun describe(configuration: Config) = schema.describe(configuration)
     }
-
-    interface Validator : net.corda.node.services.config.parsing.common.validation.Validator<Config, Validation.Error, Validation.Options>
 
     object Validation {
 
@@ -222,4 +247,6 @@ object Configuration {
             }
         }
     }
+
+    interface Validator : net.corda.node.services.config.parsing.common.validation.Validator<Config, Validation.Error, Validation.Options>
 }

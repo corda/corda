@@ -1,48 +1,11 @@
 package net.corda.node.services.config.parsing
 
-import com.typesafe.config.Config
 import com.typesafe.config.ConfigObject
 import net.corda.node.services.config.parsing.common.validation.Validated
 import java.time.Duration
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
-
-abstract class Specification<VALUE>(name: String?) : Configuration.Schema, Configuration.Value.Parser<VALUE> {
-
-    private val mutableProperties = mutableSetOf<Configuration.Property.Definition<*>>()
-
-    override val properties: Set<Configuration.Property.Definition<*>> = mutableProperties
-
-    private val schema: Configuration.Schema by lazy {
-
-        Schema(name, properties)
-    }
-
-    fun long(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Long> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, Configuration.Property.Definition.Companion::long)
-
-    fun boolean(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Boolean> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, Configuration.Property.Definition.Companion::boolean)
-
-    fun double(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Double> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, Configuration.Property.Definition.Companion::double)
-
-    fun string(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<String> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, Configuration.Property.Definition.Companion::string)
-
-    fun duration(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Duration> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, Configuration.Property.Definition.Companion::duration)
-
-    fun nestedObject(schema: Configuration.Schema? = null, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ConfigObject> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, { k, s -> Configuration.Property.Definition.nestedObject(k, schema, s) })
-
-    fun <ENUM : Enum<ENUM>> enum(key: String? = null, enumClass: KClass<ENUM>, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, { k, s -> Configuration.Property.Definition.enum(k, enumClass, s) })
-
-    override val name: String? get() = schema.name
-
-    override fun description() = schema.description()
-
-    override fun validate(target: Config, options: Configuration.Validation.Options?) = schema.validate(target, options)
-
-    override fun describe(configuration: Config) = schema.describe(configuration)
-}
-
-inline fun <reified ENUM : Enum<ENUM>, VALUE : Any> Specification<VALUE>.enum(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = enum(key, ENUM::class, sensitive)
 
 interface PropertyDelegate<TYPE> {
 
@@ -68,9 +31,24 @@ interface PropertyDelegate<TYPE> {
 
         fun <MAPPED : Any> map(mappedTypeName: String, convert: (key: String, typeName: String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>): PropertyDelegate.Standard<MAPPED>
     }
-}
 
-inline fun <TYPE, reified MAPPED : Any> PropertyDelegate.Standard<TYPE>.map(noinline convert: (key: String, typeName: String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>): PropertyDelegate.Standard<MAPPED> = map(MAPPED::class.java.simpleName, convert)
+    companion object {
+
+        internal fun long(key: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): PropertyDelegate.Standard<Long> = PropertyDelegateImpl(key, sensitive, addProperty, Configuration.Property.Definition.Companion::long)
+
+        internal fun boolean(key: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): PropertyDelegate.Standard<Boolean> = PropertyDelegateImpl(key, sensitive, addProperty, Configuration.Property.Definition.Companion::boolean)
+
+        internal fun double(key: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): PropertyDelegate.Standard<Double> = PropertyDelegateImpl(key, sensitive, addProperty, Configuration.Property.Definition.Companion::double)
+
+        internal fun string(key: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): PropertyDelegate.Standard<String> = PropertyDelegateImpl(key, sensitive, addProperty, Configuration.Property.Definition.Companion::string)
+
+        internal fun duration(key: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): PropertyDelegate.Standard<Duration> = PropertyDelegateImpl(key, sensitive, addProperty, Configuration.Property.Definition.Companion::duration)
+
+        internal fun nestedObject(schema: Configuration.Schema?, key: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): PropertyDelegate.Standard<ConfigObject> = PropertyDelegateImpl(key, sensitive, addProperty, { k, s -> Configuration.Property.Definition.nestedObject(k, schema, s) })
+
+        internal fun <ENUM : Enum<ENUM>> enum(key: String?, enumClass: KClass<ENUM>, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): PropertyDelegate.Standard<ENUM> = PropertyDelegateImpl(key, sensitive, addProperty, { k, s -> Configuration.Property.Definition.enum(k, enumClass, s) })
+    }
+}
 
 private class PropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.Standard<TYPE>) : PropertyDelegate.Standard<TYPE> {
 
