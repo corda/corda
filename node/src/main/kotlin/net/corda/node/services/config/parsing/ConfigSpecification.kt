@@ -9,26 +9,28 @@ import kotlin.reflect.KProperty
 
 abstract class ConfigSpecification(name: String?) : ConfigSchema {
 
-    override val properties = mutableSetOf<ConfigProperty<*>>()
+    private val mutableProperties = mutableSetOf<ConfigProperty<*>>()
+
+    override val properties: Set<ConfigProperty<*>> = mutableProperties
 
     private val schema: ConfigSchema by lazy {
 
         ConfigPropertySchema(name, properties)
     }
 
-    fun long(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Long> = PropertyDelegateImpl(key, sensitive, { properties.add(it) }, ConfigProperty.Companion::long)
+    fun long(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Long> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, ConfigProperty.Companion::long)
 
-    fun boolean(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Boolean> = PropertyDelegateImpl(key, sensitive, { properties.add(it) }, ConfigProperty.Companion::boolean)
+    fun boolean(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Boolean> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, ConfigProperty.Companion::boolean)
 
-    fun double(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Double> = PropertyDelegateImpl(key, sensitive, { properties.add(it) }, ConfigProperty.Companion::double)
+    fun double(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Double> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, ConfigProperty.Companion::double)
 
-    fun string(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<String> = PropertyDelegateImpl(key, sensitive, { properties.add(it) }, ConfigProperty.Companion::string)
+    fun string(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<String> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, ConfigProperty.Companion::string)
 
-    fun duration(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Duration> = PropertyDelegateImpl(key, sensitive, { properties.add(it) }, ConfigProperty.Companion::duration)
+    fun duration(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Duration> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, ConfigProperty.Companion::duration)
 
-    fun nestedObject(schema: ConfigSchema? = null, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ConfigObject> = PropertyDelegateImpl(key, sensitive, { properties.add(it) }, { k, s -> ConfigProperty.nestedObject(k, schema, s) })
+    fun nestedObject(schema: ConfigSchema? = null, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ConfigObject> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, { k, s -> ConfigProperty.nestedObject(k, schema, s) })
 
-    fun <ENUM : Enum<ENUM>> enum(key: String? = null, enumClass: KClass<ENUM>, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = PropertyDelegateImpl(key, sensitive, { properties.add(it) }, { k, s -> ConfigProperty.enum(k, enumClass, s) })
+    fun <ENUM : Enum<ENUM>> enum(key: String? = null, enumClass: KClass<ENUM>, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = PropertyDelegateImpl(key, sensitive, { mutableProperties.add(it) }, { k, s -> ConfigProperty.enum(k, enumClass, s) })
 
     override val name: String? get() = schema.name
 

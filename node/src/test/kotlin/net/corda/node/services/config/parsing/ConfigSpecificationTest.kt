@@ -92,6 +92,18 @@ class ConfigSpecificationTest {
         }
     }
 
+    @Test
+    fun chained_delegated_properties_are_not_added_multiple_times() {
+
+        val spec = object : ConfigSpecification("Test") {
+
+            @Suppress("unused")
+            val myProp by string().list().optional()
+        }
+
+        assertThat(spec.properties).hasSize(1)
+    }
+
     private interface RpcSettings {
 
         val addresses: RpcSettings.Addresses
