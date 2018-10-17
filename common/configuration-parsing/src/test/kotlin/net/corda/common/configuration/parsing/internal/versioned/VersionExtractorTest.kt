@@ -9,13 +9,13 @@ import org.junit.Test
 
 class VersionExtractorTest {
 
-    private val versionExtractor = VersionExtractor("configuration.metadata.version")
+    private val versionExtractor = Configuration.Version.Extractor.fromKey("configuration.metadata.version")
     private val extractVersion: (Config) -> Validated<Int, Configuration.Validation.Error> = { config -> versionExtractor.parse(config, Configuration.Validation.Options(strict = false)) }
 
     @Test
     fun version_header_extraction_present() {
 
-        val versionValue = versionExtractor.versionDefaultValue + 1
+        val versionValue = Configuration.Version.Extractor.DEFAULT_VERSION_VALUE + 1
         val rawConfiguration = configObject("configuration" to configObject("metadata" to configObject("version" to versionValue), "node" to configObject("p2pAddress" to "localhost:8080"))).toConfig()
 
         val version = extractVersion.invoke(rawConfiguration).valueOrThrow()
@@ -28,7 +28,7 @@ class VersionExtractorTest {
         val rawConfiguration = configObject("configuration" to configObject("node" to configObject("p2pAddress" to "localhost:8080"))).toConfig()
 
         val version = extractVersion.invoke(rawConfiguration).valueOrThrow()
-        assertThat(version).isEqualTo(versionExtractor.versionDefaultValue)
+        assertThat(version).isEqualTo(Configuration.Version.Extractor.DEFAULT_VERSION_VALUE)
     }
 
     @Test
@@ -38,7 +38,7 @@ class VersionExtractorTest {
 
         val version = extractVersion.invoke(rawConfiguration).valueOrThrow()
 
-        assertThat(version).isEqualTo(versionExtractor.versionDefaultValue)
+        assertThat(version).isEqualTo(Configuration.Version.Extractor.DEFAULT_VERSION_VALUE)
     }
 
     @Test
@@ -48,7 +48,7 @@ class VersionExtractorTest {
 
         val version = extractVersion.invoke(rawConfiguration).valueOrThrow()
 
-        assertThat(version).isEqualTo(versionExtractor.versionDefaultValue)
+        assertThat(version).isEqualTo(Configuration.Version.Extractor.DEFAULT_VERSION_VALUE)
     }
 
     @Test
@@ -58,6 +58,6 @@ class VersionExtractorTest {
 
         val version = extractVersion.invoke(rawConfiguration).valueOrThrow()
 
-        assertThat(version).isEqualTo(versionExtractor.versionDefaultValue)
+        assertThat(version).isEqualTo(Configuration.Version.Extractor.DEFAULT_VERSION_VALUE)
     }
 }

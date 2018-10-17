@@ -6,12 +6,7 @@ import net.corda.common.configuration.parsing.internal.map
 import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.valid
 
-class VersionExtractor(versionKey: String, val versionDefaultValue: Int = DEFAULT_VERSION_VALUE) : Configuration.Version.Extractor {
-
-    companion object {
-
-        const val DEFAULT_VERSION_VALUE = 1
-    }
+internal class VersionExtractor(versionKey: String, versionDefaultValue: Int) : Configuration.Version.Extractor {
 
     private val spec = Spec(versionKey, versionDefaultValue)
 

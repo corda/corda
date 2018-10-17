@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
+import net.corda.common.configuration.parsing.internal.versioned.VersionExtractor
 import net.corda.common.validation.internal.Validated
 import java.time.Duration
 import kotlin.reflect.KClass
@@ -257,7 +258,15 @@ object Configuration {
 
     object Version {
 
-        interface Extractor : Configuration.Value.Parser<Int>
+        interface Extractor : Configuration.Value.Parser<Int> {
+
+            companion object {
+
+                const val DEFAULT_VERSION_VALUE = 1
+
+                fun fromKey(versionKey: String, versionDefaultValue: Int = DEFAULT_VERSION_VALUE): Configuration.Version.Extractor = VersionExtractor(versionKey, versionDefaultValue)
+            }
+        }
     }
 
     interface Validator : net.corda.common.validation.internal.Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options>
