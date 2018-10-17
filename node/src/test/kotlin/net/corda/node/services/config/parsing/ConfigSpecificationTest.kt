@@ -1,6 +1,7 @@
 package net.corda.node.services.config.parsing
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigObject
 import net.corda.node.services.config.parsing.Validated.Companion.invalid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -19,10 +20,13 @@ class ConfigSpecificationTest {
 
                 return validate(configuration, ConfigProperty.ValidationOptions(strict)).map { RpcSettings.Addresses(principal.valueIn(it), admin.valueIn(it)) }
             }
+
+            @Suppress("UNUSED_PARAMETER")
+            fun parse(key: String, typeName: String, rawValue: ConfigObject): Validated<RpcSettings.Addresses, ConfigValidationError> = parse(rawValue.toConfig(), false)
         }
 
         val useSsl by boolean()
-        val addresses by nestedObject(AddressesSpec).map { _, _, rawValue -> AddressesSpec.parse(rawValue.toConfig(), false) }
+        val addresses by nestedObject(AddressesSpec).map(AddressesSpec::parse)
 
         override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings, ConfigValidationError> {
 
