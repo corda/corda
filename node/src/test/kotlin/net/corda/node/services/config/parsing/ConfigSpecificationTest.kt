@@ -38,7 +38,6 @@ class ConfigSpecificationTest {
     private object RpcSettingsSpec : ConfigSpecification("RpcSettings"), ConfigValueParser<RpcSettings> {
 
         val useSsl by boolean()
-
         val addresses by nestedObject(AddressesSpec).map { _, rawValue -> AddressesSpec.parse(rawValue.toConfig(), false) }
 
         override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings, ConfigValidationError> {
