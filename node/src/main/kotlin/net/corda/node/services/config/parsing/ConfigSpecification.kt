@@ -6,9 +6,9 @@ import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
-open class ConfigSpecification(name: String?) {
+abstract class ConfigSpecification(name: String?) {
 
-    private val properties = mutableSetOf<ConfigProperty<*>>()
+    protected val properties = mutableSetOf<ConfigProperty<*>>()
 
     val schema: ConfigSchema by lazy {
 
@@ -58,13 +58,16 @@ interface PropertyDelegate<TYPE> {
     }
 }
 
+inline fun <TYPE, reified MAPPED : Any> PropertyDelegate.Standard<TYPE>.map(noinline convert: (String, TYPE) -> Validated<MAPPED, ConfigValidationError>): PropertyDelegate.Standard<MAPPED> = map(MAPPED::class.java.simpleName, convert)
+
 private class PropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (ConfigProperty<*>) -> Unit, private val construct: (String, Boolean) -> ConfigProperty.Standard<TYPE>) : PropertyDelegate.Standard<TYPE> {
 
     override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, ConfigProperty.Standard<TYPE>> {
 
+        val prop = construct.invoke(key ?: property.name, sensitive).also(addToProperties)
         return object : ReadOnlyProperty<Any?, ConfigProperty.Standard<TYPE>> {
 
-            override fun getValue(thisRef: Any?, property: KProperty<*>): ConfigProperty.Standard<TYPE> = construct.invoke(key ?: property.name, sensitive).also(addToProperties)
+            override fun getValue(thisRef: Any?, property: KProperty<*>): ConfigProperty.Standard<TYPE> = prop
         }
     }
 
@@ -79,9 +82,10 @@ private class OptionalPropertyDelegateImpl<TYPE>(private val key: String?, priva
 
     override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, ConfigProperty<TYPE?>> {
 
+        val prop = construct.invoke(key ?: property.name, sensitive).also(addToProperties)
         return object : ReadOnlyProperty<Any?, ConfigProperty<TYPE?>> {
 
-            override fun getValue(thisRef: Any?, property: KProperty<*>): ConfigProperty<TYPE?> = construct.invoke(key ?: property.name, sensitive).also(addToProperties)
+            override fun getValue(thisRef: Any?, property: KProperty<*>): ConfigProperty<TYPE?> = prop
         }
     }
 }
@@ -90,9 +94,10 @@ private class ListPropertyDelegateImpl<TYPE>(private val key: String?, private v
 
     override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, ConfigProperty.Required<TYPE>> {
 
+        val prop = construct.invoke(key ?: property.name, sensitive).also(addToProperties)
         return object : ReadOnlyProperty<Any?, ConfigProperty.Required<TYPE>> {
 
-            override fun getValue(thisRef: Any?, property: KProperty<*>): ConfigProperty.Required<TYPE> = construct.invoke(key ?: property.name, sensitive).also(addToProperties)
+            override fun getValue(thisRef: Any?, property: KProperty<*>): ConfigProperty.Required<TYPE> = prop
         }
     }
 

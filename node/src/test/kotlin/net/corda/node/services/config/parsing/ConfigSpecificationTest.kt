@@ -6,53 +6,41 @@ import org.junit.Test
 
 class ConfigSpecificationTest {
 
-    private object RpcSettingsSpec : ConfigSpecification("RpcSettings") {
+    private object AddressesSpec : ConfigSpecification("Addresses") {
 
-        object AddressesSpec : ConfigSpecification("Addresses") {
+        val principal by string().map { key, rawValue ->
 
-            val principal by string().map("NetworkHostAndPort") { key, rawValue ->
+            val parts = rawValue.split(":")
+            val host = parts[0]
+            val port = parts[1].toInt()
+            Validated.valid<NetworkHostAndPort, ConfigValidationError>(NetworkHostAndPort(host, port))
+        }
 
-                val parts = rawValue.split(":")
-                val host = parts[0]
-                val port = parts[1].toInt()
-                Validated.valid<NetworkHostAndPort, ConfigValidationError>(NetworkHostAndPort(host, port))
-            }
+        val admin by string().map { key, rawValue ->
 
-            val admin by string().map("NetworkHostAndPort") { key, rawValue ->
+            val parts = rawValue.split(":")
+            val host = parts[0]
+            val port = parts[1].toInt()
+            Validated.valid<NetworkHostAndPort, ConfigValidationError>(NetworkHostAndPort(host, port))
+        }
 
-                val parts = rawValue.split(":")
-                val host = parts[0]
-                val port = parts[1].toInt()
-                Validated.valid<NetworkHostAndPort, ConfigValidationError>(NetworkHostAndPort(host, port))
-            }
+        // TODO sollecitom pull in interface
+        fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings.Addresses, ConfigValidationError> {
 
-            // TODO sollecitom find a better way to eagerly load this values...
-            init {
-                principal
-                admin
-            }
+            return schema.validate(configuration, ConfigProperty.ValidationOptions(strict)).map {
 
-            // TODO sollecitom pull in interface
-            fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings.Addresses, ConfigValidationError> {
-
-                return schema.validate(configuration, ConfigProperty.ValidationOptions(strict)).map {
-
-                    val principal = principal.valueIn(it)
-                    val admin = admin.valueIn(it)
-                    RpcSettings.Addresses(principal, admin)
-                }
+                val principal = principal.valueIn(it)
+                val admin = admin.valueIn(it)
+                RpcSettings.Addresses(principal, admin)
             }
         }
+    }
+
+    private object RpcSettingsSpec : ConfigSpecification("RpcSettings") {
 
         val useSsl by boolean()
 
-        val addresses by nestedObject(AddressesSpec.schema).map("Addresses") { _, rawValue -> AddressesSpec.parse(rawValue.toConfig(), false) }
-
-        // TODO sollecitom find a better way to eagerly load this values...
-        init {
-            useSsl
-            addresses
-        }
+        val addresses by nestedObject(AddressesSpec.schema).map { _, rawValue -> AddressesSpec.parse(rawValue.toConfig(), false) }
 
         // TODO sollecitom pull in interface
         fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings, ConfigValidationError> {
