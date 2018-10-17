@@ -16,7 +16,7 @@ interface ConfigPropertyMetadata {
     val schema: ConfigSchema?
 }
 
-interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Configuration.Validation.Options>, ConfigPropertyMetadata, Configuration.Describer, Configuration.Value.Extractor<TYPE> {
+interface ConfigProperty<TYPE> : Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options>, ConfigPropertyMetadata, Configuration.Describer, Configuration.Value.Extractor<TYPE> {
 
     override fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
@@ -32,7 +32,7 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
 
     interface Standard<TYPE> : ConfigProperty.Required<TYPE>, ConfigProperty.Single<TYPE> {
 
-        fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, ConfigValidationError>): ConfigProperty.Standard<MAPPED>
+        fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>): ConfigProperty.Standard<MAPPED>
     }
 
     companion object {
@@ -59,7 +59,7 @@ interface ConfigProperty<TYPE> : Validator<Config, ConfigValidationError, Config
 
 private class LongConfigProperty(key: String, sensitive: Boolean = false) : StandardConfigProperty<Long>(key, Long::class.javaObjectType.simpleName, Config::getLong, Config::getLongList, sensitive) {
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, ConfigValidationError> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
 
         val validated = super.validate(target, options)
         if (validated.isValid && target.getValue(key).unwrapped().toString().contains(".")) {
@@ -75,7 +75,7 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
 
     override val typeName: String = schema?.let { "#${it.name ?: "Object@$key"}" } ?: typeNameArg
 
-    override fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, ConfigValidationError>): ConfigProperty.Standard<MAPPED> = FunctionalConfigProperty(this, mappedTypeName, extractListValue, convert)
+    override fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>): ConfigProperty.Standard<MAPPED> = FunctionalConfigProperty(this, mappedTypeName, extractListValue, convert)
 
     override fun optional(defaultValue: TYPE?): ConfigProperty<TYPE?> = OptionalConfigProperty(this, defaultValue)
 
@@ -91,9 +91,9 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
 
     override val mandatory = true
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, ConfigValidationError> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
 
-        val errors = mutableSetOf<ConfigValidationError>()
+        val errors = mutableSetOf<Configuration.Validation.Error>()
         errors += errorsWhenExtractingValue(target)
         if (errors.isEmpty()) {
             schema?.let { nestedSchema ->
@@ -125,9 +125,9 @@ private class ListConfigProperty<TYPE>(delegate: StandardConfigProperty<TYPE>) :
 
     override fun valueIn(configuration: Config): List<TYPE> = delegate.extractListValue.invoke(configuration, key)
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, ConfigValidationError> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
 
-        val errors = mutableSetOf<ConfigValidationError>()
+        val errors = mutableSetOf<Configuration.Validation.Error>()
         errors += errorsWhenExtractingValue(target)
         if (errors.isEmpty()) {
             delegate.schema?.let { schema ->
@@ -146,7 +146,7 @@ private class ListConfigProperty<TYPE>(delegate: StandardConfigProperty<TYPE>) :
     }
 }
 
-private fun ConfigProperty<*>.errorsWhenExtractingValue(target: Config): Set<ConfigValidationError> {
+private fun ConfigProperty<*>.errorsWhenExtractingValue(target: Config): Set<Configuration.Validation.Error> {
 
     try {
         valueIn(target)
@@ -175,7 +175,7 @@ private class OptionalConfigProperty<TYPE>(delegate: ConfigProperty.Required<TYP
         }
     }
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, ConfigValidationError> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
 
         return when {
             isSpecifiedBy(target) -> delegate.validate(target, options)
@@ -185,19 +185,19 @@ private class OptionalConfigProperty<TYPE>(delegate: ConfigProperty.Required<TYP
     }
 }
 
-private class FunctionalConfigProperty<TYPE, MAPPED : Any>(delegate: ConfigProperty.Standard<TYPE>, private val mappedTypeName: String, internal val extractListValue: (Config, String) -> List<TYPE>, private val convert: (key: String, TYPE) -> Validated<MAPPED, ConfigValidationError>) : RequiredDelegatedProperty<MAPPED, ConfigProperty.Standard<TYPE>>(delegate), ConfigProperty.Standard<MAPPED> {
+private class FunctionalConfigProperty<TYPE, MAPPED : Any>(delegate: ConfigProperty.Standard<TYPE>, private val mappedTypeName: String, internal val extractListValue: (Config, String) -> List<TYPE>, private val convert: (key: String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>) : RequiredDelegatedProperty<MAPPED, ConfigProperty.Standard<TYPE>>(delegate), ConfigProperty.Standard<MAPPED> {
 
     override fun valueIn(configuration: Config) = convert.invoke(key, delegate.valueIn(configuration)).valueOrThrow()
 
     override val typeName: String = if (super.typeName == "#$mappedTypeName") super.typeName else "$mappedTypeName(${super.typeName})"
 
-    override fun <M : Any> map(mappedTypeName: String, convert: (key: String, MAPPED) -> Validated<M, ConfigValidationError>): ConfigProperty.Standard<M> = FunctionalConfigProperty(delegate, mappedTypeName, extractListValue, { key: String, target: TYPE -> this.convert.invoke(key, target).flatMap { convert(key, it) } })
+    override fun <M : Any> map(mappedTypeName: String, convert: (key: String, MAPPED) -> Validated<M, Configuration.Validation.Error>): ConfigProperty.Standard<M> = FunctionalConfigProperty(delegate, mappedTypeName, extractListValue, { key: String, target: TYPE -> this.convert.invoke(key, target).flatMap { convert(key, it) } })
 
     override fun list(): ConfigProperty.Required<List<MAPPED>> = FunctionalListConfigProperty(this)
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, ConfigValidationError> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
 
-        val errors = mutableSetOf<ConfigValidationError>()
+        val errors = mutableSetOf<Configuration.Validation.Error>()
         errors += delegate.validate(target, options).errors
         if (errors.isEmpty()) {
             errors += convert.invoke(key, delegate.valueIn(target)).errors
@@ -214,7 +214,7 @@ private class FunctionalListConfigProperty<RAW, TYPE : Any>(delegate: Functional
 
     override fun valueIn(configuration: Config): List<TYPE> = delegate.extractListValue.invoke(configuration, key).asSequence().map { configObject(key to ConfigValueFactory.fromAnyRef(it)) }.map(ConfigObject::toConfig).map(delegate::valueIn).toList()
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, ConfigValidationError> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
 
         val list = try {
             delegate.extractListValue.invoke(target, key)
@@ -238,14 +238,14 @@ private class FunctionalListConfigProperty<RAW, TYPE : Any>(delegate: Functional
     }
 }
 
-private fun ConfigException.toValidationError(keyName: String, typeName: String): ConfigValidationError {
+private fun ConfigException.toValidationError(keyName: String, typeName: String): Configuration.Validation.Error {
 
     return when (this) {
-        is ConfigException.Missing -> ConfigValidationError.MissingValue.of(keyName, typeName, message!!)
-        is ConfigException.WrongType -> ConfigValidationError.WrongType.of(keyName, typeName, message!!)
-        is ConfigException.BadValue -> ConfigValidationError.MissingValue.of(keyName, typeName, message!!)
+        is ConfigException.Missing -> Configuration.Validation.Error.MissingValue.of(keyName, typeName, message!!)
+        is ConfigException.WrongType -> Configuration.Validation.Error.WrongType.of(keyName, typeName, message!!)
+        is ConfigException.BadValue -> Configuration.Validation.Error.MissingValue.of(keyName, typeName, message!!)
         else -> throw IllegalStateException("Unsupported ConfigException of type ${this::class.java.name}")
     }
 }
 
-inline fun <TYPE, reified MAPPED : Any> ConfigProperty.Standard<TYPE>.map(noinline convert: (String, TYPE) -> Validated<MAPPED, ConfigValidationError>): ConfigProperty.Standard<MAPPED> = this.map(MAPPED::class.java.simpleName, convert)
+inline fun <TYPE, reified MAPPED : Any> ConfigProperty.Standard<TYPE>.map(noinline convert: (String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>): ConfigProperty.Standard<MAPPED> = this.map(MAPPED::class.java.simpleName, convert)

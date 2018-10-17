@@ -12,23 +12,23 @@ class ConfigSpecificationTest {
 
         private object AddressesSpec : ConfigSpecification("Addresses"), ConfigValueParser<RpcSettings.Addresses> {
 
-            val principal by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> ConfigValidationError.BadValue.of(key, typeName, error) as ConfigValidationError } }
+            val principal by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) as Configuration.Validation.Error } }
 
-            val admin by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> ConfigValidationError.BadValue.of(key, typeName, error) as ConfigValidationError } }
+            val admin by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) as Configuration.Validation.Error } }
 
-            override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings.Addresses, ConfigValidationError> {
+            override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings.Addresses, Configuration.Validation.Error> {
 
                 return validate(configuration, Configuration.Validation.Options(strict)).map { RpcSettings.Addresses(principal.valueIn(it), admin.valueIn(it)) }
             }
 
             @Suppress("UNUSED_PARAMETER")
-            fun parse(key: String, typeName: String, rawValue: ConfigObject): Validated<RpcSettings.Addresses, ConfigValidationError> = parse(rawValue.toConfig(), false)
+            fun parse(key: String, typeName: String, rawValue: ConfigObject): Validated<RpcSettings.Addresses, Configuration.Validation.Error> = parse(rawValue.toConfig(), false)
         }
 
         val useSsl by boolean()
         val addresses by nestedObject(AddressesSpec).map(AddressesSpec::parse)
 
-        override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings, ConfigValidationError> {
+        override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings, Configuration.Validation.Error> {
 
             return validate(configuration, Configuration.Validation.Options(strict)).map { RpcSettingsImpl(addresses.valueIn(it), useSsl.valueIn(it)) }
         }
@@ -69,7 +69,7 @@ class ConfigSpecificationTest {
         val rpcSettings = RpcSettingsSpec.parse(configuration, strict = false)
 
         assertThat(rpcSettings.errors).hasSize(1)
-        assertThat(rpcSettings.errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
+        assertThat(rpcSettings.errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
 
             assertThat(error.path).containsExactly("useSsl")
         }
@@ -88,7 +88,7 @@ class ConfigSpecificationTest {
         val rpcSettings = RpcSettingsSpec.parse(configuration, strict = false)
 
         assertThat(rpcSettings.errors).hasSize(1)
-        assertThat(rpcSettings.errors.first()).isInstanceOfSatisfying(ConfigValidationError.BadValue::class.java) { error ->
+        assertThat(rpcSettings.errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.BadValue::class.java) { error ->
 
             assertThat(error.path).containsExactly("addresses", "principal")
             assertThat(error.keyName).isEqualTo("principal")

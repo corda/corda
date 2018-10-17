@@ -15,12 +15,12 @@ class ConfigPropertyValidationTest {
         val key = "a.b.c"
         val configuration = configObject().toConfig()
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.long(key)
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
-            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
+            assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
@@ -34,12 +34,12 @@ class ConfigPropertyValidationTest {
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.long(key)
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
-            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
+            assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
@@ -53,12 +53,12 @@ class ConfigPropertyValidationTest {
         val key = "a.b.c"
         val configuration = configObject().toConfig()
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key).list()
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.long(key).list()
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
-            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
+            assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
@@ -72,12 +72,12 @@ class ConfigPropertyValidationTest {
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key).list()
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.long(key).list()
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
-            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
+            assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
@@ -90,14 +90,14 @@ class ConfigPropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.long(key)
 
         val configuration = configObject(key to false).toConfig()
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
-            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
+            assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
@@ -110,14 +110,14 @@ class ConfigPropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.long(key)
 
         val configuration = configObject(key to 1.2).toConfig()
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
-            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
+            assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
@@ -130,7 +130,7 @@ class ConfigPropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.double(key)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.double(key)
 
         val configuration = configObject(key to 1).toConfig()
 
@@ -142,14 +142,14 @@ class ConfigPropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key).list()
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.long(key).list()
 
         val configuration = configObject(key to listOf(false, true)).toConfig()
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
-            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
+            assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
@@ -162,14 +162,14 @@ class ConfigPropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.long(key)
 
         val configuration = configObject(key to listOf(1, 2, 3)).toConfig()
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
-            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
+            assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
@@ -182,14 +182,14 @@ class ConfigPropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.long(key).list()
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.long(key).list()
 
         val configuration = configObject(key to 1).toConfig()
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
-            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
+            assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
@@ -205,14 +205,14 @@ class ConfigPropertyValidationTest {
         val nestedKey = "d"
         val nestedPropertySchema = ConfigSchema.withProperties(ConfigProperty.long(nestedKey))
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.nestedObject(key, nestedPropertySchema)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.nestedObject(key, nestedPropertySchema)
 
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
-            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.WrongType::class.java) { error ->
+            assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.WrongType::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(nestedKey)
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray(), nestedKey)
@@ -228,14 +228,14 @@ class ConfigPropertyValidationTest {
         val nestedKey = "d"
         val nestedPropertySchema = ConfigSchema.withProperties(ConfigProperty.long(nestedKey))
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.nestedObject(key, nestedPropertySchema)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.nestedObject(key, nestedPropertySchema)
 
         val configuration = configObject(key to configObject()).toConfig()
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
-            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
+            assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(nestedKey)
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray(), nestedKey)
@@ -251,14 +251,14 @@ class ConfigPropertyValidationTest {
         val nestedKey = "d"
         val nestedPropertySchema = ConfigSchema.withProperties(ConfigProperty.long(nestedKey))
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.nestedObject(key, nestedPropertySchema)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.nestedObject(key, nestedPropertySchema)
 
         val configuration = configObject(key to configObject(nestedKey to null)).toConfig()
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
-            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.MissingValue::class.java) { error ->
+            assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(nestedKey)
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray(), nestedKey)
@@ -273,7 +273,7 @@ class ConfigPropertyValidationTest {
 
         val nestedKey = "d"
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.nestedObject(key)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.nestedObject(key)
 
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
@@ -285,7 +285,7 @@ class ConfigPropertyValidationTest {
 
         val key = "a"
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.string(key).map(::parseNetworkHostAndPort)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.string(key).map(::parseNetworkHostAndPort)
 
         val host = "localhost"
         val port = 8080
@@ -301,7 +301,7 @@ class ConfigPropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, ConfigValidationError, Configuration.Validation.Options> = ConfigProperty.string(key).map(::parseNetworkHostAndPort)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = ConfigProperty.string(key).map(::parseNetworkHostAndPort)
 
         val host = "localhost"
         val port = 8080
@@ -315,7 +315,7 @@ class ConfigPropertyValidationTest {
         assertThat(result.errors).satisfies { errors ->
 
             assertThat(errors).hasSize(1)
-            assertThat(errors.first()).isInstanceOfSatisfying(ConfigValidationError.BadValue::class.java) { error ->
+            assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.BadValue::class.java) { error ->
 
                 assertThat(error.keyName).isEqualTo(key.split(".").last())
                 assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
@@ -323,7 +323,7 @@ class ConfigPropertyValidationTest {
         }
     }
 
-    private fun parseNetworkHostAndPort(key: String, value: String): Validated<NetworkHostAndPort, ConfigValidationError> {
+    private fun parseNetworkHostAndPort(key: String, value: String): Validated<NetworkHostAndPort, Configuration.Validation.Error> {
 
         return try {
             val parts = value.split(":")
@@ -331,7 +331,7 @@ class ConfigPropertyValidationTest {
             val port = parts[1].toInt().also { require(it > 0) }
             valid(NetworkHostAndPort(host, port))
         } catch (e: Exception) {
-            return invalid(ConfigValidationError.BadValue.of(key, NetworkHostAndPort::class.java.simpleName, "Value must be of format \"host(String):port(Int > 0)\" e.g., \"127.0.0.1:8080\""))
+            return invalid(Configuration.Validation.Error.BadValue.of(key, NetworkHostAndPort::class.java.simpleName, "Value must be of format \"host(String):port(Int > 0)\" e.g., \"127.0.0.1:8080\""))
         }
     }
 }

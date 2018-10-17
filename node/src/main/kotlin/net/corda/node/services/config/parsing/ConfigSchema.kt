@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 
-interface ConfigSchema : Validator<Config, ConfigValidationError, Configuration.Validation.Options>, Configuration.Describer {
+interface ConfigSchema : Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options>, Configuration.Describer {
 
     val name: String?
 
@@ -33,12 +33,12 @@ internal class ConfigPropertySchema(override val name: String?, unorderedPropert
         }
     }
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, ConfigValidationError> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
 
         val propertyErrors = properties.flatMap { property -> property.validate(target, options).errors }.toMutableSet()
         if (options?.strict == true) {
             val unknownKeys = target.root().keys - properties.map(ConfigProperty<*>::key)
-            propertyErrors += unknownKeys.map { ConfigValidationError.Unknown.of(it) }
+            propertyErrors += unknownKeys.map { Configuration.Validation.Error.Unknown.of(it) }
         }
         return Validated.withResult(target, propertyErrors)
     }
