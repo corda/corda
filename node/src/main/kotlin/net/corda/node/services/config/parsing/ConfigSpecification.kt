@@ -1,16 +1,17 @@
 package net.corda.node.services.config.parsing
 
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigObject
 import java.time.Duration
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
-abstract class ConfigSpecification(name: String?) {
+abstract class ConfigSpecification(name: String?) : ConfigSchema {
 
-    protected val properties = mutableSetOf<ConfigProperty<*>>()
+    override val properties = mutableSetOf<ConfigProperty<*>>()
 
-    val schema: ConfigSchema by lazy {
+    private val schema: ConfigSchema by lazy {
 
         ConfigPropertySchema(name, properties)
     }
@@ -28,6 +29,14 @@ abstract class ConfigSpecification(name: String?) {
     fun nestedObject(schema: ConfigSchema? = null, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ConfigObject> = PropertyDelegateImpl(key, sensitive, { properties.add(it) }, { k, s -> ConfigProperty.nestedObject(k, schema, s) })
 
     fun <ENUM : Enum<ENUM>> enum(key: String? = null, enumClass: KClass<ENUM>, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = PropertyDelegateImpl(key, sensitive, { properties.add(it) }, { k, s -> ConfigProperty.enum(k, enumClass, s) })
+
+    override val name: String? get() = schema.name
+
+    override fun description() = schema.description()
+
+    override fun validate(target: Config, options: ConfigProperty.ValidationOptions?) = schema.validate(target, options)
+
+    override fun describe(configuration: Config) = schema.describe(configuration)
 }
 
 inline fun <reified ENUM : Enum<ENUM>> ConfigSpecification.enum(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = enum(key, ENUM::class, sensitive)

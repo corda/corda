@@ -27,7 +27,7 @@ class ConfigSpecificationTest {
         // TODO sollecitom pull in interface
         fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings.Addresses, ConfigValidationError> {
 
-            return schema.validate(configuration, ConfigProperty.ValidationOptions(strict)).map {
+            return validate(configuration, ConfigProperty.ValidationOptions(strict)).map {
 
                 val principal = principal.valueIn(it)
                 val admin = admin.valueIn(it)
@@ -40,12 +40,12 @@ class ConfigSpecificationTest {
 
         val useSsl by boolean()
 
-        val addresses by nestedObject(AddressesSpec.schema).map { _, rawValue -> AddressesSpec.parse(rawValue.toConfig(), false) }
+        val addresses by nestedObject(AddressesSpec).map { _, rawValue -> AddressesSpec.parse(rawValue.toConfig(), false) }
 
         // TODO sollecitom pull in interface
         fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings, ConfigValidationError> {
 
-            return schema.validate(configuration, ConfigProperty.ValidationOptions(strict)).map {
+            return validate(configuration, ConfigProperty.ValidationOptions(strict)).map {
 
                 val useSsl = useSsl.valueIn(it)
                 val addresses = addresses.valueIn(it)
