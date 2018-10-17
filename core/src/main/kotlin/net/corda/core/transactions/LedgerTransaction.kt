@@ -237,11 +237,11 @@ data class LedgerTransaction @JvmOverloads constructor(
             }
         }
         // At this stage we have ensured that "from" and "to" [Set]s are equal in size, but we should check their
-        // elements do indeed match.
-        val intersection = encumberedSet intersect encumbranceSet
-        if (intersection.isNotEmpty()) {
+        // elements do indeed match. If they don't match, we return their symmetric difference (disjunctive union).
+        val symmetricDifference = (encumberedSet union encumbranceSet).subtract(encumberedSet intersect encumbranceSet)
+        if (symmetricDifference.isNotEmpty()) {
             // At least one encumbered state is not in the [encumbranceSet] and vice versa.
-            throw TransactionVerificationException.TransactionNonMatchingEncumbranceException(id, intersection)
+            throw TransactionVerificationException.TransactionNonMatchingEncumbranceException(id, symmetricDifference)
         }
     }
 
