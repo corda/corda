@@ -31,29 +31,24 @@ class VersionedConfigurationParserTest {
     @Test
     fun missing_version_defaults_to_default_value() {
 
-        val extractVersion = object : Configuration.Value.Parser<Int?> {
-
-            override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<Int?, Configuration.Validation.Error> {
-
-                return valid(null)
-            }
-        }
         val defaultVersion = 3
-
         val expectedResult = "booya!"
-        val extractValue = object : Configuration.Value.Parser<String> {
-
-            override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<String, Configuration.Validation.Error> {
-
-                return valid(expectedResult)
-            }
-        }
 
         val configuration = configObject().toConfig()
-        val parser = VersionedConfigurationParser.mapping(extractVersion, defaultVersion, defaultVersion to extractValue)
+        val parser = VersionedConfigurationParser.mapping(extractMissingVersion, defaultVersion, defaultVersion to extractValidValue(expectedResult))
 
         val result = parser.parse(configuration, Configuration.Validation.Options(strict = false)).valueOrThrow()
 
         assertThat(result).isEqualTo(expectedResult)
+    }
+
+    private val extractMissingVersion: Configuration.Value.Parser<Int?> = extractValidValue(null)
+
+    private fun <VALUE> extractValidValue(value: VALUE) = object : Configuration.Value.Parser<VALUE> {
+
+        override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<VALUE, Configuration.Validation.Error> {
+
+            return valid(value)
+        }
     }
 }
