@@ -50,11 +50,11 @@ class ProgressTrackerTest {
         assertEquals(0, pt.stepIndex)
         var stepNotification: ProgressTracker.Step? = null
         pt.changes.subscribe { stepNotification = (it as? ProgressTracker.Change.Position)?.newStep }
-
+        assertEquals(ProgressTracker.UNSTARTED, pt.currentStep)
+        assertEquals(ProgressTracker.STARTING, pt.nextStep())
         assertEquals(SimpleSteps.ONE, pt.nextStep())
-        assertEquals(1, pt.stepIndex)
+        assertEquals(2, pt.stepIndex)
         assertEquals(SimpleSteps.ONE, stepNotification)
-
         assertEquals(SimpleSteps.TWO, pt.nextStep())
         assertEquals(SimpleSteps.THREE, pt.nextStep())
         assertEquals(SimpleSteps.FOUR, pt.nextStep())
@@ -87,8 +87,10 @@ class ProgressTrackerTest {
         assertEquals(SimpleSteps.TWO, (stepNotification.pollFirst() as ProgressTracker.Change.Structural).parent)
         assertNextStep(SimpleSteps.TWO)
 
+        assertEquals(pt2.currentStep, ProgressTracker.UNSTARTED)
+        assertEquals(ProgressTracker.STARTING, pt2.nextStep())
         assertEquals(ChildSteps.AYY, pt2.nextStep())
-        assertNextStep(ChildSteps.AYY)
+        assertEquals((stepNotification.last  as ProgressTracker.Change.Position).newStep, ChildSteps.AYY)
         assertEquals(ChildSteps.BEE, pt2.nextStep())
     }
 
@@ -115,19 +117,19 @@ class ProgressTrackerTest {
 
         // Travel tree.
         pt.currentStep = SimpleSteps.ONE
-        assertCurrentStepsTree(0, SimpleSteps.ONE)
+        assertCurrentStepsTree(1, SimpleSteps.ONE)
 
         pt.currentStep = SimpleSteps.TWO
-        assertCurrentStepsTree(1, SimpleSteps.TWO)
+        assertCurrentStepsTree(2, SimpleSteps.TWO)
 
         pt2.currentStep = ChildSteps.BEE
-        assertCurrentStepsTree(3, ChildSteps.BEE)
+        assertCurrentStepsTree(5, ChildSteps.BEE)
 
         pt.currentStep = SimpleSteps.THREE
-        assertCurrentStepsTree(5, SimpleSteps.THREE)
+        assertCurrentStepsTree(7, SimpleSteps.THREE)
 
         // Assert no structure changes and proper steps propagation.
-        assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(0, 1, 3, 5))
+        assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(1, 2, 5, 7))
         assertThat(stepsTreeNotification).isEmpty()
     }
 
@@ -153,16 +155,16 @@ class ProgressTrackerTest {
         }
 
         pt.currentStep = SimpleSteps.ONE
-        assertCurrentStepsTree(0, SimpleSteps.ONE)
+        assertCurrentStepsTree(1, SimpleSteps.ONE)
 
         pt.currentStep = SimpleSteps.FOUR
-        assertCurrentStepsTree(3, SimpleSteps.FOUR)
+        assertCurrentStepsTree(4, SimpleSteps.FOUR)
 
         pt2.currentStep = ChildSteps.SEA
-        assertCurrentStepsTree(6, ChildSteps.SEA)
+        assertCurrentStepsTree(8, ChildSteps.SEA)
 
         // Assert no structure changes and proper steps propagation.
-        assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(0, 3, 6))
+        assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(1, 4, 8))
         assertThat(stepsTreeNotification).isEmpty()
     }
     
@@ -189,18 +191,18 @@ class ProgressTrackerTest {
         }
 
         pt.currentStep = SimpleSteps.TWO
-        assertCurrentStepsTree(1, SimpleSteps.TWO)
+        assertCurrentStepsTree(2, SimpleSteps.TWO)
 
         pt.currentStep = SimpleSteps.FOUR
-        assertCurrentStepsTree(6, SimpleSteps.FOUR)
+        assertCurrentStepsTree(8, SimpleSteps.FOUR)
 
 
         pt.setChildProgressTracker(SimpleSteps.THREE, pt3)
 
-        assertCurrentStepsTree(9, SimpleSteps.FOUR)
+        assertCurrentStepsTree(12, SimpleSteps.FOUR)
 
         // Assert no structure changes and proper steps propagation.
-        assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(1, 6, 9))
+        assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(2, 8, 12))
         assertThat(stepsTreeNotification).hasSize(2) // 1 change + 1 our initial state
     }
 
@@ -228,14 +230,14 @@ class ProgressTrackerTest {
         pt.currentStep = SimpleSteps.TWO
         pt2.currentStep = ChildSteps.SEA
         pt3.currentStep = BabySteps.UNOS
-        assertCurrentStepsTree(4, ChildSteps.SEA)
+        assertCurrentStepsTree(6, ChildSteps.SEA)
 
         pt.setChildProgressTracker(SimpleSteps.TWO, pt3)
 
-        assertCurrentStepsTree(2, BabySteps.UNOS)
+        assertCurrentStepsTree(4, BabySteps.UNOS)
 
         // Assert no structure changes and proper steps propagation.
-        assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(1, 4, 2))
+        assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(2, 6, 4))
         assertThat(stepsTreeNotification).hasSize(2) // 1 change + 1 our initial state.
     }
 
