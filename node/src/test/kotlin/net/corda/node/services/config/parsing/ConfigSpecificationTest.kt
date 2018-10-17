@@ -8,9 +8,9 @@ import org.junit.Test
 
 class ConfigSpecificationTest {
 
-    private object RpcSettingsSpec : ConfigSpecification("RpcSettings"), ConfigValueParser<RpcSettings> {
+    private object RpcSettingsSpec : ConfigSpecification<RpcSettings>("RpcSettings") {
 
-        private object AddressesSpec : ConfigSpecification("Addresses"), ConfigValueParser<RpcSettings.Addresses> {
+        private object AddressesSpec : ConfigSpecification<RpcSettings.Addresses>("Addresses") {
 
             val principal by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) as Configuration.Validation.Error } }
 
@@ -99,10 +99,15 @@ class ConfigSpecificationTest {
     @Test
     fun chained_delegated_properties_are_not_added_multiple_times() {
 
-        val spec = object : ConfigSpecification("Test") {
+        val spec = object : ConfigSpecification<List<String>?>("Test") {
 
             @Suppress("unused")
             val myProp by string().list().optional()
+
+            override fun parse(configuration: Config, strict: Boolean): Validated<List<String>?, Configuration.Validation.Error> {
+
+                return myProp.validate(configuration).map { myProp.valueIn(configuration) }
+            }
         }
 
         assertThat(spec.properties).hasSize(1)

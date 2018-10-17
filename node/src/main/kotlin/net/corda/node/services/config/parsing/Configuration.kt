@@ -29,6 +29,11 @@ object Configuration {
                 }
             }
         }
+
+        interface Parser<VALUE> {
+
+            fun parse(configuration: Config, strict: Boolean): Validated<VALUE, Configuration.Validation.Error>
+        }
     }
 
     object Property {

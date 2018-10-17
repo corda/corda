@@ -7,7 +7,7 @@ import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
-abstract class ConfigSpecification(name: String?) : ConfigSchema {
+abstract class ConfigSpecification<VALUE>(name: String?) : ConfigSchema, Configuration.Value.Parser<VALUE> {
 
     private val mutableProperties = mutableSetOf<ConfigProperty<*>>()
 
@@ -41,7 +41,7 @@ abstract class ConfigSpecification(name: String?) : ConfigSchema {
     override fun describe(configuration: Config) = schema.describe(configuration)
 }
 
-inline fun <reified ENUM : Enum<ENUM>> ConfigSpecification.enum(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = enum(key, ENUM::class, sensitive)
+inline fun <reified ENUM : Enum<ENUM>, VALUE : Any> ConfigSpecification<VALUE>.enum(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = enum(key, ENUM::class, sensitive)
 
 interface PropertyDelegate<TYPE> {
 
