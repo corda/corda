@@ -40,6 +40,12 @@ object Configuration {
 
         interface Metadata {
 
+            val key: String
+            val typeName: String
+            val mandatory: Boolean
+            val sensitive: Boolean
+
+            val schema: ConfigSchema?
         }
 
         interface Definition : Metadata {

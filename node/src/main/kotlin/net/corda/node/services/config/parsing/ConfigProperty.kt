@@ -6,17 +6,7 @@ import net.corda.node.services.config.parsing.Validated.Companion.valid
 import java.time.Duration
 import kotlin.reflect.KClass
 
-interface ConfigPropertyMetadata {
-
-    val key: String
-    val typeName: String
-    val mandatory: Boolean
-    val sensitive: Boolean
-
-    val schema: ConfigSchema?
-}
-
-interface ConfigProperty<TYPE> : Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options>, ConfigPropertyMetadata, Configuration.Describer, Configuration.Value.Extractor<TYPE> {
+interface ConfigProperty<TYPE> : Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options>, Configuration.Property.Metadata, Configuration.Describer, Configuration.Value.Extractor<TYPE> {
 
     override fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
@@ -109,7 +99,7 @@ internal open class StandardConfigProperty<TYPE>(override val key: String, typeN
     override fun toString() = "\"$key\": \"$typeName\""
 }
 
-private abstract class DelegatedProperty<TYPE, DELEGATE : ConfigPropertyMetadata>(protected val delegate: DELEGATE) : ConfigPropertyMetadata by delegate, ConfigProperty<TYPE> {
+private abstract class DelegatedProperty<TYPE, DELEGATE : Configuration.Property.Metadata>(protected val delegate: DELEGATE) : Configuration.Property.Metadata by delegate, ConfigProperty<TYPE> {
 
     final override fun toString() = "\"$key\": \"$typeName\""
 }
