@@ -1,12 +1,17 @@
 package net.corda.cliutils
 
 import net.corda.core.internal.*
+import picocli.CommandLine.Command
 import picocli.CommandLine.Option
+import picocli.CommandLine.Spec
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.util.*
 import kotlin.system.exitProcess
+import picocli.CommandLine.Model.CommandSpec
+import java.util.concurrent.Callable
+
 
 private class ShellExtensionsGenerator(val alias: String, val className: String) {
     private class SettingsFile(val filePath: Path) {
@@ -121,17 +126,16 @@ private class ShellExtensionsGenerator(val alias: String, val className: String)
     }
 }
 
-class InstallShellExtensionsParser {
-    @Option(names = ["--install-shell-extensions"], description = ["Install alias and autocompletion for bash and zsh"])
-    var installShellExtensions: Boolean = false
-
-    fun installOrUpdateShellExtensions(alias: String, className: String) {
+@Command(helpCommand = true)
+class InstallShellExtensionsParser(val className: String) : CliWrapperBase("install-shell-extensions", "Install alias and autocompletion for bash and zsh") {
+    override fun runProgram(): Int {
         val generator = ShellExtensionsGenerator(alias, className)
-        if (installShellExtensions) {
-            generator.installShellExtensions()
-            exitProcess(0)
-        } else {
-            generator.checkForAutoCompleteUpdate()
-        }
+        generator.installShellExtensions()
+        return ExitCodes.SUCCESS
+    }
+
+    fun updateShellExtensions() {
+        val generator = ShellExtensionsGenerator(alias, className)
+        generator.checkForAutoCompleteUpdate()
     }
 }

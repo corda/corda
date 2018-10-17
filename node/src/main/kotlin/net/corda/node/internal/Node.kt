@@ -6,6 +6,7 @@ import com.codahale.metrics.MetricRegistry
 import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
 import com.palominolabs.metrics.newrelic.NewRelicReporter
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.cliutils.ShellConstants
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
@@ -111,7 +112,7 @@ open class Node(configuration: NodeConfiguration,
 
         fun printWarning(message: String) {
             Emoji.renderIfSupported {
-                println("${Emoji.warningSign} ATTENTION: $message")
+                println("${ShellConstants.RED}${Emoji.warningSign} ATTENTION: $message${ShellConstants.RESET}")
             }
             staticLog.warn(message)
         }

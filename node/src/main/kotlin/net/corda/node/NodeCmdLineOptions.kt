@@ -13,7 +13,7 @@ import picocli.CommandLine.Option
 import java.nio.file.Path
 import java.nio.file.Paths
 
-class NodeCmdLineOptions {
+open class SharedNodeCmdLineOptions {
     @Option(
             names = ["-b", "--base-directory"],
             description = ["The node working directory where all the files are kept."]
@@ -27,6 +27,33 @@ class NodeCmdLineOptions {
     private var _configFile: Path? = null
     val configFile: Path get() = _configFile ?: (baseDirectory / "node.conf")
 
+    @Option(
+            names = ["--on-unknown-config-keys"],
+            description = ["How to behave on unknown node configuration. \${COMPLETION-CANDIDATES}"]
+    )
+    var unknownConfigKeysPolicy: UnknownConfigKeysPolicy = UnknownConfigKeysPolicy.FAIL
+
+    open fun loadConfig(): Pair<Config, Try<NodeConfiguration>> {
+        val rawConfig = ConfigHelper.loadConfig(
+                baseDirectory,
+                configFile
+        )
+        return rawConfig to Try.on {
+            rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
+                //TODO: Move to registration command
+//                if (nodeRegistrationOption != null) {
+//                    require(!config.devMode) { "Registration cannot occur in devMode" }
+//                    require(config.compatibilityZoneURL != null || config.networkServices != null) {
+//                        "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
+//                    }
+//                }
+            }
+        }
+    }
+
+}
+
+class NodeCmdLineOptions: SharedNodeCmdLineOptions() {
     @Option(
             names = ["--sshd"],
             description = ["If set, enables SSH server for node administration."]
@@ -46,31 +73,6 @@ class NodeCmdLineOptions {
     var noLocalShell: Boolean = false
 
     @Option(
-            names = ["--initial-registration"],
-            description = ["Start initial node registration with Corda network to obtain certificate from the permissioning server."]
-    )
-    var isRegistration: Boolean = false
-
-    @Option(
-            names = ["-t", "--network-root-truststore"],
-            description = ["Network root trust store obtained from network operator."]
-    )
-    private var _networkRootTrustStorePath: Path? = null
-    val networkRootTrustStorePath: Path get() = _networkRootTrustStorePath ?: baseDirectory / "certificates" / "network-root-truststore.jks"
-
-    @Option(
-            names = ["-p", "--network-root-truststore-password"],
-            description = ["Network root trust store password obtained from network operator."]
-    )
-    var networkRootTrustStorePassword: String? = null
-
-    @Option(
-            names = ["--on-unknown-config-keys"],
-            description = ["How to behave on unknown node configuration. \${COMPLETION-CANDIDATES}"]
-    )
-    var unknownConfigKeysPolicy: UnknownConfigKeysPolicy = UnknownConfigKeysPolicy.FAIL
-
-    @Option(
             names = ["-d", "--dev-mode"],
             description = ["Run the node in developer mode. Unsafe for production."]
     )
@@ -78,13 +80,15 @@ class NodeCmdLineOptions {
 
     @Option(
             names = ["--just-generate-node-info"],
-            description = ["Perform the node start-up task necessary to generate its node info, save it to disk, then quit"]
+            description = ["DEPRECATED. Perform the node start-up task necessary to generate its node info, save it to disk, then quit"],
+            hidden = true
     )
     var justGenerateNodeInfo: Boolean = false
 
     @Option(
             names = ["--just-generate-rpc-ssl-settings"],
-            description = ["Generate the SSL key and trust stores for a secure RPC connection."]
+            description = ["DEPRECATED. Generate the SSL key and trust stores for a secure RPC connection."],
+            hidden = true
     )
     var justGenerateRpcSslCerts: Boolean = false
 
@@ -101,6 +105,28 @@ class NodeCmdLineOptions {
     )
     var clearNetworkMapCache: Boolean = false
 
+    @Option(
+            names = ["--initial-registration"],
+            description = ["DEPRECATED. Start initial node registration with Corda network to obtain certificate from the permissioning server."],
+            hidden = true
+    )
+    var isRegistration: Boolean = false
+
+    @Option(
+            names = ["-t", "--network-root-truststore"],
+            description = ["DEPRECATED. Network root trust store obtained from network operator."],
+            hidden = true
+    )
+    var networkRootTrustStorePathParameter: Path? = null
+    val networkRootTrustStorePath: Path get() = networkRootTrustStorePathParameter ?: baseDirectory / "certificates" / "network-root-truststore.jks"
+
+    @Option(
+            names = ["-p", "--network-root-truststore-password"],
+            description = ["Network root trust store password obtained from network operator."],
+            hidden = true
+    )
+    var networkRootTrustStorePassword: String? = null
+
     val nodeRegistrationOption: NodeRegistrationOption? by lazy {
         if (isRegistration) {
             requireNotNull(networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
@@ -110,8 +136,7 @@ class NodeCmdLineOptions {
             null
         }
     }
-
-    fun loadConfig(): Pair<Config, Try<NodeConfiguration>> {
+    override fun loadConfig(): Pair<Config, Try<NodeConfiguration>> {
         val rawConfig = ConfigHelper.loadConfig(
                 baseDirectory,
                 configFile,

@@ -69,58 +69,43 @@ fun CordaCliWrapper.start(args: Array<String>) {
     cmd.registerConverter(Path::class.java) { Paths.get(it).toAbsolutePath().normalize() }
     cmd.commandSpec.name(alias)
     cmd.commandSpec.usageMessage().description(description)
-    cmd.commandSpec.parser().collectErrors(true)
+    this.subCommands.forEach {
+        val subCommand = CommandLine(it)
+        it.args = args
+        subCommand.commandSpec.usageMessage().description(it.description)
+        cmd.commandSpec.addSubcommand(it.alias, subCommand)
+    }
+
     try {
         val defaultAnsiMode = if (CordaSystemUtils.isOsWindows()) {
             Help.Ansi.ON
         } else {
             Help.Ansi.AUTO
         }
-
-        val results = cmd.parse(*args)
-        val app = cmd.getCommand<CordaCliWrapper>()
-        if (cmd.isUsageHelpRequested) {
-            cmd.usage(System.out, defaultAnsiMode)
-            exitProcess(ExitCodes.SUCCESS)
-        }
-        if (cmd.isVersionHelpRequested) {
-            cmd.printVersionHelp(System.out, defaultAnsiMode)
-            exitProcess(ExitCodes.SUCCESS)
-        }
-        if (app.installShellExtensionsParser.installShellExtensions) {
-            System.out.println("Install shell extensions: ${app.installShellExtensionsParser.installShellExtensions}")
-            // ignore any parsing errors and run the program
-            exitProcess(app.call())
-        }
-        val allErrors = results.flatMap { it.parseResult?.errors() ?: emptyList() }
-        if (allErrors.any()) {
-            val parameterExceptions = allErrors.asSequence().filter { it is ParameterException }
-            if (parameterExceptions.any()) {
-                System.err.println("${ShellConstants.RED}${parameterExceptions.map{ it.message }.joinToString()}${ShellConstants.RESET}")
-                parameterExceptions.filter { it is UnmatchedArgumentException}.forEach { (it as UnmatchedArgumentException).printSuggestions(System.out) }
-                usage(cmd, System.out, defaultAnsiMode)
+        val results = cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(defaultAnsiMode),
+                DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(defaultAnsiMode),
+                *args)
+        // If an error code has been returned, use this and exit
+        results?.firstOrNull()?.let {
+            if (it is Int) {
+                exitProcess(it)
+            } else {
                 exitProcess(ExitCodes.FAILURE)
             }
-            throw allErrors.first()
         }
-        val returnCodes = RunLast().handleParseResult(results, System.out, defaultAnsiMode)
-        exitProcess(returnCodes.first() as Int)
-    } catch (e: Exception) {
+        // If no results returned, picocli ran something without invoking the main program, e.g. --help or --version, so exit successfully
+        exitProcess(ExitCodes.SUCCESS)
+    } catch (e: ExecutionException) {
         val throwable = e.cause ?: e
         if (this.verbose) {
             throwable.printStackTrace()
         } else {
-            System.err.println("${ShellConstants.RED}${throwable.rootMessage ?: "Use --verbose for more details"}${ShellConstants.RESET}")
+            System.err.println("*ERROR*: ${throwable.rootMessage ?: "Use --verbose for more details"}")
         }
         exitProcess(ExitCodes.FAILURE)
     }
 }
 
-/**
- * Simple base class for handling help, version, verbose and logging-level commands.
- * As versionProvider information from the MANIFEST file is used. It can be overwritten by custom version providers (see: Node)
- * Picocli will prioritise versionProvider from the `@Command` annotation on the subclass, see: https://picocli.info/#_reuse_combinations
- */
 @Command(mixinStandardHelpOptions = true,
         versionProvider = CordaVersionProvider::class,
         sortOptions = false,
@@ -130,9 +115,9 @@ fun CordaCliWrapper.start(args: Array<String>) {
         parameterListHeading = "%n@|bold,underline Parameters|@:%n%n",
         optionListHeading = "%n@|bold,underline Options|@:%n%n",
         commandListHeading = "%n@|bold,underline Commands|@:%n%n")
-abstract class CordaCliWrapper(val alias: String, val description: String) : Callable<Int> {
+abstract class CliWrapperBase(val alias: String, val description: String) : Callable<Int> {
     companion object {
-        private val logger by lazy { loggerFor<CordaCliWrapper>() }
+        private val logger by lazy { contextLogger() }
     }
 
     // Raw args are provided for use in logging - this is a lateinit var rather than a constructor parameter as the class
@@ -148,9 +133,6 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Cal
             converter = [LoggingLevelConverter::class]
     )
     var loggingLevel: Level = Level.INFO
-
-    @Mixin
-    lateinit var installShellExtensionsParser: InstallShellExtensionsParser
 
     // This needs to be called before loggers (See: NodeStartup.kt:51 logger called by lazy, initLogging happens before).
     // Node's logging is more rich. In corda configurations two properties, defaultLoggingLevel and consoleLogLevel, are usually used.
@@ -170,7 +152,28 @@ abstract class CordaCliWrapper(val alias: String, val description: String) : Cal
     override fun call(): Int {
         initLogging()
         logger.info("Application Args: ${args.joinToString(" ")}")
-        installShellExtensionsParser.installOrUpdateShellExtensions(alias, this.javaClass.name)
+        return runProgram()
+    }
+}
+
+/**
+ * Simple base class for handling help, version, verbose and logging-level commands.
+ * As versionProvider information from the MANIFEST file is used. It can be overwritten by custom version providers (see: Node)
+ * Picocli will prioritise versionProvider from the `@Command` annotation on the subclass, see: https://picocli.info/#_reuse_combinations
+ */
+abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperBase(alias, description) {
+    companion object {
+        private val logger by lazy { contextLogger() }
+    }
+
+    val installShellExtensionsParser = InstallShellExtensionsParser(this.javaClass.name)
+
+    val subCommands = mutableListOf<CliWrapperBase>(installShellExtensionsParser)
+
+    override fun call(): Int {
+        initLogging()
+        logger.info("Application Args: ${args.joinToString(" ")}")
+        installShellExtensionsParser.updateShellExtensions()
         return runProgram()
     }
 }
