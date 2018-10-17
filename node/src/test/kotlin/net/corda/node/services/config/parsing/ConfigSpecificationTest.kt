@@ -71,6 +71,25 @@ class ConfigSpecificationTest {
         }
     }
 
+    @Test
+    fun validate_with_domain_specific_errors() {
+
+        val useSslValue = true
+        val principalAddressValue = NetworkHostAndPort("localhost", 8080)
+        val adminAddressValue = NetworkHostAndPort("127.0.0.1", 8081)
+        // Here, for the "principal" property, the value is incorrect, as the port value is unacceptable.
+        val addressesValue = configObject("principal" to "${principalAddressValue.host}:-10", "admin" to "${adminAddressValue.host}:${adminAddressValue.port}")
+        val configuration = configObject("useSsl" to useSslValue, "addresses" to addressesValue).toConfig()
+
+        val rpcSettings = RpcSettingsSpec.parse(configuration, strict = false)
+
+        assertThat(rpcSettings.errors).hasSize(1)
+        assertThat(rpcSettings.errors.first()).isInstanceOfSatisfying(ConfigValidationError.BadValue::class.java) { error ->
+
+            assertThat(error.path).containsExactly("addresses", "principal")
+        }
+    }
+
     private interface RpcSettings {
 
         val addresses: RpcSettings.Addresses
