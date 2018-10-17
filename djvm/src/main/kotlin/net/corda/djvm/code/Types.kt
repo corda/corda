@@ -6,8 +6,13 @@ import sandbox.java.lang.DJVMException
 import sandbox.net.corda.djvm.costing.ThresholdViolationError
 import sandbox.net.corda.djvm.rules.RuleViolationError
 
+/**
+ * These are the priorities for executing [Emitter] instances.
+ * Tracing emitters are executed first.
+ */
 const val EMIT_TRACING: Int = 0
-const val EMIT_TRAPPING_EXCEPTIONS: Int = 1
+const val EMIT_TRAPPING_EXCEPTIONS: Int = EMIT_TRACING + 1
+const val EMIT_HANDLING_EXCEPTIONS: Int = EMIT_TRAPPING_EXCEPTIONS + 1
 const val EMIT_DEFAULT: Int = 10
 
 val ruleViolationError: String = Type.getInternalName(RuleViolationError::class.java)

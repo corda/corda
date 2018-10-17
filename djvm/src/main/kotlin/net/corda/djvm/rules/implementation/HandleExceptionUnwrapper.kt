@@ -1,6 +1,6 @@
 package net.corda.djvm.rules.implementation
 
-import net.corda.djvm.code.EMIT_TRAPPING_EXCEPTIONS
+import net.corda.djvm.code.EMIT_HANDLING_EXCEPTIONS
 import net.corda.djvm.code.Emitter
 import net.corda.djvm.code.EmitterContext
 import net.corda.djvm.code.Instruction
@@ -42,5 +42,5 @@ class HandleExceptionUnwrapper : Emitter {
     }
 
     override val priority: Int
-        get() = EMIT_TRAPPING_EXCEPTIONS + 1
+        get() = EMIT_HANDLING_EXCEPTIONS
 }
