@@ -7,19 +7,19 @@ import org.junit.Test
 
 class ConfigSpecificationTest {
 
-    private object AddressesSpec : ConfigSpecification("Addresses"), ConfigValueParser<RpcSettings.Addresses> {
-
-        val principal by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> ConfigValidationError.BadValue.of(key, typeName, error) as ConfigValidationError } }
-
-        val admin by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> ConfigValidationError.BadValue.of(key, typeName, error) as ConfigValidationError } }
-
-        override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings.Addresses, ConfigValidationError> {
-
-            return validate(configuration, ConfigProperty.ValidationOptions(strict)).map { RpcSettings.Addresses(principal.valueIn(it), admin.valueIn(it)) }
-        }
-    }
-
     private object RpcSettingsSpec : ConfigSpecification("RpcSettings"), ConfigValueParser<RpcSettings> {
+
+        private object AddressesSpec : ConfigSpecification("Addresses"), ConfigValueParser<RpcSettings.Addresses> {
+
+            val principal by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> ConfigValidationError.BadValue.of(key, typeName, error) as ConfigValidationError } }
+
+            val admin by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> ConfigValidationError.BadValue.of(key, typeName, error) as ConfigValidationError } }
+
+            override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings.Addresses, ConfigValidationError> {
+
+                return validate(configuration, ConfigProperty.ValidationOptions(strict)).map { RpcSettings.Addresses(principal.valueIn(it), admin.valueIn(it)) }
+            }
+        }
 
         val useSsl by boolean()
         val addresses by nestedObject(AddressesSpec).map { _, _, rawValue -> AddressesSpec.parse(rawValue.toConfig(), false) }
