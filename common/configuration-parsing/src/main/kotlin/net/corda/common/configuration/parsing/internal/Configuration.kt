@@ -36,7 +36,7 @@ object Configuration {
 
         interface Parser<VALUE> {
 
-            fun parse(configuration: Config, strict: Boolean): Validated<VALUE, Validation.Error>
+            fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<VALUE, Validation.Error>
         }
     }
 
@@ -142,9 +142,9 @@ object Configuration {
 
         override fun describe(configuration: Config) = schema.describe(configuration)
 
-        final override fun parse(configuration: Config, strict: Boolean): Validated<VALUE, Configuration.Validation.Error> {
+        final override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<VALUE, Configuration.Validation.Error> {
 
-            return validate(configuration, Configuration.Validation.Options(strict)).map(::parseValid)
+            return validate(configuration, options).map(::parseValid)
         }
 
         protected abstract fun parseValid(configuration: Config): VALUE
