@@ -6,7 +6,7 @@ import org.junit.Test
 
 class ConfigSpecificationTest {
 
-    private object AddressesSpec : ConfigSpecification("Addresses") {
+    private object AddressesSpec : ConfigSpecification("Addresses"), ConfigValueParser<RpcSettings.Addresses> {
 
         val principal by string().map { key, rawValue ->
 
@@ -24,8 +24,7 @@ class ConfigSpecificationTest {
             Validated.valid<NetworkHostAndPort, ConfigValidationError>(NetworkHostAndPort(host, port))
         }
 
-        // TODO sollecitom pull in interface
-        fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings.Addresses, ConfigValidationError> {
+        override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings.Addresses, ConfigValidationError> {
 
             return validate(configuration, ConfigProperty.ValidationOptions(strict)).map {
 
@@ -36,14 +35,13 @@ class ConfigSpecificationTest {
         }
     }
 
-    private object RpcSettingsSpec : ConfigSpecification("RpcSettings") {
+    private object RpcSettingsSpec : ConfigSpecification("RpcSettings"), ConfigValueParser<RpcSettings> {
 
         val useSsl by boolean()
 
         val addresses by nestedObject(AddressesSpec).map { _, rawValue -> AddressesSpec.parse(rawValue.toConfig(), false) }
 
-        // TODO sollecitom pull in interface
-        fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings, ConfigValidationError> {
+        override fun parse(configuration: Config, strict: Boolean): Validated<RpcSettings, ConfigValidationError> {
 
             return validate(configuration, ConfigProperty.ValidationOptions(strict)).map {
 
