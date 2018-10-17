@@ -224,10 +224,10 @@ data class LedgerTransaction @JvmOverloads constructor(
         // Update both [Set]s.
         statesAndEncumbrance.forEach {
             // Check it does not refer to itself.
-            if (it.first == it.second || it.first >= outputs.size) {
+            if (it.first == it.second || it.second >= outputs.size) {
                 throw TransactionVerificationException.TransactionMissingEncumbranceException(
                         id,
-                        it.first,
+                        it.second,
                         TransactionVerificationException.Direction.OUTPUT)
             } else {
                 encumberedSet.add(it.first) // Guaranteed to have unique elements.
