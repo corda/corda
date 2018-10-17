@@ -200,17 +200,22 @@ data class LedgerTransaction @JvmOverloads constructor(
     // can be spent on their own. Briefly, if any of the states is having more than one encumbrance references by
     // other states, a full cycle detection will fail. As a result, all of the encumbered states must be present
     // as "from" and "to" only once (or zero times if no encumbrance takes place). For instance,
-    // b -> a               b -> a
-    // c -> a               c -> a
-    // d -> a      and      d -> b
-    // a -> b               a -> d
+    // a -> b
+    // c -> b    and     a -> b
+    // b -> a            b -> c
     // do not satisfy the bi-directionality (full cycle) property.
-    // but,
-    // a -> b               a -> b
-    // b -> c               b -> d
-    // c -> d      and      c -> a
-    // d -> a               d -> c
-    // form a full cycle and the bi-directionality property is satisfied.
+    //
+    // In the first example "b" appears twice in encumbrance ("to") list and "c" exists in the encumbered ("from") list only.
+    // Due the above, one could consume "a" and "b" in the same transaction and then, because "b" is already consumed, "c" cannot be spent.
+    //
+    // Similarly, the second example does not form a full cycle because "a" and "c" exist in one of the lists only.
+    // As a result, one can consume "b" and "c" in the same transactions, which will make "a" impossible to be spent.
+    //
+    // On other hand the following are valid constructions:
+    // a -> b            a -> c
+    // b -> c    and     c -> b
+    // c -> a            b -> a
+    // and form a full cycle, meaning that the bi-directionality property is satisfied.
     private fun checkOutputEncumbrances(statesAndEncumbrance: List<Pair<Int, Int>>) {
         // [Set] of "from" (encumbered states).
         val encumberedSet = mutableSetOf<Int>()
@@ -225,13 +230,19 @@ data class LedgerTransaction @JvmOverloads constructor(
                         it.first,
                         TransactionVerificationException.Direction.OUTPUT)
             } else {
-                encumberedSet.add(it.first)
-                encumbranceSet.add(it.second)
+                encumberedSet.add(it.first) // Guaranteed to have unique elements.
+                if (!encumbranceSet.add(it.second)) {
+                    throw TransactionVerificationException.TransactionDuplicateEncumbranceException(id, it.second)
+                }
             }
         }
-        // Check that "from" and "to" do indeed match.
-        if (encumberedSet.size != encumbranceSet.size || !encumberedSet.containsAll(encumbranceSet))
-            throw TransactionVerificationException.TransactionBiDirectionalEncumbranceException(id)
+        // At this stage we have ensured that "from" and "to" [Set]s are equal in size, but we should check their
+        // elements do indeed match.
+        val intersection = encumberedSet intersect encumbranceSet
+        if (intersection.isNotEmpty()) {
+            // At least one encumbered state is not in the [encumbranceSet] and vice versa.
+            throw TransactionVerificationException.TransactionNonMatchingEncumbranceException(id, intersection)
+        }
     }
 
     /**
