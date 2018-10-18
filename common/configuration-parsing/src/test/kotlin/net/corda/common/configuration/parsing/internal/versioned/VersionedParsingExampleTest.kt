@@ -100,8 +100,7 @@ class VersionedParsingExampleTest {
             }
         }
 
-        // TODO introduce an optional prefix here
-        object V2 : Configuration.Specification<RpcSettings>("RpcSettings") {
+        object V2 : Configuration.Specification<RpcSettings>("RpcSettings", prefix = "configuration.value") {
 
             private object AddressesSpec : Configuration.Specification<Addresses>("Addresses") {
 
@@ -115,7 +114,7 @@ class VersionedParsingExampleTest {
                 fun parse(key: String, typeName: String, rawValue: ConfigObject): Valid<Addresses> = parse(rawValue.toConfig(), Configuration.Validation.Options(strict = false))
             }
 
-            private val addresses by nestedObject(AddressesSpec, "configuration.value.addresses").map(AddressesSpec::parse)
+            private val addresses by nestedObject(AddressesSpec).map(AddressesSpec::parse)
 
             override fun parseValid(configuration: Config): Valid<RpcSettings> {
 

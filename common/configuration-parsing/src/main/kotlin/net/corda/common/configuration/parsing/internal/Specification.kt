@@ -35,27 +35,28 @@ interface PropertyDelegate<TYPE> {
 
     companion object {
 
-        internal fun long(key: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<Long> = PropertyDelegateImpl(key, sensitive, addProperty, Configuration.Property.Definition.Companion::long)
+        internal fun long(key: String?, prefix: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<Long> = PropertyDelegateImpl(key, prefix, sensitive, addProperty, Configuration.Property.Definition.Companion::long)
 
-        internal fun boolean(key: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<Boolean> = PropertyDelegateImpl(key, sensitive, addProperty, Configuration.Property.Definition.Companion::boolean)
+        internal fun boolean(key: String?, prefix: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<Boolean> = PropertyDelegateImpl(key, prefix, sensitive, addProperty, Configuration.Property.Definition.Companion::boolean)
 
-        internal fun double(key: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<Double> = PropertyDelegateImpl(key, sensitive, addProperty, Configuration.Property.Definition.Companion::double)
+        internal fun double(key: String?, prefix: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<Double> = PropertyDelegateImpl(key, prefix, sensitive, addProperty, Configuration.Property.Definition.Companion::double)
 
-        internal fun string(key: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<String> = PropertyDelegateImpl(key, sensitive, addProperty, Configuration.Property.Definition.Companion::string)
+        internal fun string(key: String?, prefix: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<String> = PropertyDelegateImpl(key, prefix, sensitive, addProperty, Configuration.Property.Definition.Companion::string)
 
-        internal fun duration(key: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<Duration> = PropertyDelegateImpl(key, sensitive, addProperty, Configuration.Property.Definition.Companion::duration)
+        internal fun duration(key: String?, prefix: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<Duration> = PropertyDelegateImpl(key, prefix, sensitive, addProperty, Configuration.Property.Definition.Companion::duration)
 
-        internal fun nestedObject(schema: Configuration.Schema?, key: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<ConfigObject> = PropertyDelegateImpl(key, sensitive, addProperty, { k, s -> Configuration.Property.Definition.nestedObject(k, schema, s) })
+        internal fun nestedObject(schema: Configuration.Schema?, key: String?, prefix: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<ConfigObject> = PropertyDelegateImpl(key, prefix, sensitive, addProperty, { k, s -> Configuration.Property.Definition.nestedObject(k, schema, s) })
 
-        internal fun <ENUM : Enum<ENUM>> enum(key: String?, enumClass: KClass<ENUM>, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<ENUM> = PropertyDelegateImpl(key, sensitive, addProperty, { k, s -> Configuration.Property.Definition.enum(k, enumClass, s) })
+        internal fun <ENUM : Enum<ENUM>> enum(key: String?, prefix: String?, enumClass: KClass<ENUM>, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<ENUM> = PropertyDelegateImpl(key, prefix, sensitive, addProperty, { k, s -> Configuration.Property.Definition.enum(k, enumClass, s) })
     }
 }
 
-private class PropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.Standard<TYPE>) : PropertyDelegate.Standard<TYPE> {
+private class PropertyDelegateImpl<TYPE>(private val key: String?, private val prefix: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.Standard<TYPE>) : PropertyDelegate.Standard<TYPE> {
 
     override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Standard<TYPE>> {
 
-        val prop = construct.invoke(key ?: property.name, sensitive).also(addToProperties)
+        val shortName = key ?: property.name
+        val prop = construct.invoke(prefix?.let { "$prefix.$shortName" } ?: shortName, sensitive).also(addToProperties)
         return object : ReadOnlyProperty<Any?, Configuration.Property.Definition.Standard<TYPE>> {
 
             override fun getValue(thisRef: Any?, property: KProperty<*>): Configuration.Property.Definition.Standard<TYPE> = prop
@@ -66,7 +67,7 @@ private class PropertyDelegateImpl<TYPE>(private val key: String?, private val s
 
     override fun optional(defaultValue: TYPE?): PropertyDelegate<TYPE?> = OptionalPropertyDelegateImpl(key, sensitive, addToProperties, { k, s -> construct.invoke(k, s).optional(defaultValue) })
 
-    override fun <MAPPED : Any> map(mappedTypeName: String, convert: (key: String, typeName: String, TYPE) -> Valid<MAPPED>): PropertyDelegate.Standard<MAPPED> = PropertyDelegateImpl(key, sensitive, addToProperties, { k, s -> construct.invoke(k, s).map(mappedTypeName) { k1, t1 -> convert.invoke(k1, mappedTypeName, t1) } })
+    override fun <MAPPED : Any> map(mappedTypeName: String, convert: (key: String, typeName: String, TYPE) -> Valid<MAPPED>): PropertyDelegate.Standard<MAPPED> = PropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).map(mappedTypeName) { k1, t1 -> convert.invoke(k1, mappedTypeName, t1) } })
 }
 
 private class OptionalPropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition<TYPE?>) : PropertyDelegate<TYPE?> {
