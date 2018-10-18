@@ -95,3 +95,10 @@ We look forward to seeing what you can do with Corda!
    deterministic-modules.rst
    release-notes
    changelog
+
+.. conditional-toctree::
+   :caption: Corda Network
+   :maxdepth: 2
+   :if_tag: htmlmode
+
+   corda-network/index.md
