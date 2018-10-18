@@ -837,7 +837,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             keyStore.storeLegalIdentity(privateKeyAlias, generateKeyPair())
         }
 
-        val (x509Cert, keyPair) = keyStore.query { getCertificateAndKeyPair(privateKeyAlias) }
+        val (x509Cert, keyPair) = keyStore.query { getCertificateAndKeyPair(privateKeyAlias, keyStore.privateKeyPassword) }
 
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
         val compositeKeyAlias = "$id-composite-key"

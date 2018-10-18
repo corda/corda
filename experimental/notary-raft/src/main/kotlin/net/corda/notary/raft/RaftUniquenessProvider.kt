@@ -161,9 +161,9 @@ class RaftUniquenessProvider(
                 .withSsl()
                 .withSslProtocol(SslProtocol.TLSv1_2)
                 .withKeyStorePath(config.keyStore.path.toString())
-                .withKeyStorePassword(config.keyStore.password)
+                .withKeyStorePassword(config.keyStore.storePassword)
                 .withTrustStorePath(config.trustStore.path.toString())
-                .withTrustStorePassword(config.trustStore.password)
+                .withTrustStorePassword(config.trustStore.storePassword)
                 .build()
     }
 
