@@ -92,12 +92,19 @@ class SandboxClassLoader(
      */
     @Throws(ClassNotFoundException::class)
     override fun loadClass(name: String, resolve: Boolean): Class<*> {
-        val source = ClassSource.fromClassName(name)
-        return if (analysisConfiguration.isSandboxClass(source.internalClassName)) {
-            loadSandboxClass(source, context).type
-        } else {
-            super.loadClass(name, resolve)
+        var c = findLoadedClass(name)
+        if (c == null) {
+            val source = ClassSource.fromClassName(name)
+            c = if (analysisConfiguration.isSandboxClass(source.internalClassName)) {
+                loadSandboxClass(source, context).type
+            } else {
+                super.loadClass(name, resolve)
+            }
         }
+        if (resolve) {
+            resolveClass(c)
+        }
+        return c
     }
 
     private fun loadSandboxClass(source: ClassSource, context: AnalysisContext): LoadedClass {
