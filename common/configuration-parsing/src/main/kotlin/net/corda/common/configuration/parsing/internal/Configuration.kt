@@ -6,6 +6,7 @@ import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
 import net.corda.common.configuration.parsing.internal.versioned.VersionExtractor
 import net.corda.common.validation.internal.Validated
+import net.corda.common.validation.internal.Validated.Companion.valid
 import java.time.Duration
 import kotlin.reflect.KClass
 
@@ -53,7 +54,7 @@ object Configuration {
             val schema: Schema?
         }
 
-        interface Definition<TYPE> : Configuration.Property.Metadata, Configuration.Validator, Configuration.Value.Extractor<TYPE>, Configuration.Describer {
+        interface Definition<TYPE> : Configuration.Property.Metadata, Configuration.Validator, Configuration.Value.Extractor<TYPE>, Configuration.Describer, Configuration.Value.Parser<TYPE> {
 
             override fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
@@ -70,6 +71,11 @@ object Configuration {
             interface Standard<TYPE> : Required<TYPE>, Single<TYPE> {
 
                 fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, Validation.Error>): Standard<MAPPED>
+            }
+
+            override fun parse(configuration: Config, options: Validation.Options): Validated<TYPE, Validation.Error> {
+
+                return validate(configuration, options).flatMap { config -> valid<TYPE, Configuration.Validation.Error>(valueIn(config)) }
             }
 
             companion object {
@@ -145,10 +151,10 @@ object Configuration {
 
         final override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<VALUE, Configuration.Validation.Error> {
 
-            return validate(configuration, options).map(::parseValid)
+            return validate(configuration, options).flatMap(::parseValid)
         }
 
-        protected abstract fun parseValid(configuration: Config): VALUE
+        protected abstract fun parseValid(configuration: Config): Validated<VALUE, Configuration.Validation.Error>
     }
 
     object Validation {
@@ -258,13 +264,13 @@ object Configuration {
 
     object Version {
 
-        interface Extractor : Configuration.Value.Parser<Int> {
+        interface Extractor : Configuration.Value.Parser<Int?> {
 
             companion object {
 
                 const val DEFAULT_VERSION_VALUE = 1
 
-                fun fromKey(versionKey: String, versionDefaultValue: Int = DEFAULT_VERSION_VALUE): Configuration.Version.Extractor = VersionExtractor(versionKey, versionDefaultValue)
+                fun fromKey(versionKey: String, versionDefaultValue: Int? = DEFAULT_VERSION_VALUE): Configuration.Version.Extractor = VersionExtractor(versionKey, versionDefaultValue)
             }
         }
     }

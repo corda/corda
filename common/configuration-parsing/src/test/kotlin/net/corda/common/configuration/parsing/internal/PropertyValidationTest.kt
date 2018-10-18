@@ -5,7 +5,6 @@ import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.common.validation.internal.Validator
-import net.corda.core.utilities.NetworkHostAndPort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
@@ -287,7 +286,7 @@ class PropertyValidationTest {
 
         val key = "a"
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.string(key).map(::parseNetworkHostAndPort)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.string(key).map(::parseAddress)
 
         val host = "localhost"
         val port = 8080
@@ -303,7 +302,7 @@ class PropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.string(key).map(::parseNetworkHostAndPort)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.string(key).map(::parseAddress)
 
         val host = "localhost"
         val port = 8080
@@ -325,15 +324,15 @@ class PropertyValidationTest {
         }
     }
 
-    private fun parseNetworkHostAndPort(key: String, value: String): Validated<NetworkHostAndPort, Configuration.Validation.Error> {
+    private fun parseAddress(key: String, value: String): Validated<Address, Configuration.Validation.Error> {
 
         return try {
             val parts = value.split(":")
             val host = parts[0].also { require(it.isNotBlank()) }
             val port = parts[1].toInt().also { require(it > 0) }
-            valid(NetworkHostAndPort(host, port))
+            valid(Address(host, port))
         } catch (e: Exception) {
-            return invalid(Configuration.Validation.Error.BadValue.of(key, NetworkHostAndPort::class.java.simpleName, "Value must be of format \"host(String):port(Int > 0)\" e.g., \"127.0.0.1:8080\""))
+            return invalid(Configuration.Validation.Error.BadValue.of(key, Address::class.java.simpleName, "Value must be of format \"host(String):port(Int > 0)\" e.g., \"127.0.0.1:8080\""))
         }
     }
 }

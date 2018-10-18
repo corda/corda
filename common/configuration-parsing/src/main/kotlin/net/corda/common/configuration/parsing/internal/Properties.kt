@@ -96,16 +96,17 @@ private class OptionalProperty<TYPE>(delegate: Configuration.Property.Definition
 
         return when {
             isSpecifiedBy(configuration) -> delegate.valueIn(configuration)
-            else -> defaultValue ?: throw ConfigException.Missing(key)
+            else -> defaultValue
         }
     }
 
     override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
 
+        val result = delegate.validate(target, options)
+        val error = result.errors.asSequence().filterIsInstance<Configuration.Validation.Error.MissingValue>().singleOrNull()
         return when {
-            isSpecifiedBy(target) -> delegate.validate(target, options)
-            defaultValue != null -> valid(target)
-            else -> invalid(ConfigException.Missing(key).toValidationError(key, typeName))
+            error != null -> if (result.errors.size > 1) result else valid(target)
+            else -> result
         }
     }
 }

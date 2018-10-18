@@ -9,6 +9,8 @@ inline fun <reified ENUM : Enum<ENUM>, VALUE : Any> Configuration.Specification<
 
 inline fun <TYPE, reified MAPPED : Any> PropertyDelegate.Standard<TYPE>.map(noinline convert: (key: String, typeName: String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>): PropertyDelegate.Standard<MAPPED> = map(MAPPED::class.java.simpleName, convert)
 
+inline fun <TYPE, reified MAPPED : Any> PropertyDelegate.Standard<TYPE>.mapRaw(noinline convert: (key: String, typeName: String, TYPE) -> MAPPED): PropertyDelegate.Standard<MAPPED> = mapRaw(MAPPED::class.java.simpleName, convert)
+
 @Suppress("UNCHECKED_CAST")
 internal fun configObject(vararg entries: Pair<String, Any?>): ConfigObject {
 

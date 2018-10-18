@@ -2,6 +2,7 @@ package net.corda.common.configuration.parsing.internal
 
 import com.typesafe.config.ConfigObject
 import net.corda.common.validation.internal.Validated
+import net.corda.common.validation.internal.Validated.Companion.valid
 import java.time.Duration
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
@@ -30,6 +31,8 @@ interface PropertyDelegate<TYPE> {
         override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Standard<TYPE>>
 
         fun <MAPPED : Any> map(mappedTypeName: String, convert: (key: String, typeName: String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>): Standard<MAPPED>
+
+        fun <MAPPED : Any> mapRaw(mappedTypeName: String, convert: (key: String, typeName: String, TYPE) -> MAPPED): Standard<MAPPED> = map(mappedTypeName) { key, typeName, value -> valid<MAPPED, Configuration.Validation.Error>(convert.invoke(key, typeName, value)) }
     }
 
     companion object {

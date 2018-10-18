@@ -83,7 +83,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.mandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
-        assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.Missing::class.java)
+        assertThat(property.valueIn(configuration)).isNull()
 
     }
 
@@ -162,7 +162,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.mandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
-        assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.Missing::class.java)
+        assertThat(property.valueIn(configuration)).isNull()
     }
 
     @Test

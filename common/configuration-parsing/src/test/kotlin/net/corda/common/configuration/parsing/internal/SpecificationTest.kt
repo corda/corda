@@ -3,7 +3,7 @@ package net.corda.common.configuration.parsing.internal
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigObject
 import net.corda.common.validation.internal.Validated
-import net.corda.common.validation.internal.Validated.Companion.invalid
+import net.corda.common.validation.internal.Validated.Companion.valid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
@@ -11,30 +11,30 @@ class SpecificationTest {
 
     private object RpcSettingsSpec : Configuration.Specification<RpcSettings>("RpcSettings") {
 
-        private object AddressesSpec : Configuration.Specification<RpcSettings.Addresses>("Addresses") {
+        private object AddressesSpec : Configuration.Specification<Addresses>("Addresses") {
 
-            val principal by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) as Configuration.Validation.Error } }
+            val principal by string().map { key, typeName, rawValue -> Address.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) as Configuration.Validation.Error } }
 
-            val admin by string().map { key, typeName, rawValue -> NetworkHostAndPort.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) as Configuration.Validation.Error } }
+            val admin by string().map { key, typeName, rawValue -> Address.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) as Configuration.Validation.Error } }
 
-            override fun parseValid(configuration: Config) = RpcSettings.Addresses(principal.valueIn(configuration), admin.valueIn(configuration))
+            override fun parseValid(configuration: Config) = valid<Addresses, Configuration.Validation.Error>(Addresses(principal.valueIn(configuration), admin.valueIn(configuration)))
 
             @Suppress("UNUSED_PARAMETER")
-            fun parse(key: String, typeName: String, rawValue: ConfigObject): Validated<RpcSettings.Addresses, Configuration.Validation.Error> = parse(rawValue.toConfig(), Configuration.Validation.Options(strict = false))
+            fun parse(key: String, typeName: String, rawValue: ConfigObject): Validated<Addresses, Configuration.Validation.Error> = parse(rawValue.toConfig(), Configuration.Validation.Options(strict = false))
         }
 
         val useSsl by boolean()
         val addresses by nestedObject(AddressesSpec).map(AddressesSpec::parse)
 
-        override fun parseValid(configuration: Config) = RpcSettingsImpl(addresses.valueIn(configuration), useSsl.valueIn(configuration))
+        override fun parseValid(configuration: Config) = valid<RpcSettings, Configuration.Validation.Error>(RpcSettingsImpl(addresses.valueIn(configuration), useSsl.valueIn(configuration)))
     }
 
     @Test
     fun parse() {
 
         val useSslValue = true
-        val principalAddressValue = NetworkHostAndPort("localhost", 8080)
-        val adminAddressValue = NetworkHostAndPort("127.0.0.1", 8081)
+        val principalAddressValue = Address("localhost", 8080)
+        val adminAddressValue = Address("127.0.0.1", 8081)
         val addressesValue = configObject("principal" to "${principalAddressValue.host}:${principalAddressValue.port}", "admin" to "${adminAddressValue.host}:${adminAddressValue.port}")
         val configuration = configObject("useSsl" to useSslValue, "addresses" to addressesValue).toConfig()
 
@@ -55,8 +55,8 @@ class SpecificationTest {
     @Test
     fun validate() {
 
-        val principalAddressValue = NetworkHostAndPort("localhost", 8080)
-        val adminAddressValue = NetworkHostAndPort("127.0.0.1", 8081)
+        val principalAddressValue = Address("localhost", 8080)
+        val adminAddressValue = Address("127.0.0.1", 8081)
         val addressesValue = configObject("principal" to "${principalAddressValue.host}:${principalAddressValue.port}", "admin" to "${adminAddressValue.host}:${adminAddressValue.port}")
         // Here "useSsl" shouldn't be `null`, hence causing the validation to fail.
         val configuration = configObject("useSsl" to null, "addresses" to addressesValue).toConfig()
@@ -74,8 +74,8 @@ class SpecificationTest {
     fun validate_with_domain_specific_errors() {
 
         val useSslValue = true
-        val principalAddressValue = NetworkHostAndPort("localhost", 8080)
-        val adminAddressValue = NetworkHostAndPort("127.0.0.1", 8081)
+        val principalAddressValue = Address("localhost", 8080)
+        val adminAddressValue = Address("127.0.0.1", 8081)
         // Here, for the "principal" property, the value is incorrect, as the port value is unacceptable.
         val addressesValue = configObject("principal" to "${principalAddressValue.host}:-10", "admin" to "${adminAddressValue.host}:${adminAddressValue.port}")
         val configuration = configObject("useSsl" to useSslValue, "addresses" to addressesValue).toConfig()
@@ -87,7 +87,7 @@ class SpecificationTest {
 
             assertThat(error.path).containsExactly("addresses", "principal")
             assertThat(error.keyName).isEqualTo("principal")
-            assertThat(error.typeName).isEqualTo(NetworkHostAndPort::class.java.simpleName)
+            assertThat(error.typeName).isEqualTo(Address::class.java.simpleName)
         }
     }
 
@@ -99,7 +99,7 @@ class SpecificationTest {
             @Suppress("unused")
             val myProp by string().list().optional()
 
-            override fun parseValid(configuration: Config) = myProp.valueIn(configuration)
+            override fun parseValid(configuration: Config) = valid<List<String>?, Configuration.Validation.Error>(myProp.valueIn(configuration))
         }
 
         assertThat(spec.properties).hasSize(1)
@@ -109,35 +109,7 @@ class SpecificationTest {
 
         val addresses: Addresses
         val useSsl: Boolean
-
-        data class Addresses(val principal: NetworkHostAndPort, val admin: NetworkHostAndPort)
     }
 
-    private data class RpcSettingsImpl(override val addresses: RpcSettings.Addresses, override val useSsl: Boolean) : RpcSettings
-
-    private data class NetworkHostAndPort(val host: String, val port: Int) {
-
-        init {
-            require(host.isNotBlank())
-            require(port > 0)
-        }
-
-        companion object {
-
-            fun <ERROR> validFromRawValue(rawValue: String, mapError: (String) -> ERROR): Validated<NetworkHostAndPort, ERROR> {
-
-                val parts = rawValue.split(":")
-                if (parts.size != 2 || parts[0].isBlank() || parts[1].isBlank() || parts[1].toIntOrNull() == null) {
-                    return invalid(sequenceOf("Value format is \"<host(String)>:<port:(Int)>\"").map(mapError).toSet())
-                }
-                val host = parts[0]
-                val port = parts[1].toInt()
-                if (port <= 0) {
-                    return invalid(sequenceOf("Port value must be greater than zero").map(mapError).toSet())
-                }
-
-                return Validated.valid(NetworkHostAndPort(host, port))
-            }
-        }
-    }
+    private data class RpcSettingsImpl(override val addresses: Addresses, override val useSsl: Boolean) : RpcSettings
 }
