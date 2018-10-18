@@ -14,7 +14,7 @@ dependencies {
         exclude module: 'node-api'
         exclude module: 'finance'
     }
-    testCompile project(':test-utils')
+    testCompile(project(':test-cli'))
 }
 
 jar {
