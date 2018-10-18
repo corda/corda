@@ -1,6 +1,7 @@
 package net.corda.common.configuration.parsing.internal
 
 import com.typesafe.config.*
+import net.corda.common.validation.internal.Validated
 
 inline fun <TYPE, reified MAPPED : Any> Configuration.Property.Definition.Standard<TYPE>.map(noinline convert: (String, TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = this.map(MAPPED::class.java.simpleName, convert)
 
@@ -42,3 +43,7 @@ internal operator fun Config.minus(key: String): Config {
 internal fun Config.serialize(options: ConfigRenderOptions = ConfigRenderOptions.concise().setFormatted(true).setJson(true)): String = root().serialize(options)
 
 internal fun ConfigValue.serialize(options: ConfigRenderOptions = ConfigRenderOptions.concise().setFormatted(true).setJson(true)): String = render(options)
+
+internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
+
+internal fun <TYPE> valid(target: TYPE) = Validated.valid<TYPE, Configuration.Validation.Error>(target)

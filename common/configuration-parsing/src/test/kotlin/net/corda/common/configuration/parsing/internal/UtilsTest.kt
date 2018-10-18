@@ -4,7 +4,7 @@ import com.typesafe.config.ConfigFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
-class FunctionsTest {
+class UtilsTest {
 
     @Test
     fun serialize_deserialize_configuration() {

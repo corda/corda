@@ -100,6 +100,7 @@ class VersionedParsingExampleTest {
             }
         }
 
+        // TODO introduce an optional prefix here
         object V2 : Configuration.Specification<RpcSettings>("RpcSettings") {
 
             private object AddressesSpec : Configuration.Specification<Addresses>("Addresses") {
