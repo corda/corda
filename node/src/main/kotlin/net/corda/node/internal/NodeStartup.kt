@@ -14,11 +14,13 @@ import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
-import net.corda.node.*
+import net.corda.node.NodeCmdLineOptions
+import net.corda.node.NodeRegistrationOption
+import net.corda.node.SerialFilter
+import net.corda.node.VersionInfo
 import net.corda.node.internal.Node.Companion.isValidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
@@ -27,7 +29,6 @@ import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
-import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
@@ -189,15 +190,7 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         if (cmdLineOptions.devMode == true) {
             println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
         }
-        val configuration = configurationResult.getOrThrow()
-        // TODO: fix bootstrapping for Raft notary
-//        return if (cmdLineOptions.bootstrapRaftCluster) {
-//            println("Bootstrapping raft cluster (starting up as seed node).")
-            // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
-//            (configuration as NodeConfigurationImpl).copy(notary = configuration.notary?.copy(raft = configuration.notary?.raft?.copy(clusterAddresses = emptyList())))
-//        } else {
-          return  configuration
-//        }
+        return configurationResult.getOrThrow()
     }
 
     private fun checkRegistrationMode(): Boolean {
@@ -299,12 +292,12 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         val console: Console? = System.console()
 
         when (console) {
-        // In this case, the JVM is not connected to the console so we need to exit.
+            // In this case, the JVM is not connected to the console so we need to exit.
             null -> {
                 println("Not connected to console. Exiting")
                 exitProcess(1)
             }
-        // Otherwise we can proceed normally.
+            // Otherwise we can proceed normally.
             else -> {
                 while (true) {
                     val keystorePassword1 = console.readPassword("Enter the RPC keystore password => ")
