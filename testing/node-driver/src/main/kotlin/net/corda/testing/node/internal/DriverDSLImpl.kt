@@ -222,7 +222,7 @@ class DriverDSLImpl(
 
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
-            startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.doormanURL())
+            startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.config())
         } else {
             doneFuture(Unit)
         }
@@ -275,14 +275,18 @@ class DriverDSLImpl(
         return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap, additionalCordapps, regenerateCordappsOnStart)
     }
 
-    private fun startNodeRegistration(providedName: CordaX500Name, rootCert: X509Certificate, compatibilityZoneURL: URL): CordaFuture<NodeConfig> {
+    private fun startNodeRegistration(
+            providedName: CordaX500Name,
+            rootCert: X509Certificate,
+            networkServicesConfig: NetworkServicesConfig
+    ): CordaFuture<NodeConfig> {
         val baseDirectory = baseDirectory(providedName).createDirectories()
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = configOf(
                         "p2pAddress" to portAllocation.nextHostAndPort().toString(),
-                        "compatibilityZoneURL" to compatibilityZoneURL.toString(),
+                        "compatibilityZoneURL" to networkServicesConfig.doormanURL.toString(),
                         "myLegalName" to providedName.toString(),
                         "rpcSettings" to mapOf(
                                 "address" to portAllocation.nextHostAndPort().toString(),
@@ -305,7 +309,7 @@ class DriverDSLImpl(
             executorService.fork {
                 NodeRegistrationHelper(
                         config.corda,
-                        HTTPNetworkRegistrationService(compatibilityZoneURL, versionInfo),
+                        HTTPNetworkRegistrationService(networkServicesConfig, versionInfo),
                         NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)
                 ).buildKeystore()
                 config
@@ -371,7 +375,7 @@ class DriverDSLImpl(
                 startNotaryIdentityGeneration()
             } else {
                 // With a root cert specified we delegate generation of the notary identities to the CZ.
-                startAllNotaryRegistrations(compatibilityZone.rootCert, compatibilityZone.doormanURL())
+                startAllNotaryRegistrations(compatibilityZone.rootCert, compatibilityZone)
             }
             notaryInfosFuture.map { notaryInfos ->
                 compatibilityZone.publishNotaries(notaryInfos)
@@ -422,16 +426,22 @@ class DriverDSLImpl(
         }
     }
 
-    private fun startAllNotaryRegistrations(rootCert: X509Certificate, compatibilityZoneURL: URL): CordaFuture<List<NotaryInfo>> {
+    private fun startAllNotaryRegistrations(
+            rootCert: X509Certificate,
+            compatibilityZone: CompatibilityZoneParams): CordaFuture<List<NotaryInfo>> {
         // Start the registration process for all the notaries together then wait for their responses.
         return notarySpecs.map { spec ->
             require(spec.cluster == null) { "Registering distributed notaries not supported" }
-            startNotaryRegistration(spec, rootCert, compatibilityZoneURL)
+            startNotaryRegistration(spec, rootCert, compatibilityZone)
         }.transpose()
     }
 
-    private fun startNotaryRegistration(spec: NotarySpec, rootCert: X509Certificate, compatibilityZoneURL: URL): CordaFuture<NotaryInfo> {
-        return startNodeRegistration(spec.name, rootCert, compatibilityZoneURL).flatMap { config ->
+    private fun startNotaryRegistration(
+            spec: NotarySpec,
+            rootCert: X509Certificate,
+            compatibilityZone: CompatibilityZoneParams
+    ): CordaFuture<NotaryInfo> {
+        return startNodeRegistration(spec.name, rootCert, compatibilityZone.config()).flatMap { config ->
             // Node registration only gives us the node CA cert, not the identity cert. That is only created on first
             // startup or when the node is told to just generate its node info file. We do that here.
             if (startNodesInProcess) {
@@ -1067,6 +1077,7 @@ sealed class CompatibilityZoneParams(
 ) {
     abstract fun networkMapURL(): URL
     abstract fun doormanURL(): URL
+    abstract fun config() : NetworkServicesConfig
 }
 
 /**
@@ -1074,11 +1085,18 @@ sealed class CompatibilityZoneParams(
  */
 class SharedCompatibilityZoneParams(
         private val url: URL,
+        private val pnm : UUID?,
         publishNotaries: (List<NotaryInfo>) -> Unit,
         rootCert: X509Certificate? = null
 ) : CompatibilityZoneParams(publishNotaries, rootCert) {
+
+    val config : NetworkServicesConfig by lazy {
+        NetworkServicesConfig(url, url, pnm, false)
+    }
+
     override fun doormanURL() = url
     override fun networkMapURL() = url
+    override fun config() : NetworkServicesConfig = config
 }
 
 /**
@@ -1087,11 +1105,17 @@ class SharedCompatibilityZoneParams(
 class SplitCompatibilityZoneParams(
         private val doormanURL: URL,
         private val networkMapURL: URL,
+        private val pnm : UUID?,
         publishNotaries: (List<NotaryInfo>) -> Unit,
         rootCert: X509Certificate? = null
 ) : CompatibilityZoneParams(publishNotaries, rootCert) {
+    val config : NetworkServicesConfig by lazy {
+        NetworkServicesConfig(doormanURL, networkMapURL, pnm, false)
+    }
+
     override fun doormanURL() = doormanURL
     override fun networkMapURL() = networkMapURL
+    override fun config() : NetworkServicesConfig = config
 }
 
 fun <A> internalDriver(

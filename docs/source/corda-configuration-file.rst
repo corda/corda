@@ -194,6 +194,7 @@ absolute path to the node's base directory.
 
     :doormanURL: Root address of the network registration service.
     :networkMapURL: Root address of the network map service.
+    :pnm: Optional UUID of the private network operating within the compatibility zone this node should be joinging.
 
         .. note:: Only one of ``compatibilityZoneURL`` or ``networkServices`` should be used.
 
