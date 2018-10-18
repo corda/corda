@@ -6,7 +6,6 @@ import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
 import net.corda.common.configuration.parsing.internal.versioned.VersionExtractor
 import net.corda.common.validation.internal.Validated
-import net.corda.common.validation.internal.Validated.Companion.valid
 import java.time.Duration
 import kotlin.reflect.KClass
 
@@ -75,7 +74,7 @@ object Configuration {
 
             override fun parse(configuration: Config, options: Validation.Options): Validated<TYPE, Validation.Error> {
 
-                return validate(configuration, options).flatMap { config -> valid<TYPE, Configuration.Validation.Error>(valueIn(config)) }
+                return validate(configuration, options).flatMap { config -> valid(valueIn(config)) }
             }
 
             companion object {

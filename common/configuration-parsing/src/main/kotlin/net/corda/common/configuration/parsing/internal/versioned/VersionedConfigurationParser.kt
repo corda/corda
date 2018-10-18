@@ -12,7 +12,6 @@ class VersionedConfigurationParser<TYPE> private constructor(private val version
         fun <T> mapping(versionParser: Configuration.Value.Parser<Int?>, defaultVersion: Int? = null, vararg parseFunctions: Pair<Int, Configuration.Value.Parser<T>>): Configuration.Value.Parser<T> = VersionedConfigurationParser(versionParser, mapOf(*parseFunctions), defaultVersion)
     }
 
-    // TODO sollecitom see if you can get rid of all these `Configuration.Validation.Options(strict = false)` by introducing a separate type.
     private val extractVersion = { config: Config -> versionParser.parse(config, Configuration.Validation.Options(strict = false)) }
 
     override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<TYPE> {

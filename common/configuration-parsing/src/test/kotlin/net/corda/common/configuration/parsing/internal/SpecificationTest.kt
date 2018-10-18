@@ -2,7 +2,6 @@ package net.corda.common.configuration.parsing.internal
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigObject
-import net.corda.common.validation.internal.Validated.Companion.valid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
@@ -16,7 +15,7 @@ class SpecificationTest {
 
             val admin by string().map { key, typeName, rawValue -> Address.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) as Configuration.Validation.Error } }
 
-            override fun parseValid(configuration: Config) = valid<Addresses, Configuration.Validation.Error>(Addresses(principal.valueIn(configuration), admin.valueIn(configuration)))
+            override fun parseValid(configuration: Config) = valid(Addresses(principal.valueIn(configuration), admin.valueIn(configuration)))
 
             @Suppress("UNUSED_PARAMETER")
             fun parse(key: String, typeName: String, rawValue: ConfigObject): Valid<Addresses> = parse(rawValue.toConfig(), Configuration.Validation.Options(strict = false))
@@ -25,7 +24,7 @@ class SpecificationTest {
         val useSsl by boolean()
         val addresses by nestedObject(AddressesSpec).map(AddressesSpec::parse)
 
-        override fun parseValid(configuration: Config) = valid<RpcSettings, Configuration.Validation.Error>(RpcSettingsImpl(addresses.valueIn(configuration), useSsl.valueIn(configuration)))
+        override fun parseValid(configuration: Config) = valid<RpcSettings>(RpcSettingsImpl(addresses.valueIn(configuration), useSsl.valueIn(configuration)))
     }
 
     @Test
@@ -98,7 +97,7 @@ class SpecificationTest {
             @Suppress("unused")
             val myProp by string().list().optional()
 
-            override fun parseValid(configuration: Config) = valid<List<String>?, Configuration.Validation.Error>(myProp.valueIn(configuration))
+            override fun parseValid(configuration: Config) = valid(myProp.valueIn(configuration))
         }
 
         assertThat(spec.properties).hasSize(1)

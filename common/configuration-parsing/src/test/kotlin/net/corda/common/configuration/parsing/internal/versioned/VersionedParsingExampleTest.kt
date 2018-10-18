@@ -5,7 +5,6 @@ import com.typesafe.config.ConfigObject
 import net.corda.common.configuration.parsing.internal.*
 import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
-import net.corda.common.validation.internal.Validated.Companion.valid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
@@ -21,26 +20,16 @@ class VersionedParsingExampleTest {
         val principalAddressValue = Address("localhost", 8080)
         val adminAddressValue = Address("127.0.0.1", 8081)
 
-        fun assertResult(result: Valid<RpcSettings>) {
-
-            assertThat(result.isValid).isTrue()
-            assertThat(result.valueOrThrow()).satisfies { value ->
-
-                assertThat(value.principal).isEqualTo(principalAddressValue)
-                assertThat(value.admin).isEqualTo(adminAddressValue)
-            }
-        }
-
         val configurationV1 = configObject("configuration.metadata.version" to 1, "principalHost" to principalAddressValue.host, "principalPort" to principalAddressValue.port, "adminHost" to adminAddressValue.host, "adminPort" to adminAddressValue.port).toConfig()
         val rpcSettingsFromVersion1Conf = parser.parse(configurationV1, Configuration.Validation.Options(strict = false))
 
-        assertResult(rpcSettingsFromVersion1Conf)
+        assertResult(rpcSettingsFromVersion1Conf, principalAddressValue, adminAddressValue)
 
         val addressesValue = configObject("principal" to "${principalAddressValue.host}:${principalAddressValue.port}", "admin" to "${adminAddressValue.host}:${adminAddressValue.port}")
         val configurationV2 = configObject("configuration.metadata.version" to 2, "configuration.value.addresses" to addressesValue).toConfig()
         val rpcSettingsFromVersion2Conf = parser.parse(configurationV2, Configuration.Validation.Options(strict = false))
 
-        assertResult(rpcSettingsFromVersion2Conf)
+        assertResult(rpcSettingsFromVersion2Conf, principalAddressValue, adminAddressValue)
     }
 
     @Test
@@ -53,20 +42,20 @@ class VersionedParsingExampleTest {
         val principalAddressValue = Address("localhost", 8080)
         val adminAddressValue = Address("127.0.0.1", 8081)
 
-        fun assertResult(result: Valid<RpcSettings>) {
-
-            assertThat(result.isValid).isTrue()
-            assertThat(result.valueOrThrow()).satisfies { value ->
-
-                assertThat(value.principal).isEqualTo(principalAddressValue)
-                assertThat(value.admin).isEqualTo(adminAddressValue)
-            }
-        }
-
         val configurationWithoutVersion = configObject("principalHost" to principalAddressValue.host, "principalPort" to principalAddressValue.port, "adminHost" to adminAddressValue.host, "adminPort" to adminAddressValue.port).toConfig()
         val rpcSettings = parser.parse(configurationWithoutVersion, Configuration.Validation.Options(strict = false))
 
-        assertResult(rpcSettings)
+        assertResult(rpcSettings, principalAddressValue, adminAddressValue)
+    }
+
+    private fun assertResult(result: Valid<RpcSettings>, principalAddressValue: Address, adminAddressValue: Address) {
+
+        assertThat(result.isValid).isTrue()
+        assertThat(result.valueOrThrow()).satisfies { value ->
+
+            assertThat(value.principal).isEqualTo(principalAddressValue)
+            assertThat(value.admin).isEqualTo(adminAddressValue)
+        }
     }
 
     private data class RpcSettings(val principal: Address, val admin: Address)
@@ -119,7 +108,7 @@ class VersionedParsingExampleTest {
 
                 val admin by string().map { key, typeName, rawValue -> Address.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) as Configuration.Validation.Error } }
 
-                override fun parseValid(configuration: Config) = valid<Addresses, Configuration.Validation.Error>(Addresses(principal.valueIn(configuration), admin.valueIn(configuration)))
+                override fun parseValid(configuration: Config) = valid(Addresses(principal.valueIn(configuration), admin.valueIn(configuration)))
 
                 @Suppress("UNUSED_PARAMETER")
                 fun parse(key: String, typeName: String, rawValue: ConfigObject): Valid<Addresses> = parse(rawValue.toConfig(), Configuration.Validation.Options(strict = false))
