@@ -19,7 +19,6 @@ interface FlowAsyncOperation<R : Any> {
      * For each duplicate call, the deduplicationId is guaranteed to be the same allowing duplicate requests to be
      * de-duplicated if necessary inside the execute method.
      */
-
     fun execute(deduplicationId: String): CordaFuture<R>
 }
 // DOCEND FlowAsyncOperation
