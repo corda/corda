@@ -21,7 +21,13 @@ class VersionedConfigurationParserTest {
     @Test
     fun unsupported_version_raises_exception() {
 
+        val defaultVersion = 1
+        val unsupportedVersion: Int? = 5
 
+        val configuration = configObject().toConfig()
+        val parser = VersionedConfigurationParser.mapping(extractValidValue(unsupportedVersion), defaultVersion, 1 to extractValidValue("One"), 2 to extractValidValue("Two"))
+
+        assertThatThrownBy { parser.parse(configuration, Configuration.Validation.Options(strict = false)) }.isInstanceOf(VersionedConfigurationParser.Exception.UnsupportedVersion::class.java)
     }
 
     @Test
