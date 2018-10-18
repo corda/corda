@@ -5,21 +5,21 @@ import com.github.benmanes.caffeine.cache.CacheLoader
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
 import com.github.benmanes.caffeine.cache.RemovalListener
-import net.corda.core.internal.buildNamed
+import net.corda.core.internal.NamedCacheFactory
 
 class NonInvalidatingUnboundCache<K, V> private constructor(
         val cache: LoadingCache<K, V>
 ) : LoadingCache<K, V> by cache {
 
-    constructor(name: String, loadFunction: (K) -> V, removalListener: RemovalListener<K, V> = RemovalListener { _, _, _ -> },
+    constructor(name: String, cacheFactory: NamedCacheFactory, loadFunction: (K) -> V, removalListener: RemovalListener<K, V> = RemovalListener { _, _, _ -> },
                 keysToPreload: () -> Iterable<K> = { emptyList() }) :
-            this(buildCache(name, loadFunction, removalListener, keysToPreload))
+            this(buildCache(name, cacheFactory, loadFunction, removalListener, keysToPreload))
 
     private companion object {
-        private fun <K, V> buildCache(name: String, loadFunction: (K) -> V, removalListener: RemovalListener<K, V>,
+        private fun <K, V> buildCache(name: String, cacheFactory: NamedCacheFactory, loadFunction: (K) -> V, removalListener: RemovalListener<K, V>,
                                       keysToPreload: () -> Iterable<K>): LoadingCache<K, V> {
             val builder = Caffeine.newBuilder().removalListener(removalListener).executor(SameThreadExecutor.getExecutor())
-            return builder.buildNamed(name, NonInvalidatingCacheLoader(loadFunction)).apply {
+            return cacheFactory.buildNamed(builder, name, NonInvalidatingCacheLoader(loadFunction)).apply {
                 getAll(keysToPreload())
             }
         }

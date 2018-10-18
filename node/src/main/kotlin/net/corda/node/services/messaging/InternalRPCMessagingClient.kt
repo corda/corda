@@ -1,6 +1,7 @@
 package net.corda.node.services.messaging
 
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.internal.nodeSerializationEnv
@@ -20,7 +21,7 @@ class InternalRPCMessagingClient(val sslConfig: MutualSslConfiguration, val serv
     private var locator: ServerLocator? = null
     private var rpcServer: RPCServer? = null
 
-    fun init(rpcOps: RPCOps, securityManager: RPCSecurityManager) = synchronized(this) {
+    fun init(rpcOps: RPCOps, securityManager: RPCSecurityManager, cacheFactory: NamedCacheFactory) = synchronized(this) {
 
         val tcpTransport = ArtemisTcpTransport.rpcInternalClientTcpTransport(serverAddress, sslConfig)
         locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
@@ -32,7 +33,7 @@ class InternalRPCMessagingClient(val sslConfig: MutualSslConfiguration, val serv
             isUseGlobalPools = nodeSerializationEnv != null
         }
 
-        rpcServer = RPCServer(rpcOps, NODE_RPC_USER, NODE_RPC_USER, locator!!, securityManager, nodeName, rpcServerConfiguration)
+        rpcServer = RPCServer(rpcOps, NODE_RPC_USER, NODE_RPC_USER, locator!!, securityManager, nodeName, rpcServerConfiguration, cacheFactory)
     }
 
     fun start(serverControl: ActiveMQServerControl) = synchronized(this) {
