@@ -4,13 +4,16 @@ import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.flows.mixins.WithMockNet
 import net.corda.core.identity.Party
-import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.matchers.flow.willReturn
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.TestStartedNode
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.AfterClass
 import org.junit.Test
+import kotlin.reflect.KClass
 
 
 class ReceiveMultipleFlowTests : WithMockNet {
@@ -27,98 +30,110 @@ class ReceiveMultipleFlowTests : WithMockNet {
     private val nodes = (0..2).map { mockNet.createPartyNode() }
 
     @Test
-    fun `receive all messages in parallel using map style`() {
-        val doubleValue1 = 5.0
-        val doubleValue2 = 10.0
-        nodes[1].registerInitiatedFlow(AlgorithmDefinitionMap::class.java, Responder::class.java, false)
-        nodes[2].registerInitiatedFlow(AlgorithmDefinitionMap::class.java, Responder::class.java, false)
+    fun showcase_flows_as_closures() {
+        val answer = 10.0
+        val message = "Hello Ivan"
+
+        val counterParty = nodes[1].info.singleIdentity()
+
+        val initiatingFlow = @InitiatingFlow object : FlowLogic<Any>() {
+
+            @Suspendable
+            override fun call(): Any {
+                val session = initiateFlow(counterParty)
+                return session.sendAndReceive<Any>(message).unwrap { it }
+            }
+        }
+
+        nodes[1].registerCordAppFlowFactory(initiatingFlow::class) { session ->
+            object : FlowLogic<Unit>() {
+                @Suspendable
+                override fun call() {
+                    // this is a closure, meaning you can access variables outside its scope e.g., `answer`.
+                    val receivedMessage = session.receive<String>().unwrap { it }
+                    logger.info("Got message from counterParty: $receivedMessage.")
+                    assertThat(receivedMessage).isEqualTo(message)
+                    session.send(answer)
+                }
+            } as FlowLogic<Unit>
+        }
 
         assert.that(
-                nodes[0].startFlowAndRunNetwork(AlgorithmDefinitionMap(nodes[1].info.singleIdentity() to doubleValue1, nodes[2].info.singleIdentity() to doubleValue2)),
-                willReturn(Data(5.0, 10)))
+                nodes[0].startFlowAndRunNetwork(initiatingFlow),
+                willReturn(answer as Any))
+    }
+
+    @Test
+    fun `receive all messages in parallel using map style`() {
+        val doubleValue = 5.0
+        nodes[1].registerAnswer(AlgorithmDefinition::class, doubleValue)
+        val stringValue = "Thriller"
+        nodes[2].registerAnswer(AlgorithmDefinition::class, stringValue)
+
+        assert.that(
+                nodes[0].startFlowAndRunNetwork(ParallelAlgorithmMap(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity())),
+                willReturn(doubleValue * stringValue.length))
     }
 
     @Test
     fun `receive all messages in parallel using list style`() {
-        val doubleValue1 = 5.0
-        val doubleValue2 = 10.0
-        nodes[1].registerInitiatedFlow(AlgorithmDefinitionList::class.java, Responder::class.java, false)
-        nodes[2].registerInitiatedFlow(AlgorithmDefinitionList::class.java, Responder::class.java, false)
+        val value1 = 5.0
+        nodes[1].registerAnswer(ParallelAlgorithmList::class, value1)
+        val value2 = 6.0
+        nodes[2].registerAnswer(ParallelAlgorithmList::class, value2)
 
         assert.that(
-                nodes[0].startFlowAndRunNetwork(AlgorithmDefinitionList(nodes[1].info.singleIdentity() to doubleValue1, nodes[2].info.singleIdentity() to doubleValue2)),
-                willReturn(listOf(IntHolder(10), DoubleHolder(5.0))))
+                nodes[0].startFlowAndRunNetwork(ParallelAlgorithmList(nodes[1].info.singleIdentity(), nodes[2].info.singleIdentity())),
+                willReturn(listOf(value1, value2)))
     }
 
-
-    @InitiatingFlow
-    class AlgorithmDefinitionList(val doubleMember: Pair<Party, Double>, val intMember: Pair<Party, Double>) : FlowLogic<List<Any>>() {
+    class ParallelAlgorithmMap(doubleMember: Party, stringMember: Party) : AlgorithmDefinition(doubleMember, stringMember) {
         @Suspendable
-        protected fun askMembersForData(doubleMember: Pair<Party, Double>, intMember: Pair<Party, Double>): List<Any> {
-            val doubleSession = initiateFlow(doubleMember.first)
-            val intSession = initiateFlow(intMember.first)
-            doubleSession.send(Double::class.simpleName to doubleMember.second)
-            intSession.send(Int::class.simpleName to intMember.second)
-            val rawData = receiveAll(Any::class.java, intSession, doubleSession).map { it.unwrap { it } }
-            return rawData
-        }
-
-        @Suspendable
-        override fun call(): List<Any> {
-            return askMembersForData(doubleMember, intMember)
+        override fun askMembersForData(doubleMember: Party, stringMember: Party): Data {
+            val doubleSession = initiateFlow(doubleMember)
+            val stringSession = initiateFlow(stringMember)
+            val rawData = receiveAll(Double::class from doubleSession, String::class from stringSession)
+            return Data(rawData from doubleSession, rawData from stringSession)
         }
     }
 
     @InitiatingFlow
-    class AlgorithmDefinitionMap(val doubleMember: Pair<Party, Double>, val intMember: Pair<Party, Double>) : FlowLogic<Data>() {
+    class ParallelAlgorithmList(private val member1: Party, private val member2: Party) : FlowLogic<List<Double>>() {
         @Suspendable
-        protected fun askMembersForData(doubleMember: Pair<Party, Double>, intMember: Pair<Party, Double>): Data {
-            val doubleSession = initiateFlow(doubleMember.first)
-            val intSession = initiateFlow(intMember.first)
-            doubleSession.send(Double::class.simpleName to doubleMember.second)
-            intSession.send(Int::class.simpleName to intMember.second)
-            val rawData = receiveAll(doubleSession to DoubleHolder::class.java, intSession to IntHolder::class.java)
-            return Data((rawData[doubleSession]?.unwrap { it } as DoubleHolder).number, (rawData[intSession]?.unwrap { it } as IntHolder).number)
+        override fun call(): List<Double> {
+            val session1 = initiateFlow(member1)
+            val session2 = initiateFlow(member2)
+            val data = receiveAll<Double>(session1, session2)
+            return computeAnswer(data)
         }
 
-        @Suspendable
-        override fun call(): Data {
-            return askMembersForData(doubleMember, intMember)
+        private fun computeAnswer(data: List<UntrustworthyData<Double>>): List<Double> {
+            return data.map { element -> element.unwrap { it } }
         }
     }
 
-    private class Responder(val session: FlowSession) : FlowLogic<Unit>() {
+    @InitiatingFlow
+    abstract class AlgorithmDefinition(private val doubleMember: Party, private val stringMember: Party) : FlowLogic<Double>() {
+        protected data class Data(val double: Double, val string: String)
+
         @Suspendable
-        override fun call() {
-            val (typeToRespondWith, valueToRespondWith) = session.receive<Pair<String, Double>>().unwrap { it }
-            when (typeToRespondWith) {
-                String::class.simpleName -> {
-                    session.send(valueToRespondWith.toString())
-                }
-                Double::class.simpleName -> {
-                    session.send(DoubleHolder(valueToRespondWith))
-                }
-                Int::class.simpleName -> {
-                    session.send(IntHolder(valueToRespondWith.toInt()))
-                }
-                Float::class.simpleName -> {
-                    session.send(FloatHolder(valueToRespondWith.toFloat()))
-                }
-                else -> {
-                    throw IllegalStateException("No matching path for : ${typeToRespondWith}")
-                }
-            }
+        protected abstract fun askMembersForData(doubleMember: Party, stringMember: Party): Data
+
+        @Suspendable
+        override fun call(): Double {
+            val (double, string) = askMembersForData(doubleMember, stringMember)
+            return double * string.length
         }
     }
 }
 
-@CordaSerializable
-data class DoubleHolder(val number: Double)
-
-@CordaSerializable
-data class FloatHolder(val number: Float)
-
-@CordaSerializable
-data class IntHolder(val number: Int)
-
-data class Data(val double: Double, val int: Int)
+private inline fun <reified T> TestStartedNode.registerAnswer(kClass: KClass<out FlowLogic<Any>>, value1: T) {
+    this.registerCordAppFlowFactory(kClass) { session ->
+        object : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                session.send(value1!!)
+            }
+        }
+    }
+}
