@@ -95,3 +95,11 @@ We look forward to seeing what you can do with Corda!
    deterministic-modules.rst
    release-notes
    changelog
+
+.. toctree::
+   :caption: Corda Network
+   :maxdepth: 2
+
+   corda-network/introduction.md
+   corda-network/proposed governance-structure.md
+   corda-network/community
