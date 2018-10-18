@@ -65,7 +65,7 @@ internal constructor(private val initSerEnv: Boolean,
                 "java",
                 "-jar",
                 "corda.jar",
-                "--just-generate-node-info"
+                "generate-node-info"
         )
 
         private const val LOGS_DIR_NAME = "logs"

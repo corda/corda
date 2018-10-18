@@ -146,7 +146,7 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
 
     @Option(
             names = ["-p", "--network-root-truststore-password"],
-            description = ["Network root trust store password obtained from network operator."],
+            description = ["DEPRECATED. Network root trust store password obtained from network operator."],
             hidden = true
     )
     var networkRootTrustStorePassword: String? = null

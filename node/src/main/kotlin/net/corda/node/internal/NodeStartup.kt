@@ -46,7 +46,6 @@ interface RunAfterNodeInitialisation {
 abstract class NodeCliCommand(alias: String, description: String, val startup: NodeStartup) : CliWrapperBase(alias, description), NodeStartupLogging {
     companion object {
         const val LOGS_DIRECTORY_NAME = "logs"
-        val startupErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
     }
 
     override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)

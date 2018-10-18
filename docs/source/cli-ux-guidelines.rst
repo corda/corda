@@ -50,8 +50,11 @@ Standard options
 * A ``--logging-level`` option should be provided which specifies the logging level to be used in any logging files. Acceptable values should be ``DEBUG``, ``TRACE``, ``INFO``, ``WARN`` and ``ERROR``.
 * ``--verbose`` and ``--log-to-console`` options should be provided (both equivalent) which specifies that logging output should be displayed in the console.
   A ``-v`` short option should also be provided.
-* A ``--install-shell-extensions`` option should be provided that creates and installs a bash completion file.
 
+Standard subcommands
+~~~~~~~~~~~~~~~~~~~~
+
+* An ``install-shell-extensions`` subcommand should be provided that creates and installs a bash completion file.
 
 Defaults
 ~~~~~~~~
@@ -94,7 +97,7 @@ In order to use it, create a class containing your command line options using th
         }
 
         class UsefulUtility : CordaCliWrapper(
-            "useful-utility", // the alias to be used for this utility in bash. When --install-shell-extensions is run
+            "useful-utility", // the alias to be used for this utility in bash. When install-shell-extensions is run
                               // you will be able to invoke this command by running <useful-utility --opts> from the command line
             "A command line utility that is super useful!" // A description of this utility to be displayed when --help is run
         ) {
