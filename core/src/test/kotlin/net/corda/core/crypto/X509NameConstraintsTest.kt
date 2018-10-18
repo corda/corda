@@ -24,7 +24,7 @@ class X509NameConstraintsTest {
 
     companion object {
         private const val storePassword = "storePassword"
-        private const val keyPassword = "keyPassword"
+        private const val keyPassword = "entryPassword"
     }
 
     private fun makeKeyStores(subjectName: X500Name, nameConstraints: NameConstraints): Pair<X509KeyStore, X509KeyStore> {
