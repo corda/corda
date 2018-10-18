@@ -2,11 +2,11 @@ package net.corda.node
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigRenderOptions
 import net.corda.core.internal.div
-import net.corda.core.internal.exists
-import net.corda.core.utilities.Try
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import picocli.CommandLine.Option
@@ -33,27 +33,57 @@ open class SharedNodeCmdLineOptions {
     )
     var unknownConfigKeysPolicy: UnknownConfigKeysPolicy = UnknownConfigKeysPolicy.FAIL
 
-    open fun loadConfig(): Pair<Config, Try<NodeConfiguration>> {
+    @Option(
+            names = ["-d", "--dev-mode"],
+            description = ["Run the node in developer mode. Unsafe for production."]
+    )
+    var devMode: Boolean? = null
+
+    open fun loadConfig(): NodeConfiguration {
+        return getRawConfig().parseAsNodeConfiguration(unknownConfigKeysPolicy::handle)
+    }
+
+    protected fun getRawConfig(): Config {
         val rawConfig = ConfigHelper.loadConfig(
                 baseDirectory,
                 configFile
         )
-        return rawConfig to Try.on {
-            rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
-                //TODO: Move to registration command
-//                if (nodeRegistrationOption != null) {
-//                    require(!config.devMode) { "Registration cannot occur in devMode" }
-//                    require(config.compatibilityZoneURL != null || config.networkServices != null) {
-//                        "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
-//                    }
-//                }
+        if (devMode == true) {
+            println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
+        }
+        return rawConfig
+    }
+}
+
+class InitialRegistrationCmdLineOptions : SharedNodeCmdLineOptions() {
+    override fun loadConfig(): NodeConfiguration {
+        return getRawConfig().parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
+            require(!config.devMode) { "Registration cannot occur in devMode" }
+            require(config.compatibilityZoneURL != null || config.networkServices != null) {
+                "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
             }
         }
     }
-
 }
 
-class NodeCmdLineOptions: SharedNodeCmdLineOptions() {
+class BootstrapRaftNotaryCmdLineOptions : NodeCmdLineOptions() {
+    override fun loadConfig(): NodeConfiguration {
+        val rawConfig= ConfigHelper.loadConfig(
+                baseDirectory,
+                configFile,
+                configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell) +
+                        if (sshdServer) mapOf("sshd" to mapOf("port" to sshdServerPort.toString())) else emptyMap<String, Any>() +
+                        if (devMode != null) mapOf("devMode" to this.devMode) else emptyMap())
+        )
+        if (devMode == true) {
+            println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
+        }
+        val config = rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle) as NodeConfigurationImpl
+        return config.copy(notary = config.notary?.copy(raft = config.notary.raft?.copy(clusterAddresses = emptyList())))
+    }
+}
+
+open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
     @Option(
             names = ["--sshd"],
             description = ["If set, enables SSH server for node administration."]
@@ -73,12 +103,6 @@ class NodeCmdLineOptions: SharedNodeCmdLineOptions() {
     var noLocalShell: Boolean = false
 
     @Option(
-            names = ["-d", "--dev-mode"],
-            description = ["Run the node in developer mode. Unsafe for production."]
-    )
-    var devMode: Boolean? = null
-
-    @Option(
             names = ["--just-generate-node-info"],
             description = ["DEPRECATED. Perform the node start-up task necessary to generate its node info, save it to disk, then quit"],
             hidden = true
@@ -94,7 +118,8 @@ class NodeCmdLineOptions: SharedNodeCmdLineOptions() {
 
     @Option(
             names = ["--bootstrap-raft-cluster"],
-            description = ["Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer addresses), acting as a seed for other nodes to join the cluster."]
+            description = ["DEPRECATED. Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer addresses), acting as a seed for other nodes to join the cluster."],
+            hidden = true
     )
     var bootstrapRaftCluster: Boolean = false
 
@@ -118,7 +143,6 @@ class NodeCmdLineOptions: SharedNodeCmdLineOptions() {
             hidden = true
     )
     var networkRootTrustStorePathParameter: Path? = null
-    val networkRootTrustStorePath: Path get() = networkRootTrustStorePathParameter ?: baseDirectory / "certificates" / "network-root-truststore.jks"
 
     @Option(
             names = ["-p", "--network-root-truststore-password"],
@@ -127,34 +151,24 @@ class NodeCmdLineOptions: SharedNodeCmdLineOptions() {
     )
     var networkRootTrustStorePassword: String? = null
 
-    val nodeRegistrationOption: NodeRegistrationOption? by lazy {
-        if (isRegistration) {
-            requireNotNull(networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
-            require(networkRootTrustStorePath.exists()) { "Network root trust store path: '$networkRootTrustStorePath' doesn't exist" }
-            NodeRegistrationOption(networkRootTrustStorePath, networkRootTrustStorePassword!!)
-        } else {
-            null
-        }
-    }
-    override fun loadConfig(): Pair<Config, Try<NodeConfiguration>> {
+    override fun loadConfig(): NodeConfiguration {
         val rawConfig = ConfigHelper.loadConfig(
                 baseDirectory,
                 configFile,
                 configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell) +
                         if (sshdServer) mapOf("sshd" to mapOf("port" to sshdServerPort.toString())) else emptyMap<String, Any>() +
-                        if (devMode != null) mapOf("devMode" to this.devMode) else emptyMap())
+                                if (devMode != null) mapOf("devMode" to this.devMode) else emptyMap())
         )
-        return rawConfig to Try.on {
-            rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
-                if (nodeRegistrationOption != null) {
-                    require(!config.devMode) { "Registration cannot occur in devMode" }
-                    require(config.compatibilityZoneURL != null || config.networkServices != null) {
-                        "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
-                    }
+        return rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
+            if (isRegistration) {
+                require(!config.devMode) { "Registration cannot occur in devMode" }
+                require(config.compatibilityZoneURL != null || config.networkServices != null) {
+                    "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
                 }
             }
         }
     }
 }
+
 
 data class NodeRegistrationOption(val networkRootTrustStorePath: Path, val networkRootTrustStorePassword: String)
