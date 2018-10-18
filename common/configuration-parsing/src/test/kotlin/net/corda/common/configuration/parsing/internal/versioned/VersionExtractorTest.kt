@@ -2,15 +2,15 @@ package net.corda.common.configuration.parsing.internal.versioned
 
 import com.typesafe.config.Config
 import net.corda.common.configuration.parsing.internal.Configuration
+import net.corda.common.configuration.parsing.internal.Valid
 import net.corda.common.configuration.parsing.internal.configObject
-import net.corda.common.validation.internal.Validated
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
 class VersionExtractorTest {
 
     private val versionExtractor = Configuration.Version.Extractor.fromKey("configuration.metadata.version")
-    private val extractVersion: (Config) -> Validated<Int?, Configuration.Validation.Error> = { config -> versionExtractor.parse(config, Configuration.Validation.Options(strict = false)) }
+    private val extractVersion: (Config) -> Valid<Int?> = { config -> versionExtractor.parse(config, Configuration.Validation.Options(strict = false)) }
 
     @Test
     fun version_header_extraction_present() {

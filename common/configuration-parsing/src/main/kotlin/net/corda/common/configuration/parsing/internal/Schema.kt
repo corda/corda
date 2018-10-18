@@ -16,7 +16,7 @@ internal class Schema(override val name: String?, unorderedProperties: Iterable<
         }
     }
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
 
         val propertyErrors = properties.flatMap { property -> property.validate(target, options).errors }.toMutableSet()
         if (options?.strict == true) {

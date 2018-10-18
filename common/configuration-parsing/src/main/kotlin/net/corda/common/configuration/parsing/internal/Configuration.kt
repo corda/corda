@@ -149,12 +149,12 @@ object Configuration {
 
         override fun describe(configuration: Config) = schema.describe(configuration)
 
-        final override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<VALUE, Configuration.Validation.Error> {
+        final override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<VALUE> {
 
             return validate(configuration, options).flatMap(::parseValid)
         }
 
-        protected abstract fun parseValid(configuration: Config): Validated<VALUE, Configuration.Validation.Error>
+        protected abstract fun parseValid(configuration: Config): Valid<VALUE>
     }
 
     object Validation {

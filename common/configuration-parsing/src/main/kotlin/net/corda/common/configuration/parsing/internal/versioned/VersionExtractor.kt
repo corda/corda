@@ -2,15 +2,15 @@ package net.corda.common.configuration.parsing.internal.versioned
 
 import com.typesafe.config.Config
 import net.corda.common.configuration.parsing.internal.Configuration
+import net.corda.common.configuration.parsing.internal.Valid
 import net.corda.common.configuration.parsing.internal.map
-import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.valid
 
 internal class VersionExtractor(versionKey: String, versionDefaultValue: Int?) : Configuration.Version.Extractor {
 
     private val spec = Spec(versionKey, versionDefaultValue)
 
-    override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<Int?, Configuration.Validation.Error> {
+    override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<Int?> {
 
         return spec.parse(configuration, Configuration.Validation.Options(false))
     }

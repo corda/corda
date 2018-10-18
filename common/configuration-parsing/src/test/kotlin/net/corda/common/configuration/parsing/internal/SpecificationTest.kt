@@ -2,7 +2,6 @@ package net.corda.common.configuration.parsing.internal
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigObject
-import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.valid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -20,7 +19,7 @@ class SpecificationTest {
             override fun parseValid(configuration: Config) = valid<Addresses, Configuration.Validation.Error>(Addresses(principal.valueIn(configuration), admin.valueIn(configuration)))
 
             @Suppress("UNUSED_PARAMETER")
-            fun parse(key: String, typeName: String, rawValue: ConfigObject): Validated<Addresses, Configuration.Validation.Error> = parse(rawValue.toConfig(), Configuration.Validation.Options(strict = false))
+            fun parse(key: String, typeName: String, rawValue: ConfigObject): Valid<Addresses> = parse(rawValue.toConfig(), Configuration.Validation.Options(strict = false))
         }
 
         val useSsl by boolean()

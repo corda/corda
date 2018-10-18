@@ -11,7 +11,7 @@ internal fun <VALUE> extractValidValue(value: VALUE) = extractValue(Validated.va
 
 internal fun <VALUE> extractValueWithErrors(errors: Set<Configuration.Validation.Error>) = extractValue<VALUE>(Validated.invalid(errors))
 
-internal fun <VALUE> extractValue(value: Validated<VALUE, Configuration.Validation.Error>) = object : Configuration.Value.Parser<VALUE> {
+internal fun <VALUE> extractValue(value: Valid<VALUE>) = object : Configuration.Value.Parser<VALUE> {
 
-    override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<VALUE, Configuration.Validation.Error> = value
+    override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<VALUE> = value
 }

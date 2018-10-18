@@ -21,7 +21,7 @@ class VersionedParsingExampleTest {
         val principalAddressValue = Address("localhost", 8080)
         val adminAddressValue = Address("127.0.0.1", 8081)
 
-        fun assertResult(result: Validated<RpcSettings, Configuration.Validation.Error>) {
+        fun assertResult(result: Valid<RpcSettings>) {
 
             assertThat(result.isValid).isTrue()
             assertThat(result.valueOrThrow()).satisfies { value ->
@@ -53,7 +53,7 @@ class VersionedParsingExampleTest {
         val principalAddressValue = Address("localhost", 8080)
         val adminAddressValue = Address("127.0.0.1", 8081)
 
-        fun assertResult(result: Validated<RpcSettings, Configuration.Validation.Error>) {
+        fun assertResult(result: Valid<RpcSettings>) {
 
             assertThat(result.isValid).isTrue()
             assertThat(result.valueOrThrow()).satisfies { value ->
@@ -73,7 +73,7 @@ class VersionedParsingExampleTest {
 
     private object RpcSettingsSpec {
 
-        private fun addressFor(host: String, port: Int): Validated<Address, Configuration.Validation.Error> {
+        private fun addressFor(host: String, port: Int): Valid<Address> {
 
             return try {
                 require(host.isNotBlank())
@@ -92,7 +92,7 @@ class VersionedParsingExampleTest {
             private val adminHost by string()
             private val adminPort by long().mapRaw { _, _, value -> value.toInt() }
 
-            override fun parseValid(configuration: Config): Validated<RpcSettings, Configuration.Validation.Error> {
+            override fun parseValid(configuration: Config): Valid<RpcSettings> {
 
                 val principalHost = principalHost.valueIn(configuration)
                 val principalPort = principalPort.valueIn(configuration)
@@ -122,12 +122,12 @@ class VersionedParsingExampleTest {
                 override fun parseValid(configuration: Config) = valid<Addresses, Configuration.Validation.Error>(Addresses(principal.valueIn(configuration), admin.valueIn(configuration)))
 
                 @Suppress("UNUSED_PARAMETER")
-                fun parse(key: String, typeName: String, rawValue: ConfigObject): Validated<Addresses, Configuration.Validation.Error> = parse(rawValue.toConfig(), Configuration.Validation.Options(strict = false))
+                fun parse(key: String, typeName: String, rawValue: ConfigObject): Valid<Addresses> = parse(rawValue.toConfig(), Configuration.Validation.Options(strict = false))
             }
 
             private val addresses by nestedObject(AddressesSpec, "configuration.value.addresses").map(AddressesSpec::parse)
 
-            override fun parseValid(configuration: Config): Validated<RpcSettings, Configuration.Validation.Error> {
+            override fun parseValid(configuration: Config): Valid<RpcSettings> {
 
                 val addresses = addresses.valueIn(configuration)
                 return valid(RpcSettings(addresses.principal, addresses.admin))

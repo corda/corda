@@ -1,7 +1,6 @@
 package net.corda.common.configuration.parsing.internal
 
 import com.typesafe.config.Config
-import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.common.validation.internal.Validator
@@ -324,7 +323,7 @@ class PropertyValidationTest {
         }
     }
 
-    private fun parseAddress(key: String, value: String): Validated<Address, Configuration.Validation.Error> {
+    private fun parseAddress(key: String, value: String): Valid<Address> {
 
         return try {
             val parts = value.split(":")

@@ -7,7 +7,7 @@ import net.corda.common.validation.internal.Validated.Companion.valid
 
 internal class LongProperty(key: String, sensitive: Boolean = false) : StandardProperty<Long>(key, Long::class.javaObjectType.simpleName, Config::getLong, Config::getLongList, sensitive) {
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
 
         val validated = super.validate(target, options)
         if (validated.isValid && target.getValue(key).unwrapped().toString().contains(".")) {
@@ -23,7 +23,7 @@ internal open class StandardProperty<TYPE>(override val key: String, typeNameArg
 
     override val typeName: String = schema?.let { "#${it.name ?: "Object@$key"}" } ?: typeNameArg
 
-    override fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>): Configuration.Property.Definition.Standard<MAPPED> = FunctionalProperty(this, mappedTypeName, extractListValue, convert)
+    override fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = FunctionalProperty(this, mappedTypeName, extractListValue, convert)
 
     override fun optional(defaultValue: TYPE?): Configuration.Property.Definition<TYPE?> = OptionalProperty(this, defaultValue)
 
@@ -39,7 +39,7 @@ internal open class StandardProperty<TYPE>(override val key: String, typeNameArg
 
     override val mandatory = true
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
 
         val errors = mutableSetOf<Configuration.Validation.Error>()
         errors += errorsWhenExtractingValue(target)
@@ -63,7 +63,7 @@ private class ListProperty<TYPE>(delegate: StandardProperty<TYPE>) : RequiredDel
 
     override fun valueIn(configuration: Config): List<TYPE> = delegate.extractListValue.invoke(configuration, key)
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
 
         val errors = mutableSetOf<Configuration.Validation.Error>()
         errors += errorsWhenExtractingValue(target)
@@ -100,7 +100,7 @@ private class OptionalProperty<TYPE>(delegate: Configuration.Property.Definition
         }
     }
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
 
         val result = delegate.validate(target, options)
         val error = result.errors.asSequence().filterIsInstance<Configuration.Validation.Error.MissingValue>().singleOrNull()
@@ -111,17 +111,17 @@ private class OptionalProperty<TYPE>(delegate: Configuration.Property.Definition
     }
 }
 
-private class FunctionalProperty<TYPE, MAPPED : Any>(delegate: Configuration.Property.Definition.Standard<TYPE>, mappedTypeName: String, internal val extractListValue: (Config, String) -> List<TYPE>, private val convert: (key: String, TYPE) -> Validated<MAPPED, Configuration.Validation.Error>) : RequiredDelegatedProperty<MAPPED, Configuration.Property.Definition.Standard<TYPE>>(delegate), Configuration.Property.Definition.Standard<MAPPED> {
+private class FunctionalProperty<TYPE, MAPPED : Any>(delegate: Configuration.Property.Definition.Standard<TYPE>, mappedTypeName: String, internal val extractListValue: (Config, String) -> List<TYPE>, private val convert: (key: String, TYPE) -> Valid<MAPPED>) : RequiredDelegatedProperty<MAPPED, Configuration.Property.Definition.Standard<TYPE>>(delegate), Configuration.Property.Definition.Standard<MAPPED> {
 
     override fun valueIn(configuration: Config) = convert.invoke(key, delegate.valueIn(configuration)).valueOrThrow()
 
     override val typeName: String = if (super.typeName == "#$mappedTypeName") super.typeName else "$mappedTypeName(${super.typeName})"
 
-    override fun <M : Any> map(mappedTypeName: String, convert: (key: String, MAPPED) -> Validated<M, Configuration.Validation.Error>): Configuration.Property.Definition.Standard<M> = FunctionalProperty(delegate, mappedTypeName, extractListValue, { key: String, target: TYPE -> this.convert.invoke(key, target).flatMap { convert(key, it) } })
+    override fun <M : Any> map(mappedTypeName: String, convert: (key: String, MAPPED) -> Valid<M>): Configuration.Property.Definition.Standard<M> = FunctionalProperty(delegate, mappedTypeName, extractListValue, { key: String, target: TYPE -> this.convert.invoke(key, target).flatMap { convert(key, it) } })
 
     override fun list(): Configuration.Property.Definition.Required<List<MAPPED>> = FunctionalListProperty(this)
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
 
         val errors = mutableSetOf<Configuration.Validation.Error>()
         errors += delegate.validate(target, options).errors
@@ -140,7 +140,7 @@ private class FunctionalListProperty<RAW, TYPE : Any>(delegate: FunctionalProper
 
     override fun valueIn(configuration: Config): List<TYPE> = delegate.extractListValue.invoke(configuration, key).asSequence().map { configObject(key to ConfigValueFactory.fromAnyRef(it)) }.map(ConfigObject::toConfig).map(delegate::valueIn).toList()
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Validated<Config, Configuration.Validation.Error> {
+    override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
 
         val list = try {
             delegate.extractListValue.invoke(target, key)
