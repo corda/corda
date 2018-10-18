@@ -420,7 +420,7 @@ interface NodeStartupLogging {
 
     fun handleRegistrationError(error: Exception) {
         when (error) {
-            is NodeRegistrationException -> error.logAsExpected("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.")
+            is NodeRegistrationException -> error.logAsExpected("Issue with Node registration: ${error.message}")
             else -> error.logAsUnexpected("Exception during node registration")
         }
     }

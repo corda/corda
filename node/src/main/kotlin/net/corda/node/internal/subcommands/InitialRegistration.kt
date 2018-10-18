@@ -59,16 +59,20 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
     private val nodeRegistration = NodeRegistrationOption(networkRootTrustStorePath, networkRootTrustStorePassword)
 
     private fun registerWithNetwork(conf: NodeConfiguration) {
-        val compatibilityZoneURL = conf.networkServices?.doormanURL ?: throw RuntimeException("compatibilityZoneURL or networkServices must be configured!")
         val versionInfo = startup.getVersionInfo()
 
-        println()
-        println("******************************************************************")
-        println("*                                                                *")
-        println("*       Registering as a new participant with Corda network      *")
-        println("*                                                                *")
-        println("******************************************************************")
-        NodeRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL, versionInfo), nodeRegistration).buildKeystore()
+        println("\n" +
+                "******************************************************************\n" +
+                "*                                                                *\n" +
+                "*      Registering as a new participant with a Corda network     *\n" +
+                "*                                                                *\n" +
+                "******************************************************************\n")
+
+        NodeRegistrationHelper(conf,
+                HTTPNetworkRegistrationService(
+                        requireNotNull(conf.networkServices),
+                        versionInfo),
+                nodeRegistration).buildKeystore()
 
         // Minimal changes to make registration tool create node identity.
         // TODO: Move node identity generation logic from node to registration helper.
