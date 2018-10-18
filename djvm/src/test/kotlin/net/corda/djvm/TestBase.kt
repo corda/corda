@@ -96,7 +96,7 @@ abstract class TestBase {
         val reader = ClassReader(T::class.java.name)
         AnalysisConfiguration(
             minimumSeverityLevel = minimumSeverityLevel,
-            classPath = listOf(DETERMINISTIC_RT)
+            bootstrapJar = DETERMINISTIC_RT
         ).use { analysisConfiguration ->
             val validator = RuleValidator(ALL_RULES, analysisConfiguration)
             val context = AnalysisContext.fromConfiguration(analysisConfiguration)

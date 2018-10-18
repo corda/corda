@@ -3,12 +3,16 @@ package sandbox.java.lang;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Pinned exceptions inherit from [java.lang.Throwable], but we
+ * Pinned exceptions inherit from {@link java.lang.Throwable}, but we
  * still need to be able to pass them through the sandbox's
  * exception handlers. In which case we will wrap them inside
  * one of these.
  *
  * Exceptions wrapped inside one of these cannot be caught.
+ *
+ * Also used for passing exceptions through finally blocks without
+ * any expensive unwrapping to {@link sandbox.java.lang.Throwable}
+ * based types.
  */
 final class DJVMThrowableWrapper extends Throwable {
     private final java.lang.Throwable throwable;
