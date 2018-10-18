@@ -187,7 +187,6 @@ data class NodeConfigurationImpl(
         override val jmxMonitoringHttpPort: Int? = null,
         override val emailAddress: String,
         private val keyStorePassword: String,
-        private val keyStorePrivateKeyPassword: String = keyStorePassword,
         private val trustStorePassword: String,
         override val crlCheckSoftFail: Boolean,
         override val dataSourceProperties: Properties,
@@ -258,10 +257,14 @@ data class NodeConfigurationImpl(
     override val certificatesDirectory = baseDirectory / "certificates"
 
     private val signingCertificateStorePath = certificatesDirectory / "nodekeystore.jks"
-    override val signingCertificateStore = FileBasedCertificateStoreSupplier(signingCertificateStorePath, keyStorePassword, keyStorePrivateKeyPassword)
-
     private val p2pKeystorePath: Path get() = certificatesDirectory / "sslkeystore.jks"
-    private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword, keyStorePrivateKeyPassword)
+
+    // TODO: There are two implications here:
+    // 1. "signingCertificateStore" and "p2pKeyStore" have the same passwords. In the future we should re-visit this "rule" and see of they can be made different;
+    // 2. The passwords for store and for keys in this store are the same, this is due to limitations of Artemis.
+    override val signingCertificateStore = FileBasedCertificateStoreSupplier(signingCertificateStorePath, keyStorePassword, keyStorePassword)
+    private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword, keyStorePassword)
+
     private val p2pTrustStoreFilePath: Path get() = certificatesDirectory / "truststore.jks"
     private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword, trustStorePassword)
     override val p2pSslOptions: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
