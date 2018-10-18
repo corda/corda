@@ -13,11 +13,17 @@ import java.net.SocketException
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
-/** @param exposeRaces for testing only, so its default is not in reference.conf but here. */
 data class BFTSMaRtConfiguration(
+        /** The zero-based index of the current replica. All replicas must specify a unique replica id. */
         val replicaId: Int,
+        /**
+         * Must list the addresses of all the members in the cluster. At least one of the members must be active and
+         * be able to communicate with the cluster leader for the node to join the cluster. If empty,
+         * a new cluster will be bootstrapped.
+         */
         val clusterAddresses: List<NetworkHostAndPort>,
         val debug: Boolean = false,
+        /** Used for testing purposes only. */
         val exposeRaces: Boolean = false
 ) {
     init {
