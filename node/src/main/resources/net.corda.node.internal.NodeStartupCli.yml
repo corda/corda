@@ -31,11 +31,6 @@
     required: false
     multiParam: false
     acceptableValues: []
-  - parameterName: "--install-shell-extensions"
-    parameterType: "boolean"
-    required: false
-    multiParam: false
-    acceptableValues: []
   - parameterName: "--just-generate-node-info"
     parameterType: "boolean"
     required: false
