@@ -97,7 +97,7 @@ fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
             signingKeyStore.update {
                 serviceKeystore.aliases().forEach {
                     if (serviceKeystore.internal.isKeyEntry(it)) {
-                        setPrivateKey(it, serviceKeystore.getPrivateKey(it, DEV_CA_KEY_STORE_PASS), serviceKeystore.getCertificateChain(it), signingKeyStore.privateKeyPassword)
+                        setPrivateKey(it, serviceKeystore.getPrivateKey(it, DEV_CA_KEY_STORE_PASS), serviceKeystore.getCertificateChain(it), signingKeyStore.entryPassword)
                     } else {
                         setCertificate(it, serviceKeystore.getCertificate(it))
                     }

@@ -237,7 +237,7 @@ class X509UtilitiesTest {
         // Load back server certificate
         val certStore = signingCertStore.get()
         val serverKeyStore = certStore.value
-        val (serverCert, serverKeyPair) = serverKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, certStore.privateKeyPassword)
+        val (serverCert, serverKeyPair) = serverKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, certStore.entryPassword)
 
         serverCert.checkValidity()
         serverCert.verify(intermediateCa.certificate.publicKey)
@@ -245,7 +245,7 @@ class X509UtilitiesTest {
 
         // Load back SSL certificate
         val sslKeyStoreReloaded = p2pSslConfig.keyStore.get()
-        val (sslCert) = sslKeyStoreReloaded.query { getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, sslKeyStoreReloaded.privateKeyPassword) }
+        val (sslCert) = sslKeyStoreReloaded.query { getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, sslKeyStoreReloaded.entryPassword) }
 
         sslCert.checkValidity()
         sslCert.verify(serverCert.publicKey)

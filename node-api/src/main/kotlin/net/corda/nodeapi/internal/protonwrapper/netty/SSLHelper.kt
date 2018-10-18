@@ -161,7 +161,7 @@ internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateSto
 
 // As per Javadoc in: https://docs.oracle.com/javase/8/docs/api/javax/net/ssl/KeyManagerFactory.html `init` method
 // 2nd parameter `password` - the password for recovering keys in the KeyStore
-fun KeyManagerFactory.init(keyStore: CertificateStore) = init(keyStore.value.internal, keyStore.privateKeyPassword.toCharArray())
+fun KeyManagerFactory.init(keyStore: CertificateStore) = init(keyStore.value.internal, keyStore.entryPassword.toCharArray())
 
 fun TrustManagerFactory.init(trustStore: CertificateStore) = init(trustStore.value.internal)
 

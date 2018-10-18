@@ -28,7 +28,7 @@ fun CertificateStore.registerDevSigningCertificates(legalName: CordaX500Name,
 
     update {
         setPrivateKey(X509Utilities.CORDA_CLIENT_CA, devNodeCa.keyPair.private, listOf(devNodeCa.certificate, intermediateCa.certificate, rootCert),
-                this@registerDevSigningCertificates.privateKeyPassword)
+                this@registerDevSigningCertificates.entryPassword)
     }
 }
 
@@ -41,7 +41,7 @@ fun CertificateStore.registerDevP2pCertificates(legalName: CordaX500Name,
         val tlsKeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, devNodeCa.certificate, devNodeCa.keyPair, legalName.x500Principal, tlsKeyPair.public)
         setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKeyPair.private, listOf(tlsCert, devNodeCa.certificate, intermediateCa.certificate, rootCert),
-                this@registerDevP2pCertificates.privateKeyPassword)
+                this@registerDevP2pCertificates.entryPassword)
     }
 }
 
@@ -49,14 +49,14 @@ fun CertificateStore.storeLegalIdentity(alias: String, keyPair: KeyPair = Crypto
     val identityCertPath = query {
         val nodeCaCertPath = getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
         // Assume key password = store password.
-        val nodeCaCertAndKeyPair = getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, this@storeLegalIdentity.privateKeyPassword)
+        val nodeCaCertAndKeyPair = getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, this@storeLegalIdentity.entryPassword)
         // Create new keys and store in keystore.
         val identityCert = X509Utilities.createCertificate(CertificateType.LEGAL_IDENTITY, nodeCaCertAndKeyPair.certificate, nodeCaCertAndKeyPair.keyPair, nodeCaCertAndKeyPair.certificate.subjectX500Principal, keyPair.public)
         // TODO: X509Utilities.validateCertificateChain()
         listOf(identityCert) + nodeCaCertPath
     }
     update {
-        setPrivateKey(alias, keyPair.private, identityCertPath, this@storeLegalIdentity.privateKeyPassword)
+        setPrivateKey(alias, keyPair.private, identityCertPath, this@storeLegalIdentity.entryPassword)
     }
     return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
 }

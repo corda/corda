@@ -14,18 +14,18 @@ interface CertificateStore : Iterable<Pair<String, X509Certificate>> {
 
     companion object {
 
-        fun of(store: X509KeyStore, password: String, privateKeyPassword: String): CertificateStore = DelegatingCertificateStore(store, password, privateKeyPassword)
+        fun of(store: X509KeyStore, password: String, entryPassword: String): CertificateStore = DelegatingCertificateStore(store, password, entryPassword)
 
-        fun fromFile(storePath: Path, password: String, privateKeyPassword: String, createNew: Boolean): CertificateStore = DelegatingCertificateStore(X509KeyStore.fromFile(storePath, password, createNew), password, privateKeyPassword)
+        fun fromFile(storePath: Path, password: String, entryPassword: String, createNew: Boolean): CertificateStore = DelegatingCertificateStore(X509KeyStore.fromFile(storePath, password, createNew), password, entryPassword)
 
-        fun fromInputStream(stream: InputStream, password: String, privateKeyPassword: String): CertificateStore = DelegatingCertificateStore(X509KeyStore.fromInputStream(stream, password), password, privateKeyPassword)
+        fun fromInputStream(stream: InputStream, password: String, entryPassword: String): CertificateStore = DelegatingCertificateStore(X509KeyStore.fromInputStream(stream, password), password, entryPassword)
 
-        fun fromResource(storeResourceName: String, password: String, privateKeyPassword: String, classLoader: ClassLoader = Thread.currentThread().contextClassLoader): CertificateStore = fromInputStream(classLoader.getResourceAsStream(storeResourceName), password, privateKeyPassword)
+        fun fromResource(storeResourceName: String, password: String, entryPassword: String, classLoader: ClassLoader = Thread.currentThread().contextClassLoader): CertificateStore = fromInputStream(classLoader.getResourceAsStream(storeResourceName), password, entryPassword)
     }
 
     val value: X509KeyStore
     val password: String
-    val privateKeyPassword: String
+    val entryPassword: String
 
     fun writeTo(stream: OutputStream) = value.internal.store(stream, password.toCharArray())
 
@@ -80,4 +80,4 @@ interface CertificateStore : Iterable<Pair<String, X509Certificate>> {
     }
 }
 
-private class DelegatingCertificateStore(override val value: X509KeyStore, override val password: String, override val privateKeyPassword: String) : CertificateStore
+private class DelegatingCertificateStore(override val value: X509KeyStore, override val password: String, override val entryPassword: String) : CertificateStore

@@ -162,7 +162,7 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
         println("Private key '$keyAlias' and certificate stored in node signing keystore.")
     }
 
-    private fun CertificateStore.loadOrCreateKeyPair(alias: String, privateKeyPassword: String = password): KeyPair {
+    private fun CertificateStore.loadOrCreateKeyPair(alias: String, entryPassword: String = password): KeyPair {
         // Create or load self signed keypair from the key store.
         // We use the self sign certificate to store the key temporarily in the keystore while waiting for the request approval.
         if (alias !in this) {
@@ -171,11 +171,11 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
             val selfSignCert = X509Utilities.createSelfSignedCACertificate(myLegalName.x500Principal, keyPair)
             // Save to the key store.
             with(value) {
-                setPrivateKey(alias, keyPair.private, listOf(selfSignCert), keyPassword = privateKeyPassword)
+                setPrivateKey(alias, keyPair.private, listOf(selfSignCert), keyPassword = entryPassword)
                 save()
             }
         }
-        return query { getCertificateAndKeyPair(alias, privateKeyPassword) }.keyPair
+        return query { getCertificateAndKeyPair(alias, entryPassword) }.keyPair
     }
 
     /**
@@ -288,7 +288,7 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
                     crlDistPoint = config.tlsCertCrlDistPoint?.toString(),
                     crlIssuer = tlsCertCrlIssuer)
             logger.info("Generated TLS certificate: $sslCert")
-            setPrivateKey(CORDA_CLIENT_TLS, sslKeyPair.private, listOf(sslCert) + certificates, certificateStore.privateKeyPassword)
+            setPrivateKey(CORDA_CLIENT_TLS, sslKeyPair.private, listOf(sslCert) + certificates, certificateStore.entryPassword)
         }
         println("SSL private key and certificate stored in ${keyStore.path}.")
     }
