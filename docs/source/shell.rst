@@ -105,22 +105,6 @@ Starting the standalone shell
 
 Run the following command from the terminal:
 
-Linux and MacOS
-^^^^^^^^^^^^^^^
-
-.. code:: bash
-
-    corda-shell [-hvV] [--logging-level=<loggingLevel>] [--password=<password>]
-                [--sshd-hostkey-directory=<sshdHostKeyDirectory>]
-                [--sshd-port=<sshdPort>] [--truststore-file=<trustStoreFile>]
-                [--truststore-password=<trustStorePassword>]
-                [--truststore-type=<trustStoreType>] [--user=<user>] [-a=<host>]
-                [-c=<cordappDirectory>] [-f=<configFile>] [-o=<commandsDirectory>]
-                [-p=<port>] [COMMAND]
-
-Windows
-^^^^^^^
-
 .. code:: bash
 
     corda-shell [-hvV] [--logging-level=<loggingLevel>] [--password=<password>]
