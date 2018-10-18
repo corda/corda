@@ -498,7 +498,6 @@ class DriverDSLImpl(
             val config = configOf("notary" to mapOf(
                     "validating" to spec.validating,
                     "serviceLegalName" to spec.name.toString(),
-                    "pregeneratedIdentity" to true,
                     "className" to "net.corda.notary.raft.RaftNotaryService",
                     "extraConfig" to mapOf(
                             "nodeAddress" to nodeAddress.toString(),

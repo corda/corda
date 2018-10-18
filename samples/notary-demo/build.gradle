@@ -115,8 +115,7 @@ task deployNodesRaft(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
                 extraConfig: [
                         nodeAddress: "localhost:10008"
                 ],
-                className: className,
-                pregeneratedIdentity: true
+                className: className
         ]
     }
     node {
@@ -133,8 +132,7 @@ task deployNodesRaft(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
                         nodeAddress: "localhost:10012",
                         clusterAddresses: ["localhost:10008"]
                 ],
-                className: className,
-                pregeneratedIdentity: true
+                className: className
         ]
     }
     node {
@@ -151,8 +149,7 @@ task deployNodesRaft(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
                         nodeAddress: "localhost:10016",
                         clusterAddresses: ["localhost:10008"]
                 ],
-                className: className,
-                pregeneratedIdentity: true
+                className: className
         ]
     }
 }
@@ -188,8 +185,7 @@ task deployNodesBFT(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
                         replicaId: 0,
                         clusterAddresses: clusterAddresses
                 ],
-                className: className,
-                pregeneratedIdentity: true
+                className: className
         ]
     }
     node {
@@ -206,8 +202,7 @@ task deployNodesBFT(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
                         replicaId: 1,
                         clusterAddresses: clusterAddresses
                 ],
-                className: className,
-                pregeneratedIdentity: true
+                className: className
         ]
     }
     node {
@@ -224,8 +219,7 @@ task deployNodesBFT(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
                         replicaId: 2,
                         clusterAddresses: clusterAddresses
                 ],
-                className: className,
-                pregeneratedIdentity: true
+                className: className
         ]
     }
     node {
@@ -242,8 +236,7 @@ task deployNodesBFT(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
                         replicaId: 3,
                         clusterAddresses: clusterAddresses
                 ],
-                className: className,
-                pregeneratedIdentity: true
+                className: className
         ]
     }
 }

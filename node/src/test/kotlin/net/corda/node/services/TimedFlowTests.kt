@@ -80,13 +80,14 @@ class TimedFlowTests {
 
         private fun startClusterAndNode(mockNet: InternalMockNetwork): Pair<Party, TestStartedNode> {
             val replicaIds = (0 until CLUSTER_SIZE)
+            val serviceLegalName = CordaX500Name("Custom Notary", "Zurich", "CH")
             val notaryIdentity = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
                     replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
-                    CordaX500Name("Custom Notary", "Zurich", "CH"))
+                    serviceLegalName)
 
             val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryIdentity, true))))
             val notaryConfig = mock<NotaryConfig> {
-                whenever(it.pregeneratedIdentity).thenReturn(true)
+                whenever(it.serviceLegalName).thenReturn(serviceLegalName)
                 whenever(it.validating).thenReturn(true)
                 whenever(it.className).thenReturn(TestNotaryService::class.java.name)
             }

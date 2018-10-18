@@ -71,10 +71,10 @@ class BFTNotaryServiceTests {
         fun startBftClusterAndNode(clusterSize: Int, mockNet: InternalMockNetwork, exposeRaces: Boolean = false): Pair<Party, TestStartedNode> {
             (Paths.get("config") / "currentView").deleteIfExists() // XXX: Make config object warn if this exists?
             val replicaIds = (0 until clusterSize)
-
+            val serviceLegalName = CordaX500Name("BFT", "Zurich", "CH")
             val notaryIdentity = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
                     replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
-                    CordaX500Name("BFT", "Zurich", "CH"))
+                    serviceLegalName)
 
             val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryIdentity, false))))
 
@@ -86,7 +86,7 @@ class BFTNotaryServiceTests {
                             validating = false,
                             extraConfig = BFTSMaRtConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces).toConfig(),
                             className = "net.corda.notary.bftsmart.BftSmartNotaryService",
-                            pregeneratedIdentity = true
+                            serviceLegalName = serviceLegalName
                     )
                     doReturn(notary).whenever(it).notary
                 }))
