@@ -26,6 +26,8 @@ Unreleased
 
 * Removed experimental feature ``CordformDefinition``
 
+* Vault query fix: support query by parent classes of Contract State classes (see https://github.com/corda/corda/issues/3714)
+
 * Added ``registerResponderFlow`` method to ``StartedMockNode``, to support isolated testing of responder flow behaviour.
 
 * "app", "rpc", "p2p" and "unknown" are no longer allowed as uploader values when importing attachments. These are used
@@ -61,6 +63,9 @@ Unreleased
 * The class carpenter has a "lenient" mode where it will, during deserialisation, happily synthesis classes that implement
   interfaces that will have unimplemented methods. This is useful, for example, for object viewers. This can be turned on
   with ``SerializationContext.withLenientCarpenter``.
+
+* Introduced a grace period before the initial node registration fails if the node cannot connect to the Doorman.
+  It retries 10 times with a 1 minute interval in between each try. At the moment this is not configurable.
 
 * Added a ``FlowMonitor`` to log information about flows that have been waiting for IO more than a configurable threshold.
 
@@ -175,7 +180,7 @@ Unreleased
 * Added public support for creating ``CordaRPCClient`` using SSL. For this to work the node needs to provide client applications
   a certificate to be added to a truststore. See :doc:`tutorial-clientrpc-api`
 
-* The node RPC broker opens 2 endpoints that are configured with ``address`` and ``adminAddress``. RPC Clients would connect
+*The node RPC broker opens 2 endpoints that are configured with ``address`` and ``adminAddress``. RPC Clients would connect
   to the address, while the node will connect to the adminAddress. Previously if ssl was enabled for RPC the ``adminAddress``
   was equal to ``address``.
 
@@ -229,73 +234,6 @@ Unreleased
   normal state when it occurs in an input or output position. *This feature is only available on Corda networks running
   with a minimum platform version of 4.*
 
-Version 3.3
------------
-
-* Vault query fix: support query by parent classes of Contract State classes (see https://github.com/corda/corda/issues/3714)
-
-* Fixed an issue preventing Shell from returning control to the user when CTRL+C is pressed in the terminal.
-
-* Fixed a problem that sometimes prevented nodes from starting in presence of custom state types in the database without a corresponding type from installed CorDapps.
-
-* Introduced a grace period before the initial node registration fails if the node cannot connect to the Doorman.
-  It retries 10 times with a 1 minute interval in between each try. At the moment this is not configurable.
-
-* Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
-
-* Changes to the JSON/YAML serialisation format from ``JacksonSupport``, which also applies to the node shell:
-
-  * ``Instant`` and ``Date`` objects are serialised as ISO-8601 formatted strings rather than timestamps
-  * ``PublicKey`` objects are serialised and looked up according to their Base58 encoded string
-  * ``Party`` objects can be deserialised by looking up their public key, in addition to their name
-  * ``NodeInfo`` objects are serialised as an object and can be looked up using the same mechanism as ``Party``
-  * ``NetworkHostAndPort`` serialised according to its ``toString()``
-  * ``PartyAndCertificate`` is serialised as the name
-  * ``SerializedBytes`` is serialised by materialising the bytes into the object it represents, and then serialising that
-    object into YAML/JSON
-  * ``X509Certificate`` is serialised as an object with key fields such as ``issuer``, ``publicKey``, ``serialNumber``, etc.
-    The encoded bytes are also serialised into the ``encoded`` field. This can be used to deserialise an ``X509Certificate``
-    back.
-  * ``CertPath`` objects are serialised as a list of ``X509Certificate`` objects.
-
-* ``fullParties`` boolean parameter added to ``JacksonSupport.createDefaultMapper`` and ``createNonRpcMapper``. If ``true``
-  then ``Party`` objects are serialised as JSON objects with the ``name`` and ``owningKey`` fields. For ``PartyAndCertificate``
-  the ``certPath`` is serialised.
-
-* Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used
-
-* ``ServiceHub`` and ``CordaRPCOps`` can now safely be used from multiple threads without incurring in database transaction problems.
-
-* Fixed an issue preventing out of process nodes started by the ``Driver`` from logging to file.
-
-* The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work - the new methods avoid bugs that can occur when JPA schemas inherit from each other.
-
-* Removed -xmx VM argument from Explorer's Capsule setup. This helps avoiding out of memory errors.
-
-* Node will now gracefully fail to start if one of the required ports is already in use.
-
-* Fixed incorrect exception handling in ``NodeVaultService._query()``.
-
-* Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
-
-* Fix CORDA-1403 where a property of a class that implemented a generic interface could not be deserialised in
-  a factory without a serialiser as the subtype check for the class instance failed. Fix is to compare the raw
-  type.
-
-* Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored
-  as the raw type, List for example.
-
-.. _changelog_v3.2:
-
-Version 3.2
------------
-
-* Doorman and NetworkMap URLs can now be configured individually rather than being assumed to be
-  the same server. Current ``compatibilityZoneURL`` configurations remain valid. See both :doc:`corda-configuration-file`
-  and :doc:`permissioning` for details.
-
-* Table name with a typo changed from ``NODE_ATTCHMENTS_CONTRACTS`` to ``NODE_ATTACHMENTS_CONTRACTS``.
-
 .. _changelog_v3.1:
 
 Version 3.1
@@ -304,7 +242,7 @@ Version 3.1
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
   .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions
-later than 2.12.3 (including 2.12.4) exhibit a different issue.
+     later than 2.12.3 (including 2.12.4) exhibit a different issue.
 
 * Added `database.hibernateDialect` node configuration option
 
@@ -342,18 +280,15 @@ Corda Enterprise 3.0 Developer Preview
   where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
   one node with the legal name is found.
 
-* Due to a security risk, the `conflict` property has been removed from `NotaryError.Conflict` error object. It has been replaced
-  with `consumedStates` instead. The new property no longer specifies the original requesting party and transaction id for
-  a consumed state. Instead, only the hash of the transaction id is revealed. For more details why this change had to be
-  made please refer to the release notes.
+* Per CorDapp configuration is now exposed. ``CordappContext`` now exposes a ``CordappConfig`` object that is populated
+  at CorDapp context creation time from a file source during runtime.
 
-* Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
-  where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
-  one node with the legal name is found.
+* Introduced Flow Draining mode, in which a node continues executing existing flows, but does not start new. This is to
+  support graceful node shutdown/restarts. In particular, when this mode is on, new flows through RPC will be rejected,
+  scheduled flows will be ignored, and initial session messages will not be consumed. This will ensure that the number of
+  checkpoints will strictly diminish with time, allowing for a clean shutdown.
 
-* Introduced Flow Draining mode, in which a node continues executing existing flows, but does not start new. This is to support graceful node shutdown/restarts.
-  In particular, when this mode is on, new flows through RPC will be rejected, scheduled flows will be ignored, and initial session messages will not be consumed.
-  This will ensure that the number of checkpoints will strictly diminish with time, allowing for a clean shutdown.
+* Make the serialisation finger-printer a pluggable entity rather than hard wiring into the factory
 
 * Removed blacklisted word checks in Corda X.500 name to allow "Server" or "Node" to be use as part of the legal name.
 
@@ -376,28 +311,6 @@ Corda Enterprise 3.0 Developer Preview
 * JPA Mapping annotations for States extending ``CommonSchemaV1.LinearState`` and ``CommonSchemaV1.FungibleState`` on the
   `participants` collection need to be moved to the actual class. This allows to properly specify the unique table name per
   a collection. See: DummyDealStateSchemaV1.PersistentDummyDealState
-* Database schema changes - an H2 database instance of Corda 1.0 and 2.0 cannot be reused for Corda 3.0, listed changes for Vault and Finance module:
-
-    * ``NODE_TRANSACTIONS``:
-       column ``"TRANSACTION”`` renamed to ``TRANSACTION_VALUE``, serialization format of BLOB stored in the column has changed to AMQP
-    * ``VAULT_STATES``:
-       column ``CONTRACT_STATE`` removed
-    * ``VAULT_FUNGIBLE_STATES``:
-        column ``ISSUER_REFERENCE`` renamed to ``ISSUER_REF`` and the field size increased
-    * ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"``:
-        table renamed to ``VAULT_FUNGIBLE_STATES_PARTS``,
-        column ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_OUTPUT_INDEX"`` renamed to ``OUTPUT_INDEX``,
-        column ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_TRANSACTION_ID"`` renamed to ``TRANSACTION_ID``
-    * ``VAULT_LINEAR_STATES``:
-        type of column ``"UUID"`` changed from ``VARBINARY`` to ``VARCHAR(255)`` - select varbinary column as ``CAST("UUID" AS UUID)`` to get UUID in varchar format
-    * ``"VAULTSCHEMAV1$VAULTLINEARSTATES_PARTICIPANTS"``:
-        table renamed to ``VAULT_LINEAR_STATES_PARTS``,
-        column ``"VAULTSCHEMAV1$VAULTLINEARSTATES_OUTPUT_INDEX"`` renamed to ``OUTPUT_INDEX``,
-        column ``"VAULTSCHEMAV1$VAULTLINEARSTATES_TRANSACTION_ID"`` renamed to ``TRANSACTION_ID``
-    * ``contract_cash_states``:
-        columns storing Base58 representation of the serialised public key (e.g. ``issuer_key``) were changed to store Base58 representation of SHA-256 of public key prefixed with `DL`
-    * ``contract_cp_states``:
-        table renamed to ``cp_states``, column changes as for ``contract_cash_states``
 
 * JPA Mapping annotations for States extending ``CommonSchemaV1.LinearState`` and ``CommonSchemaV1.FungibleState`` on the
   `participants` collection need to be moved to the actual State class. This allows developers to properly specify

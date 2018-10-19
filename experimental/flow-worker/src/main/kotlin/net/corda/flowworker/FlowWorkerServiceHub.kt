@@ -123,7 +123,8 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
             configuration.database,
             identityService::wellKnownPartyFromX500Name,
             identityService::wellKnownPartyFromAnonymous,
-            schemaService
+            schemaService,
+            cacheFactory
     )
 
     init {
@@ -142,7 +143,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
     private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, validatedTransactions)
     @Suppress("LeakingThis")
     override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory).tokenize()
-    override val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database)
+    override val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
     val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
     override val monitoringService = MonitoringService(metricRegistry).tokenize()
 
@@ -163,7 +164,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
     private val transactionVerifierWorkerCount = 4
     @Suppress("LeakingThis")
     override val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount).tokenize()
-    override val contractUpgradeService = ContractUpgradeServiceImpl().tokenize()
+    override val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     override val auditService = DummyAuditService().tokenize()
 
     @Suppress("LeakingThis")
