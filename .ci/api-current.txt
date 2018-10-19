@@ -617,6 +617,13 @@ public @interface net.corda.core.contracts.LegalProseReference
   public abstract String uri()
 ##
 @CordaSerializable
+public interface net.corda.core.contracts.StatePointer
+  @NotNull
+  public abstract Object getPointer()
+  @NotNull
+  public abstract net.corda.core.contracts.StateAndRef<net.corda.core.contracts.ContractState> resolve(net.corda.core.node.ServiceHub)
+##
+@CordaSerializable
 public interface net.corda.core.contracts.LinearState extends net.corda.core.contracts.ContractState
   @NotNull
   public abstract net.corda.core.contracts.UniqueIdentifier getLinearId()

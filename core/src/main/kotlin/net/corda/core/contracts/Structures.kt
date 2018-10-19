@@ -12,6 +12,7 @@ import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.CordaSerializable
@@ -350,6 +351,7 @@ data class StateAndContract(val state: ContractState, val contract: ContractClas
  * vault query. There are two types of pointers; linear and static. [LinearPointer]s are for use with [LinearState]s.
  * [StaticPointer]s are for use with any type of [ContractState].
  */
+@CordaSerializable
 interface StatePointer {
     /**
      * An identifier for the [ContractState] that this [StatePointer] points to.
@@ -401,7 +403,13 @@ class LinearPointer(override val pointer: UniqueIdentifier) : StatePointer {
      * @param services a [ServiceHub] implementation is required to perform a vault query.
      */
     override fun resolve(services: ServiceHub): StateAndRef<LinearState> {
-        val query = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(pointer))
+        // Returns the latest version of the LinearState,
+        // even if it is not "relevant" for the resolver node.
+        val query = QueryCriteria.LinearStateQueryCriteria(
+                linearId = listOf(pointer),
+                status = Vault.StateStatus.UNCONSUMED,
+                relevancyStatus = Vault.RelevancyStatus.ALL
+        )
         val result = services.vaultService.queryBy<LinearState>(query).states
         check(result.isNotEmpty()) { "LinearPointer $pointer cannot be resolved." }
         return result.single()
