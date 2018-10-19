@@ -124,7 +124,7 @@ sealed class Action {
     /**
      * Execute the specified [operation].
      */
-    data class ExecuteAsyncOperation(val operation: FlowAsyncOperation<*>) : Action()
+    data class ExecuteAsyncOperation(val deduplicationId: String, val operation: FlowAsyncOperation<*>) : Action()
 
     /**
      * Release soft locks associated with given ID (currently the flow ID).

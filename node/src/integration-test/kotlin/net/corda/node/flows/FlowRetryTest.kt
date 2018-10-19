@@ -3,9 +3,13 @@ package net.corda.node.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.CordaRuntimeException
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.FlowAsyncOperation
 import net.corda.core.internal.IdempotentFlow
+import net.corda.core.internal.concurrent.doneFuture
+import net.corda.core.internal.executeAsync
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
@@ -54,6 +58,21 @@ class FlowRetryTest {
         }
         assertNotNull(result)
         assertEquals("$numSessions:$numIterations", result)
+    }
+
+    @Test
+    fun `async operation deduplication id is stable accross retries`() {
+        val user = User("mark", "dadada", setOf(Permissions.startFlow<AsyncRetryFlow>()))
+        driver(DriverParameters(
+                startNodesInProcess = isQuasarAgentSpecified(),
+                notarySpecs = emptyList()
+        )) {
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+
+            CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(::AsyncRetryFlow).returnValue.getOrThrow()
+            }
+        }
     }
 
     @Test
@@ -214,6 +233,36 @@ class RetryFlow() : FlowLogic<String>(), IdempotentFlow {
     override fun call(): String {
         progressTracker.currentStep = FIRST_STEP
         throw ExceptionToCauseFiniteRetry()
+        return "Result"
+    }
+}
+
+@StartableByRPC
+class AsyncRetryFlow() : FlowLogic<String>(), IdempotentFlow {
+    companion object {
+        object FIRST_STEP : ProgressTracker.Step("Step one")
+
+        fun tracker() = ProgressTracker(FIRST_STEP)
+
+        val deduplicationIds = mutableSetOf<String>()
+    }
+
+    class RecordDeduplicationId: FlowAsyncOperation<String> {
+        override fun execute(deduplicationId: String): CordaFuture<String> {
+            val dedupeIdIsNew = deduplicationIds.add(deduplicationId)
+            if (dedupeIdIsNew) {
+                throw ExceptionToCauseFiniteRetry()
+            }
+            return doneFuture(deduplicationId)
+        }
+    }
+
+    override val progressTracker = tracker()
+
+    @Suspendable
+    override fun call(): String {
+        progressTracker.currentStep = FIRST_STEP
+        executeAsync(RecordDeduplicationId())
         return "Result"
     }
 }
