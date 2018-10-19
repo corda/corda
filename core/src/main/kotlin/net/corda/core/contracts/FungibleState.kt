@@ -11,7 +11,7 @@ import net.corda.core.KeepForDJVM
  *
  * - [FungibleAsset] defines an amount property of type Amount<Issued<T>>, therefore there is an assumption that all
  *   fungible things are issued by a single well known party but this is not always the case. For example,
- *   censorship resistant crypto-currencies like Bitcoin are generated periodically by a pool of pseudo-anonymous miners
+ *   crypto-currencies like Bitcoin are generated periodically by a pool of pseudo-anonymous miners
  *   and Corda can support such crypto-currencies.
  * - [FungibleAsset] implements [OwnableState], as such there is an assumption that all fungible things are ownable.
  *   This is not always true as fungible derivative contracts exist, for example.

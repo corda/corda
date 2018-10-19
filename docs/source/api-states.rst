@@ -116,14 +116,20 @@ The interface is defined as follows:
 .. container:: codeset
 
     .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/FungibleState.kt
-:language: kotlin
+        :language: kotlin
         :start-after: DOCSTART 1
-                :end-before: DOCEND 1
+        :end-before: DOCEND 1
 
-        As seen, the interface takes a type parameter `T` that represents the fungible thing in question. This should describe
-        the basic type of the asset e.g. GBP, USD, oil, shares in company <X>, etc. and any additional metadata (issuer, grade,
-        class, etc.). An upper-bound is not specified for `T` to ensure flexibility. Typically, a class would be provided that
-        implements `TokenizableAssetInfo` so the thing can be easily added and subtracted using the `Amount` class.
+As seen, the interface takes a type parameter `T` that represents the fungible thing in question. This should describe
+the basic type of the asset e.g. GBP, USD, oil, shares in company <X>, etc. and any additional metadata (issuer, grade,
+class, etc.). An upper-bound is not specified for `T` to ensure flexibility. Typically, a class would be provided that
+implements `TokenizableAssetInfo` so the thing can be easily added and subtracted using the `Amount` class.
+
+This interface has been added in addition to `FungibleAsset` to provide some additional flexibility which
+`FungibleAsset` lacks, in particular:
+* `FungibleAsset` defines an amount property of type Amount<Issued<T>>, therefore there is an assumption that all
+  fungible things are issued by a single well known party but this is not always the case.
+* `FungibleAsset` implements `OwnableState`, as such there is an assumption that all fungible things are ownable.
 
 Other interfaces
 ^^^^^^^^^^^^^^^^

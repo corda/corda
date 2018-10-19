@@ -226,7 +226,13 @@ Unreleased
   with a minimum platform version of 4.*
 
 * Removed type parameter `U` from `tryLockFungibleStatesForSpending` to allow the function to be used with `FungibleState`
-  as well as `FungibleAsset`.
+  as well as `FungibleAsset`. This _might_ cause a compile failure in some obscure cases due to the removal of the type
+  parameter from the method. If your CorDapp does specify types explicitly when using this method then updating the types
+  will allow your app to compile successfully. However, those using type inference (e.g. using Kotlin) should not experience
+  any changes. Old CorDapp JARs will still work regardless.
+
+* `issuer_ref` column in `FungibleStateSchema` was updated to be nullable to support the introduction of the
+  `FungibleState` interface. The `vault_fungible_states` table can hold both `FungibleAssets` and `FungibleStates`.
 
 Version 3.3
 -----------
