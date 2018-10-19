@@ -7,6 +7,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.JarSignatureCollector
 import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.readFully
 import net.corda.core.node.services.AttachmentId
@@ -71,7 +72,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         val sha256 = attachmentId ?: bytes.sha256()
         if (sha256 !in files.keys) {
             val baseAttachment = MockAttachment({ bytes }, sha256, signers)
-            val attachment = if (contractClassNames == null || contractClassNames.isEmpty()) baseAttachment else ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader)
+            val attachment = if (contractClassNames == null || contractClassNames.isEmpty()) baseAttachment else ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader, signers)
             _files[sha256] = Pair(attachment, bytes)
         }
         return sha256

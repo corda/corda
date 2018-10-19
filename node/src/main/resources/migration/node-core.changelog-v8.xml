@@ -14,4 +14,17 @@
         <renameTable oldTableName="NODE_ATTACHMENTS_CONTRACT_CLASS_NAME" newTableName="NODE_ATTACHMENTS_CONTRACTS" />
     </changeSet>
 
+    <changeSet author="R3.Corda" id="add_signers">
+        <createTable tableName="node_attachments_signers">
+            <column name="att_id" type="NVARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="signer" type="NVARCHAR(1024)"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="att_id" baseTableName="node_attachments_signers"
+                                 constraintName="FK__signers__attachments"
+                                 referencedColumnNames="att_id" referencedTableName="node_attachments"/>
+    </changeSet>
+
 </databaseChangeLog>

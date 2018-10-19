@@ -3,6 +3,7 @@ package net.corda.core.transactions
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.castIfPossible
@@ -81,6 +82,7 @@ data class LedgerTransaction @JvmOverloads constructor(
         val contractAttachmentsByContract: Map<ContractClassName, ContractAttachment> = getUniqueContractAttachmentsByContract()
 
         // TODO - verify for version downgrade
+        validatePackageOwnership(contractAttachmentsByContract)
         validateStatesAgainstContract()
         verifyConstraintsValidity(contractAttachmentsByContract)
         verifyConstraints(contractAttachmentsByContract)
@@ -102,6 +104,30 @@ data class LedgerTransaction @JvmOverloads constructor(
                 State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
                 is bundled in TransactionState with ${state.contract}.
                 """.trimIndent().replace('\n', ' '))
+        }
+    }
+
+    /**
+     * Verify that for each contract the network wide package owner is respected.
+     *
+     * TODO - revisit once transaction contains network parameters.
+     */
+    private fun validatePackageOwnership(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
+        // This should never happen once we have network parameters in the transaction.
+        if (networkParameters == null) {
+            return
+        }
+
+        val contractsAndOwners = allStates.mapNotNull { transactionState ->
+            val contractClassName = transactionState.contract
+            networkParameters.getOwnerOf(contractClassName)?.let { contractClassName to it }
+        }.toMap()
+
+        contractsAndOwners.forEach { contract, owner ->
+            val attachment = contractAttachmentsByContract[contract]!!
+            if (!owner.isFulfilledBy(attachment.signers)) {
+                throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
+            }
         }
     }
 
