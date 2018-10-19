@@ -69,7 +69,7 @@ fun CordaCliWrapper.start(args: Array<String>) {
     cmd.registerConverter(Path::class.java) { Paths.get(it).toAbsolutePath().normalize() }
     cmd.commandSpec.name(alias)
     cmd.commandSpec.usageMessage().description(description)
-    this.subCommands.forEach {
+    this.subCommands().forEach {
         val subCommand = CommandLine(it)
         it.args = args
         subCommand.commandSpec.usageMessage().description(it.description)
@@ -166,9 +166,13 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
         private val logger by lazy { contextLogger() }
     }
 
-    val installShellExtensionsParser = InstallShellExtensionsParser(this.javaClass.name)
+    private val installShellExtensionsParser = InstallShellExtensionsParser(this.javaClass.name)
 
-    val subCommands = mutableListOf<CliWrapperBase>(installShellExtensionsParser)
+    protected open fun additionalSubCommands(): Set<CliWrapperBase> = emptySet()
+
+    fun subCommands(): Set<CliWrapperBase> {
+        return additionalSubCommands() + installShellExtensionsParser
+    }
 
     override fun call(): Int {
         initLogging()

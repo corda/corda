@@ -49,7 +49,7 @@ The node can optionally be started with the following command-line options:
 
 * ``--base-directory``, ``-b``: The node working directory where all the files are kept (default: ``.``).
 * ``--config-file``, ``-f``: The path to the config file. Defaults to ``node.conf``.
-* ``--dev-mode``, ``-d``: Runs the node in developer mode. Unsafe in production. Defaults to true on MacOS and desktop versions of Windows. False otherwise.
+* ``--dev-mode``, ``-d``: Runs the node in development mode. Unsafe in production. Defaults to true on MacOS and desktop versions of Windows. False otherwise.
 * ``--no-local-shell``, ``-n``: Do not start the embedded shell locally.
 * ``--on-unknown-config-keys <[FAIL,WARN,INFO]>``: How to behave on unknown node configuration. Defaults to FAIL.
 * ``--sshd``: Enables SSH server for node administration.

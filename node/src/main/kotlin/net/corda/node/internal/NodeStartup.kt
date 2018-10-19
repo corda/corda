@@ -57,22 +57,20 @@ abstract class NodeCliCommand(alias: String, description: String, val startup: N
 /** Main corda entry point. */
 open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     val startup = NodeStartup()
-    private val networkCacheCli = ClearNetworkCache(startup)
-    private val justGenerateNodeInfoCli = GenerateNodeInfo(startup)
+    private val networkCacheCli = ClearNetworkCacheCli(startup)
+    private val justGenerateNodeInfoCli = GenerateNodeInfoCli(startup)
     private val justGenerateRpcSslCerts = GenerateRpcSslCertsCli(startup)
     private val initialRegistrationCli = InitialRegistrationCli(startup)
-    private val bootstrapRaftNotaryCli = BootstrapRaftNotary(startup)
-
-    init {
-        subCommands.addAll(listOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCerts, initialRegistrationCli, bootstrapRaftNotaryCli))
-    }
+    private val bootstrapRaftNotaryCli = BootstrapRaftNotaryCli(startup)
 
     override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
+
+    override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCerts, initialRegistrationCli, bootstrapRaftNotaryCli)
 
     override fun runProgram(): Int {
         return when {
             InitialRegistration.checkRegistrationMode(cmdLineOptions.baseDirectory) -> {
-                println("Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.")
+                println("Node was started before in `initial-registration` mode, but the registration was not completed.\nResuming registration.")
                 initialRegistrationCli.runProgram()
             }
             //deal with legacy flags and redirect to subcommands
@@ -150,7 +148,7 @@ open class NodeStartup : NodeStartupLogging {
         }
 
         // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
-        attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success
+        attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.log("Exception while configuring serialisation") } as? Try.Success
                 ?: return ExitCodes.FAILURE
 
         // Step 7. Any actions required before starting up the Corda network layer.
@@ -176,7 +174,7 @@ open class NodeStartup : NodeStartupLogging {
     fun startNode(node: Node, startTime: Long) {
         if (node.configuration.devMode) {
             Emoji.renderIfSupported {
-                Node.printWarning("This node is running in developer mode! ${Emoji.developer} This is not safe for production deployment.")
+                Node.printWarning("This node is running in development mode! ${Emoji.developer} This is not safe for production deployment.")
             }
         } else {
             logger.info("The Corda node is running in production mode. If this is a developer environment you can set 'devMode=true' in the node.conf file.")
@@ -416,15 +414,12 @@ interface NodeStartupLogging {
 
     fun <RESULT> attempt(action: () -> RESULT): Try<RESULT> = Try.on(action)
 
-    fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print(message)
-
-    fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" }
-            ?: ""}", error)
+    fun Exception.log(message: String? = this.message, print: (String?, Throwable) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" } ?: ""}", this)
 
     fun handleRegistrationError(error: Exception) {
         when (error) {
-            is NodeRegistrationException -> error.logAsExpected("Issue with Node registration: ${error.message}")
-            else -> error.logAsUnexpected("Exception during node registration")
+            is NodeRegistrationException -> error.log("Issue with Node registration: ${error.message}")
+            else -> error.log("Exception during node registration")
         }
     }
 
@@ -434,19 +429,24 @@ interface NodeStartupLogging {
 
     fun handleStartError(error: Exception) {
         when {
-            error.isExpectedWhenStartingNode() -> error.logAsExpected()
-            error is CouldNotCreateDataSourceException -> error.logAsUnexpected()
-            error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")
-            error.isOpenJdkKnownIssue() -> error.logAsExpected("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
-            else -> error.logAsUnexpected("Exception during node startup")
+            error.isExpectedWhenStartingNode() -> error.log()
+            error is CouldNotCreateDataSourceException -> error.log()
+            error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.log("One of the ports required by the Corda node is already in use.")
+            error.isOpenJdkKnownIssue() -> error.log("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
+            else -> error.log("Exception during node startup")
         }
+    }
+
+    private fun printMsgAndError(message: String?, throwable: Throwable) {
+        println(message)
+        println(throwable)
     }
 
     fun handleConfigurationLoadingError(configFile: Path) = { error: Exception ->
         when (error) {
-            is UnknownConfigurationKeysException -> error.logAsExpected()
-            is ConfigException.IO -> error.logAsExpected(configFileNotFoundMessage(configFile), ::println)
-            else -> error.logAsUnexpected("Unexpected error whilst reading node configuration")
+            is UnknownConfigurationKeysException -> error.log()
+            is ConfigException.IO -> error.log(configFileNotFoundMessage(configFile)) { msg, _ -> println(msg) }
+            else -> error.log("Unexpected error whilst reading node configuration")
         }
     }
 
@@ -458,7 +458,6 @@ interface NodeStartupLogging {
                 is looking in, or use the --config-file flag to specify it explicitly.
             """.trimIndent()
     }
-
 }
 
 fun CliWrapperBase.initLogging(baseDirectory: Path) {

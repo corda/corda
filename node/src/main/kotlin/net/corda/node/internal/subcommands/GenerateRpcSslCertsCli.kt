@@ -31,7 +31,7 @@ class GenerateRpcSslCerts: RunAfterNodeInitialisation {
         val trustStorePath = conf.baseDirectory / "certificates" / "export" / "rpcssltruststore.jks"
 
         if (keyStorePath.exists() || trustStorePath.exists()) {
-            println("Found existing RPC SSL keystores. Command was already run. Exiting..")
+            println("Found existing RPC SSL keystores. Command was already run. Exiting.")
             exitProcess(0)
         }
 
@@ -40,20 +40,20 @@ class GenerateRpcSslCerts: RunAfterNodeInitialisation {
         when (console) {
             // In this case, the JVM is not connected to the console so we need to exit.
             null -> {
-                println("Not connected to console. Exiting")
+                println("Not connected to console. Exiting.")
                 exitProcess(1)
             }
             // Otherwise we can proceed normally.
             else -> {
                 while (true) {
-                    val keystorePassword1 = console.readPassword("Enter the RPC keystore password => ")
+                    val keystorePassword1 = console.readPassword("Enter the RPC keystore password:")
                     // TODO: consider adding a password strength policy.
                     if (keystorePassword1.isEmpty()) {
                         println("The RPC keystore password cannot be an empty String.")
                         continue
                     }
 
-                    val keystorePassword2 = console.readPassword("Re-enter the RPC keystore password => ")
+                    val keystorePassword2 = console.readPassword("Re-enter the RPC keystore password:")
                     if (!keystorePassword1.contentEquals(keystorePassword2)) {
                         println("The RPC keystore passwords don't match.")
                         continue
@@ -65,21 +65,21 @@ class GenerateRpcSslCerts: RunAfterNodeInitialisation {
                 }
 
                 while (true) {
-                    val trustStorePassword1 = console.readPassword("Enter the RPC truststore password => ")
+                    val trustStorePassword1 = console.readPassword("Enter the RPC truststore password:")
                     // TODO: consider adding a password strength policy.
                     if (trustStorePassword1.isEmpty()) {
-                        println("The RPC truststore password cannot be an empty String.")
+                        println("The RPC truststore password cannot be an empty string.")
                         continue
                     }
 
-                    val trustStorePassword2 = console.readPassword("Re-enter the RPC truststore password => ")
+                    val trustStorePassword2 = console.readPassword("Re-enter the RPC truststore password:")
                     if (!trustStorePassword1.contentEquals(trustStorePassword2)) {
                         println("The RPC truststore passwords don't match.")
                         continue
                     }
 
                     saveToTrustStore(trustStorePath, cert, String(trustStorePassword1), "rpcssl")
-                    println("The RPC truststore was saved to: $trustStorePath .")
+                    println("The RPC truststore was saved to: $trustStorePath.")
                     println("You need to distribute this file along with the password in a secure way to all RPC clients.")
                     break
                 }

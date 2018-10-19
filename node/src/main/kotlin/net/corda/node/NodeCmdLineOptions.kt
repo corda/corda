@@ -35,7 +35,7 @@ open class SharedNodeCmdLineOptions {
 
     @Option(
             names = ["-d", "--dev-mode"],
-            description = ["Run the node in developer mode. Unsafe for production."]
+            description = ["Run the node in development mode. Unsafe for production."]
     )
     var devMode: Boolean? = null
 
@@ -58,7 +58,7 @@ open class SharedNodeCmdLineOptions {
 class InitialRegistrationCmdLineOptions : SharedNodeCmdLineOptions() {
     override fun loadConfig(): NodeConfiguration {
         return getRawConfig().parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
-            require(!config.devMode) { "Registration cannot occur in devMode" }
+            require(!config.devMode) { "Registration cannot occur in development mode" }
             require(config.compatibilityZoneURL != null || config.networkServices != null) {
                 "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
             }
@@ -161,7 +161,7 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
         )
         return rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
             if (isRegistration) {
-                require(!config.devMode) { "Registration cannot occur in devMode" }
+                require(!config.devMode) { "Registration cannot occur in development mode" }
                 require(config.compatibilityZoneURL != null || config.networkServices != null) {
                     "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
                 }

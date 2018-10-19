@@ -12,11 +12,10 @@ import net.corda.node.internal.NodeStartupLogging.Companion.logger
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
-import picocli.CommandLine.Option
 import picocli.CommandLine.Mixin
+import picocli.CommandLine.Option
 import java.io.File
 import java.nio.file.Path
-import kotlin.reflect.KClass
 
 class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-registration", "Starts initial node registration with Corda network to obtain certificate from the permissioning server.") {
     @Option(names = ["-t", "--network-root-truststore"], description = ["Network root trust store obtained from network operator."])
@@ -36,7 +35,7 @@ class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-
     val cmdLineOptions = InitialRegistrationCmdLineOptions()
 }
 
-class InitialRegistration(val baseDirectory: Path, private val networkRootTrustStorePath: Path, private val networkRootTrustStorePassword: String, private val startup: NodeStartup) : RunAfterNodeInitialisation, NodeStartupLogging {
+class InitialRegistration(val baseDirectory: Path, private val networkRootTrustStorePath: Path, networkRootTrustStorePassword: String, private val startup: NodeStartup) : RunAfterNodeInitialisation, NodeStartupLogging {
     companion object {
         private const val INITIAL_REGISTRATION_MARKER = ".initialregistration"
 
@@ -50,7 +49,7 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
             try {
                 marker.createFile()
             } catch (e: Exception) {
-                logger.warn("Could not create marker file for `--initial-registration`.", e)
+                logger.warn("Could not create marker file for `initial-registration`.", e)
             }
             return true
         }
@@ -96,7 +95,7 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
                 marker.delete()
             }
         } catch (e: Exception) {
-            e.logAsUnexpected( "Could not delete the marker file that was created for `initial-registration`.", print = logger::warn)
+            e.log( "Could not delete the marker file that was created for `initial-registration`.", print = logger::warn)
         }
     }
 
