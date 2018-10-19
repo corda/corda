@@ -4,16 +4,16 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compile group: "org.jetbrains.kotlin", name: "kotlin-stdlib-jdk8", version: kotlin_version
+    compile group: "org.jetbrains.kotlin", name: "kotlin-reflect", version: kotlin_version
 
-    compile "com.typesafe:config:$typesafe_config_version"
+    compile group: "com.typesafe", name: "config", version: typesafe_config_version
 
     compile project(":common-validation")
 
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    testCompile "junit:junit:$junit_version"
-    testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile group: "org.jetbrains.kotlin", name: "kotlin-test", version: kotlin_version
+    testCompile group: "junit", name: "junit", version: junit_version
+    testCompile group: "org.assertj", name: "assertj-core", version: assertj_version
 }
 
 jar {
