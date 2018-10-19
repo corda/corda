@@ -7,4 +7,4 @@ package sandbox.net.corda.djvm.rules
  *
  * @property message The description of the condition causing the problem.
  */
-class RuleViolationError(override val message: String) : ThreadDeath()
+class RuleViolationError(override val message: String?) : ThreadDeath()
