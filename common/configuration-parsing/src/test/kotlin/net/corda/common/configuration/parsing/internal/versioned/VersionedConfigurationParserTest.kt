@@ -20,7 +20,7 @@ class VersionedConfigurationParserTest {
         val result = parser.parse(configuration, Configuration.Validation.Options(strict = false))
 
         assertThat(result.isValid).isTrue()
-        assertThat(result.valueIfValid).isEqualTo(valueForVersion)
+        assertThat(result.value).isEqualTo(valueForVersion)
     }
 
     @Test

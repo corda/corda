@@ -93,7 +93,7 @@ class VersionedParsingExampleTest {
                 val adminAddress = addressFor(adminHost, adminPort)
 
                 return if (principalAddress.isValid && adminAddress.isValid) {
-                    return valid(RpcSettings(principalAddress.valueIfValid!!, adminAddress.valueIfValid!!))
+                    return valid(RpcSettings(principalAddress.value!!, adminAddress.value!!))
                 } else {
                     invalid(principalAddress.errors + adminAddress.errors)
                 }

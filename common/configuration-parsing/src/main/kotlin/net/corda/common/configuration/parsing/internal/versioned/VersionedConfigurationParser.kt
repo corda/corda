@@ -3,8 +3,8 @@ package net.corda.common.configuration.parsing.internal.versioned
 import com.typesafe.config.Config
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.configuration.parsing.internal.Valid
-import net.corda.common.validation.internal.Validated.Companion.invalid
 
+// TODO sollecitom replace this with 2 types: one able to provide a Configuration.Specification for a Config, and another one, used by the first, which provides a Configuration.Specification given a versionNumber: Int?
 class VersionedConfigurationParser<TYPE> private constructor(private val versionParser: Configuration.Value.Parser<Int?>, private val parsersForVersion: Map<Int, Configuration.Value.Parser<TYPE>>, private val defaultVersion: Int?) : Configuration.Value.Parser<TYPE> {
 
     companion object {
@@ -16,13 +16,12 @@ class VersionedConfigurationParser<TYPE> private constructor(private val version
 
     override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<TYPE> {
 
-        val versionRead = extractVersion.invoke(configuration)
-        if (versionRead.isInvalid) {
-            return invalid(versionRead.errors)
+        return extractVersion.invoke(configuration).flatMap { versionRead ->
+
+            val version = versionRead ?: defaultVersion ?: throw Exception.MissingVersionHeader()
+            val parseConfiguration = parsersForVersion[version] ?: throw Exception.UnsupportedVersion(version)
+            parseConfiguration.parse(configuration, options)
         }
-        val version = versionRead.valueIfValid ?: defaultVersion ?: throw Exception.MissingVersionHeader()
-        val parseConfiguration = parsersForVersion[version] ?: throw Exception.UnsupportedVersion(version)
-        return parseConfiguration.parse(configuration, options)
     }
 
     sealed class Exception(message: String) : kotlin.Exception(message) {
