@@ -32,6 +32,8 @@ import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.rpc.ArtemisRpcBroker
+import net.corda.node.utilities.EnterpriseNamedCacheFactory
+import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
@@ -221,7 +223,7 @@ data class RpcFlowWorkerDriverDSL(private val driverDSL: DriverDSLImpl) : Intern
 
     private fun createRpcWorkerBroker(config: NodeConfiguration): ArtemisBroker {
         val rpcOptions = config.rpcOptions
-        val securityManager = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(config.rpcUsers))
+        val securityManager = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(config.rpcUsers), EnterpriseNamedCacheFactory(config.enterpriseConfiguration.getTracingConfig()))
         val broker = if (rpcOptions.useSsl) {
             ArtemisRpcBroker.withSsl(config.p2pSslOptions, rpcOptions.address, rpcOptions.adminAddress, rpcOptions.sslConfig!!, securityManager,
                     Node.MAX_RPC_MESSAGE_SIZE, false, config.baseDirectory / "artemis", false)
