@@ -24,6 +24,7 @@ import net.corda.core.KeepForDJVM
  * upper-bound is not specified for [T] to ensure flexibility. Typically, a class would be provided that implements
  * [TokenizableAssetInfo].
  */
+// DOCSTART 1
 @KeepForDJVM
 interface FungibleState<T : Any> : ContractState {
     /**
@@ -32,4 +33,5 @@ interface FungibleState<T : Any> : ContractState {
      */
     val amount: Amount<T>
 }
+// DOCEND 1
 
