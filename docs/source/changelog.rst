@@ -35,6 +35,10 @@ Unreleased
 
   .. image:: resources/notary-config-update.png
 
+  Example configuration changes for the BFT-Smart notary:
+
+  .. image:: resources/notary-config-update-bft.png
+
 * New overload for ``CordaRPCClient.start()`` method allowing to specify target legal identity to use for RPC call.
 
 * Case insensitive vault queries can be specified via a boolean on applicable SQL criteria builder operators. By default
