@@ -5,6 +5,7 @@ import io.netty.handler.ssl.ClientAuth
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.ssl.SslProvider
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.*
 import net.corda.core.crypto.Crypto.COMPOSITE_KEY
 import net.corda.core.crypto.Crypto.ECDSA_SECP256K1_SHA256
 import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
@@ -12,8 +13,6 @@ import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
 import net.corda.core.crypto.Crypto.generateKeyPair
-import net.corda.core.crypto.SignatureScheme
-import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
@@ -401,7 +400,7 @@ class X509UtilitiesTest {
         val clientHandler = NettyTestHandler { _, msg -> assertEquals("Hello", NettyTestHandler.readString(msg)) }
         NettyTestServer(sslServerContext, serverHandler, portAllocation.nextPort()).use { server ->
             server.start()
-            NettyTestClient(sslClientContext, "localhost", server.port, clientHandler).use { client ->
+            NettyTestClient(sslClientContext, InetAddress.getLocalHost().canonicalHostName, server.port, clientHandler).use { client ->
                 client.start()
 
                 clientHandler.writeString("Hello")
