@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.model
 
-import com.google.common.reflect.TypeToken
 import net.corda.core.internal.isAbstractClass
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.serialization.internal.amqp.*
@@ -95,7 +94,7 @@ sealed class LocalTypeInformation {
 
     object Any : LocalTypeInformation() {
         override val observedType = Any::class.java
-        override val typeIdentifier = TypeIdentifier.Any
+        override val typeIdentifier = TypeIdentifier.Top
     }
 
     data class Cycle(override val observedType: Type, override val typeIdentifier: TypeIdentifier) : LocalTypeInformation()
@@ -154,7 +153,7 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
     private fun buildIfNotFound(type: Type, typeIdentifier: TypeIdentifier): LocalTypeInformation {
         val rawType = type.asClass()
         return when (typeIdentifier) {
-            is TypeIdentifier.Any -> LocalTypeInformation.Any
+            is TypeIdentifier.Top -> LocalTypeInformation.Any
             is TypeIdentifier.Unknown -> LocalTypeInformation.Unknown
             is TypeIdentifier.Unparameterised,
             is TypeIdentifier.Erased -> buildForClass(rawType, typeIdentifier)

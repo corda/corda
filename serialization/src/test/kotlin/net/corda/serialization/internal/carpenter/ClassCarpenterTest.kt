@@ -27,7 +27,7 @@ class ClassCarpenterTest {
 
     @Test
     fun empty() {
-        val clazz = cc.build(ClassSchema("gen.EmptyClass", emptyMap(), null))
+        val clazz = cc.build(ClassSchema("gen.EmptyClass", emptyMap()))
         assertEquals(0, clazz.nonSyntheticFields.size)
         assertEquals(2, clazz.nonSyntheticMethods.size)   // get, toString
         assertEquals(0, clazz.declaredConstructors[0].parameterCount)
@@ -97,8 +97,8 @@ class ClassCarpenterTest {
 
     @Test(expected = DuplicateNameException::class)
     fun duplicates() {
-        cc.build(ClassSchema("gen.EmptyClass", emptyMap(), null))
-        cc.build(ClassSchema("gen.EmptyClass", emptyMap(), null))
+        cc.build(ClassSchema("gen.EmptyClass", emptyMap()))
+        cc.build(ClassSchema("gen.EmptyClass", emptyMap()))
     }
 
     @Test

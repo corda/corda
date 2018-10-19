@@ -4,6 +4,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.amqp.SerializerFactory.Companion.nameForType
+import net.corda.serialization.internal.model.fingerprintForDescriptors
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type

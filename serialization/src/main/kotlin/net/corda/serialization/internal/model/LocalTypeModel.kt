@@ -4,27 +4,28 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.serialization.internal.amqp.*
 import java.lang.reflect.*
 
-class LocalTypeModel(private val typeModelConfiguration: TypeModelConfiguration): LocalTypeLookup {
+class LocalTypeModel(
+        private val typeModelConfiguration: TypeModelConfiguration): LocalTypeLookup {
 
-    private val cache = DefaultCacheProvider.createCache<TypeIdentifier, LocalTypeInformation>()
+    private val typeInformationCache = DefaultCacheProvider.createCache<TypeIdentifier, LocalTypeInformation>()
 
     override fun isExcluded(type: Type): Boolean = typeModelConfiguration.isExcluded(type)
 
     fun inspect(type: Type): LocalTypeInformation = LocalTypeInformation.forType(type, this)
 
     override fun lookup(type: Type, typeIdentifier: TypeIdentifier, builder: () -> LocalTypeInformation): LocalTypeInformation =
-            cache[typeIdentifier] ?: buildIfNotOpaque(type, typeIdentifier, builder).apply {
-                cache.putIfAbsent(typeIdentifier, this)
+            typeInformationCache[typeIdentifier] ?: buildIfNotOpaque(type, typeIdentifier, builder).apply {
+                typeInformationCache.putIfAbsent(typeIdentifier, this)
             }
 
     private fun buildIfNotOpaque(type: Type, typeIdentifier: TypeIdentifier, builder: () -> LocalTypeInformation) =
             if (typeModelConfiguration.isOpaque(type)) LocalTypeInformation.Opaque(type.asClass(), typeIdentifier)
             else builder()
 
-
-    operator fun get(typeIdentifier: TypeIdentifier): LocalTypeInformation? = cache[typeIdentifier]
+    operator fun get(typeIdentifier: TypeIdentifier): LocalTypeInformation? = typeInformationCache[typeIdentifier]
 }
 
+typealias Fingerprint = String
 
 interface CustomTypeDescriptorLookup {
     fun getCustomTypeDescriptor(type: Type): String?
