@@ -67,18 +67,18 @@ addresses), acting as a seed for other nodes to join the cluster.
 
 ``clear-network-cache``: Clears local copy of network map, on node startup it will be restored from server or file system.
 
-``initial-registration``: Start initial node registration with the compatibility zone to obtain a certificate from the Doorman.
+``initial-registration``: Starts initial node registration with the compatibility zone to obtain a certificate from the Doorman.
 
 Parameters:
 
 * ``--network-root-truststore``, ``-t`` **required**: Network root trust store obtained from network operator.
 * ``--network-root-truststore-password``, ``-p``: Network root trust store password obtained from network operator.
 
-``generate-node-info``: Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then quit.
+``generate-node-info``: Perform the node start-up tasks necessary to generate the nodeInfo file, save it to disk, then exit.
 
-``generate-rpc-ssl-settings``: Generate the ssl keystore and truststore for a secure RPC connection.
+``generate-rpc-ssl-settings``: Generates the SSL keystore and truststore for a secure RPC connection.
 
-``install-shell-extensions``: Install ``corda`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
+``install-shell-extensions``: Installs ``corda`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
 
 .. _enabling-remote-debugging:
 

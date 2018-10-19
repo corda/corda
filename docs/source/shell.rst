@@ -134,7 +134,7 @@ Where:
 * ``--help``, ``-h``: Show this help message and exit.
 * ``--version``, ``-V``: Print version information and exit.
 
-Additionally, the ``install-shell-extensions`` subcommand can be used to install ``corda-shell`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
+Additionally, the ``install-shell-extensions`` subcommand can be used to install the ``corda-shell`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
 
 The format of ``config-file``:
 

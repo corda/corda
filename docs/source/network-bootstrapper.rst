@@ -265,8 +265,9 @@ The network bootstrapper can be started with the following command-line options:
 * ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
 * ``--help``, ``-h``: Show this help message and exit.
 * ``--version``, ``-V``: Print version information and exit.
+* ``--minimum-platform-version``: The minimum platform version to use in the generated network-parameters.
 
 Sub-commands
 ^^^^^^^^^^^^
 
-``install-shell-extensions``: Install ``bootstrapper`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
+``install-shell-extensions``: Installs ``bootstrapper`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.

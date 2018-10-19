@@ -13,7 +13,7 @@ import net.corda.node.utilities.saveToTrustStore
 import java.io.Console
 import kotlin.system.exitProcess
 
-class GenerateRpcSslCertsCli(startup: NodeStartup): NodeCliCommand("generate-rpc-ssl-settings", "Generate the SSL key and trust stores for a secure RPC connection.", startup) {
+class GenerateRpcSslCertsCli(startup: NodeStartup): NodeCliCommand("generate-rpc-ssl-settings", "Generates the SSL key and trust stores for a secure RPC connection.", startup) {
     override fun runProgram(): Int {
         return startup.initialiseAndRun(cmdLineOptions, GenerateRpcSslCerts())
     }

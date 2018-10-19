@@ -115,4 +115,4 @@ The blob inspector can be started with the following command-line options:
 Sub-commands
 ^^^^^^^^^^^^
 
-``install-shell-extensions``: Install ``blob-inspector`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
+``install-shell-extensions``: Installs ``blob-inspector`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.

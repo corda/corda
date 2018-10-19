@@ -104,14 +104,14 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
 
     @Option(
             names = ["--just-generate-node-info"],
-            description = ["DEPRECATED. Perform the node start-up task necessary to generate its node info, save it to disk, then quit"],
+            description = ["DEPRECATED. Perform the node start-up tasks necessary to generate the nodeInfo file, save it to disk, then exit."],
             hidden = true
     )
     var justGenerateNodeInfo: Boolean = false
 
     @Option(
             names = ["--just-generate-rpc-ssl-settings"],
-            description = ["DEPRECATED. Generate the SSL key and trust stores for a secure RPC connection."],
+            description = ["DEPRECATED. Generates the SSL key and trust stores for a secure RPC connection."],
             hidden = true
     )
     var justGenerateRpcSslCerts: Boolean = false
@@ -132,7 +132,7 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
 
     @Option(
             names = ["--initial-registration"],
-            description = ["DEPRECATED. Start initial node registration with Corda network to obtain certificate from the permissioning server."],
+            description = ["DEPRECATED. Starts initial node registration with Corda network to obtain certificate from the permissioning server."],
             hidden = true
     )
     var isRegistration: Boolean = false
