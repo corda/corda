@@ -5,22 +5,21 @@ import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.CacheLoader
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
-import net.corda.core.internal.buildNamed
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.config.MB
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.utilities.NamedCacheFactory
+import net.corda.node.utilities.BindableNamedCacheFactory
 import java.util.concurrent.TimeUnit
 
-class EnterpriseMockNamedCachedFactory(private val sizeOverride: Long, private val metricRegistry: MetricRegistry?, private val nodeConfiguration: NodeConfiguration?) : NamedCacheFactory, SingletonSerializeAsToken() {
+class EnterpriseMockNamedCachedFactory(private val sizeOverride: Long, private val metricRegistry: MetricRegistry?, private val nodeConfiguration: NodeConfiguration?) : BindableNamedCacheFactory, SingletonSerializeAsToken() {
     constructor(sizeOverride: Long = 1024) : this(sizeOverride, null, null)
 
-    override fun bindWithMetrics(metricRegistry: MetricRegistry): NamedCacheFactory = EnterpriseMockNamedCachedFactory(sizeOverride, metricRegistry, this.nodeConfiguration)
-    override fun bindWithConfig(nodeConfiguration: NodeConfiguration): NamedCacheFactory = EnterpriseMockNamedCachedFactory(sizeOverride, this.metricRegistry, nodeConfiguration)
+    override fun bindWithMetrics(metricRegistry: MetricRegistry): BindableNamedCacheFactory = EnterpriseMockNamedCachedFactory(sizeOverride, metricRegistry, this.nodeConfiguration)
+    override fun bindWithConfig(nodeConfiguration: NodeConfiguration): BindableNamedCacheFactory = EnterpriseMockNamedCachedFactory(sizeOverride, this.metricRegistry, nodeConfiguration)
 
     override fun <K, V> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V> {
         // Does not check metricRegistry or nodeConfiguration, because for tests we don't care.
-        return caffeine.maximumSize(sizeOverride).buildNamed<K, V>(name)
+        return caffeine.maximumSize(sizeOverride).build<K, V>()
     }
 
     override fun <K, V> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
@@ -31,6 +30,6 @@ class EnterpriseMockNamedCachedFactory(private val sizeOverride: Long, private v
             "P2PMessageDeduplicator_senderUUIDSeqNoHWM" -> caffeine.expireAfterAccess(1, TimeUnit.HOURS)
             else -> caffeine.maximumSize(sizeOverride)
         }
-        return configuredCaffeine.buildNamed<K, V>(name, loader)
+        return configuredCaffeine.build<K, V>(loader)
     }
 }

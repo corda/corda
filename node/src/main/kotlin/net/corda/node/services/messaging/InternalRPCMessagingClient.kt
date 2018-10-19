@@ -21,8 +21,8 @@ class InternalRPCMessagingClient<OPS : RPCOps>(val sslConfig: MutualSslConfigura
     private var locator: ServerLocator? = null
     private var rpcServer: RPCServer<OPS>? = null
 
-    fun init(rpcOps: OPS, securityManager: RPCSecurityManager) {
-        init(RPCOpsRouting.singleton(nodeName, rpcOps), securityManager)
+    fun init(rpcOps: OPS, securityManager: RPCSecurityManager, cacheFactory: NamedCacheFactory) {
+        init(RPCOpsRouting.singleton(nodeName, rpcOps), securityManager, cacheFactory)
     }
 
     fun init(rpcOpsRouting: RPCOpsRouting<OPS>, securityManager: RPCSecurityManager, cacheFactory: NamedCacheFactory) = synchronized(this) {

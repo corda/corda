@@ -3,8 +3,8 @@ package net.corda.node.services.persistence
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.ConcurrentBox
+import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.doneFuture

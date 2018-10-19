@@ -15,6 +15,7 @@ import net.corda.node.services.messaging.InternalRPCMessagingClient
 import net.corda.node.services.messaging.RPCOpsRouting
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.node.services.rpc.ArtemisRpcBroker
+import net.corda.node.utilities.DefaultNamedCacheFactory
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
@@ -100,7 +101,8 @@ class Main : Runnable {
 
     private fun createRpcWorkerBroker(config: NodeConfiguration, maxMessageSize: Int): ArtemisBroker {
         val rpcOptions = config.rpcOptions
-        val securityManager = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(config.rpcUsers))
+        // TODO: wire this up to an EnterpriseCacheFactory
+        val securityManager = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(config.rpcUsers), DefaultNamedCacheFactory())
         val broker = if (rpcOptions.useSsl) {
             ArtemisRpcBroker.withSsl(config.p2pSslOptions, rpcOptions.address, rpcOptions.adminAddress, rpcOptions.sslConfig!!, securityManager, maxMessageSize, false, config.baseDirectory / "artemis", false)
         } else {
@@ -127,7 +129,7 @@ class RpcWorker(private val serverControl: ActiveMQServerControl, private val rp
         val rpcServerConfiguration = RPCServerConfiguration.DEFAULT.copy(
                 rpcThreadPoolSize = rpcWorkerConfig.enterpriseConfiguration.tuning.rpcThreadPoolSize
         )
-        val securityManager = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(rpcWorkerConfig.rpcUsers))
+        val securityManager = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(rpcWorkerConfig.rpcUsers), rpcWorkerServiceHubs[0].cacheFactory)
         val nodeName =
                 if(rpcWorkerServiceHubs.size == 1) {
                     rpcWorkerServiceHubs.single().configuration.myLegalName
@@ -140,7 +142,7 @@ class RpcWorker(private val serverControl: ActiveMQServerControl, private val rp
 
         val rpcOpsMap = rpcWorkerServiceHubs.map { Pair(it.myInfo.legalIdentities.single().name, it.rpcOps) }.toMap()
 
-        internalRpcMessagingClient.init(RPCOpsRouting(rpcOpsMap), securityManager)
+        internalRpcMessagingClient.init(RPCOpsRouting(rpcOpsMap), securityManager, rpcWorkerServiceHubs[0].cacheFactory)
         internalRpcMessagingClient.start(serverControl)
 
         runOnStop += { internalRpcMessagingClient.stop() }

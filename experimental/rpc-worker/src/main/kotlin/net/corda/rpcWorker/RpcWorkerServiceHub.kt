@@ -14,7 +14,9 @@ import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.internal.*
+import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.serialization.internal.effectiveSerializationEnv
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
 import net.corda.node.CordaClock
 import net.corda.node.SimpleClock
@@ -81,7 +83,8 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration, overrid
             configuration.database,
             identityService::wellKnownPartyFromX500Name,
             identityService::wellKnownPartyFromAnonymous,
-            schemaService
+            schemaService,
+            cacheFactory
     )
 
     init {
@@ -102,7 +105,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration, overrid
     private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, validatedTransactions)
     @Suppress("LeakingThis")
     override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory)
-    override val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database)
+    override val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
     override val monitoringService = MonitoringService(metricRegistry)
     override val networkMapUpdater = NetworkMapUpdater(
             networkMapCache,

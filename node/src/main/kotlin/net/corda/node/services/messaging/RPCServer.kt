@@ -159,8 +159,9 @@ class RPCServer<OPS : RPCOps>(
             serverLocator: ServerLocator,
             securityManager: RPCSecurityManager,
             nodeLegalName: CordaX500Name,
-            rpcConfiguration: RPCServerConfiguration
-    ) : this(RPCOpsRouting.singleton(nodeLegalName, ops), rpcServerUsername, rpcServerPassword, serverLocator, securityManager, nodeLegalName, rpcConfiguration)
+            rpcConfiguration: RPCServerConfiguration,
+            cacheFactory: NamedCacheFactory
+    ) : this(RPCOpsRouting.singleton(nodeLegalName, ops), rpcServerUsername, rpcServerPassword, serverLocator, securityManager, nodeLegalName, rpcConfiguration, cacheFactory)
 
     init {
         // It is assumed that all the identities have the same type of RPCOps associated with them.
