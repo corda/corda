@@ -4,12 +4,9 @@ Corda Network
 Introduction to Corda Network
 -----------------------------
 
-Corda Network consists of Corda nodes operated by network participants, in which business transactions are created and 
-validated via Corda Distributed Applications (CorDapps) running on these nodes. Each node is identified by means of a 
-certificate issued by the Network’s Certificate Authority, and will also be identifiable on a network map. 
+Corda Network consists of Corda nodes operated by network participants, in which business transactions are created and validated via Corda Distributed Applications (CorDapps) running on these nodes. Each node is identified by means of a certificate issued by the Network’s Certificate Authority, and will also be identifiable on a network map. 
 
-Corda Network enables interoperability – the exchange of data or assets via a secure, efficient internet layer – in a 
-way that isn’t possible with competing permissioned distributed ledger technologies or legacy systems.
+Corda Network enables interoperability – the exchange of data or assets via a secure, efficient internet layer – in a way that isn’t possible with competing permissioned distributed ledger technologies / legacy systems.
 
 The network is due to go live in November, after which it will be governed by R3. An independent, not for profit 
 Foundation is currently being set-up which is intended to govern the Network from mid 2019, after a transition period.
