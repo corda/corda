@@ -1,7 +1,10 @@
 package net.corda.serialization.internal.model
 
 import com.google.common.reflect.TypeToken
+import net.corda.serialization.internal.amqp.asClass
+import sun.net.www.content.text.Generic
 import java.lang.reflect.*
+import java.util.*
 
 /**
  * Used as a key for retrieving cached type information. We need slightly more information than the bare classname,
@@ -20,6 +23,14 @@ sealed class TypeIdentifier {
      * The name of the type.
      */
     abstract val name: String
+
+    /**
+     * Obtain the local type matching this identifier
+     *
+     * @param classLoader The classloader to use to load the type.
+     * @throws ClassNotFoundException if the type or any of its parameters cannot be loaded.
+     */
+    abstract fun getLocalType(classLoader: ClassLoader = ClassLoader.getSystemClassLoader()): Type
 
     /**
      * Obtain a nicely-formatted representation of the identified type, for help with debugging.
@@ -78,7 +89,14 @@ sealed class TypeIdentifier {
      */
     object Top : TypeIdentifier() {
         override val name get() = "*"
+        override fun getLocalType(classLoader: ClassLoader): Type = classLoader.loadClass("java.lang.Object")
         override fun toString() = "Top"
+    }
+
+    private object UnboundedWildcardType : WildcardType {
+        override fun getLowerBounds(): Array<Type> = emptyArray()
+        override fun getUpperBounds(): Array<Type> = arrayOf(Any::class.java)
+        override fun toString() = "?"
     }
 
     /**
@@ -86,6 +104,7 @@ sealed class TypeIdentifier {
      */
     object Unknown : TypeIdentifier() {
         override val name get() = "?"
+        override fun getLocalType(classLoader: ClassLoader): Type = UnboundedWildcardType
         override fun toString() = "Unknown"
     }
 
@@ -93,7 +112,23 @@ sealed class TypeIdentifier {
      * Identifies a class with no type parameters.
      */
     data class Unparameterised(override val name: String) : TypeIdentifier() {
+        companion object {
+            private val primitives = listOf(
+                    Byte::class,
+                    Boolean:: class,
+                    Char::class,
+                    Int::class,
+                    Short::class,
+                    Long::class,
+                    Float::class,
+                    Double::class).associate {
+                it.javaPrimitiveType!!.name to it.javaPrimitiveType
+            }
+        }
         override fun toString() = "Unparameterised($name)"
+        override fun getLocalType(classLoader: ClassLoader): Type = primitives[name] ?: classLoader.loadClass(name)
+
+        val isPrimitive get() = name in primitives
     }
 
     /**
@@ -102,6 +137,14 @@ sealed class TypeIdentifier {
      */
     data class Erased(override val name: String) : TypeIdentifier() {
         override fun toString() = "Erased($name)"
+        override fun getLocalType(classLoader: ClassLoader): Type = classLoader.loadClass(name)
+    }
+
+    // We don't implement equals on reconstituted types, because we cannot guarantee to implement hashCode compatibly
+    // with the Java native implementation of our interface, and so cannot uphold the equals/hashCode contract.
+    private class ReconstitutedGenericArrayType(private val componentType: Type) : GenericArrayType {
+        override fun getGenericComponentType(): Type = componentType
+        override fun toString() = "$componentType[]"
     }
 
     /**
@@ -112,6 +155,24 @@ sealed class TypeIdentifier {
     data class ArrayOf(val componentType: TypeIdentifier) : TypeIdentifier() {
         override val name get() = componentType.name + "[]"
         override fun toString() = "ArrayOf(${componentType.prettyPrint()})"
+        override fun getLocalType(classLoader: ClassLoader): Type {
+            val component = componentType.getLocalType(classLoader)
+            return when (componentType) {
+                is Parameterised -> ReconstitutedGenericArrayType(component)
+                else -> java.lang.reflect.Array.newInstance(component.asClass(), 0).javaClass
+            }
+        }
+    }
+
+    // We don't implement equals on reconstituted types, because we cannot guarantee to implement hashCode compatibly
+    // with the Java native implementation of our interface, and so cannot uphold the equals/hashCode contract.
+    private class ReconstitutedParameterizedType(
+            private val _rawType: Type,
+            private val _actualTypeArguments: Array<Type>) : ParameterizedType {
+        override fun getRawType(): Type = _rawType
+        override fun getOwnerType(): Type? = null
+        override fun getActualTypeArguments(): Array<Type> = _actualTypeArguments
+        override fun toString(): String = TypeIdentifier.forGenericType(this).prettyPrint(false)
     }
 
     /**
@@ -121,6 +182,9 @@ sealed class TypeIdentifier {
      */
     data class Parameterised(override val name: String, val parameters: List<TypeIdentifier>) : TypeIdentifier() {
         override fun toString() = "Parameterised(${prettyPrint()})"
+        override fun getLocalType(classLoader: ClassLoader): Type = ReconstitutedParameterizedType(
+                classLoader.loadClass(name),
+                parameters.map { it.getLocalType(classLoader) }.toTypedArray())
     }
 }
 
