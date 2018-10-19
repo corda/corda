@@ -222,7 +222,7 @@ data class LedgerTransaction @JvmOverloads constructor(
         // [Set] of "to" (encumbrance states).
         val encumbranceSet = mutableSetOf<Int>()
         // Update both [Set]s.
-        statesAndEncumbrance.forEach {(statePosition, encumbrance) ->
+        statesAndEncumbrance.forEach { (statePosition, encumbrance) ->
             // Check it does not refer to itself.
             if (statePosition == encumbrance || encumbrance >= outputs.size) {
                 throw TransactionVerificationException.TransactionMissingEncumbranceException(

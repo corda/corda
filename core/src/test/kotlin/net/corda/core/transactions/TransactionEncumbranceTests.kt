@@ -91,6 +91,8 @@ class TransactionEncumbranceTests {
         }
 
         // Full cycle example with 4 elements 0 -> 1, 1 -> 2, 2 -> 3 and 3 -> 0
+        // All 3 Cash states and the TimeLock are linked and should be consumed in the same transaction.
+        // Note that all of the Cash states are encumbered both together and with time lock.
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
@@ -99,6 +101,24 @@ class TransactionEncumbranceTests {
                 output(Cash.PROGRAM_ID, "state encumbered by state 2", encumbrance = 2, contractState = stateWithNewOwner)
                 output(Cash.PROGRAM_ID, "state encumbered by state 3", encumbrance = 3, contractState = stateWithNewOwner)
                 output(TEST_TIMELOCK_ID, "5pm time-lock", 0, timeLock)
+                command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                verifies()
+            }
+        }
+
+        // A transaction that includes multiple independent encumbrance chains.
+        // Each Cash state is encumbered with its own TimeLock.
+        // Note that all of the Cash states are encumbered both together and with time lock.
+        ledgerServices.ledger(DUMMY_NOTARY) {
+            transaction {
+                attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
+                input(Cash.PROGRAM_ID, extraCashState)
+                output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock A", encumbrance = 3, contractState = stateWithNewOwner)
+                output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock B", encumbrance = 4, contractState = stateWithNewOwner)
+                output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock C", encumbrance = 5, contractState = stateWithNewOwner)
+                output(TEST_TIMELOCK_ID, "5pm time-lock A", 0, timeLock)
+                output(TEST_TIMELOCK_ID, "5pm time-lock B", 1, timeLock)
+                output(TEST_TIMELOCK_ID, "5pm time-lock C", 2, timeLock)
                 command(MEGA_CORP.owningKey, Cash.Commands.Move())
                 verifies()
             }
@@ -163,6 +183,24 @@ class TransactionEncumbranceTests {
                     output(Cash.PROGRAM_ID, "state encumbered by state 3", encumbrance = 3, contractState = stateWithNewOwner)
                     output(Cash.PROGRAM_ID, "state encumbered by state 0", encumbrance = 0, contractState = stateWithNewOwner)
                     output(TEST_TIMELOCK_ID, "5pm time-lock", timeLock)
+                    command(MEGA_CORP.owningKey, Cash.Commands.Move())
+                    verifies()
+                }
+            }
+        }
+
+        // No Full cycle in one of the encumbrance chains due to non-matching encumbered-encumbrance elements.
+        // 0 -> 2, 2 -> 0 is valid. On the other hand, there is 1 -> 3 only and 3 -> 1 does not exist.
+        // (thus offending indices [1, 3], because 1 is not referenced and 3 is not encumbered).
+        assertFailsWith<TransactionVerificationException.TransactionNonMatchingEncumbranceException> {
+            ledgerServices.ledger(DUMMY_NOTARY) {
+                transaction {
+                    attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
+                    input(Cash.PROGRAM_ID, state)
+                    output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock A", encumbrance = 2, contractState = stateWithNewOwner)
+                    output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock B", encumbrance = 3, contractState = stateWithNewOwner)
+                    output(TEST_TIMELOCK_ID, "5pm time-lock A", 0, timeLock)
+                    output(TEST_TIMELOCK_ID, "5pm time-lock B", timeLock)
                     command(MEGA_CORP.owningKey, Cash.Commands.Move())
                     verifies()
                 }
