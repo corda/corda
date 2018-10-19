@@ -13,7 +13,7 @@ import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LifeCycle
-import net.corda.core.internal.buildNamed
+import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
@@ -33,13 +33,8 @@ import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.contextDatabaseOrNull
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
+import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
-import org.apache.activemq.artemis.api.core.client.ClientConsumer
-import org.apache.activemq.artemis.api.core.client.ClientMessage
-import org.apache.activemq.artemis.api.core.client.ClientProducer
-import org.apache.activemq.artemis.api.core.client.ClientSession
-import org.apache.activemq.artemis.api.core.client.ClientSessionFactory
-import org.apache.activemq.artemis.api.core.client.ServerLocator
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
@@ -86,7 +81,8 @@ class RPCServer<OPS : RPCOps>(
         private val serverLocator: ServerLocator,
         private val securityManager: RPCSecurityManager,
         private val nodeLegalName: CordaX500Name,
-        private val rpcConfiguration: RPCServerConfiguration
+        private val rpcConfiguration: RPCServerConfiguration,
+        private val cacheFactory: NamedCacheFactory
 ) {
     private companion object {
         private val log = contextLogger()
@@ -153,7 +149,7 @@ class RPCServer<OPS : RPCOps>(
     private val responseMessageBuffer = ConcurrentHashMap<SimpleString, BufferOrNone>()
     private val sendJobQueue = LinkedBlockingQueue<RpcSendJob>()
 
-    private val deduplicationChecker = DeduplicationChecker(rpcConfiguration.deduplicationCacheExpiry)
+    private val deduplicationChecker = DeduplicationChecker(rpcConfiguration.deduplicationCacheExpiry, cacheFactory = cacheFactory)
     private var deduplicationIdentity: String? = null
 
     constructor(
@@ -184,7 +180,7 @@ class RPCServer<OPS : RPCOps>(
             log.debug { "Unsubscribing from Observable with id $key because of $cause" }
             value!!.subscription.unsubscribe()
         }
-        return Caffeine.newBuilder().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).buildNamed("RPCServer_observableSubscription")
+        return cacheFactory.buildNamed(Caffeine.newBuilder().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()), "RPCServer_observableSubscription")
     }
 
     fun start(activeMqServerControl: ActiveMQServerControl) {

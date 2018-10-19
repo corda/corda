@@ -38,10 +38,11 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.expect
 import net.corda.testing.core.expectEvents
 import net.corda.testing.core.sequence
-import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.internal.fromUserList
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.testActor
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.*

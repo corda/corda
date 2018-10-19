@@ -86,7 +86,7 @@ class NodeWithInfo(val node: Node, val info: NodeInfo) {
 open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 private val initialiseSerialization: Boolean = true,
-                cacheFactoryPrototype: NamedCacheFactory = DefaultNamedCacheFactory()
+                cacheFactoryPrototype: BindableNamedCacheFactory = DefaultNamedCacheFactory()
 ) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
@@ -224,7 +224,7 @@ open class Node(configuration: NodeConfiguration,
         val securityManagerConfig = configuration.security?.authService
                 ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
-        val securityManager = with(RPCSecurityManagerImpl(securityManagerConfig)) {
+        val securityManager = with(RPCSecurityManagerImpl(securityManagerConfig, cacheFactory)) {
             if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this, User(INTERNAL_SHELL_USER, INTERNAL_SHELL_USER, setOf(Permissions.all()))) else this
         }
 
@@ -285,7 +285,7 @@ open class Node(configuration: NodeConfiguration,
         // Start up the MQ clients.
         internalRpcMessagingClient?.run {
             closeOnStop()
-            init(rpcOps, securityManager)
+            init(rpcOps, securityManager, cacheFactory)
         }
         network.closeOnStop()
         network.start(

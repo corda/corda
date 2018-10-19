@@ -2,6 +2,7 @@ package net.corda.node.services.upgrade
 
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UpgradedContract
+import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.node.services.ContractUpgradeService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.utilities.PersistentMap
@@ -11,7 +12,7 @@ import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Table
 
-class ContractUpgradeServiceImpl : ContractUpgradeService, SingletonSerializeAsToken() {
+class ContractUpgradeServiceImpl(cacheFactory: NamedCacheFactory) : ContractUpgradeService, SingletonSerializeAsToken() {
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}contract_upgrades")
@@ -26,7 +27,7 @@ class ContractUpgradeServiceImpl : ContractUpgradeService, SingletonSerializeAsT
     )
 
     private companion object {
-        fun createContractUpgradesMap(): PersistentMap<String, String, DBContractUpgrade, String> {
+        fun createContractUpgradesMap(cacheFactory: NamedCacheFactory): PersistentMap<String, String, DBContractUpgrade, String> {
             return PersistentMap(
                     "ContractUpgradeService_upgrades",
                     toPersistentEntityKey = { it },
@@ -37,12 +38,13 @@ class ContractUpgradeServiceImpl : ContractUpgradeService, SingletonSerializeAsT
                             upgradedContractClassName = value
                         }
                     },
-                    persistentEntityClass = DBContractUpgrade::class.java
+                    persistentEntityClass = DBContractUpgrade::class.java,
+                    cacheFactory = cacheFactory
             )
         }
     }
 
-    private val authorisedUpgrade = createContractUpgradesMap()
+    private val authorisedUpgrade = createContractUpgradesMap(cacheFactory)
 
     fun start() {
         authorisedUpgrade.preload()

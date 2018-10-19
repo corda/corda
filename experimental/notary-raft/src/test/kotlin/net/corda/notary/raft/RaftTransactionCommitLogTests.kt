@@ -15,7 +15,6 @@ import net.corda.core.internal.concurrent.asCordaFuture
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -24,6 +23,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.internal.makeInternalTestDataSourceProperties
 import org.hamcrest.Matchers.instanceOf
 import org.junit.After

@@ -7,24 +7,21 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.node.services.api.SchemaService
-import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.testing.internal.LogHelper
-import net.corda.testing.core.TestIdentity
 import net.corda.testing.contracts.DummyContract
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
-import rx.subjects.PublishSubject
 import kotlin.test.assertEquals
 
 class PersistentStateServiceTests {
