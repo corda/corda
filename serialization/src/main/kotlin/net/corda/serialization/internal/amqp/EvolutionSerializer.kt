@@ -116,7 +116,6 @@ abstract class EvolutionSerializer(
                 factory: SerializerFactory,
                 constructor: KFunction<Any>,
                 readersAsSerialized: Map<String, OldParam>): AMQPSerializer<Any> {
-            val constructorArgs = arrayOfNulls<Any?>(constructor.parameters.size)
 
             // Java doesn't care about nullability unless it's a primitive in which
             // case it can't be referenced. Unfortunately whilst Kotlin does apply
