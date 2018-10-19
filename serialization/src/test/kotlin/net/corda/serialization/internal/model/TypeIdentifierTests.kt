@@ -22,11 +22,16 @@ class TypeIdentifierTests {
         assertIdentified<List<Int>>("List<Integer>")
     }
 
-    interface HasArray<T> {
-        val array: Array<List<T>>
+    @Test
+    fun `nested parameterised`() {
+        assertIdentified<List<List<Int>>>("List<List<Integer>>")
     }
 
-    class HasStringArray(override val array: Array<List<String>>): HasArray<String>
+    interface HasArray<T> {
+        val array: Array<out List<T>>
+    }
+
+    class HasStringArray(override val array: Array<out List<String>>): HasArray<String>
 
     @Test
     fun `resolved against an owning type`() {
