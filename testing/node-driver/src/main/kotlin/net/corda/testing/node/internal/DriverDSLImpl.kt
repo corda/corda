@@ -317,7 +317,7 @@ class DriverDSLImpl(
         } else {
             startOutOfProcessMiniNode(
                     config,
-                    "--initial-registration",
+                    "initial-registration",
                     "--network-root-truststore=${rootTruststorePath.toAbsolutePath()}",
                     "--network-root-truststore-password=$rootTruststorePassword"
             ).map { config }

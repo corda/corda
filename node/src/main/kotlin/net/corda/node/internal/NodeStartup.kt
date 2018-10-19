@@ -59,13 +59,13 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     val startup = NodeStartup()
     private val networkCacheCli = ClearNetworkCacheCli(startup)
     private val justGenerateNodeInfoCli = GenerateNodeInfoCli(startup)
-    private val justGenerateRpcSslCerts = GenerateRpcSslCertsCli(startup)
+    private val justGenerateRpcSslCertsCli = GenerateRpcSslCertsCli(startup)
     private val initialRegistrationCli = InitialRegistrationCli(startup)
     private val bootstrapRaftNotaryCli = BootstrapRaftNotaryCli(startup)
 
     override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
 
-    override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCerts, initialRegistrationCli, bootstrapRaftNotaryCli)
+    override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli, bootstrapRaftNotaryCli)
 
     override fun runProgram(): Int {
         return when {
@@ -91,7 +91,7 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
             }
             cmdLineOptions.justGenerateRpcSslCerts -> {
                 Node.printWarning("The --just-generate-rpc-ssl-settings flag has been deprecated and will be removed in a future version. Use the generate-rpc-ssl-settings command instead.")
-                justGenerateRpcSslCerts.runProgram()
+                justGenerateRpcSslCertsCli.runProgram()
             }
             cmdLineOptions.bootstrapRaftCluster -> {
                 Node.printWarning("The --bootstrap-raft-cluster flag has been deprecated and will be removed in a future version. Use the bootstrap-raft-cluster command instead.")
