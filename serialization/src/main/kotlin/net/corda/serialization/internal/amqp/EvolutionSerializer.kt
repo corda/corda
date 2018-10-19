@@ -144,7 +144,7 @@ abstract class EvolutionSerializer(
                     }
                 }
             }
-            return EvolutionSerializerViaConstructor(new.type, factory, readersAsSerialized, constructor, constructorArgs)
+            return EvolutionSerializerViaConstructor(new.type, factory, readersAsSerialized, constructor)
         }
 
         private fun makeWithSetters(
@@ -210,8 +210,7 @@ class EvolutionSerializerViaConstructor(
         clazz: Type,
         factory: SerializerFactory,
         oldReaders: Map<String, EvolutionSerializer.OldParam>,
-        kotlinConstructor: KFunction<Any>,
-        private val constructorArgs: Array<Any?>) : EvolutionSerializer(clazz, factory, oldReaders, kotlinConstructor) {
+        kotlinConstructor: KFunction<Any>) : EvolutionSerializer(clazz, factory, oldReaders, kotlinConstructor) {
     /**
      * Unlike a normal [readObject] call where we simply apply the parameter deserialisers
      * to the object list of values we need to map that list, which is ordered per the
@@ -226,6 +225,7 @@ class EvolutionSerializerViaConstructor(
     ): Any {
         if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")
 
+        val constructorArgs : Array<Any?> = arrayOfNulls<Any?>(kotlinConstructor.parameters.size)
         // *must* read all the parameters in the order they were serialized
         oldReaders.values.zip(obj).map { it.first.readProperty(it.second, schemas, input, constructorArgs, context) }
 
