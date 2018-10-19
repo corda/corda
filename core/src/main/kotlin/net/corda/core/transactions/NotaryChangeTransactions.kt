@@ -107,13 +107,14 @@ data class NotaryChangeLedgerTransaction(
         get() = computeOutputs()
 
     private fun computeOutputs(): List<TransactionState<ContractState>> {
-        val encumberedStates = inputs.asSequence().mapIndexed { index, it -> Pair(index, it) }
-                .filter { it.second.state.encumbrance != null }
-                .associateBy { it.second.ref }
-        return inputs.map {
-            if (it.state.encumbrance != null) {
-                it.state.copy(notary = newNotary, encumbrance = encumberedStates[StateRef(it.ref.txhash, it.state.encumbrance)]!!.first)
-            } else it.state.copy(notary = newNotary)
+        val inputPositionIndex: Map<StateRef, Int> = inputs.mapIndexed { index, stateAndRef -> stateAndRef.ref to index }.toMap()
+        return inputs.map { (state, ref) ->
+            if (state.encumbrance != null) {
+                val encumbranceStateRef = StateRef(ref.txhash, state.encumbrance)
+                val encumbrancePosition = inputPositionIndex[encumbranceStateRef]
+                        ?: throw IllegalStateException("Unable to generate output states – transaction not constructed correctly.")
+                state.copy(notary = newNotary, encumbrance = encumbrancePosition)
+            } else state.copy(notary = newNotary)
         }
     }
 
@@ -130,11 +131,11 @@ data class NotaryChangeLedgerTransaction(
     private fun checkEncumbrances() {
         val encumberedStates = inputs.asSequence().filter { it.state.encumbrance != null }.associateBy { it.ref }
         if (encumberedStates.isNotEmpty()) {
-            inputs.forEach {
-                if (StateRef(it.ref.txhash, it.state.encumbrance!!) !in encumberedStates) {
+            inputs.forEach { (state, ref) ->
+                if (StateRef(ref.txhash, state.encumbrance!!) !in encumberedStates) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(
                             id,
-                            it.state.encumbrance,
+                            state.encumbrance,
                             TransactionVerificationException.Direction.INPUT)
                 }
             }

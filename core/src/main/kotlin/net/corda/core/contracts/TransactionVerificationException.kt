@@ -123,7 +123,7 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
     @KeepForDJVM
     class TransactionDuplicateEncumbranceException(txId: SecureHash, index: Int)
         : TransactionVerificationException(txId, "The bi-directionality property of encumbered output states " +
-            "is not satisfied. Index $index is referenced more than one times", null)
+            "is not satisfied. Index $index is referenced more than once", null)
 
     /**
      * An encumbered state should also be referenced as the encumbrance of another state in order to satisfy the
@@ -132,7 +132,7 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
     @KeepForDJVM
     class TransactionNonMatchingEncumbranceException(txId: SecureHash, nonMatching: Collection<Int>)
         : TransactionVerificationException(txId, "The bi-directionality property of encumbered output states " +
-            "is not satisfied. Encumbered states should also be referenced as an encumbrance of an other state to form " +
+            "is not satisfied. Encumbered states should also be referenced as an encumbrance of another state to form " +
             "a full cycle. Offending indices $nonMatching", null)
 
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
