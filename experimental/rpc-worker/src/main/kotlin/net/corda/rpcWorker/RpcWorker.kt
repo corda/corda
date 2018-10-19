@@ -15,7 +15,8 @@ import net.corda.node.services.messaging.InternalRPCMessagingClient
 import net.corda.node.services.messaging.RPCOpsRouting
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.node.services.rpc.ArtemisRpcBroker
-import net.corda.node.utilities.DefaultNamedCacheFactory
+import net.corda.node.utilities.EnterpriseNamedCacheFactory
+import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
@@ -101,8 +102,7 @@ class Main : Runnable {
 
     private fun createRpcWorkerBroker(config: NodeConfiguration, maxMessageSize: Int): ArtemisBroker {
         val rpcOptions = config.rpcOptions
-        // TODO: wire this up to an EnterpriseCacheFactory
-        val securityManager = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(config.rpcUsers), DefaultNamedCacheFactory())
+        val securityManager = RPCSecurityManagerImpl(SecurityConfiguration.AuthService.fromUsers(config.rpcUsers), EnterpriseNamedCacheFactory(config.enterpriseConfiguration.getTracingConfig()))
         val broker = if (rpcOptions.useSsl) {
             ArtemisRpcBroker.withSsl(config.p2pSslOptions, rpcOptions.address, rpcOptions.adminAddress, rpcOptions.sslConfig!!, securityManager, maxMessageSize, false, config.baseDirectory / "artemis", false)
         } else {
