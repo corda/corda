@@ -8,8 +8,7 @@ Corda Network consists of Corda nodes operated by network participants, in which
 
 Corda Network enables interoperability – the exchange of data or assets via a secure, efficient internet layer – in a way that isn’t possible with competing permissioned distributed ledger technologies / legacy systems.
 
-The network is due to go live in November, after which it will be governed by R3. An independent, not for profit 
-Foundation is currently being set-up which is intended to govern the Network from mid 2019, after a transition period.
+The network is due to go live in November, after which it will be governed by R3. An independent, not for profit Foundation is currently being set-up which is intended to govern the Network from mid 2019, after a transition period.
 
 The Network will comprise of many sub-groups or ‘business networks’ of participants running particular CorDapps, and 
 such groups will often have a co-ordinating party (the ‘Business Network Operator’) who manages the distribution of the 
@@ -32,9 +31,7 @@ Netherlands, known as a Stichting. This is a legal entity suited for governance 
 with limited liability but no shareholders, capital or dividends. It is defined in a set of Articles of Association and 
 By-laws.
 
-A Foundation will enable Network members to be involved with, and also understand, how decisions are made (including 
-around issues of identity and permission), building trust and engagement from a wide range of stakeholders. We believe 
-this will bring about the best decisions and outcomes for the Network’s long-term success. 
+A Foundation will enable Network members to be involved with, and also understand, how decisions are made (including around issues of identity and permission), building trust and engagement from a wide range of stakeholders. We believe this will bring about the best decisions and outcomes for the Network’s long-term success. 
 
 Its governance bodies shall include
 
