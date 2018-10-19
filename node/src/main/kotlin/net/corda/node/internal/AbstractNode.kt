@@ -717,7 +717,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             requireNotNull(getCertificateStores()) {
                 "One or more keyStores (identity or TLS) or trustStore not found. " +
                         "Please either copy your existing keys and certificates from another node, " +
-                        "or if you don't have one yet, fill out the config file and run corda.jar Finitialinitial-registration. " +
+                        "or if you don't have one yet, fill out the config file and run corda.jar initial-registration. " +
                         "Read more at: https://docs.corda.net/permissioning.html"
             }
         } catch (e: KeyStoreException) {

@@ -12,7 +12,7 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
-import net.corda.node.internal.Node.Companion.isValidJavaVersion
+import net.corda.node.internal.Node.Companion.isInvalidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.internal.subcommands.*
 import net.corda.node.services.config.NodeConfiguration
@@ -70,39 +70,40 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
 
     override fun runProgram(): Int {
-        //deal with legacy flags and redirect to subcommands
-        if (InitialRegistration.checkRegistrationMode(cmdLineOptions.baseDirectory)) {
-            println("Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.")
-            return initialRegistrationCli.runProgram()
+        return when {
+            InitialRegistration.checkRegistrationMode(cmdLineOptions.baseDirectory) -> {
+                println("Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.")
+                initialRegistrationCli.runProgram()
+            }
+            //deal with legacy flags and redirect to subcommands
+            cmdLineOptions.isRegistration -> {
+                Node.printWarning("The --initial-registration flag has been deprecated and will be removed in a future version. Use the initial-registration command instead.")
+                requireNotNull(cmdLineOptions.networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
+                initialRegistrationCli.networkRootTrustStorePassword = cmdLineOptions.networkRootTrustStorePassword!!
+                initialRegistrationCli.networkRootTrustStorePathParameter = cmdLineOptions.networkRootTrustStorePathParameter
+                initialRegistrationCli.runProgram()
+            }
+            cmdLineOptions.clearNetworkMapCache -> {
+                Node.printWarning("The --clear-network-map-cache flag has been deprecated and will be removed in a future version. Use the clear-network-cache command instead.")
+                networkCacheCli.runProgram()
+            }
+            cmdLineOptions.justGenerateNodeInfo -> {
+                Node.printWarning("The --just-generate-node-info flag has been deprecated and will be removed in a future version. Use the generate-node-info command instead.")
+                justGenerateNodeInfoCli.runProgram()
+            }
+            cmdLineOptions.justGenerateRpcSslCerts -> {
+                Node.printWarning("The --just-generate-rpc-ssl-settings flag has been deprecated and will be removed in a future version. Use the generate-rpc-ssl-settings command instead.")
+                justGenerateRpcSslCerts.runProgram()
+            }
+            cmdLineOptions.bootstrapRaftCluster -> {
+                Node.printWarning("The --bootstrap-raft-cluster flag has been deprecated and will be removed in a future version. Use the bootstrap-raft-cluster command instead.")
+                bootstrapRaftNotaryCli.runProgram()
+            }
+            else -> startup.initialiseAndRun(cmdLineOptions, object : RunAfterNodeInitialisation {
+                val startupTime = System.currentTimeMillis()
+                override fun run(node: Node) = startup.startNode(node, startupTime)
+            })
         }
-        if (cmdLineOptions.isRegistration) {
-            Node.printWarning("The --initial-registration flag has been deprecated and will be removed in a future version. Use the initial-registration command instead.")
-            requireNotNull(cmdLineOptions.networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
-            initialRegistrationCli.networkRootTrustStorePassword = cmdLineOptions.networkRootTrustStorePassword!!
-            initialRegistrationCli.networkRootTrustStorePathParameter = cmdLineOptions.networkRootTrustStorePathParameter
-            return initialRegistrationCli.runProgram()
-        }
-        if (cmdLineOptions.clearNetworkMapCache) {
-            Node.printWarning("The --clear-network-map-cache flag has been deprecated and will be removed in a future version. Use the clear-network-cache command instead.")
-            return networkCacheCli.runProgram()
-        }
-        if (cmdLineOptions.justGenerateNodeInfo) {
-            Node.printWarning("The --just-generate-node-info flag has been deprecated and will be removed in a future version. Use the generate-node-info command instead.")
-            return justGenerateNodeInfoCli.runProgram()
-        }
-        if (cmdLineOptions.justGenerateRpcSslCerts) {
-            Node.printWarning("The --just-generate-rpc-ssl-settings flag has been deprecated and will be removed in a future version. Use the generate-rpc-ssl-settings command instead.")
-            return justGenerateRpcSslCerts.runProgram()
-        }
-        if (cmdLineOptions.bootstrapRaftCluster) {
-            Node.printWarning("The --bootstrap-raft-cluster flag has been deprecated and will be removed in a future version. Use the bootstrap-raft-cluster command instead.")
-            return bootstrapRaftNotaryCli.runProgram()
-        }
-        return startup.initialiseAndRun(cmdLineOptions, object : RunAfterNodeInitialisation {
-            val startupTime = System.currentTimeMillis()
-
-            override fun run(node: Node) = startup.startNode(node, startupTime)
-        })
     }
 
     @Mixin
@@ -123,7 +124,7 @@ open class NodeStartup : NodeStartupLogging {
         this.cmdLineOptions = cmdLineOptions
 
         // Step 1. Check for supported Java version.
-        if (!isValidJavaVersion()) return ExitCodes.FAILURE
+        if (isInvalidJavaVersion()) return ExitCodes.FAILURE
 
         // Step 2. We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
@@ -405,6 +406,7 @@ open class NodeStartup : NodeStartupLogging {
         }
     }
 }
+
 /** Provide some common logging methods for node startup commands. */
 interface NodeStartupLogging {
     companion object {
@@ -416,7 +418,8 @@ interface NodeStartupLogging {
 
     fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print(message)
 
-    fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" } ?: ""}", error)
+    fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" }
+            ?: ""}", error)
 
     fun handleRegistrationError(error: Exception) {
         when (error) {
