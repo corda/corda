@@ -7,9 +7,9 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
+import net.corda.core.node.services.Vault.ConstraintInfo.Type.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
-import net.corda.core.node.services.Vault.ConstraintInfo.Type.*
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.*
@@ -24,13 +24,13 @@ import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
 import net.corda.finance.schemas.test.SampleCashSchemaV2
 import net.corda.finance.schemas.test.SampleCashSchemaV3
-import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.core.*
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.chooseIdentity
+import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices

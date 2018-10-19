@@ -12,6 +12,7 @@ import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaMigration
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.node.MockServices
 import org.apache.commons.io.FileUtils
 import org.assertj.core.api.Assertions.assertThat
@@ -19,18 +20,18 @@ import org.junit.Test
 import java.lang.reflect.Method
 import java.math.BigInteger
 import java.net.URL
-import javax.persistence.*
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
+import javax.persistence.*
 
 class SchemaMigrationTest {
 
     private fun configureDatabase(hikariProperties: Properties,
                           databaseConfig: DatabaseConfig,
                           schemaService: NodeSchemaService = NodeSchemaService()): CordaPersistence =
-            createCordaPersistence(databaseConfig, { null }, { null }, schemaService)
+            createCordaPersistence(databaseConfig, { null }, { null }, schemaService, TestingNamedCacheFactory())
                 .apply { startHikariPool(hikariProperties, databaseConfig, schemaService.schemaOptions.keys) }
 
     @Test

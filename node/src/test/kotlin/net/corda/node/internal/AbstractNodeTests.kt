@@ -7,7 +7,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.relaxedThoroughness
-import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.internal.ProcessUtilities.startJavaProcess
 import org.junit.Rule
 import org.junit.Test

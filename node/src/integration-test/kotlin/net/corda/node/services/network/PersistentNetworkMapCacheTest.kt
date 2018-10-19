@@ -2,18 +2,14 @@ package net.corda.node.services.network
 
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
-import net.corda.testing.internal.IntegrationTest
-import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.internal.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.node.internal.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
@@ -36,7 +32,7 @@ class PersistentNetworkMapCacheTest : IntegrationTest() {
     private var portCounter = 1000
 
     //Enterprise only - objects created in the setup method, below initialized with dummy values to avoid need for nullable type declaration
-    private var database = CordaPersistence(DatabaseConfig(), emptySet())
+    private var database = CordaPersistence(DatabaseConfig(), emptySet(), TestingNamedCacheFactory())
     private var charlieNetMapCache = PersistentNetworkMapCache(TestingNamedCacheFactory(), database, InMemoryIdentityService(trustRoot = DEV_ROOT_CA.certificate))
 
     @Before()

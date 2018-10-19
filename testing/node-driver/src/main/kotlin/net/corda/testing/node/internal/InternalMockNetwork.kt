@@ -42,13 +42,13 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.node.utilities.DefaultNamedCacheFactory
+import net.corda.node.utilities.EnterpriseNamedCacheFactory
+import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.node.TestCordapp
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.setGlobalSerialization
@@ -269,7 +269,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     open class MockNode(args: MockNodeArgs) : AbstractNode<TestStartedNode>(
             args.config,
             TestClock(Clock.systemUTC()),
-            DefaultNamedCacheFactory(),
+            EnterpriseNamedCacheFactory(args.config.enterpriseConfiguration.getTracingConfig()),
             args.version,
             args.network.getServerThread(args.id),
             args.network.busyLatch

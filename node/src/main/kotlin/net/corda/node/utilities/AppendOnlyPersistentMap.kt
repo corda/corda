@@ -2,6 +2,7 @@ package net.corda.node.utilities
 
 import com.github.benmanes.caffeine.cache.LoadingCache
 import com.github.benmanes.caffeine.cache.Weigher
+import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.contextTransaction
@@ -11,7 +12,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-
 
 /**
  * Implements a caching layer on top of an *append-only* table accessed via Hibernate mapping. Note that if the same key is [set] twice,

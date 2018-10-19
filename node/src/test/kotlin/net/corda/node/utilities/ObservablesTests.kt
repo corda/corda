@@ -3,8 +3,8 @@ package net.corda.node.utilities
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.tee
-import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.*
+import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After

@@ -3,9 +3,9 @@ package net.corda.node.services.messaging
 import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.NamedCacheFactory
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.node.utilities.NamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.time.Instant

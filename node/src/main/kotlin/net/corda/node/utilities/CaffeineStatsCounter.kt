@@ -10,16 +10,15 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
 import com.github.benmanes.caffeine.cache.stats.CacheStats
 import com.github.benmanes.caffeine.cache.stats.StatsCounter
-import net.corda.core.internal.buildNamed
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 
 /**
- * Helper to export statistics to JMX and finally build the cache.
+ * Helpers to export statistics to JMX and finally build the cache.
  */
-fun <K, V> Caffeine<in K, in V>.buildNamed(registry: MetricRegistry, metricsPrefix: String): Cache<K, V> = this.addMetrics(registry, metricsPrefix).buildNamed<K, V>(metricsPrefix).addExtraMetrics(registry, metricsPrefix)
+fun <K, V> Caffeine<in K, in V>.buildNamed(registry: MetricRegistry, metricsPrefix: String): Cache<K, V> = this.addMetrics(registry, metricsPrefix).build<K, V>().addExtraMetrics(registry, metricsPrefix)
 
-fun <K, V> Caffeine<in K, in V>.buildNamed(registry: MetricRegistry, metricsPrefix: String, loader: CacheLoader<K, V>): LoadingCache<K, V> = this.recordStats(CaffeineStatsCounter.supplier(registry, "Caches/$metricsPrefix")).buildNamed<K, V>(metricsPrefix, loader).addExtraMetrics(registry, metricsPrefix)
+fun <K, V> Caffeine<in K, in V>.buildNamed(registry: MetricRegistry, metricsPrefix: String, loader: CacheLoader<K, V>): LoadingCache<K, V> = this.addMetrics(registry, metricsPrefix).build<K, V>(loader).addExtraMetrics(registry, metricsPrefix)
 
 private fun <K, V> Caffeine<in K, in V>.addMetrics(registry: MetricRegistry, metricsPrefix: String): Caffeine<in K, in V> = this.recordStats(CaffeineStatsCounter.supplier(registry, "Caches/$metricsPrefix"))
 private fun <K, V, C : Cache<K, V>> C.addExtraMetrics(registry: MetricRegistry, metricsPrefix: String): C = this.apply {
