@@ -171,6 +171,22 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     /**
      * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleStates]
      */
+    data class FungibleStateQueryCriteria(
+            val participants: List<AbstractParty>? = null,
+            val quantity: ColumnPredicate<Long>? = null,
+            override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+            override val contractStateTypes: Set<Class<out ContractState>>? = null,
+            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+    ) : CommonQueryCriteria() {
+        override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
+            super.visit(parser)
+            return parser.parseCriteria(this)
+        }
+    }
+
+    /**
+     * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleStates]
+     */
     data class FungibleAssetQueryCriteria @JvmOverloads constructor(
             val participants: List<AbstractParty>? = null,
             val owner: List<AbstractParty>? = null,
