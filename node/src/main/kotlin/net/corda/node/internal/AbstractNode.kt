@@ -156,7 +156,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             identityService::wellKnownPartyFromX500Name,
             identityService::wellKnownPartyFromAnonymous,
             schemaService,
-            configuration.dataSourceProperties,
             cacheFactory)
 
     init {

@@ -7,7 +7,6 @@ import io.netty.channel.unix.Errors
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
-import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
@@ -417,8 +416,16 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
     protected open fun loadConfigFile(): Pair<Config, Try<NodeConfiguration>> = cmdLineOptions.loadConfig()
 
     protected open fun banJavaSerialisation(conf: NodeConfiguration) {
+        // Enterprise only -  Oracle database requires additional serialization
+        val isOracleDbDriver = conf.dataSourceProperties.getProperty("dataSource.url", "").startsWith("jdbc:oracle:")
+        val serialFilter =
+                if (isOracleDbDriver) {
+                    ::oracleJdbcDriverSerialFilter
+                } else {
+                    ::defaultSerialFilter
+                }
         // Note that in dev mode this filter can be overridden by a notary service implementation.
-        SerialFilter.install(::defaultSerialFilter)
+        SerialFilter.install(serialFilter)
     }
 
     protected open fun getVersionInfo(): VersionInfo {

@@ -230,7 +230,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
                         callerParty,
                         requestSignature,
                         null,
-                        emptyList()).execute()
+                        emptyList()).execute("")
             }
             return futures.transpose().get()
         }

@@ -52,7 +52,7 @@ class FlowAsyncOperationTests {
     }
 
     private class ErroredExecute : FlowAsyncOperation<Unit> {
-        override fun execute(): CordaFuture<Unit> {
+        override fun execute(deduplicationId: String): CordaFuture<Unit> {
             throw Exception()
         }
     }
@@ -70,7 +70,7 @@ class FlowAsyncOperationTests {
     }
 
     private class ErroredResult : FlowAsyncOperation<Unit> {
-        override fun execute(): CordaFuture<Unit> {
+        override fun execute(deduplicationId: String): CordaFuture<Unit> {
             val future = openFuture<Unit>()
             future.setException(Exception())
             return future
@@ -103,7 +103,7 @@ class FlowAsyncOperationTests {
     }
 
     private class WorkerServiceTask(val completeAllTasks: Boolean, val service: WorkerService) : FlowAsyncOperation<Unit> {
-        override fun execute(): CordaFuture<Unit> {
+        override fun execute(deduplicationId: String): CordaFuture<Unit> {
             return service.performTask(completeAllTasks)
         }
     }
