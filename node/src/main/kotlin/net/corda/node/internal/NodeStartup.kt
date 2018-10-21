@@ -155,7 +155,7 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
 
     private val handleRegistrationError = { error: Exception ->
         when (error) {
-            is NodeRegistrationException -> error.logAsExpected("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.")
+            is NodeRegistrationException -> error.logAsExpected("Issue with Node registration: ${error.message}")
             else -> error.logAsUnexpected("Exception during node registration")
         }
     }
@@ -388,17 +388,23 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         logger.info(nodeStartedMessage)
     }
 
-    protected open fun registerWithNetwork(conf: NodeConfiguration, versionInfo: VersionInfo, nodeRegistrationConfig: NodeRegistrationOption) {
-        val compatibilityZoneURL = conf.networkServices?.doormanURL ?: throw RuntimeException(
-                "compatibilityZoneURL or networkServices must be configured!")
+    protected open fun registerWithNetwork(
+            conf: NodeConfiguration,
+            versionInfo: VersionInfo,
+            nodeRegistrationConfig: NodeRegistrationOption
+    ) {
+        println("\n" +
+                "******************************************************************\n" +
+                "*                                                                *\n" +
+                "*      Registering as a new participant with a Corda network     *\n" +
+                "*                                                                *\n" +
+                "******************************************************************\n")
 
-        println()
-        println("******************************************************************")
-        println("*                                                                *")
-        println("*       Registering as a new participant with Corda network      *")
-        println("*                                                                *")
-        println("******************************************************************")
-        NodeRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL, versionInfo), nodeRegistrationConfig).buildKeystore()
+        NodeRegistrationHelper(conf,
+                HTTPNetworkRegistrationService(
+                        requireNotNull(conf.networkServices),
+                        versionInfo),
+                nodeRegistrationConfig).buildKeystore()
 
         // Minimal changes to make registration tool create node identity.
         // TODO: Move node identity generation logic from node to registration helper.
@@ -411,29 +417,8 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
     protected open fun loadConfigFile(): Pair<Config, Try<NodeConfiguration>> = cmdLineOptions.loadConfig()
 
     protected open fun banJavaSerialisation(conf: NodeConfiguration) {
-        val isOracleDbDriver = conf.dataSourceProperties.getProperty("dataSource.url", "").startsWith("jdbc:oracle:")
-        val filter =
-                if (conf.notary?.bftSMaRt != null && isOracleDbDriver) {
-                    val bftAndOracleSerialFilter: (Class<*>) -> Boolean = { clazz -> bftSMaRtSerialFilter(clazz) || oracleJdbcDriverSerialFilter(clazz) }
-                    bftAndOracleSerialFilter
-                } else if (conf.notary?.bftSMaRt != null) {
-                    ::bftSMaRtSerialFilter
-                } else if (isOracleDbDriver) {
-                    ::oracleJdbcDriverSerialFilter
-                } else {
-                    ::defaultSerialFilter
-                }
-        SerialFilter.install(filter)
-    }
-
-    /** This filter is required for BFT-Smart to work as it only supports Java serialization. */
-    // TODO: move this filter out of the node, allow Cordapps to specify filters.
-    private fun bftSMaRtSerialFilter(clazz: Class<*>): Boolean = clazz.name.let {
-        it.startsWith("bftsmart.")
-                || it.startsWith("java.security.")
-                || it.startsWith("java.util.")
-                || it.startsWith("java.lang.")
-                || it.startsWith("java.net.")
+        // Note that in dev mode this filter can be overridden by a notary service implementation.
+        SerialFilter.install(::defaultSerialFilter)
     }
 
     protected open fun getVersionInfo(): VersionInfo {

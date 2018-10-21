@@ -2,6 +2,7 @@ package net.corda.djvm.analysis
 
 import net.corda.djvm.code.EmitterModule
 import net.corda.djvm.code.Instruction
+import net.corda.djvm.code.emptyAsNull
 import net.corda.djvm.code.instructions.*
 import net.corda.djvm.messages.Message
 import net.corda.djvm.references.*
@@ -232,7 +233,7 @@ open class ClassAndMemberVisitor(
             analysisContext.classes.add(visitedClass)
             super.visit(
                     version, access, visitedClass.name, signature,
-                    visitedClass.superClass.nullIfEmpty(),
+                    visitedClass.superClass.emptyAsNull,
                     visitedClass.interfaces.toTypedArray()
             )
         }
@@ -285,12 +286,19 @@ open class ClassAndMemberVisitor(
         ): MethodVisitor? {
             var visitedMember: Member? = null
             val clazz = currentClass!!
-            val member = Member(access, clazz.name, name, desc, signature ?: "")
+            val member = Member(
+                access = access,
+                className = clazz.name,
+                memberName = name,
+                signature = desc,
+                genericsDetails = signature ?: "",
+                exceptions = exceptions?.toMutableSet() ?: mutableSetOf()
+            )
             currentMember = member
             sourceLocation = sourceLocation.copy(
-                    memberName = name,
-                    signature = desc,
-                    lineNumber = 0
+                memberName = name,
+                signature = desc,
+                lineNumber = 0
             )
             val processMember = captureExceptions {
                 visitedMember = visitMethod(clazz, member)
@@ -320,12 +328,19 @@ open class ClassAndMemberVisitor(
         ): FieldVisitor? {
             var visitedMember: Member? = null
             val clazz = currentClass!!
-            val member = Member(access, clazz.name, name, desc, "", value = value)
+            val member = Member(
+                access = access,
+                className = clazz.name,
+                memberName = name,
+                signature = desc,
+                genericsDetails = "",
+                value = value
+            )
             currentMember = member
             sourceLocation = sourceLocation.copy(
-                    memberName = name,
-                    signature = desc,
-                    lineNumber = 0
+                memberName = name,
+                signature = desc,
+                lineNumber = 0
             )
             val processMember = captureExceptions {
                 visitedMember = visitField(clazz, member)
@@ -577,10 +592,6 @@ open class ClassAndMemberVisitor(
          * The API version of ASM.
          */
         const val API_VERSION: Int = Opcodes.ASM6
-
-        private fun String.nullIfEmpty(): String? {
-            return if (this.isEmpty()) { null } else { this }
-        }
 
     }
 

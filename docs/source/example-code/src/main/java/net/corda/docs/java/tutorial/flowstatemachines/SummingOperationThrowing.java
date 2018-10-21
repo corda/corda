@@ -11,7 +11,7 @@ public final class SummingOperationThrowing implements FlowAsyncOperation<Intege
 
     @NotNull
     @Override
-    public CordaFuture<Integer> execute() {
+    public CordaFuture<Integer> execute(String deduplicationId) {
         throw new IllegalStateException("You shouldn't be calling me");
     }
 

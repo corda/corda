@@ -1,5 +1,6 @@
 package net.corda.djvm.rules.implementation.instrumentation
 
+import net.corda.djvm.code.EMIT_TRACING
 import net.corda.djvm.code.Emitter
 import net.corda.djvm.code.EmitterContext
 import net.corda.djvm.code.Instruction
@@ -17,7 +18,7 @@ class TraceInvocations : Emitter {
         }
     }
 
-    override val isTracer: Boolean
-        get() = true
+    override val priority: Int
+        get() = EMIT_TRACING
 
 }

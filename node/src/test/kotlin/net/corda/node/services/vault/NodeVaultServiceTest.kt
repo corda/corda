@@ -130,6 +130,32 @@ class NodeVaultServiceTest {
     }
 
     @Test
+    fun `fungible state selection test`() {
+        val issuerParty = services.myInfo.legalIdentities.first()
+        class FungibleFoo(override val amount: Amount<Currency>, override val participants: List<AbstractParty>) : FungibleState<Currency>
+        val fungibleFoo = FungibleFoo(100.DOLLARS, listOf(issuerParty))
+        services.apply {
+            val tx = signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).apply {
+                addCommand(Command(DummyContract.Commands.Create(), issuerParty.owningKey))
+                addOutputState(fungibleFoo, DummyContract.PROGRAM_ID)
+            })
+            recordTransactions(listOf(tx))
+        }
+
+        val baseCriteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(notary = listOf(DUMMY_NOTARY))
+
+        database.transaction {
+            val states = services.vaultService.tryLockFungibleStatesForSpending(
+                    lockId = UUID.randomUUID(),
+                    eligibleStatesQuery = baseCriteria,
+                    amount = 10.DOLLARS,
+                    contractStateType = FungibleFoo::class.java
+            )
+            assertEquals(states.single().state.data.amount, 100.DOLLARS)
+        }
+    }
+
+    @Test
     fun `duplicate insert of transaction does not fail`() {
         database.transaction {
             val cash = Cash()

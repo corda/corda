@@ -113,14 +113,4 @@ class DJVMTest {
         assertArrayEquals(ByteArray(1) { 127.toByte() }, result[9] as ByteArray)
         assertArrayEquals(CharArray(1) { '?' }, result[10] as CharArray)
     }
-
-    private fun String.toDJVM(): sandbox.java.lang.String = sandbox.java.lang.String.toDJVM(this)
-    private fun Long.toDJVM(): sandbox.java.lang.Long = sandbox.java.lang.Long.toDJVM(this)
-    private fun Int.toDJVM(): sandbox.java.lang.Integer = sandbox.java.lang.Integer.toDJVM(this)
-    private fun Short.toDJVM(): sandbox.java.lang.Short = sandbox.java.lang.Short.toDJVM(this)
-    private fun Byte.toDJVM(): sandbox.java.lang.Byte = sandbox.java.lang.Byte.toDJVM(this)
-    private fun Float.toDJVM(): sandbox.java.lang.Float = sandbox.java.lang.Float.toDJVM(this)
-    private fun Double.toDJVM(): sandbox.java.lang.Double = sandbox.java.lang.Double.toDJVM(this)
-    private fun Char.toDJVM(): sandbox.java.lang.Character = sandbox.java.lang.Character.toDJVM(this)
-    private fun Boolean.toDJVM(): sandbox.java.lang.Boolean = sandbox.java.lang.Boolean.toDJVM(this)
 }

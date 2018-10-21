@@ -6,6 +6,7 @@ import net.corda.core.internal.post
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
+import net.corda.node.services.config.NetworkServicesConfig
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import okhttp3.CacheControl
 import okhttp3.Headers
@@ -19,8 +20,11 @@ import java.util.*
 import java.util.zip.ZipInputStream
 import javax.naming.ServiceUnavailableException
 
-class HTTPNetworkRegistrationService(compatibilityZoneURL: URL, val versionInfo: VersionInfo) : NetworkRegistrationService {
-    private val registrationURL = URL("$compatibilityZoneURL/certificate")
+class HTTPNetworkRegistrationService(
+        val config : NetworkServicesConfig,
+        val versionInfo: VersionInfo
+) : NetworkRegistrationService {
+    private val registrationURL = URL("${config.doormanURL}/certificate")
 
     companion object {
         private val TRANSIENT_ERROR_STATUS_CODES = setOf(HTTP_BAD_GATEWAY, HTTP_UNAVAILABLE, HTTP_GATEWAY_TIMEOUT)
@@ -54,7 +58,8 @@ class HTTPNetworkRegistrationService(compatibilityZoneURL: URL, val versionInfo:
     override fun submitRequest(request: PKCS10CertificationRequest): String {
         return String(registrationURL.post(OpaqueBytes(request.encoded),
                 "Platform-Version" to "${versionInfo.platformVersion}",
-                "Client-Version" to versionInfo.releaseVersion))
+                "Client-Version" to versionInfo.releaseVersion,
+                "Private-Network-Map" to (config.pnm?.toString() ?: "")))
     }
 }
 

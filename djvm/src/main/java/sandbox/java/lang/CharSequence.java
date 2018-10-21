@@ -3,8 +3,8 @@ package sandbox.java.lang;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * This is a dummy class that implements just enough of [java.lang.CharSequence]
- * to allow us to compile [sandbox.java.lang.String].
+ * This is a dummy class that implements just enough of {@link java.lang.CharSequence}
+ * to allow us to compile {@link sandbox.java.lang.String}.
  */
 public interface CharSequence extends java.lang.CharSequence {
 
