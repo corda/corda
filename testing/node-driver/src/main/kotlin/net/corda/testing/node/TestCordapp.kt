@@ -19,11 +19,14 @@ interface TestCordapp {
     /** Returns the version string, defaults to "1.0" if not specified. */
     val version: String
 
-    /** Returns the vendor string, defaults to "Corda" if not specified. */
+    /** Returns the vendor string, defaults to "test-vendor" if not specified. */
     val vendor: String
 
     /** Returns the target platform version, defaults to the current platform version if not specified. */
     val targetVersion: Int
+
+    /** Returns the config for this CorDapp, defaults to empty if not specified. */
+    val config: Map<String, Any>
 
     /** Returns the set of package names scanned for this test CorDapp. */
     val packages: Set<String>
@@ -43,6 +46,9 @@ interface TestCordapp {
     /** Return a copy of this [TestCordapp] but with the specified target platform version. */
     fun withTargetVersion(targetVersion: Int): TestCordapp
 
+    /** Returns a copy of this [TestCordapp] but with the specified CorDapp config. */
+    fun withConfig(config: Map<String, Any>): TestCordapp
+
     class Factory {
         companion object {
             @JvmStatic
@@ -57,9 +63,10 @@ interface TestCordapp {
                 return TestCordappImpl(
                         name = "test-cordapp",
                         version = "1.0",
-                        vendor = "Corda",
+                        vendor = "test-vendor",
                         title = "test-title",
                         targetVersion = PLATFORM_VERSION,
+                        config = emptyMap(),
                         packages = simplifyScanPackages(packageNames),
                         classes = emptySet()
                 )

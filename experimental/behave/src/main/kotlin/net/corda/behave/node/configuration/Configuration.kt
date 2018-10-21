@@ -21,6 +21,7 @@ class Configuration(
                 nodeInterface.dbPort,
                 password = DEFAULT_PASSWORD
         ),
+        // TODO This is not being used when it could be. The call-site is using configElements instead.
         val notary: NotaryConfiguration = NotaryConfiguration(),
         val cordapps: CordappConfiguration = CordappConfiguration(),
         vararg configElements: ConfigurationTemplate
@@ -28,9 +29,7 @@ class Configuration(
 
     private val developerMode = true
 
-    val cordaX500Name: CordaX500Name by lazy({
-        CordaX500Name(name, location, country)
-    })
+    val cordaX500Name: CordaX500Name = CordaX500Name(name, location, country)
 
     private val basicConfig = """
             |myLegalName="C=$country,L=$location,O=$name"
