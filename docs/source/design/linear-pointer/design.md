@@ -83,7 +83,7 @@ It is important to note that this design only standardises a pattern which is cu
 
 #### Tokens
 
-Uncoupling token type definitions from the notion of ownership. Using the `LinearPointer`, `Token` states can include an `Amount` of some pointed-to type. The pointed-to type can evolve independently from the `Token` state which should just be concerned with teh question of ownership.
+Uncoupling token type definitions from the notion of ownership. Using the `LinearPointer`, `Token` states can include an `Amount` of some pointed-to type. The pointed-to type can evolve independently from the `Token` state which should just be concerned with the question of ownership.
 
 ## Issues and resolutions
 
