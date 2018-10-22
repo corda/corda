@@ -376,7 +376,7 @@ interface StatePointer {
  */
 class StaticPointer(override val pointer: StateRef) : StatePointer {
     /**
-     * Resolves a [StaticPointer] to a [StateAndRef] via a a [StateRef] look-up.
+     * Resolves a [StaticPointer] to a [StateAndRef] via a [StateRef] look-up.
      */
     @Throws(TransactionResolutionException::class)
     override fun resolve(services: ServiceHub): StateAndRef<ContractState> {
