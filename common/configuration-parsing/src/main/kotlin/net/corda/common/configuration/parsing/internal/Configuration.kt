@@ -9,8 +9,15 @@ import net.corda.common.validation.internal.Validated
 import java.time.Duration
 import kotlin.reflect.KClass
 
+/**
+ * Entry point for the [Config] parsing utilities.
+ */
 object Configuration {
 
+    /**
+     * Able to describe a part of a [Config] as a [ConfigValue].
+     * Implemented by [Configuration.Specification], [Configuration.Schema] and [Configuration.Property.Definition] to output values that are masked if declared as sensitive.
+     */
     interface Describer {
 
         fun describe(configuration: Config): ConfigValue
@@ -18,6 +25,9 @@ object Configuration {
 
     object Value {
 
+        /**
+         * Defines functions able to extract values from a [Config] in a type-safe fashion.
+         */
         interface Extractor<TYPE> {
 
             @Throws(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
@@ -35,14 +45,20 @@ object Configuration {
             }
         }
 
+        /**
+         * Able to parse a value from a [Config] and [Configuration.Validation.Options], returning a [Valid] result containing either the value itself, or some [Configuration.Validation.Error]s.
+         */
         interface Parser<VALUE> {
 
-            fun parse(configuration: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults): Validated<VALUE, Validation.Error>
+            fun parse(configuration: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults): Valid<VALUE>
         }
     }
 
     object Property {
 
+        /**
+         * Configuration property metadata, as in the set of qualifying traits for a [Configuration.Property.Definition].
+         */
         interface Metadata {
 
             val key: String
@@ -53,23 +69,49 @@ object Configuration {
             val schema: Schema?
         }
 
+        /**
+         * Property definition, able to validate, describe and extract values from a [Config] object.
+         */
         interface Definition<TYPE> : Configuration.Property.Metadata, Configuration.Validator, Configuration.Value.Extractor<TYPE>, Configuration.Describer, Configuration.Value.Parser<TYPE> {
 
             override fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
+            /**
+             * Defines a required property, which must provide a value or produce an error.
+             */
             interface Required<TYPE> : Definition<TYPE> {
 
+                /**
+                 * Returns an optional property with given [defaultValue]. This property does not produce errors in case the value is unspecified, returning the [defaultValue] instead.
+                 */
                 fun optional(defaultValue: TYPE? = null): Definition<TYPE?>
             }
 
+            /**
+             * Defines a property that must provide a single value or produce an error in case multiple values are specified for the relevant key.
+             */
             interface Single<TYPE> : Definition<TYPE> {
 
+                /**
+                 * Returns a required property expecting multiple values for the relevant key.
+                 */
                 fun list(): Required<List<TYPE>>
             }
 
+            /**
+             * Default property definition, required and single-value.
+             */
             interface Standard<TYPE> : Required<TYPE>, Single<TYPE> {
 
+                /**
+                 * Passes the value to a validating mapping function, provided this is valid in the first place.
+                 */
                 fun <MAPPED : Any> flatMap(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, Validation.Error>): Standard<MAPPED>
+
+                /**
+                 * Passes the value to a non-validating mapping function, provided this is valid in the first place.
+                 */
+                fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> MAPPED): Standard<MAPPED> = flatMap(mappedTypeName) { key, value -> valid(convert.invoke(key, value)) }
             }
 
             override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<TYPE, Validation.Error> {
@@ -83,23 +125,49 @@ object Configuration {
 
                 internal val expectedExceptionTypes: Set<KClass<*>> = setOf(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
 
+                /**
+                 * Returns a [Configuration.Property.Definition.Standard] with value of type [Long].
+                 */
                 fun long(key: String, sensitive: Boolean = false): Standard<Long> = LongProperty(key, sensitive)
 
+                /**
+                 * Returns a [Configuration.Property.Definition.Standard] with value of type [Boolean].
+                 */
                 fun boolean(key: String, sensitive: Boolean = false): Standard<Boolean> = StandardProperty(key, Boolean::class.javaObjectType.simpleName, Config::getBoolean, Config::getBooleanList, sensitive)
 
+                /**
+                 * Returns a [Configuration.Property.Definition.Standard] with value of type [Double].
+                 */
                 fun double(key: String, sensitive: Boolean = false): Standard<Double> = StandardProperty(key, Double::class.javaObjectType.simpleName, Config::getDouble, Config::getDoubleList, sensitive)
 
+                /**
+                 * Returns a [Configuration.Property.Definition.Standard] with value of type [String].
+                 */
                 fun string(key: String, sensitive: Boolean = false): Standard<String> = StandardProperty(key, String::class.java.simpleName, Config::getString, Config::getStringList, sensitive)
 
+                /**
+                 * Returns a [Configuration.Property.Definition.Standard] with value of type [Duration].
+                 */
                 fun duration(key: String, sensitive: Boolean = false): Standard<Duration> = StandardProperty(key, Duration::class.java.simpleName, Config::getDuration, Config::getDurationList, sensitive)
 
+                /**
+                 * Returns a [Configuration.Property.Definition.Standard] with value of type [ConfigObject].
+                 * It supports an optional [Configuration.Schema], which is used for validation and more when provided.
+                 */
                 fun nestedObject(key: String, schema: Schema? = null, sensitive: Boolean = false): Standard<ConfigObject> = StandardProperty(key, ConfigObject::class.java.simpleName, Config::getObject, Config::getObjectList, sensitive, schema)
 
+                /**
+                 * Returns a [Configuration.Property.Definition.Standard] with value of type [ENUM].
+                 * This property expects the exact [ENUM] value specified as text for the relevant key.
+                 */
                 fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>, sensitive: Boolean = false): Standard<ENUM> = StandardProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) }, sensitive)
             }
         }
     }
 
+    /**
+     * A definition of the expected structure of a [Config] object, able to validate it and describe it while preventing sensitive values from being revealed.
+     */
     interface Schema : Configuration.Validator, Configuration.Describer {
 
         val name: String?
@@ -118,6 +186,10 @@ object Configuration {
         }
     }
 
+    /**
+     * A [Configuration.Schema] that is also able to parse a raw [Config] object into a [VALUE].
+     * It is an abstract class to allow extension with delegated properties e.g., object Settings: Specification() { val address by string().optional("localhost:8080") }.
+     */
     abstract class Specification<VALUE>(name: String?, private val prefix: String? = null) : Configuration.Schema, Configuration.Value.Parser<VALUE> {
 
         private val mutableProperties = mutableSetOf<Property.Definition<*>>()
@@ -126,18 +198,41 @@ object Configuration {
 
         private val schema: Schema by lazy { Schema(name, properties) }
 
+        /**
+         * Returns a delegate for a [Configuration.Property.Definition.Standard] of type [Long].
+         */
         fun long(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Long> = PropertyDelegate.long(key, prefix, sensitive) { mutableProperties.add(it) }
 
+        /**
+         * Returns a delegate for a [Configuration.Property.Definition.Standard] of type [Boolean].
+         */
         fun boolean(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Boolean> = PropertyDelegate.boolean(key, prefix, sensitive) { mutableProperties.add(it) }
 
+        /**
+         * Returns a delegate for a [Configuration.Property.Definition.Standard] of type [Double].
+         */
         fun double(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Double> = PropertyDelegate.double(key, prefix, sensitive) { mutableProperties.add(it) }
 
+        /**
+         * Returns a delegate for a [Configuration.Property.Definition.Standard] of type [String].
+         */
         fun string(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<String> = PropertyDelegate.string(key, prefix, sensitive) { mutableProperties.add(it) }
 
+        /**
+         * Returns a delegate for a [Configuration.Property.Definition.Standard] of type [Duration].
+         */
         fun duration(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Duration> = PropertyDelegate.duration(key, prefix, sensitive) { mutableProperties.add(it) }
 
+        /**
+         * Returns a delegate for a [Configuration.Property.Definition.Standard] of type [ConfigObject].
+         * It supports an optional [Configuration.Schema], which is used for validation and more when provided.
+         */
         fun nestedObject(schema: Schema? = null, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ConfigObject> = PropertyDelegate.nestedObject(schema, key, prefix, sensitive) { mutableProperties.add(it) }
 
+        /**
+         * Returns a delegate for a [Configuration.Property.Definition.Standard] of type [ENUM].
+         * This property expects the exact [ENUM] value specified as text for the relevant key.
+         */
         fun <ENUM : Enum<ENUM>> enum(key: String? = null, enumClass: KClass<ENUM>, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = PropertyDelegate.enum(key, prefix, enumClass, sensitive) { mutableProperties.add(it) }
 
         override val name: String? get() = schema.name
@@ -153,25 +248,52 @@ object Configuration {
             return validate(configuration, options).flatMap(::parseValid)
         }
 
+        /**
+         * Implement to define further mapping and validation logic, assuming the underlying raw [Config] is correct in terms of this [Configuration.Specification].
+         */
         protected abstract fun parseValid(configuration: Config): Valid<VALUE>
     }
 
     object Validation {
 
+        /**
+         * [Config] validation options.
+         * @param strict whether to raise unknown property keys as errors.
+         */
         data class Options(val strict: Boolean) {
 
             companion object {
 
+                /**
+                 * Default [Config] validation options, without [strict] parsing enabled.
+                 */
                 val defaults: Configuration.Validation.Options = Options(strict = false)
             }
         }
 
+        /**
+         * Super-type for the errors raised by the parsing and validation of a [Config] object.
+         *
+         * @param keyName name of the property key this error refers to, if any.
+         * @param typeName name of the type of the property this error refers to, if any.
+         * @param message details about what went wrong during the processing.
+         * @containingPath parent path for nested property keys, excluding the [keyName].
+         */
         sealed class Error constructor(open val keyName: String?, open val typeName: String? = null, open val message: String, val containingPath: List<String> = emptyList()) {
 
+            /**
+             * Full path for nested property keys, including the [keyName].
+             */
             val path: List<String> get() = keyName?.let { containingPath + it } ?: containingPath
 
+            /**
+             * [containingPath] joined by "." characters.
+             */
             val containingPathAsString: String = containingPath.joinToString(".")
 
+            /**
+             * [path] joined by "." characters.
+             */
             val pathAsString: String = path.joinToString(".")
 
             abstract fun withContainingPath(vararg containingPath: String): Error
@@ -181,6 +303,9 @@ object Configuration {
                 return "(keyName='$keyName', typeName='$typeName', path=$path, message='$message')"
             }
 
+            /**
+             * Raised when a value was found for the relevant [keyName], but the value did not match the declared one for the property.
+             */
             class WrongType private constructor(override val keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
 
                 internal companion object {
@@ -201,6 +326,9 @@ object Configuration {
                 override fun withContainingPath(vararg containingPath: String) = WrongType(keyName, typeName, message, containingPath.toList() + this.containingPath)
             }
 
+            /**
+             * Raised when no value was found for the relevant [keyName], and the property is [Configuration.Property.Definition.Required].
+             */
             class MissingValue private constructor(override val keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
 
                 internal companion object {
@@ -221,6 +349,9 @@ object Configuration {
                 override fun withContainingPath(vararg containingPath: String) = MissingValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
             }
 
+            /**
+             * Raised when a value was found for the relevant [keyName], it matched the declared raw type for the property, but its value is unacceptable due to application-level validation rules.
+             */
             class BadValue private constructor(override val keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
 
                 internal companion object {
@@ -241,6 +372,9 @@ object Configuration {
                 override fun withContainingPath(vararg containingPath: String) = BadValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
             }
 
+            /**
+             * Raised when a key-value pair appeared in the [Config] object without a matching property in the [Configuration.Schema], and [Configuration.Validation.Options.strict] was enabled.
+             */
             class Unknown private constructor(override val keyName: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, null, message(keyName), containingPath) {
 
                 internal companion object {
@@ -266,6 +400,9 @@ object Configuration {
                 override fun withContainingPath(vararg containingPath: String) = Unknown(keyName, containingPath.toList() + this.containingPath)
             }
 
+            /**
+             * Raised when the specification version found in the [Config] object did not match any known [Configuration.Specification].
+             */
             class UnsupportedVersion private constructor(val version: Int, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(null, null, "Unknown configuration version $version.", containingPath) {
 
                 internal companion object {
@@ -280,16 +417,25 @@ object Configuration {
 
     object Version {
 
+        /**
+         * Defines the contract from extracting a specification version from a [Config] object.
+         */
         interface Extractor : Configuration.Value.Parser<Int?> {
 
             companion object {
 
                 const val DEFAULT_VERSION_VALUE = 1
 
+                /**
+                 * Returns a [Configuration.Version.Extractor] that reads the value from given [versionKey], defaulting to [versionDefaultValue] when [versionKey] is unspecified.
+                 */
                 fun fromKey(versionKey: String, versionDefaultValue: Int? = DEFAULT_VERSION_VALUE): Configuration.Version.Extractor = VersionExtractor(versionKey, versionDefaultValue)
             }
         }
     }
 
+    /**
+     * Defines the ability to validate a [Config] object, producing a valid [Config] or a set of [Configuration.Validation.Error].
+     */
     interface Validator : net.corda.common.validation.internal.Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options>
 }
