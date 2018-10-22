@@ -371,7 +371,7 @@ interface StatePointer {
  * A [StaticPointer] contains a [pointer] to a specific [StateRef] and can be resolved by looking up the [StateRef] via
  * [ServiceHub]. There are a number of things to keep in mind when using [StaticPointer]s:
  * - The [ContractState] being pointed to may be spent or unspent when the [pointer] is resolved
- * - The [ContractState] may not the known by the node performing the look-up in which case the [resolve] method will
+ * - The [ContractState] may not be known by the node performing the look-up in which case the [resolve] method will
  *   throw a [TransactionResolutionException]
  */
 class StaticPointer(override val pointer: StateRef) : StatePointer {
