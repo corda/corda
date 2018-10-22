@@ -1,15 +1,16 @@
 package net.corda.djvm
 
+import net.corda.djvm.assertions.AssertionExtensions.assertThatDJVM
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import sandbox.SandboxFunction
 import sandbox.Task
-import sandbox.java.lang.sandbox
+import java.util.*
 
-class DJVMExceptionTest {
+class DJVMExceptionTest : TestBase() {
     @Test
-    fun testSingleException() {
+    fun testSingleException() = parentedSandbox {
         val result = Task(SingleExceptionTask()).apply("Hello World")
         assertThat(result).isInstanceOf(Throwable::class.java)
         result as Throwable
@@ -22,7 +23,7 @@ class DJVMExceptionTest {
     }
 
     @Test
-    fun testMultipleExceptions() {
+    fun testMultipleExceptions() = parentedSandbox {
         val result = Task(MultipleExceptionsTask()).apply("Hello World")
         assertThat(result).isInstanceOf(Throwable::class.java)
         result as Throwable
@@ -56,24 +57,68 @@ class DJVMExceptionTest {
     }
 
     @Test
-    fun testJavaThrowableToSandbox() {
-        val result = Throwable("Hello World").sandbox()
-        assertThat(result).isInstanceOf(sandbox.java.lang.Throwable::class.java)
-        result as sandbox.java.lang.Throwable
+    fun testJavaThrowableToSandbox() = parentedSandbox {
+        val djvm = DJVM(classLoader)
+        val helloWorld = djvm.stringOf("Hello World")
 
-        assertThat(result.message).isEqualTo("Hello World".toDJVM())
-        assertThat(result.stackTrace).isNotEmpty()
-        assertThat(result.cause).isNull()
+        val result = djvm.sandbox(Throwable("Hello World"))
+        assertThatDJVM(result)
+            .hasClassName("sandbox.java.lang.Throwable")
+            .isAssignableFrom(djvm.throwable)
+            .hasGetterValue("getMessage", helloWorld)
+            .hasGetterNullValue("getCause")
+
+        assertThat(result.getArray("getStackTrace"))
+            .hasOnlyElementsOfType(djvm.stackTraceElement)
+            .isNotEmpty()
     }
 
     @Test
-    fun testWeTryToCreateCorrectSandboxExceptionsAtRuntime() {
+    fun testWeCreateCorrectJVMExceptionAtRuntime() = parentedSandbox {
+        val djvm = DJVM(classLoader)
+        val helloWorld = djvm.stringOf("Hello World")
+
+        val result = djvm.sandbox(RuntimeException("Hello World"))
+        assertThatDJVM(result)
+            .hasClassName("sandbox.java.lang.RuntimeException")
+            .isAssignableFrom(djvm.throwable)
+            .hasGetterValue("getMessage", helloWorld)
+            .hasGetterNullValue("getCause")
+
+        assertThat(result.getArray("getStackTrace"))
+            .hasOnlyElementsOfType(djvm.stackTraceElement)
+            .isNotEmpty()
+
         assertThatExceptionOfType(ClassNotFoundException::class.java)
-            .isThrownBy { Exception("Hello World").sandbox() }
-            .withMessage("sandbox.java.lang.Exception")
+            .isThrownBy { djvm.classFor("sandbox.java.lang.RuntimeException\$1DJVM") }
+            .withMessage("sandbox.java.lang.RuntimeException\$1DJVM")
+    }
+
+    @Test
+    fun testWeCreateCorrectSyntheticExceptionAtRuntime() = parentedSandbox {
+        val djvm = DJVM(classLoader)
+
+        val result = djvm.sandbox(EmptyStackException())
+        assertThatDJVM(result)
+            .hasClassName("sandbox.java.util.EmptyStackException")
+            .isAssignableFrom(djvm.throwable)
+            .hasGetterNullValue("getMessage")
+            .hasGetterNullValue("getCause")
+
+        assertThat(result.getArray("getStackTrace"))
+            .hasOnlyElementsOfType(djvm.stackTraceElement)
+            .isNotEmpty()
+
+        assertThatDJVM(djvm.classFor("sandbox.java.util.EmptyStackException\$1DJVM"))
+            .isAssignableFrom(RuntimeException::class.java)
+    }
+
+    @Test
+    fun testWeCannotCreateSyntheticExceptionForNonException() = parentedSandbox {
+        val djvm = DJVM(classLoader)
         assertThatExceptionOfType(ClassNotFoundException::class.java)
-            .isThrownBy { RuntimeException("Hello World").sandbox() }
-            .withMessage("sandbox.java.lang.RuntimeException")
+            .isThrownBy { djvm.classFor("sandbox.java.util.LinkedList\$1DJVM") }
+            .withMessage("sandbox.java.util.LinkedList\$1DJVM")
     }
 }
 

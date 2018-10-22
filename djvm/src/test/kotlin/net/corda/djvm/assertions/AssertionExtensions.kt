@@ -36,6 +36,8 @@ object AssertionExtensions {
     fun assertThat(references: ReferenceMap) =
             AssertiveReferenceMap(references)
 
+    fun assertThatDJVM(obj: Any) = AssertiveDJVMObject(obj)
+
     inline fun <reified T> IterableAssert<ClassRepresentation>.hasClass(): IterableAssert<ClassRepresentation> = this
             .`as`("HasClass(${T::class.java.name})")
             .anySatisfy {
