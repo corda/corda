@@ -37,7 +37,7 @@ But because input states are actually output states that are serialised with the
 After the input states are correctly deserialised they can be correctly verified by the transaction contract.
 This is critical for the UTXO model of Corda to function correctly.
 
-- Define a simple process and basic tooling for contract code developers to ensure a consistent release process across the network.   
+- Define a simple process and basic tooling for contract code developers to ensure a consistent release process.   
 
 - Nodes should be prevented to select older buggy contract code for current transactions. 
 
