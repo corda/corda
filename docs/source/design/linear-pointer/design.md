@@ -19,7 +19,7 @@ data class FooState(val ref: StateAndRef<BarState>) : ContractState
 
 Linking to a `StateRef` or `StateAndRef<T>` is only recommended if a specific version of a state is required in perpetuity. Clearly, adding a `StateAndRef` embeds the data directly. This type of pointer is compatible with any `ContractState` type.
 
-But what if the linked state is updated? The the `StateRef` will be pointing to an older version of the data and this could be a problem for the `ContractState` which contains the pointer.
+But what if the linked state is updated? The `StateRef` will be pointing to an older version of the data and this could be a problem for the `ContractState` which contains the pointer.
 
 ### By `linearId`
 
