@@ -235,16 +235,6 @@ open class NodeStartup : NodeStartupLogging {
         SerialFilter.install(::defaultSerialFilter)
     }
 
-    /** This filter is required for BFT-Smart to work as it only supports Java serialization. */
-    // TODO: move this filter out of the node, allow Cordapps to specify filters.
-    private fun bftSMaRtSerialFilter(clazz: Class<*>): Boolean = clazz.name.let {
-        it.startsWith("bftsmart.")
-                || it.startsWith("java.security.")
-                || it.startsWith("java.util.")
-                || it.startsWith("java.lang.")
-                || it.startsWith("java.net.")
-    }
-
     open fun getVersionInfo(): VersionInfo {
         return VersionInfo(
                 PLATFORM_VERSION,
