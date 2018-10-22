@@ -68,6 +68,10 @@ class SchemaTest {
         val errors = barConfigSchema.validate(configuration, Configuration.Validation.Options(strict = false)).errors
 
         assertThat(errors).isEmpty()
+
+        val errorsWithDefaultOptions = barConfigSchema.validate(configuration).errors
+
+        assertThat(errorsWithDefaultOptions).isEmpty()
     }
 
     @Test
