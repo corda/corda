@@ -14,7 +14,7 @@ class VersionedParsingExampleTest {
     fun correct_parsing_function_is_used_for_present_version() {
 
         val versionParser = Configuration.Version.Extractor.fromKey("configuration.metadata.version", null)
-        val extractVersion: (Config) -> Valid<Int> = { config -> versionParser.parse(config).map { it!! } }
+        val extractVersion: (Config) -> Valid<Int> = { config -> versionParser.parseRequired(config) }
         val parseConfiguration = VersionedSpecificationRegistry.mapping(extractVersion, 1 to RpcSettingsSpec.V1, 2 to RpcSettingsSpec.V2)
 
         val principalAddressValue = Address("localhost", 8080)
@@ -37,7 +37,7 @@ class VersionedParsingExampleTest {
 
         val defaultVersion = 2
         val versionParser = Configuration.Version.Extractor.fromKey("configuration.metadata.version", defaultVersion)
-        val extractVersion: (Config) -> Valid<Int> = { config -> versionParser.parse(config).map { it!! } }
+        val extractVersion: (Config) -> Valid<Int> = { config -> versionParser.parseRequired(config) }
         val parseConfiguration = VersionedSpecificationRegistry.mapping(extractVersion, 1 to RpcSettingsSpec.V1, 2 to RpcSettingsSpec.V2)
 
         val principalAddressValue = Address("localhost", 8080)
@@ -78,10 +78,13 @@ class VersionedParsingExampleTest {
         object V1 : Configuration.Specification<RpcSettings>("RpcSettings") {
 
             private val principalHost by string()
-            private val principalPort by long().mapRaw { _, _, value -> value.toInt() }
+            private val principalPort by long().map(::parseInt)
 
             private val adminHost by string()
-            private val adminPort by long().mapRaw { _, _, value -> value.toInt() }
+            private val adminPort by long().map(::parseInt)
+
+            @Suppress("UNUSED_PARAMETER")
+            private fun parseInt(key: String, typeName: String, rawValue: Long): Int = rawValue.toInt()
 
             override fun parseValid(configuration: Config): Valid<RpcSettings> {
 
@@ -95,7 +98,7 @@ class VersionedParsingExampleTest {
                 val adminAddress = addressFor(adminHost, adminPort)
 
                 return if (principalAddress.isValid && adminAddress.isValid) {
-                    return valid(RpcSettings(principalAddress.value!!, adminAddress.value!!))
+                    return valid(RpcSettings(principalAddress.value, adminAddress.value))
                 } else {
                     invalid(principalAddress.errors + adminAddress.errors)
                 }
@@ -106,17 +109,22 @@ class VersionedParsingExampleTest {
 
             private object AddressesSpec : Configuration.Specification<Addresses>("Addresses") {
 
-                val principal by string().map { key, typeName, rawValue -> Address.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) as Configuration.Validation.Error } }
+                val principal by string().flatMap(::parseAddress)
 
-                val admin by string().map { key, typeName, rawValue -> Address.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) as Configuration.Validation.Error } }
+                val admin by string().flatMap(::parseAddress)
 
                 override fun parseValid(configuration: Config) = valid(Addresses(principal.valueIn(configuration), admin.valueIn(configuration)))
+
+                private fun parseAddress(key: String, typeName: String, rawValue: String): Valid<Address> {
+
+                    return Address.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) }
+                }
 
                 @Suppress("UNUSED_PARAMETER")
                 fun parse(key: String, typeName: String, rawValue: ConfigObject): Valid<Addresses> = parse(rawValue.toConfig())
             }
 
-            private val addresses by nestedObject(AddressesSpec).map(AddressesSpec::parse)
+            private val addresses by nestedObject(AddressesSpec).flatMap(AddressesSpec::parse)
 
             override fun parseValid(configuration: Config): Valid<RpcSettings> {
 

@@ -285,7 +285,7 @@ class PropertyValidationTest {
 
         val key = "a"
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.string(key).map(::parseAddress)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.string(key).flatMap(::parseAddress)
 
         val host = "localhost"
         val port = 8080
@@ -301,7 +301,7 @@ class PropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.string(key).map(::parseAddress)
+        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.string(key).flatMap(::parseAddress)
 
         val host = "localhost"
         val port = 8080

@@ -69,7 +69,7 @@ object Configuration {
 
             interface Standard<TYPE> : Required<TYPE>, Single<TYPE> {
 
-                fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, Validation.Error>): Standard<MAPPED>
+                fun <MAPPED : Any> flatMap(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, Validation.Error>): Standard<MAPPED>
             }
 
             override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<TYPE, Validation.Error> {
