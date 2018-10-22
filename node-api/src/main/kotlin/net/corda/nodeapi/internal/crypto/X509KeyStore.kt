@@ -53,17 +53,17 @@ class X509KeyStore private constructor(val internal: KeyStore, private val store
         return uncheckedCast(certArray.asList())
     }
 
-    fun getCertificateAndKeyPair(alias: String, keyPassword: String = storePassword): CertificateAndKeyPair {
+    fun getCertificateAndKeyPair(alias: String, keyPassword: String): CertificateAndKeyPair {
         val cert = getCertificate(alias)
         val publicKey = Crypto.toSupportedPublicKey(cert.publicKey)
         return CertificateAndKeyPair(cert, KeyPair(publicKey, getPrivateKey(alias, keyPassword)))
     }
 
-    fun getPrivateKey(alias: String, keyPassword: String = storePassword): PrivateKey {
+    fun getPrivateKey(alias: String, keyPassword: String): PrivateKey {
         return internal.getSupportedKey(alias, keyPassword)
     }
 
-    fun setPrivateKey(alias: String, key: PrivateKey, certificates: List<X509Certificate>, keyPassword: String = storePassword) {
+    fun setPrivateKey(alias: String, key: PrivateKey, certificates: List<X509Certificate>, keyPassword: String) {
         internal.setKeyEntry(alias, key, keyPassword.toCharArray(), certificates.toTypedArray())
     }
 

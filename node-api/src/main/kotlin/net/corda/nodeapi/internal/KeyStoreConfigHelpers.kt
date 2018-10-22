@@ -27,7 +27,8 @@ fun CertificateStore.registerDevSigningCertificates(legalName: CordaX500Name,
                                                     devNodeCa: CertificateAndKeyPair = createDevNodeCa(intermediateCa, legalName)) {
 
     update {
-        setPrivateKey(X509Utilities.CORDA_CLIENT_CA, devNodeCa.keyPair.private, listOf(devNodeCa.certificate, intermediateCa.certificate, rootCert))
+        setPrivateKey(X509Utilities.CORDA_CLIENT_CA, devNodeCa.keyPair.private, listOf(devNodeCa.certificate, intermediateCa.certificate, rootCert),
+                this@registerDevSigningCertificates.entryPassword)
     }
 }
 
@@ -39,7 +40,8 @@ fun CertificateStore.registerDevP2pCertificates(legalName: CordaX500Name,
     update {
         val tlsKeyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, devNodeCa.certificate, devNodeCa.keyPair, legalName.x500Principal, tlsKeyPair.public)
-        setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKeyPair.private, listOf(tlsCert, devNodeCa.certificate, intermediateCa.certificate, rootCert))
+        setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKeyPair.private, listOf(tlsCert, devNodeCa.certificate, intermediateCa.certificate, rootCert),
+                this@registerDevP2pCertificates.entryPassword)
     }
 }
 
@@ -47,15 +49,14 @@ fun CertificateStore.storeLegalIdentity(alias: String, keyPair: KeyPair = Crypto
     val identityCertPath = query {
         val nodeCaCertPath = getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
         // Assume key password = store password.
-        val nodeCaCertAndKeyPair = getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
+        val nodeCaCertAndKeyPair = getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, this@storeLegalIdentity.entryPassword)
         // Create new keys and store in keystore.
         val identityCert = X509Utilities.createCertificate(CertificateType.LEGAL_IDENTITY, nodeCaCertAndKeyPair.certificate, nodeCaCertAndKeyPair.keyPair, nodeCaCertAndKeyPair.certificate.subjectX500Principal, keyPair.public)
         // TODO: X509Utilities.validateCertificateChain()
-        // Assume key password = store password.
         listOf(identityCert) + nodeCaCertPath
     }
     update {
-        setPrivateKey(alias, keyPair.private, identityCertPath)
+        setPrivateKey(alias, keyPair.private, identityCertPath, this@storeLegalIdentity.entryPassword)
     }
     return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
 }
@@ -96,6 +97,7 @@ const val DEV_CA_KEY_STORE_FILE: String = "cordadevcakeys.jks"
 const val DEV_CA_KEY_STORE_PASS: String = "cordacadevpass"
 const val DEV_CA_TRUST_STORE_FILE: String = "cordatruststore.jks"
 const val DEV_CA_TRUST_STORE_PASS: String = "trustpass"
+const val DEV_CA_TRUST_STORE_PRIVATE_KEY_PASS: String = "trustpasskeypass"
 
 // We need a class so that we can get hold of the class loader
 internal object DevCaHelper {
@@ -104,6 +106,8 @@ internal object DevCaHelper {
     }
 }
 
-fun loadDevCaKeyStore(classLoader: ClassLoader = DevCaHelper::class.java.classLoader): CertificateStore = CertificateStore.fromResource("certificates/$DEV_CA_KEY_STORE_FILE", DEV_CA_KEY_STORE_PASS, classLoader)
+fun loadDevCaKeyStore(classLoader: ClassLoader = DevCaHelper::class.java.classLoader): CertificateStore = CertificateStore.fromResource(
+        "certificates/$DEV_CA_KEY_STORE_FILE", DEV_CA_KEY_STORE_PASS, DEV_CA_PRIVATE_KEY_PASS, classLoader)
 
-fun loadDevCaTrustStore(classLoader: ClassLoader = DevCaHelper::class.java.classLoader): CertificateStore = CertificateStore.fromResource("certificates/$DEV_CA_TRUST_STORE_FILE", DEV_CA_TRUST_STORE_PASS, classLoader)
+fun loadDevCaTrustStore(classLoader: ClassLoader = DevCaHelper::class.java.classLoader): CertificateStore = CertificateStore.fromResource(
+        "certificates/$DEV_CA_TRUST_STORE_FILE", DEV_CA_TRUST_STORE_PASS, DEV_CA_TRUST_STORE_PRIVATE_KEY_PASS, classLoader)
