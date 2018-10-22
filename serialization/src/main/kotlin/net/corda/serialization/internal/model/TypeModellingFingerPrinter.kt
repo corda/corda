@@ -13,7 +13,7 @@ import java.lang.reflect.*
 import java.util.*
 
 // Bridges between [SerializerFactory] and [TypeModellingFingerPrinter].
-internal fun getTypeModellingFingerPrinter(factory: SerializerFactory): FingerPrinter {
+internal fun getTypeModellingFingerPrinter(factory: SerializerFactory): TypeModellingFingerPrinter {
     val customTypeDescriptorLookup = object : CustomTypeDescriptorLookup {
         override fun getCustomTypeDescriptor(type: Type): String? =
                 factory.findCustomSerializer(type.asClass(), type)?.typeDescriptor?.toString()

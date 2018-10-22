@@ -241,9 +241,6 @@ private val Type.upperBound: Type
         is WildcardType -> when {
             this.upperBounds.isEmpty() || this.upperBounds.size > 1 -> this
             else -> this.upperBounds[0]
-        }.let { upperBound ->
-            // Keep wildcard with Object upper bound as wildcard
-            if (upperBound == Any::class.java) this else upperBound
         }
         else -> this
     }

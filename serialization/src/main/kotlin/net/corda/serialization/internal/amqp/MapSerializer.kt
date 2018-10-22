@@ -68,7 +68,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
                                 .toParameterized(TypeIdentifier.Top, TypeIdentifier.Top)
                                 .getLocalType(
                                         collectionClass.classLoader ?:
-                                        TypeIdentifier.javaClass.classLoader) as ParameterizedType
+                                        TypeIdentifier::class.java.classLoader) as ParameterizedType
 
 
         private fun findMostSuitableMapType(actualClass: Class<*>): Class<out Map<*, *>> =

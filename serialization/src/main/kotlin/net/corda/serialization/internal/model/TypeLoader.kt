@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.model
 
+import net.corda.serialization.internal.amqp.asClass
 import net.corda.serialization.internal.carpenter.ClassCarpenter
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -38,7 +39,7 @@ class ClassCarpentingTypeLoader(private val carpenter: ClassCarpenter): TypeLoad
 
         for (information in uncached) {
             try {
-                existingClasses[information.typeIdentifier] = information.typeIdentifier.rawClass
+                existingClasses[information.typeIdentifier] = information.typeIdentifier.getLocalType().asClass()
             } catch (e: ClassNotFoundException) {
                 requiringCarpentry += information
             }
@@ -48,13 +49,16 @@ class ClassCarpentingTypeLoader(private val carpenter: ClassCarpenter): TypeLoad
 
         // Try again for classes that had to be carpented into existence.
         for (information in requiringCarpentry) {
-            existingClasses[information.typeIdentifier] = information.typeIdentifier.rawClass
+            existingClasses[information.typeIdentifier] = information.typeIdentifier.getLocalType().asClass()
         }
 
         return makeType(remoteTypeInformation.typeIdentifier, existingClasses)
     }
 
+    @Suppress("unused")
     private fun carpent(types: List<RemoteTypeInformation>) {
+        if (types.isEmpty()) return
+        types.forEach { println(it.prettyPrint()) }
         throw UnsupportedOperationException("Not implemented yet") // TODO: convert remote type information to carpenter schema
     }
 
@@ -65,12 +69,6 @@ class ClassCarpentingTypeLoader(private val carpenter: ClassCarpenter): TypeLoad
                         typeIdentifier.parameters.map { makeType(it, classLookup) })
                 else -> classLookup[typeIdentifier]!!
             }.apply { cache.putIfAbsent(typeIdentifier, this) }
-
-    private val TypeIdentifier.rawClass get() = when(this) {
-        is TypeIdentifier.Top,
-        is TypeIdentifier.Unknown -> Any::class.java
-        else -> Class.forName(name)
-    }
 
     // Recursively traverse all of the types connected to this type in the remote type DAG.
     private val RemoteTypeInformation.traverse: Sequence<RemoteTypeInformation> get() = sequenceOf(this) + when(this) {

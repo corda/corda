@@ -17,27 +17,17 @@ sealed class RemoteTypeInformation {
     abstract val typeIdentifier: TypeIdentifier
 
     //region Pretty printing
-    /*
+
     fun prettyPrint(indent: Int = 0): String {
         return when (this) {
-            is RemoteTypeInformation.Abstract ->
-                typeIdentifier.prettyPrint() + printInterfaces(interfaces) + printProperties(properties, indent + 1)
             is RemoteTypeInformation.AnInterface ->
                 typeIdentifier.prettyPrint() + printInterfaces(interfaces)
             is RemoteTypeInformation.APojo -> typeIdentifier.prettyPrint() +
-                    printConstructor(constructor) +
                     printInterfaces(interfaces) +
                     printProperties(properties, indent + 1)
             else -> typeIdentifier.prettyPrint()
         }
     }
-
-    private fun printConstructor(constructor: RemoteConstructorInformation) =
-            constructor.parameters.joinToString(", ", "(", ")") {
-                it.name +
-                ": " + it.type.typeIdentifier.prettyPrint() +
-                (if (!it.isMandatory) "?" else "")
-            }
 
     private fun printInterfaces(interfaces: List<RemoteTypeInformation>) =
             if (interfaces.isEmpty()) ""
@@ -52,7 +42,6 @@ sealed class RemoteTypeInformation {
             "  ".repeat(indent) + key +
                     (if(!value.isMandatory) " (optional)" else "") +
                     ": " + value.type.prettyPrint(indent)
-                    */
     //endregion
 
     object Unknown : RemoteTypeInformation() {

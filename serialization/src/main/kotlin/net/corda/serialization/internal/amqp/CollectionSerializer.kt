@@ -63,7 +63,7 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
                                 .toParameterized(TypeIdentifier.Top)
                                 .getLocalType(
                                 collectionClass.classLoader ?:
-                                TypeIdentifier.javaClass.classLoader) as ParameterizedType
+                                TypeIdentifier::class.java.classLoader) as ParameterizedType
 
         private fun findMostSuitableCollectionType(actualClass: Class<*>): Class<out Collection<*>> =
                 supportedTypes.keys.findLast { it.isAssignableFrom(actualClass) }!!

@@ -3,6 +3,8 @@ package net.corda.serialization.internal.amqp
 import net.corda.serialization.internal.model.RemotePropertyInformation
 import net.corda.serialization.internal.model.RemoteTypeInformation
 import net.corda.serialization.internal.model.TypeIdentifier
+import net.corda.serialization.internal.model.isCollectionOrMap
+import java.lang.reflect.ParameterizedType
 
 class AMQPRemoteTypeModel {
 
@@ -22,10 +24,7 @@ class AMQPRemoteTypeModel {
 
     private fun CompositeType.interpretComposite(identifier: TypeIdentifier, notationLookup: Map<TypeIdentifier, TypeNotation>): RemoteTypeInformation {
         val properties = fields.asSequence().map { it.interpret(notationLookup) }.toMap()
-        val typeParameters = when (identifier) {
-            is TypeIdentifier.Parameterised -> identifier.parameters.map { it.interpretIdentifier(notationLookup) }
-            else -> emptyList()
-        }
+        val typeParameters = identifier.interpretTypeParameters(notationLookup)
         val interfaceIdentifiers = provides.map { name -> name.typeIdentifier }
         val isInterface = identifier in interfaceIdentifiers
         val interfaces = interfaceIdentifiers.mapNotNull { interfaceIdentifier ->
@@ -40,13 +39,24 @@ class AMQPRemoteTypeModel {
         else RemoteTypeInformation.APojo(typeDescriptor, identifier, properties, interfaces, typeParameters)
     }
 
-    private fun RestrictedType.interpretRestricted(identifier: TypeIdentifier, notationLookup: Map<TypeIdentifier, TypeNotation>): RemoteTypeInformation {
-        throw TODO("Deal with enums")
-    }
+    private fun TypeIdentifier.interpretTypeParameters(notationLookup: Map<TypeIdentifier, TypeNotation>): List<RemoteTypeInformation> = when (this) {
+            is TypeIdentifier.Parameterised -> parameters.map { it.interpretIdentifier(notationLookup) }
+            else -> emptyList()
+        }
+
+    private fun RestrictedType.interpretRestricted(identifier: TypeIdentifier, notationLookup: Map<TypeIdentifier, TypeNotation>): RemoteTypeInformation =
+        when (identifier) {
+            is TypeIdentifier.Parameterised -> RemoteTypeInformation.Parameterised(identifier, identifier.interpretTypeParameters(notationLookup))
+            is TypeIdentifier.ArrayOf -> RemoteTypeInformation.AnArray(identifier, identifier.componentType.interpretIdentifier(notationLookup))
+            else -> throw TODO("Deal with enums")
+        }
 
     private fun Field.interpret(notationLookup: Map<TypeIdentifier, TypeNotation>): Pair<String, RemotePropertyInformation> {
+        val identifier = type.typeIdentifier
+        val fieldTypeIdentifier = if (identifier == TypeIdentifier.Top && !requires.isEmpty()) requires[0].typeIdentifier else identifier
+        val fieldType = fieldTypeIdentifier.interpretIdentifier(notationLookup)
         return name to RemotePropertyInformation(
-                type.typeIdentifier.interpretIdentifier(notationLookup),
+                fieldType,
                 mandatory)
     }
 

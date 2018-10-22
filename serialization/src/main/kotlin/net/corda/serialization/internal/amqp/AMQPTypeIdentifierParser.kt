@@ -41,7 +41,7 @@ object AMQPTypeIdentifierParser {
 
         for (c in typeString) {
             if (c.isWhitespace() || c.isJavaIdentifierPart() || c.isJavaIdentifierStart() ||
-                    c == '.' || c == ',' || c == '?') continue
+                    c == '.' || c == ',' || c == '?' || c == '*') continue
 
             when(c) {
                 '<' -> maxTypeParamDepth = Math.max(++typeParamdepth, typeParamdepth)

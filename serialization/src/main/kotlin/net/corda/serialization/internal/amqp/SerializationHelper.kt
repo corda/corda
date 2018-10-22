@@ -4,6 +4,7 @@ import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeToken
 import net.corda.core.internal.isConcreteClass
 import net.corda.core.serialization.*
+import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.*
 import java.lang.reflect.Field
@@ -309,8 +310,9 @@ internal fun Type.asClass(): Class<*> {
 
 internal fun Type.asArray(): Type? {
     return when(this) {
-        is Class<*> -> this.arrayClass()
-        is ParameterizedType -> DeserializedGenericArrayType(this)
+        is Class<*>,
+        is ParameterizedType -> TypeIdentifier.ArrayOf(TypeIdentifier.forGenericType(this))
+                .getLocalType(this::class.java.classLoader ?: TypeIdentifier::class.java.classLoader)
         else -> null
     }
 }
@@ -324,9 +326,10 @@ internal fun Type.componentType(): Type {
     return (this as? Class<*>)?.componentType ?: (this as GenericArrayType).genericComponentType
 }
 
-internal fun Class<*>.asParameterizedType(): ParameterizedType {
-    return DeserializedParameterizedType(this, this.typeParameters)
-}
+internal fun Class<*>.asParameterizedType(): ParameterizedType =
+    TypeIdentifier.Erased(this.name, this.typeParameters.size)
+            .toParameterized(this.typeParameters.map { TypeIdentifier.forGenericType(it) })
+            .getLocalType(classLoader ?: TypeIdentifier::class.java.classLoader) as ParameterizedType
 
 internal fun Type.asParameterizedType(): ParameterizedType {
     return when (this) {
