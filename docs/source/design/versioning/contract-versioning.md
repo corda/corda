@@ -190,6 +190,9 @@ Another way to look at this:
 The serialisation engine needs to implement the above rules, and needs to run in this `Strict Mode` during transaction verification.
 This mode can be implemented as a new `SerializationContext`.
 
+The same serialization evolution `Strict Mode` needs to be enforced any time ContractStates or Commands are serialized. 
+This is to ensure that when flows communicate to older versions, the older node will not sign something that he doesn't know.
+ 
 
 ##### Backwards compatibility
 
