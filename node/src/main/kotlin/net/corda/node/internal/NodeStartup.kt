@@ -231,7 +231,8 @@ open class NodeStartup : NodeStartupLogging {
     }
 
     protected open fun banJavaSerialisation(conf: NodeConfiguration) {
-        SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
+        // Note that in dev mode this filter can be overridden by a notary service implementation.
+        SerialFilter.install(::defaultSerialFilter)
     }
 
     /** This filter is required for BFT-Smart to work as it only supports Java serialization. */
