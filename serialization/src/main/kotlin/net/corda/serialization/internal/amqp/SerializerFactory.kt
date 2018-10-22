@@ -7,7 +7,10 @@ import net.corda.core.StubOutForDJVM
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.utilities.*
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.trace
 import net.corda.serialization.internal.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
@@ -95,6 +98,8 @@ open class SerializerFactory(
 
     val classloader: ClassLoader get() = classCarpenter.classloader
 
+    private data class MemoType(val actualClass: Class<*>?, val declaredType: Type) : Type
+
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
      *
@@ -106,50 +111,54 @@ open class SerializerFactory(
         // can be useful to enable but will be *extremely* chatty if you do
         logger.trace { "Get Serializer for $actualClass ${declaredType.typeName}" }
 
-        val declaredClass = declaredType.asClass()
-        val actualType: Type = if (actualClass == null) declaredType
-        else inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
+        val ourType = MemoType(actualClass, declaredType)
+        return serializersByType.get(ourType) ?: run {
 
-        val serializer = when {
+            val declaredClass = declaredType.asClass()
+            val actualType: Type = if (actualClass == null) declaredType
+            else inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
+
+            val serializer = when {
             // Declared class may not be set to Collection, but actual class could be a collection.
             // In this case use of CollectionSerializer is perfectly appropriate.
-            (Collection::class.java.isAssignableFrom(declaredClass) ||
-                    (actualClass != null && Collection::class.java.isAssignableFrom(actualClass))) &&
-                    !EnumSet::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
-                val declaredTypeAmended = CollectionSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
-                serializersByType.computeIfAbsent(declaredTypeAmended) {
-                    CollectionSerializer(declaredTypeAmended, this)
+                (Collection::class.java.isAssignableFrom(declaredClass) ||
+                        (actualClass != null && Collection::class.java.isAssignableFrom(actualClass))) &&
+                        !EnumSet::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
+                    val declaredTypeAmended = CollectionSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
+                    serializersByType.computeIfAbsent(declaredTypeAmended) {
+                        CollectionSerializer(declaredTypeAmended, this)
+                    }
                 }
-            }
             // Declared class may not be set to Map, but actual class could be a map.
             // In this case use of MapSerializer is perfectly appropriate.
-            (Map::class.java.isAssignableFrom(declaredClass) ||
-                    (actualClass != null && Map::class.java.isAssignableFrom(actualClass))) -> {
-                val declaredTypeAmended = MapSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
-                serializersByType.computeIfAbsent(declaredTypeAmended) {
-                    makeMapSerializer(declaredTypeAmended)
+                (Map::class.java.isAssignableFrom(declaredClass) ||
+                        (actualClass != null && Map::class.java.isAssignableFrom(actualClass))) -> {
+                    val declaredTypeAmended = MapSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
+                    serializersByType.computeIfAbsent(declaredTypeAmended) {
+                        makeMapSerializer(declaredTypeAmended)
+                    }
                 }
-            }
-            Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
-                logger.trace {
-                    "class=[${actualClass?.simpleName} | $declaredClass] is an enumeration " +
-                            "declaredType=${declaredType.typeName} " +
-                            "isEnum=${declaredType::class.java.isEnum}"
-                }
+                Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
+                    logger.trace {
+                        "class=[${actualClass?.simpleName} | $declaredClass] is an enumeration " +
+                                "declaredType=${declaredType.typeName} " +
+                                "isEnum=${declaredType::class.java.isEnum}"
+                    }
 
-                serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
-                    whitelist.requireWhitelisted(actualType)
-                    EnumSerializer(actualType, actualClass ?: declaredClass, this)
+                    serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
+                        whitelist.requireWhitelisted(actualType)
+                        EnumSerializer(actualType, actualClass ?: declaredClass, this)
+                    }
+                }
+                else -> {
+                    makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
                 }
             }
-            else -> {
-                makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
-            }
+
+            serializersByDescriptor.putIfAbsent(serializer.typeDescriptor, serializer)
+            serializersByType.putIfAbsent(ourType, serializer)
+            return serializer
         }
-
-        serializersByDescriptor.putIfAbsent(serializer.typeDescriptor, serializer)
-
-        return serializer
     }
 
     /**

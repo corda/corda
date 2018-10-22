@@ -31,8 +31,10 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
                                                               override val useCase: SerializationContext.UseCase,
                                                               override val encoding: SerializationEncoding?,
                                                               override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist,
-                                                              override val lenientCarpenterEnabled: Boolean = false) : SerializationContext {
-    private val builder = AttachmentsClassLoaderBuilder(properties, deserializationClassLoader)
+                                                              override val lenientCarpenterEnabled: Boolean = false,
+                                                              private val builder: AttachmentsClassLoaderBuilder = AttachmentsClassLoaderBuilder(properties, deserializationClassLoader)
+) : SerializationContext {
+
 
     /**
      * {@inheritDoc}
@@ -75,7 +77,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
  * can replace it with an alternative version.
  */
 @DeleteForDJVM
-internal class AttachmentsClassLoaderBuilder(private val properties: Map<Any, Any>, private val deserializationClassLoader: ClassLoader) {
+class AttachmentsClassLoaderBuilder(private val properties: Map<Any, Any>, private val deserializationClassLoader: ClassLoader) {
     private val cache: Cache<List<SecureHash>, AttachmentsClassLoader> = Caffeine.newBuilder().weakValues().maximumSize(1024).build()
 
     fun build(attachmentHashes: List<SecureHash>): AttachmentsClassLoader? {
@@ -120,12 +122,12 @@ open class SerializationFactoryImpl(
         // truncate sequence to at most magicSize, and make sure it's a copy to avoid holding onto large ByteArrays
         val magic = CordaSerializationMagic(byteSequence.slice(end = magicSize).copyBytes())
         val lookupKey = magic to target
-        return schemes.computeIfAbsent(lookupKey) {
+        return (schemes.get(lookupKey) ?: schemes.computeIfAbsent(lookupKey) {
             registeredSchemes.filter { it.canDeserializeVersion(magic, target) }.forEach { return@computeIfAbsent it } // XXX: Not single?
             logger.warn("Cannot find serialization scheme for: [$lookupKey, " +
                     "${if (magic == amqpMagic) "AMQP" else "UNKNOWN MAGIC"}] registeredSchemes are: $registeredSchemes")
             throw UnsupportedOperationException("Serialization scheme $lookupKey not supported.")
-        } to magic
+        }) to magic
     }
 
     @Throws(NotSerializableException::class)
