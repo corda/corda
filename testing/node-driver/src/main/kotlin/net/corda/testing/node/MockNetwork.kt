@@ -17,6 +17,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.internal.*
+import rx.Observable
 import java.math.BigInteger
 import java.nio.file.Path
 import java.util.concurrent.Future
@@ -155,7 +156,7 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
     fun <T> startFlow(logic: FlowLogic<T>): CordaFuture<T> = node.services.startFlow(logic, node.services.newContext()).getOrThrow().resultFuture
 
     /** Register a flow that is initiated by another flow .**/
-    fun <F : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<F>) = node.registerInitiatedFlow(initiatedFlowClass)
+    fun <F : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<F>): Observable<F> = node.registerInitiatedFlow(initiatedFlowClass)
 
     /** Stop the node. **/
     fun stop() = node.internals.stop()

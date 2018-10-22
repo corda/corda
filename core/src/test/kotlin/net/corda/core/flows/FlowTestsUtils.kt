@@ -103,7 +103,7 @@ private fun Array<out Pair<FlowSession, Class<out Any>>>.enforceNoDuplicates() {
     require(this.size == this.toSet().size) { "A flow session can only appear once as argument." }
 }
 
-inline fun <reified P : FlowLogic<*>> TestStartedNode.registerCordAppFlowFactory(
+inline fun <reified P : FlowLogic<*>> TestStartedNode.registerCordappFlowFactory(
         initiatingFlowClass: KClass<out FlowLogic<*>>,
         initiatedFlowVersion: Int = 1,
         noinline flowFactory: (FlowSession) -> P): CordaFuture<P> {

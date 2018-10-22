@@ -147,7 +147,7 @@ class AttachmentSerializationTest {
     }
 
     private fun launchFlow(clientLogic: ClientLogic, rounds: Int, sendData: Boolean = false) {
-        server.registerCordAppFlowFactory(
+        server.registerCordappFlowFactory(
                 ClientLogic::class,
                 1
         ) { ServerLogic(it, sendData) }

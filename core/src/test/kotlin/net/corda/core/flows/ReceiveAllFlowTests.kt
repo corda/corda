@@ -45,7 +45,7 @@ class ReceiveMultipleFlowTests : WithMockNet {
             }
         }
 
-        nodes[1].registerCordAppFlowFactory(initiatingFlow::class) { session ->
+        nodes[1].registerCordappFlowFactory(initiatingFlow::class) { session ->
             object : FlowLogic<Unit>() {
                 @Suspendable
                 override fun call() {
@@ -128,7 +128,7 @@ class ReceiveMultipleFlowTests : WithMockNet {
 }
 
 private inline fun <reified T> TestStartedNode.registerAnswer(kClass: KClass<out FlowLogic<Any>>, value1: T) {
-    this.registerCordAppFlowFactory(kClass) { session ->
+    this.registerCordappFlowFactory(kClass) { session ->
         object : FlowLogic<Unit>() {
             @Suspendable
             override fun call() {

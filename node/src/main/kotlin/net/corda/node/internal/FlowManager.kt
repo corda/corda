@@ -14,24 +14,27 @@ import net.corda.node.services.statemachine.appName
 import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.reflect.KClass
-/*
 
-This class is responsible for organising which flow should respond to a specific @InitiatingFlow
-
-There are two main ways to modify the behaviour of a cordapp with regards to responding with a different flow
-
-    1.) implementing a new subclass. For example, if we have a ResponderFlow similar to  @InitiatedBy(Sender) MyBaseResponder : FlowLogic
-        If we subclassed a new Flow with specific logic for DB2, it would be similar to IBMB2Responder() : MyBaseResponder
-        When these two flows are encountered by the classpath scan for @InitiatedBy, they will both be selected for responding to Sender
-        This implementation will sort them for responding in order of their "depth" from FlowLogic - see: FlowWeightComparator
-        So IBMB2Responder would win and it would be selected for responding
-
-    2.) It is possible to specify a flowOverride key in the node configuration. Say we configure a node to have
-        flowOverrides{
-          "Sender" = "MyBaseResponder"
-        }
-        In this case, FlowWeightComparator would detect that there is an override in action, and it will assign MyBaseResponder a maximum weight
-        This will result in MyBaseResponder being selected for responding to Sender
+/**
+ *
+ * This class is responsible for organising which flow should respond to a specific @InitiatingFlow
+ *
+ * There are two main ways to modify the behaviour of a cordapp with regards to responding with a different flow
+ *
+ *    1.) implementing a new subclass. For example, if we have a ResponderFlow similar to  @InitiatedBy(Sender) MyBaseResponder : FlowLogic
+ *        If we subclassed a new Flow with specific logic for DB2, it would be similar to IBMB2Responder() : MyBaseResponder
+ *        When these two flows are encountered by the classpath scan for @InitiatedBy, they will both be selected for responding to Sender
+ *        This implementation will sort them for responding in order of their "depth" from FlowLogic - see: FlowWeightComparator
+ *        So IBMB2Responder would win and it would be selected for responding
+ *
+ *    2.) It is possible to specify a flowOverride key in the node configuration. Say we configure a node to have
+ *        flowOverrides{
+ *          "Sender" = "MyBaseResponder"
+ *        }
+ *        In this case, FlowWeightComparator would detect that there is an override in action, and it will assign MyBaseResponder a maximum weight
+ *        This will result in MyBaseResponder being selected for responding to Sender
+ *
+ *
  */
 interface FlowManager {
 
@@ -116,7 +119,7 @@ open class NodeFlowManager(flowOverrides: FlowOverrideConfig? = null) : FlowMana
 
     }
 
-    //TODO Harmonise use of these methods - 99% of invocations come from tests.
+    // TODO Harmonise use of these methods - 99% of invocations come from tests.
     @Synchronized
     override fun registerInitiatedCoreFlowFactory(initiatingFlowClass: KClass<out FlowLogic<*>>, initiatedFlowClass: KClass<out FlowLogic<*>>?, flowFactory: (FlowSession) -> FlowLogic<*>) {
         registerInitiatedCoreFlowFactory(initiatingFlowClass, initiatedFlowClass, InitiatedFlowFactory.Core(flowFactory))
@@ -142,8 +145,8 @@ open class NodeFlowManager(flowOverrides: FlowOverrideConfig? = null) : FlowMana
         log.debug { "Installed core flow ${initiatingFlowClass.java.name}" }
     }
 
-    //To verify the integrity of the current state, it is important that the tip of the responders is a unique weight
-    //if there are multiple flows with the same weight as the tip, it means that it is impossible to reliably pick one as the responder
+    // To verify the integrity of the current state, it is important that the tip of the responders is a unique weight
+    // if there are multiple flows with the same weight as the tip, it means that it is impossible to reliably pick one as the responder
     private fun validateInvariants(toValidate: List<RegisteredFlowContainer>) {
         val currentTip = toValidate.first()
         val flowWeightComparator = FlowWeightComparator(currentTip.initiatingFlowClass, flowOverrides)
@@ -166,11 +169,11 @@ open class NodeFlowManager(flowOverrides: FlowOverrideConfig? = null) : FlowMana
     }
 
     private data class RegisteredFlowContainer(val initiatingFlowClass: Class<out FlowLogic<*>>,
-                                       val initiatedFlowClass: Class<out FlowLogic<*>>?,
-                                       val flowFactory: InitiatedFlowFactory<FlowLogic<*>>,
-                                       val type: FlowType)
+                                               val initiatedFlowClass: Class<out FlowLogic<*>>?,
+                                               val flowFactory: InitiatedFlowFactory<FlowLogic<*>>,
+                                               val type: FlowType)
 
-    //this is used to sort the responding flows in order of "importance"
+    // this is used to sort the responding flows in order of "importance"
     // the logic is as follows
     // IF responder is a specific lambda (like for notary implementations / testing code) always return that responder
     // ELSE IF responder is present in the overrides list, always return that responder
@@ -179,10 +182,10 @@ open class NodeFlowManager(flowOverrides: FlowOverrideConfig? = null) : FlowMana
 
         override fun compare(o1: NodeFlowManager.RegisteredFlowContainer, o2: NodeFlowManager.RegisteredFlowContainer): Int {
             if (o1.initiatedFlowClass == null && o2.initiatedFlowClass != null) {
-                return Int.MAX_VALUE
+                return Int.MIN_VALUE
             }
             if (o1.initiatedFlowClass != null && o2.initiatedFlowClass == null) {
-                return Int.MIN_VALUE
+                return Int.MAX_VALUE
             }
 
             if (o1.initiatedFlowClass == null && o2.initiatedFlowClass == null) {
