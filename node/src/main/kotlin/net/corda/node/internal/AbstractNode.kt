@@ -874,7 +874,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val keyStore = configuration.signingCertificateStore.get()
 
         val privateKeyAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key"
-        val keyPair = keyStore.query { getCertificateAndKeyPair(privateKeyAlias) }.keyPair
+        val keyPair = keyStore.query { getCertificateAndKeyPair(privateKeyAlias, keyStore.entryPassword) }.keyPair
 
         val compositeKeyAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key"
         val certificates = if (compositeKeyAlias in keyStore) {
