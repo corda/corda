@@ -112,7 +112,7 @@ task deployNodesRaft(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
         notary = [
                 validating: true,
                 serviceLegalName: "O=Raft,L=Zurich,C=CH",
-                raft: [
+                extraConfig: [
                         nodeAddress: "localhost:10008"
                 ],
                 className: className
@@ -128,7 +128,7 @@ task deployNodesRaft(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
         notary = [
                 validating: true,
                 serviceLegalName: "O=Raft,L=Zurich,C=CH",
-                raft: [
+                extraConfig: [
                         nodeAddress: "localhost:10012",
                         clusterAddresses: ["localhost:10008"]
                 ],
@@ -145,7 +145,7 @@ task deployNodesRaft(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
         notary = [
                 validating: true,
                 serviceLegalName: "O=Raft,L=Zurich,C=CH",
-                raft: [
+                extraConfig: [
                         nodeAddress: "localhost:10016",
                         clusterAddresses: ["localhost:10008"]
                 ],
@@ -181,7 +181,7 @@ task deployNodesBFT(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
         notary = [
                 validating: false,
                 serviceLegalName: "O=BFT,L=Zurich,C=CH",
-                bftSMaRt: [
+                extraConfig: [
                         replicaId: 0,
                         clusterAddresses: clusterAddresses
                 ],
@@ -198,7 +198,7 @@ task deployNodesBFT(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
         notary = [
                 validating: false,
                 serviceLegalName: "O=BFT,L=Zurich,C=CH",
-                bftSMaRt: [
+                extraConfig: [
                         replicaId: 1,
                         clusterAddresses: clusterAddresses
                 ],
@@ -215,7 +215,7 @@ task deployNodesBFT(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
         notary = [
                 validating: false,
                 serviceLegalName: "O=BFT,L=Zurich,C=CH",
-                bftSMaRt: [
+                extraConfig: [
                         replicaId: 2,
                         clusterAddresses: clusterAddresses
                 ],
@@ -232,7 +232,7 @@ task deployNodesBFT(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
         notary = [
                 validating: false,
                 serviceLegalName: "O=BFT,L=Zurich,C=CH",
-                bftSMaRt: [
+                extraConfig: [
                         replicaId: 3,
                         clusterAddresses: clusterAddresses
                 ],

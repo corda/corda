@@ -268,7 +268,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
         val trustRoot = initKeyStores()
-        val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
+        val (identity, identityKeyPair) = obtainIdentity()
         startDatabase()
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
@@ -323,7 +323,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         networkMapCache.start(netParams.notaries)
 
         startDatabase()
-        val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
+        val (identity, identityKeyPair) = obtainIdentity()
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
 
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
@@ -400,8 +400,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val keyPairs = mutableSetOf(identityKeyPair)
 
         val myNotaryIdentity = configuration.notary?.let {
-            if (it.isClusterConfig) {
-                val (notaryIdentity, notaryIdentityKeyPair) = obtainIdentity(it)
+            if (it.serviceLegalName != null) {
+                val (notaryIdentity, notaryIdentityKeyPair) = loadNotaryClusterIdentity(it.serviceLegalName)
                 keyPairs += notaryIdentityKeyPair
                 notaryIdentity
             } else {
@@ -840,24 +840,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                                  myNotaryIdentity: PartyAndCertificate?,
                                                  networkParameters: NetworkParameters)
 
-    private fun obtainIdentity(notaryConfig: NotaryConfig?): Pair<PartyAndCertificate, KeyPair> {
+    /** Loads or generates the node's legal identity and key-pair. */
+    private fun obtainIdentity(): Pair<PartyAndCertificate, KeyPair> {
         val keyStore = configuration.signingCertificateStore.get()
+        val legalName = configuration.myLegalName
 
-        val (id, singleName) = if (notaryConfig == null || !notaryConfig.isClusterConfig) {
-            // Node's main identity or if it's a single node notary.
-            Pair(NODE_IDENTITY_ALIAS_PREFIX, configuration.myLegalName)
-        } else {
-            // The node is part of a distributed notary whose identity must already be generated beforehand.
-            Pair(DISTRIBUTED_NOTARY_ALIAS_PREFIX, null)
-        }
         // TODO: Integrate with Key management service?
-        val privateKeyAlias = "$id-private-key"
-
+        val privateKeyAlias = "$NODE_IDENTITY_ALIAS_PREFIX-private-key"
         if (privateKeyAlias !in keyStore) {
-            // We shouldn't have a distributed notary at this stage, so singleName should NOT be null.
-            requireNotNull(singleName) {
-                "Unable to find in the key store the identity of the distributed notary the node is part of"
-            }
             log.info("$privateKeyAlias not found in key store, generating fresh key!")
             keyStore.storeLegalIdentity(privateKeyAlias, generateKeyPair())
         }
@@ -865,30 +855,41 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val (x509Cert, keyPair) = keyStore.query { getCertificateAndKeyPair(privateKeyAlias, keyStore.entryPassword) }
 
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
-        val compositeKeyAlias = "$id-composite-key"
+        val certificates = keyStore.query { getCertificateChain(privateKeyAlias) }
+        check(certificates.first() == x509Cert) {
+            "Certificates from key store do not line up!"
+        }
+
+        val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
+        if (subject != legalName) {
+            throw ConfigurationException("The name '$legalName' for $NODE_IDENTITY_ALIAS_PREFIX doesn't match what's in the key store: $subject")
+        }
+
+        val certPath = X509Utilities.buildCertPath(certificates)
+        return Pair(PartyAndCertificate(certPath), keyPair)
+    }
+
+    /** Loads pre-generated notary service cluster identity. */
+    private fun loadNotaryClusterIdentity(serviceLegalName: CordaX500Name): Pair<PartyAndCertificate, KeyPair> {
+        val keyStore = configuration.signingCertificateStore.get()
+
+        val privateKeyAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key"
+        val keyPair = keyStore.query { getCertificateAndKeyPair(privateKeyAlias) }.keyPair
+
+        val compositeKeyAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key"
         val certificates = if (compositeKeyAlias in keyStore) {
-            // Use composite key instead if it exists.
             val certificate = keyStore[compositeKeyAlias]
             // We have to create the certificate chain for the composite key manually, this is because we don't have a keystore
             // provider that understand compositeKey-privateKey combo. The cert chain is created using the composite key certificate +
             // the tail of the private key certificates, as they are both signed by the same certificate chain.
             listOf(certificate) + keyStore.query { getCertificateChain(privateKeyAlias) }.drop(1)
-        } else {
-            keyStore.query { getCertificateChain(privateKeyAlias) }.let {
-                check(it[0] == x509Cert) { "Certificates from key store do not line up!" }
-                it
-            }
-        }
+        } else throw IllegalStateException("The identity public key for the notary service $serviceLegalName was not found in the key store.")
 
-        val subject = CordaX500Name.build(certificates[0].subjectX500Principal)
-        if (singleName != null && subject != singleName) {
-            throw ConfigurationException("The name '$singleName' for $id doesn't match what's in the key store: $subject")
-        } else if (notaryConfig != null && notaryConfig.isClusterConfig && notaryConfig.serviceLegalName != null && subject != notaryConfig.serviceLegalName) {
-            // Note that we're not checking if `notaryConfig.serviceLegalName` is not present for backwards compatibility.
-            throw ConfigurationException("The name of the notary service '${notaryConfig.serviceLegalName}' for $id doesn't " +
+        val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
+        if (subject != serviceLegalName) {
+            throw ConfigurationException("The name of the notary service '$serviceLegalName' for $DISTRIBUTED_NOTARY_ALIAS_PREFIX doesn't " +
                     "match what's in the key store: $subject. You might need to adjust the configuration of `notary.serviceLegalName`.")
         }
-
         val certPath = X509Utilities.buildCertPath(certificates)
         return Pair(PartyAndCertificate(certPath), keyPair)
     }

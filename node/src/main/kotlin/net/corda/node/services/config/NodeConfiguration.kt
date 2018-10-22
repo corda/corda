@@ -11,12 +11,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
-import net.corda.nodeapi.internal.config.SslConfiguration
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
-import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
 import org.slf4j.Logger
@@ -73,7 +68,7 @@ interface NodeConfiguration {
     val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
     val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
     val crlCheckSoftFail: Boolean
-    val jmxReporterType : JmxReporterType? get() = defaultJmxReporterType
+    val jmxReporterType: JmxReporterType? get() = defaultJmxReporterType
 
     val baseDirectory: Path
     val certificatesDirectory: Path
@@ -119,34 +114,16 @@ fun NodeConfiguration.shouldStartSSHDaemon() = this.sshd != null
 fun NodeConfiguration.shouldStartLocalShell() = !this.noLocalShell && System.console() != null && this.devMode
 fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || shouldStartSSHDaemon()
 
-data class NotaryConfig(val validating: Boolean,
-                        val raft: RaftConfig? = null,
-                        val bftSMaRt: BFTSMaRtConfiguration? = null,
-                        val serviceLegalName: CordaX500Name? = null,
-                        val className: String = "net.corda.node.services.transactions.SimpleNotaryService"
-) {
-    init {
-        require(raft == null || bftSMaRt == null) {
-            "raft and bftSMaRt configs cannot be specified together"
-        }
-    }
-
-    val isClusterConfig: Boolean get() = raft != null || bftSMaRt != null
-}
-
-data class RaftConfig(val nodeAddress: NetworkHostAndPort, val clusterAddresses: List<NetworkHostAndPort>)
-
-/** @param exposeRaces for testing only, so its default is not in reference.conf but here. */
-data class BFTSMaRtConfiguration(
-        val replicaId: Int,
-        val clusterAddresses: List<NetworkHostAndPort>,
-        val debug: Boolean = false,
-        val exposeRaces: Boolean = false
-) {
-    init {
-        require(replicaId >= 0) { "replicaId cannot be negative" }
-    }
-}
+data class NotaryConfig(
+        /** Specifies whether the notary validates transactions or not. */
+        val validating: Boolean,
+        /** The legal name of cluster in case of a distributed notary service. */
+        val serviceLegalName: CordaX500Name? = null,
+        /** The name of the notary service class to load. */
+        val className: String = "net.corda.node.services.transactions.SimpleNotaryService",
+        /** Notary implementation-specific configuration parameters. */
+        val extraConfig: Config? = null
+)
 
 /**
  * Used as an alternative to the older compatibilityZoneURL to allow the doorman and network map
@@ -167,7 +144,7 @@ data class NetworkServicesConfig(
         val doormanURL: URL,
         val networkMapURL: URL,
         val pnm: UUID? = null,
-        val inferred : Boolean = false
+        val inferred: Boolean = false
 )
 
 /**
@@ -360,7 +337,7 @@ data class NodeConfigurationImpl(
 
     override val effectiveH2Settings: NodeH2Settings?
         get() = when {
-            h2port != null -> NodeH2Settings(address = NetworkHostAndPort(host="localhost", port=h2port))
+            h2port != null -> NodeH2Settings(address = NetworkHostAndPort(host = "localhost", port = h2port))
             else -> h2Settings
         }
 
@@ -372,7 +349,7 @@ data class NodeConfigurationImpl(
             "Cannot specify both 'rpcUsers' and 'security' in configuration"
         }
         @Suppress("DEPRECATION")
-        if(certificateChainCheckPolicies.isNotEmpty()) {
+        if (certificateChainCheckPolicies.isNotEmpty()) {
             logger.warn("""You are configuring certificateChainCheckPolicies. This is a setting that is not used, and will be removed in a future version.
                 |Please contact the R3 team on the public slack to discuss your use case.
             """.trimMargin())
