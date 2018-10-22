@@ -30,14 +30,10 @@
       <module name="client_test" target="1.8" />
       <module name="cliutils_main" target="1.8" />
       <module name="cliutils_test" target="1.8" />
-      <module name="common-common-validation_main" target="1.8" />
-      <module name="common-common-validation_test" target="1.8" />
       <module name="common-configuration-parsing_main" target="1.8" />
       <module name="common-configuration-parsing_test" target="1.8" />
       <module name="common-validation_main" target="1.8" />
       <module name="common-validation_test" target="1.8" />
-      <module name="common_main" target="1.8" />
-      <module name="common_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
       <module name="confidential-identities_test" target="1.8" />
       <module name="contracts-states_integrationTest" target="1.8" />

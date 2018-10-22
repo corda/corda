@@ -19,7 +19,7 @@ buildscript {
     // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1 by default.
     // We must configure it manually to use the latest capsule version.
     ext.capsule_version = '1.0.3'
-    
+
     ext.asm_version = '5.0.4'
     ext.artemis_version = '2.6.2'
     ext.jackson_version = '2.9.5'
