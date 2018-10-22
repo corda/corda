@@ -30,7 +30,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
-import net.corda.node.services.config.MySQLConfiguration
 import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
 import java.sql.*
 import java.time.Clock
@@ -49,7 +48,7 @@ import kotlin.concurrent.thread
 class MySQLUniquenessProvider(
         metrics: MetricRegistry,
         val clock: Clock,
-        val config: MySQLConfiguration
+        val config: MySQLNotaryConfiguration
 ) : AsyncUniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<MySQLUniquenessProvider>()
