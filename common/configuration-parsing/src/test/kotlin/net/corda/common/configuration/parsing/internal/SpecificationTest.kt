@@ -12,7 +12,6 @@ class SpecificationTest {
         private object AddressesSpec : Configuration.Specification<Addresses>("Addresses") {
 
             val principal by string().flatMap(::parseAddress)
-
             val admin by string().flatMap(::parseAddress)
 
             override fun parseValid(configuration: Config) = valid(Addresses(principal.valueIn(configuration), admin.valueIn(configuration)))
