@@ -62,10 +62,10 @@ class AMQPListenerTest {
         val trustStoreBytes = bridgeConfig.p2pSslOptions.trustStore.path.readAll()
         // start listening
         amqpListenerService.provisionKeysAndActivate(keyStoreBytes,
-                bridgeConfig.p2pSslOptions.keyStore.password.toCharArray(),
-                bridgeConfig.p2pSslOptions.keyStore.password.toCharArray(),
+                bridgeConfig.p2pSslOptions.keyStore.storePassword.toCharArray(),
+                bridgeConfig.p2pSslOptions.keyStore.entryPassword.toCharArray(),
                 trustStoreBytes,
-                bridgeConfig.p2pSslOptions.trustStore.password.toCharArray())
+                bridgeConfig.p2pSslOptions.trustStore.storePassword.toCharArray())
         // Fire lots of activity to prove we are good
         assertEquals(TestAuditService.AuditEvent.STATUS_CHANGE, auditFollower.next())
         assertEquals(true, amqpListenerService.active)
@@ -137,21 +137,21 @@ class AMQPListenerTest {
         val trustStoreBytes = bridgeConfig.p2pSslOptions.trustStore.path.readAll()
         // start listening
         amqpListenerService.provisionKeysAndActivate(keyStoreBytes,
-                bridgeConfig.p2pSslOptions.keyStore.password.toCharArray(),
-                bridgeConfig.p2pSslOptions.keyStore.password.toCharArray(),
+                bridgeConfig.p2pSslOptions.keyStore.storePassword.toCharArray(),
+                bridgeConfig.p2pSslOptions.keyStore.entryPassword.toCharArray(),
                 trustStoreBytes,
-                bridgeConfig.p2pSslOptions.trustStore.password.toCharArray())
+                bridgeConfig.p2pSslOptions.trustStore.storePassword.toCharArray())
         val connectionFollower = amqpListenerService.onConnection.toBlocking().iterator
         val auditFollower = auditService.onAuditEvent.toBlocking().iterator
         val clientKeys = Crypto.generateKeyPair(ECDSA_SECP256R1_SHA256)
         val clientCert = X509Utilities.createSelfSignedCACertificate(ALICE_NAME.x500Principal, clientKeys)
         val clientKeyStoreRaw = X509KeyStore("password")
-        clientKeyStoreRaw.setPrivateKey("TLS_CERT", clientKeys.private, listOf(clientCert))
-        val clientKeyStore = CertificateStore.of(clientKeyStoreRaw, "password")
+        clientKeyStoreRaw.setPrivateKey("TLS_CERT", clientKeys.private, listOf(clientCert), "password")
+        val clientKeyStore = CertificateStore.of(clientKeyStoreRaw, "password", "password")
 
         val clientTrustStoreRaw = X509KeyStore("password")
         clientTrustStoreRaw.setCertificate("TLS_ROOT", clientCert)
-        val clientTrustStore = CertificateStore.of(clientTrustStoreRaw, "password")
+        val clientTrustStore = CertificateStore.of(clientTrustStoreRaw, "password", "password")
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = clientKeyStore
             override val trustStore = clientTrustStore

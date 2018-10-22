@@ -76,7 +76,8 @@ fun MutualSslConfiguration.createBridgeKeyStores(legalName: CordaX500Name,
         setPrivateKey(
                 X509Utilities.CORDA_CLIENT_TLS,
                 tlsKeyPair.private,
-                listOf(tlsCert, nodeCaCert, intermediateCa.certificate, rootCert))
+                listOf(tlsCert, nodeCaCert, intermediateCa.certificate, rootCert),
+                sslKeyStore.entryPassword)
     }
 }
 
