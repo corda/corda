@@ -37,7 +37,7 @@ object Configuration {
 
         interface Parser<VALUE> {
 
-            fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<VALUE, Validation.Error>
+            fun parse(configuration: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults): Validated<VALUE, Validation.Error>
         }
     }
 
@@ -72,7 +72,7 @@ object Configuration {
                 fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, Validation.Error>): Standard<MAPPED>
             }
 
-            override fun parse(configuration: Config, options: Validation.Options): Validated<TYPE, Validation.Error> {
+            override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<TYPE, Validation.Error> {
 
                 return validate(configuration, options).flatMap { config -> valid(valueIn(config)) }
             }
@@ -158,7 +158,13 @@ object Configuration {
 
     object Validation {
 
-        data class Options(val strict: Boolean)
+        data class Options(val strict: Boolean) {
+
+            companion object {
+
+                val defaults: Configuration.Validation.Options = Options(strict = false)
+            }
+        }
 
         sealed class Error constructor(open val keyName: String?, open val typeName: String? = null, open val message: String, val containingPath: List<String> = emptyList()) {
 

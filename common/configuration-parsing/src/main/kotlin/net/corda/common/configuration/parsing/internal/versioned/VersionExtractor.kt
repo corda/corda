@@ -12,7 +12,7 @@ internal class VersionExtractor(versionKey: String, versionDefaultValue: Int?) :
 
     override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<Int?> {
 
-        return spec.parse(configuration, Configuration.Validation.Options(false))
+        return spec.parse(configuration)
     }
 
     private class Spec(versionKey: String, versionDefaultValue: Int?) : Configuration.Specification<Int?>("Version") {

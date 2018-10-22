@@ -10,9 +10,9 @@ class VersionedSpecificationRegistry<VALUE> private constructor(private val vers
 
     companion object {
 
-        fun <V> mapping(versionParser: Configuration.Value.Parser<Int>, specifications: Map<Int, Configuration.Specification<V>>) = VersionedSpecificationRegistry({ config -> versionParser.parse(config, Configuration.Validation.Options(strict = false)) }, specifications)
+        fun <V> mapping(versionParser: Configuration.Value.Parser<Int>, specifications: Map<Int, Configuration.Specification<V>>) = VersionedSpecificationRegistry({ config -> versionParser.parse(config) }, specifications)
 
-        fun <V> mapping(versionParser: Configuration.Value.Parser<Int>, vararg specifications: Pair<Int, Configuration.Specification<V>>) = VersionedSpecificationRegistry({ config -> versionParser.parse(config, Configuration.Validation.Options(strict = false)) }, specifications.toMap())
+        fun <V> mapping(versionParser: Configuration.Value.Parser<Int>, vararg specifications: Pair<Int, Configuration.Specification<V>>) = VersionedSpecificationRegistry({ config -> versionParser.parse(config) }, specifications.toMap())
 
         fun <V> mapping(versionParser: (Config) -> Valid<Int>, specifications: Map<Int, Configuration.Specification<V>>) = VersionedSpecificationRegistry(versionParser, specifications)
 

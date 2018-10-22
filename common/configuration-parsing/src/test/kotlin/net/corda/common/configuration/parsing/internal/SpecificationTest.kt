@@ -18,7 +18,7 @@ class SpecificationTest {
             override fun parseValid(configuration: Config) = valid(Addresses(principal.valueIn(configuration), admin.valueIn(configuration)))
 
             @Suppress("UNUSED_PARAMETER")
-            fun parse(key: String, typeName: String, rawValue: ConfigObject): Valid<Addresses> = parse(rawValue.toConfig(), Configuration.Validation.Options(strict = false))
+            fun parse(key: String, typeName: String, rawValue: ConfigObject): Valid<Addresses> = parse(rawValue.toConfig())
         }
 
         val useSsl by boolean()
@@ -36,7 +36,7 @@ class SpecificationTest {
         val addressesValue = configObject("principal" to "${principalAddressValue.host}:${principalAddressValue.port}", "admin" to "${adminAddressValue.host}:${adminAddressValue.port}")
         val configuration = configObject("useSsl" to useSslValue, "addresses" to addressesValue).toConfig()
 
-        val rpcSettings = RpcSettingsSpec.parse(configuration, Configuration.Validation.Options(strict = false))
+        val rpcSettings = RpcSettingsSpec.parse(configuration)
 
         assertThat(rpcSettings.isValid).isTrue()
         assertThat(rpcSettings.valueOrThrow()).satisfies { value ->
@@ -59,7 +59,7 @@ class SpecificationTest {
         // Here "useSsl" shouldn't be `null`, hence causing the validation to fail.
         val configuration = configObject("useSsl" to null, "addresses" to addressesValue).toConfig()
 
-        val rpcSettings = RpcSettingsSpec.parse(configuration, Configuration.Validation.Options(strict = false))
+        val rpcSettings = RpcSettingsSpec.parse(configuration)
 
         assertThat(rpcSettings.errors).hasSize(1)
         assertThat(rpcSettings.errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
@@ -78,7 +78,7 @@ class SpecificationTest {
         val addressesValue = configObject("principal" to "${principalAddressValue.host}:-10", "admin" to "${adminAddressValue.host}:${adminAddressValue.port}")
         val configuration = configObject("useSsl" to useSslValue, "addresses" to addressesValue).toConfig()
 
-        val rpcSettings = RpcSettingsSpec.parse(configuration, Configuration.Validation.Options(strict = false))
+        val rpcSettings = RpcSettingsSpec.parse(configuration)
 
         assertThat(rpcSettings.errors).hasSize(1)
         assertThat(rpcSettings.errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.BadValue::class.java) { error ->

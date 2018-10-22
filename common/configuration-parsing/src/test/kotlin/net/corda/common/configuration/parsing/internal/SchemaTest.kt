@@ -36,7 +36,7 @@ class SchemaTest {
     }
 
     @Test
-    fun validation_with_unknown_properties_strict() {
+    fun validation_with_unknown_properties() {
 
         val prop1 = "prop1"
         val prop1Value = "value1"
@@ -59,13 +59,15 @@ class SchemaTest {
         val fooConfigSchema = Configuration.Schema.withProperties { setOf(boolean("prop4"), double("prop5")) }
         val barConfigSchema = Configuration.Schema.withProperties { setOf(string(prop1), long(prop2), nestedObject("prop3", fooConfigSchema)) }
 
-        val strict = Configuration.Validation.Options(strict = true)
+        val strictErrors = barConfigSchema.validate(configuration, Configuration.Validation.Options(strict = true)).errors
 
-        val errors = barConfigSchema.validate(configuration, strict).errors
+        assertThat(strictErrors).hasSize(2)
+        assertThat(strictErrors.filter { error -> error.keyName == "prop4" }).hasSize(1)
+        assertThat(strictErrors.filter { error -> error.keyName == "prop6" }).hasSize(1)
 
-        assertThat(errors).hasSize(2)
-        assertThat(errors.filter { error -> error.keyName == "prop4" }).hasSize(1)
-        assertThat(errors.filter { error -> error.keyName == "prop6" }).hasSize(1)
+        val errors = barConfigSchema.validate(configuration, Configuration.Validation.Options(strict = false)).errors
+
+        assertThat(errors).isEmpty()
     }
 
     @Test
