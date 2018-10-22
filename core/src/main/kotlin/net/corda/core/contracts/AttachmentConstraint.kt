@@ -82,5 +82,5 @@ data class SignatureAttachmentConstraint(
         val key: PublicKey
 ) : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean =
-        key.isFulfilledBy(attachment.signers.map { it.owningKey })
+        key.isFulfilledBy(attachment.signers.map { it })
 }

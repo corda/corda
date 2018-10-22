@@ -23,6 +23,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.security.PublicKey
 
 class TransactionBuilderTest {
     @Rule
@@ -40,7 +41,15 @@ class TransactionBuilderTest {
         doReturn(cordappProvider).whenever(services).cordappProvider
         doReturn(contractAttachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
         doReturn(testNetworkParameters()).whenever(services).networkParameters
-        doReturn(attachments).whenever(services).attachments
+
+        val attachmentStorage = rigorousMock<AttachmentStorage>()
+        doReturn(attachmentStorage).whenever(services).attachments
+        val attachment = rigorousMock<ContractAttachment>()
+        doReturn(attachment).whenever(attachmentStorage).openAttachment(contractAttachmentId)
+        doReturn(contractAttachmentId).whenever(attachment).id
+        doReturn(setOf(DummyContract.PROGRAM_ID)).whenever(attachment).allContracts
+        doReturn("app").whenever(attachment).uploader
+        doReturn(emptyList<Party>()).whenever(attachment).signers
     }
 
     @Test
@@ -103,6 +112,7 @@ class TransactionBuilderTest {
         assertTrue(expectedConstraint.isSatisfiedBy(signedAttachment))
         assertFalse(expectedConstraint.isSatisfiedBy(unsignedAttachment))
 
+        doReturn(attachments).whenever(services).attachments
         doReturn(signedAttachment).whenever(attachments).openAttachment(contractAttachmentId)
 
         val outputState = TransactionState(data = DummyState(), contract = DummyContract.PROGRAM_ID, notary = notary)
@@ -112,19 +122,17 @@ class TransactionBuilderTest {
         val wtx = builder.toWireTransaction(services)
 
         assertThat(wtx.outputs).containsOnly(outputState.copy(constraint = expectedConstraint))
-
     }
 
-
-    private val unsignedAttachment = object : AbstractAttachment({ byteArrayOf() }) {
+    private val unsignedAttachment = ContractAttachment(object : AbstractAttachment({ byteArrayOf() }) {
         override val id: SecureHash get() = throw UnsupportedOperationException()
 
-        override val signers: List<Party> get() = emptyList()
-    }
+        override val signers: List<PublicKey> get() = emptyList()
+    }, DummyContract.PROGRAM_ID)
 
-    private fun signedAttachment(vararg parties: Party) = object : AbstractAttachment({ byteArrayOf() }) {
+    private fun signedAttachment(vararg parties: Party) = ContractAttachment(object : AbstractAttachment({ byteArrayOf() }) {
         override val id: SecureHash get() = throw UnsupportedOperationException()
 
-        override val signers: List<Party> get() = parties.toList()
-    }
+        override val signers: List<PublicKey> get() = parties.map { it.owningKey }
+    }, DummyContract.PROGRAM_ID, signers = parties.map { it.owningKey })
 }

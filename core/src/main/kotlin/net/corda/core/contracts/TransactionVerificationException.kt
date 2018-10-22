@@ -5,6 +5,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NonEmptySet
 import java.security.PublicKey
@@ -169,4 +170,12 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
     @DeleteForDJVM
     class InvalidNotaryChange(txId: SecureHash)
         : TransactionVerificationException(txId, "Detected a notary change. Outputs must use the same notary as inputs", null)
+
+    /**
+     * Thrown to indicate that a contract attachment is not signed by the network-wide package owner.
+     */
+    class ContractAttachmentNotSignedByPackageOwnerException(txId: SecureHash, val attachmentHash: AttachmentId, val contractClass: String) : TransactionVerificationException(txId,
+            """The Contract attachment JAR: $attachmentHash containing the contract: $contractClass is not signed by the owner specified in the network parameters.
+           Please check the source of this attachment and if it is malicious contact your zone operator to report this incident.
+           For details see: https://docs.corda.net/network-map.html#network-parameters""".trimIndent(), null)
 }

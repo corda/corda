@@ -3,6 +3,7 @@ package net.corda.core.transactions
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.castIfPossible
@@ -74,6 +75,9 @@ data class LedgerTransaction @JvmOverloads constructor(
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
     val referenceStates: List<ContractState> get() = references.map { it.state.data }
 
+    private val inputAndOutputStates = inputs.map { it.state } + outputs
+    private val allStates = inputAndOutputStates + references.map { it.state }
+
     /**
      * Returns the typed input StateAndRef at the specified index
      * @param index The index into the inputs.
@@ -88,8 +92,35 @@ data class LedgerTransaction @JvmOverloads constructor(
      */
     @Throws(TransactionVerificationException::class)
     fun verify() {
+        val contractAttachmentsByContract: Map<ContractClassName, ContractAttachment> = getUniqueContractAttachmentsByContract()
+
+        validatePackageOwnership(contractAttachmentsByContract)
         verifyConstraints()
         verifyContracts()
+    }
+
+    /**
+     * Verify that package ownership is respected.
+     *
+     * TODO - revisit once transaction contains network parameters.
+     */
+    private fun validatePackageOwnership(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
+        // This should never happen once we have network parameters in the transaction.
+        if (networkParameters == null) {
+            return
+        }
+
+        val contractsAndOwners = allStates.mapNotNull { transactionState ->
+            val contractClassName = transactionState.contract
+            networkParameters.getOwnerOf(contractClassName)?.let { contractClassName to it }
+        }.toMap()
+
+        contractsAndOwners.forEach { contract, owner ->
+            val attachment = contractAttachmentsByContract[contract]!!
+            if (!owner.isFulfilledBy(attachment.signers)) {
+                throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
+            }
+        }
     }
 
     /**
@@ -121,6 +152,29 @@ data class LedgerTransaction @JvmOverloads constructor(
                 throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
             }
         }
+    }
+
+    private fun getUniqueContractAttachmentsByContract(): Map<ContractClassName, ContractAttachment> {
+        val result = mutableMapOf<ContractClassName, ContractAttachment>()
+
+        for (attachment in attachments) {
+            if (attachment !is ContractAttachment) continue
+
+            for (contract in attachment.allContracts) {
+                result.compute(contract) { _, previousAttachment ->
+                    when {
+                        previousAttachment == null -> attachment
+                        attachment.id == previousAttachment.id -> previousAttachment
+                        // In case multiple attachments have been added for the same contract, fail because this
+                        // transaction will not be able to be verified because it will break the no-overlap rule
+                        // that we have implemented in our Classloaders
+                        else -> throw TransactionVerificationException.ConflictingAttachmentsRejection(id, contract)
+                    }
+                }
+            }
+        }
+
+        return result
     }
 
     /**

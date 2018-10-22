@@ -505,7 +505,8 @@ class NodeVaultService(
             // Even if we set the default pageNumber to be 1 instead, that may not cover the non-default cases.
             // So the floor may be necessary anyway.
             query.firstResult = maxOf(0, (paging.pageNumber - 1) * paging.pageSize)
-            query.maxResults = paging.pageSize + 1  // detection too many results
+            val pageSize = paging.pageSize + 1
+            query.maxResults = if (pageSize > 0) pageSize else Integer.MAX_VALUE // detection too many results, protected against overflow
 
             // execution
             val results = query.resultList

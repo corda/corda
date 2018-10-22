@@ -158,8 +158,8 @@ open class TransactionBuilder @JvmOverloads constructor(
         }
     }
 
-    private fun makeSignatureAttachmentConstraint(attachmentSigners: List<Party>) =
-            SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners.map { it.owningKey }).build())
+    private fun makeSignatureAttachmentConstraint(attachmentSigners: List<PublicKey>) =
+            SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners.map { it }).build())
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) =
             contractClassName in networkParameters.whitelistedContractImplementations.keys
