@@ -9,6 +9,6 @@ import org.objectweb.asm.Label
  * @property handler The label of the exception handler.
  */
 class TryCatchBlock(
-        val typeName: String,
-        val handler: Label
-) : NoOperationInstruction()
+        typeName: String,
+        handler: Label
+) : TryBlock(handler, typeName)

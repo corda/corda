@@ -18,10 +18,10 @@ interface Emitter {
     fun emit(context: EmitterContext, instruction: Instruction)
 
     /**
-     * Indication of whether or not the emitter performs instrumentation for tracing inside the sandbox.
+     * Determines the order in which emitters are executed within the sandbox.
      */
     @JvmDefault
-    val isTracer: Boolean
-        get() = false
+    val priority: Int
+        get() = EMIT_DEFAULT
 
 }

@@ -489,28 +489,30 @@ class DriverDSLImpl(
         }
     }
 
-    // TODO This mapping is done is several places including the gradle plugin. In general we need a better way of
-    // generating the configs for the nodes, probably making use of Any.toConfig()
-    private fun NotaryConfig.toConfigMap(): Map<String, Any> = mapOf("notary" to toConfig().root().unwrapped())
-
     private fun startSingleNotary(spec: NotarySpec, localNetworkMap: LocalNetworkMap?, customOverrides: Map<String, Any?>): CordaFuture<List<NodeHandle>> {
+        val notaryConfig = mapOf("notary" to mapOf("validating" to spec.validating))
         return startRegisteredNode(
                 spec.name,
                 localNetworkMap,
                 spec.rpcUsers,
                 spec.verifierType,
-                customOverrides = NotaryConfig(spec.validating).toConfigMap() + customOverrides).map { listOf(it) }
+                customOverrides = notaryConfig + customOverrides
+        ).map { listOf(it) }
     }
 
     private fun startRaftNotaryCluster(spec: NotarySpec, localNetworkMap: LocalNetworkMap?): CordaFuture<List<NodeHandle>> {
         fun notaryConfig(nodeAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): Map<String, Any> {
             val clusterAddresses = if (clusterAddress != null) listOf(clusterAddress) else emptyList()
-            val config = NotaryConfig(
-                    validating = spec.validating,
-                    serviceLegalName = spec.name,
-                    className = "net.corda.notary.raft.RaftNotaryService",
-                    raft = RaftConfig(nodeAddress = nodeAddress, clusterAddresses = clusterAddresses))
-            return config.toConfigMap()
+            val config = configOf("notary" to mapOf(
+                    "validating" to spec.validating,
+                    "serviceLegalName" to spec.name.toString(),
+                    "className" to "net.corda.notary.raft.RaftNotaryService",
+                    "extraConfig" to mapOf(
+                            "nodeAddress" to nodeAddress.toString(),
+                            "clusterAddresses" to clusterAddresses.map { it.toString() }
+                    ))
+            )
+            return config.root().unwrapped()
         }
 
         val nodeNames = generateNodeNames(spec)
@@ -851,10 +853,10 @@ class DriverDSLImpl(
             config += "baseDirectory" to configuration.baseDirectory.toAbsolutePath().toString()
 
             config += "keyStorePath" to configuration.p2pSslOptions.keyStore.path.toString()
-            config += "keyStorePassword" to configuration.p2pSslOptions.keyStore.password
+            config += "keyStorePassword" to configuration.p2pSslOptions.keyStore.storePassword
 
             config += "trustStorePath" to configuration.p2pSslOptions.trustStore.path.toString()
-            config += "trustStorePassword" to configuration.p2pSslOptions.trustStore.password
+            config += "trustStorePassword" to configuration.p2pSslOptions.trustStore.storePassword
 
             return config
         }

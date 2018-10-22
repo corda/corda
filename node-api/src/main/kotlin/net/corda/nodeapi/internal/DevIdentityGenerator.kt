@@ -30,9 +30,9 @@ object DevIdentityGenerator {
     /** Install a node key store for the given node directory using the given legal name. */
     fun installKeyStoreWithNodeIdentity(nodeDir: Path, legalName: CordaX500Name): Party {
         val certificatesDirectory = nodeDir / "certificates"
-        val signingCertStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "nodekeystore.jks", "cordacadevpass")
-        val p2pKeyStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "sslkeystore.jks", "cordacadevpass")
-        val p2pTrustStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "truststore.jks", "trustpass")
+        val signingCertStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "nodekeystore.jks", DEV_CA_KEY_STORE_PASS, DEV_CA_KEY_STORE_PASS)
+        val p2pKeyStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "sslkeystore.jks", DEV_CA_KEY_STORE_PASS, DEV_CA_KEY_STORE_PASS)
+        val p2pTrustStore = FileBasedCertificateStoreSupplier(certificatesDirectory / "truststore.jks", DEV_CA_TRUST_STORE_PASS, DEV_CA_TRUST_STORE_PRIVATE_KEY_PASS)
         val p2pSslConfig = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
 
         certificatesDirectory.createDirectories()
@@ -77,13 +77,16 @@ object DevIdentityGenerator {
                     publicKey)
         }
         val distServKeyStoreFile = (nodeDir / "certificates").createDirectories() / "distributedService.jks"
-        X509KeyStore.fromFile(distServKeyStoreFile, "cordacadevpass", createNew = true).update {
+        X509KeyStore.fromFile(distServKeyStoreFile, DEV_CA_KEY_STORE_PASS, createNew = true).update {
             setCertificate("$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key", compositeKeyCert)
             setPrivateKey(
                     "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key",
                     keyPair.private,
                     listOf(serviceKeyCert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate),
-                    "cordacadevkeypass")
+                    DEV_CA_KEY_STORE_PASS // Unfortunately we have to use the same password for private key due to Artemis limitation, for more details please see:
+                    // org.apache.activemq.artemis.core.remoting.impl.ssl.SSLSupport.loadKeyManagerFactory
+                    // where it is calling `KeyManagerFactory.init()` with store password
+                    /*DEV_CA_PRIVATE_KEY_PASS*/)
         }
     }
 }

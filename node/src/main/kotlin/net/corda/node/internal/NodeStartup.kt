@@ -18,7 +18,6 @@ import net.corda.node.*
 import net.corda.node.internal.Node.Companion.isValidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
@@ -188,14 +187,7 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         if (cmdLineOptions.devMode == true) {
             println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
         }
-        val configuration = configurationResult.getOrThrow()
-        return if (cmdLineOptions.bootstrapRaftCluster) {
-            println("Bootstrapping raft cluster (starting up as seed node).")
-            // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
-            (configuration as NodeConfigurationImpl).copy(notary = configuration.notary?.copy(raft = configuration.notary?.raft?.copy(clusterAddresses = emptyList())))
-        } else {
-            configuration
-        }
+        return configurationResult.getOrThrow()
     }
 
     private fun checkRegistrationMode(): Boolean {
@@ -297,12 +289,12 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         val console: Console? = System.console()
 
         when (console) {
-        // In this case, the JVM is not connected to the console so we need to exit.
+            // In this case, the JVM is not connected to the console so we need to exit.
             null -> {
                 println("Not connected to console. Exiting")
                 exitProcess(1)
             }
-        // Otherwise we can proceed normally.
+            // Otherwise we can proceed normally.
             else -> {
                 while (true) {
                     val keystorePassword1 = console.readPassword("Enter the RPC keystore password => ")

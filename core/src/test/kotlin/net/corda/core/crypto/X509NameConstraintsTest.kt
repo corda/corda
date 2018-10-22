@@ -11,23 +11,31 @@ import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.Test
+import java.security.UnrecoverableKeyException
 import java.security.cert.CertPathValidator
 import java.security.cert.CertPathValidatorException
 import java.security.cert.PKIXParameters
 import javax.security.auth.x500.X500Principal
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class X509NameConstraintsTest {
 
+    companion object {
+        private const val storePassword = "storePassword"
+        private const val keyPassword = "entryPassword"
+    }
+
     private fun makeKeyStores(subjectName: X500Name, nameConstraints: NameConstraints): Pair<X509KeyStore, X509KeyStore> {
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
-        val trustStore = X509KeyStore("password").apply {
+
+        val trustStore = X509KeyStore(storePassword).apply {
             setCertificate(X509Utilities.CORDA_ROOT_CA, rootCa.certificate)
         }
 
-        val keyStore = X509KeyStore("password").apply {
+        val keyStore = X509KeyStore(storePassword).apply {
             val nodeCaKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
             val nodeCaCert = X509Utilities.createCertificate(
                     CertificateType.NODE_CA,
@@ -43,7 +51,7 @@ class X509NameConstraintsTest {
                     nodeCaKeyPair,
                     X500Principal(subjectName.encoded),
                     tlsKeyPair.public)
-            setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKeyPair.private, listOf(tlsCert, nodeCaCert, intermediateCa.certificate, rootCa.certificate))
+            setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKeyPair.private, listOf(tlsCert, nodeCaCert, intermediateCa.certificate, rootCa.certificate), keyPassword)
         }
 
         return Pair(keyStore, trustStore)
@@ -90,7 +98,6 @@ class X509NameConstraintsTest {
                 .map { GeneralSubtree(GeneralName(X500Name(it))) }.toTypedArray()
 
         val nameConstraints = NameConstraints(acceptableNames, arrayOf())
-        Crypto.ECDSA_SECP256R1_SHA256
         val pathValidator = CertPathValidator.getInstance("PKIX", BouncyCastleProvider.PROVIDER_NAME)
 
         assertFailsWith(CertPathValidatorException::class) {
@@ -125,6 +132,22 @@ class X509NameConstraintsTest {
             val certPath = X509Utilities.buildCertPath(keystore.getCertificateChain(X509Utilities.CORDA_CLIENT_TLS))
             pathValidator.validate(certPath, params)
             true
+        }
+    }
+
+    @Test
+    fun `test private key retrieval`() {
+        val acceptableNames = listOf("CN=Bank A TLS, UID=", "O=Bank A")
+                .map { GeneralSubtree(GeneralName(X500Name(it))) }.toTypedArray()
+
+        val nameConstraints = NameConstraints(acceptableNames, arrayOf())
+        val (keystore, _) = makeKeyStores(X500Name("CN=Bank A"), nameConstraints)
+
+        val privateKey = keystore.getPrivateKey(X509Utilities.CORDA_CLIENT_TLS, keyPassword)
+        assertEquals(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME.algorithmName, privateKey.algorithm)
+
+        assertFailsWith(UnrecoverableKeyException::class) {
+            keystore.getPrivateKey(X509Utilities.CORDA_CLIENT_TLS, "gibberish")
         }
     }
 }

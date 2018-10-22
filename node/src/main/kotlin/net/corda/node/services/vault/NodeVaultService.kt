@@ -10,13 +10,10 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.*
-import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.Vault.ConstraintInfo.Companion.constraintInfo
+import net.corda.core.node.services.vault.*
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.serialization.SerializationDefaults.STORAGE_CONTEXT
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
 import net.corda.core.transactions.*
 import net.corda.core.utilities.*
 import net.corda.node.services.api.SchemaService
@@ -278,7 +275,10 @@ class NodeVaultService(
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
                 val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
                 if (uuid != null) {
-                    val fungible = netUpdate.produced.filter { it.state.data is FungibleAsset<*> }
+                    val fungible = netUpdate.produced.filter { stateAndRef ->
+                        val state = stateAndRef.state.data
+                        state is FungibleAsset<*> || state is FungibleState<*>
+                    }
                     if (fungible.isNotEmpty()) {
                         val stateRefs = fungible.map { it.ref }.toNonEmptySet()
                         log.trace { "Reserving soft locks for flow id $uuid and states $stateRefs" }
@@ -397,13 +397,26 @@ class NodeVaultService(
 
     @Suspendable
     @Throws(StatesNotAvailableException::class)
-    override fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
-                                                                                  eligibleStatesQuery: QueryCriteria,
-                                                                                  amount: Amount<U>,
-                                                                                  contractStateType: Class<out T>): List<StateAndRef<T>> {
+    override fun <T : FungibleState<*>> tryLockFungibleStatesForSpending(
+            lockId: UUID,
+            eligibleStatesQuery: QueryCriteria,
+            amount: Amount<*>,
+            contractStateType: Class<out T>
+    ): List<StateAndRef<T>> {
         if (amount.quantity == 0L) {
             return emptyList()
         }
+
+        // Helper to unwrap the token from the Issued object if one exists.
+        fun unwrapIssuedAmount(amount: Amount<*>): Any {
+            val token = amount.token
+            return when (token) {
+                is Issued<*> -> token.product
+                else -> token
+            }
+        }
+
+        val unwrappedToken = unwrapIssuedAmount(amount)
 
         // Enrich QueryCriteria with additional default attributes (such as soft locks).
         // We only want to return RELEVANT states here.
@@ -419,8 +432,10 @@ class NodeVaultService(
         var claimedAmount = 0L
         val claimedStates = mutableListOf<StateAndRef<T>>()
         for (state in results.states) {
-            val issuedAssetToken = state.state.data.amount.token
-            if (issuedAssetToken.product == amount.token) {
+            // This method handles Amount<Issued<T>> in FungibleAsset and Amount<T> in FungibleState.
+            val issuedAssetToken = unwrapIssuedAmount(state.state.data.amount)
+
+            if (issuedAssetToken == unwrappedToken) {
                 claimedStates += state
                 claimedAmount += state.state.data.amount.quantity
                 if (claimedAmount > amount.quantity) {
@@ -490,7 +505,8 @@ class NodeVaultService(
             // Even if we set the default pageNumber to be 1 instead, that may not cover the non-default cases.
             // So the floor may be necessary anyway.
             query.firstResult = maxOf(0, (paging.pageNumber - 1) * paging.pageSize)
-            query.maxResults = paging.pageSize + 1  // detection too many results
+            val pageSize = paging.pageSize + 1
+            query.maxResults = if (pageSize > 0) pageSize else Integer.MAX_VALUE // detection too many results, protected against overflow
 
             // execution
             val results = query.resultList

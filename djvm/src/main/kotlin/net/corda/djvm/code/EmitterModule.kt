@@ -169,6 +169,14 @@ class EmitterModule(
     inline fun <reified T : Throwable> throwException(message: String) = throwException(T::class.java, message)
 
     /**
+     * Attempt to cast the object on the top of the stack to the given class.
+     */
+    fun castObjectTo(className: String) {
+        methodVisitor.visitTypeInsn(CHECKCAST, className)
+        hasEmittedCustomCode = true
+    }
+
+    /**
      * Emit instruction for returning from "void" method.
      */
     fun returnVoid() {

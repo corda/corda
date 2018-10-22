@@ -235,8 +235,9 @@ class X509UtilitiesTest {
         signingCertStore.get(createNew = true).also { it.registerDevSigningCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa, nodeCa) }
         p2pSslConfig.keyStore.get(createNew = true).also { it.registerDevP2pCertificates(MEGA_CORP.name, rootCa.certificate, intermediateCa, nodeCa) }
         // Load back server certificate
-        val serverKeyStore = signingCertStore.get().value
-        val (serverCert, serverKeyPair) = serverKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
+        val certStore = signingCertStore.get()
+        val serverKeyStore = certStore.value
+        val (serverCert, serverKeyPair) = serverKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, certStore.entryPassword)
 
         serverCert.checkValidity()
         serverCert.verify(intermediateCa.certificate.publicKey)
@@ -244,7 +245,7 @@ class X509UtilitiesTest {
 
         // Load back SSL certificate
         val sslKeyStoreReloaded = p2pSslConfig.keyStore.get()
-        val (sslCert) = sslKeyStoreReloaded.query { getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, p2pSslConfig.keyStore.password) }
+        val (sslCert) = sslKeyStoreReloaded.query { getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, sslKeyStoreReloaded.entryPassword) }
 
         sslCert.checkValidity()
         sslCert.verify(serverCert.publicKey)

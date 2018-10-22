@@ -7,7 +7,6 @@ import org.objectweb.asm.Label
  *
  * @property handler The handler for the finally-block.
  */
-@Suppress("MemberVisibilityCanBePrivate")
 class TryFinallyBlock(
-        val handler: Label
-) : NoOperationInstruction()
+        handler: Label
+) : TryBlock(handler, "")

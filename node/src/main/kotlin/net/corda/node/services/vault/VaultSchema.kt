@@ -145,9 +145,9 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             @Column(name = "issuer_name", nullable = true)
             var issuer: AbstractParty?,
 
-            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
+            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = true)
             @Type(type = "corda-wrapper-binary")
-            var issuerRef: ByteArray
+            var issuerRef: ByteArray?
     ) : PersistentState() {
         constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes, _participants: List<AbstractParty>) :
                 this(owner = _owner,

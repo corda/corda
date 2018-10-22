@@ -46,14 +46,14 @@ class NotaryChangeFlow<out T : ContractState>(
         return AbstractStateReplacementFlow.UpgradeTx(stx)
     }
 
-    /** Resolves the encumbrance state chain for the given [state] */
+    /** Resolves the encumbrance state chain for the given [state]. */
     private fun resolveEncumbrances(state: StateAndRef<T>): List<StateAndRef<T>> {
-        val states = mutableListOf(state)
+        val states = mutableSetOf(state)
         while (states.last().state.encumbrance != null) {
             val encumbranceStateRef = StateRef(states.last().ref.txhash, states.last().state.encumbrance!!)
             val encumbranceState = serviceHub.toStateAndRef<T>(encumbranceStateRef)
-            states.add(encumbranceState)
+            if (!states.add(encumbranceState)) break // Stop if there is a cycle.
         }
-        return states
+        return states.toList()
     }
 }

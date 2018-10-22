@@ -118,34 +118,16 @@ fun NodeConfiguration.shouldStartSSHDaemon() = this.sshd != null
 fun NodeConfiguration.shouldStartLocalShell() = !this.noLocalShell && System.console() != null && this.devMode
 fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || shouldStartSSHDaemon()
 
-data class NotaryConfig(val validating: Boolean,
-                        val raft: RaftConfig? = null,
-                        val bftSMaRt: BFTSMaRtConfiguration? = null,
-                        val serviceLegalName: CordaX500Name? = null,
-                        val className: String = "net.corda.node.services.transactions.SimpleNotaryService"
-) {
-    init {
-        require(raft == null || bftSMaRt == null) {
-            "raft and bftSMaRt configs cannot be specified together"
-        }
-    }
-
-    val isClusterConfig: Boolean get() = raft != null || bftSMaRt != null
-}
-
-data class RaftConfig(val nodeAddress: NetworkHostAndPort, val clusterAddresses: List<NetworkHostAndPort>)
-
-/** @param exposeRaces for testing only, so its default is not in reference.conf but here. */
-data class BFTSMaRtConfiguration(
-        val replicaId: Int,
-        val clusterAddresses: List<NetworkHostAndPort>,
-        val debug: Boolean = false,
-        val exposeRaces: Boolean = false
-) {
-    init {
-        require(replicaId >= 0) { "replicaId cannot be negative" }
-    }
-}
+data class NotaryConfig(
+        /** Specifies whether the notary validates transactions or not. */
+        val validating: Boolean,
+        /** The legal name of cluster in case of a distributed notary service. */
+        val serviceLegalName: CordaX500Name? = null,
+        /** The name of the notary service class to load. */
+        val className: String = "net.corda.node.services.transactions.SimpleNotaryService",
+        /** Notary implementation-specific configuration parameters. */
+        val extraConfig: Config? = null
+)
 
 /**
  * Used as an alternative to the older compatibilityZoneURL to allow the doorman and network map
@@ -166,7 +148,7 @@ data class NetworkServicesConfig(
         val doormanURL: URL,
         val networkMapURL: URL,
         val pnm: UUID? = null,
-        val inferred : Boolean = false
+        val inferred: Boolean = false
 )
 
 /**
@@ -260,12 +242,16 @@ data class NodeConfigurationImpl(
     override val certificatesDirectory = baseDirectory / "certificates"
 
     private val signingCertificateStorePath = certificatesDirectory / "nodekeystore.jks"
-    override val signingCertificateStore = FileBasedCertificateStoreSupplier(signingCertificateStorePath, keyStorePassword)
-
     private val p2pKeystorePath: Path get() = certificatesDirectory / "sslkeystore.jks"
-    private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword)
+
+    // TODO: There are two implications here:
+    // 1. "signingCertificateStore" and "p2pKeyStore" have the same passwords. In the future we should re-visit this "rule" and see of they can be made different;
+    // 2. The passwords for store and for keys in this store are the same, this is due to limitations of Artemis.
+    override val signingCertificateStore = FileBasedCertificateStoreSupplier(signingCertificateStorePath, keyStorePassword, keyStorePassword)
+    private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword, keyStorePassword)
+
     private val p2pTrustStoreFilePath: Path get() = certificatesDirectory / "truststore.jks"
-    private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword)
+    private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword, trustStorePassword)
     override val p2pSslOptions: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
 
     override val rpcOptions: NodeRpcOptions
