@@ -8,11 +8,6 @@ cordapp {
         vendor = 'R3'
         targetPlatformVersion = corda_platform_version.toInteger()
     }
-    signing {
-        // We need to sign the output of the "shrink" task,
-        // but the jar signer doesn't support that yet.
-        enabled false
-    }
     sealing {
         // Cannot seal JAR because other module also defines classes in the package net.corda.vega.analytics
         enabled false
@@ -41,6 +36,7 @@ dependencies {
 
 jar {
     classifier = 'fat'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 import proguard.gradle.ProGuardTask
@@ -80,6 +76,9 @@ task shrink(type: ProGuardTask) {
     keepclassmembers 'class org.joda.** { *; }', includedescriptorclasses:true
 }
 jar.finalizedBy shrink
+
+signJar.inputs.files(shrink.outputs)
+shrink.finalizedBy signJar
 
 artifacts {
     shrinkArtifacts file: shrinkJar, name: project.name, type: 'jar', extension: 'jar', classifier: 'tiny', builtBy: shrink

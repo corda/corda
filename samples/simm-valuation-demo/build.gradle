@@ -71,9 +71,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         cordapp project(':samples:simm-valuation-demo:flows')
         rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
     }
-    signing {
-        enabled false
-    }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]
