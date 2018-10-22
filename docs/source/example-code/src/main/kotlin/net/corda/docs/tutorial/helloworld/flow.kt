@@ -34,7 +34,7 @@ class IOUFlow(val iouValue: Int,
 
         // We create a transaction builder and add the components.
         val txBuilder = TransactionBuilder(notary = notary)
-                .addOutputState(outputState, TEMPLATE_CONTRACT_ID)
+                .addOutputState(outputState, TemplateContract.ID)
                 .addCommand(cmd)
 
         // We sign the transaction.
