@@ -10,10 +10,12 @@ import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
+import net.corda.core.node.services.*
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.Vault.ConstraintInfo.Companion.constraintInfo
+import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
 import net.corda.core.schemas.PersistentStateRef
@@ -331,6 +333,17 @@ class NodeVaultService(
                 // flowId was required by SoftLockManager to perform auto-registration of soft locks for new states
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
                 val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
+                if (uuid != null) {
+                    val fungible = netUpdate.produced.filter { stateAndRef ->
+                        val state = stateAndRef.state.data
+                        state is FungibleAsset<*> || state is FungibleState<*>
+                    }
+                    if (fungible.isNotEmpty()) {
+                        val stateRefs = fungible.map { it.ref }.toNonEmptySet()
+                        log.trace { "Reserving soft locks for flow id $uuid and states $stateRefs" }
+                        softLockReserve(uuid, stateRefs)
+                    }
+                }
                 persistentStateService.persist(vaultUpdate.produced)
                 updatesPublisher.onNext(vaultUpdate)
             }
@@ -443,13 +456,26 @@ class NodeVaultService(
 
     @Suspendable
     @Throws(StatesNotAvailableException::class)
-    override fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
-                                                                                  eligibleStatesQuery: QueryCriteria,
-                                                                                  amount: Amount<U>,
-                                                                                  contractStateType: Class<out T>): List<StateAndRef<T>> {
+    override fun <T : FungibleState<*>> tryLockFungibleStatesForSpending(
+            lockId: UUID,
+            eligibleStatesQuery: QueryCriteria,
+            amount: Amount<*>,
+            contractStateType: Class<out T>
+    ): List<StateAndRef<T>> {
         if (amount.quantity == 0L) {
             return emptyList()
         }
+
+        // Helper to unwrap the token from the Issued object if one exists.
+        fun unwrapIssuedAmount(amount: Amount<*>): Any {
+            val token = amount.token
+            return when (token) {
+                is Issued<*> -> token.product
+                else -> token
+            }
+        }
+
+        val unwrappedToken = unwrapIssuedAmount(amount)
 
         // Enrich QueryCriteria with additional default attributes (such as soft locks).
         // We only want to return RELEVANT states here.
@@ -465,8 +491,10 @@ class NodeVaultService(
         var claimedAmount = 0L
         val claimedStates = mutableListOf<StateAndRef<T>>()
         for (state in results.states) {
-            val issuedAssetToken = state.state.data.amount.token
-            if (issuedAssetToken.product == amount.token) {
+            // This method handles Amount<Issued<T>> in FungibleAsset and Amount<T> in FungibleState.
+            val issuedAssetToken = unwrapIssuedAmount(state.state.data.amount)
+
+            if (issuedAssetToken == unwrappedToken) {
                 claimedStates += state
                 claimedAmount += state.state.data.amount.quantity
                 if (claimedAmount > amount.quantity) {
@@ -514,6 +542,7 @@ class NodeVaultService(
 
             val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
             val queryRootVaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
+
             // TODO: revisit (use single instance of parser for all queries)
             val criteriaParser = HibernateQueryCriteriaParser(contractStateType, contractStateTypeMappings, criteriaBuilder, criteriaQuery, queryRootVaultStates)
 
@@ -580,6 +609,7 @@ class NodeVaultService(
             Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults)
         }
     }
+
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return concurrentBox.exclusive {

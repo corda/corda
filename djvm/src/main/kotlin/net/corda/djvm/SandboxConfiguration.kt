@@ -2,6 +2,7 @@ package net.corda.djvm
 
 import net.corda.djvm.analysis.AnalysisConfiguration
 import net.corda.djvm.code.DefinitionProvider
+import net.corda.djvm.code.EMIT_TRACING
 import net.corda.djvm.code.Emitter
 import net.corda.djvm.execution.ExecutionProfile
 import net.corda.djvm.rules.Rule
@@ -51,7 +52,7 @@ class SandboxConfiguration private constructor(
                 executionProfile = profile,
                 rules = rules,
                 emitters = (emitters ?: Discovery.find()).filter {
-                    enableTracing || !it.isTracer
+                    enableTracing || it.priority > EMIT_TRACING
                 },
                 definitionProviders = definitionProviders,
                 analysisConfiguration = analysisConfiguration

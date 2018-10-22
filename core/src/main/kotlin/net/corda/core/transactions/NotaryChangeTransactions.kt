@@ -102,13 +102,21 @@ data class NotaryChangeLedgerTransaction(
 
     override val references: List<StateAndRef<ContractState>> = emptyList()
 
-    /** We compute the outputs on demand by applying the notary field modification to the inputs */
+    /** We compute the outputs on demand by applying the notary field modification to the inputs. */
     override val outputs: List<TransactionState<ContractState>>
-        get() = inputs.mapIndexed { pos, (state) ->
+        get() = computeOutputs()
+
+    private fun computeOutputs(): List<TransactionState<ContractState>> {
+        val inputPositionIndex: Map<StateRef, Int> = inputs.mapIndexed { index, stateAndRef -> stateAndRef.ref to index }.toMap()
+        return inputs.map { (state, ref) ->
             if (state.encumbrance != null) {
-                state.copy(notary = newNotary, encumbrance = pos + 1)
+                val encumbranceStateRef = StateRef(ref.txhash, state.encumbrance)
+                val encumbrancePosition = inputPositionIndex[encumbranceStateRef]
+                        ?: throw IllegalStateException("Unable to generate output states – transaction not constructed correctly.")
+                state.copy(notary = newNotary, encumbrance = encumbrancePosition)
             } else state.copy(notary = newNotary)
         }
+    }
 
     override val requiredSigningKeys: Set<PublicKey>
         get() = inputs.flatMap { it.state.data.participants }.map { it.owningKey }.toSet() + notary.owningKey
@@ -118,18 +126,16 @@ data class NotaryChangeLedgerTransaction(
     }
 
     /**
-     * Check that encumbrances have been included in the inputs. The [NotaryChangeFlow] guarantees that an encumbrance
-     * will follow its encumbered state in the inputs.
+     * Check that encumbrances have been included in the inputs.
      */
     private fun checkEncumbrances() {
-        inputs.forEachIndexed { i, (state, ref) ->
-            state.encumbrance?.let {
-                val nextIndex = i + 1
-                fun nextStateIsEncumbrance() = (inputs[nextIndex].ref.txhash == ref.txhash) && (inputs[nextIndex].ref.index == it)
-                if (nextIndex >= inputs.size || !nextStateIsEncumbrance()) {
+        val encumberedStates = inputs.asSequence().filter { it.state.encumbrance != null }.associateBy { it.ref }
+        if (encumberedStates.isNotEmpty()) {
+            inputs.forEach { (state, ref) ->
+                if (StateRef(ref.txhash, state.encumbrance!!) !in encumberedStates) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(
                             id,
-                            it,
+                            state.encumbrance,
                             TransactionVerificationException.Direction.INPUT)
                 }
             }

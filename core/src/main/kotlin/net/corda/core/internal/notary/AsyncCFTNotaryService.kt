@@ -69,7 +69,7 @@ abstract class AsyncCFTNotaryService : TrustedAuthorityNotaryService() {
             val timeWindow: TimeWindow?,
             val references: List<StateRef>
     ): FlowAsyncOperation<Result> {
-        override fun execute(): CordaFuture<Result> {
+        override fun execute(deduplicationId: String): CordaFuture<Result> {
             return service.commitAsync(inputs, txId, caller, requestSignature, timeWindow, references)
         }
     }

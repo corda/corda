@@ -3,10 +3,10 @@ package sandbox.java.lang;
 import java.io.IOException;
 
 /**
- * This is a dummy class that implements just enough of [java.lang.Appendable]
- * to keep [sandbox.java.lang.StringBuilder], [sandbox.java.lang.StringBuffer]
- * and [sandbox.java.lang.String] honest.
- * Note that it does not extend [java.lang.Appendable].
+ * This is a dummy class that implements just enough of {@link java.lang.Appendable}
+ * to keep {@link sandbox.java.lang.StringBuilder}, {@link sandbox.java.lang.StringBuffer}
+ * and {@link sandbox.java.lang.String} honest.
+ * Note that it does not extend {@link java.lang.Appendable}.
  */
 public interface Appendable {
 

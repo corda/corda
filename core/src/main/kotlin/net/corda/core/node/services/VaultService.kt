@@ -334,24 +334,26 @@ interface VaultService {
 
     /**
      * Helper function to determine spendable states and soft locking them.
-     * Currently performance will be worse than for the hand optimised version in `Cash.unconsumedCashStatesForSpending`.
-     * However, this is fully generic and can operate with custom [FungibleAsset] states.
+     * Currently performance will be worse than for the hand optimised version in
+     * [Cash.unconsumedCashStatesForSpending]. However, this is fully generic and can operate with custom [FungibleState]
+     * and [FungibleAsset] states.
      * @param lockId The [FlowLogic.runId]'s [UUID] of the current flow used to soft lock the states.
      * @param eligibleStatesQuery A custom query object that selects down to the appropriate subset of all states of the
      * [contractStateType]. e.g. by selecting on account, issuer, etc. The query is internally augmented with the
      * [StateStatus.UNCONSUMED], soft lock and contract type requirements.
-     * @param amount The required amount of the asset, but with the issuer stripped off.
-     * It is assumed that compatible issuer states will be filtered out by the [eligibleStatesQuery].
+     * @param amount The required amount of the asset. It is assumed that compatible issuer states will be filtered out
+     * by the [eligibleStatesQuery]. This method accepts both Amount<Issued<*>> and Amount<*>. Amount<Issued<*>> is
+     * automatically unwrapped to Amount<*>.
      * @param contractStateType class type of the result set.
      * @return Returns a locked subset of the [eligibleStatesQuery] sufficient to satisfy the requested amount,
      * or else an empty list and no change in the stored lock states when their are insufficient resources available.
      */
     @Suspendable
     @Throws(StatesNotAvailableException::class)
-    fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
-                                                                         eligibleStatesQuery: QueryCriteria,
-                                                                         amount: Amount<U>,
-                                                                         contractStateType: Class<out T>): List<StateAndRef<T>>
+    fun <T : FungibleState<*>> tryLockFungibleStatesForSpending(lockId: UUID,
+                                                                eligibleStatesQuery: QueryCriteria,
+                                                                amount: Amount<*>,
+                                                                contractStateType: Class<out T>): List<StateAndRef<T>>
 
     // DOCSTART VaultQueryAPI
     /**

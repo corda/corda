@@ -27,30 +27,36 @@ class DisallowCatchingBlacklistedExceptions : Emitter {
 
     companion object {
         private val disallowedExceptionTypes = setOf(
-                ruleViolationError,
-                thresholdViolationError,
+            ruleViolationError,
+            thresholdViolationError,
 
-                /**
-                 * These errors indicate that the JVM is failing,
-                 * so don't allow these to be caught either.
-                 */
-                "java/lang/StackOverflowError",
-                "java/lang/OutOfMemoryError",
+            /**
+             * These errors indicate that the JVM is failing,
+             * so don't allow these to be caught either.
+             */
+            "java/lang/StackOverflowError",
+            "java/lang/OutOfMemoryError",
 
-                /**
-                 * These are immediate super-classes for our explicit errors.
-                 */
-                "java/lang/VirtualMachineError",
-                "java/lang/ThreadDeath",
+            /**
+             * These are immediate super-classes for our explicit errors.
+             */
+            "java/lang/VirtualMachineError",
+            "java/lang/ThreadDeath",
 
-                /**
-                 * Any of [ThreadDeath] and [VirtualMachineError]'s throwable
-                 * super-classes also need explicit checking.
-                 */
-                "java/lang/Throwable",
-                "java/lang/Error"
+            /**
+             * Any of [ThreadDeath] and [VirtualMachineError]'s throwable
+             * super-classes also need explicit checking.
+             */
+            "java/lang/Throwable",
+            "java/lang/Error"
         )
 
     }
 
+    /**
+     * We need to invoke this emitter before the [HandleExceptionUnwrapper]
+     * so that we don't unwrap exceptions we don't want to catch.
+     */
+    override val priority: Int
+        get() = EMIT_TRAPPING_EXCEPTIONS
 }
