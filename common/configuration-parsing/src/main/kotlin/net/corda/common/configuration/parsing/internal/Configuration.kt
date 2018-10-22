@@ -160,11 +160,12 @@ object Configuration {
 
         data class Options(val strict: Boolean)
 
-        sealed class Error constructor(val keyName: String, open val typeName: String? = null, open val message: String, val containingPath: List<String> = emptyList()) {
+        sealed class Error constructor(open val keyName: String?, open val typeName: String? = null, open val message: String, val containingPath: List<String> = emptyList()) {
 
-            val path: List<String> = containingPath + keyName
+            val path: List<String> get() = keyName?.let { containingPath + it } ?: containingPath
 
             val containingPathAsString: String = containingPath.joinToString(".")
+
             val pathAsString: String = path.joinToString(".")
 
             abstract fun withContainingPath(vararg containingPath: String): Error
@@ -174,7 +175,7 @@ object Configuration {
                 return "(keyName='$keyName', typeName='$typeName', path=$path, message='$message')"
             }
 
-            class WrongType private constructor(keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
+            class WrongType private constructor(override val keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
 
                 internal companion object {
 
@@ -194,7 +195,7 @@ object Configuration {
                 override fun withContainingPath(vararg containingPath: String) = WrongType(keyName, typeName, message, containingPath.toList() + this.containingPath)
             }
 
-            class MissingValue private constructor(keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
+            class MissingValue private constructor(override val keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
 
                 internal companion object {
 
@@ -214,7 +215,7 @@ object Configuration {
                 override fun withContainingPath(vararg containingPath: String) = MissingValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
             }
 
-            class BadValue private constructor(keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
+            class BadValue private constructor(override val keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
 
                 internal companion object {
 
@@ -234,7 +235,7 @@ object Configuration {
                 override fun withContainingPath(vararg containingPath: String) = BadValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
             }
 
-            class Unknown private constructor(keyName: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, null, message(keyName), containingPath) {
+            class Unknown private constructor(override val keyName: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, null, message(keyName), containingPath) {
 
                 internal companion object {
 
@@ -257,6 +258,16 @@ object Configuration {
                 override val message = message(pathAsString)
 
                 override fun withContainingPath(vararg containingPath: String) = Unknown(keyName, containingPath.toList() + this.containingPath)
+            }
+
+            class UnsupportedVersion private constructor(val version: Int, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(null, null, "Unknown configuration version $version.", containingPath) {
+
+                internal companion object {
+
+                    internal fun of(version: Int): UnsupportedVersion = UnsupportedVersion(version)
+                }
+
+                override fun withContainingPath(vararg containingPath: String) = UnsupportedVersion(version, containingPath.toList() + this.containingPath)
             }
         }
     }

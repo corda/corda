@@ -7,6 +7,8 @@ internal val extractMissingVersion: Configuration.Value.Parser<Int?> = extractVe
 
 internal fun extractVersion(value: Int?) = extractValidValue(value)
 
+internal fun extractPresentVersion(value: Int) = extractValidValue(value)
+
 internal fun <VALUE> extractValidValue(value: VALUE) = extractValue(Validated.valid(value))
 
 internal fun <VALUE> extractValueWithErrors(errors: Set<Configuration.Validation.Error>) = extractValue<VALUE>(Validated.invalid(errors))

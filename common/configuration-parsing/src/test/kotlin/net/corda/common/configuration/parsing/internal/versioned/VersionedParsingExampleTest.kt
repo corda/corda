@@ -14,38 +14,22 @@ class VersionedParsingExampleTest {
     fun correct_parsing_function_is_used_for_present_version() {
 
         val versionParser = Configuration.Version.Extractor.fromKey("configuration.metadata.version", null)
-        val defaultVersion = null
-        val parser = VersionedConfigurationParser.mapping(versionParser, defaultVersion, 1 to RpcSettingsSpec.V1, 2 to RpcSettingsSpec.V2)
+        val extractVersion: (Config) -> Valid<Int> = { config -> versionParser.parse(config, Configuration.Validation.Options(strict = false)).map { it!! } }
+        val parseConfiguration = VersionedSpecificationRegistry.mapping(extractVersion, 1 to RpcSettingsSpec.V1, 2 to RpcSettingsSpec.V2)
 
         val principalAddressValue = Address("localhost", 8080)
         val adminAddressValue = Address("127.0.0.1", 8081)
 
         val configurationV1 = configObject("configuration.metadata.version" to 1, "principalHost" to principalAddressValue.host, "principalPort" to principalAddressValue.port, "adminHost" to adminAddressValue.host, "adminPort" to adminAddressValue.port).toConfig()
-        val rpcSettingsFromVersion1Conf = parser.parse(configurationV1, Configuration.Validation.Options(strict = false))
+        val rpcSettingsFromVersion1Conf = parseConfiguration.invoke(configurationV1).flatMap { it.parse(configurationV1, Configuration.Validation.Options(strict = false)) }
 
         assertResult(rpcSettingsFromVersion1Conf, principalAddressValue, adminAddressValue)
 
         val addressesValue = configObject("principal" to "${principalAddressValue.host}:${principalAddressValue.port}", "admin" to "${adminAddressValue.host}:${adminAddressValue.port}")
         val configurationV2 = configObject("configuration.metadata.version" to 2, "configuration.value.addresses" to addressesValue).toConfig()
-        val rpcSettingsFromVersion2Conf = parser.parse(configurationV2, Configuration.Validation.Options(strict = false))
+        val rpcSettingsFromVersion2Conf = parseConfiguration.invoke(configurationV2).flatMap { it.parse(configurationV2, Configuration.Validation.Options(strict = false)) }
 
         assertResult(rpcSettingsFromVersion2Conf, principalAddressValue, adminAddressValue)
-    }
-
-    @Test
-    fun default_version_parsing_function_is_used_for_absent_version() {
-
-        val versionParser = Configuration.Version.Extractor.fromKey("configuration.metadata.version", null)
-        val defaultVersion = 1
-        val parser = VersionedConfigurationParser.mapping(versionParser, defaultVersion, defaultVersion to RpcSettingsSpec.V1)
-
-        val principalAddressValue = Address("localhost", 8080)
-        val adminAddressValue = Address("127.0.0.1", 8081)
-
-        val configurationWithoutVersion = configObject("principalHost" to principalAddressValue.host, "principalPort" to principalAddressValue.port, "adminHost" to adminAddressValue.host, "adminPort" to adminAddressValue.port).toConfig()
-        val rpcSettings = parser.parse(configurationWithoutVersion, Configuration.Validation.Options(strict = false))
-
-        assertResult(rpcSettings, principalAddressValue, adminAddressValue)
     }
 
     private fun assertResult(result: Valid<RpcSettings>, principalAddressValue: Address, adminAddressValue: Address) {
