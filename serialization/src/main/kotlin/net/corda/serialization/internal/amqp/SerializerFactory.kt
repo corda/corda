@@ -262,32 +262,8 @@ open class SerializerFactory(
         return get(type.asClass(), type)
     }
 
-    private fun typeForName(name: String, classloader: ClassLoader): Type = when {
-        name.endsWith("[]") -> {
-            val elementType = typeForName(name.substring(0, name.lastIndex - 1), classloader)
-            if (elementType is ParameterizedType || elementType is GenericArrayType) {
-                DeserializedGenericArrayType(elementType)
-            } else if (elementType is Class<*>) {
-                java.lang.reflect.Array.newInstance(elementType, 0).javaClass
-            } else {
-                throw AMQPNoTypeNotSerializableException("Not able to deserialize array type: $name")
-            }
-        }
-        name.endsWith("[p]") -> // There is no need to handle the ByteArray case as that type is coercible automatically
-            // to the binary type and is thus handled by the main serializer and doesn't need a
-            // special case for a primitive array of bytes
-            when (name) {
-                "int[p]" -> IntArray::class.java
-                "char[p]" -> CharArray::class.java
-                "boolean[p]" -> BooleanArray::class.java
-                "float[p]" -> FloatArray::class.java
-                "double[p]" -> DoubleArray::class.java
-                "short[p]" -> ShortArray::class.java
-                "long[p]" -> LongArray::class.java
-                else -> throw AMQPNoTypeNotSerializableException("Not able to deserialize array type: $name")
-            }
-        else -> DeserializedParameterizedType.make(name, classloader)
-    }
+    private fun typeForName(name: String, classloader: ClassLoader): Type =
+            AMQPTypeIdentifierParser.parse(name).getLocalType(classloader)
 
     @StubOutForDJVM
     private fun runCarpentry(schemaAndDescriptor: FactorySchemaAndDescriptor, metaSchema: CarpenterMetaSchema) {

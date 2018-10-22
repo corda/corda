@@ -4,6 +4,7 @@ import com.google.common.reflect.TypeToken
 import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.UnsignedShort
 import org.junit.Test
+import java.io.NotSerializableException
 import java.lang.IllegalArgumentException
 import java.lang.reflect.Type
 import java.time.LocalDateTime
@@ -26,7 +27,7 @@ class AMQPTypeIdentifierParserTests {
         assertParseResult<Array<Array<String>>>("string[][]")
 
         // We set a limit to the depth of arrays-of-arrays-of-arrays...
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<IllegalTypeNameParserStateException> {
             AMQPTypeIdentifierParser.parse("string" + "[]".repeat(33))
         }
     }
@@ -54,7 +55,7 @@ class AMQPTypeIdentifierParserTests {
         )
 
         // We set a limit to the maximum depth of nested type parameters.
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<IllegalTypeNameParserStateException> {
             AMQPTypeIdentifierParser.parse("WithParameter<".repeat(33) + ">".repeat(33))
         }
     }
@@ -72,6 +73,96 @@ class AMQPTypeIdentifierParserTests {
         assertParsesCompatibly<WithParameter<Int>>()
         assertParsesCompatibly<Array<out WithParameter<Int>>>()
         assertParsesCompatibly<WithParameters<IntArray, WithParameter<Array<WithParameters<Array<Array<Date>>, UUID>>>>>()
+    }
+
+    // Old tests for DeserializedParameterizedType
+    @Test
+    fun `test nested`() {
+        verify(" java.util.Map < java.util.Map< java.lang.String, java.lang.Integer >, java.util.Map < java.lang.Long , java.lang.String > >")
+    }
+
+    @Test
+    fun `test simple`() {
+        verify("java.util.List<java.lang.String>")
+    }
+
+    @Test
+    fun `test multiple args`() {
+        verify("java.util.Map<java.lang.String,java.lang.Integer>")
+    }
+
+    @Test
+    fun `test trailing whitespace`() {
+        verify("java.util.Map<java.lang.String, java.lang.Integer> ")
+    }
+
+    @Test
+    fun `test list of commands`() {
+        verify("java.util.List<net.corda.core.contracts.Command<net.corda.core.contracts.Command<net.corda.core.contracts.CommandData>>>")
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test trailing text`() {
+        verify("java.util.Map<java.lang.String, java.lang.Integer>foo")
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test trailing comma`() {
+        verify("java.util.Map<java.lang.String, java.lang.Integer,>")
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test leading comma`() {
+        verify("java.util.Map<,java.lang.String, java.lang.Integer>")
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test middle comma`() {
+        verify("java.util.Map<,java.lang.String,, java.lang.Integer>")
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test trailing close`() {
+        verify("java.util.Map<java.lang.String, java.lang.Integer>>")
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test empty params`() {
+        verify("java.util.Map<>")
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test mid whitespace`() {
+        verify("java.u til.List<java.lang.String>")
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test mid whitespace2`() {
+        verify("java.util.List<java.l ng.String>")
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test wrong number of parameters`() {
+        verify("java.util.List<java.lang.String, java.lang.Integer>")
+    }
+
+    @Test
+    fun `test no parameters`() {
+        verify("java.lang.String")
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test parameters on non-generic type`() {
+        verify("java.lang.String<java.lang.Integer>")
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test excessive nesting`() {
+        var nested = "java.lang.Integer"
+        for (i in 1..AMQPTypeIdentifierParser.MAX_TYPE_PARAM_DEPTH) {
+            nested = "java.util.List<$nested>"
+        }
+        verify(nested)
     }
 
     private inline fun <reified T> assertParseResult(typeString: String) {
@@ -94,5 +185,15 @@ class AMQPTypeIdentifierParserTests {
         val nameAccordingToSerializerFactory = SerializerFactory.nameForType(type)
         val actualIdentifier = AMQPTypeIdentifierParser.parse(nameAccordingToSerializerFactory)
         assertEquals(expectedIdentifierPrettyPrint, actualIdentifier.prettyPrint())
+    }
+
+
+    private fun normalise(string: String): String {
+        return string.replace(" ", "")
+    }
+
+    private fun verify(typeName: String) {
+        val type = AMQPTypeIdentifierParser.parse(typeName).getLocalType()
+        assertEquals(normalise(typeName), normalise(type.typeName))
     }
 }

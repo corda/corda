@@ -2,9 +2,15 @@ package net.corda.serialization.internal.model
 
 import com.google.common.reflect.TypeToken
 import net.corda.serialization.internal.amqp.asClass
-import sun.net.www.content.text.Generic
+import java.io.NotSerializableException
+import java.lang.IllegalArgumentException
 import java.lang.reflect.*
-import java.util.*
+
+/**
+ * Thrown if a [TypeIdentifier] is incompatible with the local [Type] to which it refers,
+ * i.e. if the number of type parameters does not match.
+ */
+class IncompatibleTypeIdentifierException(message: String): NotSerializableException(message)
 
 /**
  * Used as a key for retrieving cached type information. We need slightly more information than the bare classname,
@@ -29,6 +35,8 @@ sealed class TypeIdentifier {
      *
      * @param classLoader The classloader to use to load the type.
      * @throws ClassNotFoundException if the type or any of its parameters cannot be loaded.
+     * @throws IncompatibleTypeIdentifierException if the type identifier is incompatible with the locally-defined type
+     * to which it refers.
      */
     abstract fun getLocalType(classLoader: ClassLoader = ClassLoader.getSystemClassLoader()): Type
 
@@ -40,10 +48,10 @@ sealed class TypeIdentifier {
             is TypeIdentifier.Top -> "*"
             is TypeIdentifier.Unparameterised -> name.simplifyClassNameIfRequired(simplifyClassNames)
             is TypeIdentifier.Erased -> "${name.simplifyClassNameIfRequired(simplifyClassNames)} (erased)"
-            is TypeIdentifier.ArrayOf -> "${componentType.prettyPrint()}[]"
+            is TypeIdentifier.ArrayOf -> "${componentType.prettyPrint(simplifyClassNames)}[]"
             is TypeIdentifier.Parameterised ->
                 name.simplifyClassNameIfRequired(simplifyClassNames) + parameters.joinToString(", ", "<", ">") {
-                    it.prettyPrint()
+                    it.prettyPrint(simplifyClassNames)
                 }
         }
 
@@ -60,7 +68,7 @@ sealed class TypeIdentifier {
             type.name == "java.lang.Object" -> Top
             type.isArray -> ArrayOf(forClass(type.componentType))
             type.typeParameters.isEmpty() -> Unparameterised(type.name)
-            else -> Erased(type.name)
+            else -> Erased(type.name, type.typeParameters.size)
         }
 
         /**
@@ -135,8 +143,24 @@ sealed class TypeIdentifier {
      * Identifies a parameterised class such as List<Int>, for which we cannot obtain the type parameters at runtime
      * because they have been erased.
      */
-    data class Erased(override val name: String) : TypeIdentifier() {
+    data class Erased(override val name: String, val erasedParameterCount: Int) : TypeIdentifier() {
+        /**
+         * Get a parameterised version of this type, with the type parameters populated with [Unknown].
+         */
+        fun toParameterized(): TypeIdentifier = toParameterized((0 until erasedParameterCount).map { Unknown })
+
+        fun toParameterized(vararg parameters: TypeIdentifier): TypeIdentifier = toParameterized(parameters.toList())
+
+        fun toParameterized(parameters: List<TypeIdentifier>): TypeIdentifier {
+            if (parameters.size != erasedParameterCount) throw IncompatibleTypeIdentifierException(
+                    "Erased type $name takes $erasedParameterCount parameters, but ${parameters.size} supplied"
+            )
+            return Parameterised(name, parameters)
+        }
+
         override fun toString() = "Erased($name)"
+
+        // Populate erased type parameters when creating local type.
         override fun getLocalType(classLoader: ClassLoader): Type = classLoader.loadClass(name)
     }
 
@@ -181,10 +205,23 @@ sealed class TypeIdentifier {
      * @param parameters [TypeIdentifier]s for each of the resolved type parameter values of this type.
      */
     data class Parameterised(override val name: String, val parameters: List<TypeIdentifier>) : TypeIdentifier() {
+        /**
+         * Get the type-erased equivalent of this type.
+         */
+        fun erased(): TypeIdentifier = Erased(name, parameters.size)
+
         override fun toString() = "Parameterised(${prettyPrint()})"
-        override fun getLocalType(classLoader: ClassLoader): Type = ReconstitutedParameterizedType(
-                classLoader.loadClass(name),
-                parameters.map { it.getLocalType(classLoader) }.toTypedArray())
+        override fun getLocalType(classLoader: ClassLoader): Type {
+            val rawType = classLoader.loadClass(name)
+            if (rawType.typeParameters.size != parameters.size) {
+                throw IncompatibleTypeIdentifierException(
+                        "Class $rawType expects ${rawType.typeParameters.size} type arguments, " +
+                                "but type ${this.prettyPrint(false)} has ${parameters.size}")
+            }
+            return ReconstitutedParameterizedType(
+                    rawType,
+                    parameters.map { it.getLocalType(classLoader) }.toTypedArray())
+        }
     }
 }
 

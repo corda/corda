@@ -4,6 +4,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.NonEmptySet
+import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.ParameterizedType
@@ -16,8 +17,8 @@ import kotlin.collections.LinkedHashSet
  */
 @KeepForDJVM
 class CollectionSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
-    override val type: Type = declaredType as? DeserializedParameterizedType
-            ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType))
+    override val type: Type = (declaredType as? ParameterizedType)
+            ?: TypeIdentifier.forGenericType(declaredType).getLocalType(factory.classloader) // replace erased type parameters
     override val typeDescriptor: Symbol by lazy {
         Symbol.valueOf("$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
     }
@@ -58,7 +59,11 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
 
         private fun deriveParametrizedType(declaredType: Type, collectionClass: Class<out Collection<*>>): ParameterizedType =
                 (declaredType as? ParameterizedType)
-                        ?: DeserializedParameterizedType(collectionClass, arrayOf(SerializerFactory.AnyType))
+                        ?: TypeIdentifier.Erased(collectionClass.name, 1)
+                                .toParameterized(TypeIdentifier.Top)
+                                .getLocalType(
+                                collectionClass.classLoader ?:
+                                TypeIdentifier.javaClass.classLoader) as ParameterizedType
 
         private fun findMostSuitableCollectionType(actualClass: Class<*>): Class<out Collection<*>> =
                 supportedTypes.keys.findLast { it.isAssignableFrom(actualClass) }!!
