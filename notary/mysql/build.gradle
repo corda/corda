@@ -3,6 +3,7 @@ apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
     cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
@@ -26,6 +27,10 @@ idea {
 
 publish {
     name 'corda-notary-mysql'
+}
+
+jar {
+    baseName 'corda-notary-mysql'
 }
 
 cordapp {
