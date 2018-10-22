@@ -887,10 +887,10 @@ class DriverDSLImpl(
             config += "baseDirectory" to configuration.baseDirectory.toAbsolutePath().toString()
 
             config += "keyStorePath" to configuration.p2pSslOptions.keyStore.path.toString()
-            config += "keyStorePassword" to configuration.p2pSslOptions.keyStore.password
+            config += "keyStorePassword" to configuration.p2pSslOptions.keyStore.storePassword
 
             config += "trustStorePath" to configuration.p2pSslOptions.trustStore.path.toString()
-            config += "trustStorePassword" to configuration.p2pSslOptions.trustStore.password
+            config += "trustStorePassword" to configuration.p2pSslOptions.trustStore.storePassword
 
             return config
         }

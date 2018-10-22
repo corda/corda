@@ -35,10 +35,10 @@ class InProcessBridgeReceiverService(val conf: FirewallConfiguration,
                 val keyStoreBytes = sslConfiguration.keyStore.path.readAll()
                 val trustStoreBytes = sslConfiguration.trustStore.path.readAll()
                 amqpListenerService.provisionKeysAndActivate(keyStoreBytes,
-                        sslConfiguration.keyStore.password.toCharArray(),
-                        sslConfiguration.keyStore.password.toCharArray(),
+                        sslConfiguration.keyStore.storePassword.toCharArray(),
+                        sslConfiguration.keyStore.entryPassword.toCharArray(),
                         trustStoreBytes,
-                        sslConfiguration.trustStore.password.toCharArray())
+                        sslConfiguration.trustStore.storePassword.toCharArray())
             } else {
                 if (amqpListenerService.running) {
                     amqpListenerService.wipeKeysAndDeactivate()

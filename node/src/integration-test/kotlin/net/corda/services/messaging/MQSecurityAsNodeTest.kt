@@ -105,11 +105,11 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
         val clientTLSCert = X509Utilities.createCertificate(CertificateType.TLS, clientCACert, clientKeyPair, CordaX500Name("MiniCorp", "London", "GB").x500Principal, tlsKeyPair.public)
 
         signingCertStore.get(createNew = true).update {
-            setPrivateKey(X509Utilities.CORDA_CLIENT_CA, clientKeyPair.private, listOf(clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
+            setPrivateKey(X509Utilities.CORDA_CLIENT_CA, clientKeyPair.private, listOf(clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate), signingCertStore.entryPassword)
         }
 
         p2pSslConfig.keyStore.get(createNew = true).update {
-            setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKeyPair.private, listOf(clientTLSCert, clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate))
+            setPrivateKey(X509Utilities.CORDA_CLIENT_TLS, tlsKeyPair.private, listOf(clientTLSCert, clientCACert, DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate), p2pSslConfig.keyStore.entryPassword)
         }
 
         val attacker = clientTo(alice.node.configuration.p2pAddress, p2pSslConfig)
