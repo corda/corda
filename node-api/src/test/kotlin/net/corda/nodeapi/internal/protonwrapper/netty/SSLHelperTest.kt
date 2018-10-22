@@ -20,8 +20,10 @@ class SSLHelperTest {
         val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
         val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
 
-        keyManagerFactory.init(CertificateStore.fromFile(sslConfig.keyStore.path, sslConfig.keyStore.password, false))
-        trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(CertificateStore.fromFile(sslConfig.trustStore.path, sslConfig.trustStore.password, false), false))
+        val keyStore = sslConfig.keyStore
+        keyManagerFactory.init(CertificateStore.fromFile(keyStore.path, keyStore.storePassword, keyStore.entryPassword, false))
+        val trustStore = sslConfig.trustStore
+        trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(CertificateStore.fromFile(trustStore.path, trustStore.storePassword, trustStore.entryPassword, false), false))
 
         val sslHandler = createClientSslHelper(NetworkHostAndPort("localhost", 1234), setOf(legalName), keyManagerFactory, trustManagerFactory)
         val legalNameHash = SecureHash.sha256(legalName.toString()).toString().take(32).toLowerCase()

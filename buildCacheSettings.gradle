@@ -9,6 +9,7 @@ buildCache {
         enabled = !isCiServer
     }
     remote(HttpBuildCache) {
+        enabled = isCiServer
         url = gradleBuildCacheURL
         push = isCiServer
     }

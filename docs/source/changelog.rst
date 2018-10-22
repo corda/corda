@@ -11,7 +11,33 @@ Unreleased
 
 * Introduce minimum and target platform version for CorDapps.
 
+* BFT-Smart and Raft notary implementations have been extracted out of node into ``experimental`` CorDapps to emphasise
+  their experimental nature. Moreover, the BFT-Smart notary will only work in dev mode due to its use of Java serialization.
+
 * Vault storage of contract state constraints metadata and associated vault query functions to retrieve and sort by constraint type.
+
+* UPGRADE REQUIRED: changes have been made to how notary implementations are configured and loaded.
+  No upgrade steps are required for the single-node notary (both validating and non-validating variants).
+  Other notary implementations have been moved out of the Corda node into individual Cordapps, and require configuration
+  file updates.
+
+  To run a notary you will now need to include the appropriate notary CorDapp in the ``cordapps/`` directory:
+
+    * ``corda-notary-raft`` for the Raft notary.
+    * ``corda-notary-bft-smart`` for the BFT-Smart notary.
+
+  It is now required to specify the fully qualified notary service class name, ``className``, and the legal name of
+  the notary service in case of distributed notaries: ``serviceLegalName``.
+
+  Implementation-specific configuration values have been moved to the ``extraConfig`` configuration block.
+
+  Example configuration changes for the Raft notary:
+
+  .. image:: resources/notary-config-update.png
+
+  Example configuration changes for the BFT-Smart notary:
+
+  .. image:: resources/notary-config-update-bft.png
 
 * New overload for ``CordaRPCClient.start()`` method allowing to specify target legal identity to use for RPC call.
 
@@ -221,6 +247,15 @@ Unreleased
   for "current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a
   normal state when it occurs in an input or output position. *This feature is only available on Corda networks running
   with a minimum platform version of 4.*
+
+* Removed type parameter `U` from `tryLockFungibleStatesForSpending` to allow the function to be used with `FungibleState`
+  as well as `FungibleAsset`. This _might_ cause a compile failure in some obscure cases due to the removal of the type
+  parameter from the method. If your CorDapp does specify types explicitly when using this method then updating the types
+  will allow your app to compile successfully. However, those using type inference (e.g. using Kotlin) should not experience
+  any changes. Old CorDapp JARs will still work regardless.
+
+* `issuer_ref` column in `FungibleStateSchema` was updated to be nullable to support the introduction of the
+  `FungibleState` interface. The `vault_fungible_states` table can hold both `FungibleAssets` and `FungibleStates`.
 
 Version 3.3
 -----------

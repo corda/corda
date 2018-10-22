@@ -32,6 +32,7 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.*
 import net.corda.node.CordaClock
+import net.corda.node.SerialFilter
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.classloading.requireAnnotation
@@ -86,6 +87,7 @@ import org.slf4j.Logger
 import rx.Observable
 import rx.Scheduler
 import java.io.IOException
+import java.lang.UnsupportedOperationException
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 import java.security.KeyPair
@@ -153,6 +155,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             schemaService,
             configuration.dataSourceProperties,
             cacheFactory)
+
     init {
         // TODO Break cyclic dependency
         identityService.database = database
@@ -167,7 +170,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(), attachments).tokenize()
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
-    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, transactionStorage)
+    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, transactionStorage).also {
+        attachments.servicesForResolution = it
+    }
     @Suppress("LeakingThis")
     val vaultService = makeVaultService(keyManagementService, servicesForResolution, database).tokenize()
     val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
@@ -265,7 +270,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
         val trustRoot = initKeyStores()
-        val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
+        val (identity, identityKeyPair) = obtainIdentity()
         startDatabase()
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
@@ -320,7 +325,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         networkMapCache.start(netParams.notaries)
 
         startDatabase()
-        val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
+        val (identity, identityKeyPair) = obtainIdentity()
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
 
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
@@ -397,8 +402,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val keyPairs = mutableSetOf(identityKeyPair)
 
         val myNotaryIdentity = configuration.notary?.let {
-            if (it.isClusterConfig) {
-                val (notaryIdentity, notaryIdentityKeyPair) = obtainIdentity(it)
+            if (it.serviceLegalName != null) {
+                val (notaryIdentity, notaryIdentityKeyPair) = loadNotaryClusterIdentity(it.serviceLegalName)
                 keyPairs += notaryIdentityKeyPair
                 notaryIdentity
             } else {
@@ -766,6 +771,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
             val notaryKey = myNotaryIdentity?.owningKey
                     ?: throw IllegalArgumentException("Unable to start notary service $serviceClass: notary identity not found")
+
+            /** Some notary implementations only work with Java serialization. */
+            maybeInstallSerializationFilter(serviceClass)
+
             val constructor = serviceClass.getDeclaredConstructor(ServiceHubInternal::class.java, PublicKey::class.java).apply { isAccessible = true }
             val service = constructor.newInstance(services, notaryKey) as NotaryService
 
@@ -776,6 +785,23 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 start()
             }
             return service
+        }
+    }
+
+    /** Installs a custom serialization filter defined by a notary service implementation. Only supported in dev mode. */
+    private fun maybeInstallSerializationFilter(serviceClass: Class<out NotaryService>) {
+        try {
+            @Suppress("UNCHECKED_CAST")
+            val filter = serviceClass.getDeclaredMethod("getSerializationFilter").invoke(null) as ((Class<*>) -> Boolean)
+            if (configuration.devMode) {
+                log.warn("Installing a custom Java serialization filter, required by ${serviceClass.name}. " +
+                        "Note this is only supported in dev mode – a production node will fail to start if serialization filters are used.")
+                SerialFilter.install(filter)
+            } else {
+                throw UnsupportedOperationException("Unable to install a custom Java serialization filter, not in dev mode.")
+            }
+        } catch (e: NoSuchMethodException) {
+            // No custom serialization filter declared
         }
     }
 
@@ -816,55 +842,56 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                                  myNotaryIdentity: PartyAndCertificate?,
                                                  networkParameters: NetworkParameters)
 
-    private fun obtainIdentity(notaryConfig: NotaryConfig?): Pair<PartyAndCertificate, KeyPair> {
+    /** Loads or generates the node's legal identity and key-pair. */
+    private fun obtainIdentity(): Pair<PartyAndCertificate, KeyPair> {
         val keyStore = configuration.signingCertificateStore.get()
+        val legalName = configuration.myLegalName
 
-        val (id, singleName) = if (notaryConfig == null || !notaryConfig.isClusterConfig) {
-            // Node's main identity or if it's a single node notary.
-            Pair(NODE_IDENTITY_ALIAS_PREFIX, configuration.myLegalName)
-        } else {
-            // The node is part of a distributed notary whose identity must already be generated beforehand.
-            Pair(DISTRIBUTED_NOTARY_ALIAS_PREFIX, null)
-        }
         // TODO: Integrate with Key management service?
-        val privateKeyAlias = "$id-private-key"
-
+        val privateKeyAlias = "$NODE_IDENTITY_ALIAS_PREFIX-private-key"
         if (privateKeyAlias !in keyStore) {
-            // We shouldn't have a distributed notary at this stage, so singleName should NOT be null.
-            requireNotNull(singleName) {
-                "Unable to find in the key store the identity of the distributed notary the node is part of"
-            }
             log.info("$privateKeyAlias not found in key store, generating fresh key!")
             keyStore.storeLegalIdentity(privateKeyAlias, generateKeyPair())
         }
 
-        val (x509Cert, keyPair) = keyStore.query { getCertificateAndKeyPair(privateKeyAlias) }
+        val (x509Cert, keyPair) = keyStore.query { getCertificateAndKeyPair(privateKeyAlias, keyStore.entryPassword) }
 
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
-        val compositeKeyAlias = "$id-composite-key"
+        val certificates = keyStore.query { getCertificateChain(privateKeyAlias) }
+        check(certificates.first() == x509Cert) {
+            "Certificates from key store do not line up!"
+        }
+
+        val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
+        if (subject != legalName) {
+            throw ConfigurationException("The name '$legalName' for $NODE_IDENTITY_ALIAS_PREFIX doesn't match what's in the key store: $subject")
+        }
+
+        val certPath = X509Utilities.buildCertPath(certificates)
+        return Pair(PartyAndCertificate(certPath), keyPair)
+    }
+
+    /** Loads pre-generated notary service cluster identity. */
+    private fun loadNotaryClusterIdentity(serviceLegalName: CordaX500Name): Pair<PartyAndCertificate, KeyPair> {
+        val keyStore = configuration.signingCertificateStore.get()
+
+        val privateKeyAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key"
+        val keyPair = keyStore.query { getCertificateAndKeyPair(privateKeyAlias, keyStore.entryPassword) }.keyPair
+
+        val compositeKeyAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key"
         val certificates = if (compositeKeyAlias in keyStore) {
-            // Use composite key instead if it exists.
             val certificate = keyStore[compositeKeyAlias]
             // We have to create the certificate chain for the composite key manually, this is because we don't have a keystore
             // provider that understand compositeKey-privateKey combo. The cert chain is created using the composite key certificate +
             // the tail of the private key certificates, as they are both signed by the same certificate chain.
             listOf(certificate) + keyStore.query { getCertificateChain(privateKeyAlias) }.drop(1)
-        } else {
-            keyStore.query { getCertificateChain(privateKeyAlias) }.let {
-                check(it[0] == x509Cert) { "Certificates from key store do not line up!" }
-                it
-            }
-        }
+        } else throw IllegalStateException("The identity public key for the notary service $serviceLegalName was not found in the key store.")
 
-        val subject = CordaX500Name.build(certificates[0].subjectX500Principal)
-        if (singleName != null && subject != singleName) {
-            throw ConfigurationException("The name '$singleName' for $id doesn't match what's in the key store: $subject")
-        } else if (notaryConfig != null && notaryConfig.isClusterConfig && notaryConfig.serviceLegalName != null && subject != notaryConfig.serviceLegalName) {
-            // Note that we're not checking if `notaryConfig.serviceLegalName` is not present for backwards compatibility.
-            throw ConfigurationException("The name of the notary service '${notaryConfig.serviceLegalName}' for $id doesn't " +
+        val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
+        if (subject != serviceLegalName) {
+            throw ConfigurationException("The name of the notary service '$serviceLegalName' for $DISTRIBUTED_NOTARY_ALIAS_PREFIX doesn't " +
                     "match what's in the key store: $subject. You might need to adjust the configuration of `notary.serviceLegalName`.")
         }
-
         val certPath = X509Utilities.buildCertPath(certificates)
         return Pair(PartyAndCertificate(certPath), keyPair)
     }
@@ -1011,7 +1038,7 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
     // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
     JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
-    val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
+    val attributeConverters = listOf(PublicKeyToTextConverter(), AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
     return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, cacheFactory, attributeConverters)
 }

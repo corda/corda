@@ -125,7 +125,14 @@ The current set of network parameters:
 :eventHorizon: Time after which nodes are considered to be unresponsive and removed from network map. Nodes republish their
         ``NodeInfo`` on a regular interval. Network map treats that as a heartbeat from the node.
 
-More parameters will be added in future releases to regulate things like allowed port numbers, whether or not IPv6 
+:packageOwnership: List of the network-wide java packages that were successfully claimed by their owners.
+    Any CorDapp JAR that offers contracts and states in any of these packages must be signed by the owner.
+    This ensures that when a node encounters an owned contract it can uniquely identify it and knows that all other nodes can do the same.
+    Encountering an owned contract in a JAR that is not signed by the rightful owner is most likely a sign of malicious behaviour, and should be reported.
+    The transaction verification logic will throw an exception when this happens.
+    Read more about *Package ownership* here :doc:`design/data-model-upgrades/package-namespace-ownership`.
+
+More parameters will be added in future releases to regulate things like allowed port numbers, whether or not IPv6
 connectivity is required for zone members, required cryptographic algorithms and roll-out schedules (e.g. for moving to post quantum cryptography), parameters related to SGX and so on.
 
 Network parameters update process

@@ -3,6 +3,7 @@ package net.corda.core.transactions
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.castIfPossible
@@ -74,6 +75,9 @@ data class LedgerTransaction @JvmOverloads constructor(
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
     val referenceStates: List<ContractState> get() = references.map { it.state.data }
 
+    private val inputAndOutputStates = inputs.map { it.state } + outputs
+    private val allStates = inputAndOutputStates + references.map { it.state }
+
     /**
      * Returns the typed input StateAndRef at the specified index
      * @param index The index into the inputs.
@@ -88,8 +92,35 @@ data class LedgerTransaction @JvmOverloads constructor(
      */
     @Throws(TransactionVerificationException::class)
     fun verify() {
+        val contractAttachmentsByContract: Map<ContractClassName, ContractAttachment> = getUniqueContractAttachmentsByContract()
+
+        validatePackageOwnership(contractAttachmentsByContract)
         verifyConstraints()
         verifyContracts()
+    }
+
+    /**
+     * Verify that package ownership is respected.
+     *
+     * TODO - revisit once transaction contains network parameters.
+     */
+    private fun validatePackageOwnership(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
+        // This should never happen once we have network parameters in the transaction.
+        if (networkParameters == null) {
+            return
+        }
+
+        val contractsAndOwners = allStates.mapNotNull { transactionState ->
+            val contractClassName = transactionState.contract
+            networkParameters.getOwnerOf(contractClassName)?.let { contractClassName to it }
+        }.toMap()
+
+        contractsAndOwners.forEach { contract, owner ->
+            val attachment = contractAttachmentsByContract[contract]!!
+            if (!owner.isFulfilledBy(attachment.signers)) {
+                throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
+            }
+        }
     }
 
     /**
@@ -121,6 +152,29 @@ data class LedgerTransaction @JvmOverloads constructor(
                 throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
             }
         }
+    }
+
+    private fun getUniqueContractAttachmentsByContract(): Map<ContractClassName, ContractAttachment> {
+        val result = mutableMapOf<ContractClassName, ContractAttachment>()
+
+        for (attachment in attachments) {
+            if (attachment !is ContractAttachment) continue
+
+            for (contract in attachment.allContracts) {
+                result.compute(contract) { _, previousAttachment ->
+                    when {
+                        previousAttachment == null -> attachment
+                        attachment.id == previousAttachment.id -> previousAttachment
+                        // In case multiple attachments have been added for the same contract, fail because this
+                        // transaction will not be able to be verified because it will break the no-overlap rule
+                        // that we have implemented in our Classloaders
+                        else -> throw TransactionVerificationException.ConflictingAttachmentsRejection(id, contract)
+                    }
+                }
+            }
+        }
+
+        return result
     }
 
     /**
@@ -169,30 +223,79 @@ data class LedgerTransaction @JvmOverloads constructor(
 
     private fun checkEncumbrancesValid() {
         // Validate that all encumbrances exist within the set of input states.
-        val encumberedInputs = inputs.filter { it.state.encumbrance != null }
-        encumberedInputs.forEach { (state, ref) ->
-            val encumbranceStateExists = inputs.any {
-                it.ref.txhash == ref.txhash && it.ref.index == state.encumbrance
-            }
-            if (!encumbranceStateExists) {
+        inputs.filter { it.state.encumbrance != null }
+                .forEach { (state, ref) -> checkInputEncumbranceStateExists(state, ref) }
+
+        // Check that in the outputs,
+        // a) an encumbered state does not refer to itself as the encumbrance
+        // b) the number of outputs can contain the encumbrance
+        // c) the bi-directionality (full cycle) property is satisfied.
+        val statesAndEncumbrance = outputs.withIndex().filter { it.value.encumbrance != null }.map { Pair(it.index, it.value.encumbrance!!) }
+        if (!statesAndEncumbrance.isEmpty()) {
+            checkOutputEncumbrances(statesAndEncumbrance)
+        }
+    }
+
+    private fun checkInputEncumbranceStateExists(state: TransactionState<ContractState>, ref: StateRef) {
+        val encumbranceStateExists = inputs.any {
+            it.ref.txhash == ref.txhash && it.ref.index == state.encumbrance
+        }
+        if (!encumbranceStateExists) {
+            throw TransactionVerificationException.TransactionMissingEncumbranceException(
+                    id,
+                    state.encumbrance!!,
+                    TransactionVerificationException.Direction.INPUT
+            )
+        }
+    }
+
+    // Using basic graph theory, a full cycle of encumbered (co-dependent) states should exist to achieve bi-directional
+    // encumbrances. This property is important to ensure that no states involved in an encumbrance-relationship
+    // can be spent on their own. Briefly, if any of the states is having more than one encumbrance references by
+    // other states, a full cycle detection will fail. As a result, all of the encumbered states must be present
+    // as "from" and "to" only once (or zero times if no encumbrance takes place). For instance,
+    // a -> b
+    // c -> b    and     a -> b
+    // b -> a            b -> c
+    // do not satisfy the bi-directionality (full cycle) property.
+    //
+    // In the first example "b" appears twice in encumbrance ("to") list and "c" exists in the encumbered ("from") list only.
+    // Due the above, one could consume "a" and "b" in the same transaction and then, because "b" is already consumed, "c" cannot be spent.
+    //
+    // Similarly, the second example does not form a full cycle because "a" and "c" exist in one of the lists only.
+    // As a result, one can consume "b" and "c" in the same transactions, which will make "a" impossible to be spent.
+    //
+    // On other hand the following are valid constructions:
+    // a -> b            a -> c
+    // b -> c    and     c -> b
+    // c -> a            b -> a
+    // and form a full cycle, meaning that the bi-directionality property is satisfied.
+    private fun checkOutputEncumbrances(statesAndEncumbrance: List<Pair<Int, Int>>) {
+        // [Set] of "from" (encumbered states).
+        val encumberedSet = mutableSetOf<Int>()
+        // [Set] of "to" (encumbrance states).
+        val encumbranceSet = mutableSetOf<Int>()
+        // Update both [Set]s.
+        statesAndEncumbrance.forEach { (statePosition, encumbrance) ->
+            // Check it does not refer to itself.
+            if (statePosition == encumbrance || encumbrance >= outputs.size) {
                 throw TransactionVerificationException.TransactionMissingEncumbranceException(
                         id,
-                        state.encumbrance!!,
-                        TransactionVerificationException.Direction.INPUT
-                )
+                        encumbrance,
+                        TransactionVerificationException.Direction.OUTPUT)
+            } else {
+                encumberedSet.add(statePosition) // Guaranteed to have unique elements.
+                if (!encumbranceSet.add(encumbrance)) {
+                    throw TransactionVerificationException.TransactionDuplicateEncumbranceException(id, encumbrance)
+                }
             }
         }
-
-        // Check that, in the outputs, an encumbered state does not refer to itself as the encumbrance,
-        // and that the number of outputs can contain the encumbrance.
-        for ((i, output) in outputs.withIndex()) {
-            val encumbranceIndex = output.encumbrance ?: continue
-            if (encumbranceIndex == i || encumbranceIndex >= outputs.size) {
-                throw TransactionVerificationException.TransactionMissingEncumbranceException(
-                        id,
-                        encumbranceIndex,
-                        TransactionVerificationException.Direction.OUTPUT)
-            }
+        // At this stage we have ensured that "from" and "to" [Set]s are equal in size, but we should check their
+        // elements do indeed match. If they don't match, we return their symmetric difference (disjunctive union).
+        val symmetricDifference = (encumberedSet union encumbranceSet).subtract(encumberedSet intersect encumbranceSet)
+        if (symmetricDifference.isNotEmpty()) {
+            // At least one encumbered state is not in the [encumbranceSet] and vice versa.
+            throw TransactionVerificationException.TransactionNonMatchingEncumbranceException(id, symmetricDifference)
         }
     }
 

@@ -2,6 +2,7 @@ package net.corda.core.internal
 
 import net.corda.core.identity.Party
 import java.security.CodeSigner
+import java.security.PublicKey
 import java.security.cert.X509Certificate
 import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
@@ -23,22 +24,25 @@ object JarSignatureCollector {
      * @param jar The open [JarInputStream] to collect signing parties from.
      * @throws InvalidJarSignersException If the signer sets for any two signable items are different from each other.
      */
-    fun collectSigningParties(jar: JarInputStream): List<Party> {
+    fun collectSigners(jar: JarInputStream): List<PublicKey> = getSigners(jar).toOrderedPublicKeys()
+
+    fun collectSigningParties(jar: JarInputStream): List<Party> = getSigners(jar).toPartiesOrderedByName()
+
+    private fun getSigners(jar: JarInputStream): Set<CodeSigner> {
         val signerSets = jar.fileSignerSets
-        if (signerSets.isEmpty()) return emptyList()
+        if (signerSets.isEmpty()) return emptySet()
 
         val (firstFile, firstSignerSet) = signerSets.first()
         for ((otherFile, otherSignerSet) in signerSets.subList(1, signerSets.size)) {
             if (otherSignerSet != firstSignerSet) throw InvalidJarSignersException(
-                """
-                Mismatch between signers ${firstSignerSet.toPartiesOrderedByName()} for file $firstFile
-                and signers ${otherSignerSet.toPartiesOrderedByName()} for file ${otherFile}.
-                See https://docs.corda.net/design/data-model-upgrades/signature-constraints.html for details of the
-                constraints applied to attachment signatures.
-                """.trimIndent().replace('\n', ' '))
+                    """
+                    Mismatch between signers ${firstSignerSet.toOrderedPublicKeys()} for file $firstFile
+                    and signers ${otherSignerSet.toOrderedPublicKeys()} for file ${otherFile}.
+                    See https://docs.corda.net/design/data-model-upgrades/signature-constraints.html for details of the
+                    constraints applied to attachment signatures.
+                    """.trimIndent().replace('\n', ' '))
         }
-
-        return firstSignerSet.toPartiesOrderedByName()
+        return firstSignerSet
     }
 
     private val JarInputStream.fileSignerSets: List<Pair<String, Set<CodeSigner>>> get() =
@@ -62,6 +66,10 @@ object JarSignatureCollector {
     private fun Set<CodeSigner>.toPartiesOrderedByName(): List<Party> = map {
         Party(it.signerCertPath.certificates[0] as X509Certificate)
     }.sortedBy { it.name.toString() } // Sorted for determinism.
+
+    private fun Set<CodeSigner>.toOrderedPublicKeys(): List<PublicKey> = map {
+        (it.signerCertPath.certificates[0] as X509Certificate).publicKey
+    }.sortedBy { it.hash} // Sorted for determinism.
 
     private val JarInputStream.entries get(): Sequence<JarEntry> = generateSequence(nextJarEntry) { nextJarEntry }
 }

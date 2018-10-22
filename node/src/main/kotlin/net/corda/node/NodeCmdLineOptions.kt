@@ -66,23 +66,6 @@ class InitialRegistrationCmdLineOptions : SharedNodeCmdLineOptions() {
     }
 }
 
-class BootstrapRaftNotaryCmdLineOptions : NodeCmdLineOptions() {
-    override fun loadConfig(): NodeConfiguration {
-        val rawConfig= ConfigHelper.loadConfig(
-                baseDirectory,
-                configFile,
-                configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell) +
-                        if (sshdServer) mapOf("sshd" to mapOf("port" to sshdServerPort.toString())) else emptyMap<String, Any>() +
-                        if (devMode != null) mapOf("devMode" to this.devMode) else emptyMap())
-        )
-        if (devMode == true) {
-            println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
-        }
-        val config = rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle) as NodeConfigurationImpl
-        return config.copy(notary = config.notary?.copy(raft = config.notary.raft?.copy(clusterAddresses = emptyList())))
-    }
-}
-
 open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
     @Option(
             names = ["--sshd"],
@@ -115,13 +98,6 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
             hidden = true
     )
     var justGenerateRpcSslCerts: Boolean = false
-
-    @Option(
-            names = ["--bootstrap-raft-cluster"],
-            description = ["DEPRECATED. Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer addresses), acting as a seed for other nodes to join the cluster."],
-            hidden = true
-    )
-    var bootstrapRaftCluster: Boolean = false
 
     @Option(
             names = ["--clear-network-map-cache"],

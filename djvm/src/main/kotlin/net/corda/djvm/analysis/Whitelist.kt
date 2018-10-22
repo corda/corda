@@ -100,9 +100,6 @@ open class Whitelist private constructor(
             "^java/lang/Cloneable(\\..*)?\$".toRegex(),
             "^java/lang/Object(\\..*)?\$".toRegex(),
             "^java/lang/Override(\\..*)?\$".toRegex(),
-                // TODO: sandbox exception handling!
-                "^java/lang/StackTraceElement\$".toRegex(),
-                "^java/lang/Throwable\$".toRegex(),
             "^java/lang/Void\$".toRegex(),
             "^java/lang/invoke/LambdaMetafactory\$".toRegex(),
             "^java/lang/invoke/MethodHandles(\\\$.*)?\$".toRegex(),

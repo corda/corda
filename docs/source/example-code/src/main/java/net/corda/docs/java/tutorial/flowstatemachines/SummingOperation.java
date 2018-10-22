@@ -12,7 +12,7 @@ public final class SummingOperation implements FlowAsyncOperation<Integer> {
 
     @NotNull
     @Override
-    public CordaFuture<Integer> execute() {
+    public CordaFuture<Integer> execute(String deduplicationId) {
         return CordaFutureImplKt.doneFuture(this.a + this.b);
     }
 

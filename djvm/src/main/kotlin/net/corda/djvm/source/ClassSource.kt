@@ -21,12 +21,14 @@ class ClassSource private constructor(
         /**
          * Instantiate a [ClassSource] from a fully qualified class name.
          */
+        @JvmStatic
         fun fromClassName(className: String, origin: String? = null) =
                 ClassSource(className, origin)
 
         /**
          * Instantiate a [ClassSource] from a file on disk.
          */
+        @JvmStatic
         fun fromPath(path: Path) = PathClassSource(path)
 
         /**
