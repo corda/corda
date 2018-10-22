@@ -22,9 +22,9 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.services.config.MySQLConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
+import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
@@ -256,7 +256,8 @@ class MySQLNotaryServiceTests : IntegrationTest() {
                         configOverrides = {
                             val notaryConfig = NotaryConfig(
                                     validating = true,
-                                    mysql = MySQLConfiguration(dataStoreProperties, maxBatchSize = 10, maxBatchInputStates = 100),
+                                    extraConfig = MySQLNotaryConfiguration(dataStoreProperties, maxBatchSize = 10, maxBatchInputStates = 100).toConfig(),
+                                    serviceLegalName = notaryName,
                                     className = MySQLNotaryService::class.java.name
                             )
                             doReturn(notaryConfig).whenever(it).notary

@@ -6,6 +6,7 @@ import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.node.services.transactions.ValidatingNotaryFlow
+import net.corda.nodeapi.internal.config.parseAs
 import java.security.PublicKey
 
 /** Notary service backed by a replicated MySQL database. */
@@ -20,8 +21,11 @@ class MySQLNotaryService(
             ?: throw IllegalArgumentException("Failed to register ${this::class.java}: notary configuration not present")
 
     override val asyncUniquenessProvider = with(services) {
-        val mysqlConfig = notaryConfig.mysql
-                ?: throw IllegalArgumentException("Failed to register ${this::class.java}: raft configuration not present")
+        val mysqlConfig = try {
+            notaryConfig.extraConfig!!.parseAs<MySQLNotaryConfiguration>()
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Failed to register ${MySQLNotaryService::class.java}: mysql configuration not present")
+        }
         MySQLUniquenessProvider(
                 services.monitoringService.metrics,
                 services.clock,

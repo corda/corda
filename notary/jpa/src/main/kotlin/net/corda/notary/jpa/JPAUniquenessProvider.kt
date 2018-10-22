@@ -12,14 +12,16 @@ import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.notary.*
+import net.corda.core.internal.notary.AsyncUniquenessProvider
+import net.corda.core.internal.notary.NotaryInternalException
+import net.corda.core.internal.notary.isConsumedByTheSameTx
+import net.corda.core.internal.notary.validateTimeWindow
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.serialization.internal.CordaSerializationEncoding
@@ -36,7 +38,7 @@ import kotlin.concurrent.thread
 
 /** A JPA backed Uniqueness provider */
 @ThreadSafe
-class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, val notaryConfig: NotaryConfig) : AsyncUniquenessProvider, SingletonSerializeAsToken() {
+class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, val config: JPANotaryConfiguration) : AsyncUniquenessProvider, SingletonSerializeAsToken() {
 
     // TODO: test vs. MySQLUniquenessProvider
 
@@ -49,7 +51,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
     @CordaSerializable
     class Request(
             @Id
-            @Column(nullable = true, length=76)
+            @Column(nullable = true, length = 76)
             var id: String? = null,
 
             @Column(name = "consuming_transaction_id", nullable = true, length = 64)
@@ -79,7 +81,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}jpa_notary_committed_states")
-    @NamedQuery(name = "CommittedState.select", query="SELECT c from JPAUniquenessProvider\$CommittedState c WHERE c.id in :ids")
+    @NamedQuery(name = "CommittedState.select", query = "SELECT c from JPAUniquenessProvider\$CommittedState c WHERE c.id in :ids")
     class CommittedState(
             @Id
             @Column(name = "state_ref", length = 73)
@@ -96,7 +98,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
         try {
             val buffer = LinkedList<CommitRequest>()
             while (!Thread.interrupted()) {
-                val drainedSize = Queues.drain(requestQueue, buffer, notaryConfig.batchSize, notaryConfig.batchTimeoutMs, TimeUnit.MILLISECONDS)
+                val drainedSize = Queues.drain(requestQueue, buffer, config.batchSize, config.batchTimeoutMs, TimeUnit.MILLISECONDS)
                 if (drainedSize == 0) continue
                 processRequests(buffer)
                 buffer.clear()
@@ -115,7 +117,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
         private const val jdbcBatchSize = 100_000
         private val log = contextLogger()
 
-        fun encodeStateRef(s: StateRef): String  {
+        fun encodeStateRef(s: StateRef): String {
             return s.txhash.toString() + ":" + s.index.toString(16)
         }
 
@@ -173,7 +175,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
         val ids = (states + references).map { encodeStateRef(it) }.toSet()
         val committedStates = mutableListOf<CommittedState>()
 
-        for (idsBatch in ids.chunked(notaryConfig.maxInputStates)) {
+        for (idsBatch in ids.chunked(config.maxInputStates)) {
             @SuppressWarnings("unchecked")
             val existing = session.createNamedQuery("CommittedState.select").setParameter("ids", idsBatch).resultList as List<CommittedState>
             committedStates.addAll(existing)
@@ -184,7 +186,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
             val consumingTxId = SecureHash.parse(it.consumingTxHash)
             if (stateRef in references) {
                 stateRef to StateConsumptionDetails(hashOfTransactionId = consumingTxId, type = StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
-            } else  {
+            } else {
                 stateRef to StateConsumptionDetails(consumingTxId.sha256())
             }
         }.toMap()
@@ -192,8 +194,8 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
 
     private fun withRetry(block: () -> Unit) {
         var retryCount = 0
-        var backOff = notaryConfig.backOffBaseMs
-        while (retryCount < notaryConfig.maxDBTransactionRetryCount) {
+        var backOff = config.backOffBaseMs
+        while (retryCount < config.maxDBTransactionRetryCount) {
             try {
                 block()
                 break
@@ -263,7 +265,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
                     }
                 }
             }
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             log.warn("Error processing commit requests", e)
             for (request in requests) {
                 respondWithError(request, e)
@@ -272,10 +274,10 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
     }
 
     private fun respondWithError(request: CommitRequest, exception: Exception) {
-            if (exception is NotaryInternalException) {
-                request.future.set(AsyncUniquenessProvider.Result.Failure(exception.error))
-            } else {
-                request.future.setException(NotaryInternalException(NotaryError.General(Exception("Internal service error."))))
-            }
+        if (exception is NotaryInternalException) {
+            request.future.set(AsyncUniquenessProvider.Result.Failure(exception.error))
+        } else {
+            request.future.setException(NotaryInternalException(NotaryError.General(Exception("Internal service error."))))
+        }
     }
 }

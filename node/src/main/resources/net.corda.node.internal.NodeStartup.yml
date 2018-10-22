@@ -6,11 +6,6 @@
     required: false
     multiParam: true
     acceptableValues: []
-  - parameterName: "--bootstrap-raft-cluster"
-    parameterType: "boolean"
-    required: false
-    multiParam: false
-    acceptableValues: []
   - parameterName: "--clear-network-map-cache"
     parameterType: "boolean"
     required: false

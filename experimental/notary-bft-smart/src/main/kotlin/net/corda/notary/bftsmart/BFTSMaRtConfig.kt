@@ -13,6 +13,24 @@ import java.net.SocketException
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
+data class BFTSMaRtConfiguration(
+        /** The zero-based index of the current replica. All replicas must specify a unique replica id. */
+        val replicaId: Int,
+        /**
+         * Must list the addresses of all the members in the cluster. At least one of the members must be active and
+         * be able to communicate with the cluster leader for the node to join the cluster. If empty,
+         * a new cluster will be bootstrapped.
+         */
+        val clusterAddresses: List<NetworkHostAndPort>,
+        val debug: Boolean = false,
+        /** Used for testing purposes only. */
+        val exposeRaces: Boolean = false
+) {
+    init {
+        require(replicaId >= 0) { "replicaId cannot be negative" }
+    }
+}
+
 /**
  * BFT SMaRt can only be configured via files in a configHome directory.
  * Each instance of this class creates such a configHome, accessible via [path].

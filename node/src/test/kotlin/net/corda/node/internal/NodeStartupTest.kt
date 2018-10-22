@@ -35,7 +35,6 @@ class NodeStartupTest {
         assertThat(startup.cmdLineOptions.sshdServer).isEqualTo(false)
         assertThat(startup.cmdLineOptions.justGenerateNodeInfo).isEqualTo(false)
         assertThat(startup.cmdLineOptions.justGenerateRpcSslCerts).isEqualTo(false)
-        assertThat(startup.cmdLineOptions.bootstrapRaftCluster).isEqualTo(false)
         assertThat(startup.cmdLineOptions.unknownConfigKeysPolicy).isEqualTo(UnknownConfigKeysPolicy.FAIL)
         assertThat(startup.cmdLineOptions.devMode).isEqualTo(null)
         assertThat(startup.cmdLineOptions.clearNetworkMapCache).isEqualTo(false)

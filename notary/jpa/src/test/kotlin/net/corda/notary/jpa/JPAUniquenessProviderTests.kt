@@ -10,10 +10,11 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.notary.jpa.JPAUniquenessProvider.Companion.decodeStateRef
-import net.corda.notary.jpa.JPAUniquenessProvider.Companion.encodeStateRef
+import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.notary.jpa.JPAUniquenessProvider.Companion.decodeStateRef
+import net.corda.notary.jpa.JPAUniquenessProvider.Companion.encodeStateRef
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.generateStateRef
@@ -35,7 +36,8 @@ class JPAUniquenessProviderTests {
     private val identity = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party
     private val txID = SecureHash.randomSHA256()
     private val requestSignature = NotarisationRequestSignature(DigitalSignature.WithKey(NullKeys.NullPublicKey, ByteArray(32)), 0)
-    private val notaryConfig = NotaryConfig(validating=false, maxInputStates = 10)
+    private val notaryConfig = JPANotaryConfiguration(maxInputStates = 10)
+
 
     private lateinit var database: CordaPersistence
 
@@ -53,10 +55,10 @@ class JPAUniquenessProviderTests {
 
     @Test
     fun `should commit a transaction with unused inputs without exception`() {
-            val provider = JPAUniquenessProvider(Clock.systemUTC(), database, notaryConfig)
-            val inputState = generateStateRef()
+        val provider = JPAUniquenessProvider(Clock.systemUTC(), database, notaryConfig)
+        val inputState = generateStateRef()
 
-            provider.commit(listOf(inputState), txID, identity, requestSignature)
+        provider.commit(listOf(inputState), txID, identity, requestSignature)
     }
 
     @Test
@@ -86,7 +88,7 @@ class JPAUniquenessProviderTests {
 
     @Test
     fun `all conflicts are found with batching`() {
-        val nrStates = notaryConfig.maxInputStates + notaryConfig.maxInputStates/2
+        val nrStates = notaryConfig.maxInputStates + notaryConfig.maxInputStates / 2
         val stateRefs = (1..nrStates).map { generateStateRef() }
         println(stateRefs.size)
         val firstTxId = SecureHash.randomSHA256()
