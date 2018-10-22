@@ -397,7 +397,7 @@ class StaticPointer(override val pointer: StateRef) : StatePointer {
  */
 class LinearPointer(override val pointer: UniqueIdentifier) : StatePointer {
     /**
-     * Resolves a [LinearPointer] using the [UniqueIdentifier] contained in the [pointer] property. returns a
+     * Resolves a [LinearPointer] using the [UniqueIdentifier] contained in the [pointer] property. Returns a
      * [StateAndRef] containing the latest version of the [LinearState] that the node calling [resolve] is aware of.
      *
      * @param services a [ServiceHub] implementation is required to perform a vault query.
