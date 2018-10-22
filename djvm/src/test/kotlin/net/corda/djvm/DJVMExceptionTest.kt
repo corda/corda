@@ -137,7 +137,7 @@ class MultipleExceptionsTask : SandboxFunction<Any?, sandbox.java.lang.Throwable
 }
 
 private infix operator fun sandbox.java.lang.String.plus(s: String): sandbox.java.lang.String {
-    return (toString() + s).toDJVM()
+    return sandbox.java.lang.String.valueOf(toString() + s)
 }
 
 private fun Array<StackTraceElement>.toLineNumbers(): IntArray {

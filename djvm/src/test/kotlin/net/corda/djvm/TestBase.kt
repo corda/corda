@@ -277,7 +277,7 @@ abstract class TestBase {
         }
     }
 
-    @Suppress("WeakerAccess")
+    @Suppress("MemberVisibilityCanBePrivate")
     protected class DJVM(private val classLoader: ClassLoader) {
         private val djvm: Class<*> = classFor("sandbox.java.lang.DJVM")
         val sandboxObject: Class<*> by lazy { classFor("sandbox.java.lang.Object") }
