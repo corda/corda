@@ -21,17 +21,17 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
+import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.TestClock
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.*
 import org.hamcrest.Matchers.instanceOf
 import org.junit.AfterClass
@@ -64,7 +64,7 @@ class BFTNotaryServiceTests {
         @JvmStatic
         fun before() {
             IntegrationTest.globalSetUp() //Enterprise only - remote db setup
-            mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"))
+            mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.notary.bftsmart"))
             val clusterSize = minClusterSize(1)
             val started = startBftClusterAndNode(clusterSize, mockNet)
             notary = started.first
@@ -81,10 +81,10 @@ class BFTNotaryServiceTests {
         fun startBftClusterAndNode(clusterSize: Int, mockNet: InternalMockNetwork, exposeRaces: Boolean = false): Pair<Party, TestStartedNode> {
             (Paths.get("config") / "currentView").deleteIfExists() // XXX: Make config object warn if this exists?
             val replicaIds = (0 until clusterSize)
-
+            val serviceLegalName = CordaX500Name("BFT", "Zurich", "CH")
             val notaryIdentity = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
                     replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
-                    CordaX500Name("BFT", "Zurich", "CH"))
+                    serviceLegalName)
 
             val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryIdentity, false))))
 
@@ -94,8 +94,9 @@ class BFTNotaryServiceTests {
                 mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = {
                     val notary = NotaryConfig(
                             validating = false,
-                            bftSMaRt = BFTSMaRtConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces),
-                            className = "net.corda.notary.bftsmart.BftSmartNotaryService"
+                            extraConfig = BFTSMaRtConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces).toConfig(),
+                            className = "net.corda.notary.bftsmart.BftSmartNotaryService",
+                            serviceLegalName = serviceLegalName
                     )
                     doReturn(notary).whenever(it).notary
                 }))

@@ -20,9 +20,9 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.security.PublicKey
 import javax.persistence.Entity
@@ -54,10 +54,13 @@ class BftSmartNotaryService(
     }
 
     private val notaryConfig = services.configuration.notary
-            ?: throw IllegalArgumentException("Failed to register ${this::class.java}: notary configuration not present")
+            ?: throw IllegalArgumentException("Failed to register ${BftSmartNotaryService::class.java}: notary configuration not present")
 
-    private val bftSMaRtConfig = notaryConfig.bftSMaRt
-            ?: throw IllegalArgumentException("Failed to register ${this::class.java}: raft configuration not present")
+    private val bftSMaRtConfig = try {
+        notaryConfig.extraConfig!!.parseAs<BFTSMaRtConfiguration>()
+    } catch (e: Exception) {
+        throw IllegalArgumentException("Failed to register ${BftSmartNotaryService::class.java}: BFT-Smart configuration not present")
+    }
 
     private val cluster: BFTSMaRt.Cluster = makeBFTCluster(notaryIdentityKey, bftSMaRtConfig)
 
