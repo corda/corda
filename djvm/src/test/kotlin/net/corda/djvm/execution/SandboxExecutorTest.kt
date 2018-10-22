@@ -733,4 +733,18 @@ class SandboxExecutorTest : TestBase() {
             return cl.find()
         }
     }
+
+    @Test
+    fun `test creating arrays of arrays`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<Any, Array<Any>>(configuration)
+        contractExecutor.run<ArraysOfArrays>("THINGY").apply {
+            assertThat(result).isEqualTo(arrayOf(arrayOf("THINGY")))
+        }
+    }
+
+    class ArraysOfArrays : Function<Any, Array<Any>> {
+        override fun apply(input: Any): Array<Any> {
+            return arrayOf(arrayOf(input))
+        }
+    }
 }
