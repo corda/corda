@@ -61,7 +61,7 @@ This design is not about:
 
 ### Assumptions and trade-offs made for the current version
 
-1. We assume that ContractStates will never change in a dramatic way that would impact other Contracts or Flows that depend on them.
+##### We assume that ContractStates will never change in a dramatic way that would impact other Contracts or Flows that depend on them.
  
 E.g.: If various contracts depend on Cash, the assumption is that no new field will be added to Cash that would have an influence over the amount or the owner (the fundamental fields of Cash).
 It is always safe to mix new CashStates with older states that depend on it. 
@@ -71,7 +71,7 @@ This means that we can simplify the contract-to-contract dependency, also given 
 This is not a very strong definition, so we will have to create more formalised rules in the next releases. 
 
 
-2. Flow to Flow communication could be lossy for objects that are not ContractStates or Commands.
+##### Flow to Flow communication could be lossy for objects that are not ContractStates or Commands.
 
 Explanation: 
 Flows communicate by passing around various objects, and eventually the entire TransactionBuilder.
@@ -81,7 +81,7 @@ The decision was that the node that sends data would decide (if his version is h
 The objects that live on the ledger like ContractStates and Commands that the other party actually has to sign, will not be allowed to lose any data.
  
 
-3. We assume that cordapp developers will correctly understand all implications and handle backwards compatibility themselves.
+##### We assume that cordapp developers will correctly understand all implications and handle backwards compatibility themselves.
 Basically they will have to realise that any version of a flow can talk to any other version, and code accordingly. 
 
 This get particularly tricky when there are reusable inline subflows involved.
@@ -111,11 +111,11 @@ Currently we have the concept of "CorDapp" and, as described in the terminology 
 
 Contracts and Flows should be able to evolve and be released independently, and have proper names and their own version, even if they share the same gradle multi-project build.
 
-Contract states need to be seen as non-static objects and can be different from one version to the next.
+Contract states need to be seen as evolvable objects that can be different from one version to the next.
 
 Corda uses a proprietary serialisation engine based on AMQP, which allows evolution of objects: https://docs.corda.net/serialization-enum-evolution.html.
 
-We can use features already implemented in the serialisation engine and add new features to make sure that data on the ledger is never lost in transactions. 
+We can use features already implemented in the serialisation engine and add new features to make sure that data on the ledger is never lost from one transaction to the next. 
 
 
 ### Contract Version 
@@ -126,7 +126,9 @@ The Cordapp gradle plugin should be amended to differentiate between a "flows" m
 
 In the build.gradle file of the contracts module, there should be a `version` property that needs be incremented for each release.
 
-When packaging the contract for release, the `version` should be added by the plugin to the manifest file, together with other properties like `target-platform-version.
+This `version' will be used for the regular release, and be part of the jar name.
+
+Also, when packaging the contract for release, the `version` should be added by the plugin to the manifest file, together with other properties like `target-platform-version.
 
 When loading the contractJar in the attachment storage, the version should be saved as a column, so it is easily accessible.
  
@@ -157,9 +159,10 @@ Any signed ContractJars should be only considered valid if they have the version
 ### Protection against losing data on the ledger
 
 The solution we propose is:
-    - States can only evolve by respecting some predefined rules (see below).
-    - The serialisation engine will need a new `Strict mode` feature to enforce the evolution rules.
-    - The `version` metadata of the contract code can be used to make sure that nodes can't spend a state with an older version (downgrade).
+
+- States can only evolve by respecting some predefined rules (see below).
+- The serialisation engine will need a new `Strict mode` feature to enforce the evolution rules.
+- The `version` metadata of the contract code can be used to make sure that nodes can't spend a state with an older version (downgrade).
 
 
 #### Contract State evolution
