@@ -118,7 +118,7 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
                     freshKeyStorePassword,
                     freshKeyStoreKeyPassword,
                     trustStoreBytes,
-                    floatListenerSSLConfiguration.trustStore.password.toCharArray())
+                    floatListenerSSLConfiguration.trustStore.storePassword.toCharArray())
             val amqpActivateMessage = amqpControlClient!!.createMessage(activateMessage.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes,
                     FLOAT_CONTROL_TOPIC,
                     expectedCertificateSubject.toString(),
@@ -141,7 +141,7 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
     // Recode KeyStore to use a fresh random password for entries and overall
     private fun recodeKeyStore(sslConfiguration: MutualSslConfiguration): Triple<CharArray, CharArray, ByteArray> {
         val keyStoreOriginal = sslConfiguration.keyStore.get().value.internal
-        val originalKeyStorePassword = sslConfiguration.keyStore.password.toCharArray()
+        val originalKeyStorePassword = sslConfiguration.keyStore.storePassword.toCharArray()
         val freshKeyStorePassword = CharArray(20) { secureRandom.nextInt(0xD800).toChar() } // Stick to single character Unicode range
         val freshPrivateKeyPassword = CharArray(20) { secureRandom.nextInt(0xD800).toChar() } // Stick to single character Unicode range
         for (alias in keyStoreOriginal.aliases()) {

@@ -22,8 +22,8 @@ data class BridgeSSLConfigurationImpl(private val sslKeystore: Path,
                                       private val crlCheckSoftFail: Boolean,
                                       override val useOpenSsl: Boolean = false) : BridgeSSLConfiguration {
 
-    override val keyStore = FileBasedCertificateStoreSupplier(sslKeystore, keyStorePassword)
-    override val trustStore = FileBasedCertificateStoreSupplier(trustStoreFile, trustStorePassword)
+    override val keyStore = FileBasedCertificateStoreSupplier(sslKeystore, keyStorePassword, keyStorePassword)
+    override val trustStore = FileBasedCertificateStoreSupplier(trustStoreFile, trustStorePassword, trustStorePassword)
 }
 
 data class BridgeOutboundConfigurationImpl(override val artemisBrokerAddress: NetworkHostAndPort,
@@ -81,9 +81,9 @@ data class FirewallConfigurationImpl(
     }
 
     private val p2pKeystorePath = sslKeystore
-    private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword)
+    private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword, keyStorePassword)
     private val p2pTrustStoreFilePath = trustStoreFile
-    private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword)
+    private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword, trustStorePassword)
     override val p2pSslOptions: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
 }
 
