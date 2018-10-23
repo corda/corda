@@ -95,7 +95,7 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
                 marker.delete()
             }
         } catch (e: Exception) {
-            e.log( "Could not delete the marker file that was created for `initial-registration`.", e, logger::warn)
+            e.log( "Could not delete the marker file that was created for `initial-registration`.", true, logger::warn)
         }
     }
 
