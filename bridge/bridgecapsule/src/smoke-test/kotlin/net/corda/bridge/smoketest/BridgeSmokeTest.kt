@@ -130,7 +130,7 @@ class BridgeSmokeTest {
             setPrivateKey(
                     X509Utilities.CORDA_CLIENT_TLS,
                     tlsKeyPair.private,
-                    listOf(tlsCert, nodeCaCert, intermediateCa.certificate, rootCert), sslKeyStore.entryPassword)
+                    listOf(tlsCert, nodeCaCert, intermediateCa.certificate, rootCert), sslKeyStore.password)
         }
     }
 
