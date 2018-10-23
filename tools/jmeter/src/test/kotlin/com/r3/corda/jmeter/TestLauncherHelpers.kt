@@ -118,11 +118,12 @@ class TestLauncherHelpers {
         SystemPropertySetter("jmeter.home", temporaryFolder.root.toString()).use {
             val defaultJmeterPropertiesFile = createFileInTmpFolder("jmeter.properties")
             createFileInTmpFolder("custom.properties")
-            createFileInTmpFolder("server-rmi.config", "${InetAddress.getLocalHost().hostName}:10101")
             createFileInTmpFolder("nomatch-rmi.config", "notmatching:10101")
 
             val cmdLine = LauncherCommandLine()
             cmdLine.jMeterArguments.addAll(listOf("-s"))
+            cmdLine.serverRmiMappings = createFileInTmpFolder("server-rmi.config", "${InetAddress.getLocalHost().hostName}:10101")
+
 
             val result = Launcher.prepareJMeterArguments(cmdLine)
             assertEquals(defaultJmeterPropertiesFile, result.jmeterPropertiesFile.toString())
@@ -159,6 +160,23 @@ class TestLauncherHelpers {
     }
 
     @Test
+    fun testJMeterArgPreparationServerMissingRmiMapping() {
+        SystemPropertySetter("jmeter.home", temporaryFolder.root.toString()).use {
+            createFileInTmpFolder("jmeter.properties")
+            val customJmeterPropertiesFile = createFileInTmpFolder("custom.properties")
+            createFileInTmpFolder("server-rmi.config", "${InetAddress.getLocalHost().hostName}:10101")
+            createFileInTmpFolder("nomatch-rmi.config", "notmatching:10101")
+
+            val cmdLine = LauncherCommandLine()
+            cmdLine.jMeterArguments.addAll(listOf("-s"))
+            cmdLine.sshHosts = mutableListOf("node1.mydomain.com")
+            cmdLine.jMeterProperties = customJmeterPropertiesFile
+
+            testForException("Enabling ssh tunneling requires providing rmi mappings via -XserverRmiMappings") { Launcher.prepareJMeterArguments(cmdLine) }
+        }
+    }
+
+    @Test
     fun testJMeterArgPreparationClient() {
         SystemPropertySetter("jmeter.home", temporaryFolder.root.toString()).use {
             val defaultJmeterPropertiesFile = createFileInTmpFolder("jmeter.properties")
@@ -170,7 +188,6 @@ class TestLauncherHelpers {
 
             val result = Launcher.prepareJMeterArguments(cmdLine)
             assertEquals(defaultJmeterPropertiesFile, result.jmeterPropertiesFile.toString())
-            assertEquals(mapOf(InetAddress.getLocalHost().hostName to 10101), result.serverRmiMappings)
             val expectedServerPropsFile = temporaryFolder.root.toPath() / "server-rmi.properties"
             assertEquals(listOf("-p", defaultJmeterPropertiesFile), result.jmeterArgs)
             val serverPropsFile = expectedServerPropsFile.toFile()

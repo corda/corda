@@ -94,12 +94,14 @@ class Launcher {
             } else {
                 File(cmdLine.jMeterProperties).toPath()
             }
-            val serverRmiMappingFile = if (cmdLine.serverRmiMappings.isBlank()) {
-                (jMeterHome / "server-rmi.config").toString()
+            val serverRmiMappings = if (!cmdLine.serverRmiMappings.isBlank()) {
+                readHostAndPortMap(cmdLine.serverRmiMappings)
             } else {
-                cmdLine.serverRmiMappings
+                if (!cmdLine.sshHosts.isEmpty()) {
+                    throw LauncherException("Enabling ssh tunneling requires providing rmi mappings via -XserverRmiMappings")
+                }
+                emptyMap()
             }
-            val serverRmiMappings = readHostAndPortMap(serverRmiMappingFile)
 
             // we want to add the jMeter properties file here - it must not be part of the user specified jMeter
             // arguments
@@ -118,9 +120,12 @@ class Launcher {
                 if (port != null) {
                     val rmiPropsFile = (jMeterHome / "server-rmi.properties").toFile()
                     rmiPropsFile.writeText("server.rmi.localport=$port")
-
                     jMeterArgs.addAll(listOf("-q", rmiPropsFile.toString()))
+                    logger.info("Starting jmeter server using mapped server.rmi.localport=$port")
+                } else {
+                    logger.info("No rmi server mapping found, using default server.rmi.localport - assuming no ssh tunnelling in effect")
                 }
+
             }
             return JMeterArgsPlus(jMeterArgs, jMeterPropertiesFile, serverRmiMappings)
         }

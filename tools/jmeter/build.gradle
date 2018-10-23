@@ -107,6 +107,8 @@ run {
         args+= Eval.me(jmeterHosts)
     }
 
+    args += [ "-XserverRmiMappings", sourceSets.main.resources.getSrcDirs().first().getPath() + "/../data/server-rmi.config"]
+
     args+= [ "-XjmeterProperties", sourceSets.main.resources.getSrcDirs().first().getPath()+"/jmeter.properties",
              "--",
              "-d", sourceSets.main.resources.getSrcDirs().first().getPath() ]
@@ -140,7 +142,6 @@ task buildJMeterJAR(type: FatCapsule) {
     from(processResources) {
         include "log4j2.xml"
         include "*.properties"
-        include "server-rmi.config"
         include "bin/*.properties"
     }
 
