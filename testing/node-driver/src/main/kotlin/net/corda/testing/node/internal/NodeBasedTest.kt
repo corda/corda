@@ -10,7 +10,9 @@ import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
+import net.corda.node.internal.FlowManager
 import net.corda.node.internal.Node
+import net.corda.node.internal.NodeFlowManager
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
@@ -88,7 +90,8 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     fun startNode(legalName: CordaX500Name,
                   platformVersion: Int = PLATFORM_VERSION,
                   rpcUsers: List<User> = emptyList(),
-                  configOverrides: Map<String, Any> = emptyMap()): NodeWithInfo {
+                  configOverrides: Map<String, Any> = emptyMap(),
+                  flowManager: FlowManager = NodeFlowManager(FlowOverrideConfig())): NodeWithInfo {
         val baseDirectory = baseDirectory(legalName).createDirectories()
         val p2pAddress = configOverrides["p2pAddress"] ?: portAllocation.nextHostAndPort().toString()
         val config = ConfigHelper.loadConfig(
@@ -104,7 +107,8 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 ) + configOverrides
         )
 
-        val cordapps =  cordappsForPackages(getCallerPackage(NodeBasedTest::class)?.let { cordappPackages + it } ?: cordappPackages)
+        val cordapps = cordappsForPackages(getCallerPackage(NodeBasedTest::class)?.let { cordappPackages + it }
+                ?: cordappPackages)
 
         val existingCorDappDirectoriesOption = if (config.hasPath(NodeConfiguration.cordappDirectoriesKey)) config.getStringList(NodeConfiguration.cordappDirectoriesKey) else emptyList()
 
@@ -120,7 +124,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
         }
 
         defaultNetworkParameters.install(baseDirectory)
-        val node = InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion))
+        val node = InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion), flowManager = flowManager)
         val nodeInfo = node.start()
         val nodeWithInfo = NodeWithInfo(node, nodeInfo)
         nodes += nodeWithInfo
@@ -146,7 +150,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     }
 }
 
-class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo) : Node(configuration, versionInfo, false) {
+class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo, flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides)) : Node(configuration, versionInfo, false, flowManager = flowManager) {
     override fun start() : NodeInfo {
         assertFalse(isInvalidJavaVersion(), "You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8." )
         return super.start()

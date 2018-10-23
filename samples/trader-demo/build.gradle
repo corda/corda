@@ -89,6 +89,20 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         }
         extraConfig = ['h2Settings.address' : 'localhost:10017']
     }
+    
+    //All other nodes should be using LoggingBuyerFlow as it is a subclass of BuyerFlow
+    node {
+        name "O=LoggingBank,L=London,C=GB"
+        p2pPort 10025
+        cordapps = ["$project.group:finance:$corda_release_version"]
+        rpcUsers = ext.rpcUsers
+        rpcSettings {
+            address "localhost:10026"
+            adminAddress "localhost:10027"
+        }
+        extraConfig = ['h2Settings.address' : 'localhost:10035']
+        flowOverride("net.corda.traderdemo.flow.SellerFlow", "net.corda.traderdemo.flow.BuyerFlow")
+    }
 }
 
 task integrationTest(type: Test, dependsOn: []) {

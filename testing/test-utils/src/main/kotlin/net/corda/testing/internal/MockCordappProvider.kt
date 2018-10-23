@@ -3,7 +3,6 @@ package net.corda.testing.internal
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
-import net.corda.core.identity.Party
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.node.services.AttachmentId
@@ -13,7 +12,6 @@ import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.testing.services.MockAttachmentStorage
 import java.nio.file.Paths
 import java.security.PublicKey
-import java.util.*
 
 class MockCordappProvider(
         cordappLoader: CordappLoader,

@@ -26,7 +26,6 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.persistence.checkpoints
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
@@ -116,7 +115,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `exception while fiber suspended`() {
-        bobNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
+        bobNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
         val flow = ReceiveFlow(bob)
         val fiber = aliceNode.services.startFlow(flow) as FlowStateMachineImpl
         // Before the flow runs change the suspend action to throw an exception
@@ -134,7 +133,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `both sides do a send as their first IO request`() {
-        bobNode.registerFlowFactory(PingPongFlow::class) { PingPongFlow(it, 20L) }
+        bobNode.registerCordappFlowFactory(PingPongFlow::class) { PingPongFlow(it, 20L) }
         aliceNode.services.startFlow(PingPongFlow(bob, 10L))
         mockNet.runNetwork()
 
@@ -151,7 +150,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `other side ends before doing expected send`() {
-        bobNode.registerFlowFactory(ReceiveFlow::class) { NoOpFlow() }
+        bobNode.registerCordappFlowFactory(ReceiveFlow::class) { NoOpFlow() }
         val resultFuture = aliceNode.services.startFlow(ReceiveFlow(bob)).resultFuture
         mockNet.runNetwork()
         assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
@@ -161,7 +160,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `receiving unexpected session end before entering sendAndReceive`() {
-        bobNode.registerFlowFactory(WaitForOtherSideEndBeforeSendAndReceive::class) { NoOpFlow() }
+        bobNode.registerCordappFlowFactory(WaitForOtherSideEndBeforeSendAndReceive::class) { NoOpFlow() }
         val sessionEndReceived = Semaphore(0)
         receivedSessionMessagesObservable().filter {
             it.message is ExistingSessionMessage && it.message.payload === EndSessionMessage
@@ -176,7 +175,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `FlowException thrown on other side`() {
-        val erroringFlow = bobNode.registerFlowFactory(ReceiveFlow::class) {
+        val erroringFlow = bobNode.registerCordappFlowFactory(ReceiveFlow::class) {
             ExceptionFlow { MyFlowException("Nothing useful") }
         }
         val erroringFlowSteps = erroringFlow.flatMap { it.progressSteps }
@@ -240,7 +239,7 @@ class FlowFrameworkTests {
             }
         }
 
-        bobNode.registerFlowFactory(AskForExceptionFlow::class) { ConditionalExceptionFlow(it, "Hello") }
+        bobNode.registerCordappFlowFactory(AskForExceptionFlow::class) { ConditionalExceptionFlow(it, "Hello") }
         val resultFuture = aliceNode.services.startFlow(RetryOnExceptionFlow(bob)).resultFuture
         mockNet.runNetwork()
         assertThat(resultFuture.getOrThrow()).isEqualTo("Hello")
@@ -248,7 +247,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `serialisation issue in counterparty`() {
-        bobNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow(NonSerialisableData(1), it) }
+        bobNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedSendFlow(NonSerialisableData(1), it) }
         val result = aliceNode.services.startFlow(ReceiveFlow(bob)).resultFuture
         mockNet.runNetwork()
         assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
@@ -258,7 +257,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `FlowException has non-serialisable object`() {
-        bobNode.registerFlowFactory(ReceiveFlow::class) {
+        bobNode.registerCordappFlowFactory(ReceiveFlow::class) {
             ExceptionFlow { NonSerialisableFlowException(NonSerialisableData(1)) }
         }
         val result = aliceNode.services.startFlow(ReceiveFlow(bob)).resultFuture
@@ -275,7 +274,7 @@ class FlowFrameworkTests {
                 .addCommand(dummyCommand(alice.owningKey))
         val stx = aliceNode.services.signInitialTransaction(ptx)
 
-        val committerFiber = aliceNode.registerFlowFactory(WaitingFlows.Waiter::class) {
+        val committerFiber = aliceNode.registerCordappFlowFactory(WaitingFlows.Waiter::class) {
             WaitingFlows.Committer(it)
         }.map { it.stateMachine }.map { uncheckedCast<FlowStateMachine<*>, FlowStateMachine<Any>>(it) }
         val waiterStx = bobNode.services.startFlow(WaitingFlows.Waiter(stx, alice)).resultFuture
@@ -290,7 +289,7 @@ class FlowFrameworkTests {
                 .addCommand(dummyCommand())
         val stx = aliceNode.services.signInitialTransaction(ptx)
 
-        aliceNode.registerFlowFactory(WaitingFlows.Waiter::class) {
+        aliceNode.registerCordappFlowFactory(WaitingFlows.Waiter::class) {
             WaitingFlows.Committer(it) { throw Exception("Error") }
         }
         val waiter = bobNode.services.startFlow(WaitingFlows.Waiter(stx, alice)).resultFuture
@@ -307,7 +306,7 @@ class FlowFrameworkTests {
                 .addCommand(dummyCommand(alice.owningKey))
         val stx = aliceNode.services.signInitialTransaction(ptx)
 
-        aliceNode.registerFlowFactory(VaultQueryFlow::class) {
+        aliceNode.registerCordappFlowFactory(VaultQueryFlow::class) {
             WaitingFlows.Committer(it)
         }
         val result = bobNode.services.startFlow(VaultQueryFlow(stx, alice)).resultFuture
@@ -318,7 +317,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `customised client flow`() {
-        val receiveFlowFuture = bobNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it) }
+        val receiveFlowFuture = bobNode.registerCordappFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it) }
         aliceNode.services.startFlow(CustomSendFlow("Hello", bob)).resultFuture
         mockNet.runNetwork()
         assertThat(receiveFlowFuture.getOrThrow().receivedPayloads).containsOnly("Hello")
@@ -333,7 +332,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `upgraded initiating flow`() {
-        bobNode.registerFlowFactory(UpgradedFlow::class, initiatedFlowVersion = 1) { InitiatedSendFlow("Old initiated", it) }
+        bobNode.registerCordappFlowFactory(UpgradedFlow::class, initiatedFlowVersion = 1) { InitiatedSendFlow("Old initiated", it) }
         val result = aliceNode.services.startFlow(UpgradedFlow(bob)).resultFuture
         mockNet.runNetwork()
         assertThat(receivedSessionMessages).startsWith(
@@ -347,7 +346,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `upgraded initiated flow`() {
-        bobNode.registerFlowFactory(SendFlow::class, initiatedFlowVersion = 2) { UpgradedFlow(it) }
+        bobNode.registerCordappFlowFactory(SendFlow::class, initiatedFlowVersion = 2) { UpgradedFlow(it) }
         val initiatingFlow = SendFlow("Old initiating", bob)
         val flowInfo = aliceNode.services.startFlow(initiatingFlow).resultFuture
         mockNet.runNetwork()
@@ -387,7 +386,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `single inlined sub-flow`() {
-        bobNode.registerFlowFactory(SendAndReceiveFlow::class) { SingleInlinedSubFlow(it) }
+        bobNode.registerCordappFlowFactory(SendAndReceiveFlow::class) { SingleInlinedSubFlow(it) }
         val result = aliceNode.services.startFlow(SendAndReceiveFlow(bob, "Hello")).resultFuture
         mockNet.runNetwork()
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
@@ -395,7 +394,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `double inlined sub-flow`() {
-        bobNode.registerFlowFactory(SendAndReceiveFlow::class) { DoubleInlinedSubFlow(it) }
+        bobNode.registerCordappFlowFactory(SendAndReceiveFlow::class) { DoubleInlinedSubFlow(it) }
         val result = aliceNode.services.startFlow(SendAndReceiveFlow(bob, "Hello")).resultFuture
         mockNet.runNetwork()
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
@@ -403,7 +402,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `non-FlowException thrown on other side`() {
-        val erroringFlowFuture = bobNode.registerFlowFactory(ReceiveFlow::class) {
+        val erroringFlowFuture = bobNode.registerCordappFlowFactory(ReceiveFlow::class) {
             ExceptionFlow { Exception("evil bug!") }
         }
         val erroringFlowSteps = erroringFlowFuture.flatMap { it.progressSteps }
@@ -507,8 +506,8 @@ class FlowFrameworkTripartyTests {
 
     @Test
     fun `sending to multiple parties`() {
-        bobNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
-        charlieNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
+        bobNode.registerCordappFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
+        charlieNode.registerCordappFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
         val payload = "Hello World"
         aliceNode.services.startFlow(SendFlow(payload, bob, charlie))
         mockNet.runNetwork()
@@ -538,8 +537,8 @@ class FlowFrameworkTripartyTests {
     fun `receiving from multiple parties`() {
         val bobPayload = "Test 1"
         val charliePayload = "Test 2"
-        bobNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow(bobPayload, it) }
-        charlieNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow(charliePayload, it) }
+        bobNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedSendFlow(bobPayload, it) }
+        charlieNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedSendFlow(charliePayload, it) }
         val multiReceiveFlow = ReceiveFlow(bob, charlie).nonTerminating()
         aliceNode.services.startFlow(multiReceiveFlow)
         aliceNode.internals.acceptableLiveFiberCountOnStop = 1
@@ -564,8 +563,8 @@ class FlowFrameworkTripartyTests {
 
     @Test
     fun `FlowException only propagated to parent`() {
-        charlieNode.registerFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Chain") } }
-        bobNode.registerFlowFactory(ReceiveFlow::class) { ReceiveFlow(charlie) }
+        charlieNode.registerCordappFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Chain") } }
+        bobNode.registerCordappFlowFactory(ReceiveFlow::class) { ReceiveFlow(charlie) }
         val receivingFiber = aliceNode.services.startFlow(ReceiveFlow(bob))
         mockNet.runNetwork()
         assertThatExceptionOfType(UnexpectedFlowEndException::class.java)
@@ -577,9 +576,9 @@ class FlowFrameworkTripartyTests {
         // Bob will send its payload and then block waiting for the receive from Alice. Meanwhile Alice will move
         // onto Charlie which will throw the exception
         val node2Fiber = bobNode
-                .registerFlowFactory(ReceiveFlow::class) { SendAndReceiveFlow(it, "Hello") }
+                .registerCordappFlowFactory(ReceiveFlow::class) { SendAndReceiveFlow(it, "Hello") }
                 .map { it.stateMachine }
-        charlieNode.registerFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Nothing useful") } }
+        charlieNode.registerCordappFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Nothing useful") } }
 
         val aliceFiber = aliceNode.services.startFlow(ReceiveFlow(bob, charlie)) as FlowStateMachineImpl
         mockNet.runNetwork()
@@ -630,6 +629,8 @@ class FlowFrameworkPersistenceTests {
     private lateinit var notaryIdentity: Party
     private lateinit var alice: Party
     private lateinit var bob: Party
+    private lateinit var aliceFlowManager: MockNodeFlowManager
+    private lateinit var bobFlowManager: MockNodeFlowManager
 
     @Before
     fun start() {
@@ -637,8 +638,11 @@ class FlowFrameworkPersistenceTests {
                 cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
                 servicePeerAllocationStrategy = RoundRobin()
         )
-        aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
-        bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
+        aliceFlowManager = MockNodeFlowManager()
+        bobFlowManager = MockNodeFlowManager()
+
+        aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, flowManager = aliceFlowManager))
+        bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME, flowManager = bobFlowManager))
 
         receivedSessionMessagesObservable().forEach { receivedSessionMessages += it }
 
@@ -664,7 +668,7 @@ class FlowFrameworkPersistenceTests {
 
     @Test
     fun `flow restarted just after receiving payload`() {
-        bobNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
+        bobNode.registerCordappFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
         aliceNode.services.startFlow(SendFlow("Hello", bob))
 
         // We push through just enough messages to get only the payload sent
@@ -679,7 +683,7 @@ class FlowFrameworkPersistenceTests {
 
     @Test
     fun `flow loaded from checkpoint will respond to messages from before start`() {
-        aliceNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
+        aliceNode.registerCordappFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
         bobNode.services.startFlow(ReceiveFlow(alice).nonTerminating()) // Prepare checkpointed receive flow
         val restoredFlow = bobNode.restartAndGetRestoredFlow<ReceiveFlow>()
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
@@ -694,7 +698,7 @@ class FlowFrameworkPersistenceTests {
         var sentCount = 0
         mockNet.messagingNetwork.sentMessages.toSessionTransfers().filter { it.isPayloadTransfer }.forEach { sentCount++ }
         val charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
-        val secondFlow = charlieNode.registerFlowFactory(PingPongFlow::class) { PingPongFlow(it, payload2) }
+        val secondFlow = charlieNode.registerCordappFlowFactory(PingPongFlow::class) { PingPongFlow(it, payload2) }
         mockNet.runNetwork()
         val charlie = charlieNode.info.singleIdentity()
 
@@ -802,23 +806,14 @@ private infix fun TestStartedNode.sent(message: SessionMessage): Pair<Int, Sessi
 private infix fun Pair<Int, SessionMessage>.to(node: TestStartedNode): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
 
 private data class SessionTransfer(val from: Int, val message: SessionMessage, val to: MessageRecipients) {
-    val isPayloadTransfer: Boolean get() =
-        message is ExistingSessionMessage && message.payload is DataSessionMessage ||
-                message is InitialSessionMessage && message.firstPayload != null
+    val isPayloadTransfer: Boolean
+        get() =
+            message is ExistingSessionMessage && message.payload is DataSessionMessage ||
+                    message is InitialSessionMessage && message.firstPayload != null
+
     override fun toString(): String = "$from sent $message to $to"
 }
 
-private inline fun <reified P : FlowLogic<*>> TestStartedNode.registerFlowFactory(
-        initiatingFlowClass: KClass<out FlowLogic<*>>,
-        initiatedFlowVersion: Int = 1,
-        noinline flowFactory: (FlowSession) -> P): CordaFuture<P> {
-    val observable = registerFlowFactory(
-            initiatingFlowClass.java,
-            InitiatedFlowFactory.CorDapp(initiatedFlowVersion, "", flowFactory),
-            P::class.java,
-            track = true)
-    return observable.toFuture()
-}
 
 private fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): InitialSessionMessage {
     return InitialSessionMessage(SessionId(0), 0, clientFlowClass.java.name, flowVersion, "", payload?.serialize())
@@ -1061,7 +1056,8 @@ private class SendAndReceiveFlow(val otherParty: Party, val payload: Any, val ot
     constructor(otherPartySession: FlowSession, payload: Any) : this(otherPartySession.counterparty, payload, otherPartySession)
 
     @Suspendable
-    override fun call(): Any = (otherPartySession ?: initiateFlow(otherParty)).sendAndReceive<Any>(payload).unwrap { it }
+    override fun call(): Any = (otherPartySession
+            ?: initiateFlow(otherParty)).sendAndReceive<Any>(payload).unwrap { it }
 }
 
 private class InlinedSendFlow(val payload: String, val otherPartySession: FlowSession) : FlowLogic<Unit>() {

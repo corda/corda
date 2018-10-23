@@ -44,6 +44,7 @@ import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.*
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
+import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_SHELL_USER
 import net.corda.nodeapi.internal.ShutdownHook
@@ -57,7 +58,6 @@ import org.apache.commons.lang.SystemUtils
 import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.net.BindException
@@ -73,8 +73,7 @@ import kotlin.system.exitProcess
 class NodeWithInfo(val node: Node, val info: NodeInfo) {
     val services: StartedNodeServices = object : StartedNodeServices, ServiceHubInternal by node.services, FlowStarter by node.flowStarter {}
     fun dispose() = node.stop()
-    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> =
-            node.registerInitiatedFlow(node.smm, initiatedFlowClass)
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = node.registerInitiatedFlow(node.smm, initiatedFlowClass)
 }
 
 /**
@@ -86,12 +85,14 @@ class NodeWithInfo(val node: Node, val info: NodeInfo) {
 open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 private val initialiseSerialization: Boolean = true,
+                flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides),
                 cacheFactoryPrototype: BindableNamedCacheFactory = DefaultNamedCacheFactory()
 ) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
         cacheFactoryPrototype,
         versionInfo,
+        flowManager,
         // Under normal (non-test execution) it will always be "1"
         AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1)
 ) {
@@ -207,7 +208,8 @@ open class Node(configuration: NodeConfiguration,
         return P2PMessagingClient(
                 config = configuration,
                 versionInfo = versionInfo,
-                serverAddress = configuration.messagingServerAddress ?: NetworkHostAndPort("localhost", configuration.p2pAddress.port),
+                serverAddress = configuration.messagingServerAddress
+                        ?: NetworkHostAndPort("localhost", configuration.p2pAddress.port),
                 nodeExecutor = serverThread,
                 database = database,
                 networkMap = networkMapCache,
@@ -233,7 +235,8 @@ open class Node(configuration: NodeConfiguration,
         }
 
         val messageBroker = if (!configuration.messagingServerExternal) {
-            val brokerBindAddress = configuration.messagingServerAddress ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
+            val brokerBindAddress = configuration.messagingServerAddress
+                    ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
             ArtemisMessagingServer(configuration, brokerBindAddress, networkParameters.maxMessageSize)
         } else {
             null
@@ -447,7 +450,7 @@ open class Node(configuration: NodeConfiguration,
         }.build().start()
     }
 
-    private fun registerNewRelicReporter (registry: MetricRegistry) {
+    private fun registerNewRelicReporter(registry: MetricRegistry) {
         log.info("Registering New Relic JMX Reporter:")
         val reporter = NewRelicReporter.forRegistry(registry)
                 .name("New Relic Reporter")
@@ -508,5 +511,9 @@ open class Node(configuration: NodeConfiguration,
         shutdown = false
 
         log.info("Shutdown complete")
+    }
+
+    fun <T : FlowLogic<*>> registerInitiatedFlow(smm: StateMachineManager, initiatedFlowClass: Class<T>) {
+        this.flowManager.registerInitiatedFlow(initiatedFlowClass)
     }
 }

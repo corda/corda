@@ -76,6 +76,7 @@ interface NodeConfiguration {
     val p2pSslOptions: MutualSslConfiguration
 
     val cordappDirectories: List<Path>
+    val flowOverrides: FlowOverrideConfig?
 
     fun validate(): List<String>
 
@@ -96,6 +97,9 @@ interface NodeConfiguration {
         val defaultJmxReporterType = JmxReporterType.JOLOKIA
     }
 }
+
+data class FlowOverrideConfig(val overrides: List<FlowOverride> = listOf())
+data class FlowOverride(val initiator: String, val responder: String)
 
 /**
  * Currently registered JMX Reporters
@@ -210,7 +214,8 @@ data class NodeConfigurationImpl(
         override val flowMonitorPeriodMillis: Duration = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS,
         override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS,
         override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT),
-        override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA
+        override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA,
+        override val flowOverrides: FlowOverrideConfig?
 ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()

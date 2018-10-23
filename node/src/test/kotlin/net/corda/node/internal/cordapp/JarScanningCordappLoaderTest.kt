@@ -56,7 +56,7 @@ class JarScanningCordappLoaderTest {
 
         val actualCordapp = loader.cordapps.single()
         assertThat(actualCordapp.contractClassNames).isEqualTo(listOf(isolatedContractId))
-        assertThat(actualCordapp.initiatedFlows.single().name).isEqualTo("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Acceptor")
+        assertThat(actualCordapp.initiatedFlows.first().name).isEqualTo("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Acceptor")
         assertThat(actualCordapp.rpcFlows).isEmpty()
         assertThat(actualCordapp.schedulableFlows).isEmpty()
         assertThat(actualCordapp.services).isEmpty()
@@ -74,7 +74,7 @@ class JarScanningCordappLoaderTest {
         assertThat(loader.cordapps).isNotEmpty
 
         val actualCordapp = loader.cordapps.single { !it.initiatedFlows.isEmpty() }
-        assertThat(actualCordapp.initiatedFlows).first().hasSameClassAs(DummyFlow::class.java)
+        assertThat(actualCordapp.initiatedFlows.first()).hasSameClassAs(DummyFlow::class.java)
         assertThat(actualCordapp.rpcFlows).first().hasSameClassAs(DummyRPCFlow::class.java)
         assertThat(actualCordapp.schedulableFlows).first().hasSameClassAs(DummySchedulableFlow::class.java)
     }
