@@ -6,6 +6,11 @@ cordapp {
         vendor = 'R3'
         targetPlatformVersion = corda_platform_version.toInteger()
     }
+    signing {
+        // We need to sign the output of the "shrink" task,
+        // but the jar signer doesn't support that yet.
+        enabled false
+    }
     sealing {
         // Cannot seal JAR because other module also defines classes in the package net.corda.vega.analytics
         enabled false
@@ -34,8 +39,4 @@ dependencies {
     compile "com.opengamma.strata:strata-collect:$strata_version"
     compile "com.opengamma.strata:strata-loader:$strata_version"
     compile "com.opengamma.strata:strata-math:$strata_version"
-}
-
-jar {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
