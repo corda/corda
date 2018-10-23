@@ -166,7 +166,7 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
         private val logger by lazy { contextLogger() }
     }
 
-    private val installShellExtensionsParser = InstallShellExtensionsParser(this.javaClass.name)
+    private val installShellExtensionsParser = InstallShellExtensionsParser(alias, this.javaClass.name)
 
     protected open fun additionalSubCommands(): Set<CliWrapperBase> = emptySet()
 

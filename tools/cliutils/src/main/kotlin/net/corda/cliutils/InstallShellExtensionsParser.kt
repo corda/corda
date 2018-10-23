@@ -121,15 +121,15 @@ private class ShellExtensionsGenerator(val alias: String, val className: String)
 }
 
 @Command(helpCommand = true)
-class InstallShellExtensionsParser(val className: String) : CliWrapperBase("install-shell-extensions", "Installs alias and autocompletion for bash and zsh") {
+class InstallShellExtensionsParser(private val shellAlias: String, val className: String) : CliWrapperBase("install-shell-extensions", "Installs alias and autocompletion for bash and zsh") {
     override fun runProgram(): Int {
-        val generator = ShellExtensionsGenerator(alias, className)
+        val generator = ShellExtensionsGenerator(shellAlias, className)
         generator.installShellExtensions()
         return ExitCodes.SUCCESS
     }
 
     fun updateShellExtensions() {
-        val generator = ShellExtensionsGenerator(alias, className)
+        val generator = ShellExtensionsGenerator(shellAlias, className)
         generator.checkForAutoCompleteUpdate()
     }
 }
