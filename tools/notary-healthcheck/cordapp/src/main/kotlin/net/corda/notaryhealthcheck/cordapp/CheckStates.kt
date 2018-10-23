@@ -3,6 +3,7 @@ package net.corda.notaryhealthcheck.cordapp
 import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
+import net.corda.notaryhealthcheck.contract.SchedulingContract
 import net.corda.notaryhealthcheck.utils.Monitorable
 import java.time.Instant
 import kotlin.reflect.jvm.jvmName
@@ -20,15 +21,16 @@ import kotlin.reflect.jvm.jvmName
  * @param waitTimeSeconds How long to wait for the next check (i.e. time to add to the current time for the next states startTime)
  * @param waitForOutstandingFlowsSeconds How long to wait before running another notary check if the previous one is still outstanding.
  */
+@BelongsToContract(SchedulingContract::class)
 class ScheduledCheckState(
         override val participants: List<AbstractParty>,
         override val linearId: UniqueIdentifier,
         val statesToCheck: List<UniqueIdentifier>,
         val target: Monitorable,
-        private val startTime: Instant,
+        val startTime: Instant,
         val lastSuccessTime: Instant,
-        private val waitTimeSeconds: Int,
-        private val waitForOutstandingFlowsSeconds: Int) : SchedulableState, LinearState {
+        val waitTimeSeconds: Int,
+        val waitForOutstandingFlowsSeconds: Int) : SchedulableState, LinearState {
     override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
         val logicRef = flowLogicRefFactory.create(ScheduledCheckFlow::class.jvmName, thisStateRef, waitTimeSeconds, waitForOutstandingFlowsSeconds)
         return ScheduledActivity(logicRef, startTime)
@@ -39,18 +41,21 @@ class ScheduledCheckState(
  * State to mark a running notary health check. The ScheduleCheckFlow evolves a ScheduleCheckState into this when it
  * runs the healthcheck flow for its target.
  */
+@BelongsToContract(SchedulingContract::class)
 class RunningCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>, val startTime: Instant) : LinearState
 
 /**
  * State to mark a successful health check. The ScheduleCheckFlow evolves a RunningCheckState into this if the healthcheck
  * flow returns successfully.
  */
+@BelongsToContract(SchedulingContract::class)
 class SuccessfulCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>, val finishTime: Instant) : LinearState
 
 /**
  * State to mark a failed health check. The ScheduleCheckFlow evolves a RunningCheckState into this if the healthcheck
  * flow fails
  */
+@BelongsToContract(SchedulingContract::class)
 class FailedCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>) : LinearState
 
 /**
@@ -58,5 +63,6 @@ class FailedCheckState(override val linearId: UniqueIdentifier, override val par
  * if there was still one or more healthcheck flows outstanding and the last one had been started less than waitForOutstandingFlowsSeconds
  * ago.
  */
+@BelongsToContract(SchedulingContract::class)
 class AbandonnedCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>) : LinearState
 

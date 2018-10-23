@@ -12,6 +12,7 @@ import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.notaryhealthcheck.contract.NullContract
 import net.corda.notaryhealthcheck.utils.Monitorable
@@ -23,14 +24,25 @@ class HealthCheckFlow(monitorable: Monitorable) : FlowLogic<List<TransactionSign
     private val party = monitorable.party
 
     data class NullCommand(val data: Byte = 0) : CommandData // Param must be public for AMQP serialization.
+
+    @BelongsToContract(NullContract::class)
     data class State(override val participants: List<AbstractParty>) : ContractState
+
+    companion object {
+        object PREPARING : ProgressTracker.Step("Preparing")
+        object CHECKING : ProgressTracker.Step("Checking")
+    }
+
+    override val progressTracker = ProgressTracker(PREPARING, CHECKING)
 
     @Suspendable
     override fun call(): List<TransactionSignature> {
+        progressTracker.currentStep = PREPARING
         val stx = serviceHub.signInitialTransaction(TransactionBuilder(notary).apply {
             addOutputState(State(listOf(ourIdentity)), NullContract::class.java.name, AlwaysAcceptAttachmentConstraint)
             addCommand(NullCommand(), listOf(ourIdentity.owningKey))
         })
+        progressTracker.currentStep = CHECKING
         return subFlow(NotaryClientFlow(stx, party, notary))
     }
 
@@ -53,11 +65,14 @@ class HealthCheckFlow(monitorable: Monitorable) : FlowLogic<List<TransactionSign
         override fun call(): List<TransactionSignature> {
             val session = initiateFlow(party)
             val requestSignature = NotarisationRequest(stx.inputs, stx.id).generateSignature(serviceHub)
-            return validateResponse(if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
+            progressTracker.currentStep = REQUESTING
+            val result = if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
                 sendAndReceiveValidating(session, requestSignature)
             } else {
                 sendAndReceiveNonValidating(notaryParty, session, requestSignature)
-            }, notaryParty)
+            }
+            progressTracker.currentStep = VALIDATING
+            return validateResponse(result, notaryParty)
         }
 
 
