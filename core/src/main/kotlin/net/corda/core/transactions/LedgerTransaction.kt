@@ -62,8 +62,8 @@ data class LedgerTransaction @JvmOverloads constructor(
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
     val referenceStates: List<ContractState> get() = references.map { it.state.data }
 
-    private val inputAndOutputStates = inputs.asSequence().map { it.state } + outputs.asSequence()
-    private val allStates = inputAndOutputStates + references.asSequence().map { it.state }
+    private val inputAndOutputStates = inputs.map { it.state } + outputs
+    private val allStates = inputAndOutputStates + references.map { it.state }
 
     /**
      * Returns the typed input StateAndRef at the specified index
@@ -89,26 +89,6 @@ data class LedgerTransaction @JvmOverloads constructor(
         verifyContracts()
     }
 
-    private fun allStates() = inputs.asSequence().map { it.state } + outputs.asSequence()
-
-    /**
-     * For all input and output [TransactionState]s, validates that the wrapped [ContractState] matches up with the
-     * wrapped [Contract], as declared by the [BelongsToContract] annotation on the [ContractState]'s class.
-     *
-     * A warning will be written to the log if any mismatch is detected.
-     */
-    private fun validateStatesAgainstContract() = allStates().forEach(::validateStateAgainstContract)
-
-    private fun validateStateAgainstContract(state: TransactionState<ContractState>) {
-        state.data.requiredContractClassName?.let { requiredContractClassName ->
-            if (state.contract != requiredContractClassName)
-                logger.warn("""
-                State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
-                is bundled in TransactionState with ${state.contract}.
-                """.trimIndent().replace('\n', ' '))
-        }
-    }
-
     /**
      * For all input and output [TransactionState]s, validates that the wrapped [ContractState] matches up with the
      * wrapped [Contract], as declared by the [BelongsToContract] annotation on the [ContractState]'s class.
@@ -124,6 +104,30 @@ data class LedgerTransaction @JvmOverloads constructor(
                 State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
                 is bundled in TransactionState with ${state.contract}.
                 """.trimIndent().replace('\n', ' '))
+        }
+    }
+
+    /**
+     * Verify that package ownership is respected.
+     *
+     * TODO - revisit once transaction contains network parameters.
+     */
+    private fun validatePackageOwnership(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
+        // This should never happen once we have network parameters in the transaction.
+        if (networkParameters == null) {
+            return
+        }
+
+        val contractsAndOwners = allStates.mapNotNull { transactionState ->
+            val contractClassName = transactionState.contract
+            networkParameters.getOwnerOf(contractClassName)?.let { contractClassName to it }
+        }.toMap()
+
+        contractsAndOwners.forEach { contract, owner ->
+            val attachment = contractAttachmentsByContract[contract]!!
+            if (!owner.isFulfilledBy(attachment.signers)) {
+                throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
+            }
         }
     }
 
