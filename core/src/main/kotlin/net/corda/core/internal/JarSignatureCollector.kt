@@ -34,7 +34,7 @@ object JarSignatureCollector {
      * @param jar The open [JarInputStream] to collect signing parties from.
      * @throws InvalidJarSignersException If the signer sets for any two signable items are different from each other.
      */
-    fun collectCertificates(jar: JarInputStream): List<X509Certificate> = collectSigningSet(jar).toCertificates()
+    fun collectCertificates(jar: JarInputStream): List<X509Certificate> = getSigners(jar).toCertificates()
 
     private fun getSigners(jar: JarInputStream): Set<CodeSigner> {
         val signerSets = jar.fileSignerSets

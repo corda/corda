@@ -514,7 +514,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // CorDapp will be generated.
             generatedCordapps += VirtualCordapp.generateSimpleNotaryCordapp(versionInfo)
         }
-        val blacklistedCerts = if (configuration.devMode) DEV_CERTIFICATES else emptyList()
+        val blacklistedCerts = if (configuration.devMode) emptyList() else DEV_CERTIFICATES
         return JarScanningCordappLoader.fromDirectories(
                 configuration.cordappDirectories,
                 versionInfo,
