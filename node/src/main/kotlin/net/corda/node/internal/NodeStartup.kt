@@ -405,7 +405,7 @@ interface NodeStartupLogging {
 
     fun <RESULT> attempt(action: () -> RESULT): Try<RESULT> = Try.on(action)
 
-    fun Exception.log(message: String = "An error occurred", print: (String, Throwable) -> Unit = logger::error) = print(message, this)
+    fun Exception.log(message: String? = null, print: (String, Throwable) -> Unit = logger::error) = print(message ?: this.message ?: "An error occurred" , this)
 
     fun handleRegistrationError(error: Exception) {
         when (error) {
