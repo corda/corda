@@ -1,6 +1,7 @@
 package net.corda.djvm
 
 import net.corda.djvm.assertions.AssertionExtensions.assertThatDJVM
+import net.corda.djvm.rewiring.SandboxClassLoadingException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
@@ -119,6 +120,30 @@ class DJVMExceptionTest : TestBase() {
         assertThatExceptionOfType(ClassNotFoundException::class.java)
             .isThrownBy { djvm.classFor("sandbox.java.util.LinkedList\$1DJVM") }
             .withMessage("sandbox.java.util.LinkedList\$1DJVM")
+    }
+
+    /**
+     * This scenario should never happen in practice. We just need to be sure
+     * that the classloader can handle it.
+     */
+    @Test
+    fun testWeCannotCreateSyntheticExceptionForImaginaryJavaClass() = parentedSandbox {
+        val djvm = DJVM(classLoader)
+        assertThatExceptionOfType(SandboxClassLoadingException::class.java)
+            .isThrownBy { djvm.classFor("sandbox.java.util.DoesNotExist\$1DJVM") }
+            .withMessageContaining("Failed to load class")
+    }
+
+    /**
+     * This scenario should never happen in practice. We just need to be sure
+     * that the classloader can handle it.
+     */
+    @Test
+    fun testWeCannotCreateSyntheticExceptionForImaginaryUserClass() = parentedSandbox {
+        val djvm = DJVM(classLoader)
+        assertThatExceptionOfType(SandboxClassLoadingException::class.java)
+            .isThrownBy { djvm.classFor("sandbox.com.example.DoesNotExist\$1DJVM") }
+            .withMessageContaining("Failed to load class")
     }
 }
 
