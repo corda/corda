@@ -180,7 +180,7 @@ see changes to this list.
 * Scott James
 * Sean Zhang (Wells Fargo)
 * Shams Asari (R3)
-* Shivan Sawant (Persistent Systems Limited)
+* Shivan Sawant
 * Siddhartha Sengupta (Tradewind Markets)
 * Simon Taylor (Barclays)
 * Sofus Mortensen (Digital Asset Holdings)
