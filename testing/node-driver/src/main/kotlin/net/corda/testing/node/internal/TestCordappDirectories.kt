@@ -1,9 +1,11 @@
 package net.corda.testing.node.internal
 
+import com.typesafe.config.ConfigValueFactory
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.div
+import net.corda.core.internal.writeText
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.testing.node.TestCordapp
@@ -22,24 +24,28 @@ object TestCordappDirectories {
     fun getJarDirectory(cordapp: TestCordapp, cordappsDirectory: Path = defaultCordappsDirectory): Path {
         cordapp as TestCordappImpl
         return testCordappsCache.computeIfAbsent(cordapp) {
-            val cordappDir = (cordappsDirectory / UUID.randomUUID().toString()).createDirectories()
-            val uniqueScanString = if (cordapp.packages.size == 1 && cordapp.classes.isEmpty()) {
-                cordapp.packages.first()
-            } else {
-                "${cordapp.packages}${cordapp.classes.joinToString { it.name }}".toByteArray().sha256().toString()
+            val configString = ConfigValueFactory.fromMap(cordapp.config).toConfig().root().render()
+            val filename = cordapp.run {
+                val uniqueScanString = if (packages.size == 1 && classes.isEmpty() && config.isEmpty()) {
+                    packages.first()
+                } else {
+                    "$packages$classes$configString".toByteArray().sha256().toString()
+                }
+                "${name}_${vendor}_${title}_${version}_${targetVersion}_$uniqueScanString".replace(whitespace, "-")
             }
-            val jarFileName = cordapp.run { "${name}_${vendor}_${title}_${version}_${targetVersion}_$uniqueScanString.jar".replace(whitespace, "-") }
-            val jarFile = cordappDir / jarFileName
+            val cordappDir = cordappsDirectory / UUID.randomUUID().toString()
+            val configDir = (cordappDir / "config").createDirectories()
+            val jarFile = cordappDir / "$filename.jar"
             cordapp.packageAsJar(jarFile)
+            (configDir / "$filename.conf").writeText(configString)
             logger.debug { "$cordapp packaged into $jarFile" }
             cordappDir
         }
     }
 
     private val defaultCordappsDirectory: Path by lazy {
-        val cordappsDirectory = (Paths.get("build") / "tmp" / getTimestampAsDirectoryName() / "generated-test-cordapps").toAbsolutePath()
+        val cordappsDirectory = Paths.get("build").toAbsolutePath() / "generated-test-cordapps" / getTimestampAsDirectoryName()
         logger.info("Initialising generated test CorDapps directory in $cordappsDirectory")
-        cordappsDirectory.toFile().deleteOnExit()
         cordappsDirectory.deleteRecursively()
         cordappsDirectory.createDirectories()
     }

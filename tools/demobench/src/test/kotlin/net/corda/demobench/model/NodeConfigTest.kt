@@ -65,12 +65,7 @@ class NodeConfigTest {
                 issuableCurrencies = listOf("GBP")
         )
 
-        val nodeConfig = config.nodeConf()
-                .withValue("baseDirectory", valueFor(baseDir.toString()))
-                .withFallback(ConfigFactory.parseResources("reference.conf"))
-                .resolve()
-        val custom = nodeConfig.getConfig("custom")
-        assertEquals(listOf("GBP"), custom.getAnyRefList("issuableCurrencies"))
+        assertEquals(listOf("GBP"), config.financeConf().getStringList("issuableCurrencies"))
     }
 
     @Test
