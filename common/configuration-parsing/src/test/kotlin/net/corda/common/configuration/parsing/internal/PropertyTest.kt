@@ -21,6 +21,7 @@ class PropertyTest {
         assertThat(property.mandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThat(property.valueIn(configuration)).isEqualTo(value)
+        assertThat(configuration[property]).isEqualTo(value)
     }
 
     @Test

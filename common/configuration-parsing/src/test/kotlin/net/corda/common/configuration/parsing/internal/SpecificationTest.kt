@@ -14,7 +14,7 @@ class SpecificationTest {
             val principal by string().flatMap(::parseAddress)
             val admin by string().flatMap(::parseAddress)
 
-            override fun parseValid(configuration: Config) = valid(Addresses(principal.valueIn(configuration), admin.valueIn(configuration)))
+            override fun parseValid(configuration: Config) = valid(Addresses(configuration[principal], configuration[admin]))
 
             @Suppress("UNUSED_PARAMETER")
             fun parse(key: String, typeName: String, rawValue: ConfigObject): Valid<Addresses> = parse(rawValue.toConfig())
@@ -28,7 +28,7 @@ class SpecificationTest {
         val useSsl by boolean()
         val addresses by nestedObject(AddressesSpec).flatMap(AddressesSpec::parse)
 
-        override fun parseValid(configuration: Config) = valid<RpcSettings>(RpcSettingsImpl(addresses.valueIn(configuration), useSsl.valueIn(configuration)))
+        override fun parseValid(configuration: Config) = valid<RpcSettings>(RpcSettingsImpl(configuration[addresses], configuration[useSsl]))
     }
 
     @Test
@@ -101,7 +101,7 @@ class SpecificationTest {
             @Suppress("unused")
             val myProp by string().list().optional()
 
-            override fun parseValid(configuration: Config) = valid(myProp.valueIn(configuration))
+            override fun parseValid(configuration: Config) = valid(configuration[myProp])
         }
 
         assertThat(spec.properties).hasSize(1)

@@ -2,7 +2,6 @@ package net.corda.common.configuration.parsing.internal
 
 import com.typesafe.config.*
 import net.corda.common.validation.internal.Validated
-import java.lang.IllegalStateException
 
 inline fun <TYPE, reified MAPPED : Any> Configuration.Property.Definition.Standard<TYPE>.flatMap(noinline convert: (String, TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = flatMap(MAPPED::class.java.simpleName, convert)
 
@@ -11,6 +10,8 @@ inline fun <reified ENUM : Enum<ENUM>, VALUE : Any> Configuration.Specification<
 inline fun <TYPE, reified MAPPED : Any> PropertyDelegate.Standard<TYPE>.flatMap(noinline convert: (key: String, typeName: String, TYPE) -> Valid<MAPPED>): PropertyDelegate.Standard<MAPPED> = flatMap(MAPPED::class.java.simpleName, convert)
 
 inline fun <TYPE, reified MAPPED : Any> PropertyDelegate.Standard<TYPE>.map(noinline convert: (key: String, typeName: String, TYPE) -> MAPPED): PropertyDelegate.Standard<MAPPED> = map(MAPPED::class.java.simpleName, convert)
+
+operator fun <TYPE> Config.get(property: Configuration.Property.Definition<TYPE>): TYPE = property.valueIn(this)
 
 fun Configuration.Version.Extractor.parseRequired(config: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults) = parse(config, options).map { it ?: throw IllegalStateException("Absent version value.") }
 

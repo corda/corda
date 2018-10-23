@@ -88,11 +88,11 @@ class VersionedParsingExampleTest {
 
             override fun parseValid(configuration: Config): Valid<RpcSettings> {
 
-                val principalHost = principalHost.valueIn(configuration)
-                val principalPort = principalPort.valueIn(configuration)
+                val principalHost = configuration[principalHost]
+                val principalPort = configuration[principalPort]
 
-                val adminHost = adminHost.valueIn(configuration)
-                val adminPort = adminPort.valueIn(configuration)
+                val adminHost = configuration[adminHost]
+                val adminPort = configuration[adminPort]
 
                 val principalAddress = addressFor(principalHost, principalPort)
                 val adminAddress = addressFor(adminHost, adminPort)
@@ -113,7 +113,7 @@ class VersionedParsingExampleTest {
 
                 val admin by string().flatMap(::parseAddress)
 
-                override fun parseValid(configuration: Config) = valid(Addresses(principal.valueIn(configuration), admin.valueIn(configuration)))
+                override fun parseValid(configuration: Config) = valid(Addresses(configuration[principal],configuration[admin]))
 
                 private fun parseAddress(key: String, typeName: String, rawValue: String): Valid<Address> {
 
@@ -128,7 +128,7 @@ class VersionedParsingExampleTest {
 
             override fun parseValid(configuration: Config): Valid<RpcSettings> {
 
-                val addresses = addresses.valueIn(configuration)
+                val addresses = configuration[addresses]
                 return valid(RpcSettings(addresses.principal, addresses.admin))
             }
         }
