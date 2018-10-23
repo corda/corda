@@ -27,13 +27,13 @@ interface BindableNamedCacheFactory : NamedCacheFactory, SerializeAsToken {
     fun bindWithConfig(nodeConfiguration: NodeConfiguration): BindableNamedCacheFactory
 }
 
-open class DefaultNamedCacheFactory private constructor(private val metricRegistry: MetricRegistry?, private val nodeConfiguration: NodeConfiguration?) : BindableNamedCacheFactory, SingletonSerializeAsToken() {
+open class DefaultNamedCacheFactory protected constructor(private val metricRegistry: MetricRegistry?, private val nodeConfiguration: NodeConfiguration?) : BindableNamedCacheFactory, SingletonSerializeAsToken() {
     constructor() : this(null, null)
 
     override fun bindWithMetrics(metricRegistry: MetricRegistry): BindableNamedCacheFactory = DefaultNamedCacheFactory(metricRegistry, this.nodeConfiguration)
     override fun bindWithConfig(nodeConfiguration: NodeConfiguration): BindableNamedCacheFactory = DefaultNamedCacheFactory(this.metricRegistry, nodeConfiguration)
 
-    protected fun <K, V> configuredForNamed(caffeine: Caffeine<K, V>, name: String): Caffeine<K, V> {
+    open protected fun <K, V> configuredForNamed(caffeine: Caffeine<K, V>, name: String): Caffeine<K, V> {
         return with(nodeConfiguration!!) {
             when {
                 name.startsWith("RPCSecurityManagerShiroCache_") -> with(security?.authService?.options?.cache!!) { caffeine.maximumSize(maxEntries).expireAfterWrite(expireAfterSecs, TimeUnit.SECONDS) }
@@ -77,5 +77,5 @@ open class DefaultNamedCacheFactory private constructor(private val metricRegist
         return configuredForNamed(caffeine, name).build<K, V>(loader)
     }
 
-    protected val defaultCacheSize = 1024L
+    open protected val defaultCacheSize = 1024L
 }
