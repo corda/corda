@@ -405,7 +405,9 @@ bintrayConfig {
             'corda-notary-healthcheck-client',
             'corda-tools-cliutils',
             'corda-notary-raft',
-            'corda-notary-bft-smart'
+            'corda-notary-bft-smart',
+            'corda-notary-jpa',
+            'corda-notary-mysql'
     ]
     license {
         name = 'Apache-2.0'
