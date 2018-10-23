@@ -28,8 +28,8 @@ data class TransactionState<out T : ContractState> @JvmOverloads constructor(
          */
         // TODO: Implement the contract sandbox loading of the contract attachments
         val contract: ContractClassName = requireNotNull(data.requiredContractClassName) {
-        //TODO: add link to docsite page, when there is one.
-    """
+            //TODO: add link to docsite page, when there is one.
+            """
     Unable to infer Contract class name because state class ${data::class.java.name} is not annotated with
     @BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${data::class.java.name}
     with @BelongsToContract, or supply an explicit contract parameter to TransactionState().
@@ -58,7 +58,7 @@ data class TransactionState<out T : ContractState> @JvmOverloads constructor(
         /**
          * A validator for the contract attachments on the transaction.
          */
-        val constraint: AttachmentConstraint = AutomaticHashConstraint) {
+        val constraint: AttachmentConstraint = AutomaticPlaceholderConstraint) {
 
     private companion object {
         val logger = loggerFor<TransactionState<*>>()

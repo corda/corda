@@ -5,6 +5,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NonEmptySet
 import java.security.PublicKey
@@ -36,7 +37,7 @@ class AttachmentResolutionException(val hash: SecureHash) : FlowException("Attac
  */
 @Suppress("MemberVisibilityCanBePrivate")
 @CordaSerializable
-sealed class TransactionVerificationException(val txId: SecureHash, message: String, cause: Throwable?)
+abstract class TransactionVerificationException(val txId: SecureHash, message: String, cause: Throwable?)
     : FlowException("$message, transaction: $txId", cause) {
 
     /**
@@ -49,6 +50,19 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
     class ContractRejection(txId: SecureHash, val contractClass: String, cause: Throwable) : TransactionVerificationException(txId, "Contract verification failed: ${cause.message}, contract: $contractClass", cause) {
         constructor(txId: SecureHash, contract: Contract, cause: Throwable) : this(txId, contract.javaClass.name, cause)
     }
+
+    /**
+     * This exception happens when a transaction was not built correctly.
+     * When a contract is not annotated with [NoConstraintPropagation], then the platform ensures that the constraints of output states transition correctly from input states.
+     *
+     * @property txId The transaction.
+     * @property contractClass The fully qualified class name of the failing contract.
+     * @property inputConstraint The constraint of the input state.
+     * @property outputConstraint The constraint of the outputs state.
+     */
+    @KeepForDJVM
+    class ConstraintPropagationRejection(txId: SecureHash, val contractClass: String, inputConstraint: AttachmentConstraint, outputConstraint: AttachmentConstraint)
+        : TransactionVerificationException(txId, "Contract constraints for $contractClass are not propagated correctly. The outputConstraint: $outputConstraint is not a valid transition from the input constraint: $inputConstraint.", null)
 
     /**
      * The transaction attachment that contains the [contractClass] class didn't meet the constraints specified by
@@ -169,4 +183,12 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
     @DeleteForDJVM
     class InvalidNotaryChange(txId: SecureHash)
         : TransactionVerificationException(txId, "Detected a notary change. Outputs must use the same notary as inputs", null)
+
+    /**
+     * Thrown to indicate that a contract attachment is not signed by the network-wide package owner.
+     */
+    class ContractAttachmentNotSignedByPackageOwnerException(txId: SecureHash, val attachmentHash: AttachmentId, val contractClass: String) : TransactionVerificationException(txId,
+            """The Contract attachment JAR: $attachmentHash containing the contract: $contractClass is not signed by the owner specified in the network parameters.
+           Please check the source of this attachment and if it is malicious contact your zone operator to report this incident.
+           For details see: https://docs.corda.net/network-map.html#network-parameters""".trimIndent(), null)
 }

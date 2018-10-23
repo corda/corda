@@ -191,10 +191,10 @@ class NodeMonitorModel : AutoCloseable {
         val retryInterval = 5.seconds
 
         val client = CordaRPCClient(
-            nodeHostAndPort,
-            CordaRPCClientConfiguration.DEFAULT.copy(
-                connectionMaxRetryInterval = retryInterval
-            )
+                nodeHostAndPort,
+                CordaRPCClientConfiguration.DEFAULT.copy(
+                        connectionMaxRetryInterval = retryInterval
+                )
         )
         do {
             val connection = try {

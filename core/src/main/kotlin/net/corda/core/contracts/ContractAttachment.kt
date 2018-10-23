@@ -2,6 +2,7 @@ package net.corda.core.contracts
 
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
+import java.security.PublicKey
 
 /**
  * Wrap an attachment in this if it is to be used as an executable contract attachment
@@ -12,7 +13,12 @@ import net.corda.core.serialization.CordaSerializable
  */
 @KeepForDJVM
 @CordaSerializable
-class ContractAttachment @JvmOverloads constructor(val attachment: Attachment, val contract: ContractClassName, val additionalContracts: Set<ContractClassName> = emptySet(), val uploader: String? = null) : Attachment by attachment {
+class ContractAttachment @JvmOverloads constructor(
+        val attachment: Attachment,
+        val contract: ContractClassName,
+        val additionalContracts: Set<ContractClassName> = emptySet(),
+        val uploader: String? = null,
+        override val signers: List<PublicKey> = emptyList()) : Attachment by attachment {
 
     val allContracts: Set<ContractClassName> get() = additionalContracts + contract
 

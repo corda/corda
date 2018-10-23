@@ -6,6 +6,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.internal.createWireTransaction
@@ -129,7 +130,8 @@ class TransactionTests {
                 id,
                 null,
                 timeWindow,
-                privacySalt
+                privacySalt,
+                testNetworkParameters()
         )
 
         transaction.verify()

@@ -63,7 +63,7 @@ class TransactionSerializationTests {
     // It refers to a fake TX/state that we don't bother creating here.
     val depositRef = MINI_CORP.ref(1)
     val fakeStateRef = generateStateRef()
-    val inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY), fakeStateRef)
+    val inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), fakeStateRef )
     val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val megaCorpServices = MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, rigorousMock(), MEGA_CORP_KEY)
