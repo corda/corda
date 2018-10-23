@@ -108,30 +108,6 @@ data class LedgerTransaction @JvmOverloads constructor(
     }
 
     /**
-     * Verify that package ownership is respected.
-     *
-     * TODO - revisit once transaction contains network parameters.
-     */
-    private fun validatePackageOwnership(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
-        // This should never happen once we have network parameters in the transaction.
-        if (networkParameters == null) {
-            return
-        }
-
-        val contractsAndOwners = allStates.mapNotNull { transactionState ->
-            val contractClassName = transactionState.contract
-            networkParameters.getOwnerOf(contractClassName)?.let { contractClassName to it }
-        }.toMap()
-
-        contractsAndOwners.forEach { contract, owner ->
-            val attachment = contractAttachmentsByContract[contract]!!
-            if (!owner.isFulfilledBy(attachment.signers)) {
-                throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
-            }
-        }
-    }
-
-    /**
      * Verify that for each contract the network wide package owner is respected.
      *
      * TODO - revisit once transaction contains network parameters.

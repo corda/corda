@@ -67,9 +67,9 @@ object JarSignatureCollector {
         (it.signerCertPath.certificates[0] as X509Certificate).publicKey
     }.sortedBy { it.hash} // Sorted for determinism.
 
-    private fun Set<CodeSigner>.toOrderedPublicKeys(): List<PublicKey> = map {
-        (it.signerCertPath.certificates[0] as X509Certificate).publicKey
-    }.sortedBy { it.hash} // Sorted for determinism.
+    private fun Set<CodeSigner>.toPartiesOrderedByName(): List<Party> = map {
+        Party(it.signerCertPath.certificates[0] as X509Certificate)
+    }.sortedBy { it.name.toString() } // Sorted for determinism.
 
     private val JarInputStream.entries get(): Sequence<JarEntry> = generateSequence(nextJarEntry) { nextJarEntry }
 }

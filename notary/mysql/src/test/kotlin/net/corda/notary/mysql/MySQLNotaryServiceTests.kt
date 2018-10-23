@@ -241,7 +241,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
             val builder = DummyContract.generateInitial(Random().nextInt(), notary, node.info.singleIdentity().ref(0))
             val stx = node.services.signInitialTransaction(builder)
             node.services.recordTransactions(stx)
-            StateAndRef(builder.outputStates().first(), StateRef(stx.id, 0))
+            StateAndRef(stx.coreTransaction.outputs.first(), StateRef(stx.id, 0))
         }
     }
 
