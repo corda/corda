@@ -6,4 +6,4 @@ package sandbox.net.corda.djvm.costing
  *
  * @property message The description of the condition causing the problem.
  */
-class ThresholdViolationError(override val message: String) : ThreadDeath()
+class ThresholdViolationError(override val message: String?) : ThreadDeath()

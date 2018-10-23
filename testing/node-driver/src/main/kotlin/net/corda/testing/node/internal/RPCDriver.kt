@@ -24,12 +24,14 @@ import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
-import net.corda.testing.node.TestCordapp
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.internal.TestingNamedCacheFactory
+import net.corda.testing.internal.fromUserList
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -485,7 +487,8 @@ data class RPCDriverDSL(
                 locator,
                 rpcSecurityManager,
                 nodeLegalName,
-                configuration
+                configuration,
+                TestingNamedCacheFactory()
         )
         driverDSL.shutdownManager.registerShutdown {
             rpcServer.close(queueDrainTimeout)

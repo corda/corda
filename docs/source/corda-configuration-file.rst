@@ -132,34 +132,17 @@ absolute path to the node's base directory.
 :security: Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses. See
     :doc:`clientrpc` for details.
 
-:notary: Optional configuration object which if present configures the node to run as a notary. If part of a Raft or BFT SMaRt
-    cluster then specify ``raft`` or ``bftSMaRt`` respectively as described below. If a single node notary then omit both.
+:notary: Optional configuration object which if present configures the node to run as a notary.
 
     :validating: Boolean to determine whether the notary is a validating or non-validating one.
 
     :serviceLegalName: If the node is part of a distributed cluster, specify the legal name of the cluster. At runtime, Corda
         checks whether this name matches the name of the certificate of the notary cluster.
 
-    :raft: If part of a distributed Raft cluster specify this config object, with the following settings:
+    :className: The fully qualified class name of the notary service to run. The class is expected to be loaded from
+        a notary CorDapp. Defaults to run the ``SimpleNotaryService``, which is built in.
 
-        :nodeAddress: The host and port to which to bind the embedded Raft server. Note that the Raft cluster uses a
-            separate transport layer for communication that does not integrate with ArtemisMQ messaging services.
-
-        :clusterAddresses: Must list the addresses of all the members in the cluster. At least one of the members must
-            be active and be able to communicate with the cluster leader for the node to join the cluster. If empty, a
-            new cluster will be bootstrapped.
-
-    :bftSMaRt: If part of a distributed BFT-SMaRt cluster specify this config object, with the following settings:
-
-        :replicaId: The zero-based index of the current replica. All replicas must specify a unique replica id.
-
-        :clusterAddresses: Must list the addresses of all the members in the cluster. At least one of the members must
-            be active and be able to communicate with the cluster leader for the node to join the cluster. If empty, a
-            new cluster will be bootstrapped.
-
-    :custom: If `true`, will load and install a notary service from a CorDapp. See :doc:`tutorial-custom-notary`.
-
-    Only one of ``raft``, ``bftSMaRt`` or ``custom`` configuration values may be specified.
+    :extraConfig: an optional configuration block for providing notary implementation-specific values.
 
 :rpcUsers: A list of users who are authorised to access the RPC system. Each user in the list is a config object with the
     following fields:
@@ -194,6 +177,7 @@ absolute path to the node's base directory.
 
     :doormanURL: Root address of the network registration service.
     :networkMapURL: Root address of the network map service.
+    :pnm: Optional UUID of the private network operating within the compatibility zone this node should be joinging.
 
         .. note:: Only one of ``compatibilityZoneURL`` or ``networkServices`` should be used.
 

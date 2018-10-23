@@ -429,7 +429,7 @@ public static final class net.corda.core.contracts.AmountTransfer$Companion exte
 public interface net.corda.core.contracts.Attachment extends net.corda.core.contracts.NamedByHash
   public void extractFile(String, java.io.OutputStream)
   @NotNull
-  public abstract java.util.List<net.corda.core.identity.Party> getSigners()
+  public abstract java.util.List<java.security.PublicKey> getSigners()
   public abstract int getSize()
   @NotNull
   public abstract java.io.InputStream open()
@@ -537,7 +537,7 @@ public final class net.corda.core.contracts.ContractAttachment extends java.lang
   @NotNull
   public net.corda.core.crypto.SecureHash getId()
   @NotNull
-  public java.util.List<net.corda.core.identity.Party> getSigners()
+  public java.util.List<java.security.PublicKey> getSigners()
   public int getSize()
   @Nullable
   public final String getUploader()
@@ -561,13 +561,18 @@ public final class net.corda.core.contracts.ContractsDSL extends java.lang.Objec
   public static final java.util.List<net.corda.core.contracts.CommandWithParties<C>> select(java.util.Collection<? extends net.corda.core.contracts.CommandWithParties<? extends net.corda.core.contracts.CommandData>>, Class<C>, java.util.Collection<? extends java.security.PublicKey>, java.util.Collection<net.corda.core.identity.Party>)
 ##
 @CordaSerializable
-public interface net.corda.core.contracts.FungibleAsset extends net.corda.core.contracts.OwnableState
+public interface net.corda.core.contracts.FungibleAsset extends net.corda.core.contracts.FungibleState, net.corda.core.contracts.OwnableState
   @NotNull
   public abstract net.corda.core.contracts.Amount<net.corda.core.contracts.Issued<T>> getAmount()
   @NotNull
   public abstract java.util.Collection<java.security.PublicKey> getExitKeys()
   @NotNull
   public abstract net.corda.core.contracts.FungibleAsset<T> withNewOwnerAndAmount(net.corda.core.contracts.Amount<net.corda.core.contracts.Issued<T>>, net.corda.core.identity.AbstractParty)
+##
+@CordaSerializable
+public interface net.corda.core.contracts.FungibleState extends net.corda.core.contracts.ContractState
+  @NotNull
+  public abstract net.corda.core.contracts.Amount<T> getAmount()
 ##
 @DoNotImplement
 @CordaSerializable
@@ -3366,7 +3371,7 @@ public interface net.corda.core.node.services.VaultService
   public abstract net.corda.core.messaging.DataFeed<net.corda.core.node.services.Vault$Page<T>, net.corda.core.node.services.Vault$Update<T>> trackBy(Class<? extends T>, net.corda.core.node.services.vault.QueryCriteria, net.corda.core.node.services.vault.Sort)
   @Suspendable
   @NotNull
-  public abstract java.util.List<net.corda.core.contracts.StateAndRef<T>> tryLockFungibleStatesForSpending(java.util.UUID, net.corda.core.node.services.vault.QueryCriteria, net.corda.core.contracts.Amount<U>, Class<? extends T>)
+  public abstract java.util.List<net.corda.core.contracts.StateAndRef<T>> tryLockFungibleStatesForSpending(java.util.UUID, net.corda.core.node.services.vault.QueryCriteria, net.corda.core.contracts.Amount<?>, Class<? extends T>)
   @NotNull
   public abstract net.corda.core.concurrent.CordaFuture<net.corda.core.node.services.Vault$Update<net.corda.core.contracts.ContractState>> whenConsumed(net.corda.core.contracts.StateRef)
 ##

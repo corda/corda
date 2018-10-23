@@ -6,14 +6,8 @@ import foo.bar.sandbox.toNumber
 import net.corda.djvm.TestBase
 import net.corda.djvm.analysis.Whitelist
 import net.corda.djvm.Utilities
-import net.corda.djvm.Utilities.throwContractConstraintViolation
-import net.corda.djvm.Utilities.throwError
-import net.corda.djvm.Utilities.throwOutOfMemoryError
 import net.corda.djvm.Utilities.throwRuleViolationError
-import net.corda.djvm.Utilities.throwStackOverflowError
-import net.corda.djvm.Utilities.throwThreadDeath
 import net.corda.djvm.Utilities.throwThresholdViolationError
-import net.corda.djvm.Utilities.throwThrowable
 import net.corda.djvm.assertions.AssertionExtensions.withProblem
 import net.corda.djvm.rewiring.SandboxClassLoadingException
 import org.assertj.core.api.Assertions.assertThat
@@ -55,7 +49,7 @@ class SandboxExecutorTest : TestBase() {
 
     class Contract : Function<Transaction, Unit> {
         override fun apply(input: Transaction) {
-            throwContractConstraintViolation()
+            throw IllegalArgumentException("Contract constraint violated")
         }
     }
 
@@ -74,11 +68,7 @@ class SandboxExecutorTest : TestBase() {
             val obj = Object()
             val hash1 = obj.hashCode()
             val hash2 = obj.hashCode()
-            //require(hash1 == hash2)
-            // TODO: Replace require() once we have working exception support.
-            if (hash1 != hash2) {
-                throwError()
-            }
+            require(hash1 == hash2)
             return Object().hashCode()
         }
     }
@@ -180,7 +170,7 @@ class SandboxExecutorTest : TestBase() {
     class TestCatchThreadDeath : Function<Int, Int> {
         override fun apply(input: Int): Int {
             return try {
-                throwThreadDeath()
+                throw ThreadDeath()
             } catch (exception: ThreadDeath) {
                 1
             }
@@ -261,8 +251,8 @@ class SandboxExecutorTest : TestBase() {
         override fun apply(input: Int): Int {
             return try {
                 when (input) {
-                    1 -> throwThrowable()
-                    2 -> throwError()
+                    1 -> throw Throwable()
+                    2 -> throw Error()
                     else -> 0
                 }
             } catch (exception: Error) {
@@ -277,20 +267,20 @@ class SandboxExecutorTest : TestBase() {
         override fun apply(input: Int): Int {
             return try {
                 when (input) {
-                    1 -> throwThrowable()
-                    2 -> throwError()
+                    1 -> throw Throwable()
+                    2 -> throw Error()
                     3 -> try {
-                        throwThreadDeath()
+                        throw ThreadDeath()
                     } catch (ex: ThreadDeath) {
                         3
                     }
                     4 -> try {
-                        throwStackOverflowError()
+                        throw StackOverflowError("FAKE OVERFLOW!")
                     } catch (ex: StackOverflowError) {
                         4
                     }
                     5 -> try {
-                        throwOutOfMemoryError()
+                        throw OutOfMemoryError("FAKE OOM!")
                     } catch (ex: OutOfMemoryError) {
                         5
                     }

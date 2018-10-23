@@ -1,10 +1,8 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.testMessage.MESSAGE_CONTRACT_PROGRAM_ID
-import net.corda.testMessage.Message
-import net.corda.testMessage.MessageContract
-import net.corda.testMessage.MessageState
+import net.corda.RpcInfo
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.flows.*
@@ -15,9 +13,11 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.RpcInfo
-import net.corda.client.rpc.CordaRPCClient
 import net.corda.node.services.Permissions.Companion.all
+import net.corda.testMessage.MESSAGE_CONTRACT_PROGRAM_ID
+import net.corda.testMessage.Message
+import net.corda.testMessage.MessageContract
+import net.corda.testMessage.MessageState
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
@@ -53,7 +53,11 @@ class FlowsDrainingModeContentionTest {
     @Test
     fun `draining mode does not deadlock with acks between 2 nodes`() {
         val message = "Ground control to Major Tom"
-        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
+        driver(DriverParameters(
+                startNodesInProcess = true,
+                portAllocation = portAllocation,
+                extraCordappPackagesToScan = listOf(MessageState::class.packageName)
+        )) {
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
 
@@ -70,11 +74,12 @@ class FlowsDrainingModeContentionTest {
 
 @StartableByRPC
 @InitiatingFlow
-class ProposeTransactionAndWaitForCommit(private val data: String, private val myRpcInfo: RpcInfo, private val counterParty: Party, private val notary: Party) : FlowLogic<SignedTransaction>() {
-
+class ProposeTransactionAndWaitForCommit(private val data: String,
+                                         private val myRpcInfo: RpcInfo,
+                                         private val counterParty: Party,
+                                         private val notary: Party) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
-
         val session = initiateFlow(counterParty)
         val messageState = MessageState(message = Message(data), by = ourIdentity)
         val command = Command(MessageContract.Commands.Send(), messageState.participants.map { it.owningKey })
@@ -91,10 +96,8 @@ class ProposeTransactionAndWaitForCommit(private val data: String, private val m
 
 @InitiatedBy(ProposeTransactionAndWaitForCommit::class)
 class SignTransactionTriggerDrainingModeAndFinality(private val session: FlowSession) : FlowLogic<Unit>() {
-
     @Suspendable
     override fun call() {
-
         val tx = subFlow(ReceiveTransactionFlow(session))
         val signedTx = serviceHub.addSignature(tx)
         val initiatingRpcInfo = session.receive<RpcInfo>().unwrap { it }
@@ -105,7 +108,6 @@ class SignTransactionTriggerDrainingModeAndFinality(private val session: FlowSes
     }
 
     private fun triggerDrainingModeForInitiatingNode(initiatingRpcInfo: RpcInfo) {
-
         CordaRPCClient(initiatingRpcInfo.address).start(initiatingRpcInfo.username, initiatingRpcInfo.password).use {
             it.proxy.setFlowsDrainingModeEnabled(true)
         }

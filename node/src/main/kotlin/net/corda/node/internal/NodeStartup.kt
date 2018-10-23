@@ -18,7 +18,6 @@ import net.corda.node.*
 import net.corda.node.internal.Node.Companion.isValidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
@@ -27,7 +26,6 @@ import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
-import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
@@ -152,7 +150,7 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
 
     private val handleRegistrationError = { error: Exception ->
         when (error) {
-            is NodeRegistrationException -> error.logAsExpected("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.")
+            is NodeRegistrationException -> error.logAsExpected("Issue with Node registration: ${error.message}")
             else -> error.logAsUnexpected("Exception during node registration")
         }
     }
@@ -189,14 +187,7 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         if (cmdLineOptions.devMode == true) {
             println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
         }
-        val configuration = configurationResult.getOrThrow()
-        return if (cmdLineOptions.bootstrapRaftCluster) {
-            println("Bootstrapping raft cluster (starting up as seed node).")
-            // Ignore the configured clusterAddresses to make the node bootstrap a cluster instead of joining.
-            (configuration as NodeConfigurationImpl).copy(notary = configuration.notary?.copy(raft = configuration.notary?.raft?.copy(clusterAddresses = emptyList())))
-        } else {
-            configuration
-        }
+        return configurationResult.getOrThrow()
     }
 
     private fun checkRegistrationMode(): Boolean {
@@ -298,12 +289,12 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         val console: Console? = System.console()
 
         when (console) {
-        // In this case, the JVM is not connected to the console so we need to exit.
+            // In this case, the JVM is not connected to the console so we need to exit.
             null -> {
                 println("Not connected to console. Exiting")
                 exitProcess(1)
             }
-        // Otherwise we can proceed normally.
+            // Otherwise we can proceed normally.
             else -> {
                 while (true) {
                     val keystorePassword1 = console.readPassword("Enter the RPC keystore password => ")
@@ -385,17 +376,23 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         logger.info(nodeStartedMessage)
     }
 
-    protected open fun registerWithNetwork(conf: NodeConfiguration, versionInfo: VersionInfo, nodeRegistrationConfig: NodeRegistrationOption) {
-        val compatibilityZoneURL = conf.networkServices?.doormanURL ?: throw RuntimeException(
-                "compatibilityZoneURL or networkServices must be configured!")
+    protected open fun registerWithNetwork(
+            conf: NodeConfiguration,
+            versionInfo: VersionInfo,
+            nodeRegistrationConfig: NodeRegistrationOption
+    ) {
+        println("\n" +
+                "******************************************************************\n" +
+                "*                                                                *\n" +
+                "*      Registering as a new participant with a Corda network     *\n" +
+                "*                                                                *\n" +
+                "******************************************************************\n")
 
-        println()
-        println("******************************************************************")
-        println("*                                                                *")
-        println("*       Registering as a new participant with Corda network      *")
-        println("*                                                                *")
-        println("******************************************************************")
-        NodeRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL, versionInfo), nodeRegistrationConfig).buildKeystore()
+        NodeRegistrationHelper(conf,
+                HTTPNetworkRegistrationService(
+                        requireNotNull(conf.networkServices),
+                        versionInfo),
+                nodeRegistrationConfig).buildKeystore()
 
         // Minimal changes to make registration tool create node identity.
         // TODO: Move node identity generation logic from node to registration helper.
@@ -408,17 +405,8 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
     protected open fun loadConfigFile(): Pair<Config, Try<NodeConfiguration>> = cmdLineOptions.loadConfig()
 
     protected open fun banJavaSerialisation(conf: NodeConfiguration) {
-        SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
-    }
-
-    /** This filter is required for BFT-Smart to work as it only supports Java serialization. */
-    // TODO: move this filter out of the node, allow Cordapps to specify filters.
-    private fun bftSMaRtSerialFilter(clazz: Class<*>): Boolean = clazz.name.let {
-        it.startsWith("bftsmart.")
-                || it.startsWith("java.security.")
-                || it.startsWith("java.util.")
-                || it.startsWith("java.lang.")
-                || it.startsWith("java.net.")
+        // Note that in dev mode this filter can be overridden by a notary service implementation.
+        SerialFilter.install(::defaultSerialFilter)
     }
 
     protected open fun getVersionInfo(): VersionInfo {

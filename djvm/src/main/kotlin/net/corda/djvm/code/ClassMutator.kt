@@ -41,7 +41,11 @@ class ClassMutator(
         }
     }
 
-    private val emitters: List<Emitter> = emitters + PrependClassInitializer()
+    /*
+     * Some emitters must be executed before others. E.g. we need to apply
+     * the tracing emitters before the non-tracing ones.
+     */
+    private val emitters: List<Emitter> = (emitters + PrependClassInitializer()).sortedBy(Emitter::priority)
     private val initializers = mutableListOf<MethodBody>()
 
     /**
@@ -128,8 +132,7 @@ class ClassMutator(
      */
     override fun visitInstruction(method: Member, emitter: EmitterModule, instruction: Instruction) {
         val context = EmitterContext(currentAnalysisContext(), configuration, emitter)
-        // We need to apply the tracing emitters before the non-tracing ones.
-        Processor.processEntriesOfType<Emitter>(emitters.sortedByDescending(Emitter::isTracer), analysisContext.messages) {
+        Processor.processEntriesOfType<Emitter>(emitters, analysisContext.messages) {
             it.emit(context, instruction)
         }
         if (!emitter.emitDefaultInstruction || emitter.hasEmittedCustomCode) {

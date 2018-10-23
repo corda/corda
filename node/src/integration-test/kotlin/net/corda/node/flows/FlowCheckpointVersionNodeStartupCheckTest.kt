@@ -69,12 +69,11 @@ class FlowCheckpointVersionNodeStartupCheckTest {
             // Create the CorDapp jar file manually first to get hold of the directory that will contain it so that we can
             // rename the filename later. The cordappDir, which acts as pointer to the jar file, does not get renamed.
             val cordappDir = TestCordappDirectories.getJarDirectory(cordapp)
-            val cordappJar = cordappDir.list().single()
+            val cordappJar = cordappDir.list().single { it.toString().endsWith(".jar") }
 
             createSuspendedFlowInBob(setOf(cordapp))
 
-            // Rename the jar file. TestCordappDirectories caches the location of the jar file but the use of the random
-            // UUID in the name means there's zero chance of contaminating another test.
+            // Rename the jar file.
             cordappJar.moveTo(cordappDir / "renamed-${cordappJar.fileName}")
 
             assertBobFailsToStartWithLogMessage(
@@ -88,13 +87,13 @@ class FlowCheckpointVersionNodeStartupCheckTest {
     fun `restart node with incompatible version of suspended flow due to different jar hash`() {
         driver(parametersForRestartingNodes()) {
             val originalCordapp = defaultCordapp.withName("different-jar-hash-test-${UUID.randomUUID()}")
-            val originalCordappJar = TestCordappDirectories.getJarDirectory(originalCordapp).list().single()
+            val originalCordappJar = TestCordappDirectories.getJarDirectory(originalCordapp).list().single { it.toString().endsWith(".jar") }
 
             createSuspendedFlowInBob(setOf(originalCordapp))
 
             // The vendor is part of the MANIFEST so changing it is sufficient to change the jar hash
             val modifiedCordapp = originalCordapp.withVendor("${originalCordapp.vendor}-modified")
-            val modifiedCordappJar = TestCordappDirectories.getJarDirectory(modifiedCordapp).list().single()
+            val modifiedCordappJar = TestCordappDirectories.getJarDirectory(modifiedCordapp).list().single { it.toString().endsWith(".jar") }
             modifiedCordappJar.moveTo(originalCordappJar, REPLACE_EXISTING)
 
             assertBobFailsToStartWithLogMessage(

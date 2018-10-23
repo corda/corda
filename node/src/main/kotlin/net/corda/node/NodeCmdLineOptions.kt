@@ -89,12 +89,6 @@ class NodeCmdLineOptions {
     var justGenerateRpcSslCerts: Boolean = false
 
     @Option(
-            names = ["--bootstrap-raft-cluster"],
-            description = ["Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer addresses), acting as a seed for other nodes to join the cluster."]
-    )
-    var bootstrapRaftCluster: Boolean = false
-
-    @Option(
             names = ["-c", "--clear-network-map-cache"],
             description = ["Clears local copy of network map, on node startup it will be restored from server or file system."]
     )

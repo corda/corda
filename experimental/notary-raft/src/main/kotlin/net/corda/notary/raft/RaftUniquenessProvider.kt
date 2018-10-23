@@ -18,6 +18,7 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
+import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.schemas.PersistentStateRef
@@ -25,9 +26,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.node.services.config.RaftConfig
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.node.utilities.NamedCacheFactory
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -161,9 +160,9 @@ class RaftUniquenessProvider(
                 .withSsl()
                 .withSslProtocol(SslProtocol.TLSv1_2)
                 .withKeyStorePath(config.keyStore.path.toString())
-                .withKeyStorePassword(config.keyStore.password)
+                .withKeyStorePassword(config.keyStore.storePassword)
                 .withTrustStorePath(config.trustStore.path.toString())
-                .withTrustStorePassword(config.trustStore.password)
+                .withTrustStorePassword(config.trustStore.storePassword)
                 .build()
     }
 

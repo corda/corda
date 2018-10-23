@@ -6,20 +6,22 @@ import com.google.common.hash.HashCode
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
+import net.corda.core.ClientRelevantError
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
-import net.corda.node.utilities.NamedCacheFactory
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
@@ -31,6 +33,7 @@ import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Paths
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import java.util.jar.JarInputStream
@@ -46,6 +49,10 @@ class NodeAttachmentService(
         cacheFactory: NamedCacheFactory,
         private val database: CordaPersistence
 ) : AttachmentStorageInternal, SingletonSerializeAsToken() {
+
+    // This is to break the circular dependency.
+    lateinit var servicesForResolution: ServicesForResolution
+
     companion object {
         private val log = contextLogger()
 
@@ -95,7 +102,13 @@ class NodeAttachmentService(
             @Column(name = "contract_class_name", nullable = false)
             @CollectionTable(name = "${NODE_DATABASE_PREFIX}attachments_contracts", joinColumns = [(JoinColumn(name = "att_id", referencedColumnName = "att_id"))],
                     foreignKey = ForeignKey(name = "FK__ctr_class__attachments"))
-            var contractClassNames: List<ContractClassName>? = null
+            var contractClassNames: List<ContractClassName>? = null,
+
+            @ElementCollection(targetClass = PublicKey::class, fetch = FetchType.EAGER)
+            @Column(name = "signer", nullable = false)
+            @CollectionTable(name = "${NODE_DATABASE_PREFIX}attachments_signers", joinColumns = [(JoinColumn(name = "att_id", referencedColumnName = "att_id"))],
+                    foreignKey = ForeignKey(name = "FK__signers__attachments"))
+            var signers: List<PublicKey>? = null
     )
 
     @VisibleForTesting
@@ -213,11 +226,13 @@ class NodeAttachmentService(
 
     private fun loadAttachmentContent(id: SecureHash): Pair<Attachment, ByteArray>? {
         return database.transaction {
-            val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString()) ?: return@transaction null
+            val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString())
+                    ?: return@transaction null
             val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad).let {
                 val contracts = attachment.contractClassNames
                 if (contracts != null && contracts.isNotEmpty()) {
-                    ContractAttachment(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader)
+                    ContractAttachment(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader, attachment.signers
+                            ?: emptyList())
                 } else {
                     it
                 }
@@ -291,14 +306,19 @@ class NodeAttachmentService(
                 val id = bytes.sha256()
                 if (!hasAttachment(id)) {
                     checkIsAValidJAR(bytes.inputStream())
+
+                    val jarSigners = getSigners(bytes)
+
                     val session = currentDBSession()
                     val attachment = NodeAttachmentService.DBAttachment(
                             attId = id.toString(),
                             content = bytes,
                             uploader = uploader,
                             filename = filename,
-                            contractClassNames = contractClassNames
+                            contractClassNames = contractClassNames,
+                            signers = jarSigners
                     )
+
                     session.save(attachment)
                     attachmentCount.inc()
                     log.info("Stored new attachment $id")
@@ -309,6 +329,9 @@ class NodeAttachmentService(
             }
         }
     }
+
+    private fun getSigners(attachmentBytes: ByteArray) =
+        JarSignatureCollector.collectSigners(JarInputStream(attachmentBytes.inputStream()))
 
     @Suppress("OverridingDeprecatedMember")
     override fun importOrGetAttachment(jar: InputStream): AttachmentId {

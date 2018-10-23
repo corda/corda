@@ -22,7 +22,7 @@ class WaitForStateConsumption(val stateRefs: Set<StateRef>, val services: Servic
         val logger = contextLogger()
     }
 
-    override fun execute(): CordaFuture<Unit> {
+    override fun execute(deduplicationId: String): CordaFuture<Unit> {
         val futures = stateRefs.map { services.vaultService.whenConsumed(it).toCompletableFuture() }
         val completedFutures = futures.filter { it.isDone }
 

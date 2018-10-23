@@ -11,7 +11,7 @@ import net.corda.core.internal.executeAsync
 
 // DOCSTART SummingOperation
 class SummingOperation(val a: Int, val b: Int) : FlowAsyncOperation<Int> {
-    override fun execute(): CordaFuture<Int> {
+    override fun execute(deduplicationId: String): CordaFuture<Int> {
         return doneFuture(a + b)
     }
 }
@@ -19,7 +19,7 @@ class SummingOperation(val a: Int, val b: Int) : FlowAsyncOperation<Int> {
 
 // DOCSTART SummingOperationThrowing
 class SummingOperationThrowing(val a: Int, val b: Int) : FlowAsyncOperation<Int> {
-    override fun execute(): CordaFuture<Int> {
+    override fun execute(deduplicationId: String): CordaFuture<Int> {
         throw IllegalStateException("You shouldn't be calling me")
     }
 }

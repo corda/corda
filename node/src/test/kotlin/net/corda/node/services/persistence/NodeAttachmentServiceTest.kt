@@ -4,46 +4,59 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.JarSignatureTestUtils.createJar
+import net.corda.core.JarSignatureTestUtils.generateKey
+import net.corda.core.JarSignatureTestUtils.signJar
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.*
+import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.configureDatabase
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
-import org.junit.After
-import org.junit.Before
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.*
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
+import java.net.URI
 import java.nio.charset.StandardCharsets
-import java.nio.file.FileAlreadyExistsException
-import java.nio.file.FileSystem
-import java.nio.file.Path
+import java.nio.file.*
+import java.security.PublicKey
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
+import javax.tools.JavaFileObject
+import javax.tools.SimpleJavaFileObject
+import javax.tools.StandardLocation
+import javax.tools.ToolProvider
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
+
 class NodeAttachmentServiceTest {
+
     // Use an in memory file system for testing attachment storage.
     private lateinit var fs: FileSystem
     private lateinit var database: CordaPersistence
     private lateinit var storage: NodeAttachmentService
+    private val services = rigorousMock<ServicesForResolution>()
 
     @Before
     fun setUp() {
@@ -52,16 +65,38 @@ class NodeAttachmentServiceTest {
         val dataSourceProperties = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProperties, DatabaseConfig(), { null }, { null })
         fs = Jimfs.newFileSystem(Configuration.unix())
+
+        doReturn(testNetworkParameters()).whenever(services).networkParameters
+
         storage = NodeAttachmentService(MetricRegistry(), TestingNamedCacheFactory(), database).also {
             database.transaction {
                 it.start()
             }
         }
+        storage.servicesForResolution = services
     }
 
     @After
     fun tearDown() {
+        dir.list { subdir ->
+            subdir.forEach(Path::deleteRecursively)
+        }
         database.close()
+    }
+
+    @Test
+    fun `importing a signed jar saves the signers to the storage`() {
+        val jarAndSigner = makeTestSignedContractJar("com.example.MyContract")
+        val signedJar = jarAndSigner.first
+        val attachmentId = storage.importAttachment(signedJar.inputStream(), "test", null)
+        assertEquals(listOf(jarAndSigner.second.hash), storage.openAttachment(attachmentId)!!.signers.map { it.hash })
+    }
+
+    @Test
+    fun `importing a non-signed jar will save no signers`() {
+        val jarName = makeTestContractJar("com.example.MyContract")
+        val attachmentId = storage.importAttachment(dir.resolve(jarName).inputStream(), "test", null)
+        assertEquals(0, storage.openAttachment(attachmentId)!!.signers.size)
     }
 
     @Test
@@ -289,7 +324,20 @@ class NodeAttachmentServiceTest {
         return Pair(file, file.readAll().sha256())
     }
 
-    private companion object {
+    companion object {
+        private val dir = Files.createTempDirectory(NodeAttachmentServiceTest::class.simpleName)
+
+        @BeforeClass
+        @JvmStatic
+        fun beforeClass() {
+        }
+
+        @AfterClass
+        @JvmStatic
+        fun afterClass() {
+            dir.deleteRecursively()
+        }
+
         private fun makeTestJar(output: OutputStream, extraEntries: List<Pair<String, String>> = emptyList()) {
             output.use {
                 val jar = JarOutputStream(it)
@@ -305,5 +353,48 @@ class NodeAttachmentServiceTest {
                 jar.closeEntry()
             }
         }
+
+        private fun makeTestSignedContractJar(contractName: String): Pair<Path, PublicKey> {
+            val alias = "testAlias"
+            val pwd = "testPassword"
+            dir.generateKey(alias, pwd, ALICE_NAME.toString())
+            val jarName = makeTestContractJar(contractName)
+            val signer = dir.signJar(jarName, alias, pwd)
+            return dir.resolve(jarName) to signer
+        }
+
+        private fun makeTestContractJar(contractName: String): String {
+            val packages = contractName.split(".")
+            val jarName = "testattachment.jar"
+            val className = packages.last()
+            createTestClass(className, packages.subList(0, packages.size - 1))
+            dir.createJar(jarName, "${contractName.replace(".", "/")}.class")
+            return jarName
+        }
+
+        private fun createTestClass(className: String, packages: List<String>): Path {
+            val newClass = """package ${packages.joinToString(".")};
+                import net.corda.core.contracts.*;
+                import net.corda.core.transactions.*;
+
+                public class $className implements Contract {
+                    @Override
+                    public void verify(LedgerTransaction tx) throws IllegalArgumentException {
+                    }
+                }
+            """.trimIndent()
+            val compiler = ToolProvider.getSystemJavaCompiler()
+            val source = object : SimpleJavaFileObject(URI.create("string:///${packages.joinToString("/")}/${className}.java"), JavaFileObject.Kind.SOURCE) {
+                override fun getCharContent(ignoreEncodingErrors: Boolean): CharSequence {
+                    return newClass
+                }
+            }
+            val fileManager = compiler.getStandardFileManager(null, null, null)
+            fileManager.setLocation(StandardLocation.CLASS_OUTPUT, listOf(dir.toFile()))
+
+            val compile = compiler.getTask(System.out.writer(), fileManager, null, null, null, listOf(source)).call()
+            return Paths.get(fileManager.list(StandardLocation.CLASS_OUTPUT, "", setOf(JavaFileObject.Kind.CLASS), true).single().name)
+        }
     }
+
 }

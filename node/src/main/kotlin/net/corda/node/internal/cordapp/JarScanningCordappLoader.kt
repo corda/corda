@@ -19,7 +19,6 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
-import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.serialization.internal.DefaultWhitelist
 import org.apache.commons.collections4.map.LRUMap
@@ -165,17 +164,6 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun findInitiatedFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, InitiatedBy::class)
-                // First group by the initiating flow class in case there are multiple mappings
-                .groupBy { it.requireAnnotation<InitiatedBy>().value.java }
-                .map { (initiatingFlow, initiatedFlows) ->
-                    val sorted = initiatedFlows.sortedWith(FlowTypeHierarchyComparator(initiatingFlow))
-                    if (sorted.size > 1) {
-                        logger.warn("${initiatingFlow.name} has been specified as the inititating flow by multiple flows " +
-                                "in the same type hierarchy: ${sorted.joinToString { it.name }}. Choosing the most " +
-                                "specific sub-type for registration: ${sorted[0].name}.")
-                    }
-                    sorted[0]
-                }
     }
 
     private fun Class<out FlowLogic<*>>.isUserInvokable(): Boolean {
@@ -226,17 +214,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         }
     }
 
-    private class FlowTypeHierarchyComparator(val initiatingFlow: Class<out FlowLogic<*>>) : Comparator<Class<out FlowLogic<*>>> {
-        override fun compare(o1: Class<out FlowLogic<*>>, o2: Class<out FlowLogic<*>>): Int {
-            return when {
-                o1 == o2 -> 0
-                o1.isAssignableFrom(o2) -> 1
-                o2.isAssignableFrom(o1) -> -1
-                else -> throw IllegalArgumentException("${initiatingFlow.name} has been specified as the initiating flow by " +
-                        "both ${o1.name} and ${o2.name}")
-            }
-        }
-    }
+
 
     private fun <T : Any> loadClass(className: String, type: KClass<T>): Class<out T>? {
         return try {

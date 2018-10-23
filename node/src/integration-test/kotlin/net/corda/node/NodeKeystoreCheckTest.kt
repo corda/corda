@@ -25,7 +25,7 @@ class NodeKeystoreCheckTest {
     }
 
     @Test
-    fun `node should throw exception if cert path doesn't chain to the trust root`() {
+    fun `node should throw exception if cert path does not chain to the trust root`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             // Create keystores.
             val keystorePassword = "password"
@@ -49,9 +49,9 @@ class NodeKeystoreCheckTest {
                 // Self signed root.
                 val badRootKeyPair = Crypto.generateKeyPair()
                 val badRoot = X509Utilities.createSelfSignedCACertificate(X500Principal("O=Bad Root,L=Lodnon,C=GB"), badRootKeyPair)
-                val nodeCA = getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)
+                val nodeCA = getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, signingCertStore.entryPassword)
                 val badNodeCACert = X509Utilities.createCertificate(CertificateType.NODE_CA, badRoot, badRootKeyPair, ALICE_NAME.x500Principal, nodeCA.keyPair.public)
-                setPrivateKey(X509Utilities.CORDA_CLIENT_CA, nodeCA.keyPair.private, listOf(badNodeCACert, badRoot))
+                setPrivateKey(X509Utilities.CORDA_CLIENT_CA, nodeCA.keyPair.private, listOf(badNodeCACert, badRoot), signingCertStore.entryPassword)
             }
 
             assertThatThrownBy {

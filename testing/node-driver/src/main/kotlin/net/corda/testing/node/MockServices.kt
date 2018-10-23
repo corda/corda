@@ -21,7 +21,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.ServicesForResolutionImpl
-import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -34,6 +33,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.MockCordappProvider
+import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.internal.*
 import net.corda.testing.services.MockAttachmentStorage
 import java.security.KeyPair

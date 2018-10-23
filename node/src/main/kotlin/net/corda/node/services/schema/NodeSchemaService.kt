@@ -2,6 +2,7 @@ package net.corda.node.services.schema
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.FungibleAsset
+import net.corda.core.contracts.FungibleState
 import net.corda.core.contracts.LinearState
 import net.corda.core.schemas.*
 import net.corda.core.schemas.MappedSchemaValidator.crossReferencesToOtherMappedSchema
@@ -65,6 +66,8 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
         if (state is LinearState)
             schemas += VaultSchemaV1   // VaultLinearStates
         if (state is FungibleAsset<*>)
+            schemas += VaultSchemaV1   // VaultFungibleAssets
+        if (state is FungibleState<*>)
             schemas += VaultSchemaV1   // VaultFungibleStates
 
         return schemas
@@ -76,6 +79,14 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
             return VaultSchemaV1.VaultLinearStates(state.linearId, state.participants)
         if ((schema === VaultSchemaV1) && (state is FungibleAsset<*>))
             return VaultSchemaV1.VaultFungibleStates(state.owner, state.amount.quantity, state.amount.token.issuer.party, state.amount.token.issuer.reference, state.participants)
+        if ((schema === VaultSchemaV1) && (state is FungibleState<*>))
+            return VaultSchemaV1.VaultFungibleStates(
+                    participants = state.participants.toMutableSet(),
+                    owner = null,
+                    quantity = state.amount.quantity,
+                    issuer = null,
+                    issuerRef = null
+            )
         return (state as QueryableState).generateMappedObject(schema)
     }
 

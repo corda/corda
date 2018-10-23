@@ -96,10 +96,9 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
         val requestId = try {
             submitOrResumeCertificateSigningRequest(keyPair)
         } catch (e: Exception) {
-            if (e is ConnectException || e is ServiceUnavailableException || e is IOException) {
-                throw NodeRegistrationException(e)
-            }
-            throw e
+            throw if (e is ConnectException || e is ServiceUnavailableException || e is IOException) {
+                NodeRegistrationException(e.message, e)
+            } else e
         }
 
         val certificates = try {
@@ -162,7 +161,7 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
         println("Private key '$keyAlias' and certificate stored in node signing keystore.")
     }
 
-    private fun CertificateStore.loadOrCreateKeyPair(alias: String, privateKeyPassword: String = password): KeyPair {
+    private fun CertificateStore.loadOrCreateKeyPair(alias: String, entryPassword: String = password): KeyPair {
         // Create or load self signed keypair from the key store.
         // We use the self sign certificate to store the key temporarily in the keystore while waiting for the request approval.
         if (alias !in this) {
@@ -171,11 +170,11 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
             val selfSignCert = X509Utilities.createSelfSignedCACertificate(myLegalName.x500Principal, keyPair)
             // Save to the key store.
             with(value) {
-                setPrivateKey(alias, keyPair.private, listOf(selfSignCert), keyPassword = privateKeyPassword)
+                setPrivateKey(alias, keyPair.private, listOf(selfSignCert), keyPassword = entryPassword)
                 save()
             }
         }
-        return query { getCertificateAndKeyPair(alias, privateKeyPassword) }.keyPair
+        return query { getCertificateAndKeyPair(alias, entryPassword) }.keyPair
     }
 
     /**
@@ -200,7 +199,8 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
                 if (idlePeriodDuration != null) {
                     Thread.sleep(idlePeriodDuration.toMillis())
                 } else {
-                    throw NodeRegistrationException(e)
+                    throw NodeRegistrationException("Compatibility Zone registration service is currently unavailable, "
+                            + "try again later!.", e)
                 }
             }
         }
@@ -249,10 +249,17 @@ open class NetworkRegistrationHelper(private val certificatesDirectory: Path,
     protected open fun isTlsCrlIssuerCertRequired(): Boolean = false
 }
 
-class NodeRegistrationException(cause: Throwable?) : IOException("Unable to contact node registration service", cause)
+class NodeRegistrationException(
+        message: String?,
+        cause: Throwable?
+) : IOException(message ?: "Unable to contact node registration service", cause)
 
-class NodeRegistrationHelper(private val config: NodeConfiguration, certService: NetworkRegistrationService, regConfig: NodeRegistrationOption, computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) :
-        NetworkRegistrationHelper(
+class NodeRegistrationHelper(
+        private val config: NodeConfiguration,
+        certService: NetworkRegistrationService,
+        regConfig: NodeRegistrationOption,
+        computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))
+) : NetworkRegistrationHelper(
                 config.certificatesDirectory,
                 config.signingCertificateStore,
                 config.myLegalName,
@@ -274,7 +281,9 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
     }
 
     private fun createSSLKeystore(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>, tlsCertCrlIssuer: X500Name?) {
-        config.p2pSslOptions.keyStore.get(createNew = true).update {
+        val keyStore = config.p2pSslOptions.keyStore
+        val certificateStore = keyStore.get(createNew = true)
+        certificateStore.update {
             println("Generating SSL certificate for node messaging service.")
             val sslKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
             val sslCert = X509Utilities.createCertificate(
@@ -286,9 +295,9 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
                     crlDistPoint = config.tlsCertCrlDistPoint?.toString(),
                     crlIssuer = tlsCertCrlIssuer)
             logger.info("Generated TLS certificate: $sslCert")
-            setPrivateKey(CORDA_CLIENT_TLS, sslKeyPair.private, listOf(sslCert) + certificates)
+            setPrivateKey(CORDA_CLIENT_TLS, sslKeyPair.private, listOf(sslCert) + certificates, certificateStore.entryPassword)
         }
-        println("SSL private key and certificate stored in ${config.p2pSslOptions.keyStore.path}.")
+        println("SSL private key and certificate stored in ${keyStore.path}.")
     }
 
     private fun createTruststore(rootCertificate: X509Certificate) {

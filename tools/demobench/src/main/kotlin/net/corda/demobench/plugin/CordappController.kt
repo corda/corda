@@ -12,10 +12,13 @@ import java.nio.file.StandardCopyOption
 import kotlin.streams.toList
 
 class CordappController : Controller() {
+    companion object {
+        const val FINANCE_CORDAPP_FILENAME = "corda-finance"
+    }
 
     private val jvm by inject<JVMConfig>()
-    private val cordappDir: Path = jvm.applicationDir.resolve(NodeConfig.cordappDirName)
-    private val finance: Path = cordappDir.resolve("corda-finance.jar")
+    private val cordappDir: Path = jvm.applicationDir / NodeConfig.CORDAPP_DIR_NAME
+    private val financeCordappJar: Path = cordappDir / "$FINANCE_CORDAPP_FILENAME.jar"
 
     /**
      * Install any built-in cordapps that this node requires.
@@ -25,8 +28,8 @@ class CordappController : Controller() {
         if (!config.cordappsDir.exists()) {
             config.cordappsDir.createDirectories()
         }
-        if (finance.exists()) {
-            finance.copyToDirectory(config.cordappsDir, StandardCopyOption.REPLACE_EXISTING)
+        if (financeCordappJar.exists()) {
+            financeCordappJar.copyToDirectory(config.cordappsDir, StandardCopyOption.REPLACE_EXISTING)
             log.info("Installed 'Finance' cordapp")
         }
     }
@@ -39,7 +42,7 @@ class CordappController : Controller() {
         if (!config.cordappsDir.isDirectory()) return emptyList()
         return config.cordappsDir.walk(1) { paths ->
             paths.filter(Path::isCordapp)
-                 .filter { !finance.endsWith(it.fileName) }
+                 .filter { !financeCordappJar.endsWith(it.fileName) }
                  .toList()
         }
     }

@@ -2,6 +2,7 @@ package net.corda.core.internal
 
 import net.corda.core.identity.Party
 import java.security.CodeSigner
+import java.security.PublicKey
 import java.security.cert.X509Certificate
 import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
@@ -23,7 +24,9 @@ object JarSignatureCollector {
      * @param jar The open [JarInputStream] to collect signing parties from.
      * @throws InvalidJarSignersException If the signer sets for any two signable items are different from each other.
      */
-    fun collectSigningParties(jar: JarInputStream): List<Party> = collectSigningSet(jar).toPartiesOrderedByName()
+    fun collectSigners(jar: JarInputStream): List<PublicKey> = getSigners(jar).toOrderedPublicKeys()
+
+    fun collectSigningParties(jar: JarInputStream): List<Party> = getSigners(jar).toPartiesOrderedByName()
 
     /**
      * Returns an ordered list of every [X509Certificate] which has signed every signable item in the given [JarInputStream].
@@ -33,27 +36,20 @@ object JarSignatureCollector {
      */
     fun collectCertificates(jar: JarInputStream): List<X509Certificate> = collectSigningSet(jar).toCertificates()
 
-    /**
-     * Returns set of every [CodeSigner] which has signed every signable item in the given [JarInputStream].
-     *
-     * @param jar The open [JarInputStream] to collect signing parties from.
-     * @throws InvalidJarSignersException If the signer sets for any two signable items are different from each other.
-     */
-    private fun collectSigningSet(jar: JarInputStream): Set<CodeSigner> {
+    private fun getSigners(jar: JarInputStream): Set<CodeSigner> {
         val signerSets = jar.fileSignerSets
         if (signerSets.isEmpty()) return emptySet()
 
         val (firstFile, firstSignerSet) = signerSets.first()
         for ((otherFile, otherSignerSet) in signerSets.subList(1, signerSets.size)) {
             if (otherSignerSet != firstSignerSet) throw InvalidJarSignersException(
-                """
-                Mismatch between signers ${firstSignerSet.toPartiesOrderedByName()} for file $firstFile
-                and signers ${otherSignerSet.toPartiesOrderedByName()} for file ${otherFile}.
-                See https://docs.corda.net/design/data-model-upgrades/signature-constraints.html for details of the
-                constraints applied to attachment signatures.
-                """.trimIndent().replace('\n', ' '))
+                    """
+                    Mismatch between signers ${firstSignerSet.toOrderedPublicKeys()} for file $firstFile
+                    and signers ${otherSignerSet.toOrderedPublicKeys()} for file ${otherFile}.
+                    See https://docs.corda.net/design/data-model-upgrades/signature-constraints.html for details of the
+                    constraints applied to attachment signatures.
+                    """.trimIndent().replace('\n', ' '))
         }
-
         return firstSignerSet
     }
 
@@ -78,6 +74,10 @@ object JarSignatureCollector {
     private fun Set<CodeSigner>.toPartiesOrderedByName(): List<Party> = map {
         Party(it.signerCertPath.certificates[0] as X509Certificate)
     }.sortedBy { it.name.toString() } // Sorted for determinism.
+
+    private fun Set<CodeSigner>.toOrderedPublicKeys(): List<PublicKey> = map {
+        (it.signerCertPath.certificates[0] as X509Certificate).publicKey
+    }.sortedBy { it.hash} // Sorted for determinism.
 
     private fun Set<CodeSigner>.toCertificates(): List<X509Certificate> = map {
        it.signerCertPath.certificates[0] as X509Certificate

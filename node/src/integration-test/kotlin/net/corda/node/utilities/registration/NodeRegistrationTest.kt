@@ -81,6 +81,7 @@ class NodeRegistrationTest {
     fun `node registration correct root cert`() {
         val compatibilityZone = SharedCompatibilityZoneParams(
                 URL("http://$serverHostAndPort"),
+                null,
                 publishNotaries = { server.networkParameters = testNetworkParameters(it) },
                 rootCert = DEV_ROOT_CA.certificate)
         internalDriver(

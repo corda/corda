@@ -17,6 +17,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
@@ -29,8 +30,12 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.days
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.minutes
 import net.corda.node.CordaClock
+import net.corda.node.SerialFilter
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.classloading.requireAnnotation
@@ -86,6 +91,7 @@ import org.slf4j.Logger
 import rx.Observable
 import rx.Scheduler
 import java.io.IOException
+import java.lang.UnsupportedOperationException
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 import java.security.KeyPair
@@ -97,13 +103,10 @@ import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
-import kotlin.collections.set
-import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
@@ -116,13 +119,13 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 // TODO Log warning if this node is a notary but not one of the ones specified in the network parameters, both for core and custom
 abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                val platformClock: CordaClock,
-                               cacheFactoryPrototype: NamedCacheFactory,
+                               cacheFactoryPrototype: BindableNamedCacheFactory,
                                protected val versionInfo: VersionInfo,
+                               protected val flowManager: FlowManager,
                                protected val serverThread: AffinityExecutor.ServiceAffinityExecutor,
                                private val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
-
     @Suppress("LeakingThis")
     private var tokenizableServices: MutableList<Any>? = mutableListOf(platformClock, this)
 
@@ -151,8 +154,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             identityService::wellKnownPartyFromX500Name,
             identityService::wellKnownPartyFromAnonymous,
             schemaService,
-            configuration.dataSourceProperties
-    )
+            configuration.dataSourceProperties,
+            cacheFactory)
+
     init {
         // TODO Break cyclic dependency
         identityService.database = database
@@ -164,13 +168,15 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
     val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database).tokenize()
-    val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(), attachments).tokenize()
+    val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
-    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, transactionStorage)
+    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, transactionStorage).also {
+        attachments.servicesForResolution = it
+    }
     @Suppress("LeakingThis")
     val vaultService = makeVaultService(keyManagementService, servicesForResolution, database).tokenize()
-    val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database)
+    val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
     val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
     val networkMapUpdater = NetworkMapUpdater(
             networkMapCache,
@@ -186,7 +192,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     ).closeOnStop()
     @Suppress("LeakingThis")
     val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount).tokenize()
-    val contractUpgradeService = ContractUpgradeServiceImpl().tokenize()
+    val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
     @Suppress("LeakingThis")
     protected val network: MessagingService = makeMessagingService().tokenize()
@@ -206,7 +212,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     ).tokenize().closeOnStop()
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
-    private val flowFactories = ConcurrentHashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
     private val shutdownExecutor = Executors.newSingleThreadExecutor()
 
     protected abstract val transactionVerifierWorkerCount: Int
@@ -232,7 +237,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private var _started: S? = null
 
     private fun <T : Any> T.tokenize(): T {
-        tokenizableServices?.add(this) ?: throw IllegalStateException("The tokenisable services list has already been finalised")
+        tokenizableServices?.add(this)
+                ?: throw IllegalStateException("The tokenisable services list has already been finalised")
         return this
     }
 
@@ -265,7 +271,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         log.info("Generating nodeInfo ...")
         val trustRoot = initKeyStores()
-        val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
+        val (identity, identityKeyPair) = obtainIdentity()
         startDatabase()
         val nodeCa = configuration.signingCertificateStore.get()[CORDA_CLIENT_CA]
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
@@ -320,7 +326,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         networkMapCache.start(netParams.notaries)
 
         startDatabase()
-        val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
+        val (identity, identityKeyPair) = obtainIdentity()
         identityService.start(trustRoot, listOf(identity.certificate, nodeCa))
 
         val (keyPairs, nodeInfoAndSigned, myNotaryIdentity) = database.transaction {
@@ -397,8 +403,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val keyPairs = mutableSetOf(identityKeyPair)
 
         val myNotaryIdentity = configuration.notary?.let {
-            if (it.isClusterConfig) {
-                val (notaryIdentity, notaryIdentityKeyPair) = obtainIdentity(it)
+            if (it.serviceLegalName != null) {
+                val (notaryIdentity, notaryIdentityKeyPair) = loadNotaryClusterIdentity(it.serviceLegalName)
                 keyPairs += notaryIdentityKeyPair
                 notaryIdentity
             } else {
@@ -604,91 +610,27 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     private fun registerCordappFlows() {
-        cordappLoader.cordapps.flatMap { it.initiatedFlows }
-                .forEach {
+        cordappLoader.cordapps.forEach { cordapp ->
+            cordapp.initiatedFlows.groupBy { it.requireAnnotation<InitiatedBy>().value.java }.forEach { initiator, responders ->
+                responders.forEach { responder ->
                     try {
-                        registerInitiatedFlowInternal(smm, it, track = false)
+                        flowManager.registerInitiatedFlow(initiator, responder)
                     } catch (e: NoSuchMethodException) {
-                        log.error("${it.name}, as an initiated flow, must have a constructor with a single parameter " +
+                        log.error("${responder.name}, as an initiated flow, must have a constructor with a single parameter " +
                                 "of type ${Party::class.java.name}")
-                    } catch (e: Exception) {
-                        log.error("Unable to register initiated flow ${it.name}", e)
+                        throw e
                     }
                 }
-    }
-
-    fun <T : FlowLogic<*>> registerInitiatedFlow(smm: StateMachineManager, initiatedFlowClass: Class<T>): Observable<T> {
-        return registerInitiatedFlowInternal(smm, initiatedFlowClass, track = true)
-    }
-
-    // TODO remove once not needed
-    private fun deprecatedFlowConstructorMessage(flowClass: Class<*>): String {
-        return "Installing flow factory for $flowClass accepting a ${Party::class.java.simpleName}, which is deprecated. " +
-                "It should accept a ${FlowSession::class.java.simpleName} instead"
-    }
-
-    private fun <F : FlowLogic<*>> registerInitiatedFlowInternal(smm: StateMachineManager, initiatedFlow: Class<F>, track: Boolean): Observable<F> {
-        val constructors = initiatedFlow.declaredConstructors.associateBy { it.parameterTypes.toList() }
-        val flowSessionCtor = constructors[listOf(FlowSession::class.java)]?.apply { isAccessible = true }
-        val ctor: (FlowSession) -> F = if (flowSessionCtor == null) {
-            // Try to fallback to a Party constructor
-            val partyCtor = constructors[listOf(Party::class.java)]?.apply { isAccessible = true }
-            if (partyCtor == null) {
-                throw IllegalArgumentException("$initiatedFlow must have a constructor accepting a ${FlowSession::class.java.name}")
-            } else {
-                log.warn(deprecatedFlowConstructorMessage(initiatedFlow))
             }
-            { flowSession: FlowSession -> uncheckedCast(partyCtor.newInstance(flowSession.counterparty)) }
-        } else {
-            { flowSession: FlowSession -> uncheckedCast(flowSessionCtor.newInstance(flowSession)) }
         }
-        val initiatingFlow = initiatedFlow.requireAnnotation<InitiatedBy>().value.java
-        val (version, classWithAnnotation) = initiatingFlow.flowVersionAndInitiatingClass
-        require(classWithAnnotation == initiatingFlow) {
-            "${InitiatedBy::class.java.name} must point to ${classWithAnnotation.name} and not ${initiatingFlow.name}"
-        }
-        val flowFactory = InitiatedFlowFactory.CorDapp(version, initiatedFlow.appName, ctor)
-        val observable = internalRegisterFlowFactory(smm, initiatingFlow, flowFactory, initiatedFlow, track)
-        log.info("Registered ${initiatingFlow.name} to initiate ${initiatedFlow.name} (version $version)")
-        return observable
-    }
-
-    protected fun <F : FlowLogic<*>> internalRegisterFlowFactory(smm: StateMachineManager,
-                                                                 initiatingFlowClass: Class<out FlowLogic<*>>,
-                                                                 flowFactory: InitiatedFlowFactory<F>,
-                                                                 initiatedFlowClass: Class<F>,
-                                                                 track: Boolean): Observable<F> {
-        val observable = if (track) {
-            smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
-        } else {
-            Observable.empty()
-        }
-        check(initiatingFlowClass !in flowFactories.keys) {
-            "$initiatingFlowClass is attempting to register multiple initiated flows"
-        }
-        flowFactories[initiatingFlowClass] = flowFactory
-        return observable
-    }
-
-    /**
-     * Installs a flow that's core to the Corda platform. Unlike CorDapp flows which are versioned individually using
-     * [InitiatingFlow.version], core flows have the same version as the node's platform version. To cater for backwards
-     * compatibility [flowFactory] provides a second parameter which is the platform version of the initiating party.
-     */
-    @VisibleForTesting
-    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (FlowSession) -> FlowLogic<*>) {
-        require(clientFlowClass.java.flowVersionAndInitiatingClass.first == 1) {
-            "${InitiatingFlow::class.java.name}.version not applicable for core flows; their version is the node's platform version"
-        }
-        flowFactories[clientFlowClass.java] = InitiatedFlowFactory.Core(flowFactory)
-        log.debug { "Installed core flow ${clientFlowClass.java.name}" }
+        flowManager.validateRegistrations()
     }
 
     private fun installCoreFlows() {
-        installCoreFlow(FinalityFlow::class, ::FinalityHandler)
-        installCoreFlow(NotaryChangeFlow::class, ::NotaryChangeHandler)
-        installCoreFlow(ContractUpgradeFlow.Initiate::class, ::ContractUpgradeHandler)
-        installCoreFlow(SwapIdentitiesFlow::class, ::SwapIdentitiesHandler)
+        flowManager.registerInitiatedCoreFlowFactory(FinalityFlow::class, FinalityHandler::class, ::FinalityHandler)
+        flowManager.registerInitiatedCoreFlowFactory(NotaryChangeFlow::class, NotaryChangeHandler::class, ::NotaryChangeHandler)
+        flowManager.registerInitiatedCoreFlowFactory(ContractUpgradeFlow.Initiate::class, NotaryChangeHandler::class, ::ContractUpgradeHandler)
+        flowManager.registerInitiatedCoreFlowFactory(SwapIdentitiesFlow::class, SwapIdentitiesHandler::class, ::SwapIdentitiesHandler)
     }
 
     protected open fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {
@@ -768,16 +710,37 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
             val notaryKey = myNotaryIdentity?.owningKey
                     ?: throw IllegalArgumentException("Unable to start notary service $serviceClass: notary identity not found")
+
+            /** Some notary implementations only work with Java serialization. */
+            maybeInstallSerializationFilter(serviceClass)
+
             val constructor = serviceClass.getDeclaredConstructor(ServiceHubInternal::class.java, PublicKey::class.java).apply { isAccessible = true }
             val service = constructor.newInstance(services, notaryKey) as NotaryService
 
             service.run {
                 tokenize()
                 runOnStop += ::stop
-                installCoreFlow(NotaryFlow.Client::class, ::createServiceFlow)
+                flowManager.registerInitiatedCoreFlowFactory(NotaryFlow.Client::class, ::createServiceFlow)
                 start()
             }
             return service
+        }
+    }
+
+    /** Installs a custom serialization filter defined by a notary service implementation. Only supported in dev mode. */
+    private fun maybeInstallSerializationFilter(serviceClass: Class<out NotaryService>) {
+        try {
+            @Suppress("UNCHECKED_CAST")
+            val filter = serviceClass.getDeclaredMethod("getSerializationFilter").invoke(null) as ((Class<*>) -> Boolean)
+            if (configuration.devMode) {
+                log.warn("Installing a custom Java serialization filter, required by ${serviceClass.name}. " +
+                        "Note this is only supported in dev mode – a production node will fail to start if serialization filters are used.")
+                SerialFilter.install(filter)
+            } else {
+                throw UnsupportedOperationException("Unable to install a custom Java serialization filter, not in dev mode.")
+            }
+        } catch (e: NoSuchMethodException) {
+            // No custom serialization filter declared
         }
     }
 
@@ -818,55 +781,56 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                                  myNotaryIdentity: PartyAndCertificate?,
                                                  networkParameters: NetworkParameters)
 
-    private fun obtainIdentity(notaryConfig: NotaryConfig?): Pair<PartyAndCertificate, KeyPair> {
+    /** Loads or generates the node's legal identity and key-pair. */
+    private fun obtainIdentity(): Pair<PartyAndCertificate, KeyPair> {
         val keyStore = configuration.signingCertificateStore.get()
+        val legalName = configuration.myLegalName
 
-        val (id, singleName) = if (notaryConfig == null || !notaryConfig.isClusterConfig) {
-            // Node's main identity or if it's a single node notary.
-            Pair(NODE_IDENTITY_ALIAS_PREFIX, configuration.myLegalName)
-        } else {
-            // The node is part of a distributed notary whose identity must already be generated beforehand.
-            Pair(DISTRIBUTED_NOTARY_ALIAS_PREFIX, null)
-        }
         // TODO: Integrate with Key management service?
-        val privateKeyAlias = "$id-private-key"
-
+        val privateKeyAlias = "$NODE_IDENTITY_ALIAS_PREFIX-private-key"
         if (privateKeyAlias !in keyStore) {
-            // We shouldn't have a distributed notary at this stage, so singleName should NOT be null.
-            requireNotNull(singleName) {
-                "Unable to find in the key store the identity of the distributed notary the node is part of"
-            }
             log.info("$privateKeyAlias not found in key store, generating fresh key!")
             keyStore.storeLegalIdentity(privateKeyAlias, generateKeyPair())
         }
 
-        val (x509Cert, keyPair) = keyStore.query { getCertificateAndKeyPair(privateKeyAlias) }
+        val (x509Cert, keyPair) = keyStore.query { getCertificateAndKeyPair(privateKeyAlias, keyStore.entryPassword) }
 
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
-        val compositeKeyAlias = "$id-composite-key"
+        val certificates = keyStore.query { getCertificateChain(privateKeyAlias) }
+        check(certificates.first() == x509Cert) {
+            "Certificates from key store do not line up!"
+        }
+
+        val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
+        if (subject != legalName) {
+            throw ConfigurationException("The name '$legalName' for $NODE_IDENTITY_ALIAS_PREFIX doesn't match what's in the key store: $subject")
+        }
+
+        val certPath = X509Utilities.buildCertPath(certificates)
+        return Pair(PartyAndCertificate(certPath), keyPair)
+    }
+
+    /** Loads pre-generated notary service cluster identity. */
+    private fun loadNotaryClusterIdentity(serviceLegalName: CordaX500Name): Pair<PartyAndCertificate, KeyPair> {
+        val keyStore = configuration.signingCertificateStore.get()
+
+        val privateKeyAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key"
+        val keyPair = keyStore.query { getCertificateAndKeyPair(privateKeyAlias, keyStore.entryPassword) }.keyPair
+
+        val compositeKeyAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key"
         val certificates = if (compositeKeyAlias in keyStore) {
-            // Use composite key instead if it exists.
             val certificate = keyStore[compositeKeyAlias]
             // We have to create the certificate chain for the composite key manually, this is because we don't have a keystore
             // provider that understand compositeKey-privateKey combo. The cert chain is created using the composite key certificate +
             // the tail of the private key certificates, as they are both signed by the same certificate chain.
             listOf(certificate) + keyStore.query { getCertificateChain(privateKeyAlias) }.drop(1)
-        } else {
-            keyStore.query { getCertificateChain(privateKeyAlias) }.let {
-                check(it[0] == x509Cert) { "Certificates from key store do not line up!" }
-                it
-            }
-        }
+        } else throw IllegalStateException("The identity public key for the notary service $serviceLegalName was not found in the key store.")
 
-        val subject = CordaX500Name.build(certificates[0].subjectX500Principal)
-        if (singleName != null && subject != singleName) {
-            throw ConfigurationException("The name '$singleName' for $id doesn't match what's in the key store: $subject")
-        } else if (notaryConfig != null && notaryConfig.isClusterConfig && notaryConfig.serviceLegalName != null && subject != notaryConfig.serviceLegalName) {
-            // Note that we're not checking if `notaryConfig.serviceLegalName` is not present for backwards compatibility.
-            throw ConfigurationException("The name of the notary service '${notaryConfig.serviceLegalName}' for $id doesn't " +
+        val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
+        if (subject != serviceLegalName) {
+            throw ConfigurationException("The name of the notary service '$serviceLegalName' for $DISTRIBUTED_NOTARY_ALIAS_PREFIX doesn't " +
                     "match what's in the key store: $subject. You might need to adjust the configuration of `notary.serviceLegalName`.")
         }
-
         val certPath = X509Utilities.buildCertPath(certificates)
         return Pair(PartyAndCertificate(certPath), keyPair)
     }
@@ -936,7 +900,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? {
-            return flowFactories[initiatingFlowClass]
+            return flowManager.getFlowFactoryForInitiatingFlow(initiatingFlowClass)
         }
 
         override fun jdbcSession(): Connection = database.createSession()
@@ -1002,31 +966,20 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
 
 class ConfigurationException(message: String) : CordaException(message)
 
-// TODO This is no longer used by AbstractNode and can be moved elsewhere
-fun configureDatabase(hikariProperties: Properties,
-                      databaseConfig: DatabaseConfig,
-                      wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
-                      wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
-                      schemaService: SchemaService = NodeSchemaService(),
-                      internalSchemas: Set<MappedSchema> = NodeSchemaService().internalSchemas()): CordaPersistence {
-    val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, hikariProperties)
-    persistence.startHikariPool(hikariProperties, databaseConfig, internalSchemas)
-    return persistence
-}
-
 fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                            wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                            schemaService: SchemaService,
-                           hikariProperties: Properties): CordaPersistence {
+                           hikariProperties: Properties,
+                           cacheFactory: NamedCacheFactory): CordaPersistence {
     // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
     // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
     // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
     JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
-    val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
+    val attributeConverters = listOf(PublicKeyToTextConverter(), AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
     val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
-    return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters)
+    return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, cacheFactory, attributeConverters)
 }
 
 fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null) {

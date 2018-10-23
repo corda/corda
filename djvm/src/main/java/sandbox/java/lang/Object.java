@@ -54,8 +54,7 @@ public class Object {
 
     private static Class<?> fromDJVM(Class<?> type) {
         try {
-            java.lang.String name = type.getName();
-            return Class.forName(name.startsWith("sandbox.") ? name.substring(8) : name);
+            return DJVM.fromDJVMType(type);
         } catch (ClassNotFoundException e) {
             throw new RuleViolationError(e.getMessage());
         }

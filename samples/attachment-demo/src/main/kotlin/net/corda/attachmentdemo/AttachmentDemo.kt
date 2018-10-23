@@ -11,6 +11,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.StartableByService
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
@@ -23,9 +24,9 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.node.internal.poll
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.node.internal.poll
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -130,6 +131,16 @@ class AttachmentDemoFlow(private val otherSide: Party,
         return subFlow(FinalityFlow(stx, setOf(otherSide)))
     }
 }
+
+@StartableByRPC
+@StartableByService
+class NoProgressTrackerShellDemo : FlowLogic<String>() {
+    @Suspendable
+    override fun call(): String {
+        return "You Called me!"
+    }
+}
+
 
 @Suppress("DEPRECATION")
 // DOCSTART 1

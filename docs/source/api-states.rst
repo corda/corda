@@ -100,6 +100,37 @@ Because ``OwnableState`` models fungible assets that can be merged and split ove
 not have a ``linearId``. $5 of cash created by one transaction is considered to be identical to $5 of cash produced by
 another transaction.
 
+FungibleState
+~~~~~~~~~~~~~
+
+`FungibleState<T>` is an interface to represent things which are fungible, this means that there is an expectation that
+these things can be split and merged. That's the only assumption made by this interface. This interface should be
+implemented if you want to represent fractional ownership in a thing, or if you have many things. Examples:
+
+* There is only one Mona Lisa which you wish to issue 100 tokens, each representing a 1% interest in the Mona Lisa
+* A company issues 1000 shares with a nominal value of 1, in one batch of 1000. This means the single batch of 1000
+  shares could be split up into 1000 units of 1 share.
+
+The interface is defined as follows:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/FungibleState.kt
+        :language: kotlin
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
+
+As seen, the interface takes a type parameter `T` that represents the fungible thing in question. This should describe
+the basic type of the asset e.g. GBP, USD, oil, shares in company <X>, etc. and any additional metadata (issuer, grade,
+class, etc.). An upper-bound is not specified for `T` to ensure flexibility. Typically, a class would be provided that
+implements `TokenizableAssetInfo` so the thing can be easily added and subtracted using the `Amount` class.
+
+This interface has been added in addition to `FungibleAsset` to provide some additional flexibility which
+`FungibleAsset` lacks, in particular:
+* `FungibleAsset` defines an amount property of type Amount<Issued<T>>, therefore there is an assumption that all
+  fungible things are issued by a single well known party but this is not always the case.
+* `FungibleAsset` implements `OwnableState`, as such there is an assumption that all fungible things are ownable.
+
 Other interfaces
 ^^^^^^^^^^^^^^^^
 You can also customize your state by implementing the following interfaces:

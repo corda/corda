@@ -11,11 +11,38 @@ Unreleased
 
 * Introduce minimum and target platform version for CorDapps.
 
+* BFT-Smart and Raft notary implementations have been extracted out of node into ``experimental`` CorDapps to emphasise
+  their experimental nature. Moreover, the BFT-Smart notary will only work in dev mode due to its use of Java serialization.
+
 * Vault storage of contract state constraints metadata and associated vault query functions to retrieve and sort by constraint type.
+
+* UPGRADE REQUIRED: changes have been made to how notary implementations are configured and loaded.
+  No upgrade steps are required for the single-node notary (both validating and non-validating variants).
+  Other notary implementations have been moved out of the Corda node into individual Cordapps, and require configuration
+  file updates.
+
+  To run a notary you will now need to include the appropriate notary CorDapp in the ``cordapps/`` directory:
+
+    * ``corda-notary-raft`` for the Raft notary.
+    * ``corda-notary-bft-smart`` for the BFT-Smart notary.
+
+  It is now required to specify the fully qualified notary service class name, ``className``, and the legal name of
+  the notary service in case of distributed notaries: ``serviceLegalName``.
+
+  Implementation-specific configuration values have been moved to the ``extraConfig`` configuration block.
+
+  Example configuration changes for the Raft notary:
+
+  .. image:: resources/notary-config-update.png
+
+  Example configuration changes for the BFT-Smart notary:
+
+  .. image:: resources/notary-config-update-bft.png
 
 * New overload for ``CordaRPCClient.start()`` method allowing to specify target legal identity to use for RPC call.
 
-* Case insensitive vault queries can be specified via a boolean on applicable SQL criteria builder operators. By default queries will be case sensitive.
+* Case insensitive vault queries can be specified via a boolean on applicable SQL criteria builder operators. By default
+  queries will be case sensitive.
 
 * Getter added to ``CordaRPCOps`` for the node's network parameters.
 
@@ -25,14 +52,13 @@ Unreleased
 
 * Removed experimental feature ``CordformDefinition``
 
-* Vault query fix: support query by parent classes of Contract State classes (see https://github.com/corda/corda/issues/3714)
-
 * Added ``registerResponderFlow`` method to ``StartedMockNode``, to support isolated testing of responder flow behaviour.
 
 * "app", "rpc", "p2p" and "unknown" are no longer allowed as uploader values when importing attachments. These are used
   internally in security sensitive code.
 
-* Introduced ``TestCorDapp`` and utilities to support asymmetric setups for nodes through ``DriverDSL``, ``MockNetwork`` and ``MockServices``.
+* Introduced ``TestCorDapp`` and utilities to support asymmetric setups for nodes through ``DriverDSL``, ``MockNetwork``
+  and ``MockServices``.
 
 * Change type of the ``checkpoint_value`` column. Please check the upgrade-notes on how to update your database.
 
@@ -46,16 +72,14 @@ Unreleased
   rather than IllegalStateException.
 
 * The Corda JPA entities no longer implement java.io.Serializable, as this was causing persistence errors in obscure cases.
-  Java serialization is disabled globally in the node, but in the unlikely event you were relying on these types being Java serializable please contact us.
+  Java serialization is disabled globally in the node, but in the unlikely event you were relying on these types being Java
+  serializable please contact us.
 
 * Remove all references to the out-of-process transaction verification.
 
 * The class carpenter has a "lenient" mode where it will, during deserialisation, happily synthesis classes that implement
   interfaces that will have unimplemented methods. This is useful, for example, for object viewers. This can be turned on
   with ``SerializationContext.withLenientCarpenter``.
-
-* Introduced a grace period before the initial node registration fails if the node cannot connect to the Doorman.
-  It retries 10 times with a 1 minute interval in between each try. At the moment this is not configurable.
 
 * Added a ``FlowMonitor`` to log information about flows that have been waiting for IO more than a configurable threshold.
 
@@ -104,7 +128,8 @@ Unreleased
 * The node's configuration is only printed on startup if ``devMode`` is ``true``, avoiding the risk of printing passwords
   in a production setup.
 
-* ``NodeStartup`` will now only print node's configuration if ``devMode`` is ``true``, avoiding the risk of printing passwords in a production setup.
+* ``NodeStartup`` will now only print node's configuration if ``devMode`` is ``true``, avoiding the risk of printing passwords
+  in a production setup.
 
 * SLF4J's MDC will now only be printed to the console if not empty. No more log lines ending with "{}".
 
@@ -169,13 +194,15 @@ Unreleased
 * Added public support for creating ``CordaRPCClient`` using SSL. For this to work the node needs to provide client applications
   a certificate to be added to a truststore. See :doc:`tutorial-clientrpc-api`
 
-* The node RPC broker opens 2 endpoints that are configured with ``address`` and ``adminAddress``. RPC Clients would connect to the address, while the node will connect
-  to the adminAddress. Previously if ssl was enabled for RPC the ``adminAddress`` was equal to ``address``.
+* The node RPC broker opens 2 endpoints that are configured with ``address`` and ``adminAddress``. RPC Clients would connect
+  to the address, while the node will connect to the adminAddress. Previously if ssl was enabled for RPC the ``adminAddress``
+  was equal to ``address``.
 
 * Upgraded H2 to v1.4.197
 
-* Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
-  To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
+* Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps``
+  object directly. To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings
+  are present.
 
 * Changes to the network bootstrapper:
 
@@ -183,7 +210,8 @@ Unreleased
     whitelist.
   * The CorDapp jars are also copied to each nodes' ``cordapps`` directory.
 
-* Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation of internal data.
+* Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation
+  of internal data.
 
 * Serializing an inner class (non-static nested class in Java, inner class in Kotlin) will be rejected explicitly by the serialization
   framework. Prior to this change it didn't work, but the error thrown was opaque (complaining about too few arguments
@@ -191,13 +219,15 @@ Unreleased
   reference to the outer class) as per the Java documentation `here <https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html>`_
   we are disallowing this as the paradigm in general makes little sense for contract states.
 
-* Node can be shut down abruptly by ``shutdown`` function in ``CordaRPCOps`` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
+* Node can be shut down abruptly by ``shutdown`` function in ``CordaRPCOps`` or gracefully (draining flows first) through
+  ``gracefulShutdown`` command from shell.
 
 * API change: ``net.corda.core.schemas.PersistentStateRef`` fields (index and txId) are now non-nullable.
   The fields were always effectively non-nullable - values were set from non-nullable fields of other objects.
   The class is used as database Primary Key columns of other entities and databases already impose those columns as non-nullable
   (even if JPA annotation nullable=false was absent).
-  In case your Cordapps use this entity class to persist data in own custom tables as non Primary Key columns refer to :doc:`upgrade-notes` for upgrade instructions.
+  In case your Cordapps use this entity class to persist data in own custom tables as non Primary Key columns refer to
+  :doc:`upgrade-notes` for upgrade instructions.
 
 * Adding a public method to check if a public key satisfies Corda recommended algorithm specs, `Crypto.validatePublicKey(java.security.PublicKey)`.
   For instance, this method will check if an ECC key lies on a valid curve or if an RSA key is >= 2048bits. This might
@@ -218,6 +248,82 @@ Unreleased
   normal state when it occurs in an input or output position. *This feature is only available on Corda networks running
   with a minimum platform version of 4.*
 
+* Removed type parameter `U` from `tryLockFungibleStatesForSpending` to allow the function to be used with `FungibleState`
+  as well as `FungibleAsset`. This _might_ cause a compile failure in some obscure cases due to the removal of the type
+  parameter from the method. If your CorDapp does specify types explicitly when using this method then updating the types
+  will allow your app to compile successfully. However, those using type inference (e.g. using Kotlin) should not experience
+  any changes. Old CorDapp JARs will still work regardless.
+
+* `issuer_ref` column in `FungibleStateSchema` was updated to be nullable to support the introduction of the
+  `FungibleState` interface. The `vault_fungible_states` table can hold both `FungibleAssets` and `FungibleStates`.
+
+Version 3.3
+-----------
+
+* Vault query fix: support query by parent classes of Contract State classes (see https://github.com/corda/corda/issues/3714)
+
+* Fixed an issue preventing Shell from returning control to the user when CTRL+C is pressed in the terminal.
+
+* Fixed a problem that sometimes prevented nodes from starting in presence of custom state types in the database without a corresponding type from installed CorDapps.
+
+* Introduced a grace period before the initial node registration fails if the node cannot connect to the Doorman.
+  It retries 10 times with a 1 minute interval in between each try. At the moment this is not configurable.
+
+* Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
+
+* Changes to the JSON/YAML serialisation format from ``JacksonSupport``, which also applies to the node shell:
+
+  * ``Instant`` and ``Date`` objects are serialised as ISO-8601 formatted strings rather than timestamps
+  * ``PublicKey`` objects are serialised and looked up according to their Base58 encoded string
+  * ``Party`` objects can be deserialised by looking up their public key, in addition to their name
+  * ``NodeInfo`` objects are serialised as an object and can be looked up using the same mechanism as ``Party``
+  * ``NetworkHostAndPort`` serialised according to its ``toString()``
+  * ``PartyAndCertificate`` is serialised as the name
+  * ``SerializedBytes`` is serialised by materialising the bytes into the object it represents, and then serialising that
+    object into YAML/JSON
+  * ``X509Certificate`` is serialised as an object with key fields such as ``issuer``, ``publicKey``, ``serialNumber``, etc.
+    The encoded bytes are also serialised into the ``encoded`` field. This can be used to deserialise an ``X509Certificate``
+    back.
+  * ``CertPath`` objects are serialised as a list of ``X509Certificate`` objects.
+
+* ``fullParties`` boolean parameter added to ``JacksonSupport.createDefaultMapper`` and ``createNonRpcMapper``. If ``true``
+  then ``Party`` objects are serialised as JSON objects with the ``name`` and ``owningKey`` fields. For ``PartyAndCertificate``
+  the ``certPath`` is serialised.
+
+* Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used
+
+* ``ServiceHub`` and ``CordaRPCOps`` can now safely be used from multiple threads without incurring in database transaction problems.
+
+* Fixed an issue preventing out of process nodes started by the ``Driver`` from logging to file.
+
+* The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work - the new methods avoid bugs that can occur when JPA schemas inherit from each other.
+
+* Removed -xmx VM argument from Explorer's Capsule setup. This helps avoiding out of memory errors.
+
+* Node will now gracefully fail to start if one of the required ports is already in use.
+
+* Fixed incorrect exception handling in ``NodeVaultService._query()``.
+
+* Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
+
+* Fix CORDA-1403 where a property of a class that implemented a generic interface could not be deserialised in
+  a factory without a serialiser as the subtype check for the class instance failed. Fix is to compare the raw
+  type.
+
+* Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored
+  as the raw type, List for example.
+
+.. _changelog_v3.2:
+
+Version 3.2
+-----------
+
+* Doorman and NetworkMap URLs can now be configured individually rather than being assumed to be
+  the same server. Current ``compatibilityZoneURL`` configurations remain valid. See both :doc:`corda-configuration-file`
+  and :doc:`permissioning` for details.
+
+* Table name with a typo changed from ``NODE_ATTCHMENTS_CONTRACTS`` to ``NODE_ATTACHMENTS_CONTRACTS``.
+
 .. _changelog_v3.1:
 
 Version 3.1
@@ -226,7 +332,7 @@ Version 3.1
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
   .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions
-later than 2.12.3 (including 2.12.4) exhibit a different issue.
+    later than 2.12.3 (including 2.12.4) exhibit a different issue.
 
 * Updated the api scanner gradle plugin to work the same way as the version in master. These changes make the api scanner more
   accurate and fix a couple of bugs, and change the format of the api-current.txt file slightly. Backporting these changes
@@ -245,33 +351,62 @@ later than 2.12.3 (including 2.12.4) exhibit a different issue.
 Version 3.0
 -----------
 
-* Per CorDapp configuration is now exposed. ``CordappContext`` now exposes a ``CordappConfig`` object that is populated
-  at CorDapp context creation time from a file source during runtime.
+* Due to a security risk, the `conflict` property has been removed from `NotaryError.Conflict` error object. It has been replaced
+  with `consumedStates` instead. The new property no longer specifies the original requesting party and transaction id for
+  a consumed state. Instead, only the hash of the transaction id is revealed. For more details why this change had to be
+  made please refer to the release notes.
+
+* Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
+  where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
+  one node with the legal name is found.
 
 * Introduced Flow Draining mode, in which a node continues executing existing flows, but does not start new. This is to support graceful node shutdown/restarts.
   In particular, when this mode is on, new flows through RPC will be rejected, scheduled flows will be ignored, and initial session messages will not be consumed.
   This will ensure that the number of checkpoints will strictly diminish with time, allowing for a clean shutdown.
-
-* Make the serialisation finger-printer a pluggable entity rather than hard wiring into the factory
 
 * Removed blacklisted word checks in Corda X.500 name to allow "Server" or "Node" to be use as part of the legal name.
 
 * Separated our pre-existing Artemis broker into an RPC broker and a P2P broker.
 
 * Refactored ``NodeConfiguration`` to expose ``NodeRpcOptions`` (using top-level "rpcAddress" property still works with warning).
+
 * Modified ``CordaRPCClient`` constructor to take a ``SSLConfiguration?`` additional parameter, defaulted to ``null``.
 
-* Introduced ``CertificateChainCheckPolicy.UsernameMustMatchCommonName`` sub-type, allowing customers to optionally enforce username == CN condition on RPC SSL certificates.
+* Introduced ``CertificateChainCheckPolicy.UsernameMustMatchCommonName`` sub-type, allowing customers to optionally enforce
+  username == CN condition on RPC SSL certificates.
 
 * Modified ``DriverDSL`` and sub-types to allow specifying RPC settings for the Node.
 
-* Modified the ``DriverDSL`` to start Cordformation nodes allowing automatic generation of "rpcSettings.adminAddress" in case "rcpSettings.useSsl" is ``false`` (the default).
+* Modified the ``DriverDSL`` to start Cordformation nodes allowing automatic generation of "rpcSettings.adminAddress" in case
+  "rcpSettings.useSsl" is ``false`` (the default).
 
 * Introduced ``UnsafeCertificatesFactory`` allowing programmatic generation of X509 certificates for test purposes.
 
 * JPA Mapping annotations for States extending ``CommonSchemaV1.LinearState`` and ``CommonSchemaV1.FungibleState`` on the
-  `participants` collection need to be moved to the actual class. This allows to properly specify the unique table name per a collection.
-  See: DummyDealStateSchemaV1.PersistentDummyDealState
+  `participants` collection need to be moved to the actual class. This allows to properly specify the unique table name per
+  a collection. See: DummyDealStateSchemaV1.PersistentDummyDealState
+* Database schema changes - an H2 database instance of Corda 1.0 and 2.0 cannot be reused for Corda 3.0, listed changes for Vault and Finance module:
+
+    * ``NODE_TRANSACTIONS``:
+       column ``"TRANSACTION”`` renamed to ``TRANSACTION_VALUE``, serialization format of BLOB stored in the column has changed to AMQP
+    * ``VAULT_STATES``:
+       column ``CONTRACT_STATE`` removed
+    * ``VAULT_FUNGIBLE_STATES``:
+        column ``ISSUER_REFERENCE`` renamed to ``ISSUER_REF`` and the field size increased
+    * ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_PARTICIPANTS"``:
+        table renamed to ``VAULT_FUNGIBLE_STATES_PARTS``,
+        column ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_OUTPUT_INDEX"`` renamed to ``OUTPUT_INDEX``,
+        column ``"VAULTSCHEMAV1$VAULTFUNGIBLESTATES_TRANSACTION_ID"`` renamed to ``TRANSACTION_ID``
+    * ``VAULT_LINEAR_STATES``:
+        type of column ``"UUID"`` changed from ``VARBINARY`` to ``VARCHAR(255)`` - select varbinary column as ``CAST("UUID" AS UUID)`` to get UUID in varchar format
+    * ``"VAULTSCHEMAV1$VAULTLINEARSTATES_PARTICIPANTS"``:
+        table renamed to ``VAULT_LINEAR_STATES_PARTS``,
+        column ``"VAULTSCHEMAV1$VAULTLINEARSTATES_OUTPUT_INDEX"`` renamed to ``OUTPUT_INDEX``,
+        column ``"VAULTSCHEMAV1$VAULTLINEARSTATES_TRANSACTION_ID"`` renamed to ``TRANSACTION_ID``
+    * ``contract_cash_states``:
+        columns storing Base58 representation of the serialised public key (e.g. ``issuer_key``) were changed to store Base58 representation of SHA-256 of public key prefixed with `DL`
+    * ``contract_cp_states``:
+        table renamed to ``cp_states``, column changes as for ``contract_cash_states``
 
 * X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
   hierarchy is now enforced in the validation code. See ``net.corda.core.internal.CertRole`` for the current implementation
@@ -556,7 +691,9 @@ Release 1.0
 * Vault query soft locking enhancements and deprecations
 
   * removed original ``VaultService`` ``softLockedStates`` query mechanism.
-  * introduced improved ``SoftLockingCondition`` filterable attribute in ``VaultQueryCriteria`` to enable specification of different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified by set of lock ids)
+  * introduced improved ``SoftLockingCondition`` filterable attribute in ``VaultQueryCriteria`` to enable specification of
+    different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified by set
+    of lock ids)
 
 * Trader demo now issues cash and commercial paper directly from the bank node, rather than the seller node self-issuing
   commercial paper but labelling it as if issued by the bank.
@@ -586,7 +723,8 @@ Release 1.0
   This may require adjusting imports of Cash flow references and also of ``StartFlow`` permission in ``gradle.build`` files.
 
 * Removed the concept of relevancy from ``LinearState``. The ``ContractState``'s relevancy to the vault can be determined
-  by the flow context, the vault will process any transaction from a flow which is not derived from transaction resolution verification.
+  by the flow context, the vault will process any transaction from a flow which is not derived from transaction resolution
+  verification.
 
 * Removed the tolerance attribute from ``TimeWindowChecker`` and thus, there is no extra tolerance on the notary side anymore.
 
@@ -769,9 +907,11 @@ Milestone 14
 
     * Pagination simplification. Pagination continues to be optional, with following changes:
 
-      - If no PageSpecification provided then a maximum of MAX_PAGE_SIZE (200) results will be returned, otherwise we fail-fast with a ``VaultQueryException`` to alert the API user to the need to specify a PageSpecification.
-        Internally, we no longer need to calculate a results count (thus eliminating an expensive SQL query) unless a PageSpecification is supplied (note: that a value of -1 is returned for total_results in this scenario).
-        Internally, we now use the AggregateFunction capability to perform the count.
+      - If no PageSpecification provided then a maximum of MAX_PAGE_SIZE (200) results will be returned, otherwise we fail-fast
+        with a ``VaultQueryException`` to alert the API user to the need to specify a PageSpecification. Internally, we no
+        longer need to calculate a results count (thus eliminating an expensive SQL query) unless a PageSpecification is
+        supplied (note: that a value of -1 is returned for total_results in this scenario). Internally, we now use the
+        AggregateFunction capability to perform the count.
       - Paging now starts from 1 (was previously 0).
 
     * Additional Sort criteria: by StateRef (or constituents: txId, index)

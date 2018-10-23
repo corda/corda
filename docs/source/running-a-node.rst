@@ -48,8 +48,6 @@ Command-line options
 The node can optionally be started with the following command-line options:
 
 * ``--base-directory``, ``-b``: The node working directory where all the files are kept (default: ``.``).
-* ``--bootstrap-raft-cluster``: Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer 
-  addresses), acting as a seed for other nodes to join the cluster.
 * ``--clear-network-map-cache``, ``-c``: Clears local copy of network map, on node startup it will be restored from server or file system.
 * ``--config-file``, ``-f``: The path to the config file. Defaults to ``node.conf``.
 * ``--dev-mode``, ``-d``: Runs the node in developer mode. Unsafe in production. Defaults to true on MacOS and desktop versions of Windows. False otherwise.

@@ -1,5 +1,7 @@
 package net.corda.behave.node.configuration
 
+// TODO This is a ConfigurationTemplate but is never used as one. Therefore the private "applications" list is never used
+// and thus includeFinance isn't necessary either. Something is amiss.
 class CordappConfiguration(var apps: List<String> = emptyList(), val includeFinance: Boolean = false) : ConfigurationTemplate() {
 
     private val applications = apps + if (includeFinance) {

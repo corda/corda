@@ -2,16 +2,18 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.assertion.assert
-import net.corda.testing.internal.matchers.flow.willReturn
 import net.corda.core.flows.mixins.WithMockNet
 import net.corda.core.identity.Party
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.internal.matchers.flow.willReturn
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.TestStartedNode
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.AfterClass
 import org.junit.Test
+import kotlin.reflect.KClass
 
 
 class ReceiveMultipleFlowTests : WithMockNet {
@@ -43,7 +45,7 @@ class ReceiveMultipleFlowTests : WithMockNet {
             }
         }
 
-        nodes[1].registerInitiatedFlow(initiatingFlow::class) { session ->
+        nodes[1].registerCordappFlowFactory(initiatingFlow::class) { session ->
             object : FlowLogic<Unit>() {
                 @Suspendable
                 override fun call() {
@@ -121,6 +123,17 @@ class ReceiveMultipleFlowTests : WithMockNet {
         override fun call(): Double {
             val (double, string) = askMembersForData(doubleMember, stringMember)
             return double * string.length
+        }
+    }
+}
+
+private inline fun <reified T> TestStartedNode.registerAnswer(kClass: KClass<out FlowLogic<Any>>, value1: T) {
+    this.registerCordappFlowFactory(kClass) { session ->
+        object : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                session.send(value1!!)
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 @file:KeepForDJVM
+
 package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
@@ -11,6 +12,7 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.security.PublicKey
 import java.util.jar.JarInputStream
 
 const val DEPLOYED_CORDAPP_UPLOADER = "app"
@@ -40,8 +42,8 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     override val size: Int get() = attachmentData.size
 
     override fun open(): InputStream = attachmentData.inputStream()
-    override val signers by lazy {
-        openAsJAR().use(JarSignatureCollector::collectSigningParties)
+    override val signers: List<PublicKey> by lazy {
+        openAsJAR().use(JarSignatureCollector::collectSigners)
     }
 
     override fun equals(other: Any?) = other === this || other is Attachment && other.id == this.id

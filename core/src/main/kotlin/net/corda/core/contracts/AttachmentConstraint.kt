@@ -3,7 +3,6 @@ package net.corda.core.contracts
 import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.internal.AttachmentWithContext
@@ -82,5 +81,5 @@ data class SignatureAttachmentConstraint(
         val key: PublicKey
 ) : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean =
-        key.isFulfilledBy(attachment.signers.map { it.owningKey })
+        key.isFulfilledBy(attachment.signers.map { it })
 }

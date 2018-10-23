@@ -43,11 +43,11 @@ public class IOUFlow extends FlowLogic<Void> {
     @Override
     public Void call() throws FlowException {
         // We retrieve the notary identity from the network map.
-        final Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
+        Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
 
         // DOCSTART 02
         // We create a transaction builder.
-        final TransactionBuilder txBuilder = new TransactionBuilder();
+        TransactionBuilder txBuilder = new TransactionBuilder();
         txBuilder.setNotary(notary);
 
         // We create the transaction components.
@@ -63,7 +63,7 @@ public class IOUFlow extends FlowLogic<Void> {
         txBuilder.verify(getServiceHub());
 
         // Signing the transaction.
-        final SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
+        SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
 
         // Creating a session with the other party.
         FlowSession otherPartySession = initiateFlow(otherParty);
