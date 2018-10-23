@@ -56,9 +56,11 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         webPort 10007
         rpcUsers = [[user: "bankUser", password: "test", permissions: ["ALL"]]]
         extraConfig = [
-                custom    : [issuableCurrencies: ["USD"]],
                 h2Settings: [address: "localhost:10017"]
         ]
+        cordapp(project(':finance')) {
+            config "issuableCurrencies = [ USD ]"
+        }
     }
     node {
         name "O=BigCorporation,L=New York,C=US"

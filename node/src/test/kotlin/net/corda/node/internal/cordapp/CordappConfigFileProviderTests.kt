@@ -12,16 +12,16 @@ import java.nio.file.Paths
 
 class CordappConfigFileProviderTests {
     private companion object {
-        val cordappConfDir = Paths.get("build") / "tmp" / "cordapps" / "config"
+        val cordappDir = Paths.get("build") / "tmp" / "cordapps"
         const val cordappName = "test"
-        val cordappConfFile = cordappConfDir / "$cordappName.conf"
+        val cordappConfFile = cordappDir / "config" / "$cordappName.conf"
 
         val validConfig: Config = ConfigFactory.parseString("key=value")
         val alternateValidConfig: Config = ConfigFactory.parseString("key=alternateValue")
         const val invalidConfig = "Invalid"
     }
 
-    private val provider = CordappConfigFileProvider(cordappConfDir)
+    private val provider = CordappConfigFileProvider(listOf(cordappDir))
 
     @Test
     fun `test that config can be loaded`() {

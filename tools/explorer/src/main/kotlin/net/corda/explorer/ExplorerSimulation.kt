@@ -18,14 +18,19 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.GBP
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.flows.*
+import net.corda.finance.flows.AbstractCashFlow
+import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashExitFlow.ExitRequest
+import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
+import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.internal.CashConfigDataFlow
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.*
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.FINANCE_CORDAPP
 import java.time.Instant
 import java.util.*
 
@@ -63,16 +68,27 @@ class ExplorerSimulation(private val options: OptionSet) {
 
     private fun startDemoNodes() {
         val portAllocation = PortAllocation.Incremental(20000)
-        driver(DriverParameters(portAllocation = portAllocation, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true, jmxPolicy = JmxPolicy(true))) {
+        driver(DriverParameters(
+                portAllocation = portAllocation,
+                cordappsForAllNodes = listOf(FINANCE_CORDAPP),
+                waitForAllNodesToFinish = true,
+                jmxPolicy = JmxPolicy(true)
+        )) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             val bob = startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
             val ukBankName = CordaX500Name(organisation = "UK Bank Plc", locality = "London", country = "GB")
             val usaBankName = CordaX500Name(organisation = "USA Bank Corp", locality = "New York", country = "US")
-            val issuerGBP = startNode(providedName = ukBankName, rpcUsers = listOf(manager),
-                    customOverrides = mapOf("custom" to mapOf("issuableCurrencies" to listOf("GBP"))))
-            val issuerUSD = startNode(providedName = usaBankName, rpcUsers = listOf(manager),
-                    customOverrides = mapOf("custom" to mapOf("issuableCurrencies" to listOf("USD"))))
+            val issuerGBP = startNode(
+                    providedName = ukBankName,
+                    rpcUsers = listOf(manager),
+                    additionalCordapps = listOf(FINANCE_CORDAPP.withConfig(mapOf("issuableCurrencies" to listOf("GBP"))))
+            )
+            val issuerUSD = startNode(
+                    providedName = usaBankName,
+                    rpcUsers = listOf(manager),
+                    additionalCordapps = listOf(FINANCE_CORDAPP.withConfig(mapOf("issuableCurrencies" to listOf("USD"))))
+            )
 
             notaryNode = defaultNotaryNode.get()
             aliceNode = alice.get()
