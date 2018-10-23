@@ -60,7 +60,7 @@ class AMQPServer(val hostName: String,
         private val conf = parent.configuration
 
         init {
-            keyManagerFactory.init(conf.keyStore.value.internal, conf.keyStore.password.toCharArray())
+            keyManagerFactory.init(conf.keyStore.value.internal, conf.keyStore.entryPassword.toCharArray())
             trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.crlCheckSoftFail))
         }
 

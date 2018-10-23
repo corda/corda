@@ -113,12 +113,13 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
         auditService.statusChangeEvent("Connection change on float control port $connectionChange")
         if (connectionChange.connected) {
             val (freshKeyStorePassword, freshKeyStoreKeyPassword, recodedKeyStore) = recodeKeyStore(floatListenerSSLConfiguration)
-            val trustStoreBytes = floatListenerSSLConfiguration.trustStore.path.readAll()
+            val trustStore = floatListenerSSLConfiguration.trustStore
+            val trustStoreBytes = trustStore.path.readAll()
             val activateMessage = ActivateFloat(recodedKeyStore,
                     freshKeyStorePassword,
                     freshKeyStoreKeyPassword,
                     trustStoreBytes,
-                    floatListenerSSLConfiguration.trustStore.storePassword.toCharArray())
+                    trustStore.storePassword.toCharArray())
             val amqpActivateMessage = amqpControlClient!!.createMessage(activateMessage.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes,
                     FLOAT_CONTROL_TOPIC,
                     expectedCertificateSubject.toString(),

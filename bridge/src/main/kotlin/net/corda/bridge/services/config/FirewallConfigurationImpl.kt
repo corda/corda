@@ -17,12 +17,14 @@ fun Config.parseAsFirewallConfiguration(): FirewallConfiguration = parseAs<Firew
 
 data class BridgeSSLConfigurationImpl(private val sslKeystore: Path,
                                       private val keyStorePassword: String,
+                                      private val keyStorePrivateKeyPassword: String = keyStorePassword,
                                       private val trustStoreFile: Path,
                                       private val trustStorePassword: String,
                                       private val crlCheckSoftFail: Boolean,
                                       override val useOpenSsl: Boolean = false) : BridgeSSLConfiguration {
 
-    override val keyStore = FileBasedCertificateStoreSupplier(sslKeystore, keyStorePassword, keyStorePassword)
+    override val keyStore = FileBasedCertificateStoreSupplier(sslKeystore, keyStorePassword, keyStorePrivateKeyPassword)
+    // Trust store does not and should not contain any keys therefore keys password for it should not matter
     override val trustStore = FileBasedCertificateStoreSupplier(trustStoreFile, trustStorePassword, trustStorePassword)
 }
 
@@ -81,9 +83,11 @@ data class FirewallConfigurationImpl(
     }
 
     private val p2pKeystorePath = sslKeystore
-    private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword, keyStorePassword)
+    // Due to Artemis limitations setting private key password same as key store password.
+    private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword, entryPassword = keyStorePassword)
     private val p2pTrustStoreFilePath = trustStoreFile
-    private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword, trustStorePassword)
+    // Due to Artemis limitations setting private key password same as key store password.
+    private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword, entryPassword = trustStorePassword)
     override val p2pSslOptions: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
 }
 

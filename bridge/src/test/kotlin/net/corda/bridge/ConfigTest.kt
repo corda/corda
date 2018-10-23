@@ -84,6 +84,21 @@ class ConfigTest {
     }
 
     @Test
+    fun `Load custom inner certificate config diff passwords`() {
+        val configResource = "/net/corda/bridge/separatedwithcustomcerts/bridge/firewall_diffPasswords.conf"
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        val outboundSSLConfiguration = config.outboundConfig!!.customSSLConfiguration!!
+        assertEquals("outboundkeypassword", outboundSSLConfiguration.keyStore.storePassword)
+        assertEquals("outboundprivatekeypassword", outboundSSLConfiguration.keyStore.entryPassword)
+        assertEquals("outboundtrustpassword", outboundSSLConfiguration.trustStore.storePassword)
+        assertNull(config.inboundConfig)
+        val innerSLConfiguration = config.bridgeInnerConfig!!.customSSLConfiguration!!
+        assertEquals("tunnelkeypassword", innerSLConfiguration.keyStore.storePassword)
+        assertEquals("tunneltrustpassword", innerSLConfiguration.trustStore.storePassword)
+        assertNull(config.floatOuterConfig)
+    }
+
+    @Test
     fun `Load custom outer certificate config`() {
         val configResource = "/net/corda/bridge/separatedwithcustomcerts/float/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)

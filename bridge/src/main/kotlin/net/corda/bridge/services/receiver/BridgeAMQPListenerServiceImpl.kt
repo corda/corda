@@ -24,8 +24,8 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
                                     val auditService: FirewallAuditService,
                                     private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeAMQPListenerService, ServiceStateSupport by stateHelper {
     companion object {
-        val log = contextLogger()
-        val consoleLogger = LoggerFactory.getLogger("BasicInfo")
+        private val log = contextLogger()
+        private val consoleLogger = LoggerFactory.getLogger("BasicInfo")
     }
 
     private val statusFollower: ServiceStateCombiner
@@ -48,8 +48,10 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
         require(active) { "AuditService must be active" }
         require(keyStorePassword !== keyStorePrivateKeyPassword) { "keyStorePassword and keyStorePrivateKeyPassword must reference distinct arrays!" }
 
-        val keyStore = CertificateStore.of(loadKeyStore(keyStoreBytes, keyStorePassword), java.lang.String.valueOf(keyStorePrivateKeyPassword), java.lang.String.valueOf(keyStorePrivateKeyPassword)).also { wipeKeys(keyStoreBytes, keyStorePassword) }
-        val trustStore = CertificateStore.of(loadKeyStore(trustStoreBytes, trustStorePassword), java.lang.String.valueOf(trustStorePassword), java.lang.String.valueOf(trustStorePassword)).also { wipeKeys(trustStoreBytes, trustStorePassword) }
+        val keyStore = CertificateStore.of(loadKeyStore(keyStoreBytes, keyStorePassword),
+                java.lang.String.valueOf(keyStorePassword), java.lang.String.valueOf(keyStorePrivateKeyPassword)).also { wipeKeys(keyStoreBytes, keyStorePassword) }
+        val trustStore = CertificateStore.of(loadKeyStore(trustStoreBytes, trustStorePassword),
+                java.lang.String.valueOf(trustStorePassword), java.lang.String.valueOf(trustStorePassword)).also { wipeKeys(trustStoreBytes, trustStorePassword) }
         val bindAddress = conf.inboundConfig!!.listeningAddress
         val amqpConfiguration = object : AMQPConfiguration {
             override val keyStore = keyStore

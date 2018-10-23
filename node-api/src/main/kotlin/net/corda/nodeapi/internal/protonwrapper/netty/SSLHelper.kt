@@ -223,7 +223,7 @@ internal fun createServerSNIOpenSslHandler(keyManagerFactoriesMap: Map<String, K
 
 internal fun splitKeystore(config: AMQPConfiguration): Map<String, CertHoldingKeyManagerFactoryWrapper> {
     val keyStore = config.keyStore.value.internal
-    val password = config.keyStore.password.toCharArray()
+    val password = config.keyStore.entryPassword.toCharArray()
     return keyStore.aliases().toList().map { alias ->
         val key = keyStore.getKey(alias, password)
         val certs = keyStore.getCertificateChain(alias)

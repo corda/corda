@@ -94,7 +94,10 @@ absolute path to the firewall's base directory.
    :customSSLConfiguration:  The default behaviour is that the outgoing ``TLS 1.2/AMQP 1.0`` connections present certificate details from (``<workspace>/certificates/sslkeystore.jks``)
         and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config. However, distinct KeyStores may be configured in this section:
 
-        :keyStorePassword: The password for the TLS KeyStore and private keys within the KeyStore.
+        :keyStorePassword: The password for the TLS KeyStore.
+
+        :keyStorePrivateKeyPassword: Optional parameter to lock the private keys within the KeyStore. If it is missing, it will be assumed that the private keys password is the same as
+            ``keyStorePassword`` above.
 
         :trustStorePassword: The password for TLS TrustStore.
 
@@ -122,7 +125,10 @@ absolute path to the firewall's base directory.
    :customSSLConfiguration:  The default behaviour is that the inbound ``TLS 1.2/AMQP 1.0`` connections present certificate details from (``<workspace>/certificates/sslkeystore.jks``)
         and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config. However, distinct KeyStores may be configured in this section:
 
-        :keyStorePassword: The password for the TLS KeyStore and private keys within the KeyStore.
+        :keyStorePassword: The password for the TLS KeyStore.
+
+        :keyStorePrivateKeyPassword: Optional parameter to lock the private keys within the KeyStore. If it is missing, it will be assumed that the private keys password is the same as
+            ``keyStorePassword`` above.
 
         :trustStorePassword: The password for TLS TrustStore.
 
@@ -143,7 +149,10 @@ absolute path to the firewall's base directory.
                                              and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config.
                                              However, it is strongly recommended that distinct KeyStores should be configured in this section to use locally valid certificates only, so that compromise of the DMZ machines does not give access to the node's primary TLS keys.
 
-            :keyStorePassword: The password for the TLS KeyStore and private keys within the KeyStore.
+            :keyStorePassword: The password for the TLS KeyStore.
+
+            :keyStorePrivateKeyPassword: Optional parameter to lock the private keys within the KeyStore. If it is missing, it will be assumed that the private keys password is the same as
+                ``keyStorePassword`` above.
 
             :trustStorePassword: The password for TLS TrustStore.
 
@@ -157,7 +166,10 @@ absolute path to the firewall's base directory.
             By default, they are taken from (``<workspace>/certificates/sslkeystore.jks``)
             and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config. However, alternate sources may be defined in this section.
 
-            :keyStorePassword: The password for the TLS KeyStore and private keys within the KeyStore.
+            :keyStorePassword: The password for the TLS KeyStore.
+
+            :keyStorePrivateKeyPassword: Optional parameter to lock the private keys within the KeyStore. If it is missing, it will be assumed that the private keys password is the same as
+                ``keyStorePassword`` above.
 
             :trustStorePassword: The password for TLS TrustStore.
 
@@ -177,7 +189,10 @@ absolute path to the firewall's base directory.
                                              and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config.
                                              However, it is strongly recommended that distinct KeyStores should be configured in this section to use locally valid certificates only, so that compromise of the DMZ machines does not give access to the node's primary TLS keys.
 
-            :keyStorePassword: The password for the TLS KeyStore and private keys within the KeyStore.
+            :keyStorePassword: The password for the TLS KeyStore.
+
+            :keyStorePrivateKeyPassword: Optional parameter to lock the private keys within the KeyStore. If it is missing, it will be assumed that the private keys password is the same as
+                ``keyStorePassword`` above.
 
             :trustStorePassword: The password for TLS TrustStore.
 

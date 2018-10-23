@@ -130,6 +130,55 @@ class BridgeIntegrationTest {
     }
 
     @Test
+    fun `Load bridge and float outer with different passwords and stand them up`() {
+        val bridgeFolder = tempFolder.root.toPath()
+        val bridgeConfigResource = "/net/corda/bridge/withfloatdiffpasswords/bridge/firewall.conf"
+        val bridgeConfig = createAndLoadConfigFromResource(bridgeFolder, bridgeConfigResource)
+        listOf(bridgeConfig.p2pSslOptions, bridgeConfig.bridgeInnerConfig?.customSSLConfiguration).forEach { it?.createBridgeKeyStores(DUMMY_BANK_A_NAME) }
+        createNetworkParams(bridgeFolder)
+        assertEquals(FirewallMode.BridgeInner, bridgeConfig.firewallMode)
+        assertEquals(NetworkHostAndPort("localhost", 11005), bridgeConfig.outboundConfig!!.artemisBrokerAddress)
+        val floatFolder = tempFolder.root.toPath() / "float"
+        val floatConfigResource = "/net/corda/bridge/withfloatdiffpasswords/float/firewall.conf"
+        val floatConfig = createAndLoadConfigFromResource(floatFolder, floatConfigResource)
+        listOf(floatConfig.p2pSslOptions, floatConfig.inboundConfig?.customSSLConfiguration, floatConfig.floatOuterConfig?.customSSLConfiguration).forEach { it?.createBridgeKeyStores(DUMMY_BANK_A_NAME) }
+        createNetworkParams(floatFolder)
+        assertEquals(FirewallMode.FloatOuter, floatConfig.firewallMode)
+        assertEquals(NetworkHostAndPort("0.0.0.0", 10005), floatConfig.inboundConfig!!.listeningAddress)
+        val (artemisServer, artemisClient) = createArtemis()
+        try {
+            installBridgeControlResponder(artemisClient)
+            val bridge = FirewallInstance(bridgeConfig, FirewallVersionInfo(1, "1.1", "Dummy", "Test"))
+            val bridgeStateFollower = bridge.activeChange.toBlocking().iterator
+            val float = FirewallInstance(floatConfig, FirewallVersionInfo(1, "1.1", "Dummy", "Test"))
+            val floatStateFollower = float.activeChange.toBlocking().iterator
+            assertEquals(false, floatStateFollower.next())
+            float.start()
+            assertEquals(true, floatStateFollower.next())
+            assertEquals(true, float.active) // float is running
+            assertEquals(false, serverListening("localhost", 10005)) // but not activated
+            assertEquals(false, bridgeStateFollower.next())
+            bridge.start()
+            assertEquals(true, bridgeStateFollower.next())
+            assertEquals(true, bridge.active)
+            assertEquals(true, float.active)
+            assertEquals(true, serverListening("localhost", 10005)) // now activated
+            bridge.stop()
+            assertEquals(false, bridgeStateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(true, float.active)
+            assertEquals(false, serverListening("localhost", 10005)) // now de-activated
+            float.stop()
+            assertEquals(false, floatStateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(false, float.active)
+        } finally {
+            artemisClient.stop()
+            artemisServer.stop()
+        }
+    }
+
+    @Test
     fun `Run HA all in one mode`() {
         val configResource = "/net/corda/bridge/hasingleprocess/firewall.conf"
         createNetworkParams(tempFolder.root.toPath())

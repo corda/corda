@@ -145,13 +145,15 @@ class AMQPListenerTest {
         val auditFollower = auditService.onAuditEvent.toBlocking().iterator
         val clientKeys = Crypto.generateKeyPair(ECDSA_SECP256R1_SHA256)
         val clientCert = X509Utilities.createSelfSignedCACertificate(ALICE_NAME.x500Principal, clientKeys)
-        val clientKeyStoreRaw = X509KeyStore("password")
-        clientKeyStoreRaw.setPrivateKey("TLS_CERT", clientKeys.private, listOf(clientCert), "password")
-        val clientKeyStore = CertificateStore.of(clientKeyStoreRaw, "password", "password")
+        val storePassword = "password"
+        val keyPassword = "privateKeyPassword"
+        val clientKeyStoreRaw = X509KeyStore(storePassword)
+        clientKeyStoreRaw.setPrivateKey("TLS_CERT", clientKeys.private, listOf(clientCert), keyPassword)
+        val clientKeyStore = CertificateStore.of(clientKeyStoreRaw, storePassword, keyPassword)
 
-        val clientTrustStoreRaw = X509KeyStore("password")
+        val clientTrustStoreRaw = X509KeyStore(storePassword)
         clientTrustStoreRaw.setCertificate("TLS_ROOT", clientCert)
-        val clientTrustStore = CertificateStore.of(clientTrustStoreRaw, "password", "password")
+        val clientTrustStore = CertificateStore.of(clientTrustStoreRaw, storePassword, keyPassword)
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = clientKeyStore
             override val trustStore = clientTrustStore
