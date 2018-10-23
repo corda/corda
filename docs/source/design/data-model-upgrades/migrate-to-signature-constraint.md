@@ -25,12 +25,14 @@ A malicious party should not be able to attack this feature, by "taking ownershi
 
 ## Non-Goals
 
-Migration from the whitelist constraint was already implemented. so will not be addressed.
+Migration from the whitelist constraint was already implemented. so will not be addressed. (The cordapp develper just needs to sign the jar and whitelist the signed jar.)
 
 Also versioning is being addressed in different design docs.
 
 
 ## Design details
+
+### Requirements
 
 To migrate without disruption from the hash constraint, the jar that is attached to a spending transaction needs to satisfy both the hash constraint of the input state, as well as the signature constraint of the output state.
 
@@ -41,7 +43,7 @@ Also, it needs to reassure future transaction verifiers - when doing transaction
 
 To achieve the first part, we can create this convention:
 
-- Developer signs the original jar (that was used with the hash constraint), and adds the right metadata to it.
+- Developer signs the original jar (that was used with the hash constraint).
 - Nodes install it, thus whitelisting it.
 - The HashConstraint.verify method will be modified to verify the hash with and without signatures.
 - The nodes create normal transactions that spend an input state with the hashConstraint and output states with the signature constraint. No special spend-to-self transactions should be required.
@@ -82,11 +84,14 @@ A normal node would just download the signed jar using the normal process for th
 
  - A transaction mixing an original HashConstraint state, and a v2 Signature constraint state will not pass. The only way out is to strongly "encourage" nodes to upgrade before the new release.
   
+The problem is that, in a transaction, the attachment needs to pass the constraint of all states.
 
-######  New nodes that download the unsigned original jar will fail the package ownership checks.
+If the rightful owner took over the contract of states originally released with the HashConstraint, and started releasing new versions then the following might happen:
 
-- This is actually an issue with the package ownership implementation. It should verify against the network parameters found in the transaction.
-
+- NodeA did not migrate all his states to the Signature Constraint.
+- NodeB did, and already has states created with version 2.
+- If they decide to trade, NodeA will add his HashConstraint state, and NodeB will add his version2 SignatureConstraint state to a new transaction.
+This is an impossible transaction. Because if you select version1 of the contract you violate the non-downgrade rule. If you select version2 , you violate the initial HashConstraint.
 
 
 ### Implementation details
