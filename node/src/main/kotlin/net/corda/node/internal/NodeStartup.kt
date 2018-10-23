@@ -148,7 +148,7 @@ open class NodeStartup : NodeStartupLogging {
         }
 
         // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
-        attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.log("Exception while configuring serialisation", true) } as? Try.Success
+        attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.log("Exception while configuring serialisation") } as? Try.Success
                 ?: return ExitCodes.FAILURE
 
         // Step 7. Any actions required before starting up the Corda network layer.
@@ -405,12 +405,12 @@ interface NodeStartupLogging {
 
     fun <RESULT> attempt(action: () -> RESULT): Try<RESULT> = Try.on(action)
 
-    fun Exception.log(message: String? = this.message, logStackTrace: Boolean = false, print: (String?, Throwable?) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" } ?: ""}", if (logStackTrace) this else null)
+    fun Exception.log(message: String = "An error occurred", print: (String, Throwable) -> Unit = logger::error) = print(message, this)
 
     fun handleRegistrationError(error: Exception) {
         when (error) {
             is NodeRegistrationException -> error.log("Issue with Node registration: ${error.message}")
-            else -> error.log("Exception during node registration", true)
+            else -> error.log("Exception during node registration")
         }
     }
 
@@ -421,10 +421,10 @@ interface NodeStartupLogging {
     fun handleStartError(error: Exception) {
         when {
             error.isExpectedWhenStartingNode() -> error.log()
-            error is CouldNotCreateDataSourceException -> error.log(logStackTrace = true)
+            error is CouldNotCreateDataSourceException -> error.log()
             error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.log("One of the ports required by the Corda node is already in use.")
             error.isOpenJdkKnownIssue() -> error.log("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
-            else -> error.log("Exception during node startup", true)
+            else -> error.log("Exception during node startup")
         }
     }
 
@@ -432,7 +432,7 @@ interface NodeStartupLogging {
         when (error) {
             is UnknownConfigurationKeysException -> error.log()
             is ConfigException.IO -> error.log(configFileNotFoundMessage(configFile)) { msg, _ -> println(msg) }
-            else -> error.log("Unexpected error whilst reading node configuration", true)
+            else -> error.log("Unexpected error whilst reading node configuration")
         }
     }
 

@@ -129,7 +129,7 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
 
     @Option(names = ["--logging-level"],
             completionCandidates = LoggingLevelConverter.LoggingLevels::class,
-            description = ["Enable logging at this level and higher. Possible values: \${COMPLETION-CANDIDATES}"],
+            description = ["Enables logging at this level and higher. Possible values: \${COMPLETION-CANDIDATES}"],
             converter = [LoggingLevelConverter::class]
     )
     var loggingLevel: Level = Level.INFO

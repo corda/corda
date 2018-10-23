@@ -55,9 +55,9 @@ The node can optionally be started with the following command-line options:
 * ``--sshd``: Enables SSH server for node administration.
 * ``--sshd-port``: Sets the port for the SSH server. If not supplied and SSH server is enabled, the port defaults to 2222.
 * ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
-* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
-* ``--help``, ``-h``: Show this help message and exit.
-* ``--version``, ``-V``: Print version information and exit.
+* ``--logging-level=<loggingLevel>``: Enables logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
+* ``--help``, ``-h``: Shows this help message and exits.
+* ``--version``, ``-V``: Prints version information and exits.
 
 Sub-commands
 ^^^^^^^^^^^^
@@ -74,7 +74,7 @@ Parameters:
 * ``--network-root-truststore``, ``-t`` **required**: Network root trust store obtained from network operator.
 * ``--network-root-truststore-password``, ``-p``: Network root trust store password obtained from network operator.
 
-``generate-node-info``: Perform the node start-up tasks necessary to generate the nodeInfo file, save it to disk, then exit.
+``generate-node-info``: Performs the node start-up tasks necessary to generate the nodeInfo file, saves it to disk, then exits.
 
 ``generate-rpc-ssl-settings``: Generates the SSL keystore and truststore for a secure RPC connection.
 

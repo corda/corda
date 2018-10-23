@@ -35,7 +35,7 @@ open class SharedNodeCmdLineOptions {
 
     @Option(
             names = ["-d", "--dev-mode"],
-            description = ["Run the node in development mode. Unsafe for production."]
+            description = ["Runs the node in development mode. Unsafe for production."]
     )
     var devMode: Boolean? = null
 
@@ -94,7 +94,7 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
 
     @Option(
             names = ["--just-generate-node-info"],
-            description = ["DEPRECATED. Perform the node start-up tasks necessary to generate the nodeInfo file, save it to disk, then exit."],
+            description = ["DEPRECATED. Performs the node start-up tasks necessary to generate the nodeInfo file, saves it to disk, then exits."],
             hidden = true
     )
     var justGenerateNodeInfo: Boolean = false

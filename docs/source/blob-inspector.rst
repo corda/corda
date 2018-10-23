@@ -108,9 +108,9 @@ The blob inspector can be started with the following command-line options:
 * ``--full-parties``: Display the owningKey and certPath properties of Party and PartyAndReference objects respectively.
 * ``--schema``: Print the blob's schema first.
 * ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
-* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
-* ``--help``, ``-h``: Show this help message and exit.
-* ``--version``, ``-V``: Print version information and exit.
+* ``--logging-level=<loggingLevel>``: Enables logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
+* ``--help``, ``-h``: Shows this help message and exits.
+* ``--version``, ``-V``: Prints version information and exits.
 
 Sub-commands
 ^^^^^^^^^^^^
