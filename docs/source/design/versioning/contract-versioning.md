@@ -31,7 +31,7 @@ Corda is designed such that the flow that builds the transaction (on its executi
 But because input states are actually output states that are serialised with the previous transaction (built using a potentially different version of the contract), this means that states serialised with a version of the ContractJAR will need to be deserialisable with a different version. 
 
 
-## Goal
+## Goals
 
 - States should be correctly deserialized as an input state of a transaction that uses a different release of the contract code. 
 After the input states are correctly deserialised they can be correctly verified by the transaction contract.
@@ -109,7 +109,7 @@ After they publish the new release, this sort of scenario could happen if we don
 
 Currently we have the concept of "CorDapp" and, as described in the terminology section, this makes reasoning harder as it is actually composed of 2 parts. 
 
-Contracts and Flows should be able to evolve and be released independently, and have proper names and their own version, even if they share the same gradle multi-project build.
+Contracts and Flows should be able to evolve and be released independently, and have proper names and their own version, even if they share the same gradle multi-module build.
 
 Contract states need to be seen as evolvable objects that can be different from one version to the next.
 
@@ -229,3 +229,133 @@ If the field is not set, it needs to be retrieved from the previous transaction 
 
 Same as above, if the constraint is the SignatureConstraint, the version must be set on the TransactionState.
 
+
+## Appendix:
+
+This section contains various hypothetical scenarios to illustrate various issues and how they are solved by the current design.  
+
+These are the possible changes:
+ - changes to the state (fields added/removed from the state)
+ - changes to the verification logic (more restrictive, less restrictive, or both - for different checks)
+ - adding/removing/renaming of commands
+ - Persistent Schema changes (These are out of scope of this document, as they shouldn't be in contract jar in the first place)
+ - any combination of the above
+
+
+Terminology:
+
+- V1, V2 - are versions of the contract.
+- Tx1, Tx2 - are transactions between parties.
+
+
+#### Scenario 1 - Spending a state with an older contract. 
+- V1: com.megacorp.token.MegaToken(amount: Amount, owner: Party)
+- V2: com.megacorp.token.MegaToken(amount: Amount, owner: Party, accumulatedDebt: Amount? = 0)
+
+
+- Tx1: Alice transfers MegaToken to Bob, and selects V1 
+- Tx2: Bob transfers to Chuck, but selects V2. The V1 output state will be deserialised with an accumulatedDebt=0, which is correct.
+- After a while, Chuck accumulates some debt on this token.
+- Txn: Chuck creates a transaction with Dan, but selects V1 as the contract version for this transaction, thus managing to "lose" the accumulatedDebt. (V1 does not know about the accumulatedDebt field)
+
+
+Solution: This was analysed above. It will be solved by the non-downgrade rule and the serialization engine changes.
+
+
+#### Scenario 2: - Running an explicit upgrade  written against an older contract version.
+- V1: com.megacorp.token.MegaToken(amount: Amount, owner: Party)
+- V2: com.megacorp.token.MegaToken(amount: Amount, owner: Party, accumulatedDebt: Amount? = 0)
+- Another company creates a better com.gigacorp.token.GigaToken that is an UpgradedContract designed to replace the MegaToken via an explicit upgrade, but develop against V1 ( as V2 was not released at the time of development).
+
+Same as before:
+- Tx1: Alice transfers MegaToken to Bob, and selects V1 (the only version available at that time)
+- Tx2: Bob transfers to Chuck, but selects V2. The V1 output state will be deserialised with an accumulatedDebt=0, which is correct.
+- After a while, Chuck accumulates some debt on this token.
+- Chuck notices the GigaToken does not know about the accumulatedDebt field, so runs an explicit upgrade and transforms his MegaToken with debt into a clean GigaToken.
+
+Solution: This attack breaks the assumption we made that contracts will not be adding fields that change it fundamentally.
+
+
+#### Scenario 3 - Flows installed by 2 peers compiled against different contract versions.
+- Alice runs V1 of the MegaToken FlowsJAR, while Bob runs V2.
+- Bob builds a new transaction where he transfers a state with accumulatedDebt To Alice.
+- Alice is not able to correctly evaluate the business proposition, as she does not know that there even exists an accumulatedDebt field, but still signs it as if it was debt free.
+
+Solution: Solved by the assumption that peer-to-peer communication can be lossy, and the peer with the higher version is responsible to send the right data
+
+
+#### Scenario 4 - Developer attempts to rename a field from one version to the next. 
+- V1: com.megacorp.token.MegaToken(amount: Amount, owner: Party, accumulatedDebt: Amount )
+- V2: com.megacorp.token.MegaToken(amount: Amount, owner: Party, currentDebt: Amount)
+
+This is a rename of a field.  
+This would break as soon as you try to spend a V1 state with V2, because there is no default value for currentDebt.
+
+Solution: Not possible for now, as it breaks the serialisation evolution rules. Could be added as a new feature in the future.
+
+
+#### Scenario 5 - Contract verification logic becomes more strict in a new version. General concerns.
+- V1: check that amount > 10
+- V2: check that amount > 12 
+
+
+- Tx1: Alice transfers MegaToken(amount=11) to Bob, and selects V1
+- Tx2: Bob wants to forward it to Charlie, but in the meantime v2 is released, and Bob installs it.
+
+
+- If Bob selects V2, the contract will fail. So, Bob needs to select V1, but will Charlie accept it?
+
+The question is how important it is, that amount is >12?
+ - Is it a new regulation active from a date?
+ - Was it actually a (security) bug in V1?
+ - Is it just a change done for not good reason?
+
+Solution: This is not addressed in the current design doc. It needs to be explored in more depth.
+
+#### Scenario 6 - Contract verification logic becomes more strict in a new version. ???
+- V1: check that amount > 10
+- V2: check that amount > 12
+
+
+- Alice runs V1 of the MegaToken FlowsJAR, while Bob runs V2. So Alice does not know (yet) that in the future the amount will have to be >12.
+- Alice builds a transaction that transfers 11 token to Bob. This is a perfectly good transaction (from her point of view), with the V1 attachment.
+- Should Bob sign this transaction?	
+- This could be encoded in Bob's flow (who should know that the underlying contract has changed this way.). 
+
+Solution: Same as Scenario 5.
+
+
+#### Scenario 7 - Contract verification logic becomes less strict.
+- V1: check that amount > 12
+- V2: check that amount > 10 
+
+Alice runs V1 of the MegaToken FlowsJAR, while Bob runs V2.
+
+Because there was no change in the actual structure of the state it means the flow that Alice has installed is compatible with the newer version from Bob so Alice could download V2 from Bob.
+
+Solution: This should not require any change.
+
+
+#### Scenario 8 - Contract depends on another Contract.
+- V1: com.megacorp.token.MegaToken(amount: Amount, owner: Party)
+- V2: com.megacorp.token.MegaToken(amount: Amount, owner: Party, accumulatedDebt: Amount? = 0)
+
+A contract developed by a thirdparty: com.megabank.tokens.SuperToken depends on com.megacorp.token.MegaToken
+
+V1 of `com.megabank.tokens.SuperToken` is compiled against V1 of `com.megacorp.token.MegaToken`. So does not know about the new ``accumulatedDebt`` field.
+
+Alice swaps MegaToken-v2 for SuperToken-v1 with Bob in a transaction. If Alice select v1 of the SuperToken contract attachment, then it will not be able to correctly evaluate the transaction. 
+
+
+Solution: Solved by the assumption we made that contracts don't change fundamentally.
+
+
+#### Scenario 9 - A new command is added or removed 
+- V1 of com.megacorp.token.MegaToken has 3 Commands: Issue, Move, Exit
+- V2 of com.megacorp.token.MegaToken has 4 Commands: Issue, Move, Exit, AddDebt
+- V3 of com.megacorp.token.MegaToken has 3 Commands: Issue, Move, Exit
+
+There should not be any problem with adding/removing commands, as they apply only to transitions.
+Spending of a state should not be affected by the command that created it.  
+
+Solution: Does not require any change
