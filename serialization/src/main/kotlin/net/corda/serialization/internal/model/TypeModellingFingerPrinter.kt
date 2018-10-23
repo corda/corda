@@ -12,32 +12,48 @@ import org.apache.qpid.proton.amqp.*
 import java.lang.reflect.*
 import java.util.*
 
-// Bridges between [SerializerFactory] and [TypeModellingFingerPrinter].
-internal fun getTypeModellingFingerPrinter(factory: SerializerFactory): TypeModellingFingerPrinter {
-    val customTypeDescriptorLookup = object : CustomTypeDescriptorLookup {
-        override fun getCustomTypeDescriptor(type: Type): String? =
-                factory.findCustomSerializer(type.asClass(), type)?.typeDescriptor?.toString()
-    }
-
-    val localTypeInformationFingerPrinter = CustomisableLocalTypeInformationFingerPrinter(customTypeDescriptorLookup)
-
-    return TypeModellingFingerPrinter(
-            LocalTypeModel(
-                    WhitelistBasedTypeModelConfiguration(
-                            factory.whitelist
-                    ) {
-                        Primitives.unwrap(it.asClass()) in opaqueTypes ||
-                                customTypeDescriptorLookup.getCustomTypeDescriptor(it) != null
-                    }),
-            localTypeInformationFingerPrinter)
+/**
+ * Obtains the custom type descriptor for any type that has a custom serializer, according to the [SerializerFactory].
+ */
+private class FactoryBasedCustomTypeDescriptorLookup(private val factory: SerializerFactory): CustomTypeDescriptorLookup {
+    override fun getCustomTypeDescriptor(type: Type): String? =
+            factory.findCustomSerializer(type.asClass(), type)?.typeDescriptor?.toString()
 }
 
 /**
- * Implementation of the finger printing mechanism used by default
+ * Bridges between [SerializerFactory] and [TypeModellingFingerPrinter], creating objects which encapsulate the small
+ * pieces of [SerializerFactory]'s functionality that [TypeModellingFingerPrinter] is actually interested in.
+ *
+ * First we construct a [CustomTypeDescriptorLookup] to obtain type descriptors for types which have custom serializers,
+ * then we construct a [LocalTypeModel] which is configured to use the factory's whitelist, and to treat types as opaque
+ * if they are either in the list of [opaqueTypes] or they have a custom type descriptor.
+ *
+ * Finally we build a [LocalTypeInformationFingerPrinter], which builds fingerprints from [LocalTypeInformation] rather
+ * than from [Type]s. This and the [LocalTypeModel] are then used to construct a [TypeModellingFingerPrinter].
+ */
+internal fun getTypeModellingFingerPrinter(factory: SerializerFactory): TypeModellingFingerPrinter {
+    val customTypeDescriptorLookup = FactoryBasedCustomTypeDescriptorLookup(factory)
+
+    fun isOpaque(type: Type) = Primitives.unwrap(type.asClass()) in opaqueTypes ||
+            customTypeDescriptorLookup.getCustomTypeDescriptor(type) != null
+
+    val typeModel = LocalTypeModel(WhitelistBasedTypeModelConfiguration(factory.whitelist, ::isOpaque))
+    val localTypeInformationFingerPrinter = CustomisableLocalTypeInformationFingerPrinter(customTypeDescriptorLookup)
+
+    return TypeModellingFingerPrinter(typeModel, localTypeInformationFingerPrinter)
+}
+
+/**
+ * An implementation of [FingerPrinter] that uses a [LocalTypeModel] to obtain [LocalTypeInformation] for each [Type] it
+ * is asked to fingerprint, then passes that [LocalTypeInformation] to a [LocalTypeInformationFingerPrinter] for
+ * fingerprinting.
+ *
+ * Eventually we will want to use the [LocalTypeInformationFingerPrinter] directly, e.g. from a [TypeLoader] that
+ * maintains its own [LocalTypeModel], and the adaptor for the [FingerPrinter] interface will no longer be necessary.
  */
 @KeepForDJVM
-class TypeModellingFingerPrinter(val typeModel: LocalTypeModel,
-                                 val localTypeFingerPrinter: LocalTypeInformationFingerPrinter) : FingerPrinter {
+class TypeModellingFingerPrinter(private val typeModel: LocalTypeModel,
+                                 private val localTypeFingerPrinter: LocalTypeInformationFingerPrinter) : FingerPrinter {
 
     private val cache = DefaultCacheProvider.createCache<TypeIdentifier, Fingerprint>()
 
@@ -68,6 +84,10 @@ data class CustomisableLocalTypeInformationFingerPrinter(
             CustomisableLocalTypeInformationFingerPrintingState(customTypeDescriptorLookup).fingerprint(typeInformation)
 }
 
+/**
+ * Wrapper for the [Hasher] we use to generate fingerprints, providing methods for writing various kinds of content
+ * into the hash.
+ */
 internal class FingerprintWriter {
 
     companion object {
@@ -100,13 +120,17 @@ internal class FingerprintWriter {
     val fingerprint: String get() = hasher.hash().asBytes().toBase64()
 }
 
-// Representation of the current state of fingerprinting
+/**
+ * Representation of the current state of fingerprinting.
+ */
 private class CustomisableLocalTypeInformationFingerPrintingState(private val customTypeDescriptorLookup: CustomTypeDescriptorLookup) {
 
     private val typesSeen: MutableSet<TypeIdentifier> = mutableSetOf()
     private val writer = FingerprintWriter()
 
-    // Fingerprint the type recursively, and return the encoded fingerprint written into the hasher.
+    /**
+     * Fingerprint the type recursively, and return the encoded fingerprint written into the hasher.
+     */
     fun fingerprint(type: LocalTypeInformation): String =
         fingerprintType(type).writer.fingerprint
 
