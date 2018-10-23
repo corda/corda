@@ -280,18 +280,18 @@ abstract class TestBase {
     @Suppress("MemberVisibilityCanBePrivate")
     protected class DJVM(private val classLoader: ClassLoader) {
         private val djvm: Class<*> = classFor("sandbox.java.lang.DJVM")
-        val sandboxObject: Class<*> by lazy { classFor("sandbox.java.lang.Object") }
-        val string: Class<*> by lazy { classFor("sandbox.java.lang.String") }
-        val long: Class<*> by lazy { classFor("sandbox.java.lang.Long") }
-        val integer: Class<*> by lazy { classFor("sandbox.java.lang.Integer") }
-        val short: Class<*> by lazy { classFor("sandbox.java.lang.Short") }
-        val byte: Class<*> by lazy { classFor("sandbox.java.lang.Byte") }
-        val character: Class<*> by lazy { classFor("sandbox.java.lang.Character") }
-        val boolean: Class<*> by lazy { classFor("sandbox.java.lang.Boolean") }
-        val double: Class<*> by lazy { classFor("sandbox.java.lang.Double") }
-        val float: Class<*> by lazy { classFor("sandbox.java.lang.Float") }
-        val throwable: Class<*> by lazy { classFor("sandbox.java.lang.Throwable") }
-        val stackTraceElement: Class<*> by lazy { classFor("sandbox.java.lang.StackTraceElement") }
+        val objectClass: Class<*> by lazy { classFor("sandbox.java.lang.Object") }
+        val stringClass: Class<*> by lazy { classFor("sandbox.java.lang.String") }
+        val longClass: Class<*> by lazy { classFor("sandbox.java.lang.Long") }
+        val integerClass: Class<*> by lazy { classFor("sandbox.java.lang.Integer") }
+        val shortClass: Class<*> by lazy { classFor("sandbox.java.lang.Short") }
+        val byteClass: Class<*> by lazy { classFor("sandbox.java.lang.Byte") }
+        val characterClass: Class<*> by lazy { classFor("sandbox.java.lang.Character") }
+        val booleanClass: Class<*> by lazy { classFor("sandbox.java.lang.Boolean") }
+        val doubleClass: Class<*> by lazy { classFor("sandbox.java.lang.Double") }
+        val floatClass: Class<*> by lazy { classFor("sandbox.java.lang.Float") }
+        val throwableClass: Class<*> by lazy { classFor("sandbox.java.lang.Throwable") }
+        val stackTraceElementClass: Class<*> by lazy { classFor("sandbox.java.lang.StackTraceElement") }
 
         fun classFor(className: String): Class<*> = Class.forName(className, false, classLoader)
 
@@ -304,46 +304,46 @@ abstract class TestBase {
         }
 
         fun stringOf(str: String): Any {
-            return string.getMethod("toDJVM", String::class.java).invoke(null, str)
+            return stringClass.getMethod("toDJVM", String::class.java).invoke(null, str)
         }
 
         fun longOf(l: Long): Any {
-            return long.getMethod("toDJVM", Long::class.javaObjectType).invoke(null, l)
+            return longClass.getMethod("toDJVM", Long::class.javaObjectType).invoke(null, l)
         }
 
         fun intOf(i: Int): Any {
-            return integer.getMethod("toDJVM", Int::class.javaObjectType).invoke(null, i)
+            return integerClass.getMethod("toDJVM", Int::class.javaObjectType).invoke(null, i)
         }
 
         fun shortOf(i: Int): Any {
-            return short.getMethod("toDJVM", Short::class.javaObjectType).invoke(null, i.toShort())
+            return shortClass.getMethod("toDJVM", Short::class.javaObjectType).invoke(null, i.toShort())
         }
 
         fun byteOf(i: Int): Any {
-            return byte.getMethod("toDJVM", Byte::class.javaObjectType).invoke(null, i.toByte())
+            return byteClass.getMethod("toDJVM", Byte::class.javaObjectType).invoke(null, i.toByte())
         }
 
         fun charOf(c: Char): Any {
-            return character.getMethod("toDJVM", Char::class.javaObjectType).invoke(null, c)
+            return characterClass.getMethod("toDJVM", Char::class.javaObjectType).invoke(null, c)
         }
 
         fun booleanOf(bool: Boolean): Any {
-            return boolean.getMethod("toDJVM", Boolean::class.javaObjectType).invoke(null, bool)
+            return booleanClass.getMethod("toDJVM", Boolean::class.javaObjectType).invoke(null, bool)
         }
 
         fun doubleOf(d: Double): Any {
-            return double.getMethod("toDJVM", Double::class.javaObjectType).invoke(null, d)
+            return doubleClass.getMethod("toDJVM", Double::class.javaObjectType).invoke(null, d)
         }
 
         fun floatOf(f: Float): Any {
-            return float.getMethod("toDJVM", Float::class.javaObjectType).invoke(null, f)
+            return floatClass.getMethod("toDJVM", Float::class.javaObjectType).invoke(null, f)
         }
 
         fun objectArrayOf(vararg objs: Any): Array<in Any> {
             @Suppress("unchecked_cast")
-            return (java.lang.reflect.Array.newInstance(sandboxObject, objs.size) as Array<in Any>).also {
+            return (java.lang.reflect.Array.newInstance(objectClass, objs.size) as Array<in Any>).also {
                 for (i in 0 until objs.size) {
-                    it[i] = sandboxObject.cast(objs[i])
+                    it[i] = objectClass.cast(objs[i])
                 }
             }
         }

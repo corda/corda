@@ -64,12 +64,12 @@ class DJVMExceptionTest : TestBase() {
         val result = djvm.sandbox(Throwable("Hello World"))
         assertThatDJVM(result)
             .hasClassName("sandbox.java.lang.Throwable")
-            .isAssignableFrom(djvm.throwable)
+            .isAssignableFrom(djvm.throwableClass)
             .hasGetterValue("getMessage", helloWorld)
             .hasGetterNullValue("getCause")
 
         assertThat(result.getArray("getStackTrace"))
-            .hasOnlyElementsOfType(djvm.stackTraceElement)
+            .hasOnlyElementsOfType(djvm.stackTraceElementClass)
             .isNotEmpty()
     }
 
@@ -81,12 +81,12 @@ class DJVMExceptionTest : TestBase() {
         val result = djvm.sandbox(RuntimeException("Hello World"))
         assertThatDJVM(result)
             .hasClassName("sandbox.java.lang.RuntimeException")
-            .isAssignableFrom(djvm.throwable)
+            .isAssignableFrom(djvm.throwableClass)
             .hasGetterValue("getMessage", helloWorld)
             .hasGetterNullValue("getCause")
 
         assertThat(result.getArray("getStackTrace"))
-            .hasOnlyElementsOfType(djvm.stackTraceElement)
+            .hasOnlyElementsOfType(djvm.stackTraceElementClass)
             .isNotEmpty()
 
         assertThatExceptionOfType(ClassNotFoundException::class.java)
@@ -101,12 +101,12 @@ class DJVMExceptionTest : TestBase() {
         val result = djvm.sandbox(EmptyStackException())
         assertThatDJVM(result)
             .hasClassName("sandbox.java.util.EmptyStackException")
-            .isAssignableFrom(djvm.throwable)
+            .isAssignableFrom(djvm.throwableClass)
             .hasGetterNullValue("getMessage")
             .hasGetterNullValue("getCause")
 
         assertThat(result.getArray("getStackTrace"))
-            .hasOnlyElementsOfType(djvm.stackTraceElement)
+            .hasOnlyElementsOfType(djvm.stackTraceElementClass)
             .isNotEmpty()
 
         assertThatDJVM(djvm.classFor("sandbox.java.util.EmptyStackException\$1DJVM"))

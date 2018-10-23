@@ -65,7 +65,7 @@ class SandboxClassLoader private constructor(
     /**
      * Creates an empty [SandboxClassLoader] with exactly the same
      * configuration as this one, but with the given [AnalysisContext].
-     * @param newContext
+     * @param newContext The [AnalysisContext] to use for the child classloader.
      */
     fun copyEmpty(newContext: AnalysisContext) = SandboxClassLoader(
         analysisConfiguration,
@@ -81,6 +81,7 @@ class SandboxClassLoader private constructor(
      * Given a class name, provide its corresponding [LoadedClass] for the sandbox.
      * This class may have been loaded by a parent classloader really.
      */
+    @Throws(ClassNotFoundException::class)
     fun loadForSandbox(className: String): LoadedClass {
         val sandboxClass = loadClassForSandbox(className)
         val sandboxName = Type.getInternalName(sandboxClass)
@@ -94,6 +95,7 @@ class SandboxClassLoader private constructor(
         }
     }
 
+    @Throws(ClassNotFoundException::class)
     fun loadForSandbox(source: ClassSource): LoadedClass {
         return loadForSandbox(source.qualifiedClassName)
     }
@@ -107,6 +109,7 @@ class SandboxClassLoader private constructor(
         }
     }
 
+    @Throws(ClassNotFoundException::class)
     fun loadClassForSandbox(source: ClassSource): Class<*> {
         return loadClassForSandbox(source.qualifiedClassName)
     }

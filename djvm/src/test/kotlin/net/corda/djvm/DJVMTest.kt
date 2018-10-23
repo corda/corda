@@ -17,7 +17,7 @@ class DJVMTest : TestBase() {
     @Test
     fun testSimpleIntegerFormats() = parentedSandbox {
         val result = with(DJVM(classLoader)) {
-            string.getMethod("format", string, Array<Any>::class.java)
+            stringClass.getMethod("format", stringClass, Array<Any>::class.java)
                 .invoke(null,
                     stringOf("%d-%d-%d-%d"),
                     arrayOf(intOf(10), longOf(999999L), shortOf(1234), byteOf(108))
@@ -29,7 +29,7 @@ class DJVMTest : TestBase() {
     @Test
     fun testHexFormat() = parentedSandbox {
         val result = with(DJVM(classLoader)) {
-            string.getMethod("format", string, Array<Any>::class.java)
+            stringClass.getMethod("format", stringClass, Array<Any>::class.java)
                 .invoke(null, stringOf("%0#6x"), arrayOf(intOf(768))).toString()
         }
         assertEquals("0x0300", result)
@@ -38,7 +38,7 @@ class DJVMTest : TestBase() {
     @Test
     fun testDoubleFormat() = parentedSandbox {
         val result = with(DJVM(classLoader)) {
-            string.getMethod("format", string, Array<Any>::class.java)
+            stringClass.getMethod("format", stringClass, Array<Any>::class.java)
                 .invoke(null, stringOf("%9.4f"), arrayOf(doubleOf(1234.5678))).toString()
         }
         assertEquals("1234.5678", result)
@@ -47,7 +47,7 @@ class DJVMTest : TestBase() {
     @Test
     fun testFloatFormat() = parentedSandbox {
         val result = with(DJVM(classLoader)) {
-            string.getMethod("format", string, Array<Any>::class.java)
+            stringClass.getMethod("format", stringClass, Array<Any>::class.java)
                 .invoke(null, stringOf("%7.2f"), arrayOf(floatOf(1234.5678f))).toString()
         }
         assertEquals("1234.57", result)
@@ -56,7 +56,7 @@ class DJVMTest : TestBase() {
     @Test
     fun testCharFormat() = parentedSandbox {
         val result = with(DJVM(classLoader)) {
-            string.getMethod("format", string, Array<Any>::class.java)
+            stringClass.getMethod("format", stringClass, Array<Any>::class.java)
                 .invoke(null, stringOf("[%c]"), arrayOf(charOf('A'))).toString()
         }
         assertEquals("[A]", result)
@@ -65,7 +65,7 @@ class DJVMTest : TestBase() {
     @Test
     fun testObjectFormat() = parentedSandbox {
         val result = with(DJVM(classLoader)) {
-            string.getMethod("format", string, Array<Any>::class.java)
+            stringClass.getMethod("format", stringClass, Array<Any>::class.java)
                 .invoke(null, stringOf("%s"), arrayOf(object : sandbox.java.lang.Object() {})).toString()
         }
         assertThat(result).startsWith("sandbox.java.lang.Object@")
