@@ -172,8 +172,8 @@ class NodeConfigurationImplTest {
 
         val errors = configuration.validate()
 
-        assertThat(errors).hasOnlyOneElementSatisfying {
-            error -> error.contains("Cannot configure both compatibilityZoneUrl and networkServices simultaneously")
+        assertThat(errors).hasOnlyOneElementSatisfying { error ->
+            error.contains("Cannot configure both compatibilityZoneUrl and networkServices simultaneously")
         }
     }
 
@@ -268,7 +268,8 @@ class NodeConfigurationImplTest {
                 noLocalShell = false,
                 rpcSettings = rpcSettings,
                 crlCheckSoftFail = true,
-                tlsCertCrlDistPoint = null
+                tlsCertCrlDistPoint = null,
+                flowOverrides = FlowOverrideConfig(listOf())
         )
     }
 }

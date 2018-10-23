@@ -149,7 +149,7 @@ class NodeTest {
         }
     }
 
-    private fun createConfig(nodeName: CordaX500Name): NodeConfiguration {
+    private fun createConfig(nodeName: CordaX500Name): NodeConfigurationImpl {
         val fakeAddress = NetworkHostAndPort("0.1.2.3", 456)
         return NodeConfigurationImpl(
                 baseDirectory = temporaryFolder.root.toPath(),
@@ -167,7 +167,8 @@ class NodeTest {
                 flowTimeout = FlowTimeoutConfiguration(timeout = Duration.ZERO, backoffBase = 1.0, maxRestartCount = 1),
                 rpcSettings = NodeRpcSettings(address = fakeAddress, adminAddress = null, ssl = null),
                 messagingServerAddress = null,
-                notary = null
+                notary = null,
+                flowOverrides = FlowOverrideConfig(listOf())
 
         )
     }

@@ -43,7 +43,7 @@ data class CordappImpl(
      */
     override val cordappClasses: List<String> = run {
         val classList = rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass } + notaryService
-         classList.mapNotNull { it?.name } + contractClassNames
+        classList.mapNotNull { it?.name } + contractClassNames
     }
 
     // TODO Why a seperate Info class and not just have the fields directly in CordappImpl?

@@ -30,6 +30,8 @@ import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.InitiatedFlowFactory
+import net.corda.node.internal.NodeFlowManager
+import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
@@ -51,7 +53,6 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.node.TestCordapp
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.setGlobalSerialization
@@ -79,7 +80,8 @@ data class MockNodeArgs(
         val network: InternalMockNetwork,
         val id: Int,
         val entropyRoot: BigInteger,
-        val version: VersionInfo = MOCK_VERSION_INFO
+        val version: VersionInfo = MOCK_VERSION_INFO,
+        val flowManager: MockNodeFlowManager = MockNodeFlowManager()
 )
 
 // TODO We don't need a parameters object as this is internal only
@@ -89,7 +91,8 @@ data class InternalMockNodeParameters(
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
         val configOverrides: (NodeConfiguration) -> Any? = {},
         val version: VersionInfo = MOCK_VERSION_INFO,
-        val additionalCordapps: Collection<TestCordapp>? = null) {
+        val additionalCordapps: Collection<TestCordapp>? = null,
+        val flowManager: MockNodeFlowManager = MockNodeFlowManager()) {
     constructor(mockNodeParameters: MockNodeParameters) : this(
             mockNodeParameters.forcedID,
             mockNodeParameters.legalName,
@@ -132,12 +135,10 @@ interface TestStartedNode {
      * starts up for all [FlowLogic] classes it finds which are annotated with [InitiatedBy].
      * @return An [Observable] of the initiated flows started by counterparties.
      */
-    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T>
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
 
-    fun <F : FlowLogic<*>> registerFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
-                                               flowFactory: InitiatedFlowFactory<F>,
-                                               initiatedFlowClass: Class<F>,
-                                               track: Boolean): Observable<F>
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatingFlowClass: Class<out FlowLogic<*>>, initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
+
 }
 
 open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParameters(),
@@ -202,7 +203,8 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
      */
     val defaultNotaryIdentity: Party
         get() {
-            return defaultNotaryNode.info.legalIdentities.singleOrNull() ?: throw IllegalStateException("Default notary has multiple identities")
+            return defaultNotaryNode.info.legalIdentities.singleOrNull()
+                    ?: throw IllegalStateException("Default notary has multiple identities")
         }
 
     /**
@@ -270,11 +272,12 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         }
     }
 
-    open class MockNode(args: MockNodeArgs) : AbstractNode<TestStartedNode>(
+    open class MockNode(args: MockNodeArgs, private val mockFlowManager: MockNodeFlowManager = args.flowManager) : AbstractNode<TestStartedNode>(
             args.config,
             TestClock(Clock.systemUTC()),
             DefaultNamedCacheFactory(),
             args.version,
+            mockFlowManager,
             args.network.getServerThread(args.id),
             args.network.busyLatch
     ) {
@@ -294,24 +297,28 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                 override val rpcOps: CordaRPCOps,
                 override val notaryService: NotaryService?) : TestStartedNode {
 
-            override fun <F : FlowLogic<*>> registerFlowFactory(
-                    initiatingFlowClass: Class<out FlowLogic<*>>,
-                    flowFactory: InitiatedFlowFactory<F>,
-                    initiatedFlowClass: Class<F>,
-                    track: Boolean): Observable<F> =
-                    internals.internalRegisterFlowFactory(smm, initiatingFlowClass, flowFactory, initiatedFlowClass, track)
-
             override fun dispose() = internals.stop()
 
-            override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> =
-                    internals.registerInitiatedFlow(smm, initiatedFlowClass)
+            override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>, track: Boolean): Observable<T> {
+                internals.flowManager.registerInitiatedFlow(initiatedFlowClass)
+                return smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
+            }
+
+            override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatingFlowClass: Class<out FlowLogic<*>>, initiatedFlowClass: Class<T>, track: Boolean): Observable<T> {
+                internals.flowManager.registerInitiatedFlow(initiatingFlowClass, initiatedFlowClass)
+                return smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
+            }
+
+
         }
 
         val mockNet = args.network
         val id = args.id
+
         init {
             require(id >= 0) { "Node ID must be zero or positive, was passed: $id" }
         }
+
         private val entropyRoot = args.entropyRoot
         var counter = entropyRoot
         override val log get() = staticLog
@@ -333,7 +340,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                     this,
                     attachments,
                     network as MockNodeMessagingService,
-                    object : StartedNodeServices, ServiceHubInternal by services, FlowStarter by flowStarter { },
+                    object : StartedNodeServices, ServiceHubInternal by services, FlowStarter by flowStarter {},
                     nodeInfo,
                     smm,
                     database,
@@ -417,7 +424,18 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         var acceptableLiveFiberCountOnStop: Int = 0
 
         override fun acceptableLiveFiberCountOnStop(): Int = acceptableLiveFiberCountOnStop
+
+        fun <T : FlowLogic<*>> registerInitiatedFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>, initiatedFlowClass: Class<T>, factory: InitiatedFlowFactory<T>, track: Boolean): Observable<T> {
+            mockFlowManager.registerTestingFactory(initiatingFlowClass, factory)
+            return if (track) {
+                smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
+            } else {
+                Observable.empty<T>()
+            }
+        }
     }
+
+
 
     fun createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters()): MockNode {
         return createUnstartedNode(parameters, defaultFactory)
@@ -453,7 +471,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         val cordappDirectories = cordapps.map { TestCordappDirectories.getJarDirectory(it) }.distinct()
         doReturn(cordappDirectories).whenever(config).cordappDirectories
 
-        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version))
+        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version, flowManager = parameters.flowManager))
         _nodes += node
         if (start) {
             node.start()
@@ -482,8 +500,10 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
      */
     @JvmOverloads
     fun runNetwork(rounds: Int = -1) {
-        check(!networkSendManuallyPumped) { "MockNetwork.runNetwork() should only be used when networkSendManuallyPumped == false. " +
-                "You can use MockNetwork.waitQuiescent() to wait for all the nodes to process all the messages on their queues instead." }
+        check(!networkSendManuallyPumped) {
+            "MockNetwork.runNetwork() should only be used when networkSendManuallyPumped == false. " +
+                    "You can use MockNetwork.waitQuiescent() to wait for all the nodes to process all the messages on their queues instead."
+        }
         fun pumpAll() = messagingNetwork.endpoints.map { it.pumpReceive(false) }
 
         if (rounds == -1) {
@@ -570,5 +590,19 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(FlowTimeoutConfiguration(1.hours, 3, backoffBase = 1.0)).whenever(it).flowTimeout
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
+    }
+}
+
+class MockNodeFlowManager : NodeFlowManager() {
+    val testingRegistrations = HashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
+    override fun getFlowFactoryForInitiatingFlow(initiatedFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? {
+        if (initiatedFlowClass in testingRegistrations) {
+            return testingRegistrations.get(initiatedFlowClass)
+        }
+        return super.getFlowFactoryForInitiatingFlow(initiatedFlowClass)
+    }
+
+    fun registerTestingFactory(initiator: Class<out FlowLogic<*>>, factory: InitiatedFlowFactory<*>) {
+        testingRegistrations.put(initiator, factory)
     }
 }

@@ -5,7 +5,10 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
-import net.corda.core.crypto.*
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.ensureMinimumPlatformVersion

@@ -8,6 +8,7 @@ import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
@@ -37,7 +38,6 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
-import net.corda.testing.node.TestCordapp
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -50,6 +50,7 @@ import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import okhttp3.OkHttpClient
@@ -213,7 +214,8 @@ class DriverDSLImpl(
             startInSameProcess: Boolean?,
             maximumHeapSize: String,
             additionalCordapps: Collection<TestCordapp>,
-            regenerateCordappsOnStart: Boolean
+            regenerateCordappsOnStart: Boolean,
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>
     ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
@@ -230,7 +232,7 @@ class DriverDSLImpl(
         return registrationFuture.flatMap {
             networkMapAvailability.flatMap {
                 // But starting the node proper does require the network map
-                startRegisteredNode(name, it, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, p2pAddress, additionalCordapps, regenerateCordappsOnStart)
+                startRegisteredNode(name, it, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, p2pAddress, additionalCordapps, regenerateCordappsOnStart, flowOverrides)
             }
         }
     }
@@ -244,7 +246,8 @@ class DriverDSLImpl(
                                     maximumHeapSize: String = "512m",
                                     p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort(),
                                     additionalCordapps: Collection<TestCordapp> = emptySet(),
-                                    regenerateCordappsOnStart: Boolean = false): CordaFuture<NodeHandle> {
+                                    regenerateCordappsOnStart: Boolean = false,
+                                    flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap()): CordaFuture<NodeHandle> {
         val rpcAddress = portAllocation.nextHostAndPort()
         val rpcAdminAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
@@ -258,14 +261,16 @@ class DriverDSLImpl(
                         "networkServices.networkMapURL" to compatibilityZone.networkMapURL().toString())
         }
 
+        val flowOverrideConfig = flowOverrides.entries.map { FlowOverride(it.key.canonicalName, it.value.canonicalName) }.let { FlowOverrideConfig(it) }
         val overrides = configOf(
-                "myLegalName" to name.toString(),
-                "p2pAddress" to p2pAddress.toString(),
+                NodeConfiguration::myLegalName.name to name.toString(),
+                NodeConfiguration::p2pAddress.name to p2pAddress.toString(),
                 "rpcSettings.address" to rpcAddress.toString(),
                 "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
-                "useTestClock" to useTestClock,
-                "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
-                "verifierType" to verifierType.name
+                NodeConfiguration::useTestClock.name to useTestClock,
+                NodeConfiguration::rpcUsers.name to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
+                NodeConfiguration::verifierType.name to verifierType.name,
+                NodeConfiguration::flowOverrides.name to flowOverrideConfig.toConfig().root().unwrapped()
         ) + czUrlConfig + customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
@@ -516,8 +521,7 @@ class DriverDSLImpl(
                 localNetworkMap,
                 spec.rpcUsers,
                 spec.verifierType,
-                customOverrides = notaryConfig(clusterAddress)
-        )
+                customOverrides = notaryConfig(clusterAddress))
 
         // All other nodes will join the cluster
         val restNodeFutures = nodeNames.drop(1).map {

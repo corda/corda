@@ -148,7 +148,8 @@ data class NodeParameters(
         val maximumHeapSize: String = "512m",
         val logLevel: String? = null,
         val additionalCordapps: Collection<TestCordapp> = emptySet(),
-        val regenerateCordappsOnStart: Boolean = false
+        val regenerateCordappsOnStart: Boolean = false,
+        val flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap()
 ) {
     /**
      * Helper builder for configuring a [Node] from Java.
