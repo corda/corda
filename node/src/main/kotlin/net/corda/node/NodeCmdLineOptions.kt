@@ -53,6 +53,13 @@ open class SharedNodeCmdLineOptions {
         }
         return rawConfig
     }
+
+    fun copyFrom(other: SharedNodeCmdLineOptions) {
+        baseDirectory = other.baseDirectory
+        _configFile = other._configFile
+        unknownConfigKeysPolicy= other.unknownConfigKeysPolicy
+        devMode = other.devMode
+    }
 }
 
 class InitialRegistrationCmdLineOptions : SharedNodeCmdLineOptions() {
