@@ -28,6 +28,14 @@ object JarSignatureCollector {
 
     fun collectSigningParties(jar: JarInputStream): List<Party> = getSigners(jar).toPartiesOrderedByName()
 
+    /**
+     * Returns an ordered list of every [X509Certificate] which has signed every signable item in the given [JarInputStream].
+     *
+     * @param jar The open [JarInputStream] to collect signing parties from.
+     * @throws InvalidJarSignersException If the signer sets for any two signable items are different from each other.
+     */
+    fun collectCertificates(jar: JarInputStream): List<X509Certificate> = getSigners(jar).toCertificates()
+
     private fun getSigners(jar: JarInputStream): Set<CodeSigner> {
         val signerSets = jar.fileSignerSets
         if (signerSets.isEmpty()) return emptySet()
@@ -70,6 +78,10 @@ object JarSignatureCollector {
     private fun Set<CodeSigner>.toOrderedPublicKeys(): List<PublicKey> = map {
         (it.signerCertPath.certificates[0] as X509Certificate).publicKey
     }.sortedBy { it.hash} // Sorted for determinism.
+
+    private fun Set<CodeSigner>.toCertificates(): List<X509Certificate> = map {
+       it.signerCertPath.certificates[0] as X509Certificate
+    }.sortedBy { it.toString() } // Sorted for determinism.
 
     private val JarInputStream.entries get(): Sequence<JarEntry> = generateSequence(nextJarEntry) { nextJarEntry }
 }

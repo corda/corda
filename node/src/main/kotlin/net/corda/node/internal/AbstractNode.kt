@@ -72,6 +72,7 @@ import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.*
+import net.corda.nodeapi.internal.DEV_CERTIFICATES
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.config.CertificateStore
@@ -513,10 +514,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // CorDapp will be generated.
             generatedCordapps += VirtualCordapp.generateSimpleNotaryCordapp(versionInfo)
         }
+        val blacklistedCerts = if (configuration.devMode) emptyList() else DEV_CERTIFICATES
         return JarScanningCordappLoader.fromDirectories(
                 configuration.cordappDirectories,
                 versionInfo,
-                extraCordapps = generatedCordapps
+                extraCordapps = generatedCordapps,
+                blacklistedCerts = blacklistedCerts
         )
     }
 
