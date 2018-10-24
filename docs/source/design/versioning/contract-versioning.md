@@ -13,6 +13,14 @@
 
 ## Background:
 
+This document addresses "Corda as a platform for applications" concerns. 
+
+These applications that run on Corda - CorDapps - as opposed to other blockchains are allowed to be updated to fix bugs and address new requirements.
+
+Corda also allows a lot of flexibility so CorDapps can depend on other CorDapps, which have different release cycles, and participants on the network can have any combination installed.
+
+This document is focused mainly on the "ContractJar" part of the CorDapps, as this is the Smart contract that lives on the ledger.
+
 Starting with version 3, Corda has introduced the WhitelistedByZone Contract Constraint, which is the first constraint that allows the contract and contract state type to evolve.
 In version 4 we will introduce the decentralized Signature Constraint, which is also an upgradable (allows evolving) constraint.
 This introduces a set of new problems that were not present when the Hash Constraint was the only alternative. (The Hash Constraint is non-upgradeable, as it pins the jar version to the hardcoded hash. It can only be upgraded via the "explicit" mechanism.)
@@ -31,6 +39,11 @@ Corda is designed such that the flow that builds the transaction (on its executi
 But because input states are actually output states that are serialised with the previous transaction (built using a potentially different version of the contract), this means that states serialised with a version of the ContractJAR will need to be deserialisable with a different version. 
 
 
+.. image:: resources/tx-chain.png
+   :scale: 25%
+   :align: center
+
+
 ## Goals
 
 - States should be correctly deserialized as an input state of a transaction that uses a different release of the contract code. 
@@ -41,6 +54,8 @@ This is critical for the UTXO model of Corda to function correctly.
 
 - Nodes should be prevented to select older buggy contract code for current transactions. 
 
+- Ensure basic mechanism for flows to not miss essential data when communicating with newer flows. 
+
 
 ## Non-Goals
 
@@ -49,7 +64,7 @@ This design is not about:
 - Addressing security issues discovered in an older version of a contract (that was used in transactions) without compromising the trust in the ledger. (There are proposals for this and can be extracted in a separate doc) 
 - Define the concept of "CorDapp identity" useful when flows or contracts are coded against third-party contracts.
 - Evolve states from the HashConstraint or the Whitelist constraint (addressed in a separate design).
-
+- Publishing And Distribution of applications to nodes.
 
 ## Issues considered but postponed for a future version of corda
 
