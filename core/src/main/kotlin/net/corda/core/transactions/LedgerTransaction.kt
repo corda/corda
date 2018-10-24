@@ -10,6 +10,7 @@ import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
 import java.util.*
 import java.util.function.Predicate
@@ -56,6 +57,7 @@ data class LedgerTransaction @JvmOverloads constructor(
     }
 
     private companion object {
+        val logger = loggerFor<LedgerTransaction>()
         private fun contractClassFor(className: ContractClassName, classLoader: ClassLoader?): Try<Class<out Contract>> {
             return Try.on {
                 (classLoader ?: this::class.java.classLoader)
@@ -138,30 +140,6 @@ data class LedgerTransaction @JvmOverloads constructor(
                 State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
                 is bundled in TransactionState with ${state.contract}.
                 """.trimIndent().replace('\n', ' '))
-        }
-    }
-
-    /**
-     * Verify that for each contract the network wide package owner is respected.
-     *
-     * TODO - revisit once transaction contains network parameters.
-     */
-    private fun validatePackageOwnership(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
-        // This should never happen once we have network parameters in the transaction.
-        if (networkParameters == null) {
-            return
-        }
-
-        val contractsAndOwners = allStates.mapNotNull { transactionState ->
-            val contractClassName = transactionState.contract
-            networkParameters.getOwnerOf(contractClassName)?.let { contractClassName to it }
-        }.toMap()
-
-        contractsAndOwners.forEach { contract, owner ->
-            val attachment = contractAttachmentsByContract[contract]!!
-            if (!owner.isFulfilledBy(attachment.signers)) {
-                throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
-            }
         }
     }
 

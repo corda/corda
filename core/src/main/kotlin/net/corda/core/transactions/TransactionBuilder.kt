@@ -181,7 +181,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         val resolvedStates: List<TransactionState<ContractState>> = contractAttachmentsAndResolvedOutputStates.mapNotNull { it.second }.flatten()
 
         // The output states need to preserve the order in which they were added.
-        val resolvedOutputStatesInTheOriginalOrder: List<TransactionState<ContractState>> = outputStates().map { os -> resolvedStates.find { rs -> rs.data == os.data }!! }
+        val resolvedOutputStatesInTheOriginalOrder: List<TransactionState<ContractState>> = outputStates().map { os -> resolvedStates.find { rs -> rs.data == os.data && rs.encumbrance == os.encumbrance}!! }
 
         val attachments: Collection<AttachmentId> = contractAttachmentsAndResolvedOutputStates.map { it.first } + refStateContractAttachments
 
@@ -454,7 +454,7 @@ open class TransactionBuilder @JvmOverloads constructor(
             state: ContractState,
             contract: ContractClassName = requireNotNull(state.requiredContractClassName) {
                 //TODO: add link to docsite page, when there is one.
-"""
+                """
 Unable to infer Contract class name because state class ${state::class.java.name} is not annotated with
 @BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${state::class.java.name}
 with @BelongsToContract, or supply an explicit contract parameter to addOutputState().
@@ -470,7 +470,7 @@ with @BelongsToContract, or supply an explicit contract parameter to addOutputSt
             state: ContractState,
             contract: ContractClassName = requireNotNull(state.requiredContractClassName) {
                 //TODO: add link to docsite page, when there is one.
-"""
+                """
 Unable to infer Contract class name because state class ${state::class.java.name} is not annotated with
 @BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${state::class.java.name}
 with @BelongsToContract, or supply an explicit contract parameter to addOutputState().

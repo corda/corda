@@ -2,6 +2,7 @@ package net.corda.node.internal.cordapp
 
 import io.github.classgraph.ClassGraph
 import io.github.classgraph.ScanResult
+import net.corda.core.contracts.warnContractWithoutConstraintPropagation
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
