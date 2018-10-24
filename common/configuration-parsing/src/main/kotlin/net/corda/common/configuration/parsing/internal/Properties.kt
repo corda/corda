@@ -144,8 +144,8 @@ private class FunctionalListProperty<RAW, TYPE : Any>(delegate: FunctionalProper
 
         val list = try {
             delegate.extractListValue.invoke(target, key)
-        } catch (e: Exception) {
-            if (e is ConfigException && isErrorExpected(e)) {
+        } catch (e: ConfigException) {
+            if (isErrorExpected(e)) {
                 return invalid(e.toValidationError(key, typeName))
             } else {
                 throw e
@@ -176,12 +176,15 @@ private abstract class RequiredDelegatedProperty<TYPE, DELEGATE : Configuration.
 
 private fun ConfigException.toValidationError(keyName: String, typeName: String): Configuration.Validation.Error {
 
-    return when (this) {
-        is ConfigException.Missing -> Configuration.Validation.Error.MissingValue.of(keyName, typeName, message!!)
-        is ConfigException.WrongType -> Configuration.Validation.Error.WrongType.of(keyName, typeName, message!!)
-        is ConfigException.BadValue -> Configuration.Validation.Error.MissingValue.of(keyName, typeName, message!!)
+    val toError = when (this) {
+        is ConfigException.Missing -> Configuration.Validation.Error.MissingValue.Companion::of
+        is ConfigException.WrongType -> Configuration.Validation.Error.WrongType.Companion::of
+        is ConfigException.BadValue -> Configuration.Validation.Error.BadValue.Companion::of
+        is ConfigException.BadPath -> Configuration.Validation.Error.BadPath.Companion::of
+        is ConfigException.Parse -> Configuration.Validation.Error.MalformedStructure.Companion::of
         else -> throw IllegalStateException("Unsupported ConfigException of type ${this::class.java.name}")
     }
+    return toError.invoke(keyName, typeName, message!!, emptyList())
 }
 
 private fun Configuration.Property.Definition<*>.errorsWhenExtractingValue(target: Config): Set<Configuration.Validation.Error> {
@@ -197,6 +200,6 @@ private fun Configuration.Property.Definition<*>.errorsWhenExtractingValue(targe
     }
 }
 
-private val expectedExceptionTypes = setOf(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
+private val expectedExceptionTypes = setOf(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class, ConfigException.BadPath::class, ConfigException.Parse::class)
 
 private fun isErrorExpected(error: ConfigException) = expectedExceptionTypes.any { expected -> expected.isInstance(error) }

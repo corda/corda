@@ -449,6 +449,32 @@ object Configuration {
             }
 
             /**
+             * Raised when the [Config] contains a malformed path.
+             */
+            class BadPath private constructor(override val keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
+
+                internal companion object {
+
+                    internal fun of(keyName: String, typeName: String, message: String, containingPath: List<String> = emptyList()): BadPath = contextualize(keyName, containingPath).let { (key, path) -> BadPath(key, typeName, message, path) }
+                }
+
+                override fun withContainingPath(vararg containingPath: String) = BadPath(keyName, typeName, message, containingPath.toList() + this.containingPath)
+            }
+
+            /**
+             * Raised when the [Config] is malformed and cannot be parsed.
+             */
+            class MalformedStructure private constructor(override val keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
+
+                internal companion object {
+
+                    internal fun of(keyName: String, typeName: String, message: String, containingPath: List<String> = emptyList()): MalformedStructure = contextualize(keyName, containingPath).let { (key, path) -> MalformedStructure(key, typeName, message, path) }
+                }
+
+                override fun withContainingPath(vararg containingPath: String) = MalformedStructure(keyName, typeName, message, containingPath.toList() + this.containingPath)
+            }
+
+            /**
              * Raised when a key-value pair appeared in the [Config] object without a matching property in the [Configuration.Schema], and [Configuration.Validation.Options.strict] was enabled.
              */
             class Unknown private constructor(override val keyName: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, null, message(keyName), containingPath) {
