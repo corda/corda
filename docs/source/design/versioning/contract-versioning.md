@@ -65,6 +65,7 @@ This design is not about:
 - Define the concept of "CorDapp identity" useful when flows or contracts are coded against third-party contracts.
 - Evolve states from the HashConstraint or the Whitelist constraint (addressed in a separate design).
 - Publishing And Distribution of applications to nodes.
+- Contract constraints, package ownership, or any operational concerns.
 
 ## Issues considered but postponed for a future version of corda
 
@@ -84,6 +85,8 @@ It is always safe to mix new CashStates with older states that depend on it.
 This means that we can simplify the contract-to-contract dependency, also given that the UpgradeableContract is actually a contract that depends on another contract, it can be simplified too.
 
 This is not a very strong definition, so we will have to create more formalised rules in the next releases. 
+
+If any contract breaks this assumption, in Corda 4 there will be no platform support the transition to the new version. The burden of coordinating with all the other cordapp developers and nodes is on the original developer.
 
 
 ##### Flow to Flow communication could be lossy for objects that are not ContractStates or Commands.
@@ -116,7 +119,7 @@ After they publish the new release, this sort of scenario could happen if we don
 1. Tx1: Alice transfers MegaToken to Bob, and selects V1 
 2. Tx2: Bob transfers to Chuck, but selects V2. The V1 output state will be deserialised with an accumulatedDebt=0, which is correct.
 3. After a while, Chuck accumulates some debt on this token.
-4. Txn: Chuck creates a transaction with Dan, but selects V1 as the contract version for this transaction, thus managing to "lose" the accumulatedDebt. (V1 does not know about the accumulatedDebt field)
+4. Txn: Chuck creates a transaction with Dan, but selects V1 as the contract version for this transaction, thus managing to "lose" the `accumulatedDebt`. (V1 does not know about the accumulatedDebt field)
 
 
 
@@ -226,6 +229,9 @@ The rule is: the version of the code used in the transaction that spends a state
 
 This rule needs to be enforced at verification time, and also during transaction building.
 
+*Note:* This rule can be implemented as a normal contract constraint, as it is a constraint on the attachments that can be used on the spending transaction.
+We don't currently support multiple constraints on a state and don't have any delegation mechanism to implement it like that.
+ 
 
 #### Add Version field on TransactionState
 
