@@ -64,7 +64,7 @@ class FlowOverrideTests {
     private val nodeBClasses = setOf(Ping::class.java, Pong::class.java)
 
     @Test
-    fun `should use the most "specific" implementation of a responding flow`() {
+    fun `should use the most specific implementation of a responding flow`() {
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
             val nodeA = startNode(additionalCordapps = setOf(cordappForClasses(*nodeAClasses.toTypedArray()))).getOrThrow()
             val nodeB = startNode(additionalCordapps = setOf(cordappForClasses(*nodeBClasses.toTypedArray()))).getOrThrow()
