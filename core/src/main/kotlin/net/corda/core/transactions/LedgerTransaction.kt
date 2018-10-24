@@ -11,6 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.cordapp.CordappInfoResolver
+import net.corda.core.internal.rules.StateContractValidationEnforcementRule
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
@@ -115,7 +116,7 @@ data class LedgerTransaction @JvmOverloads constructor(
     private fun validateStatesAgainstContract() = allStates.forEach(::validateStateAgainstContract)
 
     private fun validateStateAgainstContract(state: TransactionState<ContractState>) {
-        val shouldEnforce = StateContractValidationEnforcementRule.shouldEnforce
+        val shouldEnforce = StateContractValidationEnforcementRule.shouldEnforce(state.data)
 
         val requiredContractClassName = state.data.requiredContractClassName ?:
             if (shouldEnforce) throw TransactionRequiredContractUnspecifiedException(id, state)
@@ -694,8 +695,4 @@ data class LedgerTransaction @JvmOverloads constructor(
             networkParameters = networkParameters,
             references = references
     )
-}
-
-object StateContractValidationEnforcementRule {
-    val shouldEnforce get() = CordappInfoResolver.getCorDappInfo()?.targetPlatformVersion ?: 4 >= 4
 }
