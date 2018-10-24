@@ -91,6 +91,6 @@ class RaftNotaryServiceTests : IntegrationTest() {
         val builder = DummyContract.generateInitial(Random().nextInt(), notary, nodeHandle.services.myInfo.singleIdentity().ref(0))
         val stx = nodeHandle.services.signInitialTransaction(builder)
         nodeHandle.services.recordTransactions(stx)
-        return StateAndRef(builder.outputStates().first(), StateRef(stx.id, 0))
+        return StateAndRef(stx.coreTransaction.outputs.first(), StateRef(stx.id, 0))
     }
 }

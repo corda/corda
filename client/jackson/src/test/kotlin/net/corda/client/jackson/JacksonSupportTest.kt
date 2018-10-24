@@ -229,6 +229,15 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     fun `SignedTransaction (WireTransaction)`() {
         val attachmentId = SecureHash.randomSHA256()
         doReturn(attachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
+        val attachmentStorage = rigorousMock<AttachmentStorage>()
+        doReturn(attachmentStorage).whenever(services).attachments
+        val attachment = rigorousMock<ContractAttachment>()
+        doReturn(attachment).whenever(attachmentStorage).openAttachment(attachmentId)
+        doReturn(attachmentId).whenever(attachment).id
+        doReturn(emptyList<Party>()).whenever(attachment).signers
+        doReturn(setOf(DummyContract.PROGRAM_ID)).whenever(attachment).allContracts
+        doReturn("app").whenever(attachment).uploader
+
         val wtx = TransactionBuilder(
                 notary = DUMMY_NOTARY,
                 inputs = mutableListOf(StateRef(SecureHash.randomSHA256(), 1)),

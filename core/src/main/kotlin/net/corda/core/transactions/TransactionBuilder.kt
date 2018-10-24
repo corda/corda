@@ -4,11 +4,12 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
-import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.ensureMinimumPlatformVersion
+import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -17,6 +18,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
+import net.corda.core.utilities.loggerFor
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -47,6 +49,11 @@ open class TransactionBuilder @JvmOverloads constructor(
         protected var privacySalt: PrivacySalt = PrivacySalt(),
         protected val references: MutableList<StateRef> = arrayListOf()
 ) {
+
+    private companion object {
+        val logger = loggerFor<TransactionBuilder>()
+    }
+
     private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
 
@@ -91,8 +98,7 @@ open class TransactionBuilder @JvmOverloads constructor(
     // DOCEND 1
 
     /**
-     * Generates a [WireTransaction] from this builder and resolves any [AutomaticHashConstraint] on contracts to
-     * [HashAttachmentConstraint].
+     * Generates a [WireTransaction] from this builder, resolves any [AutomaticPlaceholderConstraint], and selects the attachments to use for this transaction.
      *
      * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
      *
@@ -108,21 +114,11 @@ open class TransactionBuilder @JvmOverloads constructor(
             services.ensureMinimumPlatformVersion(4, "Reference states")
         }
 
-        /**
-         * Resolves the [AutomaticHashConstraint]s to [HashAttachmentConstraint]s,
-         * [WhitelistedByZoneAttachmentConstraint]s or [SignatureAttachmentConstraint]s based on a global parameter.
-         *
-         * The [AutomaticHashConstraint] allows for less boiler plate when constructing transactions since for the
-         * typical case the named contract will be available when building the transaction. In exceptional cases the
-         * [TransactionStates] must be created with an explicit [AttachmentConstraint]
-         */
-        val resolvedOutputs = outputs.map { state ->
-            state.withConstraint(when {
-                state.constraint !== AutomaticHashConstraint -> state.constraint
-                useWhitelistedByZoneAttachmentConstraint(state.contract, services.networkParameters) ->
-                    WhitelistedByZoneAttachmentConstraint
-                else -> makeAttachmentConstraint(services, state)
-            })
+        val (allContractAttachments: Collection<SecureHash>, resolvedOutputs: List<TransactionState<ContractState>>) = selectContractAttachmentsAndOutputStateConstraints(services, serializationContext)
+
+        // Final sanity check that all states have the correct constraints.
+        for (state in (inputsWithTransactionState + resolvedOutputs)) {
+            checkConstraintValidity(state)
         }
 
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
@@ -131,50 +127,249 @@ open class TransactionBuilder @JvmOverloads constructor(
                             inputStates(),
                             resolvedOutputs,
                             commands,
-                            attachments + makeContractAttachments(services.cordappProvider),
+                            (allContractAttachments + attachments).toSortedSet().toList(), // Sort the attachments to ensure transaction builds are stable.
                             notary,
                             window,
-                            referenceStates
-                    ),
+                            referenceStates),
                     privacySalt
             )
         }
     }
 
-    private fun TransactionState<ContractState>.withConstraint(newConstraint: AttachmentConstraint) =
-            if (newConstraint == constraint) this else copy(constraint = newConstraint)
+    /**
+     * This method is responsible for selecting the contract versions to be used for the current transaction and resolve the output state [AutomaticPlaceholderConstraint]s.
+     * The contract attachments are used to create a deterministic Classloader to deserialise the transaction and to run the contract verification.
+     *
+     * The selection logic depends on the Attachment Constraints of the input, output and reference states, also on the explicitly set attachments.
+     * TODO also on the versions of the attachments of the transactions generating the input states. ( after we add versioning)
+     */
+    private fun selectContractAttachmentsAndOutputStateConstraints(
+            services: ServicesForResolution, serializationContext: SerializationContext?): Pair<Collection<SecureHash>, List<TransactionState<ContractState>>> {
 
-    private fun makeAttachmentConstraint(services: ServicesForResolution, state: TransactionState<ContractState>): AttachmentConstraint {
-        val attachmentId = services.cordappProvider.getContractAttachmentID(state.contract)
-            ?: throw MissingContractAttachments(listOf(state))
+        // Determine the explicitly set contract attachments.
+        val explicitAttachmentContracts: List<Pair<ContractClassName, SecureHash>> = this.attachments
+                .map(services.attachments::openAttachment)
+                .mapNotNull { it as? ContractAttachment }
+                .flatMap { attch ->
+                    attch.allContracts.map { it to attch.id }
+                }
 
-        val attachmentSigners = services.attachments.openAttachment(attachmentId)?.signers
-            ?: throw MissingContractAttachments(listOf(state))
+        // And fail early if there's more than 1 for a contract.
+        require(explicitAttachmentContracts.isEmpty() || explicitAttachmentContracts.groupBy { (ctr, _) -> ctr }.all { (_, groups) -> groups.size == 1 }) { "Multiple attachments set for the same contract." }
 
-        return when {
-            attachmentSigners.isEmpty() -> HashAttachmentConstraint(attachmentId)
-            else -> makeSignatureAttachmentConstraint(attachmentSigners)
+        val explicitAttachmentContractsMap: Map<ContractClassName, SecureHash> = explicitAttachmentContracts.toMap()
+
+        val inputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = inputsWithTransactionState.groupBy { it.contract }
+        val outputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = outputs.groupBy { it.contract }
+
+        val allContracts: Set<ContractClassName> = inputContractGroups.keys + outputContractGroups.keys
+
+        // Handle reference states.
+        // Filter out all contracts that might have been already used by 'normal' input or output states.
+        val referenceStateGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = referencesWithTransactionState.groupBy { it.contract }
+        val refStateContractAttachments: List<AttachmentId> = referenceStateGroups
+                .filterNot { it.key in allContracts }
+                .map { refStateEntry ->
+                    selectAttachmentThatSatisfiesConstraints(true, refStateEntry.key, refStateEntry.value.map { it.constraint }, services)
+                }
+
+        // For each contract, resolve the AutomaticPlaceholderConstraint, and select the attachment.
+        val contractAttachmentsAndResolvedOutputStates: List<Pair<AttachmentId, List<TransactionState<ContractState>>?>> = allContracts.toSet().map { ctr ->
+            handleContract(ctr, inputContractGroups[ctr], outputContractGroups[ctr], explicitAttachmentContractsMap[ctr], serializationContext, services)
         }
+
+        val resolvedStates: List<TransactionState<ContractState>> = contractAttachmentsAndResolvedOutputStates.mapNotNull { it.second }.flatten()
+
+        // The output states need to preserve the order in which they were added.
+        val resolvedOutputStatesInTheOriginalOrder: List<TransactionState<ContractState>> = outputStates().map { os -> resolvedStates.find { rs -> rs.data == os.data && rs.encumbrance == os.encumbrance}!! }
+
+        val attachments: Collection<AttachmentId> = contractAttachmentsAndResolvedOutputStates.map { it.first } + refStateContractAttachments
+
+        return Pair(attachments, resolvedOutputStatesInTheOriginalOrder)
     }
 
-    private fun makeSignatureAttachmentConstraint(attachmentSigners: List<Party>) =
-            SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners.map { it.owningKey }).build())
-
-    private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) =
-            contractClassName in networkParameters.whitelistedContractImplementations.keys
+    private val automaticConstraints = setOf(AutomaticPlaceholderConstraint, AutomaticHashConstraint)
 
     /**
-     * The attachments added to the current transaction contain only the hashes of the current cordapps.
-     * NOT the hashes of the cordapps that were used when the input states were created ( in case they changed in the meantime)
-     * TODO - review this logic
+     * Selects an attachment and resolves the constraints for the output states with [AutomaticPlaceholderConstraint].
+     *
+     * This is the place where the complex logic of the upgradability of contracts and constraint propagation is handled.
+     *
+     * * For contracts that *are not* annotated with @[NoConstraintPropagation], this will attempt to determine a constraint for the output states
+     * that is a valid transition from all the constraints of the input states.
+     *
+     * * For contracts that *are* annotated with @[NoConstraintPropagation], this enforces setting an explicit output constraint.
+     *
+     * * For states with the [HashAttachmentConstraint], if an attachment with that hash is installed on the current node, then it will be inherited by the output states and selected for the transaction.
+     * Otherwise a [MissingContractAttachments] is thrown.
+     *
+     * * For input states with [WhitelistedByZoneAttachmentConstraint] or a [AlwaysAcceptAttachmentConstraint] implementations, then the currently installed cordapp version is used.
      */
-    private fun makeContractAttachments(cordappProvider: CordappProvider): List<AttachmentId> {
-        // Reference inputs not included as it is not necessary to verify them.
-        return (inputsWithTransactionState + outputs).map { state ->
-            cordappProvider.getContractAttachmentID(state.contract)
-                    ?: throw MissingContractAttachments(listOf(state))
-        }.distinct()
+    private fun handleContract(
+            contractClassName: ContractClassName,
+            inputStates: List<TransactionState<ContractState>>?,
+            outputStates: List<TransactionState<ContractState>>?,
+            explicitContractAttachment: AttachmentId?,
+            serializationContext: SerializationContext?,
+            services: ServicesForResolution
+    ): Pair<AttachmentId, List<TransactionState<ContractState>>?> {
+        val inputsAndOutputs = (inputStates ?: emptyList()) + (outputStates ?: emptyList())
+
+        // Determine if there are any HashConstraints that pin the version of a contract. If there are, check if we trust them.
+        val hashAttachments = inputsAndOutputs
+                .filter { it.constraint is HashAttachmentConstraint }
+                .map { state ->
+                    val attachment = services.attachments.openAttachment((state.constraint as HashAttachmentConstraint).attachmentId)
+                    if (attachment == null || attachment !is ContractAttachment || !isUploaderTrusted(attachment.uploader)) {
+                        // This should never happen because these are input states that should have been validated already.
+                        throw MissingContractAttachments(listOf(state))
+                    }
+                    attachment
+                }.toSet()
+
+        // Check that states with the HashConstraint don't conflict between themselves or with an explicitly set attachment.
+        require(hashAttachments.size <= 1) {
+            "Transaction was built with $contractClassName states with multiple HashConstraints. This is illegal, because it makes it impossible to validate with a single version of the contract code."
+        }
+        if (explicitContractAttachment != null && hashAttachments.singleOrNull() != null) {
+            require(explicitContractAttachment == (hashAttachments.single() as ContractAttachment).attachment.id) {
+                "An attachment has been explicitly set for contract $contractClassName in the transaction builder which conflicts with the HashConstraint of a state."
+            }
+        }
+
+        // This will contain the hash of the JAR that *has* to be used by this Transaction, because it is explicit. Or null if none.
+        val forcedAttachmentId = explicitContractAttachment ?: hashAttachments.singleOrNull()?.id
+
+        fun selectAttachment() = selectAttachmentThatSatisfiesConstraints(
+                false,
+                contractClassName,
+                inputsAndOutputs.map { it.constraint }.toSet().filterNot { it in automaticConstraints },
+                services)
+
+        // This will contain the hash of the JAR that will be used by this Transaction.
+        val selectedAttachmentId = forcedAttachmentId ?: selectAttachment()
+
+        val attachmentToUse = services.attachments.openAttachment(selectedAttachmentId)?.let { it as ContractAttachment }
+                ?: throw IllegalArgumentException("Contract attachment $selectedAttachmentId for $contractClassName is missing.")
+
+        // For Exit transactions (no output states) there is no need to resolve the output constraints.
+        if (outputStates == null) {
+            return Pair(selectedAttachmentId, null)
+        }
+
+        // If there are no automatic constraints, there is nothing to resolve.
+        if (outputStates.none { it.constraint in automaticConstraints }) {
+            return Pair(selectedAttachmentId, outputStates)
+        }
+
+        // The final step is to resolve AutomaticPlaceholderConstraint.
+        val automaticConstraintPropagation = contractClassName.contractHasAutomaticConstraintPropagation(serializationContext?.deserializationClassLoader)
+
+        // When automaticConstraintPropagation is disabled for a contract, output states must an explicit Constraint.
+        require(automaticConstraintPropagation) { "Contract $contractClassName was marked with @NoConstraintPropagation, which means the constraint of the output states has to be set explicitly." }
+
+        // This is the logic to determine the constraint which will replace the AutomaticPlaceholderConstraint.
+        val defaultOutputConstraint = selectAttachmentConstraint(contractClassName, inputStates, attachmentToUse, services)
+
+        // Sanity check that the selected attachment actually passes.
+        val constraintAttachment = AttachmentWithContext(attachmentToUse, contractClassName, services.networkParameters.whitelistedContractImplementations)
+        require(defaultOutputConstraint.isSatisfiedBy(constraintAttachment)) { "Selected output constraint: $defaultOutputConstraint not satisfying $selectedAttachmentId" }
+
+        val resolvedOutputStates = outputStates.map {
+            val outputConstraint = it.constraint
+            if (outputConstraint in automaticConstraints) {
+                it.copy(constraint = defaultOutputConstraint)
+            } else {
+                // If the constraint on the output state is already set, and is not a valid transition or can't be transitioned, then fail early.
+                inputStates?.forEach { input ->
+                    require(outputConstraint.canBeTransitionedFrom(input.constraint, attachmentToUse)) { "Output state constraint $outputConstraint cannot be transitions from ${input.constraint}" }
+                }
+                require(outputConstraint.isSatisfiedBy(constraintAttachment)) { "Output state constraint check fails. $outputConstraint" }
+                it
+            }
+        }
+
+        return Pair(selectedAttachmentId, resolvedOutputStates)
     }
+
+    /**
+     * If there are multiple input states with different constraints then run the constraint intersection logic to determine the resulting output constraint.
+     * For issuing transactions where the attachmentToUse is JarSigned, then default to the SignatureConstraint with all the signatures.
+     * TODO - in the future this step can actually create a new ContractAttachment by merging 2 signed jars of the same version.
+     */
+    private fun selectAttachmentConstraint(
+            contractClassName: ContractClassName,
+            inputStates: List<TransactionState<ContractState>>?,
+            attachmentToUse: ContractAttachment,
+            services: ServicesForResolution): AttachmentConstraint = when {
+        inputStates != null -> attachmentConstraintsTransition(inputStates.groupBy { it.constraint }.keys, attachmentToUse)
+        useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParameters) -> WhitelistedByZoneAttachmentConstraint
+        attachmentToUse.signers.isNotEmpty() -> makeSignatureAttachmentConstraint(attachmentToUse.signers)
+        else -> HashAttachmentConstraint(attachmentToUse.id)
+    }
+
+    /**
+     * Given a set of [AttachmentConstraint]s, this function implements the rules on how constraints can evolve.
+     *
+     * This should be an exhaustive check, and should mirror [AttachmentConstraint.canBeTransitionedFrom].
+     *
+     * TODO - once support for third party signing is added, it should be implemented here. ( a constraint with 2 signatures is less restrictive than a constraint with 1 more signature)
+     */
+    private fun attachmentConstraintsTransition(constraints: Set<AttachmentConstraint>, attachmentToUse: ContractAttachment): AttachmentConstraint = when {
+
+        // Sanity check.
+        constraints.isEmpty() -> throw IllegalArgumentException("Cannot transition from no constraints.")
+
+        // When all input states have the same constraint.
+        constraints.size == 1 -> constraints.single()
+
+        // Fail when combining the insecure AlwaysAcceptAttachmentConstraint with something else. The size must be at least 2 at this point.
+        constraints.any { it is AlwaysAcceptAttachmentConstraint } ->
+            throw IllegalArgumentException("Can't mix the AlwaysAcceptAttachmentConstraint with a secure constraint in the same transaction. This can be used to hide insecure transitions.")
+
+        // Multiple states with Hash constraints with different hashes. This should not happen as we checked already.
+        constraints.all { it is HashAttachmentConstraint } ->
+            throw IllegalArgumentException("Cannot mix HashConstraints with different hashes in the same transaction.")
+
+        // The HashAttachmentConstraint is the strongest constraint, so it wins when mixed with anything. As long as the actual constraints pass.
+        // TODO - this could change if we decide to introduce a way to gracefully migrate from the Hash Constraint to the Signature Constraint.
+        constraints.any { it is HashAttachmentConstraint } -> constraints.find { it is HashAttachmentConstraint }!!
+
+        // TODO, we don't currently support mixing signature constraints with different signers. This will change once we introduce third party signers.
+        constraints.all { it is SignatureAttachmentConstraint } ->
+            throw IllegalArgumentException("Cannot mix SignatureAttachmentConstraints signed by different parties in the same transaction.")
+
+        // This ensures a smooth migration from the Whitelist Constraint, given that for the transaction to be valid it still has to pass both constraints.
+        // The transition is possible only when the SignatureConstraint contains ALL signers from the attachment.
+        constraints.any { it is SignatureAttachmentConstraint } && constraints.any { it is WhitelistedByZoneAttachmentConstraint } -> {
+            val signatureConstraint = constraints.mapNotNull { it as? SignatureAttachmentConstraint }.single()
+            when {
+                attachmentToUse.signers.isEmpty() -> throw IllegalArgumentException("Cannot mix a state with the WhitelistedByZoneAttachmentConstraint and a state with the SignatureAttachmentConstraint, when the latest attachment is not signed. Please contact your Zone operator.")
+                signatureConstraint.key.keys.containsAll(attachmentToUse.signers) -> signatureConstraint
+                else -> throw IllegalArgumentException("Attempting to transition a WhitelistedByZoneAttachmentConstraint state backed by an attachment signed by multiple parties to a weaker SignatureConstraint that does not require all those signatures. Please contact your Zone operator.")
+            }
+        }
+
+        else -> throw IllegalArgumentException("Unexpected constraints $constraints.")
+    }
+
+    private fun makeSignatureAttachmentConstraint(attachmentSigners: List<PublicKey>) =
+            SignatureAttachmentConstraint(CompositeKey.Builder().addKeys(attachmentSigners.map { it }).build())
+
+    /**
+     * This method should only be called for upgradeable contracts.
+     *
+     * For now we use the currently installed CorDapp version.
+     * TODO - When the SignatureConstraint and contract version logic is in, this will need to query the attachments table and find the latest one that satisfies all constraints.
+     * TODO - select a version of the contract that is no older than the one from the previous transactions.
+     */
+    private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, constraints: List<AttachmentConstraint>, services: ServicesForResolution): AttachmentId {
+        require(constraints.none { it in automaticConstraints })
+        require(isReference || constraints.none { it is HashAttachmentConstraint })
+        return services.cordappProvider.getContractAttachmentID(contractClassName)!!
+    }
+
+    private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction(services).toLedgerTransaction(services)
@@ -258,7 +453,7 @@ open class TransactionBuilder @JvmOverloads constructor(
     fun addOutputState(
             state: ContractState,
             contract: ContractClassName = requireNotNull(state.requiredContractClassName) {
-            //TODO: add link to docsite page, when there is one.
+                //TODO: add link to docsite page, when there is one.
 """
 Unable to infer Contract class name because state class ${state::class.java.name} is not annotated with
 @BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${state::class.java.name}
@@ -266,7 +461,7 @@ with @BelongsToContract, or supply an explicit contract parameter to addOutputSt
 """.trimIndent().replace('\n', ' ')
             },
             notary: Party, encumbrance: Int? = null,
-            constraint: AttachmentConstraint = AutomaticHashConstraint
+            constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
     ) = addOutputState(TransactionState(state, contract, notary, encumbrance, constraint))
 
     /** A default notary must be specified during builder construction to use this method */
@@ -274,14 +469,14 @@ with @BelongsToContract, or supply an explicit contract parameter to addOutputSt
     fun addOutputState(
             state: ContractState,
             contract: ContractClassName = requireNotNull(state.requiredContractClassName) {
-            //TODO: add link to docsite page, when there is one.
+                //TODO: add link to docsite page, when there is one.
 """
 Unable to infer Contract class name because state class ${state::class.java.name} is not annotated with
 @BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${state::class.java.name}
 with @BelongsToContract, or supply an explicit contract parameter to addOutputState().
 """.trimIndent().replace('\n', ' ')
             },
-            constraint: AttachmentConstraint = AutomaticHashConstraint
+            constraint: AttachmentConstraint = AutomaticPlaceholderConstraint
     ) = apply {
         checkNotNull(notary) {
             "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation"

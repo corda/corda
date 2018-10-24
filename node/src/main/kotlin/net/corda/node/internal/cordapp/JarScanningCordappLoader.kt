@@ -2,6 +2,7 @@ package net.corda.node.internal.cordapp
 
 import io.github.classgraph.ClassGraph
 import io.github.classgraph.ScanResult
+import net.corda.core.contracts.warnContractWithoutConstraintPropagation
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -184,7 +185,11 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     }
 
     private fun findContractClassNames(scanResult: RestrictedScanResult): List<String> {
-        return coreContractClasses.flatMap { scanResult.getNamesOfClassesImplementing(it) }.distinct()
+        val contractClasses = coreContractClasses.flatMap { scanResult.getNamesOfClassesImplementing(it) }.distinct()
+        for (contractClass in contractClasses) {
+            contractClass.warnContractWithoutConstraintPropagation(appClassLoader)
+        }
+        return contractClasses
     }
 
     private fun findPlugins(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {

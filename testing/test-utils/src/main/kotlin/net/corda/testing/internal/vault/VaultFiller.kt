@@ -103,7 +103,7 @@ class VaultFiller @JvmOverloads constructor(
                                      linearNumber: Long = 0L,
                                      linearBoolean: Boolean = false,
                                      linearTimestamp: Instant = now(),
-                                     constraint: AttachmentConstraint = AutomaticHashConstraint): Vault<LinearState> {
+                                     constraint: AttachmentConstraint = AutomaticPlaceholderConstraint): Vault<LinearState> {
         val myKey: PublicKey = services.myInfo.chooseIdentity().owningKey
         val me = AnonymousParty(myKey)
         val issuerKey = defaultNotary.keyPair
