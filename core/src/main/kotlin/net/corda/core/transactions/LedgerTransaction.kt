@@ -2,7 +2,6 @@ package net.corda.core.transactions
 
 import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
-import net.corda.core.StubOutForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
 import net.corda.core.contracts.TransactionVerificationException.TransactionRequiredContractUnspecifiedException
@@ -10,7 +9,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
-import net.corda.core.internal.cordapp.CordappInfoResolver
+import net.corda.core.internal.rules.StateContractValidationEnforcementRule
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
@@ -163,7 +163,7 @@ data class LedgerTransaction private constructor(
             internalTx.allStates.forEach(::validateStateAgainstContract)
 
     private fun validateStateAgainstContract(state: TransactionState<ContractState>) {
-        val shouldEnforce = StateContractValidationEnforcementRule.shouldEnforce
+        val shouldEnforce = StateContractValidationEnforcementRule.shouldEnforce(state.data)
 
         val requiredContractClassName = state.data.requiredContractClassName ?:
             if (shouldEnforce) throw TransactionRequiredContractUnspecifiedException(id, state)
