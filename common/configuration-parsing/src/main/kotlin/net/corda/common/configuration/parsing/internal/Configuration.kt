@@ -332,10 +332,7 @@ object Configuration {
 
         override fun describe(configuration: Config) = schema.describe(configuration)
 
-        final override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<VALUE> {
-
-            return validate(configuration, options).flatMap(::parseValid)
-        }
+        final override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<VALUE> = validate(configuration, options).flatMap(::parseValid)
 
         /**
          * Implement to define further mapping and validation logic, assuming the underlying raw [Config] is correct in terms of this [Configuration.Specification].
