@@ -2,7 +2,6 @@ apply plugin: 'net.corda.plugins.cordapp'
 
 def javaHome = System.getProperty('java.home')
 def shrinkJar = file("$buildDir/libs/${project.name}-${project.version}-tiny.jar")
-def signedJar = file("$buildDir/libs/${project.name}-${project.version}-tiny-signed.jar")
 
 cordapp {
     info {
@@ -80,13 +79,12 @@ task shrink(type: ProGuardTask) {
     keepclassmembers 'class org.joda.** { *; }', includedescriptorclasses:true
 }
 
-task sign(type: net.corda.plugins.SignJar, dependsOn: shrink) {
-    inputs.file(shrink)
-    outputs.file(signedJar)
+task sign(type: net.corda.plugins.SignJar) {
+    inputJars shrink
 }
 
 jar.finalizedBy sign
 
 artifacts {
-    shrinkArtifacts file: signedJar, name: project.name, type: 'jar', extension: 'jar', classifier: 'tiny', builtBy: sign
+    shrinkArtifacts file: sign.outputJars.singleFile, name: project.name, type: 'jar', extension: 'jar', classifier: 'tiny', builtBy: sign
 }
