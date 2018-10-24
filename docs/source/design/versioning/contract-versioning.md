@@ -256,7 +256,10 @@ Also to define other possible evolutions and decide if possible or not (E.g: add
 7. Add support to the `cordapp` plugin and the driver to test multiple versions of the contractJar together.
 8. Document all the release process.
 9. Update samples with the new gradle plugin.
-10. Create an elaborate sample for some more complex flows and contract upgrade scenarios. Ideally with new fields added to the state, new version of the flow protocol, internal flow objects changed, subflows, dependency on other contracts.
+10. Create an elaborate sample for some more complex flows and contract upgrade scenarios. 
+Ideally with new fields added to the state, new version of the flow protocol, internal flow objects changed, subflows, dependency on other contracts.
+This would be published as an example for how it should be done. 
+11. Use this elaborate  sample to create a comprehensive automated Behave Compatibility Test Suite.
 
 ## Deferred tasks
    
