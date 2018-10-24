@@ -18,6 +18,8 @@ interface Validated<TARGET, ERROR> {
 
     fun <MAPPED> flatMap(convert: (TARGET) -> Validated<MAPPED, ERROR>): Validated<MAPPED, ERROR>
 
+    fun <MAPPED_ERROR> mapErrors(convertError: (ERROR) -> MAPPED_ERROR): Validated<TARGET, MAPPED_ERROR>
+
     companion object {
 
         fun <T, E> valid(target: T): Validated.Result<T, E> = Validated.Result.Successful(target)
@@ -46,6 +48,11 @@ interface Validated<TARGET, ERROR> {
 
                 return convert.invoke(value)
             }
+
+            override fun <MAPPED_ERROR> mapErrors(convertError: (ERROR) -> MAPPED_ERROR): Validated<TARGET, MAPPED_ERROR> {
+
+                return valid(value)
+            }
         }
 
         class Unsuccessful<TARGET, ERROR>(override val errors: Set<ERROR>) : Result<TARGET, ERROR>(), Validated<TARGET, ERROR> {
@@ -67,6 +74,11 @@ interface Validated<TARGET, ERROR> {
             override fun <MAPPED> flatMap(convert: (TARGET) -> Validated<MAPPED, ERROR>): Validated<MAPPED, ERROR> {
 
                 return invalid(errors)
+            }
+
+            override fun <MAPPED_ERROR> mapErrors(convertError: (ERROR) -> MAPPED_ERROR): Validated<TARGET, MAPPED_ERROR> {
+
+                return invalid(errors.asSequence().map(convertError).toSet())
             }
         }
     }

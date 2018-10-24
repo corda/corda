@@ -28,9 +28,9 @@ interface PropertyDelegate<TYPE> {
 
         override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Standard<TYPE>>
 
-        fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (key: String, TYPE) -> Valid<MAPPED>): Standard<MAPPED>
+        fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (TYPE) -> Valid<MAPPED>): Standard<MAPPED>
 
-        fun <MAPPED : Any> map(mappedTypeName: String, convert: (key: String, TYPE) -> MAPPED): Standard<MAPPED> = mapValid(mappedTypeName) { key, value -> valid(convert.invoke(key, value)) }
+        fun <MAPPED : Any> map(mappedTypeName: String, convert: (TYPE) -> MAPPED): Standard<MAPPED> = mapValid(mappedTypeName) { value -> valid(convert.invoke(value)) }
     }
 
     companion object {
@@ -71,7 +71,7 @@ private class PropertyDelegateImpl<TYPE>(private val key: String?, private val p
 
     override fun optional(defaultValue: TYPE?): PropertyDelegate<TYPE?> = OptionalPropertyDelegateImpl(key, sensitive, addToProperties, { k, s -> construct.invoke(k, s).optional(defaultValue) })
 
-    override fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (key: String, TYPE) -> Valid<MAPPED>): PropertyDelegate.Standard<MAPPED> = PropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).mapValid(mappedTypeName) { k1, t1 -> convert.invoke(k1, t1) } })
+    override fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (TYPE) -> Valid<MAPPED>): PropertyDelegate.Standard<MAPPED> = PropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).mapValid(mappedTypeName) { value -> convert.invoke(value) } })
 }
 
 private class OptionalPropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition<TYPE?>) : PropertyDelegate<TYPE?> {

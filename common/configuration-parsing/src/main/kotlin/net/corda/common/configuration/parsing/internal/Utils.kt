@@ -3,20 +3,19 @@ package net.corda.common.configuration.parsing.internal
 import com.typesafe.config.*
 import net.corda.common.validation.internal.Validated
 
-// TODO sollecitom try to remove the key from these mapping functions, by perhaps making keyName in Configuration.Validation.Error optional, and contextualizing the produced errors with the key we know here.
-inline fun <TYPE, reified MAPPED : Any> Configuration.Property.Definition.Standard<TYPE>.mapValid(noinline convert: (String, TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = mapValid(MAPPED::class.java.simpleName, convert)
+inline fun <TYPE, reified MAPPED : Any> Configuration.Property.Definition.Standard<TYPE>.mapValid(noinline convert: (TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = mapValid(MAPPED::class.java.simpleName, convert)
 
 inline fun <reified ENUM : Enum<ENUM>, VALUE : Any> Configuration.Specification<VALUE>.enum(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = enum(key, ENUM::class, sensitive)
 
-inline fun <TYPE, reified MAPPED : Any> PropertyDelegate.Standard<TYPE>.mapValid(noinline convert: (key: String, TYPE) -> Valid<MAPPED>): PropertyDelegate.Standard<MAPPED> = mapValid(MAPPED::class.java.simpleName, convert)
+inline fun <TYPE, reified MAPPED : Any> PropertyDelegate.Standard<TYPE>.mapValid(noinline convert: (TYPE) -> Valid<MAPPED>): PropertyDelegate.Standard<MAPPED> = mapValid(MAPPED::class.java.simpleName, convert)
 
-inline fun <TYPE, reified MAPPED : Any> PropertyDelegate.Standard<TYPE>.map(noinline convert: (key: String, TYPE) -> MAPPED): PropertyDelegate.Standard<MAPPED> = map(MAPPED::class.java.simpleName, convert)
+inline fun <TYPE, reified MAPPED : Any> PropertyDelegate.Standard<TYPE>.map(noinline convert: (TYPE) -> MAPPED): PropertyDelegate.Standard<MAPPED> = map(MAPPED::class.java.simpleName, convert)
 
 operator fun <TYPE> Config.get(property: Configuration.Property.Definition<TYPE>): TYPE = property.valueIn(this)
 
 fun Configuration.Version.Extractor.parseRequired(config: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults) = parse(config, options).map { it ?: throw IllegalStateException("Absent version value.") }
 
-inline fun <reified NESTED : Any> Configuration.Specification<*>.nested(specification: Configuration.Specification<NESTED>, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<NESTED> = nestedObject(schema = specification as Configuration.Schema, key = key, sensitive = sensitive).mapValid { _, value -> specification.parse(value.toConfig()) }
+inline fun <reified NESTED : Any> Configuration.Specification<*>.nested(specification: Configuration.Specification<NESTED>, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<NESTED> = nestedObject(schema = specification, key = key, sensitive = sensitive).map(ConfigObject::toConfig).mapValid { value -> specification.parse(value) }
 
 @Suppress("UNCHECKED_CAST")
 internal fun configObject(vararg entries: Pair<String, Any?>): ConfigObject {

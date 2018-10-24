@@ -323,7 +323,7 @@ class PropertyValidationTest {
         }
     }
 
-    private fun parseAddress(key: String, value: String): Valid<Address> {
+    private fun parseAddress(value: String): Valid<Address> {
 
         return try {
             val parts = value.split(":")
@@ -331,7 +331,7 @@ class PropertyValidationTest {
             val port = parts[1].toInt().also { require(it > 0) }
             valid(Address(host, port))
         } catch (e: Exception) {
-            return invalid(Configuration.Validation.Error.BadValue.of(key, Address::class.java.simpleName, "Value must be of format \"host(String):port(Int > 0)\" e.g., \"127.0.0.1:8080\""))
+            return invalid(Configuration.Validation.Error.BadValue.of("Value must be of format \"host(String):port(Int > 0)\" e.g., \"127.0.0.1:8080\""))
         }
     }
 }

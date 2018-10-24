@@ -23,7 +23,7 @@ internal open class StandardProperty<TYPE>(override val key: String, typeNameArg
 
     override val typeName: String = schema?.let { "#${it.name ?: "Object@$key"}" } ?: typeNameArg
 
-    override fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (String, TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = FunctionalProperty(this, mappedTypeName, extractListValue, convert)
+    override fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = FunctionalProperty(this, mappedTypeName, extractListValue, convert)
 
     override fun optional(defaultValue: TYPE?): Configuration.Property.Definition<TYPE?> = OptionalProperty(this, defaultValue)
 
@@ -111,13 +111,13 @@ private class OptionalProperty<TYPE>(delegate: Configuration.Property.Definition
     }
 }
 
-private class FunctionalProperty<TYPE, MAPPED : Any>(delegate: Configuration.Property.Definition.Standard<TYPE>, mappedTypeName: String, internal val extractListValue: (Config, String) -> List<TYPE>, private val convert: (key: String, TYPE) -> Valid<MAPPED>) : RequiredDelegatedProperty<MAPPED, Configuration.Property.Definition.Standard<TYPE>>(delegate), Configuration.Property.Definition.Standard<MAPPED> {
+private class FunctionalProperty<TYPE, MAPPED : Any>(delegate: Configuration.Property.Definition.Standard<TYPE>, private val mappedTypeName: String, internal val extractListValue: (Config, String) -> List<TYPE>, private val convert: (TYPE) -> Valid<MAPPED>) : RequiredDelegatedProperty<MAPPED, Configuration.Property.Definition.Standard<TYPE>>(delegate), Configuration.Property.Definition.Standard<MAPPED> {
 
-    override fun valueIn(configuration: Config) = convert.invoke(key, delegate.valueIn(configuration)).valueOrThrow()
+    override fun valueIn(configuration: Config) = convert.invoke(delegate.valueIn(configuration)).valueOrThrow()
 
     override val typeName: String = if (super.typeName == "#$mappedTypeName") super.typeName else "$mappedTypeName(${super.typeName})"
 
-    override fun <M : Any> mapValid(mappedTypeName: String, convert: (key: String, MAPPED) -> Valid<M>): Configuration.Property.Definition.Standard<M> = FunctionalProperty(delegate, mappedTypeName, extractListValue, { key: String, target: TYPE -> this.convert.invoke(key, target).flatMap { convert(key, it) } })
+    override fun <M : Any> mapValid(mappedTypeName: String, convert: (MAPPED) -> Valid<M>): Configuration.Property.Definition.Standard<M> = FunctionalProperty(delegate, mappedTypeName, extractListValue, { target: TYPE -> this.convert.invoke(target).flatMap(convert) })
 
     override fun list(): Configuration.Property.Definition.Required<List<MAPPED>> = FunctionalListProperty(this)
 
@@ -126,7 +126,7 @@ private class FunctionalProperty<TYPE, MAPPED : Any>(delegate: Configuration.Pro
         val errors = mutableSetOf<Configuration.Validation.Error>()
         errors += delegate.validate(target, options).errors
         if (errors.isEmpty()) {
-            errors += convert.invoke(key, delegate.valueIn(target)).errors
+            errors += convert.invoke(delegate.valueIn(target)).mapErrors { error -> error.with(delegate.key, mappedTypeName) }.errors
         }
         return Validated.withResult(target, errors)
     }
@@ -184,7 +184,7 @@ private fun ConfigException.toValidationError(keyName: String, typeName: String)
         is ConfigException.Parse -> Configuration.Validation.Error.MalformedStructure.Companion::of
         else -> throw IllegalStateException("Unsupported ConfigException of type ${this::class.java.name}")
     }
-    return toError.invoke(keyName, typeName, message!!, emptyList())
+    return toError.invoke(message!!, keyName, typeName, emptyList())
 }
 
 private fun Configuration.Property.Definition<*>.errorsWhenExtractingValue(target: Config): Set<Configuration.Validation.Error> {

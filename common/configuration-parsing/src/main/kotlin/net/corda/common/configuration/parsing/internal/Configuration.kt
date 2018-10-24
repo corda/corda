@@ -141,16 +141,15 @@ object Configuration {
              */
             interface Standard<TYPE> : Required<TYPE>, Single<TYPE> {
 
-                // TODO sollecitom see if you can get rid of typeName and keyName here
                 /**
                  * Passes the value to a validating mapping function, provided this is valid in the first place.
                  */
-                fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, Validation.Error>): Standard<MAPPED>
+                fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (TYPE) -> Validated<MAPPED, Validation.Error>): Standard<MAPPED>
 
                 /**
                  * Passes the value to a non-validating mapping function, provided this is valid in the first place.
                  */
-                fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> MAPPED): Standard<MAPPED> = mapValid(mappedTypeName) { key, value -> valid(convert.invoke(key, value)) }
+                fun <MAPPED : Any> map(mappedTypeName: String, convert: (TYPE) -> MAPPED): Standard<MAPPED> = mapValid(mappedTypeName) { value -> valid(convert.invoke(value)) }
             }
 
             override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<TYPE, Validation.Error> {
@@ -170,12 +169,12 @@ object Configuration {
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [Int].
                  */
-                fun int(key: String, sensitive: Boolean = false): Standard<Int> = long(key, sensitive).mapValid { _, value ->
+                fun int(key: String, sensitive: Boolean = false): Standard<Int> = long(key, sensitive).mapValid { value ->
 
                     try {
                         valid(Math.toIntExact(value))
                     } catch (e: ArithmeticException) {
-                        invalid<Int, Configuration.Validation.Error>(Configuration.Validation.Error.BadValue.of(key, Int::class.javaObjectType.simpleName, "Provided value exceeds Integer range."))
+                        invalid<Int, Configuration.Validation.Error>(Configuration.Validation.Error.BadValue.of("Provided value exceeds Integer range.", key, Int::class.javaObjectType.simpleName))
                     }
                 }
 
@@ -192,7 +191,7 @@ object Configuration {
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [Float].
                  */
-                fun float(key: String, sensitive: Boolean = false): Standard<Float> = double(key, sensitive).mapValid { _, value ->
+                fun float(key: String, sensitive: Boolean = false): Standard<Float> = double(key, sensitive).mapValid { value ->
 
                     if (value.compareTo(value.toFloat()) == 0) {
                         valid(value.toFloat())
@@ -369,11 +368,13 @@ object Configuration {
          * @param message details about what went wrong during the processing.
          * @param containingPath containing path of the error, excluding the [keyName].
          */
-        sealed class Error constructor(open val keyName: String?, open val typeName: String? = null, open val message: String, val containingPath: List<String> = emptyList()) {
+        sealed class Error constructor(open val keyName: String?, open val typeName: String?, open val message: String, val containingPath: List<String> = emptyList()) {
 
             internal companion object {
 
-                internal fun contextualize(keyName: String, containingPath: List<String>): Pair<String, List<String>> {
+                private const val UNKNOWN = "<unknown>"
+
+                private fun contextualize(keyName: String, containingPath: List<String>): Pair<String, List<String>> {
 
                     val keyParts = keyName.split(".")
                     return when {
@@ -404,6 +405,8 @@ object Configuration {
 
             abstract fun withContainingPath(vararg containingPath: String): Error
 
+            abstract fun with(keyName: String = this.keyName ?: UNKNOWN, typeName: String = this.typeName ?: UNKNOWN): Configuration.Validation.Error
+
             override fun toString(): String {
 
                 return "(keyName='$keyName', typeName='$typeName', path=$path, message='$message')"
@@ -416,10 +419,13 @@ object Configuration {
 
                 internal companion object {
 
-                    internal fun of(keyName: String, message: String, typeName: String, containingPath: List<String> = emptyList()): WrongType = contextualize(keyName, containingPath).let { (key, path) -> WrongType(key, typeName, message, path) }
+                    // TODO sollecitom derive the message from the context of the error type
+                    internal fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): WrongType = contextualize(keyName, containingPath).let { (key, path) -> WrongType(key, typeName, message, path) }
                 }
 
                 override fun withContainingPath(vararg containingPath: String) = WrongType(keyName, typeName, message, containingPath.toList() + this.containingPath)
+
+                override fun with(keyName: String, typeName: String): WrongType = WrongType.of(message, keyName, typeName, containingPath)
             }
 
             /**
@@ -429,10 +435,12 @@ object Configuration {
 
                 internal companion object {
 
-                    internal fun of(keyName: String, typeName: String, message: String, containingPath: List<String> = emptyList()): MissingValue = contextualize(keyName, containingPath).let { (key, path) -> MissingValue(key, typeName, message, path) }
+                    internal fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): MissingValue = contextualize(keyName, containingPath).let { (key, path) -> MissingValue(key, typeName, message, path) }
                 }
 
                 override fun withContainingPath(vararg containingPath: String) = MissingValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
+
+                override fun with(keyName: String, typeName: String): MissingValue = MissingValue.of(message, keyName, typeName, containingPath)
             }
 
             /**
@@ -442,11 +450,12 @@ object Configuration {
 
                 internal companion object {
 
-                    // TODO sollecitom try to either have keyName and typeName as nullable with copying functions to contextualize, or use a Builder or a Closure instead
-                    internal fun of(keyName: String, typeName: String, message: String, containingPath: List<String> = emptyList()): BadValue = contextualize(keyName, containingPath).let { (key, path) -> BadValue(key, typeName, message, path) }
+                    internal fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): BadValue = contextualize(keyName, containingPath).let { (key, path) -> BadValue(key, typeName, message, path) }
                 }
 
                 override fun withContainingPath(vararg containingPath: String) = BadValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
+
+                override fun with(keyName: String, typeName: String): BadValue = BadValue.of(message, keyName, typeName, containingPath)
             }
 
             /**
@@ -456,10 +465,12 @@ object Configuration {
 
                 internal companion object {
 
-                    internal fun of(keyName: String, typeName: String, message: String, containingPath: List<String> = emptyList()): BadPath = contextualize(keyName, containingPath).let { (key, path) -> BadPath(key, typeName, message, path) }
+                    internal fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): BadPath = contextualize(keyName, containingPath).let { (key, path) -> BadPath(key, typeName, message, path) }
                 }
 
                 override fun withContainingPath(vararg containingPath: String) = BadPath(keyName, typeName, message, containingPath.toList() + this.containingPath)
+
+                override fun with(keyName: String, typeName: String): BadPath = BadPath.of(message, keyName, typeName, containingPath)
             }
 
             /**
@@ -469,10 +480,12 @@ object Configuration {
 
                 internal companion object {
 
-                    internal fun of(keyName: String, typeName: String, message: String, containingPath: List<String> = emptyList()): MalformedStructure = contextualize(keyName, containingPath).let { (key, path) -> MalformedStructure(key, typeName, message, path) }
+                    internal fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): MalformedStructure = contextualize(keyName, containingPath).let { (key, path) -> MalformedStructure(key, typeName, message, path) }
                 }
 
                 override fun withContainingPath(vararg containingPath: String) = MalformedStructure(keyName, typeName, message, containingPath.toList() + this.containingPath)
+
+                override fun with(keyName: String, typeName: String): MalformedStructure = MalformedStructure.of(message, keyName, typeName, containingPath)
             }
 
             /**
@@ -484,12 +497,14 @@ object Configuration {
 
                     private fun message(keyName: String) = "Unknown property \"$keyName\"."
 
-                    internal fun of(keyName: String, containingPath: List<String> = emptyList()): Unknown = contextualize(keyName, containingPath).let { (key, path) -> Unknown(key, path) }
+                    internal fun of(keyName: String = UNKNOWN, containingPath: List<String> = emptyList()): Unknown = contextualize(keyName, containingPath).let { (key, path) -> Unknown(key, path) }
                 }
 
                 override val message = message(pathAsString)
 
                 override fun withContainingPath(vararg containingPath: String) = Unknown(keyName, containingPath.toList() + this.containingPath)
+
+                override fun with(keyName: String, typeName: String): Unknown = Unknown.of(keyName, containingPath)
             }
 
             /**
@@ -503,6 +518,8 @@ object Configuration {
                 }
 
                 override fun withContainingPath(vararg containingPath: String) = UnsupportedVersion(version, containingPath.toList() + this.containingPath)
+
+                override fun with(keyName: String, typeName: String): UnsupportedVersion = this
             }
         }
     }
