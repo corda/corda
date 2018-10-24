@@ -23,7 +23,7 @@ internal open class StandardProperty<TYPE>(override val key: String, typeNameArg
 
     override val typeName: String = schema?.let { "#${it.name ?: "Object@$key"}" } ?: typeNameArg
 
-    override fun <MAPPED : Any> flatMap(mappedTypeName: String, convert: (String, TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = FunctionalProperty(this, mappedTypeName, extractListValue, convert)
+    override fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (String, TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = FunctionalProperty(this, mappedTypeName, extractListValue, convert)
 
     override fun optional(defaultValue: TYPE?): Configuration.Property.Definition<TYPE?> = OptionalProperty(this, defaultValue)
 
@@ -117,7 +117,7 @@ private class FunctionalProperty<TYPE, MAPPED : Any>(delegate: Configuration.Pro
 
     override val typeName: String = if (super.typeName == "#$mappedTypeName") super.typeName else "$mappedTypeName(${super.typeName})"
 
-    override fun <M : Any> flatMap(mappedTypeName: String, convert: (key: String, MAPPED) -> Valid<M>): Configuration.Property.Definition.Standard<M> = FunctionalProperty(delegate, mappedTypeName, extractListValue, { key: String, target: TYPE -> this.convert.invoke(key, target).flatMap { convert(key, it) } })
+    override fun <M : Any> mapValid(mappedTypeName: String, convert: (key: String, MAPPED) -> Valid<M>): Configuration.Property.Definition.Standard<M> = FunctionalProperty(delegate, mappedTypeName, extractListValue, { key: String, target: TYPE -> this.convert.invoke(key, target).flatMap { convert(key, it) } })
 
     override fun list(): Configuration.Property.Definition.Required<List<MAPPED>> = FunctionalListProperty(this)
 

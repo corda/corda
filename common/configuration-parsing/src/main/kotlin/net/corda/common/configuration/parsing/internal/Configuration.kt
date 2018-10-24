@@ -145,12 +145,12 @@ object Configuration {
                 /**
                  * Passes the value to a validating mapping function, provided this is valid in the first place.
                  */
-                fun <MAPPED : Any> flatMap(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, Validation.Error>): Standard<MAPPED>
+                fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (String, TYPE) -> Validated<MAPPED, Validation.Error>): Standard<MAPPED>
 
                 /**
                  * Passes the value to a non-validating mapping function, provided this is valid in the first place.
                  */
-                fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> MAPPED): Standard<MAPPED> = flatMap(mappedTypeName) { key, value -> valid(convert.invoke(key, value)) }
+                fun <MAPPED : Any> map(mappedTypeName: String, convert: (String, TYPE) -> MAPPED): Standard<MAPPED> = mapValid(mappedTypeName) { key, value -> valid(convert.invoke(key, value)) }
             }
 
             override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<TYPE, Validation.Error> {
@@ -170,7 +170,7 @@ object Configuration {
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [Int].
                  */
-                fun int(key: String, sensitive: Boolean = false): Standard<Int> = long(key, sensitive).flatMap { k, value ->
+                fun int(key: String, sensitive: Boolean = false): Standard<Int> = long(key, sensitive).mapValid { k, value ->
 
                     try {
                         valid(Math.toIntExact(value))
@@ -192,7 +192,7 @@ object Configuration {
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [Float].
                  */
-                fun float(key: String, sensitive: Boolean = false): Standard<Float> = double(key, sensitive).flatMap { k, value ->
+                fun float(key: String, sensitive: Boolean = false): Standard<Float> = double(key, sensitive).mapValid { k, value ->
 
                     if (value.compareTo(value.toFloat()) == 0) {
                         valid(value.toFloat())

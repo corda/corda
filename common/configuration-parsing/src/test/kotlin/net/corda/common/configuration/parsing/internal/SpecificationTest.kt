@@ -1,7 +1,6 @@
 package net.corda.common.configuration.parsing.internal
 
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigObject
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
@@ -11,8 +10,8 @@ class SpecificationTest {
 
         private object AddressesSpec : Configuration.Specification<Addresses>("Addresses") {
 
-            val principal by string().flatMap(::parseAddress)
-            val admin by string().flatMap(::parseAddress)
+            val principal by string().mapValid(::parseAddress)
+            val admin by string().mapValid(::parseAddress)
 
             override fun parseValid(configuration: Config) = valid(Addresses(configuration[principal], configuration[admin]))
 

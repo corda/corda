@@ -28,9 +28,9 @@ interface PropertyDelegate<TYPE> {
 
         override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Standard<TYPE>>
 
-        fun <MAPPED : Any> flatMap(mappedTypeName: String, convert: (key: String, typeName: String, TYPE) -> Valid<MAPPED>): Standard<MAPPED>
+        fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (key: String, typeName: String, TYPE) -> Valid<MAPPED>): Standard<MAPPED>
 
-        fun <MAPPED : Any> map(mappedTypeName: String, convert: (key: String, typeName: String, TYPE) -> MAPPED): Standard<MAPPED> = flatMap(mappedTypeName) { key, typeName, value -> valid(convert.invoke(key, typeName, value)) }
+        fun <MAPPED : Any> map(mappedTypeName: String, convert: (key: String, typeName: String, TYPE) -> MAPPED): Standard<MAPPED> = mapValid(mappedTypeName) { key, typeName, value -> valid(convert.invoke(key, typeName, value)) }
     }
 
     companion object {
@@ -71,7 +71,7 @@ private class PropertyDelegateImpl<TYPE>(private val key: String?, private val p
 
     override fun optional(defaultValue: TYPE?): PropertyDelegate<TYPE?> = OptionalPropertyDelegateImpl(key, sensitive, addToProperties, { k, s -> construct.invoke(k, s).optional(defaultValue) })
 
-    override fun <MAPPED : Any> flatMap(mappedTypeName: String, convert: (key: String, typeName: String, TYPE) -> Valid<MAPPED>): PropertyDelegate.Standard<MAPPED> = PropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).flatMap(mappedTypeName) { k1, t1 -> convert.invoke(k1, mappedTypeName, t1) } })
+    override fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (key: String, typeName: String, TYPE) -> Valid<MAPPED>): PropertyDelegate.Standard<MAPPED> = PropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).mapValid(mappedTypeName) { k1, t1 -> convert.invoke(k1, mappedTypeName, t1) } })
 }
 
 private class OptionalPropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition<TYPE?>) : PropertyDelegate<TYPE?> {
