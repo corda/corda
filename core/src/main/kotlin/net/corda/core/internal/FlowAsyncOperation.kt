@@ -12,8 +12,14 @@ import net.corda.core.serialization.CordaSerializable
  */
 @CordaSerializable
 interface FlowAsyncOperation<R : Any> {
-    /** Performs the operation in a non-blocking fashion. */
-    fun execute(): CordaFuture<R>
+    /**
+     * Performs the operation in a non-blocking fashion.
+     * @param deduplicationId  If the flow restarts from a checkpoint (due to node restart, or via a visit to the flow
+     * hospital following an error) the execute method might be called more than once by the Corda flow state machine.
+     * For each duplicate call, the deduplicationId is guaranteed to be the same allowing duplicate requests to be
+     * de-duplicated if necessary inside the execute method.
+     */
+    fun execute(deduplicationId: String): CordaFuture<R>
 }
 // DOCEND FlowAsyncOperation
 

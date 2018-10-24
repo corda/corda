@@ -37,7 +37,7 @@ class MaxTransactionSizeTests {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(listOf("net.corda.testing.contracts", "net.corda.node.services.transactions"), networkParameters = testNetworkParameters(maxTransactionSize = 3_000_000))
+        mockNet = MockNetwork(listOf("net.corda.testing.contracts"), networkParameters = testNetworkParameters(maxTransactionSize = 3_000_000))
         aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         notaryNode = mockNet.defaultNotaryNode

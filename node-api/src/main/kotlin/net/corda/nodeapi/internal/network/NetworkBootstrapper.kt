@@ -14,7 +14,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
@@ -34,6 +34,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.jar.JarInputStream
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
@@ -64,7 +65,7 @@ internal constructor(private val initSerEnv: Boolean,
                 "java",
                 "-jar",
                 "corda.jar",
-                "--just-generate-node-info"
+                "generate-node-info"
         )
 
         private const val LOGS_DIR_NAME = "logs"
@@ -125,13 +126,19 @@ internal constructor(private val initSerEnv: Boolean,
         }
         return clusteredNotaries.groupBy { it.first }.map { (k, vs) ->
             val cs = vs.map { it.second.config }
-            if (cs.any { it.hasPath("notary.bftSMaRt") }) {
-                require(cs.all { it.hasPath("notary.bftSMaRt") }) { "Mix of BFT and non-BFT notaries with service name $k" }
+            if (cs.any { isBFTNotary(it) }) {
+                require(cs.all { isBFTNotary(it) }) { "Mix of BFT and non-BFT notaries with service name $k" }
                 NotaryCluster.BFT(k) to vs.map { it.second.directory }
             } else {
                 NotaryCluster.CFT(k) to vs.map { it.second.directory }
             }
         }.toMap()
+    }
+
+    private fun isBFTNotary(config: Config): Boolean {
+        // TODO: pass a commandline parameter to the bootstrapper instead. Better yet, a notary config map
+        //       specifying the notary identities and the type (single-node, CFT, BFT) of each notary to set up.
+        return config.getString ("notary.className").contains("BFT", true)
     }
 
     private fun generateServiceIdentitiesForNotaryClusters(configs: Map<Path, Config>) {
@@ -161,16 +168,23 @@ internal constructor(private val initSerEnv: Boolean,
     }
 
     /** Entry point for the tool */
-    fun bootstrap(directory: Path, copyCordapps: Boolean) {
+    fun bootstrap(directory: Path, copyCordapps: Boolean, minimumPlatformVersion: Int) {
+        require(minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
         // Don't accidently include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
         val cordappJars = directory.list { paths ->
             paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }.toList()
         }
-        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false)
+        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, minimumPlatformVersion = minimumPlatformVersion)
     }
 
-    private fun bootstrap(directory: Path, cordappJars: List<Path>, copyCordapps: Boolean, fromCordform: Boolean) {
+    private fun bootstrap(
+            directory: Path,
+            cordappJars: List<Path>,
+            copyCordapps: Boolean,
+            fromCordform: Boolean,
+            minimumPlatformVersion: Int = PLATFORM_VERSION
+    ) {
         directory.createDirectories()
         println("Bootstrapping local test network in $directory")
         if (!fromCordform) {
@@ -208,8 +222,8 @@ internal constructor(private val initSerEnv: Boolean,
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles, configs)
             println("Generating contract implementations whitelist")
-            val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.map(contractsJarConverter))
-            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs)
+            val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.filter { !isSigned(it) }.map(contractsJarConverter))
+            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, minimumPlatformVersion)
             if (newNetParams != existingNetParams) {
                 println("${if (existingNetParams == null) "New" else "Updated"} $newNetParams")
             } else {
@@ -336,10 +350,13 @@ internal constructor(private val initSerEnv: Boolean,
         throw IllegalStateException(msg.toString())
     }
 
-    private fun installNetworkParameters(notaryInfos: List<NotaryInfo>,
-                                         whitelist: Map<String, List<AttachmentId>>,
-                                         existingNetParams: NetworkParameters?,
-                                         nodeDirs: List<Path>): NetworkParameters {
+    private fun installNetworkParameters(
+            notaryInfos: List<NotaryInfo>,
+            whitelist: Map<String, List<AttachmentId>>,
+            existingNetParams: NetworkParameters?,
+            nodeDirs: List<Path>,
+            minimumPlatformVersion: Int
+    ): NetworkParameters {
         // TODO Add config for minimumPlatformVersion, maxMessageSize and maxTransactionSize
         val netParams = if (existingNetParams != null) {
             if (existingNetParams.whitelistedContractImplementations == whitelist && existingNetParams.notaries == notaryInfos) {
@@ -354,7 +371,7 @@ internal constructor(private val initSerEnv: Boolean,
             }
         } else {
             NetworkParameters(
-                    minimumPlatformVersion = 4,
+                    minimumPlatformVersion = minimumPlatformVersion,
                     notaries = notaryInfos,
                     modifiedTime = Instant.now(),
                     maxMessageSize = 10485760,
@@ -382,7 +399,7 @@ internal constructor(private val initSerEnv: Boolean,
 
     // We need to to set serialization env, because generation of parameters is run from Cordform.
     private fun initialiseSerialization() {
-        _contextSerializationEnv.set(SerializationEnvironmentImpl(
+        _contextSerializationEnv.set(SerializationEnvironment.with(
                 SerializationFactoryImpl().apply {
                     registerScheme(AMQPParametersSerializationScheme)
                 },
@@ -396,6 +413,12 @@ internal constructor(private val initSerEnv: Boolean,
 
         override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
             return magic == amqpMagic && target == SerializationContext.UseCase.P2P
+        }
+    }
+
+    private fun isSigned(file: Path): Boolean = file.read {
+        JarInputStream(it).use {
+            JarSignatureCollector.collectSigningParties(it).isNotEmpty()
         }
     }
 }

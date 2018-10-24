@@ -8,8 +8,6 @@ import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.TrustedAuthorityNotaryService
-import net.corda.core.node.AppServiceHub
-import net.corda.core.node.services.CordaService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionWithSignatures
 import net.corda.core.transactions.WireTransaction
@@ -19,13 +17,12 @@ import java.security.PublicKey
 import java.security.SignatureException
 
 /**
- * A custom notary service should provide a constructor that accepts two parameters of types [AppServiceHub] and [PublicKey].
+ * A custom notary service should provide a constructor that accepts two parameters of types [ServiceHubInternal] and [PublicKey].
  *
  * Note that the support for custom notaries is still experimental – at present only a single-node notary service can be customised.
  * The notary-related APIs might change in the future.
  */
 // START 1
-@CordaService
 class MyCustomValidatingNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
     override val uniquenessProvider = PersistentUniquenessProvider(services.clock, services.database, services.cacheFactory)
 

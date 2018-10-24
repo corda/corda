@@ -25,6 +25,8 @@ sourceSets {
 }
 
 dependencies {
+    // Bundling in the Raft notary service for tests involving distributed notaries
+    compile project(':experimental:notary-raft')
     compile project(':test-utils')
 
     // Integration test helpers

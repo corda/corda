@@ -100,6 +100,37 @@ Because ``OwnableState`` models fungible assets that can be merged and split ove
 not have a ``linearId``. $5 of cash created by one transaction is considered to be identical to $5 of cash produced by
 another transaction.
 
+FungibleState
+~~~~~~~~~~~~~
+
+`FungibleState<T>` is an interface to represent things which are fungible, this means that there is an expectation that
+these things can be split and merged. That's the only assumption made by this interface. This interface should be
+implemented if you want to represent fractional ownership in a thing, or if you have many things. Examples:
+
+* There is only one Mona Lisa which you wish to issue 100 tokens, each representing a 1% interest in the Mona Lisa
+* A company issues 1000 shares with a nominal value of 1, in one batch of 1000. This means the single batch of 1000
+  shares could be split up into 1000 units of 1 share.
+
+The interface is defined as follows:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/FungibleState.kt
+        :language: kotlin
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
+
+As seen, the interface takes a type parameter `T` that represents the fungible thing in question. This should describe
+the basic type of the asset e.g. GBP, USD, oil, shares in company <X>, etc. and any additional metadata (issuer, grade,
+class, etc.). An upper-bound is not specified for `T` to ensure flexibility. Typically, a class would be provided that
+implements `TokenizableAssetInfo` so the thing can be easily added and subtracted using the `Amount` class.
+
+This interface has been added in addition to `FungibleAsset` to provide some additional flexibility which
+`FungibleAsset` lacks, in particular:
+* `FungibleAsset` defines an amount property of type Amount<Issued<T>>, therefore there is an assumption that all
+  fungible things are issued by a single well known party but this is not always the case.
+* `FungibleAsset` implements `OwnableState`, as such there is an assumption that all fungible things are ownable.
+
 Other interfaces
 ^^^^^^^^^^^^^^^^
 You can also customize your state by implementing the following interfaces:
@@ -152,3 +183,45 @@ Where:
 * ``encumbrance`` points to another state that must also appear as an input to any transaction consuming this
   state
 * ``constraint`` is a constraint on which contract-code attachments can be used with this state
+
+Reference States
+----------------
+
+A reference input state is a ``ContractState`` which can be referred to in a transaction by the contracts of input and
+output states but whose contract is not executed as part of the transaction verification process. Furthermore,
+reference states are not consumed when the transaction is committed to the ledger but they are checked for
+"current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a normal
+state when it occurs in an input or output position.
+
+Reference data states enable many parties to reuse the same state in their transactions as reference data whilst
+still allowing the reference data state owner the capability to update the state. A standard example would be the
+creation of financial instrument reference data and the use of such reference data by parties holding the related
+financial instruments.
+
+Just like regular input states, the chain of provenance for reference states is resolved and all dependency transactions
+verified. This is because users of reference data must be satisfied that the data they are referring to is valid as per
+the rules of the contract which governs it and that all previous participants of teh state assented to updates of it.
+
+**Known limitations:**
+
+*Notary change:* It is likely the case that users of reference states do not have permission to change the notary
+assigned to a reference state. Even if users *did* have this permission the result would likely be a bunch of
+notary change races. As such, if a reference state is added to a transaction which is assigned to a
+different notary to the input and output states then all those inputs and outputs must be moved to the
+notary which the reference state uses.
+
+If two or more reference states assigned to different notaries are added to a transaction then it follows that this
+transaction cannot be committed to the ledger. This would also be the case for transactions not containing reference
+states. There is an additional complication for transaction including reference states, however. It is unlikely that the
+party using the reference states has the authority to change the notary for the state (in other words, the party using the
+reference state would not be listed as a participant on it). Therefore, it is likely that a transaction containing
+reference states with two different notaries cannot be committed to the ledger.
+
+As such, if reference states assigned to multiple different notaries are added to a transaction builder
+then the check below will fail.
+
+        .. warning:: Currently, encumbrances should not be used with reference states. In the case where a state is
+                     encumbered by an encumbrance state, the encumbrance state should also be referenced in the same
+                     transaction that references the encumbered state. This is because the data contained within the
+                     encumbered state may take on a different meaning, and likely would do, once the encumbrance state
+                     is taken into account.

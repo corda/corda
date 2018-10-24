@@ -2,6 +2,7 @@ package net.corda.djvm.analysis
 
 import net.corda.djvm.code.EmitterModule
 import net.corda.djvm.code.Instruction
+import net.corda.djvm.code.emptyAsNull
 import net.corda.djvm.code.instructions.*
 import net.corda.djvm.messages.Message
 import net.corda.djvm.references.*
@@ -85,8 +86,12 @@ open class ClassAndMemberVisitor(
 
     /**
      * Process class after it has been fully traversed and analyzed.
+     * The [classVisitor] has finished visiting all of the class's
+     * existing elements (i.e. methods, fields, inner classes etc)
+     * and is about to complete. However, it can still add new
+     * elements to the class, if required.
      */
-    open fun visitClassEnd(clazz: ClassRepresentation) {}
+    open fun visitClassEnd(classVisitor: ClassVisitor, clazz: ClassRepresentation) {}
 
     /**
      * Extract the meta-data indicating the source file of the traversed class (i.e., where it is compiled from).
@@ -136,7 +141,7 @@ open class ClassAndMemberVisitor(
      */
     protected fun shouldBeProcessed(className: String): Boolean {
         return !configuration.whitelist.inNamespace(className) &&
-                className !in configuration.pinnedClasses
+                !configuration.isPinnedClass(className)
     }
 
     /**
@@ -228,7 +233,7 @@ open class ClassAndMemberVisitor(
             analysisContext.classes.add(visitedClass)
             super.visit(
                     version, access, visitedClass.name, signature,
-                    visitedClass.superClass.nullIfEmpty(),
+                    visitedClass.superClass.emptyAsNull,
                     visitedClass.interfaces.toTypedArray()
             )
         }
@@ -241,7 +246,7 @@ open class ClassAndMemberVisitor(
                     .getClassReferencesFromClass(currentClass!!, configuration.analyzeAnnotations)
                     .forEach(::recordTypeReference)
             captureExceptions {
-                visitClassEnd(currentClass!!)
+                visitClassEnd(this, currentClass!!)
             }
             super.visitEnd()
         }
@@ -281,12 +286,19 @@ open class ClassAndMemberVisitor(
         ): MethodVisitor? {
             var visitedMember: Member? = null
             val clazz = currentClass!!
-            val member = Member(access, clazz.name, name, desc, signature ?: "")
+            val member = Member(
+                access = access,
+                className = clazz.name,
+                memberName = name,
+                signature = desc,
+                genericsDetails = signature ?: "",
+                exceptions = exceptions?.toMutableSet() ?: mutableSetOf()
+            )
             currentMember = member
             sourceLocation = sourceLocation.copy(
-                    memberName = name,
-                    signature = desc,
-                    lineNumber = 0
+                memberName = name,
+                signature = desc,
+                lineNumber = 0
             )
             val processMember = captureExceptions {
                 visitedMember = visitMethod(clazz, member)
@@ -316,12 +328,19 @@ open class ClassAndMemberVisitor(
         ): FieldVisitor? {
             var visitedMember: Member? = null
             val clazz = currentClass!!
-            val member = Member(access, clazz.name, name, desc, "", value = value)
+            val member = Member(
+                access = access,
+                className = clazz.name,
+                memberName = name,
+                signature = desc,
+                genericsDetails = "",
+                value = value
+            )
             currentMember = member
             sourceLocation = sourceLocation.copy(
-                    memberName = name,
-                    signature = desc,
-                    lineNumber = 0
+                memberName = name,
+                signature = desc,
+                lineNumber = 0
             )
             val processMember = captureExceptions {
                 visitedMember = visitField(clazz, member)
@@ -385,7 +404,9 @@ open class ClassAndMemberVisitor(
          */
         override fun visitCode() {
             tryReplaceMethodBody()
-            super.visitCode()
+            visit(MethodEntry(method)) {
+                super.visitCode()
+            }
         }
 
         /**
@@ -495,6 +516,15 @@ open class ClassAndMemberVisitor(
         }
 
         /**
+         * Transform values loaded from the constants pool.
+         */
+        override fun visitLdcInsn(value: Any) {
+            visit(ConstantInstruction(value), defaultFirst = true) {
+                super.visitLdcInsn(value)
+            }
+        }
+
+        /**
          * Finish visiting this method, writing any new method body byte-code
          * if we haven't written it already. This would (presumably) only happen
          * for methods that previously had no body, e.g. native methods.
@@ -562,10 +592,6 @@ open class ClassAndMemberVisitor(
          * The API version of ASM.
          */
         const val API_VERSION: Int = Opcodes.ASM6
-
-        private fun String.nullIfEmpty(): String? {
-            return if (this.isEmpty()) { null } else { this }
-        }
 
     }
 

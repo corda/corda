@@ -18,6 +18,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.createNodeInfoAndSigned
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -148,7 +149,7 @@ class NodeTest {
         }
     }
 
-    private fun createConfig(nodeName: CordaX500Name): NodeConfiguration {
+    private fun createConfig(nodeName: CordaX500Name): NodeConfigurationImpl {
         val fakeAddress = NetworkHostAndPort("0.1.2.3", 456)
         return NodeConfigurationImpl(
                 baseDirectory = temporaryFolder.root.toPath(),
@@ -166,7 +167,8 @@ class NodeTest {
                 flowTimeout = FlowTimeoutConfiguration(timeout = Duration.ZERO, backoffBase = 1.0, maxRestartCount = 1),
                 rpcSettings = NodeRpcSettings(address = fakeAddress, adminAddress = null, ssl = null),
                 messagingServerAddress = null,
-                notary = null
+                notary = null,
+                flowOverrides = FlowOverrideConfig(listOf())
 
         )
     }

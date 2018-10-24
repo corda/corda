@@ -3,6 +3,7 @@ package net.corda.demobench.model
 import com.typesafe.config.*
 import com.typesafe.config.ConfigFactory.empty
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
@@ -11,7 +12,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import java.util.Properties
+import java.util.*
 
 /**
  * This is a subset of FullNodeConfiguration, containing only those configs which we need. The node uses reference.conf
@@ -38,33 +39,33 @@ data class NodeConfig(
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
         val defaultUser = user("guest")
-        const val cordappDirName = "cordapps"
+        const val CORDAPP_DIR_NAME = "cordapps"
     }
 
-    fun nodeConf(): Config {
+    @VisibleForTesting
+    internal fun nodeConf(): Config {
         val rpcSettings: ConfigObject = empty()
             .withValue("address", valueFor(rpcSettings.address.toString()))
             .withValue("adminAddress", valueFor(rpcSettings.adminAddress.toString()))
             .root()
-        val customMap: Map<String, Any> = HashMap<String, Any>().also {
-            if (issuableCurrencies.isNotEmpty()) {
-                it["issuableCurrencies"] = issuableCurrencies
-            }
-        }
-        val custom: ConfigObject = ConfigFactory.parseMap(customMap).root()
         return NodeConfigurationData(myLegalName, p2pAddress, this.rpcSettings.address, notary, h2port, rpcUsers, useTestClock, detectPublicIp, devMode)
             .toConfig()
             .withoutPath("rpcAddress")
             .withoutPath("rpcAdminAddress")
             .withValue("rpcSettings", rpcSettings)
-            .withOptionalValue("custom", custom)
     }
 
-    fun webServerConf() = WebServerConfigurationData(myLegalName, rpcSettings.address, webAddress, rpcUsers).asConfig()
+    @VisibleForTesting
+    internal fun webServerConf() = WebServerConfigurationData(myLegalName, rpcSettings.address, webAddress, rpcUsers).asConfig()
 
-    fun toNodeConfText() = nodeConf().render()
+    fun toNodeConfText(): String = nodeConf().render()
 
-    fun toWebServerConfText() = webServerConf().render()
+    fun toWebServerConfText(): String = webServerConf().render()
+
+    @VisibleForTesting
+    internal fun financeConf() = FinanceConfData(issuableCurrencies).toConfig()
+
+    fun toFinanceConfText(): String = financeConf().render()
 
     fun serialiseAsString(): String = toConfig().render()
 
@@ -92,6 +93,8 @@ private data class WebServerConfigurationData(
    fun asConfig() = toConfig()
 }
 
+private data class FinanceConfData(val issuableCurrencies: List<String>)
+
 /**
  * This is a subset of NotaryConfig. It implements [ExtraService] to avoid unnecessary copying.
  */
@@ -104,7 +107,7 @@ data class NodeConfigWrapper(val baseDir: Path, val nodeConfig: NodeConfig) : Ha
     val key: String = nodeConfig.myLegalName.organisation.toKey()
     val nodeDir: Path = baseDir / key
     val explorerDir: Path = baseDir / "$key-explorer"
-    override val cordappsDir: Path = nodeDir / NodeConfig.cordappDirName
+    override val cordappsDir: Path = nodeDir / NodeConfig.CORDAPP_DIR_NAME
     var state: NodeState = NodeState.STARTING
 
     fun install(cordapps: Collection<Path>) {

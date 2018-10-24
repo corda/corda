@@ -6,7 +6,6 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationContext.*
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.internal.SerializationEnvironment
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
@@ -35,7 +34,7 @@ class AMQPClientSerializationScheme(
         }
 
         fun createSerializationEnv(classLoader: ClassLoader? = null): SerializationEnvironment {
-            return SerializationEnvironmentImpl(
+            return SerializationEnvironment.with(
                     SerializationFactoryImpl().apply {
                         registerScheme(AMQPClientSerializationScheme(emptyList()))
                     },

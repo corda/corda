@@ -74,6 +74,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     abstract class CommonQueryCriteria : QueryCriteria() {
         abstract val status: Vault.StateStatus
         open val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+        open val constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet()
+        open val constraints: Set<Vault.ConstraintInfo> = emptySet()
         abstract val contractStateTypes: Set<Class<out ContractState>>?
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
@@ -90,7 +92,9 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val notary: List<AbstractParty>? = null,
             val softLockingCondition: SoftLockingCondition? = null,
             val timeCondition: TimeCondition? = null,
-            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL,
+            override val constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet(),
+            override val constraints: Set<Vault.ConstraintInfo> = emptySet()
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
@@ -161,6 +165,22 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                     status,
                     contractStateTypes
             )
+        }
+    }
+
+    /**
+     * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleStates]
+     */
+    data class FungibleStateQueryCriteria(
+            val participants: List<AbstractParty>? = null,
+            val quantity: ColumnPredicate<Long>? = null,
+            override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+            override val contractStateTypes: Set<Class<out ContractState>>? = null,
+            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+    ) : CommonQueryCriteria() {
+        override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
+            super.visit(parser)
+            return parser.parseCriteria(this)
         }
     }
 

@@ -5,6 +5,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
@@ -18,6 +19,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.toHexString
 import rx.Observable
 import java.time.Instant
 import java.util.*
@@ -125,6 +127,44 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         RELEVANT, NOT_RELEVANT, ALL
     }
 
+    /**
+     *  Contract constraint information associated with a [ContractState].
+     *  See [AttachmentConstraint]
+     */
+    @CordaSerializable
+    data class ConstraintInfo(val constraint: AttachmentConstraint) {
+        @CordaSerializable
+        enum class Type {
+            ALWAYS_ACCEPT, HASH, CZ_WHITELISTED, SIGNATURE
+        }
+        fun type(): Type {
+            return when (constraint::class.java) {
+                AlwaysAcceptAttachmentConstraint::class.java -> Type.ALWAYS_ACCEPT
+                HashAttachmentConstraint::class.java -> Type.HASH
+                WhitelistedByZoneAttachmentConstraint::class.java -> Type.CZ_WHITELISTED
+                SignatureAttachmentConstraint::class.java -> Type.SIGNATURE
+                else -> throw IllegalArgumentException("Invalid constraint type: $constraint")
+            }
+        }
+        fun data(): ByteArray? {
+            return when (type()) {
+                Type.HASH -> (constraint as HashAttachmentConstraint).attachmentId.bytes
+                Type.SIGNATURE -> (constraint as SignatureAttachmentConstraint).key.encoded
+                else -> null
+            }
+        }
+        companion object {
+            fun constraintInfo(type: Type, data: ByteArray?): ConstraintInfo {
+                return when (type) {
+                    Type.ALWAYS_ACCEPT -> ConstraintInfo(AlwaysAcceptAttachmentConstraint)
+                    Type.HASH -> ConstraintInfo(HashAttachmentConstraint(SecureHash.parse(data!!.toHexString())))
+                    Type.CZ_WHITELISTED -> ConstraintInfo(WhitelistedByZoneAttachmentConstraint)
+                    Type.SIGNATURE -> ConstraintInfo(SignatureAttachmentConstraint(Crypto.decodePublicKey(data!!)))
+                }
+            }
+        }
+    }
+
     @CordaSerializable
     enum class UpdateType {
         GENERAL, NOTARY_CHANGE, CONTRACT_UPGRADE
@@ -151,7 +191,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                                            val otherResults: List<Any>)
 
     @CordaSerializable
-    data class StateMetadata constructor(
+    data class StateMetadata @JvmOverloads constructor(
             val ref: StateRef,
             val contractStateClassName: String,
             val recordedTime: Instant,
@@ -160,18 +200,9 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             val notary: AbstractParty?,
             val lockId: String?,
             val lockUpdateTime: Instant?,
-            val relevancyStatus: Vault.RelevancyStatus?
+            val relevancyStatus: Vault.RelevancyStatus? = null,
+            val constraintInfo: ConstraintInfo? = null
     ) {
-        constructor(ref: StateRef,
-                    contractStateClassName: String,
-                    recordedTime: Instant,
-                    consumedTime: Instant?,
-                    status: Vault.StateStatus,
-                    notary: AbstractParty?,
-                    lockId: String?,
-                    lockUpdateTime: Instant?
-        ) : this(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, null)
-
         fun copy(
                 ref: StateRef = this.ref,
                 contractStateClassName: String = this.contractStateClassName,
@@ -184,6 +215,19 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         ): StateMetadata {
             return StateMetadata(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, null)
         }
+        fun copy(
+                ref: StateRef = this.ref,
+                contractStateClassName: String = this.contractStateClassName,
+                recordedTime: Instant = this.recordedTime,
+                consumedTime: Instant? = this.consumedTime,
+                status: Vault.StateStatus = this.status,
+                notary: AbstractParty? = this.notary,
+                lockId: String? = this.lockId,
+                lockUpdateTime: Instant? = this.lockUpdateTime,
+                relevancyStatus: Vault.RelevancyStatus?
+        ): StateMetadata {
+            return StateMetadata(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, relevancyStatus, ConstraintInfo(AlwaysAcceptAttachmentConstraint))
+        }
     }
 
     companion object {
@@ -193,6 +237,12 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         val NoNotaryUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.NOTARY_CHANGE)
     }
 }
+
+/**
+ * The maximum permissible size of contract constraint type data (for storage in vault states database table).
+ * Maximum value equates to a CompositeKey with 10 EDDSA_ED25519_SHA512 keys stored in.
+ */
+const val MAX_CONSTRAINT_DATA_SIZE = 563
 
 /**
  * A [VaultService] is responsible for securely and safely persisting the current state of a vault to storage. The
@@ -284,24 +334,26 @@ interface VaultService {
 
     /**
      * Helper function to determine spendable states and soft locking them.
-     * Currently performance will be worse than for the hand optimised version in `Cash.unconsumedCashStatesForSpending`.
-     * However, this is fully generic and can operate with custom [FungibleAsset] states.
+     * Currently performance will be worse than for the hand optimised version in
+     * [Cash.unconsumedCashStatesForSpending]. However, this is fully generic and can operate with custom [FungibleState]
+     * and [FungibleAsset] states.
      * @param lockId The [FlowLogic.runId]'s [UUID] of the current flow used to soft lock the states.
      * @param eligibleStatesQuery A custom query object that selects down to the appropriate subset of all states of the
      * [contractStateType]. e.g. by selecting on account, issuer, etc. The query is internally augmented with the
      * [StateStatus.UNCONSUMED], soft lock and contract type requirements.
-     * @param amount The required amount of the asset, but with the issuer stripped off.
-     * It is assumed that compatible issuer states will be filtered out by the [eligibleStatesQuery].
+     * @param amount The required amount of the asset. It is assumed that compatible issuer states will be filtered out
+     * by the [eligibleStatesQuery]. This method accepts both Amount<Issued<*>> and Amount<*>. Amount<Issued<*>> is
+     * automatically unwrapped to Amount<*>.
      * @param contractStateType class type of the result set.
      * @return Returns a locked subset of the [eligibleStatesQuery] sufficient to satisfy the requested amount,
      * or else an empty list and no change in the stored lock states when their are insufficient resources available.
      */
     @Suspendable
     @Throws(StatesNotAvailableException::class)
-    fun <T : FungibleAsset<U>, U : Any> tryLockFungibleStatesForSpending(lockId: UUID,
-                                                                         eligibleStatesQuery: QueryCriteria,
-                                                                         amount: Amount<U>,
-                                                                         contractStateType: Class<out T>): List<StateAndRef<T>>
+    fun <T : FungibleState<*>> tryLockFungibleStatesForSpending(lockId: UUID,
+                                                                eligibleStatesQuery: QueryCriteria,
+                                                                amount: Amount<*>,
+                                                                contractStateType: Class<out T>): List<StateAndRef<T>>
 
     // DOCSTART VaultQueryAPI
     /**

@@ -198,11 +198,23 @@ CorDapps can advertise their minimum and target platform version. The minimum pl
 
 .. sourcecode:: groovy
 
-    'Min-Platform-Version': 3
+    'Min-Platform-Version': 4
     'Target-Platform-Version': 4
 
+Using the `cordapp` Gradle plugin, this can be achieved by putting this in your CorDapp's `build.gradle`:
 
-In gradle, this can be achieved by modifying the jar task as shown in this example:
+.. container:: codeset
+
+    .. sourcecode:: groovy
+
+        cordapp {
+            info {
+                targetPlatformVersion 4
+                minimumPlatformVersion 4
+            }
+        }
+
+Without using the `cordapp` plugin, you can achieve the same by modifying the jar task as shown in this example:
 
 .. container:: codeset
 
@@ -211,7 +223,7 @@ In gradle, this can be achieved by modifying the jar task as shown in this examp
         jar {
             manifest {
                 attributes(
-                        'Min-Platform-Version': 3
+                        'Min-Platform-Version': 4
                         'Target-Platform-Version': 4
                 )
             }

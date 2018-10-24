@@ -62,6 +62,7 @@ abstract class AbstractStateReplacementFlow {
         @Throws(StateReplacementException::class)
         override fun call(): StateAndRef<T> {
             val (stx) = assembleTx()
+            stx.verify(serviceHub, checkSufficientSignatures = false)
             val participantSessions = getParticipantSessions()
             progressTracker.currentStep = SIGNING
 

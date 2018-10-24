@@ -21,25 +21,20 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.ServicesForResolutionImpl
-import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.MockCordappProvider
-import net.corda.testing.node.internal.MockKeyManagementService
-import net.corda.testing.node.internal.MockTransactionStorage
-import net.corda.testing.node.internal.TestCordappDirectories
-import net.corda.testing.node.internal.getCallerPackage
+import net.corda.testing.internal.configureDatabase
+import net.corda.testing.node.internal.*
 import net.corda.testing.services.MockAttachmentStorage
 import java.security.KeyPair
 import java.sql.Connection
@@ -72,8 +67,7 @@ open class MockServices private constructor(
     companion object {
 
         private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): CordappLoader {
-
-            val cordappPaths = TestCordappDirectories.forPackages(packages)
+            val cordappPaths = cordappsForPackages(packages).map { TestCordappDirectories.getJarDirectory(it) }
             return JarScanningCordappLoader.fromDirectories(cordappPaths, versionInfo)
         }
 

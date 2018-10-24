@@ -64,8 +64,10 @@ abstract class FlowLogic<out T> {
         /**
          * Return the outermost [FlowLogic] instance, or null if not in a flow.
          */
-        @Suppress("unused") @JvmStatic
-        val currentTopLevel: FlowLogic<*>? get() = (Strand.currentStrand() as? FlowStateMachine<*>)?.logic
+        @Suppress("unused")
+        @JvmStatic
+        val currentTopLevel: FlowLogic<*>?
+            get() = (Strand.currentStrand() as? FlowStateMachine<*>)?.logic
 
         /**
          * If on a flow, suspends the flow and only wakes it up after at least [duration] time has passed.  Otherwise,
@@ -123,10 +125,11 @@ abstract class FlowLogic<out T> {
      * Note: The current implementation returns the single identity of the node. This will change once multiple identities
      * is implemented.
      */
-    val ourIdentityAndCert: PartyAndCertificate get() {
-        return serviceHub.myInfo.legalIdentitiesAndCerts.find { it.party == stateMachine.ourIdentity }
-                ?: throw IllegalStateException("Identity specified by ${stateMachine.id} (${stateMachine.ourIdentity}) is not one of ours!")
-    }
+    val ourIdentityAndCert: PartyAndCertificate
+        get() {
+            return serviceHub.myInfo.legalIdentitiesAndCerts.find { it.party == stateMachine.ourIdentity }
+                    ?: throw IllegalStateException("Identity specified by ${stateMachine.id} (${stateMachine.ourIdentity}) is not one of ours!")
+        }
 
     /**
      * Specifies the identity to use for this flow. This will be one of the multiple identities that belong to this node.
@@ -141,9 +144,11 @@ abstract class FlowLogic<out T> {
     // Used to implement the deprecated send/receive functions using Party. When such a deprecated function is used we
     // create a fresh session for the Party, put it here and use it in subsequent deprecated calls.
     private val deprecatedPartySessionMap = HashMap<Party, FlowSession>()
+
     private fun getDeprecatedSessionForParty(party: Party): FlowSession {
         return deprecatedPartySessionMap.getOrPut(party) { initiateFlow(party) }
     }
+
     /**
      * Returns a [FlowInfo] object describing the flow [otherParty] is using. With [FlowInfo.flowVersion] it
      * provides the necessary information needed for the evolution of flows and enabling backwards compatibility.
@@ -342,7 +347,7 @@ abstract class FlowLogic<out T> {
      * Note that this has to return a tracker before the flow is invoked. You can't change your mind half way
      * through.
      */
-    open val progressTracker: ProgressTracker? = null
+    open val progressTracker: ProgressTracker? = ProgressTracker.DEFAULT_TRACKER()
 
     /**
      * This is where you fill out your business logic.
@@ -383,7 +388,7 @@ abstract class FlowLogic<out T> {
      *
      * @return Returns null if this flow has no progress tracker.
      */
-    fun trackStepsTree(): DataFeed<List<Pair<Int,String>>, List<Pair<Int,String>>>? {
+    fun trackStepsTree(): DataFeed<List<Pair<Int, String>>, List<Pair<Int, String>>>? {
         // TODO this is not threadsafe, needs an atomic get-step-and-subscribe
         return progressTracker?.let {
             DataFeed(it.allStepsLabels, it.stepsTreeChanges)

@@ -1,10 +1,11 @@
 package net.corda.node.internal.cordapp
 
 import net.corda.core.internal.cordapp.CordappImpl
+import net.corda.core.internal.cordapp.CordappImpl.Info.Companion.UNKNOWN_VALUE
 import java.util.jar.Attributes
 import java.util.jar.Manifest
 
-fun createTestManifest(name: String, title: String, version: String, vendor: String): Manifest {
+fun createTestManifest(name: String, title: String, version: String, vendor: String, targetVersion: Int): Manifest {
     val manifest = Manifest()
 
     // Mandatory manifest attribute. If not present, all other entries are silently skipped.
@@ -19,27 +20,28 @@ fun createTestManifest(name: String, title: String, version: String, vendor: Str
     manifest["Implementation-Title"] = title
     manifest["Implementation-Version"] = version
     manifest["Implementation-Vendor"] = vendor
+    manifest["Target-Platform-Version"] = targetVersion.toString()
 
     return manifest
 }
 
-operator fun Manifest.set(key: String, value: String) {
-    mainAttributes.putValue(key, value)
+operator fun Manifest.set(key: String, value: String): String? {
+    return mainAttributes.putValue(key, value)
 }
 
-fun Manifest?.toCordappInfo(defaultShortName: String): CordappImpl.Info {
-    var info = CordappImpl.Info.UNKNOWN
-    (this?.mainAttributes?.getValue("Name") ?: defaultShortName).let { shortName ->
-        info = info.copy(shortName = shortName)
-    }
-    this?.mainAttributes?.getValue("Implementation-Vendor")?.let { vendor ->
-        info = info.copy(vendor = vendor)
-    }
-    this?.mainAttributes?.getValue("Implementation-Version")?.let { version ->
-        info = info.copy(version = version)
-    }
-    val minPlatformVersion = this?.mainAttributes?.getValue("Min-Platform-Version")?.toInt() ?: 1
-    val targetPlatformVersion = this?.mainAttributes?.getValue("Target-Platform-Version")?.toInt() ?: minPlatformVersion
-    info = info.copy(minimumPlatformVersion = minPlatformVersion, targetPlatformVersion = targetPlatformVersion)
-    return info
+operator fun Manifest.get(key: String): String? = mainAttributes.getValue(key)
+
+fun Manifest.toCordappInfo(defaultShortName: String): CordappImpl.Info {
+    val shortName = this["Name"] ?: defaultShortName
+    val vendor = this["Implementation-Vendor"] ?: UNKNOWN_VALUE
+    val version = this["Implementation-Version"] ?: UNKNOWN_VALUE
+    val minPlatformVersion = this["Min-Platform-Version"]?.toIntOrNull() ?: 1
+    val targetPlatformVersion = this["Target-Platform-Version"]?.toIntOrNull() ?: minPlatformVersion
+    return CordappImpl.Info(
+            shortName = shortName,
+            vendor = vendor,
+            version = version,
+            minimumPlatformVersion = minPlatformVersion,
+            targetPlatformVersion = targetPlatformVersion
+    )
 }

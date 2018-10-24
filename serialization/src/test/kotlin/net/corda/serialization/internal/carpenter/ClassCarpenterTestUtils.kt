@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.carpenter
 
 import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.amqp.Field
 import net.corda.serialization.internal.amqp.Schema
@@ -47,7 +48,7 @@ open class AmqpCarpenterBase(whitelist: ClassWhitelist) {
     var cc = ClassCarpenterImpl(whitelist = whitelist)
     var factory = SerializerFactoryExternalCarpenter(cc)
 
-    fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
+    fun <T: Any> serialise(obj: T): SerializedBytes<T> = SerializationOutput(factory).serialize(obj)
     @Suppress("NOTHING_TO_INLINE")
     inline fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
 }

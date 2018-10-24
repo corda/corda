@@ -30,9 +30,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val b = B(A(testA), testB)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 
-        require(obj.obj is B)
-
-        val amqpObj = obj.obj as B
+        val amqpObj = obj.obj
 
         assertEquals(testB, amqpObj.b)
         assertEquals(testA, amqpObj.a.a)
@@ -92,8 +90,6 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
         val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A")))
 
-        require(obj.obj is B)
-
         amqpSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
     }
 
@@ -110,8 +106,6 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
 
         val b = B(A(testA), testB)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
-
-        require(obj.obj is B)
 
         val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("B")))
         val carpenterSchema = amqpSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
@@ -138,9 +132,6 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
 
         val b = B(A(testA), testB)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
-
-        require(obj.obj is B)
-
         val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
         val carpenterSchema = amqpSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
 
@@ -198,8 +189,6 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val c = C(B(testA, testB), testC)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(c))
 
-        require(obj.obj is C)
-
         val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
 
         amqpSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
@@ -224,8 +213,6 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val c = C(B(testA, testB), testC)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(c))
 
-        require(obj.obj is C)
-
         val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
 
         amqpSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
@@ -249,8 +236,6 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
 
         val c = C(B(testA, testB), testC)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(c))
-
-        require(obj.obj is C)
 
         val carpenterSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
         TestMetaCarpenter(carpenterSchema.carpenterSchema(

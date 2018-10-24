@@ -13,75 +13,12 @@ import java.io.NotSerializableException
 object CheckpointSerializationDefaults {
     @DeleteForDJVM
     val CHECKPOINT_CONTEXT get() = effectiveSerializationEnv.checkpointContext
-    val CHECKPOINT_SERIALIZATION_FACTORY get() = effectiveSerializationEnv.checkpointSerializationFactory
-}
-
-/**
- * A class for serializing and deserializing objects at checkpoints, using Kryo serialization.
- */
-@KeepForDJVM
-class CheckpointSerializationFactory(
-    private val scheme: CheckpointSerializationScheme
-) {
-
-    val defaultContext: CheckpointSerializationContext get() = _currentContext.get() ?: effectiveSerializationEnv.checkpointContext
-
-    private val creator: List<StackTraceElement> = Exception().stackTrace.asList()
-
-    /**
-     * Deserialize the bytes in to an object, using the prefixed bytes to determine the format.
-     *
-     * @param byteSequence The bytes to deserialize, including a format header prefix.
-     * @param clazz The class or superclass or the object to be deserialized, or [Any] or [Object] if unknown.
-     * @param context A context that configures various parameters to deserialization.
-     */
-    fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: CheckpointSerializationContext): T {
-        return withCurrentContext(context) { scheme.deserialize(byteSequence, clazz, context) }
-    }
-
-    /**
-     * Serialize an object to bytes using the preferred serialization format version from the context.
-     *
-     * @param obj The object to be serialized.
-     * @param context A context that configures various parameters to serialization, including the serialization format version.
-     */
-    fun <T : Any> serialize(obj: T, context: CheckpointSerializationContext): SerializedBytes<T> {
-        return withCurrentContext(context) { scheme.serialize(obj, context) }
-    }
-
-    override fun toString(): String {
-        return "${this.javaClass.name} scheme=$scheme ${creator.joinToString("\n")}"
-    }
-
-    override fun equals(other: Any?): Boolean {
-        return other is CheckpointSerializationFactory && other.scheme == this.scheme
-    }
-
-    override fun hashCode(): Int = scheme.hashCode()
-
-    private val _currentContext = ThreadLocal<CheckpointSerializationContext?>()
-
-    /**
-     * Change the current context inside the block to that supplied.
-     */
-    fun <T> withCurrentContext(context: CheckpointSerializationContext?, block: () -> T): T {
-        val priorContext = _currentContext.get()
-        if (context != null) _currentContext.set(context)
-        try {
-            return block()
-        } finally {
-            if (context != null) _currentContext.set(priorContext)
-        }
-    }
-
-    companion object {
-        val defaultFactory: CheckpointSerializationFactory get() = effectiveSerializationEnv.checkpointSerializationFactory
-    }
+    val CHECKPOINT_SERIALIZER get() = effectiveSerializationEnv.checkpointSerializer
 }
 
 @KeepForDJVM
 @DoNotImplement
-interface CheckpointSerializationScheme {
+interface CheckpointSerializer {
     @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: CheckpointSerializationContext): T
 
@@ -167,32 +104,36 @@ interface CheckpointSerializationContext {
 /*
  * Convenience extension method for deserializing a ByteSequence, utilising the default factory.
  */
-inline fun <reified T : Any> ByteSequence.checkpointDeserialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
-                                                                context: CheckpointSerializationContext): T {
-    return serializationFactory.deserialize(this, T::class.java, context)
+@JvmOverloads
+inline fun <reified T : Any> ByteSequence.checkpointDeserialize(
+        context: CheckpointSerializationContext = effectiveSerializationEnv.checkpointContext): T {
+    return effectiveSerializationEnv.checkpointSerializer.deserialize(this, T::class.java, context)
 }
 
 /**
  * Convenience extension method for deserializing SerializedBytes with type matching, utilising the default factory.
  */
-inline fun <reified T : Any> SerializedBytes<T>.checkpointDeserialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
-                                                                      context: CheckpointSerializationContext): T {
-    return serializationFactory.deserialize(this, T::class.java, context)
+@JvmOverloads
+inline fun <reified T : Any> SerializedBytes<T>.checkpointDeserialize(
+        context: CheckpointSerializationContext = effectiveSerializationEnv.checkpointContext): T {
+    return effectiveSerializationEnv.checkpointSerializer.deserialize(this, T::class.java, context)
 }
 
 /**
  * Convenience extension method for deserializing a ByteArray, utilising the default factory.
  */
-inline fun <reified T : Any> ByteArray.checkpointDeserialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
-                                                             context: CheckpointSerializationContext): T {
+@JvmOverloads
+inline fun <reified T : Any> ByteArray.checkpointDeserialize(
+        context: CheckpointSerializationContext = effectiveSerializationEnv.checkpointContext): T {
     require(isNotEmpty()) { "Empty bytes" }
-    return this.sequence().checkpointDeserialize(serializationFactory, context)
+    return this.sequence().checkpointDeserialize(context)
 }
 
 /**
  * Convenience extension method for serializing an object of type T, utilising the default factory.
  */
-fun <T : Any> T.checkpointSerialize(serializationFactory: CheckpointSerializationFactory = CheckpointSerializationFactory.defaultFactory,
-                                    context: CheckpointSerializationContext): SerializedBytes<T> {
-    return serializationFactory.serialize(this, context)
+@JvmOverloads
+fun <T : Any> T.checkpointSerialize(
+        context: CheckpointSerializationContext = effectiveSerializationEnv.checkpointContext): SerializedBytes<T> {
+    return effectiveSerializationEnv.checkpointSerializer.serialize(this, context)
 }

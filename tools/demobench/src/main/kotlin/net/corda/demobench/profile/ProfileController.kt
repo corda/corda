@@ -60,7 +60,7 @@ class ProfileController : Controller() {
                     log.info("Wrote: $file")
 
                     // Write all of the non-built-in cordapps.
-                    val cordappDir = (nodeDir / NodeConfig.cordappDirName).createDirectory()
+                    val cordappDir = (nodeDir / NodeConfig.CORDAPP_DIR_NAME).createDirectory()
                     cordappController.useCordappsFor(config).forEach {
                         val cordapp = it.copyToDirectory(cordappDir)
                         log.info("Wrote: $cordapp")

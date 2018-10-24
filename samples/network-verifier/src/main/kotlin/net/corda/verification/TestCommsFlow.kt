@@ -14,10 +14,9 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 
-
 @StartableByRPC
 @InitiatingFlow
-class TestCommsFlowInitiator(val x500Name: CordaX500Name? = null) : FlowLogic<List<String>>() {
+class TestCommsFlowInitiator(private val x500Name: CordaX500Name? = null) : FlowLogic<List<String>>() {
 
     object SENDING : ProgressTracker.Step("SENDING")
     object RECIEVED_ALL : ProgressTracker.Step("RECIEVED_ALL")
@@ -42,7 +41,7 @@ class TestCommsFlowInitiator(val x500Name: CordaX500Name? = null) : FlowLogic<Li
                     progressTracker.currentStep = RECIEVED_ALL
                 }
         val tx = TransactionBuilder(notary = serviceHub.networkMapCache.notaryIdentities.first())
-        tx.addOutputState(CommsTestState(responses, serviceHub.myInfo.legalIdentities.first()), CommsTestContract::class.qualifiedName!!)
+        tx.addOutputState(CommsTestState(responses, serviceHub.myInfo.legalIdentities.first()), CommsTestContract::class.java.name)
         tx.addCommand(CommsTestCommand, serviceHub.myInfo.legalIdentities.first().owningKey)
         val signedTx = serviceHub.signInitialTransaction(tx)
         subFlow(FinalityFlow(signedTx))
@@ -55,25 +54,21 @@ class TestCommsFlowInitiator(val x500Name: CordaX500Name? = null) : FlowLogic<Li
 }
 
 @InitiatedBy(TestCommsFlowInitiator::class)
-class TestCommsFlowResponder(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
+class TestCommsFlowResponder(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         otherSideSession.send("Hello from: " + serviceHub.myInfo.legalIdentities.first().name.toString())
     }
-
 }
 
 @CordaSerializable
 data class CommsTestState(val responses: List<String>, val issuer: AbstractParty) : ContractState {
     override val participants: List<AbstractParty>
         get() = listOf(issuer)
-
 }
-
 
 @CordaSerializable
 object CommsTestCommand : CommandData
-
 
 class CommsTestContract : Contract {
     override fun verify(tx: LedgerTransaction) {

@@ -53,7 +53,7 @@ class BlobInspectorTest {
     }
 
     private fun run(resourceName: String): String {
-        blobInspector.source = mutableListOf(javaClass.getResource(resourceName))
+        blobInspector.source = javaClass.getResource(resourceName)
         val writer = StringWriter()
         blobInspector.run(PrintStream(WriterOutputStream(writer, UTF_8)))
         val output = writer.toString()

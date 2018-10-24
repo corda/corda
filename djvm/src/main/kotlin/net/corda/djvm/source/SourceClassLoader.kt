@@ -2,6 +2,8 @@ package net.corda.djvm.source
 
 import net.corda.djvm.analysis.AnalysisContext
 import net.corda.djvm.analysis.ClassResolver
+import net.corda.djvm.analysis.ExceptionResolver.Companion.getDJVMExceptionOwner
+import net.corda.djvm.analysis.ExceptionResolver.Companion.isDJVMException
 import net.corda.djvm.analysis.SourceLocation
 import net.corda.djvm.code.asResourcePath
 import net.corda.djvm.messages.Message
@@ -61,7 +63,15 @@ abstract class AbstractSourceClassLoader(
      */
     override fun loadClass(name: String, resolve: Boolean): Class<*> {
         logger.trace("Loading class {}, resolve={}...", name, resolve)
-        val originalName = classResolver.reverseNormalized(name)
+        val originalName = classResolver.reverseNormalized(name).let { n ->
+            // A synthetic exception should be mapped back to its
+            // corresponding exception in the original hierarchy.
+            if (isDJVMException(n)) {
+                getDJVMExceptionOwner(n)
+            } else {
+                n
+            }
+        }
         return super.loadClass(originalName, resolve)
     }
 

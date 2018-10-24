@@ -17,9 +17,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWh
         val test = 10
         val a = A(test)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
-
-        require(obj.obj is A)
-        val amqpObj = obj.obj as A
+        val amqpObj = obj.obj
 
         assertEquals(test, amqpObj.a)
         assertEquals(1, obj.envelope.schema.types.size)
@@ -53,9 +51,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWh
         val a = A(test)
 
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
-
-        require(obj.obj is A)
-        val amqpObj = obj.obj as A
+        val amqpObj = obj.obj
 
         assertEquals(test, amqpObj.a)
         assertEquals(1, obj.envelope.schema.types.size)
@@ -83,9 +79,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWh
         val test = 10L
         val a = A(test)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
-
-        require(obj.obj is A)
-        val amqpObj = obj.obj as A
+        val amqpObj = obj.obj
 
         assertEquals(test, amqpObj.a)
         assertEquals(1, obj.envelope.schema.types.size)
@@ -118,9 +112,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWh
         val test = 10.toShort()
         val a = A(test)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
-
-        require(obj.obj is A)
-        val amqpObj = obj.obj as A
+        val amqpObj = obj.obj
 
         assertEquals(test, amqpObj.a)
         assertEquals(1, obj.envelope.schema.types.size)
@@ -153,9 +145,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWh
         val test = 10.0
         val a = A(test)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
-
-        require(obj.obj is A)
-        val amqpObj = obj.obj as A
+        val amqpObj = obj.obj
 
         assertEquals(test, amqpObj.a)
         assertEquals(1, obj.envelope.schema.types.size)
@@ -188,9 +178,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWh
         val test = 10.0F
         val a = A(test)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
-
-        require(obj.obj is A)
-        val amqpObj = obj.obj as A
+        val amqpObj = obj.obj
 
         assertEquals(test, amqpObj.a)
         assertEquals(1, obj.envelope.schema.types.size)

@@ -21,11 +21,6 @@
     required: false
     multiParam: false
     acceptableValues: []
-  - parameterName: "--install-shell-extensions"
-    parameterType: "boolean"
-    required: false
-    multiParam: false
-    acceptableValues: []
   - parameterName: "--log-to-console"
     parameterType: "boolean"
     required: false

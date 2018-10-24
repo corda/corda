@@ -112,18 +112,14 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         try {
             // Notary can be removed and then added again, that's why we need to perform this check.
             require((config.nodeConfig.notary != null).xor(notaryIdentity != null)) { "There must be exactly one notary in the network" }
-            config.nodeDir.createDirectories()
+            val cordappConfigDir = (config.cordappsDir / "config").createDirectories()
 
             // Install any built-in plugins into the working directory.
             cordappController.populate(config)
 
-            // Write this node's configuration file into its working directory.
-            val confFile = config.nodeDir / "node.conf"
-            confFile.writeText(config.nodeConfig.toNodeConfText())
-
-            // Write this node's configuration file into its working directory.
-            val webConfFile = config.nodeDir / "web-server.conf"
-            webConfFile.writeText(config.nodeConfig.toWebServerConfText())
+            (config.nodeDir / "node.conf").writeText(config.nodeConfig.toNodeConfText())
+            (config.nodeDir / "web-server.conf").writeText(config.nodeConfig.toWebServerConfText())
+            (cordappConfigDir / "${CordappController.FINANCE_CORDAPP_FILENAME}.conf").writeText(config.nodeConfig.toFinanceConfText())
 
             // Execute the Corda node
             val cordaEnv = System.getenv().toMutableMap().apply {

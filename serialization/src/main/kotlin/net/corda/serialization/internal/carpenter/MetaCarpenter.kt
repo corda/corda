@@ -32,6 +32,11 @@ data class CarpenterMetaSchema(
         val dependencies: MutableMap<String, Pair<TypeNotation, MutableList<String>>>,
         val dependsOn: MutableMap<String, MutableList<String>>) {
     companion object CarpenterSchemaConstructor {
+        fun buildWith(classLoader: ClassLoader, types: List<TypeNotation>) =
+            newInstance().apply {
+                types.forEach { buildFor(it, classLoader) }
+            }
+
         fun newInstance(): CarpenterMetaSchema {
             return CarpenterMetaSchema(mutableListOf(), mutableMapOf(), mutableMapOf())
         }

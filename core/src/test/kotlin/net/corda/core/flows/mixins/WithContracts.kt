@@ -51,9 +51,13 @@ interface WithContracts : WithMockNet {
 
     fun <T : UpgradedContract<*, *>> TestStartedNode.authoriseContractUpgrade(
         tx: SignedTransaction, toClass: KClass<T>) =
-        startFlow(
-            ContractUpgradeFlow.Authorise(tx.tx.outRef<ContractState>(0), toClass.java)
-        )
+        authoriseContractUpgrade(tx.tx.outRef(0), toClass)
+
+    fun <T : UpgradedContract<*, *>> TestStartedNode.authoriseContractUpgrade(
+            stateAndRef: StateAndRef<ContractState>, toClass: KClass<T>) =
+            startFlow(
+                    ContractUpgradeFlow.Authorise(stateAndRef, toClass.java)
+            )
 
     fun TestStartedNode.deauthoriseContractUpgrade(tx: SignedTransaction) = startFlow(
         ContractUpgradeFlow.Deauthorise(tx.tx.outRef<ContractState>(0).ref)

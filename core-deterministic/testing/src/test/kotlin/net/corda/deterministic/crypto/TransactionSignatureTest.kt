@@ -37,7 +37,7 @@ class TransactionSignatureTest {
 
         // Sign the meta object.
         val transactionSignature: TransactionSignature = CheatingSecurityProvider().use {
-            keyPair.sign(signableData)
+            CryptoSignUtils.doSign(keyPair, signableData)
         }
 
         // Check auto-verification.
@@ -52,7 +52,7 @@ class TransactionSignatureTest {
     fun `Signature metadata full failure clearData has changed`() {
         val signableData = SignableData(testBytes.sha256(), SignatureMetadata(1, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
         val transactionSignature = CheatingSecurityProvider().use {
-            keyPair.sign(signableData)
+            CryptoSignUtils.doSign(keyPair, signableData)
         }
         Crypto.doVerify((testBytes + testBytes).sha256(), transactionSignature)
     }
@@ -137,7 +137,7 @@ class TransactionSignatureTest {
     private fun signOneTx(txId: SecureHash, keyPair: KeyPair): TransactionSignature {
         val signableData = SignableData(txId, SignatureMetadata(3, Crypto.findSignatureScheme(keyPair.public).schemeNumberID))
         return CheatingSecurityProvider().use {
-            keyPair.sign(signableData)
+            CryptoSignUtils.doSign(keyPair, signableData)
         }
     }
 }

@@ -63,7 +63,7 @@ be used to supplement or replace the HTTP network map. If the same node is adver
 latest one is taken.
 
 On startup the node generates its own signed node info file, filename of the format ``nodeInfo-${hash}``. It can also be
-generated using the ``--just-generate-node-info`` command line flag without starting the node. To create a simple network
+generated using the ``generate-node-info`` sub-command without starting the node. To create a simple network
 without the HTTP network map service simply place this file in the ``additional-node-infos`` directory of every node that's
 part of this network. For example, a simple way to do this is to use rsync.
 
@@ -192,7 +192,7 @@ you either need to run from the command line:
 
 .. code-block:: shell
 
-    java -jar corda.jar --clear-network-map-cache
+    java -jar corda.jar clear-network-cache
 
 or call RPC method `clearNetworkMapCache` (it can be invoked through the node's shell as `run clearNetworkMapCache`, for more information on
 how to log into node's shell see :doc:`shell`). As we are testing and hardening the implementation this step shouldn't be required.

@@ -3,6 +3,9 @@ package net.corda.djvm.rewiring
 import net.corda.djvm.SandboxConfiguration
 import net.corda.djvm.analysis.AnalysisContext
 import net.corda.djvm.analysis.ClassAndMemberVisitor
+import net.corda.djvm.analysis.ExceptionResolver.Companion.getDJVMExceptionOwner
+import net.corda.djvm.analysis.ExceptionResolver.Companion.isDJVMException
+import net.corda.djvm.code.asPackagePath
 import net.corda.djvm.code.asResourcePath
 import net.corda.djvm.references.ClassReference
 import net.corda.djvm.source.ClassSource
@@ -18,7 +21,7 @@ import net.corda.djvm.validation.RuleValidator
 class SandboxClassLoader(
         configuration: SandboxConfiguration,
         private val context: AnalysisContext
-) : ClassLoader(null) {
+) : ClassLoader() {
 
     private val analysisConfiguration = configuration.analysisConfiguration
 
@@ -33,13 +36,8 @@ class SandboxClassLoader(
     /**
      * The analyzer used to traverse the class hierarchy.
      */
-    val analyzer: ClassAndMemberVisitor
+    private val analyzer: ClassAndMemberVisitor
         get() = ruleValidator
-
-    /**
-     * Set of classes that should be left untouched due to pinning.
-     */
-    private val pinnedClasses = analysisConfiguration.pinnedClasses
 
     /**
      * Set of classes that should be left untouched due to whitelisting.
@@ -62,6 +60,29 @@ class SandboxClassLoader(
     private val rewriter: ClassRewriter = ClassRewriter(configuration, supportingClassLoader)
 
     /**
+     * We need to load this class up front, so that we can identify sandboxed exception classes.
+     */
+    private val throwableClass: Class<*>
+
+    init {
+        // Bootstrap the loading of the sandboxed Throwable class.
+        loadClassAndBytes(ClassSource.fromClassName("sandbox.java.lang.Object"), context)
+        loadClassAndBytes(ClassSource.fromClassName("sandbox.java.lang.StackTraceElement"), context)
+        throwableClass = loadClassAndBytes(ClassSource.fromClassName("sandbox.java.lang.Throwable"), context).type
+    }
+
+    /**
+     * Given a class name, provide its corresponding [LoadedClass] for the sandbox.
+     */
+    fun loadForSandbox(name: String, context: AnalysisContext): LoadedClass {
+        return loadClassAndBytes(ClassSource.fromClassName(analysisConfiguration.classResolver.resolveNormalized(name)), context)
+    }
+
+    fun loadForSandbox(source: ClassSource, context: AnalysisContext): LoadedClass {
+        return loadForSandbox(source.qualifiedClassName, context)
+    }
+
+    /**
      * Load the class with the specified binary name.
      *
      * @param name The binary name of the class.
@@ -69,69 +90,100 @@ class SandboxClassLoader(
      *
      * @return The resulting <tt>Class</tt> object.
      */
+    @Throws(ClassNotFoundException::class)
     override fun loadClass(name: String, resolve: Boolean): Class<*> {
-        return loadClassAndBytes(ClassSource.fromClassName(name), context).type
+        var clazz = findLoadedClass(name)
+        if (clazz == null) {
+            val source = ClassSource.fromClassName(name)
+            clazz = if (analysisConfiguration.isSandboxClass(source.internalClassName)) {
+                loadSandboxClass(source, context).type
+            } else {
+                super.loadClass(name, resolve)
+            }
+        }
+        if (resolve) {
+            resolveClass(clazz)
+        }
+        return clazz
+    }
+
+    private fun loadSandboxClass(source: ClassSource, context: AnalysisContext): LoadedClass {
+        return if (isDJVMException(source.internalClassName)) {
+            /**
+             * We need to load a DJVMException's owner class before we can create
+             * its wrapper exception. And loading the owner should also create the
+             * wrapper class automatically.
+             */
+            loadedClasses.getOrElse(source.internalClassName) {
+                loadSandboxClass(ClassSource.fromClassName(getDJVMExceptionOwner(source.qualifiedClassName)), context)
+                loadedClasses[source.internalClassName]
+            } ?: throw ClassNotFoundException(source.qualifiedClassName)
+        } else {
+            loadClassAndBytes(source, context).also { clazz ->
+                /**
+                 * Check whether we've just loaded an unpinned sandboxed throwable class.
+                 * If we have, we may also need to synthesise a throwable wrapper for it.
+                 */
+                if (throwableClass.isAssignableFrom(clazz.type) && !analysisConfiguration.isJvmException(source.internalClassName)) {
+                    logger.debug("Generating synthetic throwable for ${source.qualifiedClassName}")
+                    loadWrapperFor(clazz.type)
+                }
+            }
+        }
     }
 
     /**
      * Load the class with the specified binary name.
      *
-     * @param source The class source, including the binary name of the class.
+     * @param request The class request, including the binary name of the class.
      * @param context The context in which the analysis is conducted.
      *
      * @return The resulting <tt>Class</tt> object and its byte code representation.
      */
-    fun loadClassAndBytes(source: ClassSource, context: AnalysisContext): LoadedClass {
-        logger.debug("Loading class {}, origin={}...", source.qualifiedClassName, source.origin)
-        val name = analysisConfiguration.classResolver.reverseNormalized(source.qualifiedClassName)
-        val resolvedName = analysisConfiguration.classResolver.resolveNormalized(name)
+    private fun loadClassAndBytes(request: ClassSource, context: AnalysisContext): LoadedClass {
+        logger.debug("Loading class {}, origin={}...", request.qualifiedClassName, request.origin)
+        val requestedPath = request.internalClassName
+        val sourceName = analysisConfiguration.classResolver.reverseNormalized(request.qualifiedClassName)
+        val resolvedName = analysisConfiguration.classResolver.resolveNormalized(sourceName)
 
         // Check if the class has already been loaded.
-        val loadedClass = loadedClasses[name]
+        val loadedClass = loadedClasses[requestedPath]
         if (loadedClass != null) {
-            logger.trace("Class {} already loaded", source.qualifiedClassName)
+            logger.trace("Class {} already loaded", request.qualifiedClassName)
             return loadedClass
+        } else if (analysisConfiguration.isPinnedClass(requestedPath)) {
+            logger.debug("Class {} is loaded unmodified", request.qualifiedClassName)
+            return loadUnmodifiedClass(requestedPath)
         }
 
-        // Load the byte code for the specified class.
-        val reader = supportingClassLoader.classReader(name, context, source.origin)
+        val byteCode = if (analysisConfiguration.isTemplateClass(requestedPath)) {
+            loadUnmodifiedByteCode(requestedPath)
+        } else {
+            // Load the byte code for the specified class.
+            val reader = supportingClassLoader.classReader(sourceName, context, request.origin)
 
-        // Analyse the class if not matching the whitelist.
-        val readClassName = reader.className
-        if (!analysisConfiguration.whitelist.matches(readClassName)) {
-            logger.trace("Class {} does not match with the whitelist", source.qualifiedClassName)
-            logger.trace("Analyzing class {}...", source.qualifiedClassName)
-            analyzer.analyze(reader, context)
-        }
-
-        // Check if the class should be left untouched.
-        val qualifiedName = name.asResourcePath
-        if (qualifiedName in pinnedClasses) {
-            logger.trace("Class {} is marked as pinned", source.qualifiedClassName)
-            val pinnedClasses = LoadedClass(
-                    supportingClassLoader.loadClass(name),
-                    ByteCode(ByteArray(0), false)
-            )
-            loadedClasses[name] = pinnedClasses
-            if (source.origin != null) {
-                context.recordClassOrigin(name, ClassReference(source.origin))
+            // Analyse the class if not matching the whitelist.
+            val readClassName = reader.className
+            if (!analysisConfiguration.whitelist.matches(readClassName)) {
+                logger.trace("Class {} does not match with the whitelist", request.qualifiedClassName)
+                logger.trace("Analyzing class {}...", request.qualifiedClassName)
+                analyzer.analyze(reader, context)
             }
-            return pinnedClasses
-        }
 
-        // Check if any errors were found during analysis.
-        if (context.messages.errorCount > 0) {
-            logger.trace("Errors detected after analyzing class {}", source.qualifiedClassName)
-            throw SandboxClassLoadingException(context)
-        }
+            // Check if any errors were found during analysis.
+            if (context.messages.errorCount > 0) {
+                logger.debug("Errors detected after analyzing class {}", request.qualifiedClassName)
+                throw SandboxClassLoadingException(context)
+            }
 
-        // Transform the class definition and byte code in accordance with provided rules.
-        val byteCode = rewriter.rewrite(reader, context)
+            // Transform the class definition and byte code in accordance with provided rules.
+            rewriter.rewrite(reader, context)
+        }
 
         // Try to define the transformed class.
-        val clazz = try {
+        val clazz: Class<*> = try {
             when {
-                whitelistedClasses.matches(qualifiedName) -> supportingClassLoader.loadClass(name)
+                whitelistedClasses.matches(sourceName.asResourcePath) -> supportingClassLoader.loadClass(sourceName)
                 else -> defineClass(resolvedName, byteCode.bytes, 0, byteCode.bytes.size)
             }
         } catch (exception: SecurityException) {
@@ -140,19 +192,40 @@ class SandboxClassLoader(
 
         // Cache transformed class.
         val classWithByteCode = LoadedClass(clazz, byteCode)
-        loadedClasses[name] = classWithByteCode
-        if (source.origin != null) {
-            context.recordClassOrigin(name, ClassReference(source.origin))
+        loadedClasses[requestedPath] = classWithByteCode
+        if (request.origin != null) {
+            context.recordClassOrigin(sourceName, ClassReference(request.origin))
         }
 
         logger.debug("Loaded class {}, bytes={}, isModified={}",
-                source.qualifiedClassName, byteCode.bytes.size, byteCode.isModified)
+                request.qualifiedClassName, byteCode.bytes.size, byteCode.isModified)
 
         return classWithByteCode
     }
 
+    private fun loadUnmodifiedByteCode(internalClassName: String): ByteCode {
+        return ByteCode((getSystemClassLoader().getResourceAsStream("$internalClassName.class")
+                ?: throw ClassNotFoundException(internalClassName)).readBytes(), false)
+    }
+
+    private fun loadUnmodifiedClass(className: String): LoadedClass {
+        return LoadedClass(supportingClassLoader.loadClass(className), UNMODIFIED).apply {
+            loadedClasses[className] = this
+        }
+    }
+
+    private fun loadWrapperFor(throwable: Class<*>): LoadedClass {
+        val className = analysisConfiguration.exceptionResolver.getThrowableName(throwable)
+        return loadedClasses.getOrPut(className) {
+            val superName = analysisConfiguration.exceptionResolver.getThrowableSuperName(throwable)
+            val byteCode = ThrowableWrapperFactory.toByteCode(className, superName)
+            LoadedClass(defineClass(className.asPackagePath, byteCode.bytes, 0, byteCode.bytes.size), byteCode)
+        }
+    }
+
     private companion object {
         private val logger = loggerFor<SandboxClassLoader>()
+        private val UNMODIFIED = ByteCode(ByteArray(0), false)
     }
 
 }

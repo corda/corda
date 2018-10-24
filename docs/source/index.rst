@@ -14,7 +14,7 @@ follow our :doc:`quickstart guide </quickstart-index>`.
 
 If you want to start coding on Corda, then familiarise yourself with the :doc:`key concepts </key-concepts>`, then read
 our :doc:`Hello, World! tutorial </hello-world-introduction>`. For the background behind Corda, read the non-technical
-`introductory white paper`_ or for more detail, the `technical white paper`_.
+`platform white paper`_ or for more detail, the `technical white paper`_.
 
 If you have questions or comments, then get in touch on `Slack <https://slack.corda.net/>`_ or ask a question on
 `Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ .
@@ -24,7 +24,7 @@ We look forward to seeing what you can do with Corda!
 .. note:: You can read this site offline. Either `download the PDF`_ or download the Corda source code, run ``gradle buildDocs`` and you will have
    a copy of this site in the ``docs/build/html`` directory.
 
-.. _`introductory white paper`: _static/corda-introductory-whitepaper.pdf
+.. _`platform white paper`: _static/corda-platform-whitepaper.pdf
 .. _`technical white paper`: _static/corda-technical-whitepaper.pdf
 .. _`download the PDF`: _static/corda-developer-site.pdf
 
@@ -79,9 +79,11 @@ We look forward to seeing what you can do with Corda!
    design/kafka-notary/design.md
    design/monitoring-management/design.md
    design/sgx-integration/design.md
+   design/reference-states/design.md
    design/sgx-infrastructure/design.md
    design/threat-model/corda-threat-model.md
    design/data-model-upgrades/signature-constraints.md
+   design/data-model-upgrades/package-namespace-ownership.md
 
 .. conditional-toctree::
    :caption: Participate

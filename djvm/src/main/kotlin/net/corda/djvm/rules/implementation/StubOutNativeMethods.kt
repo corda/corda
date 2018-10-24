@@ -23,7 +23,7 @@ class StubOutNativeMethods : MemberDefinitionProvider {
 
     private fun writeExceptionMethodBody(emitter: EmitterModule): Unit = with(emitter) {
         lineNumber(0)
-        throwException(RuleViolationError::class.java, "Native method has been deleted")
+        throwException<RuleViolationError>("Native method has been deleted")
     }
 
     private fun writeStubMethodBody(emitter: EmitterModule): Unit = with(emitter) {

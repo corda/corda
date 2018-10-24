@@ -221,7 +221,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executeAsyncOperation(fiber: FlowFiber, action: Action.ExecuteAsyncOperation) {
-        val operationFuture = action.operation.execute()
+        val operationFuture = action.operation.execute(action.deduplicationId)
         operationFuture.thenMatch(
                 success = { result ->
                     fiber.scheduleEvent(Event.AsyncOperationCompletion(result))

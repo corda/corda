@@ -15,13 +15,12 @@ import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.TrustedAuthorityNotaryService
 import net.corda.core.internal.notary.UniquenessProvider
-import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.CordaService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.seconds
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
@@ -81,15 +80,16 @@ class TimedFlowTests {
 
         private fun startClusterAndNode(mockNet: InternalMockNetwork): Pair<Party, TestStartedNode> {
             val replicaIds = (0 until CLUSTER_SIZE)
+            val serviceLegalName = CordaX500Name("Custom Notary", "Zurich", "CH")
             val notaryIdentity = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
                     replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
-                    CordaX500Name("Custom Notary", "Zurich", "CH"))
+                    serviceLegalName)
 
             val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryIdentity, true))))
             val notaryConfig = mock<NotaryConfig> {
-                whenever(it.custom).thenReturn(true)
-                whenever(it.isClusterConfig).thenReturn(true)
+                whenever(it.serviceLegalName).thenReturn(serviceLegalName)
                 whenever(it.validating).thenReturn(true)
+                whenever(it.className).thenReturn(TestNotaryService::class.java.name)
             }
 
             val notaryNodes = (0 until CLUSTER_SIZE).map {
@@ -176,8 +176,7 @@ class TimedFlowTests {
         }.bufferUntilSubscribed().toBlocking().toFuture()
     }
 
-    @CordaService
-    private class TestNotaryService(override val services: AppServiceHub, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
+    private class TestNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
         override val uniquenessProvider = mock<UniquenessProvider>()
         override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = TestNotaryFlow(otherPartySession, this)
         override fun start() {}

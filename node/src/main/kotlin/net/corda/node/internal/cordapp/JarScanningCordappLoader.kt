@@ -1,8 +1,7 @@
 package net.corda.node.internal.cordapp
 
-import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
-import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
-import net.corda.core.contracts.warnContractWithoutConstraintPropagation
+import io.github.classgraph.ClassGraph
+import io.github.classgraph.ScanResult
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -10,6 +9,8 @@ import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.CordappInfoResolver
+import net.corda.core.internal.notary.NotaryService
+import net.corda.core.internal.notary.TrustedAuthorityNotaryService
 import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -18,7 +19,6 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
-import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.serialization.internal.DefaultWhitelist
 import org.apache.commons.collections4.map.LRUMap
@@ -26,6 +26,7 @@ import java.lang.reflect.Modifier
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
+import java.security.cert.X509Certificate
 import java.util.*
 import java.util.jar.JarInputStream
 import kotlin.reflect.KClass
@@ -37,9 +38,13 @@ import kotlin.streams.toList
  * @property cordappJarPaths The classpath of cordapp JARs
  */
 class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>,
-                                                   private val versionInfo: VersionInfo = VersionInfo.UNKNOWN) : CordappLoaderTemplate() {
+                                                   private val versionInfo: VersionInfo = VersionInfo.UNKNOWN,
+                                                   extraCordapps: List<CordappImpl>,
+                                                   private val blacklistedCordappSigners: List<X509Certificate> = emptyList()) : CordappLoaderTemplate() {
 
-    override val cordapps: List<CordappImpl> by lazy { loadCordapps() + coreCordapp }
+    override val cordapps: List<CordappImpl> by lazy {
+        loadCordapps() + extraCordapps
+    }
 
     override val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
 
@@ -57,11 +62,15 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         /**
          * Creates a CordappLoader from multiple directories.
          *
-         * @param corDappDirectories Directories used to scan for CorDapp JARs.
+         * @param cordappDirs Directories used to scan for CorDapp JARs.
          */
-        fun fromDirectories(corDappDirectories: Iterable<Path>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): JarScanningCordappLoader {
-            logger.info("Looking for CorDapps in ${corDappDirectories.distinct().joinToString(", ", "[", "]")}")
-            return JarScanningCordappLoader(corDappDirectories.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() }, versionInfo)
+        fun fromDirectories(cordappDirs: Collection<Path>,
+                            versionInfo: VersionInfo = VersionInfo.UNKNOWN,
+                            extraCordapps: List<CordappImpl> = emptyList(),
+                            blacklistedCerts: List<X509Certificate> = emptyList()): JarScanningCordappLoader {
+            logger.info("Looking for CorDapps in ${cordappDirs.distinct().joinToString(", ", "[", "]")}")
+            val paths = cordappDirs.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() }
+            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, blacklistedCerts)
         }
 
         /**
@@ -69,8 +78,9 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
          *
          * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection.
          */
-        fun fromJarUrls(scanJars: List<URL>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): JarScanningCordappLoader {
-            return JarScanningCordappLoader(scanJars.map { it.restricted() }, versionInfo)
+        fun fromJarUrls(scanJars: List<URL>, versionInfo: VersionInfo = VersionInfo.UNKNOWN, extraCordapps: List<CordappImpl> = emptyList(), blacklistedCerts: List<X509Certificate> = emptyList()): JarScanningCordappLoader {
+            val paths = scanJars.map { it.restricted() }
+            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, blacklistedCerts)
         }
 
         private fun URL.restricted(rootPackageName: String? = null) = RestrictedURL(this, rootPackageName)
@@ -86,48 +96,38 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 }
             }
         }
-
-        /** A list of the core RPC flows present in Corda */
-        private val coreRPCFlows = listOf(
-                ContractUpgradeFlow.Initiate::class.java,
-                ContractUpgradeFlow.Authorise::class.java,
-                ContractUpgradeFlow.Deauthorise::class.java)
     }
-
-    /** A Cordapp representing the core package which is not scanned automatically. */
-    @VisibleForTesting
-    internal val coreCordapp = CordappImpl(
-            contractClassNames = listOf(),
-            initiatedFlows = listOf(),
-            rpcFlows = coreRPCFlows,
-            serviceFlows = listOf(),
-            schedulableFlows = listOf(),
-            services = listOf(),
-            serializationWhitelists = listOf(),
-            serializationCustomSerializers = listOf(),
-            customSchemas = setOf(),
-            info = CordappImpl.Info("corda-core", versionInfo.vendor, versionInfo.releaseVersion, 1, versionInfo.platformVersion),
-            allFlows = listOf(),
-            jarPath = ContractUpgradeFlow.javaClass.location, // Core JAR location
-            jarHash = SecureHash.allOnesHash
-    )
-
     private fun loadCordapps(): List<CordappImpl> {
-        val cordapps = cordappJarPaths.map { scanCordapp(it).toCordapp(it) }
+        val cordapps = cordappJarPaths
+                .map { url -> scanCordapp(url).use { it.toCordapp(url) } }
                 .filter {
                     if (it.info.minimumPlatformVersion > versionInfo.platformVersion) {
-                        logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it requires minimum platform version ${it.info.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
+                        logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it requires minimum " +
+                                "platform version ${it.info.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
                         false
                     } else {
                         true
                     }
                 }
+                .filter {
+                    if (blacklistedCordappSigners.isEmpty()) {
+                        true //Nothing blacklisted, no need to check
+                    } else {
+                        val certificates = it.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectCertificates)
+                        if (certificates.isEmpty() || (certificates - blacklistedCordappSigners).isNotEmpty())
+                            true // Cordapp is not signed or it is signed by at least one non-blacklisted certificate
+                        else {
+                            logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it is signed by development key(s) only: " +
+                                    "${certificates.intersect(blacklistedCordappSigners).map { it.publicKey }}.")
+                            false
+                        }
+                    }
+                }
         cordapps.forEach { CordappInfoResolver.register(it.cordappClasses, it.info) }
         return cordapps
     }
-
     private fun RestrictedScanResult.toCordapp(url: RestrictedURL): CordappImpl {
-        val info = url.url.openStream().let(::JarInputStream).use { it.manifest }.toCordappInfo(CordappImpl.jarName(url.url))
+        val info = url.url.openStream().let(::JarInputStream).use { it.manifest?.toCordappInfo(CordappImpl.jarName(url.url)) ?: CordappImpl.Info.UNKNOWN }
         return CordappImpl(
                 findContractClassNames(this),
                 findInitiatedFlows(this),
@@ -141,8 +141,19 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 findAllFlows(this),
                 url.url,
                 info,
-                getJarHash(url.url)
+                getJarHash(url.url),
+                findNotaryService(this)
         )
+    }
+
+    private fun findNotaryService(scanResult: RestrictedScanResult): Class<out NotaryService>? {
+        // Note: we search for implementations of both NotaryService and TrustedAuthorityNotaryService as
+        // the scanner won't find subclasses deeper down the hierarchy if any intermediate class is not
+        // present in the CorDapp.
+        val result = scanResult.getClassesWithSuperclass(NotaryService::class) +
+                scanResult.getClassesWithSuperclass(TrustedAuthorityNotaryService::class)
+        logger.info("Found notary service CorDapp implementations: " + result.joinToString(", "))
+        return result.firstOrNull()
     }
 
     private fun getJarHash(url: URL): SecureHash.SHA256 = url.openStream().readFully().sha256()
@@ -153,17 +164,6 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun findInitiatedFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, InitiatedBy::class)
-                // First group by the initiating flow class in case there are multiple mappings
-                .groupBy { it.requireAnnotation<InitiatedBy>().value.java }
-                .map { (initiatingFlow, initiatedFlows) ->
-                    val sorted = initiatedFlows.sortedWith(FlowTypeHierarchyComparator(initiatingFlow))
-                    if (sorted.size > 1) {
-                        logger.warn("${initiatingFlow.name} has been specified as the inititating flow by multiple flows " +
-                                "in the same type hierarchy: ${sorted.joinToString { it.name }}. Choosing the most " +
-                                "specific sub-type for registration: ${sorted[0].name}.")
-                    }
-                    sorted[0]
-                }
     }
 
     private fun Class<out FlowLogic<*>>.isUserInvokable(): Boolean {
@@ -205,7 +205,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     }
 
     private fun findCustomSchemas(scanResult: RestrictedScanResult): Set<MappedSchema> {
-        return scanResult.getClassesWithSuperclass(MappedSchema::class).toSet()
+        return scanResult.getClassesWithSuperclass(MappedSchema::class).instances().toSet()
     }
 
     private val cachedScanResult = LRUMap<RestrictedURL, RestrictedScanResult>(1000)
@@ -213,21 +213,12 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     private fun scanCordapp(cordappJarPath: RestrictedURL): RestrictedScanResult {
         logger.info("Scanning CorDapp in ${cordappJarPath.url}")
         return cachedScanResult.computeIfAbsent(cordappJarPath) {
-            RestrictedScanResult(FastClasspathScanner().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).scan(), cordappJarPath.qualifiedNamePrefix)
+            val scanResult = ClassGraph().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).enableAllInfo().scan()
+            RestrictedScanResult(scanResult, cordappJarPath.qualifiedNamePrefix)
         }
     }
 
-    private class FlowTypeHierarchyComparator(val initiatingFlow: Class<out FlowLogic<*>>) : Comparator<Class<out FlowLogic<*>>> {
-        override fun compare(o1: Class<out FlowLogic<*>>, o2: Class<out FlowLogic<*>>): Int {
-            return when {
-                o1 == o2 -> 0
-                o1.isAssignableFrom(o2) -> 1
-                o2.isAssignableFrom(o1) -> -1
-                else -> throw IllegalArgumentException("${initiatingFlow.name} has been specified as the initiating flow by " +
-                        "both ${o1.name} and ${o2.name}")
-            }
-        }
-    }
+
 
     private fun <T : Any> loadClass(className: String, type: KClass<T>): Class<out T>? {
         return try {
@@ -246,41 +237,53 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         val qualifiedNamePrefix: String get() = rootPackageName?.let { "$it." } ?: ""
     }
 
-    private inner class RestrictedScanResult(private val scanResult: ScanResult, private val qualifiedNamePrefix: String) {
+    private fun <T : Any> List<Class<out T>>.instances(): List<T> {
+        return map { it.kotlin.objectOrNewInstance() }
+    }
+
+    private inner class RestrictedScanResult(private val scanResult: ScanResult, private val qualifiedNamePrefix: String) : AutoCloseable {
         fun getNamesOfClassesImplementing(type: KClass<*>): List<String> {
-            return scanResult.getNamesOfClassesImplementing(type.java)
-                    .filter { it.startsWith(qualifiedNamePrefix) }
+            return scanResult.getClassesImplementing(type.java.name).names.filter { it.startsWith(qualifiedNamePrefix) }
         }
 
-        fun <T : Any> getClassesWithSuperclass(type: KClass<T>): List<T> {
-            return scanResult.getNamesOfSubclassesOf(type.java)
+        fun <T : Any> getClassesWithSuperclass(type: KClass<T>): List<Class<out T>> {
+            return scanResult
+                    .getSubclasses(type.java.name)
+                    .names
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
-                    .filterNot { Modifier.isAbstract(it.modifiers) }
-                    .map { it.kotlin.objectOrNewInstance() }
+                    .filterNot { it.isAbstractClass }
         }
 
         fun <T : Any> getClassesImplementing(type: KClass<T>): List<T> {
-            return scanResult.getNamesOfClassesImplementing(type.java)
+            return scanResult
+                    .getClassesImplementing(type.java.name)
+                    .names
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
-                    .filterNot { Modifier.isAbstract(it.modifiers) }
+                    .filterNot { it.isAbstractClass }
                     .map { it.kotlin.objectOrNewInstance() }
         }
 
         fun <T : Any> getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {
-            return scanResult.getNamesOfClassesWithAnnotation(annotation.java)
+            return scanResult
+                    .getClassesWithAnnotation(annotation.java.name)
+                    .names
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
                     .filterNot { Modifier.isAbstract(it.modifiers) }
         }
 
         fun <T : Any> getConcreteClassesOfType(type: KClass<T>): List<Class<out T>> {
-            return scanResult.getNamesOfSubclassesOf(type.java)
+            return scanResult
+                    .getSubclasses(type.java.name)
+                    .names
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
-                    .filterNot { Modifier.isAbstract(it.modifiers) }
+                    .filterNot { it.isAbstractClass }
         }
+
+        override fun close() = scanResult.close()
     }
 }
 

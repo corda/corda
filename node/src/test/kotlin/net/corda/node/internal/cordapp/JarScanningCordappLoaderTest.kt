@@ -2,15 +2,13 @@ package net.corda.node.internal.cordapp
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
+import net.corda.core.internal.packageName
 import net.corda.node.VersionInfo
-import net.corda.node.cordapp.CordappLoader
-import net.corda.nodeapi.internal.PLATFORM_VERSION
-import net.corda.testing.node.internal.cordappsForPackages
-import net.corda.testing.node.internal.getTimestampAsDirectoryName
-import net.corda.testing.node.internal.packageInDirectory
+import net.corda.testing.node.internal.TestCordappDirectories
+import net.corda.testing.node.internal.cordappForPackages
+import net.corda.nodeapi.internal.DEV_CERTIFICATES
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import java.nio.file.Path
 import java.nio.file.Paths
 
 @InitiatingFlow
@@ -39,16 +37,15 @@ class DummyRPCFlow : FlowLogic<Unit>() {
 
 class JarScanningCordappLoaderTest {
     private companion object {
-        const val testScanPackage = "net.corda.node.internal.cordapp"
         const val isolatedContractId = "net.corda.finance.contracts.isolated.AnotherDummyContract"
         const val isolatedFlowName = "net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator"
     }
 
     @Test
-    fun `test that classes that aren't in cordapps aren't loaded`() {
+    fun `classes that aren't in cordapps aren't loaded`() {
         // Basedir will not be a corda node directory so the dummy flow shouldn't be recognised as a part of a cordapp
         val loader = JarScanningCordappLoader.fromDirectories(listOf(Paths.get(".")))
-        assertThat(loader.cordapps).containsOnly(loader.coreCordapp)
+        assertThat(loader.cordapps).isEmpty()
     }
 
     @Test
@@ -56,12 +53,11 @@ class JarScanningCordappLoaderTest {
         val isolatedJAR = JarScanningCordappLoaderTest::class.java.getResource("isolated.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR))
 
-        val actual = loader.cordapps.toTypedArray()
-        assertThat(actual).hasSize(2)
+        assertThat(loader.cordapps).hasSize(1)
 
-        val actualCordapp = actual.single { it != loader.coreCordapp }
+        val actualCordapp = loader.cordapps.single()
         assertThat(actualCordapp.contractClassNames).isEqualTo(listOf(isolatedContractId))
-        assertThat(actualCordapp.initiatedFlows.single().name).isEqualTo("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Acceptor")
+        assertThat(actualCordapp.initiatedFlows.first().name).isEqualTo("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Acceptor")
         assertThat(actualCordapp.rpcFlows).isEmpty()
         assertThat(actualCordapp.schedulableFlows).isEmpty()
         assertThat(actualCordapp.services).isEmpty()
@@ -72,30 +68,16 @@ class JarScanningCordappLoaderTest {
 
     @Test
     fun `flows are loaded by loader`() {
-        val loader = cordappLoaderForPackages(listOf(testScanPackage))
+        val dir = TestCordappDirectories.getJarDirectory(cordappForPackages(javaClass.packageName))
+        val loader = JarScanningCordappLoader.fromDirectories(listOf(dir))
 
-        val actual = loader.cordapps.toTypedArray()
-        // One core cordapp, one cordapp from this source tree. In gradle it will also pick up the node jar.
-        assertThat(actual.size == 2 || actual.size == 3).isTrue()
+        // One cordapp from this source tree. In gradle it will also pick up the node jar.
+        assertThat(loader.cordapps).isNotEmpty
 
-        val actualCordapp = actual.single { !it.initiatedFlows.isEmpty() }
-        assertThat(actualCordapp.initiatedFlows).first().hasSameClassAs(DummyFlow::class.java)
+        val actualCordapp = loader.cordapps.single { !it.initiatedFlows.isEmpty() }
+        assertThat(actualCordapp.initiatedFlows.first()).hasSameClassAs(DummyFlow::class.java)
         assertThat(actualCordapp.rpcFlows).first().hasSameClassAs(DummyRPCFlow::class.java)
         assertThat(actualCordapp.schedulableFlows).first().hasSameClassAs(DummySchedulableFlow::class.java)
-    }
-
-    @Test
-    fun `duplicate packages are ignored`() {
-        val loader = cordappLoaderForPackages(listOf(testScanPackage, testScanPackage))
-        val cordapps = loader.cordapps.filter { LoaderTestFlow::class.java in it.initiatedFlows }
-        assertThat(cordapps).hasSize(1)
-    }
-
-    @Test
-    fun `sub-packages are ignored`() {
-        val loader = cordappLoaderForPackages(listOf("net.corda.core", testScanPackage))
-        val cordapps = loader.cordapps.filter { LoaderTestFlow::class.java in it.initiatedFlows }
-        assertThat(cordapps).hasSize(1)
     }
 
     // This test exists because the appClassLoader is used by serialisation and we need to ensure it is the classloader
@@ -113,7 +95,7 @@ class JarScanningCordappLoaderTest {
     fun `cordapp classloader sets target and min version to 1 if not specified`() {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/no-min-or-target-version.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN)
-        loader.cordapps.filter { !it.info.shortName.equals("corda-core") }.forEach {
+        loader.cordapps.forEach {
             assertThat(it.info.targetPlatformVersion).isEqualTo(1)
             assertThat(it.info.minimumPlatformVersion).isEqualTo(1)
         }
@@ -125,8 +107,7 @@ class JarScanningCordappLoaderTest {
         // make sure classloader extracts correct values
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN)
-        // exclude the core cordapp
-        val cordapp = loader.cordapps.filter { it.cordappClasses.contains("net.corda.core.internal.cordapp.CordappImpl")}.single()
+        val cordapp = loader.cordapps.first()
         assertThat(cordapp.info.targetPlatformVersion).isEqualTo(3)
         assertThat(cordapp.info.minimumPlatformVersion).isEqualTo(2)
     }
@@ -137,46 +118,50 @@ class JarScanningCordappLoaderTest {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-no-target.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN)
         // exclude the core cordapp
-        val cordapp = loader.cordapps.filter { it.cordappClasses.contains("net.corda.core.internal.cordapp.CordappImpl")}.single()
+        val cordapp = loader.cordapps.single { it.cordappClasses.contains("net.corda.core.internal.cordapp.CordappImpl") }
         assertThat(cordapp.info.targetPlatformVersion).isEqualTo(2)
         assertThat(cordapp.info.minimumPlatformVersion).isEqualTo(2)
     }
 
     @Test
-    fun `cordapp classloader does not load apps when their min platform version is greater than the platform version`() {
-        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!
+    fun `cordapp classloader does not load apps when their min platform version is greater than the node platform version`() {
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-no-target.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 1))
-        // exclude the core cordapp
-        assertThat(loader.cordapps.size).isEqualTo(1)
+        assertThat(loader.cordapps).hasSize(0)
     }
 
     @Test
     fun `cordapp classloader does load apps when their min platform version is less than the platform version`() {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 1000))
-        // exclude the core cordapp
-        assertThat(loader.cordapps.size).isEqualTo(2)
+        assertThat(loader.cordapps).hasSize(1)
     }
 
     @Test
     fun `cordapp classloader does load apps when their min platform version is equal to the platform version`() {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN.copy(platformVersion = 2))
-        // exclude the core cordapp
-        assertThat(loader.cordapps.size).isEqualTo(2)
+        assertThat(loader.cordapps).hasSize(1)
     }
 
-    private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): CordappLoader {
-
-        val cordapps = cordappsForPackages(packages)
-        return testDirectory().let { directory ->
-            cordapps.packageInDirectory(directory)
-            JarScanningCordappLoader.fromDirectories(listOf(directory))
-        }
+    @Test
+    fun `cordapp classloader loads app signed by allowed certificate`() {
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), blacklistedCerts = emptyList())
+        assertThat(loader.cordapps).hasSize(1)
     }
 
-    private fun testDirectory(): Path {
+    @Test
+    fun `cordapp classloader does not load app signed by blacklisted certificate`() {
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-dev-key.jar")!!
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), blacklistedCerts = DEV_CERTIFICATES)
+        assertThat(loader.cordapps).hasSize(0)
+    }
 
-        return Paths.get("build", getTimestampAsDirectoryName())
+    @Test
+    fun `cordapp classloader loads app signed by both allowed and non-blacklisted certificate`() {
+        val jar = JarScanningCordappLoaderTest::class.java.getResource("signed/signed-by-two-keys.jar")!!
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), blacklistedCerts = DEV_CERTIFICATES)
+        assertThat(loader.cordapps).hasSize(1)
     }
 }

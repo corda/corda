@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Test
 import sandbox.net.corda.djvm.costing.ThresholdViolationError
+import kotlin.concurrent.thread
 
 class RuntimeCostTest {
 
@@ -16,17 +17,13 @@ class RuntimeCostTest {
 
     @Test
     fun `cannot increment cost beyond threshold`() {
-        Thread {
+        thread(name = "Foo") {
             val cost = RuntimeCost(10) { "failed in ${it.name}" }
             assertThatExceptionOfType(ThresholdViolationError::class.java)
                     .isThrownBy { cost.increment(11) }
                     .withMessage("failed in Foo")
             assertThat(cost.value).isEqualTo(11)
-        }.apply {
-            name = "Foo"
-            start()
-            join()
-        }
+        }.join()
     }
 
 }

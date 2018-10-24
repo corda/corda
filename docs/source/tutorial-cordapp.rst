@@ -4,8 +4,8 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-The example CorDapp
-===================
+Running the example CorDapp
+===========================
 
 .. contents::
 

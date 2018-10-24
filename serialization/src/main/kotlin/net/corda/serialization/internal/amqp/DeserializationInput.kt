@@ -117,7 +117,7 @@ class DeserializationInput constructor(
             des {
                 val envelope = getEnvelope(bytes, context.encodingWhitelist)
 
-                logger.trace("deserialize blob scheme=\"${envelope.schema.toString()}\"")
+                logger.trace("deserialize blob scheme=\"${envelope.schema}\"")
 
                 clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema),
                         clazz, context))
@@ -149,7 +149,7 @@ class DeserializationInput constructor(
             if (obj is DescribedType && ReferencedObject.DESCRIPTOR == obj.descriptor) {
                 // It must be a reference to an instance that has already been read, cheaply and quickly returning it by reference.
                 val objectIndex = (obj.described as UnsignedInteger).toInt()
-                if (objectIndex !in 0..objectHistory.size)
+                if (objectIndex >= objectHistory.size)
                     throw AMQPNotSerializableException(
                             type,
                             "Retrieval of existing reference failed. Requested index $objectIndex " +

@@ -20,6 +20,8 @@ class FinalityHandler(private val sender: FlowSession) : FlowLogic<Unit>() {
     override fun call() {
         subFlow(ReceiveTransactionFlow(sender, true, StatesToRecord.ONLY_RELEVANT))
     }
+
+    internal fun sender(): Party = sender.counterparty
 }
 
 class NotaryChangeHandler(otherSideSession: FlowSession) : AbstractStateReplacementFlow.Acceptor<Party>(otherSideSession) {
@@ -54,7 +56,7 @@ class ContractUpgradeHandler(otherSide: FlowSession) : AbstractStateReplacementF
         // verify outputs matches the proposed upgrade.
         val ourSTX = serviceHub.validatedTransactions.getTransaction(proposal.stateRef.txhash)
         requireNotNull(ourSTX) { "We don't have a copy of the referenced state" }
-        val oldStateAndRef = ourSTX!!.tx.outRef<ContractState>(proposal.stateRef.index)
+        val oldStateAndRef = ourSTX!!.resolveBaseTransaction(serviceHub).outRef<ContractState>(proposal.stateRef.index)
         val authorisedUpgrade = serviceHub.contractUpgradeService.getAuthorisedContractUpgrade(oldStateAndRef.ref) ?: throw IllegalStateException("Contract state upgrade is unauthorised. State hash : ${oldStateAndRef.ref}")
         val proposedTx = stx.coreTransaction as ContractUpgradeWireTransaction
         val expectedTx = ContractUpgradeUtils.assembleUpgradeTx(oldStateAndRef, proposal.modification, proposedTx.privacySalt, serviceHub)
