@@ -26,11 +26,6 @@
     required: false
     multiParam: false
     acceptableValues: []
-  - parameterName: "--install-shell-extensions"
-    parameterType: "boolean"
-    required: false
-    multiParam: false
-    acceptableValues: []
   - parameterName: "--just-generate-node-info"
     parameterType: "boolean"
     required: false
@@ -98,11 +93,6 @@
     parameterType: "java.nio.file.Path"
     required: false
     multiParam: true
-    acceptableValues: []
-  - parameterName: "-c"
-    parameterType: "boolean"
-    required: false
-    multiParam: false
     acceptableValues: []
   - parameterName: "-d"
     parameterType: "java.lang.Boolean"

@@ -32,6 +32,7 @@ import rx.internal.schedulers.CachedThreadScheduler
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
+import kotlin.test.assertFalse
 
 // TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by
 // using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't
@@ -150,9 +151,8 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 }
 
 class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo, flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides)) : Node(configuration, versionInfo, false, flowManager = flowManager) {
-
     override fun start() : NodeInfo {
-        check(isValidJavaVersion()) { "You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8." }
+        assertFalse(isInvalidJavaVersion(), "You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8." )
         return super.start()
     }
 

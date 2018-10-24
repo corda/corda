@@ -47,7 +47,7 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
             description = ["Display the owningKey and certPath properties of Party and PartyAndReference objects respectively"])
     private var fullParties: Boolean = false
 
-    @Option(names = ["--schema"], description = ["Print the blob's schema first"])
+    @Option(names = ["--schema"], description = ["Prints the blob's schema first"])
     private var schema: Boolean = false
 
     override fun runProgram() = run(System.out)

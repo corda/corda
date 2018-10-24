@@ -6,6 +6,7 @@ import com.codahale.metrics.MetricRegistry
 import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
 import com.palominolabs.metrics.newrelic.NewRelicReporter
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.cliutils.ShellConstants
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
@@ -110,9 +111,13 @@ open class Node(configuration: NodeConfiguration,
             LoggerFactory.getLogger(loggerName).info(msg)
         }
 
+        fun printInRed(message: String) {
+            println("${ShellConstants.RED}$message${ShellConstants.RESET}")
+        }
+
         fun printWarning(message: String) {
             Emoji.renderIfSupported {
-                println("${Emoji.warningSign} ATTENTION: $message")
+                printInRed("${Emoji.warningSign} ATTENTION: $message")
             }
             staticLog.warn(message)
         }
@@ -132,13 +137,13 @@ open class Node(configuration: NodeConfiguration,
         // TODO: make this configurable.
         const val MAX_RPC_MESSAGE_SIZE = 10485760
 
-        fun isValidJavaVersion(): Boolean {
+        fun isInvalidJavaVersion(): Boolean {
             if (!hasMinimumJavaVersion()) {
                 println("You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8.")
                 println("Corda will now exit...")
-                return false
+                return true
             }
-            return true
+            return false
         }
 
         private fun hasMinimumJavaVersion(): Boolean {
