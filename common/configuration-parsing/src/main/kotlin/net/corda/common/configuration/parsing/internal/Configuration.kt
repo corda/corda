@@ -416,7 +416,6 @@ object Configuration {
 
                 internal companion object {
 
-                    // TODO sollecitom derive the message from the context of the error type
                     internal fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): WrongType = contextualize(keyName, containingPath).let { (key, path) -> WrongType(key, typeName, message, path) }
                 }
 
