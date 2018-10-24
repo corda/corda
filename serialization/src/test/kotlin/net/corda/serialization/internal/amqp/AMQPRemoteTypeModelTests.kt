@@ -19,9 +19,9 @@ class AMQPRemoteTypeModelTests {
     private val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
     private val typeModel = AMQPRemoteTypeModel()
 
-    val localTypeModel = LocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist))
+    private val localTypeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist))
 
-    val reflector = TypeLoadingRemoteTypeReflector(
+    private val reflector = TypeLoadingRemoteTypeReflector(
             ClassCarpentingTypeLoader(ClassCarpenterImpl(AllWhitelist)),
             localTypeModel,
             getTypeModellingFingerPrinter(factory))

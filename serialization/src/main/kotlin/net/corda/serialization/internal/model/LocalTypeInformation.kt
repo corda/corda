@@ -135,12 +135,11 @@ sealed class LocalTypeInformation {
 
 private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val resolutionContext: Type? = null, val visited: Set<TypeIdentifier> = emptySet()) {
 
-    fun build(type: Type, typeIdentifier: TypeIdentifier): LocalTypeInformation {
-        return if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier) else
-            lookup.lookup(type, typeIdentifier) {
-                copy(visited = visited + typeIdentifier).buildIfNotFound(type, typeIdentifier)
-            }
-    }
+    fun build(type: Type, typeIdentifier: TypeIdentifier): LocalTypeInformation =
+        if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier)
+        else lookup.lookup(type, typeIdentifier) {
+            copy(visited = visited + typeIdentifier).buildIfNotFound(type, typeIdentifier)
+        }
 
     private fun resolveAndBuild(type: Type): LocalTypeInformation {
         val resolved = type.resolveAgainstContext()
@@ -238,7 +237,7 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
     }
 
     private fun buildInterfaceInformation(type: Type) =
-            type.allInterfaces.mapNotNull {
+            type.allInterfaces.asSequence().mapNotNull {
                 if (it == type) return@mapNotNull null
                 resolveAndBuild(it)
             }.toList()
@@ -249,8 +248,7 @@ private data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val 
         val clazz = type.asClass()
 
         if (clazz.isInterface) {
-            // Ignore classes we've already seen, and stop exploring once we reach a branch that has no `CordaSerializable`
-            // annotation or whitelisting.
+            // Ignore classes we've already seen, and stop exploring once we reach an excluded type.
             if (clazz in interfaces || lookup.isExcluded(clazz)) return interfaces
             else interfaces += type
         }
@@ -358,6 +356,5 @@ private fun Method.returnsNullable(): Boolean = try {
 }
 
 internal val Class<*>.isCollectionOrMap
-    get() =
-        (Collection::class.java.isAssignableFrom(this) || Map::class.java.isAssignableFrom(this))
+    get() = (Collection::class.java.isAssignableFrom(this) || Map::class.java.isAssignableFrom(this))
                 && !EnumSet::class.java.isAssignableFrom(this)

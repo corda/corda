@@ -3,6 +3,7 @@ package net.corda.serialization.internal.model
 import com.google.common.hash.Hashing
 import com.google.common.primitives.Primitives
 import net.corda.core.KeepForDJVM
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toBase64
 import net.corda.serialization.internal.amqp.FingerPrinter
 import net.corda.serialization.internal.amqp.SerializerFactory
@@ -11,6 +12,16 @@ import net.corda.serialization.internal.amqp.ifThrowsAppend
 import org.apache.qpid.proton.amqp.*
 import java.lang.reflect.*
 import java.util.*
+
+
+typealias Fingerprint = String
+
+/**
+ *
+ */
+interface CustomTypeDescriptorLookup {
+    fun getCustomTypeDescriptor(type: Type): String?
+}
 
 /**
  * Obtains the custom type descriptor for any type that has a custom serializer, according to the [SerializerFactory].
@@ -37,7 +48,7 @@ internal fun getTypeModellingFingerPrinter(factory: SerializerFactory): TypeMode
     fun isOpaque(type: Type) = Primitives.unwrap(type.asClass()) in opaqueTypes ||
             customTypeDescriptorLookup.getCustomTypeDescriptor(type) != null
 
-    val typeModel = LocalTypeModel(WhitelistBasedTypeModelConfiguration(factory.whitelist, ::isOpaque))
+    val typeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(factory.whitelist, ::isOpaque))
     val localTypeInformationFingerPrinter = CustomisableLocalTypeInformationFingerPrinter(customTypeDescriptorLookup)
 
     return TypeModellingFingerPrinter(typeModel, localTypeInformationFingerPrinter)
@@ -68,27 +79,46 @@ class TypeModellingFingerPrinter(private val typeModel: LocalTypeModel,
     override fun fingerprint(type: Type): String = fingerprint(typeModel.inspect(type))
 
     fun fingerprint(typeInformation: LocalTypeInformation): String =
-            cache[typeInformation.typeIdentifier] ?:
-                    localTypeFingerPrinter.fingerprint(typeInformation).apply {
-                        cache.putIfAbsent(typeInformation.typeIdentifier, this)
-                    }
+            cache[typeInformation.typeIdentifier] ?: localTypeFingerPrinter.fingerprint(typeInformation).apply {
+                cache.putIfAbsent(typeInformation.typeIdentifier, this)
+            }
 }
 
+/**
+ * A fingerprinter that fingerprints [LocalTypeInformation], rather than a [Type] directly.
+ */
 interface LocalTypeInformationFingerPrinter {
+    /**
+     * Traverse the provided [LocalTypeInformation] graph and emit a short fingerprint string uniquely representing
+     * the shape of that graph.
+     *
+     * @param typeInformation The [LocalTypeInformation] to fingerprint.
+     */
     fun fingerprint(typeInformation: LocalTypeInformation): String
 }
 
-data class CustomisableLocalTypeInformationFingerPrinter(
-        private val customTypeDescriptorLookup: CustomTypeDescriptorLookup): LocalTypeInformationFingerPrinter {
+/**
+ * A [LocalTypeInformationFingerPrinter] that consults a [CustomTypeDescriptorLookup] to obtain type descriptors for
+ * types that do not need to be traversed to calculate their fingerprint information. (Usually these will be the type
+ * descriptors supplied by custom serializers).
+ *
+ * @param customTypeDescriptorLookup The [CustomTypeDescriptorLookup] to use to obtain custom type descriptors for
+ * selected types.
+ */
+class CustomisableLocalTypeInformationFingerPrinter(
+        private val customTypeDescriptorLookup: CustomTypeDescriptorLookup,
+        private val debugEnabled: Boolean = false) : LocalTypeInformationFingerPrinter {
     override fun fingerprint(typeInformation: LocalTypeInformation): String =
-            CustomisableLocalTypeInformationFingerPrintingState(customTypeDescriptorLookup).fingerprint(typeInformation)
+            CustomisableLocalTypeInformationFingerPrintingState(
+                    customTypeDescriptorLookup,
+                    FingerprintWriter(debugEnabled)).fingerprint(typeInformation)
 }
 
 /**
  * Wrapper for the [Hasher] we use to generate fingerprints, providing methods for writing various kinds of content
  * into the hash.
  */
-internal class FingerprintWriter {
+internal class FingerprintWriter(private val debugEnabled: Boolean) {
 
     companion object {
         private const val ARRAY_HASH: String = "Array = true"
@@ -98,10 +128,12 @@ internal class FingerprintWriter {
         private const val NOT_NULLABLE_HASH: String = "Nullable = false"
         private const val ANY_TYPE_HASH: String = "Any type = true"
 
-        val ANY = FingerprintWriter().writeAny().fingerprint
-        val CYCLE = FingerprintWriter().writeAlreadySeen().fingerprint
+        val ANY = FingerprintWriter(false).writeAny().fingerprint
+
+        private val logger = contextLogger()
     }
 
+    private val debugBuffer: StringBuilder? = if (debugEnabled) StringBuilder() else null
     private var hasher = Hashing.murmur3_128().newHasher()
 
     fun write(chars: CharSequence) = append(chars)
@@ -114,25 +146,37 @@ internal class FingerprintWriter {
     fun writeAny() = append(ANY_TYPE_HASH)
 
     private fun append(chars: CharSequence) = apply {
+        debugBuffer?.append(chars)
         hasher = hasher.putUnencodedChars(chars)
     }
 
-    val fingerprint: String get() = hasher.hash().asBytes().toBase64()
+    val fingerprint: String get() {
+        if (debugBuffer != null) logger.info(debugBuffer.toString())
+        return hasher.hash().asBytes().toBase64()
+    }
 }
 
 /**
- * Representation of the current state of fingerprinting.
+ * Representation of the current state of fingerprinting, which keeps track of which types have already been visited
+ * during fingerprinting.
  */
-private class CustomisableLocalTypeInformationFingerPrintingState(private val customTypeDescriptorLookup: CustomTypeDescriptorLookup) {
+private class CustomisableLocalTypeInformationFingerPrintingState(
+        private val customTypeDescriptorLookup: CustomTypeDescriptorLookup,
+        private val writer: FingerprintWriter) {
+
+    companion object {
+        private var CHARACTER_TYPE = LocalTypeInformation.APrimitive(
+                Character::class.java,
+                TypeIdentifier.forClass(Character::class.java))
+    }
 
     private val typesSeen: MutableSet<TypeIdentifier> = mutableSetOf()
-    private val writer = FingerprintWriter()
 
     /**
      * Fingerprint the type recursively, and return the encoded fingerprint written into the hasher.
      */
     fun fingerprint(type: LocalTypeInformation): String =
-        fingerprintType(type).writer.fingerprint
+            fingerprintType(type).writer.fingerprint
 
     // This method concatenates various elements of the types recursively as unencoded strings into the hasher,
     // effectively creating a unique string for a type which we then hash in the calling function above.
@@ -168,81 +212,92 @@ private class CustomisableLocalTypeInformationFingerPrintingState(private val cu
         }
     }
 
-        private fun fingerprintCollection(type: LocalTypeInformation.ACollection) {
-            fingerprintName(type)
-            fingerprintTypeParameters(type.typeParameters)
+    private fun fingerprintCollection(type: LocalTypeInformation.ACollection) {
+        fingerprintName(type)
+        fingerprintTypeParameters(type.typeParameters)
+    }
+
+    private fun fingerprintOpaque(type: LocalTypeInformation) =
+            fingerprintWithCustomSerializerOrElse(type) {
+                fingerprintName(type)
+            }
+
+    private fun fingerprintInterface(type: LocalTypeInformation.AnInterface) =
+            fingerprintWithCustomSerializerOrElse(type) {
+                fingerprintName(type)
+                writer.writeAlreadySeen() // replicate behaviour of old fingerprinter
+                fingerprintInterfaces(type.interfaces)
+                fingerprintTypeParameters(type.typeParameters)
+            }
+
+    private fun fingerprintAbstract(type: LocalTypeInformation.Abstract) =
+            fingerprintWithCustomSerializerOrElse(type) {
+                fingerprintName(type)
+                fingerprintProperties(type.properties)
+                fingerprintInterfaces(type.interfaces)
+                fingerprintTypeParameters(type.typeParameters)
+            }
+
+    private fun fingerprintPojo(type: LocalTypeInformation.APojo) =
+            fingerprintWithCustomSerializerOrElse(type) {
+                fingerprintName(type)
+                fingerprintProperties(type.properties)
+                fingerprintInterfaces(type.interfaces)
+                fingerprintTypeParameters(type.typeParameters)
+            }
+
+    private fun fingerprintName(type: LocalTypeInformation) {
+        val identifier = type.typeIdentifier
+        when (identifier) {
+            is TypeIdentifier.ArrayOf -> writer.write(identifier.componentType.name).writeArray()
+            else -> writer.write(identifier.name)
         }
+    }
 
-        private fun fingerprintOpaque(type: LocalTypeInformation) =
-                fingerprintWithCustomSerializerOrElse(type) {
-                    fingerprintName(type)
-                }
+    private fun fingerprintTypeParameters(typeParameters: List<LocalTypeInformation>) =
+            typeParameters.forEach { fingerprintType(it) }
 
-        private fun fingerprintInterface(type: LocalTypeInformation.AnInterface) =
-                fingerprintWithCustomSerializerOrElse(type) {
-                    fingerprintName(type)
-                    writer.writeAlreadySeen() // replicate behaviour of old fingerprinter
-                    fingerprintInterfaces(type.interfaces)
-                    fingerprintTypeParameters(type.typeParameters)
-                }
+    private fun fingerprintProperties(properties: Map<String, LocalPropertyInformation>) =
+            properties.asSequence().sortedBy { it.key }.forEach { (propertyName, propertyType) ->
+                val (neverMandatory, adjustedType) = adjustType(propertyType.type)
+                fingerprintType(adjustedType)
+                writer.write(propertyName)
+                if (propertyType.isMandatory && !neverMandatory) writer.writeNotNullable() else writer.writeNullable()
+            }
 
-        private fun fingerprintAbstract(type: LocalTypeInformation.Abstract) =
-                fingerprintWithCustomSerializerOrElse(type) {
-                    fingerprintName(type)
-                    fingerprintProperties(type.properties)
-                    fingerprintInterfaces(type.interfaces)
-                    fingerprintTypeParameters(type.typeParameters)
-                }
+    // Compensate for the serialisation framework's forcing of char to Character
+    private fun adjustType(propertyType: LocalTypeInformation): Pair<Boolean, LocalTypeInformation> =
+        if (propertyType.typeIdentifier.name == "char") true to CHARACTER_TYPE else false to propertyType
 
-        private fun fingerprintPojo(type: LocalTypeInformation.APojo) =
-                fingerprintWithCustomSerializerOrElse(type) {
-                    fingerprintName(type)
-                    fingerprintProperties(type.properties)
-                    fingerprintInterfaces(type.interfaces)
-                    fingerprintTypeParameters(type.typeParameters)
-                }
+    private fun fingerprintInterfaces(interfaces: List<LocalTypeInformation>) =
+            interfaces.forEach { fingerprintType(it) }
 
-        private fun fingerprintName(type: LocalTypeInformation) = writer.write(type.typeIdentifier.name)
+    // ensures any change to the enum (adding constants) will trigger the need for evolution
+    private fun fingerprintEnum(type: LocalTypeInformation.AnEnum) {
+        writer.write(type.members).write(type.typeIdentifier.name).writeEnum()
+    }
 
-        private fun fingerprintTypeParameters(typeParameters: List<LocalTypeInformation>) =
-                typeParameters.forEach { fingerprintType(it) }
+    // Give any custom serializers loaded into the factory the chance to supply their own type-descriptors
+    private fun fingerprintWithCustomSerializerOrElse(type: LocalTypeInformation, defaultAction: () -> Unit) {
+        val customTypeDescriptor = customTypeDescriptorLookup.getCustomTypeDescriptor(type.observedType)
+        if (customTypeDescriptor != null) writer.write(customTypeDescriptor)
+        else defaultAction()
+    }
 
-        private fun fingerprintProperties(properties: Map<String, LocalPropertyInformation>) =
-                properties.asSequence().sortedBy { it.key }.forEach { (propertyName, propertyType) ->
-                    fingerprintType(propertyType.type)
-                    writer.write(propertyName)
-                    if (propertyType.isMandatory) writer.writeNotNullable() else writer.writeNullable()
-                }
-
-        private fun fingerprintInterfaces(interfaces: List<LocalTypeInformation>) =
-                interfaces.forEach { fingerprintType(it) }
-
-        // ensures any change to the enum (adding constants) will trigger the need for evolution
-        private fun fingerprintEnum(type: LocalTypeInformation.AnEnum) {
-            writer.write(type.members).write(type.typeIdentifier.name).writeEnum()
-        }
-
-        // Give any custom serializers loaded into the factory the chance to supply their own type-descriptors
-        private fun fingerprintWithCustomSerializerOrElse(type: LocalTypeInformation, defaultAction: () -> Unit) {
-            val customTypeDescriptor = customTypeDescriptorLookup.getCustomTypeDescriptor(type.observedType)
-            if (customTypeDescriptor != null) writer.write(customTypeDescriptor)
-            else defaultAction()
-        }
-
-        // Test whether we are in a state in which we have already seen the given type.
-        //
-        // We don't include Example<?> and Example<T> where type is ? or T in this otherwise we
-        // generate different fingerprints for class Outer<T>(val a: Inner<T>) when serialising
-        // and deserializing (assuming deserialization is occurring in a factory that didn't
-        // serialise the object in the  first place (and thus the cache lookup fails). This is also
-        // true of Any, where we need  Example<A, B> and Example<?, ?> to have the same fingerprint
-        private fun hasSeen(type: TypeIdentifier) = (type in typesSeen)
-                && (type != TypeIdentifier.Unknown)
+    // Test whether we are in a state in which we have already seen the given type.
+    //
+    // We don't include Example<?> and Example<T> where type is ? or T in this otherwise we
+    // generate different fingerprints for class Outer<T>(val a: Inner<T>) when serialising
+    // and deserializing (assuming deserialization is occurring in a factory that didn't
+    // serialise the object in the  first place (and thus the cache lookup fails). This is also
+    // true of Any, where we need  Example<A, B> and Example<?, ?> to have the same fingerprint
+    private fun hasSeen(type: TypeIdentifier) = (type in typesSeen)
+            && (type != TypeIdentifier.Unknown)
 }
 
 // region Utility functions
 internal fun fingerprintForDescriptors(vararg typeDescriptors: String): String =
-        FingerprintWriter().write(typeDescriptors.joinToString()).fingerprint
+        FingerprintWriter(false).write(typeDescriptors.joinToString()).fingerprint
 // endregion
 
 // Copied from SerializerFactory so that we can have equivalent behaviour, for now.
