@@ -194,6 +194,7 @@ class NodeTabView : Fragment() {
         model.webPort.value = nodeController.nextPort
         model.h2Port.value = nodeController.nextPort
 
+        SuggestedDetails.cursor = nodeController.activeNodes.size
         val defaults = SuggestedDetails.nextBank
         model.legalName.value = defaults.first
         model.nearestCity.value = CityDatabase[defaults.second]

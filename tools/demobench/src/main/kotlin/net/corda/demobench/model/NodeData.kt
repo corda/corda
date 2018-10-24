@@ -25,9 +25,8 @@ object SuggestedDetails {
             "Bank of Golden Gates" to "San Francisco"
     )
 
-    private var cursor = 0
-
-    val nextBank: Pair<String, String> get() = banks[cursor++ % banks.size]
+    var cursor = 0
+    val nextBank: Pair<String, String> get(cursor) = banks[cursor++ % banks.size]
 }
 
 class NodeData {

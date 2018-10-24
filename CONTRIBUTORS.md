@@ -200,6 +200,7 @@ see changes to this list.
 * tomtau
 * Tudor Malene (R3)
 * Tushar Singh Bora (Accenture)
+* Vardan Nadkarni (Persistent Systems Limited)
 * varunkm
 * Venelin Stoykov (INDUSTRIA)
 * verymahler
