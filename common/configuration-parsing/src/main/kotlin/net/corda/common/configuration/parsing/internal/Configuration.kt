@@ -141,6 +141,7 @@ object Configuration {
              */
             interface Standard<TYPE> : Required<TYPE>, Single<TYPE> {
 
+                // TODO sollecitom see if you can get rid of typeName and keyName here
                 /**
                  * Passes the value to a validating mapping function, provided this is valid in the first place.
                  */
@@ -370,6 +371,22 @@ object Configuration {
          */
         sealed class Error constructor(open val keyName: String?, open val typeName: String? = null, open val message: String, val containingPath: List<String> = emptyList()) {
 
+            internal companion object {
+
+                internal fun contextualize(keyName: String, containingPath: List<String>): Pair<String, List<String>> {
+
+                    val keyParts = keyName.split(".")
+                    return when {
+                        keyParts.size > 1 -> {
+                            val fullContainingPath = containingPath + keyParts.subList(0, keyParts.size - 1)
+                            val keySegment = keyParts.last()
+                            keySegment to fullContainingPath
+                        }
+                        else -> keyName to containingPath
+                    }
+                }
+            }
+
             /**
              * Full path for nested property keys, including the [keyName].
              */
@@ -399,17 +416,7 @@ object Configuration {
 
                 internal companion object {
 
-                    internal fun of(keyName: String, message: String, typeName: String, containingPath: List<String> = emptyList()): WrongType {
-
-                        val keyParts = keyName.split(".")
-                        return if (keyParts.size > 1) {
-                            val fullContainingPath = containingPath + keyParts.subList(0, keyParts.size - 1)
-                            val keySegment = keyParts.last()
-                            return WrongType(keySegment, typeName, message, fullContainingPath)
-                        } else {
-                            WrongType(keyName, typeName, message, containingPath)
-                        }
-                    }
+                    internal fun of(keyName: String, message: String, typeName: String, containingPath: List<String> = emptyList()): WrongType = contextualize(keyName, containingPath).let { (key, path) -> WrongType(key, typeName, message, path) }
                 }
 
                 override fun withContainingPath(vararg containingPath: String) = WrongType(keyName, typeName, message, containingPath.toList() + this.containingPath)
@@ -422,17 +429,7 @@ object Configuration {
 
                 internal companion object {
 
-                    internal fun of(keyName: String, typeName: String, message: String, containingPath: List<String> = emptyList()): MissingValue {
-
-                        val keyParts = keyName.split(".")
-                        return if (keyParts.size > 1) {
-                            val fullContainingPath = containingPath + keyParts.subList(0, keyParts.size - 1)
-                            val keySegment = keyParts.last()
-                            return MissingValue(keySegment, typeName, message, fullContainingPath)
-                        } else {
-                            MissingValue(keyName, typeName, message, containingPath)
-                        }
-                    }
+                    internal fun of(keyName: String, typeName: String, message: String, containingPath: List<String> = emptyList()): MissingValue = contextualize(keyName, containingPath).let { (key, path) -> MissingValue(key, typeName, message, path) }
                 }
 
                 override fun withContainingPath(vararg containingPath: String) = MissingValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
@@ -445,17 +442,7 @@ object Configuration {
 
                 internal companion object {
 
-                    internal fun of(keyName: String, typeName: String, message: String, containingPath: List<String> = emptyList()): BadValue {
-
-                        val keyParts = keyName.split(".")
-                        return if (keyParts.size > 1) {
-                            val fullContainingPath = containingPath + keyParts.subList(0, keyParts.size - 1)
-                            val keySegment = keyParts.last()
-                            return BadValue(keySegment, typeName, message, fullContainingPath)
-                        } else {
-                            BadValue(keyName, typeName, message, containingPath)
-                        }
-                    }
+                    internal fun of(keyName: String, typeName: String, message: String, containingPath: List<String> = emptyList()): BadValue = contextualize(keyName, containingPath).let { (key, path) -> BadValue(key, typeName, message, path) }
                 }
 
                 override fun withContainingPath(vararg containingPath: String) = BadValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
@@ -470,18 +457,7 @@ object Configuration {
 
                     private fun message(keyName: String) = "Unknown property \"$keyName\"."
 
-                    internal fun of(keyName: String, containingPath: List<String> = emptyList()): Unknown {
-
-                        val keyParts = keyName.split(".")
-                        return when {
-                            keyParts.size > 1 -> {
-                                val fullContainingPath = containingPath + keyParts.subList(0, keyParts.size - 1)
-                                val keySegment = keyParts.last()
-                                return Unknown(keySegment, fullContainingPath)
-                            }
-                            else -> Unknown(keyName, containingPath)
-                        }
-                    }
+                    internal fun of(keyName: String, containingPath: List<String> = emptyList()): Unknown = contextualize(keyName, containingPath).let { (key, path) -> Unknown(key, path) }
                 }
 
                 override val message = message(pathAsString)
