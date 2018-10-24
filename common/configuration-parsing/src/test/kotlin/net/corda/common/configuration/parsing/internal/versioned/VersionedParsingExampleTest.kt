@@ -111,9 +111,9 @@ class VersitionedParsingExampleTest {
 
                 override fun parseValid(configuration: Config) = valid(Addresses(configuration[principal],configuration[admin]))
 
-                private fun parseAddress(key: String, typeName: String, rawValue: String): Valid<Address> {
+                private fun parseAddress(key: String, rawValue: String): Valid<Address> {
 
-                    return Address.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) }
+                    return Address.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, "Address", error) }
                 }
             }
 

@@ -170,7 +170,7 @@ object Configuration {
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [Int].
                  */
-                fun int(key: String, sensitive: Boolean = false): Standard<Int> = long(key, sensitive).mapValid { k, value ->
+                fun int(key: String, sensitive: Boolean = false): Standard<Int> = long(key, sensitive).mapValid { _, value ->
 
                     try {
                         valid(Math.toIntExact(value))
@@ -192,7 +192,7 @@ object Configuration {
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [Float].
                  */
-                fun float(key: String, sensitive: Boolean = false): Standard<Float> = double(key, sensitive).mapValid { k, value ->
+                fun float(key: String, sensitive: Boolean = false): Standard<Float> = double(key, sensitive).mapValid { _, value ->
 
                     if (value.compareTo(value.toFloat()) == 0) {
                         valid(value.toFloat())
@@ -442,6 +442,7 @@ object Configuration {
 
                 internal companion object {
 
+                    // TODO sollecitom try to either have keyName and typeName as nullable with copying functions to contextualize, or use a Builder or a Closure instead
                     internal fun of(keyName: String, typeName: String, message: String, containingPath: List<String> = emptyList()): BadValue = contextualize(keyName, containingPath).let { (key, path) -> BadValue(key, typeName, message, path) }
                 }
 
