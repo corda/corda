@@ -105,14 +105,14 @@ The blob inspector can be started with the following command-line options:
 * ``--format=type``: Output format. Possible values: [YAML, JSON]. Default: YAML.
 * ``--input-format=type``: Input format. If the file can't be decoded with the given value it's auto-detected, so you should
   never normally need to specify this. Possible values [BINARY, HEX, BASE64]. Default: BINARY.
-* ``--full-parties``: Displays the owningKey and certPath properties of Party and PartyAndReference objects respectively.
-* ``--schema``: Prints the blob's schema first.
+* ``--full-parties``: Display the owningKey and certPath properties of Party and PartyAndReference objects respectively.
+* ``--schema``: Print the blob's schema first.
 * ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
-* ``--logging-level=<loggingLevel>``: Enables logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
-* ``--help``, ``-h``: Shows this help message and exits.
-* ``--version``, ``-V``: Prints version information and exits.
+* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
+* ``--help``, ``-h``: Show this help message and exit.
+* ``--version``, ``-V``: Print version information and exit.
 
 Sub-commands
 ^^^^^^^^^^^^
 
-``install-shell-extensions``: Installs ``blob-inspector`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
+``install-shell-extensions``: Install ``blob-inspector`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.

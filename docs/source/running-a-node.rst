@@ -55,9 +55,9 @@ The node can optionally be started with the following command-line options:
 * ``--sshd``: Enables SSH server for node administration.
 * ``--sshd-port``: Sets the port for the SSH server. If not supplied and SSH server is enabled, the port defaults to 2222.
 * ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
-* ``--logging-level=<loggingLevel>``: Enables logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
-* ``--help``, ``-h``: Shows this help message and exits.
-* ``--version``, ``-V``: Prints version information and exits.
+* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
+* ``--help``, ``-h``: Show this help message and exit.
+* ``--version``, ``-V``: Print version information and exit.
 
 Sub-commands
 ^^^^^^^^^^^^
@@ -78,7 +78,7 @@ Parameters:
 
 ``generate-rpc-ssl-settings``: Generates the SSL keystore and truststore for a secure RPC connection.
 
-``install-shell-extensions``: Installs ``corda`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
+``install-shell-extensions``: Install ``corda`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
 
 .. _enabling-remote-debugging:
 

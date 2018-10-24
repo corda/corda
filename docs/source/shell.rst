@@ -130,9 +130,9 @@ Where:
 * ``--truststore-file=<trustStoreFile>``: The path to the TrustStore file.
 * ``--truststore-type=<trustStoreType>``: The type of the TrustStore (e.g. JKS).
 * ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
-* ``--logging-level=<loggingLevel>``: Enables logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
-* ``--help``, ``-h``: Shows this help message and exits.
-* ``--version``, ``-V``: Prints version information and exits.
+* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
+* ``--help``, ``-h``: Show this help message and exit.
+* ``--version``, ``-V``: Print version information and exit.
 
 Additionally, the ``install-shell-extensions`` subcommand can be used to install the ``corda-shell`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
 
