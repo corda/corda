@@ -17,7 +17,7 @@ internal class LongProperty(key: String, sensitive: Boolean = false) : StandardP
     }
 }
 
-internal open class StandardProperty<TYPE>(override val key: String, typeNameArg: String, private val extractSingleValue: (Config, String) -> TYPE, internal val extractListValue: (Config, String) -> List<TYPE>, override val sensitive: Boolean = false, final override val schema: Configuration.Schema? = null) : Configuration.Property.Definition.Standard<TYPE> {
+internal open class StandardProperty<TYPE>(override val key: String, typeNameArg: String, private val extractSingleValue: (Config, String) -> TYPE, internal val extractListValue: (Config, String) -> List<TYPE>, override val isSensitive: Boolean = false, final override val schema: Configuration.Schema? = null) : Configuration.Property.Definition.Standard<TYPE> {
 
     override fun valueIn(configuration: Config) = extractSingleValue.invoke(configuration, key)
 
@@ -31,13 +31,13 @@ internal open class StandardProperty<TYPE>(override val key: String, typeNameArg
 
     override fun describe(configuration: Config): ConfigValue {
 
-        if (sensitive) {
+        if (isSensitive) {
             return ConfigValueFactory.fromAnyRef(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER)
         }
         return schema?.describe(configuration.getConfig(key)) ?: ConfigValueFactory.fromAnyRef(valueIn(configuration))
     }
 
-    override val mandatory = true
+    override val isMandatory = true
 
     override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
 
@@ -77,7 +77,7 @@ private class ListProperty<TYPE>(delegate: StandardProperty<TYPE>) : RequiredDel
 
     override fun describe(configuration: Config): ConfigValue {
 
-        if (sensitive) {
+        if (isSensitive) {
             return ConfigValueFactory.fromAnyRef(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER)
         }
         return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) }.toList()) } ?: ConfigValueFactory.fromAnyRef(valueIn(configuration))
@@ -86,7 +86,7 @@ private class ListProperty<TYPE>(delegate: StandardProperty<TYPE>) : RequiredDel
 
 private class OptionalProperty<TYPE>(delegate: Configuration.Property.Definition.Required<TYPE>, private val defaultValue: TYPE?) : DelegatedProperty<TYPE?, Configuration.Property.Definition.Required<TYPE>>(delegate) {
 
-    override val mandatory: Boolean = false
+    override val isMandatory: Boolean = false
 
     override val typeName: String = "${super.typeName}?"
 
@@ -145,7 +145,7 @@ private class FunctionalListProperty<RAW, TYPE : Any>(delegate: FunctionalProper
         val list = try {
             delegate.extractListValue.invoke(target, key)
         } catch (e: Exception) {
-            if (e is ConfigException && Configuration.Property.Definition.expectedExceptionTypes.any { expected -> expected.isInstance(e) }) {
+            if (e is ConfigException && isErrorExpected(e)) {
                 return invalid(e.toValidationError(key, typeName))
             } else {
                 throw e
@@ -157,7 +157,7 @@ private class FunctionalListProperty<RAW, TYPE : Any>(delegate: FunctionalProper
 
     override fun describe(configuration: Config): ConfigValue {
 
-        if (sensitive) {
+        if (isSensitive) {
             return ConfigValueFactory.fromAnyRef(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER)
         }
         return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) }.toList()) } ?: ConfigValueFactory.fromAnyRef(valueIn(configuration))
@@ -190,9 +190,13 @@ private fun Configuration.Property.Definition<*>.errorsWhenExtractingValue(targe
         valueIn(target)
         return emptySet()
     } catch (exception: ConfigException) {
-        if (Configuration.Property.Definition.expectedExceptionTypes.any { expected -> expected.isInstance(exception) }) {
+        if (isErrorExpected(exception)) {
             return setOf(exception.toValidationError(key, typeName))
         }
         throw exception
     }
 }
+
+private val expectedExceptionTypes = setOf(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
+
+private fun isErrorExpected(error: ConfigException) = expectedExceptionTypes.any { expected -> expected.isInstance(error) }

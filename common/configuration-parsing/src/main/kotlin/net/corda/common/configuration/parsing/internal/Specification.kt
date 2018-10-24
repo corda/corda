@@ -37,9 +37,13 @@ interface PropertyDelegate<TYPE> {
 
         internal fun long(key: String?, prefix: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<Long> = PropertyDelegateImpl(key, prefix, sensitive, addProperty, Configuration.Property.Definition.Companion::long)
 
+        internal fun int(key: String?, prefix: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<Int> = PropertyDelegateImpl(key, prefix, sensitive, addProperty, Configuration.Property.Definition.Companion::int)
+
         internal fun boolean(key: String?, prefix: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<Boolean> = PropertyDelegateImpl(key, prefix, sensitive, addProperty, Configuration.Property.Definition.Companion::boolean)
 
         internal fun double(key: String?, prefix: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<Double> = PropertyDelegateImpl(key, prefix, sensitive, addProperty, Configuration.Property.Definition.Companion::double)
+
+        internal fun float(key: String?, prefix: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<Float> = PropertyDelegateImpl(key, prefix, sensitive, addProperty, Configuration.Property.Definition.Companion::float)
 
         internal fun string(key: String?, prefix: String?, sensitive: Boolean, addProperty: (Configuration.Property.Definition<*>) -> Unit): Standard<String> = PropertyDelegateImpl(key, prefix, sensitive, addProperty, Configuration.Property.Definition.Companion::string)
 

@@ -18,7 +18,7 @@ class PropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isTrue()
+        assertThat(property.isMandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThat(property.valueIn(configuration)).isEqualTo(value)
         assertThat(configuration[property]).isEqualTo(value)
@@ -35,7 +35,7 @@ class PropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isTrue()
+        assertThat(property.isMandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.WrongType::class.java)
     }
@@ -51,7 +51,7 @@ class PropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isTrue()
+        assertThat(property.isMandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThat(property.valueIn(configuration)).isEqualTo(value)
     }
@@ -67,7 +67,7 @@ class PropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isFalse()
+        assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThat(property.valueIn(configuration)).isEqualTo(value)
     }
@@ -82,7 +82,7 @@ class PropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isFalse()
+        assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
         assertThat(property.valueIn(configuration)).isNull()
 
@@ -99,7 +99,7 @@ class PropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isFalse()
+        assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
         assertThat(property.valueIn(configuration)).isEqualTo(defaultValue)
     }
@@ -114,7 +114,7 @@ class PropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isTrue()
+        assertThat(property.isMandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
         assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.Missing::class.java)
     }
@@ -130,7 +130,7 @@ class PropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isFalse()
+        assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThat(property.valueIn(configuration)).isEqualTo(value)
     }
@@ -146,7 +146,7 @@ class PropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isFalse()
+        assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.WrongType::class.java)
     }
@@ -161,7 +161,7 @@ class PropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isFalse()
+        assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
         assertThat(property.valueIn(configuration)).isNull()
     }
@@ -177,7 +177,7 @@ class PropertyTest {
         println(property)
 
         assertThat(property.key).isEqualTo(key)
-        assertThat(property.mandatory).isFalse()
+        assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
         assertThat(property.valueIn(configuration)).isEqualTo(defaultValue)
     }

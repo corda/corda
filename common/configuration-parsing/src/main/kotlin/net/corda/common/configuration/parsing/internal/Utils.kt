@@ -3,6 +3,7 @@ package net.corda.common.configuration.parsing.internal
 import com.typesafe.config.*
 import net.corda.common.validation.internal.Validated
 
+// TODO sollecitom try to remove the key from these mapping functions, by perhaps making keyName in Configuration.Validation.Error optional, and contextualizing the produced errors with the key we know here.
 inline fun <TYPE, reified MAPPED : Any> Configuration.Property.Definition.Standard<TYPE>.flatMap(noinline convert: (String, TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = flatMap(MAPPED::class.java.simpleName, convert)
 
 inline fun <reified ENUM : Enum<ENUM>, VALUE : Any> Configuration.Specification<VALUE>.enum(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = enum(key, ENUM::class, sensitive)

@@ -7,7 +7,7 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
-class VersionedParsingExampleTest {
+class VersitionedParsingExampleTest {
 
     @Test
     fun correct_parsing_function_is_used_for_present_version() {
@@ -77,13 +77,10 @@ class VersionedParsingExampleTest {
         object V1 : Configuration.Specification<RpcSettings>("RpcSettings") {
 
             private val principalHost by string()
-            private val principalPort by long().map(::parseInt)
+            private val principalPort by int()
 
             private val adminHost by string()
-            private val adminPort by long().map(::parseInt)
-
-            @Suppress("UNUSED_PARAMETER")
-            private fun parseInt(key: String, typeName: String, rawValue: Long): Int = rawValue.toInt()
+            private val adminPort by int()
 
             override fun parseValid(configuration: Config): Valid<RpcSettings> {
 

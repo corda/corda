@@ -6,6 +6,7 @@ import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
 import net.corda.common.configuration.parsing.internal.versioned.VersionExtractor
 import net.corda.common.validation.internal.Validated
+import net.corda.common.validation.internal.Validated.Companion.invalid
 import java.time.Duration
 import kotlin.reflect.KClass
 
@@ -20,6 +21,9 @@ object Configuration {
      */
     interface Describer {
 
+        /**
+         * Describes a [Config] hiding sensitive data.
+         */
         fun describe(configuration: Config): ConfigValue
     }
 
@@ -30,11 +34,27 @@ object Configuration {
          */
         interface Extractor<TYPE> {
 
+            /**
+             * Returns a value out of a [Config] if all is good. Otherwise, it throws an exception.
+             *
+             * @throws ConfigException.Missing if the [Config] does not specify the value.
+             * @throws ConfigException.WrongType if the [Config] specifies a value of the wrong type.
+             * @throws ConfigException.BadValue if the [Config] specifies a value of the correct type, but this in unacceptable according to application-level validation rules..
+             */
             @Throws(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
             fun valueIn(configuration: Config): TYPE
 
+            /**
+             * Returns whether the value is specified by the [Config].
+             */
             fun isSpecifiedBy(configuration: Config): Boolean
 
+            /**
+             * Returns a value out of a [Config] if all is good, or null if no value is present. Otherwise, it throws an exception.
+             *
+             * @throws ConfigException.WrongType if the [Config] specifies a value of the wrong type.
+             * @throws ConfigException.BadValue if the [Config] specifies a value of the correct type, but this in unacceptable according to application-level validation rules..
+             */
             @Throws(ConfigException.WrongType::class, ConfigException.BadValue::class)
             fun valueInOrNull(configuration: Config): TYPE? {
 
@@ -50,6 +70,9 @@ object Configuration {
          */
         interface Parser<VALUE> {
 
+            /**
+             * Returns a [Valid] wrapper either around a valid value extracted from the [Config], or around a set of [Configuration.Validation.Error] with details about what went wrong.
+             */
             fun parse(configuration: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults): Valid<VALUE>
         }
     }
@@ -61,10 +84,25 @@ object Configuration {
          */
         interface Metadata {
 
+            /**
+             * Property key.
+             */
             val key: String
+
+            /**
+             * Name of the type for this property..
+             */
             val typeName: String
-            val mandatory: Boolean
-            val sensitive: Boolean
+
+            /**
+             * Whether the absence of a value for this property will raise an error.
+             */
+            val isMandatory: Boolean
+
+            /**
+             * Whether the value for this property will be shown by [Configuration.Property.Definition.describe].
+             */
+            val isSensitive: Boolean
 
             val schema: Schema?
         }
@@ -123,12 +161,22 @@ object Configuration {
 
                 const val SENSITIVE_DATA_PLACEHOLDER = "*****"
 
-                internal val expectedExceptionTypes: Set<KClass<*>> = setOf(ConfigException.Missing::class, ConfigException.WrongType::class, ConfigException.BadValue::class)
-
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [Long].
                  */
                 fun long(key: String, sensitive: Boolean = false): Standard<Long> = LongProperty(key, sensitive)
+
+                /**
+                 * Returns a [Configuration.Property.Definition.Standard] with value of type [Int].
+                 */
+                fun int(key: String, sensitive: Boolean = false): Standard<Int> = long(key, sensitive).flatMap { k, value ->
+
+                    try {
+                        valid(Math.toIntExact(value))
+                    } catch (e: ArithmeticException) {
+                        invalid<Int, Configuration.Validation.Error>(Configuration.Validation.Error.BadValue.of(key, Int::class.javaObjectType.simpleName, "Provided value exceeds Integer range."))
+                    }
+                }
 
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [Boolean].
@@ -139,6 +187,18 @@ object Configuration {
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [Double].
                  */
                 fun double(key: String, sensitive: Boolean = false): Standard<Double> = StandardProperty(key, Double::class.javaObjectType.simpleName, Config::getDouble, Config::getDoubleList, sensitive)
+
+                /**
+                 * Returns a [Configuration.Property.Definition.Standard] with value of type [Float].
+                 */
+                fun float(key: String, sensitive: Boolean = false): Standard<Float> = double(key, sensitive).flatMap { k, value ->
+
+                    if (value.compareTo(value.toFloat()) == 0) {
+                        valid(value.toFloat())
+                    } else {
+                        invalid<Float, Configuration.Validation.Error>(Configuration.Validation.Error.BadValue.of(key, Float::class.javaObjectType.simpleName, "Provided value exceeds Float range."))
+                    }
+                }
 
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [String].
@@ -204,6 +264,11 @@ object Configuration {
         fun long(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Long> = PropertyDelegate.long(key, prefix, sensitive) { mutableProperties.add(it) }
 
         /**
+         * Returns a delegate for a [Configuration.Property.Definition.Standard] of type [Int].
+         */
+        fun int(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Int> = PropertyDelegate.int(key, prefix, sensitive) { mutableProperties.add(it) }
+
+        /**
          * Returns a delegate for a [Configuration.Property.Definition.Standard] of type [Boolean].
          */
         fun boolean(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Boolean> = PropertyDelegate.boolean(key, prefix, sensitive) { mutableProperties.add(it) }
@@ -212,6 +277,11 @@ object Configuration {
          * Returns a delegate for a [Configuration.Property.Definition.Standard] of type [Double].
          */
         fun double(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Double> = PropertyDelegate.double(key, prefix, sensitive) { mutableProperties.add(it) }
+
+        /**
+         * Returns a delegate for a [Configuration.Property.Definition.Standard] of type [Float].
+         */
+        fun float(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<Float> = PropertyDelegate.float(key, prefix, sensitive) { mutableProperties.add(it) }
 
         /**
          * Returns a delegate for a [Configuration.Property.Definition.Standard] of type [String].
