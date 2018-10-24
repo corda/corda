@@ -77,7 +77,7 @@ This design is not about:
 
 ### Assumptions and trade-offs made for the current version
 
-##### We assume that ContractStates will never change in a dramatic way that would impact other Contracts or Flows that depend on them.
+##### We assume that ContractStates will never change their semantics in a way that would impact other Contracts or Flows that depend on them.
  
 E.g.: If various contracts depend on Cash, the assumption is that no new field will be added to Cash that would have an influence over the amount or the owner (the fundamental fields of Cash).
 It is always safe to mix new CashStates with older states that depend on it. 
@@ -233,7 +233,7 @@ This rule needs to be enforced at verification time, and also during transaction
 We don't currently support multiple constraints on a state and don't have any delegation mechanism to implement it like that.
  
 
-#### Add Version field on TransactionState
+#### Considered but decided against - Add Version field on TransactionState
 
 The `version` could also be stored redundantly to states on the ledger - as a field in ``TransactionState`` and also in the `vault_states` table.
 
@@ -244,12 +244,25 @@ Note:
 - When a transaction is verified the version of the attachment needs to match the version of the output states. 
  
 
-##### Backwards compatibility
+## Actions
 
-If the field is not set, it needs to be retrieved from the previous transaction as per the rules from above.
+1. Implement the serialization `Strict Mode` and wire that during transaction verification, and more generally whenever it tries to deserialize ContractStates or Commands. 
+Also to define other possible evolutions and decide if possible or not (E.g: adding/removing interfaces).
+2. Find some good names for the `ContractJar` and the `FlowsJar`.
+3. Implement the gradle plugin changes to split the 'cordapp' into 'contract' (better name) and 'flows' (better name).
+4. Implement the versioning strategy proposed above in the 'contract' part of the plugin.
+5. When importing a ContractJar, read the version and save it as a database column. Also add it as a field to teh `ContractAttachment` class. 
+6. Implement the non-downgrade rule using the above `version`.
+7. Add support to the `cordapp` plugin and the driver to test multiple versions of the contractJar together.
+8. Document all the release process.
+9. Update samples with the new gradle plugin.
+10. Create an elaborate sample for some more complex flows and contract upgrade scenarios. Ideally with new fields added to the state, new version of the flow protocol, internal flow objects changed, subflows, dependency on other contracts.
 
-Same as above, if the constraint is the SignatureConstraint, the version must be set on the TransactionState.
-
+## Deferred tasks
+   
+1. Formalise the dependency rules between contracts, contracts and flows, and also subflow versioning.
+2. Find a way to hide the complexity of backwards compatibility from flow devlopers (maybe using a handshake).
+3. Remove custom contract state schema from ContractJar.
 
 ## Appendix:
 
