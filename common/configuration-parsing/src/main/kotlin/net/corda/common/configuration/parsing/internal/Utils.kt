@@ -15,6 +15,8 @@ operator fun <TYPE> Config.get(property: Configuration.Property.Definition<TYPE>
 
 fun Configuration.Version.Extractor.parseRequired(config: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults) = parse(config, options).map { it ?: throw IllegalStateException("Absent version value.") }
 
+inline fun <reified NESTED : Any> Configuration.Specification<*>.nested(specification: Configuration.Specification<NESTED>, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<NESTED> = nestedObject(schema = specification as Configuration.Schema, key = key, sensitive = sensitive).flatMap { _, _, value -> specification.parse(value.toConfig()) }
+
 @Suppress("UNCHECKED_CAST")
 internal fun configObject(vararg entries: Pair<String, Any?>): ConfigObject {
 

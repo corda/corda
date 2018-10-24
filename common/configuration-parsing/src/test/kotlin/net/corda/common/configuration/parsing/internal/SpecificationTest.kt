@@ -16,9 +16,6 @@ class SpecificationTest {
 
             override fun parseValid(configuration: Config) = valid(Addresses(configuration[principal], configuration[admin]))
 
-            @Suppress("UNUSED_PARAMETER")
-            fun parse(key: String, typeName: String, rawValue: ConfigObject): Valid<Addresses> = parse(rawValue.toConfig())
-
             private fun parseAddress(key: String, typeName: String, rawValue: String): Valid<Address> {
 
                 return Address.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) }
@@ -26,7 +23,7 @@ class SpecificationTest {
         }
 
         val useSsl by boolean()
-        val addresses by nestedObject(AddressesSpec).flatMap(AddressesSpec::parse)
+        val addresses by nested(AddressesSpec)
 
         override fun parseValid(configuration: Config) = valid<RpcSettings>(RpcSettingsImpl(configuration[addresses], configuration[useSsl]))
     }

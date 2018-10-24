@@ -1,7 +1,6 @@
 package net.corda.common.configuration.parsing.internal.versioned
 
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigObject
 import net.corda.common.configuration.parsing.internal.*
 import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
@@ -119,12 +118,9 @@ class VersionedParsingExampleTest {
 
                     return Address.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(key, typeName, error) }
                 }
-
-                @Suppress("UNUSED_PARAMETER")
-                fun parse(key: String, typeName: String, rawValue: ConfigObject): Valid<Addresses> = parse(rawValue.toConfig())
             }
 
-            private val addresses by nestedObject(AddressesSpec).flatMap(AddressesSpec::parse)
+            private val addresses by nested(AddressesSpec)
 
             override fun parseValid(configuration: Config): Valid<RpcSettings> {
 
