@@ -230,18 +230,37 @@ object Configuration {
      */
     interface Schema : Configuration.Validator, Configuration.Describer {
 
+        /**
+         * Name of the schema.
+         */
         val name: String?
 
+        /**
+         * A description of the schema definition, with references to nested types.
+         */
         fun description(): String
 
+        /**
+         * All properties defining this schema.
+         */
         val properties: Set<Property.Definition<*>>
 
         companion object {
 
+            /**
+             * Constructs a schema with given name and properties.
+             */
             fun withProperties(name: String? = null, properties: Iterable<Property.Definition<*>>): Schema = Schema(name, properties)
 
+            /**
+             * @see [withProperties].
+             */
             fun withProperties(vararg properties: Property.Definition<*>, name: String? = null): Schema = withProperties(name, properties.toSet())
 
+            /**
+             * Convenient way of creating an [Iterable] of [Property.Definition]s without having to reference the [Property.Definition.Companion] each time.
+             * @see [withProperties].
+             */
             fun withProperties(name: String? = null, builder: Property.Definition.Companion.() -> Iterable<Property.Definition<*>>): Schema = withProperties(name, builder.invoke(Property.Definition))
         }
     }
@@ -347,7 +366,7 @@ object Configuration {
          * @param keyName name of the property key this error refers to, if any.
          * @param typeName name of the type of the property this error refers to, if any.
          * @param message details about what went wrong during the processing.
-         * @containingPath parent path for nested property keys, excluding the [keyName].
+         * @param containingPath containing path of the error, excluding the [keyName].
          */
         sealed class Error constructor(open val keyName: String?, open val typeName: String? = null, open val message: String, val containingPath: List<String> = emptyList()) {
 
