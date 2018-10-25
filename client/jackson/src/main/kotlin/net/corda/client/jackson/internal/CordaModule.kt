@@ -98,7 +98,7 @@ private class CordaSerializableBeanSerializerModifier : BeanSerializerModifier()
             val ctor = constructorForDeserialization(beanClass)
             val amqpProperties = propertiesForSerialization(ctor, beanClass, serializerFactory)
                     .serializationOrder
-                    .map { it.serializer.name }
+                    .mapNotNull { if (it.isCalculated) null else it.serializer.name }
             val propertyRenames = beanDesc.findProperties().associateBy({ it.name }, { it.internalName })
             (amqpProperties - propertyRenames.values).let {
                 check(it.isEmpty()) { "Jackson didn't provide serialisers for $it" }

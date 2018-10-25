@@ -102,7 +102,8 @@ class VaultFiller @JvmOverloads constructor(
                                      linearString: String = "",
                                      linearNumber: Long = 0L,
                                      linearBoolean: Boolean = false,
-                                     linearTimestamp: Instant = now()): Vault<LinearState> {
+                                     linearTimestamp: Instant = now(),
+                                     constraint: AttachmentConstraint = AutomaticPlaceholderConstraint): Vault<LinearState> {
         val myKey: PublicKey = services.myInfo.chooseIdentity().owningKey
         val me = AnonymousParty(myKey)
         val issuerKey = defaultNotary.keyPair
@@ -116,7 +117,8 @@ class VaultFiller @JvmOverloads constructor(
                         linearString = linearString,
                         linearNumber = linearNumber,
                         linearBoolean = linearBoolean,
-                        linearTimestamp = linearTimestamp), DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
+                        linearTimestamp = linearTimestamp), DUMMY_LINEAR_CONTRACT_PROGRAM_ID,
+                        constraint = constraint)
                 addCommand(dummyCommand())
             }
             return@map services.signInitialTransaction(dummyIssue).withAdditionalSignature(issuerKey, signatureMetadata)
@@ -132,12 +134,12 @@ class VaultFiller @JvmOverloads constructor(
 
     @JvmOverloads
     fun fillWithSomeTestLinearAndDealStates(numberToCreate: Int,
-                                     externalId: String? = null,
-                                     participants: List<AbstractParty> = emptyList(),
-                                     linearString: String = "",
-                                     linearNumber: Long = 0L,
-                                     linearBoolean: Boolean = false,
-                                     linearTimestamp: Instant = now()): Vault<LinearState> {
+                                            externalId: String? = null,
+                                            participants: List<AbstractParty> = emptyList(),
+                                            linearString: String = "",
+                                            linearNumber: Long = 0L,
+                                            linearBoolean: Boolean = false,
+                                            linearTimestamp: Instant = now()): Vault<LinearState> {
         val myKey: PublicKey = services.myInfo.chooseIdentity().owningKey
         val me = AnonymousParty(myKey)
         val issuerKey = defaultNotary.keyPair

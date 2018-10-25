@@ -4,7 +4,6 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.VersionInfo
-import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.services.MockAttachmentStorage

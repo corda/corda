@@ -23,6 +23,8 @@ import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.internal.TestingNamedCacheFactory
+import net.corda.testing.internal.fromUserList
 import net.corda.testing.internal.p2pSslOptions
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
@@ -128,7 +130,7 @@ class ArtemisRpcTests {
 
     private fun <OPS : RPCOps> InternalRPCMessagingClient.start(ops: OPS, securityManager: RPCSecurityManager, brokerControl: ActiveMQServerControl) {
         apply {
-            init(ops, securityManager)
+            init(ops, securityManager, TestingNamedCacheFactory())
             start(brokerControl)
         }
     }

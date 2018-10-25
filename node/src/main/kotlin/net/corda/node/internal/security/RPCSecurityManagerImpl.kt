@@ -4,14 +4,13 @@ package net.corda.node.internal.security
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.primitives.Ints
-import net.corda.core.context.AuthServiceId
-import net.corda.core.internal.buildNamed
+import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.DataSourceFactory
+import net.corda.node.services.config.AuthDataSourceType
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.node.services.config.SecurityConfiguration
-import net.corda.node.services.config.AuthDataSourceType
 import net.corda.nodeapi.internal.config.User
 import org.apache.shiro.authc.*
 import org.apache.shiro.authc.credential.PasswordMatcher
@@ -28,22 +27,22 @@ import org.apache.shiro.realm.jdbc.JdbcRealm
 import org.apache.shiro.subject.PrincipalCollection
 import org.apache.shiro.subject.SimplePrincipalCollection
 import java.io.Closeable
-import javax.security.auth.login.FailedLoginException
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit
+import javax.security.auth.login.FailedLoginException
+
 private typealias AuthServiceConfig = SecurityConfiguration.AuthService
 
 /**
  * Default implementation of [RPCSecurityManager] adapting
  * [org.apache.shiro.mgt.SecurityManager]
  */
-class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
+class RPCSecurityManagerImpl(config: AuthServiceConfig, cacheFactory: NamedCacheFactory) : RPCSecurityManager {
 
     override val id = config.id
     private val manager: DefaultSecurityManager
 
     init {
-        manager = buildImpl(config)
+        manager = buildImpl(config, cacheFactory)
     }
 
     @Throws(FailedLoginException::class)
@@ -75,14 +74,8 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
 
         private val logger = loggerFor<RPCSecurityManagerImpl>()
 
-        /**
-         * Instantiate RPCSecurityManager initialised with users data from a list of [User]
-         */
-        fun fromUserList(id: AuthServiceId, users: List<User>) =
-                RPCSecurityManagerImpl(AuthServiceConfig.fromUsers(users).copy(id = id))
-
         // Build internal Shiro securityManager instance
-        private fun buildImpl(config: AuthServiceConfig): DefaultSecurityManager {
+        private fun buildImpl(config: AuthServiceConfig, cacheFactory: NamedCacheFactory): DefaultSecurityManager {
             val realm = when (config.dataSource.type) {
                 AuthDataSourceType.DB -> {
                     logger.info("Constructing DB-backed security data source: ${config.dataSource.connection}")
@@ -98,7 +91,8 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
                 it.cacheManager = config.options?.cache?.let {
                     CaffeineCacheManager(
                             timeToLiveSeconds = it.expireAfterSecs,
-                            maxSize = it.maxEntries)
+                            maxSize = it.maxEntries,
+                            cacheFactory = cacheFactory)
                 }
             }
         }
@@ -294,7 +288,8 @@ private fun <K : Any, V> Cache<K, V>.toShiroCache() = object : ShiroCache<K, V> 
  * cache implementation in [com.github.benmanes.caffeine.cache.Cache]
  */
 private class CaffeineCacheManager(val maxSize: Long,
-                                   val timeToLiveSeconds: Long) : CacheManager {
+                                   val timeToLiveSeconds: Long,
+                                   val cacheFactory: NamedCacheFactory) : CacheManager {
 
     private val instances = ConcurrentHashMap<String, ShiroCache<*, *>>()
 
@@ -306,11 +301,7 @@ private class CaffeineCacheManager(val maxSize: Long,
 
     private fun <K : Any, V> buildCache(name: String): ShiroCache<K, V> {
         logger.info("Constructing cache '$name' with maximumSize=$maxSize, TTL=${timeToLiveSeconds}s")
-        return Caffeine.newBuilder()
-                .expireAfterWrite(timeToLiveSeconds, TimeUnit.SECONDS)
-                .maximumSize(maxSize)
-                .buildNamed<K, V>("RPCSecurityManagerShiroCache_$name")
-                .toShiroCache()
+        return cacheFactory.buildNamed<K, V>(Caffeine.newBuilder(), "RPCSecurityManagerShiroCache_$name").toShiroCache()
     }
 
     companion object {

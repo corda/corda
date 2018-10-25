@@ -61,7 +61,6 @@ dependencies {
     testCompile "com.google.guava:guava-testlib:$guava_version"
 
     // Bring in the MockNode infrastructure for writing protocol unit tests.
-    testCompile project(":node")
     testCompile project(":node-driver")
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"

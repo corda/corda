@@ -3,6 +3,7 @@ package net.corda.core.contracts
 import net.corda.core.KeepForDJVM
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
+import net.corda.core.serialization.SerializableCalculatedProperty
 import java.security.PublicKey
 
 /**
@@ -27,17 +28,18 @@ class InsufficientBalanceException(val amountMissing: Amount<*>) : FlowException
  * (GBP, USD, oil, shares in company <X>, etc.) and any additional metadata (issuer, grade, class, etc.).
  */
 @KeepForDJVM
-interface FungibleAsset<T : Any> : OwnableState {
+interface FungibleAsset<T : Any> : FungibleState<Issued<T>>, OwnableState {
     /**
      * Amount represents a positive quantity of some issued product which can be cash, tokens, assets, or generally
      * anything else that's quantifiable with integer quantities. See [Issued] and [Amount] for more details.
      */
-    val amount: Amount<Issued<T>>
+    override val amount: Amount<Issued<T>>
 
     /**
      * There must be an ExitCommand signed by these keys to destroy the amount. While all states require their
      * owner to sign, some (i.e. cash) also require the issuer.
      */
+    @get:SerializableCalculatedProperty
     val exitKeys: Collection<PublicKey>
 
     /**

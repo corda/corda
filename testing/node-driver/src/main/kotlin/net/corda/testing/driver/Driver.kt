@@ -19,6 +19,7 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.PortAllocation.Incremental
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.*
 import rx.Observable
@@ -134,8 +135,8 @@ abstract class PortAllocation {
  *     in. If null the Driver-level value will be used.
  * @property maximumHeapSize The maximum JVM heap size to use for the node.
  * @property logLevel Logging level threshold.
- * @property additionalCordapps Additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
- * @property regenerateCordappsOnStart Whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
+ * @property additionalCordapps Additional [TestCordapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
+ * @property regenerateCordappsOnStart Whether existing [TestCordapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
  */
 @Suppress("unused")
 data class NodeParameters(
@@ -146,8 +147,9 @@ data class NodeParameters(
         val startInSameProcess: Boolean? = null,
         val maximumHeapSize: String = "512m",
         val logLevel: String? = null,
-        val additionalCordapps: Set<TestCorDapp> = emptySet(),
-        val regenerateCordappsOnStart: Boolean = false
+        val additionalCordapps: Collection<TestCordapp> = emptySet(),
+        val regenerateCordappsOnStart: Boolean = false,
+        val flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap()
 ) {
     /**
      * Helper builder for configuring a [Node] from Java.
@@ -226,8 +228,8 @@ data class NodeParameters(
      * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
      *     in. If null the Driver-level value will be used.
      * @param maximumHeapSize The maximum JVM heap size to use for the node.
-     * @param additionalCordapps Additional [TestCorDapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
-     * @param regenerateCordappsOnStart Whether existing [TestCorDapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
+     * @param additionalCordapps Additional [TestCordapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
+     * @param regenerateCordappsOnStart Whether existing [TestCordapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
      */
     constructor(
             providedName: CordaX500Name?,
@@ -236,7 +238,7 @@ data class NodeParameters(
             customOverrides: Map<String, Any?>,
             startInSameProcess: Boolean?,
             maximumHeapSize: String,
-            additionalCordapps: Set<TestCorDapp> = emptySet(),
+            additionalCordapps: Set<TestCordapp> = emptySet(),
             regenerateCordappsOnStart: Boolean = false
     ) : this(
             providedName,
@@ -291,7 +293,7 @@ data class NodeParameters(
     fun withStartInSameProcess(startInSameProcess: Boolean?): NodeParameters = copy(startInSameProcess = startInSameProcess)
     fun withMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
     fun withLogLevel(logLevel: String?): NodeParameters = copy(logLevel = logLevel)
-    fun withAdditionalCordapps(additionalCordapps: Set<TestCorDapp>): NodeParameters = copy(additionalCordapps = additionalCordapps)
+    fun withAdditionalCordapps(additionalCordapps: Set<TestCordapp>): NodeParameters = copy(additionalCordapps = additionalCordapps)
     fun withDeleteExistingCordappsDirectory(regenerateCordappsOnStart: Boolean): NodeParameters = copy(regenerateCordappsOnStart = regenerateCordappsOnStart)
 }
 
@@ -379,7 +381,7 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
  * @property inMemoryDB Whether to use in-memory H2 for new nodes rather then on-disk (the node starts quicker, however
  *     the data is not persisted between node restarts). Has no effect if node is configured
  *     in any way to use database other than H2.
- * @property cordappsForAllNodes [TestCorDapp]s that will be added to each node started by the [DriverDSL].
+ * @property cordappsForAllNodes [TestCordapp]s that will be added to each node started by the [DriverDSL].
  */
 @Suppress("unused")
 data class DriverParameters(
@@ -398,7 +400,7 @@ data class DriverParameters(
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         val initialiseSerialization: Boolean = true,
         val inMemoryDB: Boolean = true,
-        val cordappsForAllNodes: Set<TestCorDapp>? = null
+        val cordappsForAllNodes: Collection<TestCordapp>? = null
     ) {
     constructor(
             isDebug: Boolean = false,
@@ -480,7 +482,7 @@ data class DriverParameters(
             extraCordappPackagesToScan: List<String>,
             jmxPolicy: JmxPolicy,
             networkParameters: NetworkParameters,
-            cordappsForAllNodes: Set<TestCorDapp>? = null
+            cordappsForAllNodes: Collection<TestCordapp>? = null
     ) : this(
             isDebug,
             driverDirectory,
@@ -549,7 +551,7 @@ data class DriverParameters(
             networkParameters: NetworkParameters,
             initialiseSerialization: Boolean,
             inMemoryDB: Boolean,
-            cordappsForAllNodes: Set<TestCorDapp>? = null
+            cordappsForAllNodes: Set<TestCordapp>? = null
     ) : this(
             isDebug,
             driverDirectory,
@@ -584,7 +586,7 @@ data class DriverParameters(
     fun withNetworkParameters(networkParameters: NetworkParameters): DriverParameters = copy(networkParameters = networkParameters)
     fun withNotaryCustomOverrides(notaryCustomOverrides: Map<String, Any?>): DriverParameters = copy(notaryCustomOverrides = notaryCustomOverrides)
     fun withInMemoryDB(inMemoryDB: Boolean): DriverParameters = copy(inMemoryDB = inMemoryDB)
-    fun withCordappsForAllNodes(cordappsForAllNodes: Set<TestCorDapp>?): DriverParameters = copy(cordappsForAllNodes = cordappsForAllNodes)
+    fun withCordappsForAllNodes(cordappsForAllNodes: Set<TestCordapp>?): DriverParameters = copy(cordappsForAllNodes = cordappsForAllNodes)
 
     fun copy(
             isDebug: Boolean,
@@ -660,7 +662,7 @@ data class DriverParameters(
             extraCordappPackagesToScan: List<String>,
             jmxPolicy: JmxPolicy,
             networkParameters: NetworkParameters,
-            cordappsForAllNodes: Set<TestCorDapp>?
+            cordappsForAllNodes: Set<TestCordapp>?
     ) = this.copy(
             isDebug = isDebug,
             driverDirectory = driverDirectory,
@@ -693,7 +695,7 @@ data class DriverParameters(
             jmxPolicy: JmxPolicy,
             networkParameters: NetworkParameters,
             initialiseSerialization: Boolean,
-            cordappsForAllNodes: Set<TestCorDapp>?
+            cordappsForAllNodes: Set<TestCordapp>?
     ) = this.copy(
             isDebug = isDebug,
             driverDirectory = driverDirectory,

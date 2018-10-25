@@ -83,7 +83,8 @@ class RPCClientProxyHandler(
         private val sessionId: Trace.SessionId,
         private val externalTrace: Trace?,
         private val impersonatedActor: Actor?,
-        private val targetLegalIdentity: CordaX500Name?
+        private val targetLegalIdentity: CordaX500Name?,
+        private val cacheFactory: NamedCacheFactory = ClientCacheFactory()
 ) : InvocationHandler {
 
     private enum class State {
@@ -169,8 +170,7 @@ class RPCClientProxyHandler(
             }
             observablesToReap.locked { observables.add(observableId) }
         }
-        return Caffeine.newBuilder().
-                weakValues().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).buildNamed("RpcClientProxyHandler_rpcObservable")
+        return cacheFactory.buildNamed(Caffeine.newBuilder().weakValues().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()), "RpcClientProxyHandler_rpcObservable")
     }
 
     private var sessionFactory: ClientSessionFactory? = null
@@ -179,7 +179,7 @@ class RPCClientProxyHandler(
     private var rpcProducer: ClientProducer? = null
     private var rpcConsumer: ClientConsumer? = null
 
-    private val deduplicationChecker = DeduplicationChecker(rpcConfiguration.deduplicationCacheExpiry)
+    private val deduplicationChecker = DeduplicationChecker(rpcConfiguration.deduplicationCacheExpiry, cacheFactory = cacheFactory)
     private val deduplicationSequenceNumber = AtomicLong(0)
 
     private val sendingEnabled = AtomicBoolean(true)

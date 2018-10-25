@@ -3,16 +3,12 @@ package net.corda.core.serialization
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.TestNoSecurityDataVendingFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.core.ALICE_NAME
@@ -151,17 +147,16 @@ class AttachmentSerializationTest {
     }
 
     private fun launchFlow(clientLogic: ClientLogic, rounds: Int, sendData: Boolean = false) {
-        server.registerFlowFactory(
-                ClientLogic::class.java,
-                InitiatedFlowFactory.Core { ServerLogic(it, sendData) },
-                ServerLogic::class.java,
-                track = false)
+        server.registerCordappFlowFactory(
+                ClientLogic::class,
+                1
+        ) { ServerLogic(it, sendData) }
         client.services.startFlow(clientLogic)
         mockNet.runNetwork(rounds)
     }
 
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
-        client = mockNet.restartNode(client) { args, _ ->
+        client = mockNet.restartNode(client) { args ->
             object : InternalMockNetwork.MockNode(args) {
                 override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = checkAttachmentsOnLoad }
             }

@@ -1,10 +1,13 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.toFuture
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.testing.node.internal.TestStartedNode
+import rx.Observable
 import kotlin.reflect.KClass
 
 /**
@@ -32,20 +35,6 @@ abstract class SimpleAnswer<out R : Any>(private val session: FlowSession, priva
 class NoAnswer(private val closure: () -> Unit = {}) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() = closure()
-}
-
-/**
- * Allows to register a flow of type [R] against an initiating flow of type [I].
- */
-inline fun <I : FlowLogic<*>, reified R : FlowLogic<*>> TestStartedNode.registerInitiatedFlow(initiatingFlowType: KClass<I>, crossinline construct: (session: FlowSession) -> R) {
-    registerFlowFactory(initiatingFlowType.java, InitiatedFlowFactory.Core { session -> construct(session) }, R::class.javaObjectType, true)
-}
-
-/**
- * Allows to register a flow of type [Answer] against an initiating flow of type [I], returning a valure of type [R].
- */
-inline fun <I : FlowLogic<*>, reified R : Any> TestStartedNode.registerAnswer(initiatingFlowType: KClass<I>, value: R) {
-    registerFlowFactory(initiatingFlowType.java, InitiatedFlowFactory.Core { session -> Answer(session, value) }, Answer::class.javaObjectType, true)
 }
 
 /**
@@ -112,4 +101,23 @@ inline fun <reified R : Any> FlowLogic<*>.receiveAll(session: FlowSession, varar
 
 private fun Array<out Pair<FlowSession, Class<out Any>>>.enforceNoDuplicates() {
     require(this.size == this.toSet().size) { "A flow session can only appear once as argument." }
+}
+
+inline fun <reified P : FlowLogic<*>> TestStartedNode.registerCordappFlowFactory(
+        initiatingFlowClass: KClass<out FlowLogic<*>>,
+        initiatedFlowVersion: Int = 1,
+        noinline flowFactory: (FlowSession) -> P): CordaFuture<P> {
+
+    val observable = internals.registerInitiatedFlowFactory(
+            initiatingFlowClass.java,
+            P::class.java,
+            InitiatedFlowFactory.CorDapp(initiatedFlowVersion, "", flowFactory),
+            track = true)
+    return observable.toFuture()
+}
+
+fun <T : FlowLogic<*>> TestStartedNode.registerCoreFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
+                                                               initiatedFlowClass: Class<T>,
+                                                               flowFactory: (FlowSession) -> T , track: Boolean): Observable<T> {
+    return this.internals.registerInitiatedFlowFactory(initiatingFlowClass, initiatedFlowClass, InitiatedFlowFactory.Core(flowFactory), track)
 }

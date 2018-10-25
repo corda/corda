@@ -3,10 +3,7 @@ package net.corda.node.services.vault
 import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.packageName
@@ -23,17 +20,16 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.node.internal.InitiatedFlowFactory
-import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Test
+import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.reflect.jvm.jvmName
@@ -51,7 +47,7 @@ class NodePair(private val mockNet: InternalMockNetwork) {
 
     @InitiatingFlow
     abstract class AbstractClientLogic<out T>(nodePair: NodePair) : FlowLogic<T>() {
-        protected val server = nodePair.server.info.singleIdentity()
+        private val server = nodePair.server.info.singleIdentity()
         protected abstract fun callImpl(): T
         @Suspendable
         override fun call() = callImpl().also {
@@ -67,7 +63,7 @@ class NodePair(private val mockNet: InternalMockNetwork) {
         private set
 
     fun <T> communicate(clientLogic: AbstractClientLogic<T>, rebootClient: Boolean): FlowStateMachine<T> {
-        server.registerFlowFactory(AbstractClientLogic::class.java, InitiatedFlowFactory.Core { ServerLogic(it, serverRunning) }, ServerLogic::class.java, false)
+        server.registerCoreFlowFactory(AbstractClientLogic::class.java, ServerLogic::class.java, { ServerLogic(it, serverRunning) }, false)
         client.services.startFlow(clientLogic)
         while (!serverRunning.get()) mockNet.runNetwork(1)
         if (rebootClient) {
@@ -81,9 +77,12 @@ class VaultSoftLockManagerTest {
     private val mockVault = rigorousMock<VaultServiceInternal>().also {
         doNothing().whenever(it).softLockRelease(any(), anyOrNull())
     }
-    private val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(ContractImpl::class.packageName), defaultFactory = { args, _ ->
+
+    private val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(ContractImpl::class.packageName), defaultFactory = { args ->
         object : InternalMockNetwork.MockNode(args) {
-            override fun makeVaultService(keyManagementService: KeyManagementService, services: ServicesForResolution, database: CordaPersistence): VaultServiceInternal {
+            override fun makeVaultService(keyManagementService: KeyManagementService,
+                                          services: ServicesForResolution,
+                                          database: CordaPersistence): VaultServiceInternal {
                 val node = this
                 val realVault = super.makeVaultService(keyManagementService, services, database)
                 return object : VaultServiceInternal by realVault {
@@ -96,13 +95,11 @@ class VaultSoftLockManagerTest {
             }
         }
     })
+
     private val nodePair = NodePair(mockNet)
-    @After
-    fun tearDown() {
-        mockNet.stopNodes()
-    }
 
     object CommandDataImpl : CommandData
+
     class ClientLogic(nodePair: NodePair, val state: ContractState) : NodePair.AbstractClientLogic<List<ContractState>>(nodePair) {
         override fun callImpl() = run {
             subFlow(FinalityFlow(serviceHub.signInitialTransaction(TransactionBuilder(notary = ourIdentity).apply {
@@ -127,7 +124,7 @@ class VaultSoftLockManagerTest {
         override val owner get() = participants[0]
         override fun withNewOwner(newOwner: AbstractParty) = throw UnsupportedOperationException()
         override val amount get() = Amount(1, Issued(PartyAndReference(owner, OpaqueBytes.of(1)), Unit))
-        override val exitKeys get() = throw UnsupportedOperationException()
+        override val exitKeys get() = emptyList<PublicKey>()
         override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Unit>>, newOwner: AbstractParty) = throw UnsupportedOperationException()
         override fun equals(other: Any?) = other is FungibleAssetImpl && participants == other.participants
         override fun hashCode() = participants.hashCode()
@@ -148,6 +145,11 @@ class VaultSoftLockManagerTest {
             // In this case we don't want softLockRelease called so that we avoid its expensive query, even after restore from checkpoint.
         }
         verifyNoMoreInteractions(mockVault)
+    }
+
+    @After
+    fun tearDown() {
+        mockNet.stopNodes()
     }
 
     @Test

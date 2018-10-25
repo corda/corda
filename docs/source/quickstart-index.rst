@@ -1,15 +1,6 @@
 Quickstart
 ==========
 
-.. only:: pdfmode
-
-   .. toctree::
-      :caption: Other docs
-      :maxdepth: 1
-
-      getting-set-up.rst
-      tutorial-cordapp.rst
-
 Welcome to the Corda Quickstart Guide. Follow the links below to help get going quickly with Corda.
 
 I want to:

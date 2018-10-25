@@ -17,7 +17,10 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.messaging.*
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.StateMachineUpdate
 import net.corda.nodeapi.internal.pendingFlowsCount
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
@@ -357,11 +360,6 @@ object InteractiveShell {
                 val args = parser.parseArguments(clazz.name, paramNamesFromConstructor.zip(ctor.genericParameterTypes), inputData)
                 if (args.size != ctor.genericParameterTypes.size) {
                     errors.add("${getPrototype()}: Wrong number of arguments (${args.size} provided, ${ctor.genericParameterTypes.size} needed)")
-                    continue
-                }
-                val flow = ctor.newInstance(*args) as FlowLogic<*>
-                if (flow.progressTracker == null) {
-                    errors.add("A flow must override the progress tracker in order to be run from the shell")
                     continue
                 }
                 return invoke(clazz, args)

@@ -46,8 +46,8 @@ threats is the [STRIDE](https://en.wikipedia.org/wiki/STRIDE_(security)) framewo
 
 -   Spoofing
 -   Tampering
--   Information Disclosure
 -   Repudiation
+-   Information Disclosure
 -   Denial of Service
 -   Elevation of Privilege
 

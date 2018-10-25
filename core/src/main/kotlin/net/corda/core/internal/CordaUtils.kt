@@ -17,6 +17,8 @@ import org.slf4j.MDC
 
 // *Internal* Corda-specific utilities
 
+const val PLATFORM_VERSION = 4
+
 fun ServicesForResolution.ensureMinimumPlatformVersion(requiredMinPlatformVersion: Int, feature: String) {
     val currentMinPlatformVersion = networkParameters.minimumPlatformVersion
     if (currentMinPlatformVersion < requiredMinPlatformVersion) {

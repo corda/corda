@@ -8,6 +8,7 @@ import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
@@ -28,7 +29,6 @@ import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
-import net.corda.nodeapi.internal.PLATFORM_VERSION
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
@@ -50,14 +50,13 @@ import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import rx.Observable
 import rx.Subscription
 import rx.schedulers.Schedulers
-import rx.subjects.AsyncSubject
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL
@@ -93,7 +92,7 @@ class DriverDSLImpl(
         val networkParameters: NetworkParameters,
         val notaryCustomOverrides: Map<String, Any?>,
         val inMemoryDB: Boolean,
-        val cordappsForAllNodes: Set<TestCorDapp>
+        val cordappsForAllNodes: Collection<TestCordapp>
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -165,7 +164,7 @@ class DriverDSLImpl(
 
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.corda.rpcOptions.address
-        val clientRpcSslOptions =  clientSslOptionsCompatibleWith(config.corda.rpcOptions)
+        val clientRpcSslOptions = clientSslOptionsCompatibleWith(config.corda.rpcOptions)
         val client = createCordaRPCClientWithSslAndClassLoader(rpcAddress, sslConfiguration = clientRpcSslOptions)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
@@ -186,7 +185,25 @@ class DriverDSLImpl(
         }
     }
 
-    override fun startNode(defaultParameters: NodeParameters, providedName: CordaX500Name?, rpcUsers: List<User>, verifierType: VerifierType, customOverrides: Map<String, Any?>, startInSameProcess: Boolean?, maximumHeapSize: String) = startNode(defaultParameters, providedName, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, defaultParameters.additionalCordapps, defaultParameters.regenerateCordappsOnStart)
+    override fun startNode(defaultParameters: NodeParameters,
+                           providedName: CordaX500Name?,
+                           rpcUsers: List<User>,
+                           verifierType: VerifierType,
+                           customOverrides: Map<String, Any?>,
+                           startInSameProcess: Boolean?,
+                           maximumHeapSize: String): CordaFuture<NodeHandle> {
+        return startNode(
+                defaultParameters,
+                providedName,
+                rpcUsers,
+                verifierType,
+                customOverrides,
+                startInSameProcess,
+                maximumHeapSize,
+                defaultParameters.additionalCordapps,
+                defaultParameters.regenerateCordappsOnStart
+        )
+    }
 
     override fun startNode(
             defaultParameters: NodeParameters,
@@ -196,8 +213,9 @@ class DriverDSLImpl(
             customOverrides: Map<String, Any?>,
             startInSameProcess: Boolean?,
             maximumHeapSize: String,
-            additionalCordapps: Set<TestCorDapp>,
-            regenerateCordappsOnStart: Boolean
+            additionalCordapps: Collection<TestCordapp>,
+            regenerateCordappsOnStart: Boolean,
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>
     ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
@@ -206,7 +224,7 @@ class DriverDSLImpl(
 
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
-            startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.doormanURL())
+            startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.config())
         } else {
             doneFuture(Unit)
         }
@@ -214,7 +232,7 @@ class DriverDSLImpl(
         return registrationFuture.flatMap {
             networkMapAvailability.flatMap {
                 // But starting the node proper does require the network map
-                startRegisteredNode(name, it, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, p2pAddress, additionalCordapps, regenerateCordappsOnStart)
+                startRegisteredNode(name, it, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, p2pAddress, additionalCordapps, regenerateCordappsOnStart, flowOverrides)
             }
         }
     }
@@ -227,8 +245,9 @@ class DriverDSLImpl(
                                     startInSameProcess: Boolean? = null,
                                     maximumHeapSize: String = "512m",
                                     p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort(),
-                                    additionalCordapps: Set<TestCorDapp> = emptySet(),
-                                    regenerateCordappsOnStart: Boolean = false): CordaFuture<NodeHandle> {
+                                    additionalCordapps: Collection<TestCordapp> = emptySet(),
+                                    regenerateCordappsOnStart: Boolean = false,
+                                    flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap()): CordaFuture<NodeHandle> {
         val rpcAddress = portAllocation.nextHostAndPort()
         val rpcAdminAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
@@ -242,14 +261,16 @@ class DriverDSLImpl(
                         "networkServices.networkMapURL" to compatibilityZone.networkMapURL().toString())
         }
 
+        val flowOverrideConfig = flowOverrides.entries.map { FlowOverride(it.key.canonicalName, it.value.canonicalName) }.let { FlowOverrideConfig(it) }
         val overrides = configOf(
-                "myLegalName" to name.toString(),
-                "p2pAddress" to p2pAddress.toString(),
+                NodeConfiguration::myLegalName.name to name.toString(),
+                NodeConfiguration::p2pAddress.name to p2pAddress.toString(),
                 "rpcSettings.address" to rpcAddress.toString(),
                 "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
-                "useTestClock" to useTestClock,
-                "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
-                "verifierType" to verifierType.name
+                NodeConfiguration::useTestClock.name to useTestClock,
+                NodeConfiguration::rpcUsers.name to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
+                NodeConfiguration::verifierType.name to verifierType.name,
+                NodeConfiguration::flowOverrides.name to flowOverrideConfig.toConfig().root().unwrapped()
         ) + czUrlConfig + customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
@@ -259,14 +280,18 @@ class DriverDSLImpl(
         return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap, additionalCordapps, regenerateCordappsOnStart)
     }
 
-    private fun startNodeRegistration(providedName: CordaX500Name, rootCert: X509Certificate, compatibilityZoneURL: URL): CordaFuture<NodeConfig> {
+    private fun startNodeRegistration(
+            providedName: CordaX500Name,
+            rootCert: X509Certificate,
+            networkServicesConfig: NetworkServicesConfig
+    ): CordaFuture<NodeConfig> {
         val baseDirectory = baseDirectory(providedName).createDirectories()
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = configOf(
                         "p2pAddress" to portAllocation.nextHostAndPort().toString(),
-                        "compatibilityZoneURL" to compatibilityZoneURL.toString(),
+                        "compatibilityZoneURL" to networkServicesConfig.doormanURL.toString(),
                         "myLegalName" to providedName.toString(),
                         "rpcSettings" to mapOf(
                                 "address" to portAllocation.nextHostAndPort().toString(),
@@ -289,7 +314,7 @@ class DriverDSLImpl(
             executorService.fork {
                 NodeRegistrationHelper(
                         config.corda,
-                        HTTPNetworkRegistrationService(compatibilityZoneURL, versionInfo),
+                        HTTPNetworkRegistrationService(networkServicesConfig, versionInfo),
                         NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)
                 ).buildKeystore()
                 config
@@ -297,7 +322,7 @@ class DriverDSLImpl(
         } else {
             startOutOfProcessMiniNode(
                     config,
-                    "--initial-registration",
+                    "initial-registration",
                     "--network-root-truststore=${rootTruststorePath.toAbsolutePath()}",
                     "--network-root-truststore-password=$rootTruststorePassword"
             ).map { config }
@@ -355,7 +380,7 @@ class DriverDSLImpl(
                 startNotaryIdentityGeneration()
             } else {
                 // With a root cert specified we delegate generation of the notary identities to the CZ.
-                startAllNotaryRegistrations(compatibilityZone.rootCert, compatibilityZone.doormanURL())
+                startAllNotaryRegistrations(compatibilityZone.rootCert, compatibilityZone)
             }
             notaryInfosFuture.map { notaryInfos ->
                 compatibilityZone.publishNotaries(notaryInfos)
@@ -406,16 +431,22 @@ class DriverDSLImpl(
         }
     }
 
-    private fun startAllNotaryRegistrations(rootCert: X509Certificate, compatibilityZoneURL: URL): CordaFuture<List<NotaryInfo>> {
+    private fun startAllNotaryRegistrations(
+            rootCert: X509Certificate,
+            compatibilityZone: CompatibilityZoneParams): CordaFuture<List<NotaryInfo>> {
         // Start the registration process for all the notaries together then wait for their responses.
         return notarySpecs.map { spec ->
             require(spec.cluster == null) { "Registering distributed notaries not supported" }
-            startNotaryRegistration(spec, rootCert, compatibilityZoneURL)
+            startNotaryRegistration(spec, rootCert, compatibilityZone)
         }.transpose()
     }
 
-    private fun startNotaryRegistration(spec: NotarySpec, rootCert: X509Certificate, compatibilityZoneURL: URL): CordaFuture<NotaryInfo> {
-        return startNodeRegistration(spec.name, rootCert, compatibilityZoneURL).flatMap { config ->
+    private fun startNotaryRegistration(
+            spec: NotarySpec,
+            rootCert: X509Certificate,
+            compatibilityZone: CompatibilityZoneParams
+    ): CordaFuture<NotaryInfo> {
+        return startNodeRegistration(spec.name, rootCert, compatibilityZone.config()).flatMap { config ->
             // Node registration only gives us the node CA cert, not the identity cert. That is only created on first
             // startup or when the node is told to just generate its node info file. We do that here.
             if (startNodesInProcess) {
@@ -426,7 +457,7 @@ class DriverDSLImpl(
             } else {
                 // TODO The config we use here is uses a hardocded p2p port which changes when the node is run proper
                 // This causes two node info files to be generated.
-                startOutOfProcessMiniNode(config, "--just-generate-node-info").map {
+                startOutOfProcessMiniNode(config, "generate-node-info").map {
                     // Once done we have to read the signed node info file that's been generated
                     val nodeInfoFile = config.corda.baseDirectory.list { paths ->
                         paths.filter { it.fileName.toString().startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
@@ -455,28 +486,30 @@ class DriverDSLImpl(
         }
     }
 
-    // TODO This mapping is done is several places including the gradle plugin. In general we need a better way of
-    // generating the configs for the nodes, probably making use of Any.toConfig()
-    private fun NotaryConfig.toConfigMap(): Map<String, Any> = mapOf("notary" to toConfig().root().unwrapped())
-
     private fun startSingleNotary(spec: NotarySpec, localNetworkMap: LocalNetworkMap?, customOverrides: Map<String, Any?>): CordaFuture<List<NodeHandle>> {
+        val notaryConfig = mapOf("notary" to mapOf("validating" to spec.validating))
         return startRegisteredNode(
                 spec.name,
                 localNetworkMap,
                 spec.rpcUsers,
                 spec.verifierType,
-                customOverrides = NotaryConfig(spec.validating).toConfigMap() + customOverrides
+                customOverrides = notaryConfig + customOverrides
         ).map { listOf(it) }
     }
 
     private fun startRaftNotaryCluster(spec: NotarySpec, localNetworkMap: LocalNetworkMap?): CordaFuture<List<NodeHandle>> {
         fun notaryConfig(nodeAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): Map<String, Any> {
             val clusterAddresses = if (clusterAddress != null) listOf(clusterAddress) else emptyList()
-            val config = NotaryConfig(
-                    validating = spec.validating,
-                    serviceLegalName = spec.name,
-                    raft = RaftConfig(nodeAddress = nodeAddress, clusterAddresses = clusterAddresses))
-            return config.toConfigMap()
+            val config = configOf("notary" to mapOf(
+                    "validating" to spec.validating,
+                    "serviceLegalName" to spec.name.toString(),
+                    "className" to "net.corda.notary.raft.RaftNotaryService",
+                    "extraConfig" to mapOf(
+                            "nodeAddress" to nodeAddress.toString(),
+                            "clusterAddresses" to clusterAddresses.map { it.toString() }
+                    ))
+            )
+            return config.root().unwrapped()
         }
 
         val nodeNames = generateNodeNames(spec)
@@ -488,8 +521,7 @@ class DriverDSLImpl(
                 localNetworkMap,
                 spec.rpcUsers,
                 spec.verifierType,
-                customOverrides = notaryConfig(clusterAddress)
-        )
+                customOverrides = notaryConfig(clusterAddress))
 
         // All other nodes will join the cluster
         val restNodeFutures = nodeNames.drop(1).map {
@@ -536,16 +568,12 @@ class DriverDSLImpl(
         }
     }
 
-    private val sharedCordappsDirectories: Iterable<Path> by lazy {
-        TestCordappDirectories.cached(cordappsForAllNodes)
-    }
-
     private fun startNodeInternal(specifiedConfig: NodeConfig,
                                   webAddress: NetworkHostAndPort,
                                   startInProcess: Boolean?,
                                   maximumHeapSize: String,
                                   localNetworkMap: LocalNetworkMap?,
-                                  additionalCordapps: Set<TestCorDapp>,
+                                  additionalCordapps: Collection<TestCordapp>,
                                   regenerateCordappsOnStart: Boolean = false): CordaFuture<NodeHandle> {
         val visibilityHandle = networkVisibilityController.register(specifiedConfig.corda.myLegalName)
         val baseDirectory = specifiedConfig.corda.baseDirectory.createDirectories()
@@ -559,11 +587,17 @@ class DriverDSLImpl(
 
         val useHTTPS = specifiedConfig.typesafe.run { hasPath("useHTTPS") && getBoolean("useHTTPS") }
 
-        val existingCorDappDirectoriesOption = if (regenerateCordappsOnStart) emptyList<String>() else if (specifiedConfig.typesafe.hasPath(NodeConfiguration.cordappDirectoriesKey)) specifiedConfig.typesafe.getStringList(NodeConfiguration.cordappDirectoriesKey) else emptyList()
+        val existingCorDappDirectoriesOption = if (regenerateCordappsOnStart) {
+            emptyList()
+        } else if (specifiedConfig.typesafe.hasPath(NodeConfiguration.cordappDirectoriesKey)) {
+            specifiedConfig.typesafe.getStringList(NodeConfiguration.cordappDirectoriesKey)
+        } else {
+            emptyList()
+        }
 
-        val cordappDirectories = existingCorDappDirectoriesOption + sharedCordappsDirectories.map { it.toString() } + TestCordappDirectories.cached(additionalCordapps, regenerateCordappsOnStart).map { it.toString() }
+        val cordappDirectories = existingCorDappDirectoriesOption + (cordappsForAllNodes + additionalCordapps).map { TestCordappDirectories.getJarDirectory(it).toString() }
 
-        val config = NodeConfig(specifiedConfig.typesafe.withValue(NodeConfiguration.cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories)))
+        val config = NodeConfig(specifiedConfig.typesafe.withValue(NodeConfiguration.cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories.toSet())))
 
         if (startInProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, config)
@@ -688,8 +722,13 @@ class DriverDSLImpl(
 
         private fun <A> oneOf(array: Array<A>) = array[Random().nextInt(array.size)]
 
-        fun cordappsInCurrentAndAdditionalPackages(packagesToScan: Iterable<String> = emptySet()): Set<TestCorDapp> = cordappsForPackages(getCallerPackage() + packagesToScan)
-        fun cordappsInCurrentAndAdditionalPackages(firstPackage: String, vararg otherPackages: String): Set<TestCorDapp> = cordappsInCurrentAndAdditionalPackages(otherPackages.toList() + firstPackage)
+        fun cordappsInCurrentAndAdditionalPackages(packagesToScan: Collection<String> = emptySet()): List<TestCordapp> {
+            return cordappsForPackages(getCallerPackage() + packagesToScan)
+        }
+
+        fun cordappsInCurrentAndAdditionalPackages(firstPackage: String, vararg otherPackages: String): List<TestCordapp> {
+            return cordappsInCurrentAndAdditionalPackages(otherPackages.asList() + firstPackage)
+        }
 
         private fun startInProcessNode(
                 executorService: ScheduledExecutorService,
@@ -811,10 +850,10 @@ class DriverDSLImpl(
             config += "baseDirectory" to configuration.baseDirectory.toAbsolutePath().toString()
 
             config += "keyStorePath" to configuration.p2pSslOptions.keyStore.path.toString()
-            config += "keyStorePassword" to configuration.p2pSslOptions.keyStore.password
+            config += "keyStorePassword" to configuration.p2pSslOptions.keyStore.storePassword
 
             config += "trustStorePath" to configuration.p2pSslOptions.trustStore.path.toString()
-            config += "trustStorePassword" to configuration.p2pSslOptions.trustStore.password
+            config += "trustStorePassword" to configuration.p2pSslOptions.trustStore.storePassword
 
             return config
         }
@@ -1043,6 +1082,7 @@ sealed class CompatibilityZoneParams(
 ) {
     abstract fun networkMapURL(): URL
     abstract fun doormanURL(): URL
+    abstract fun config() : NetworkServicesConfig
 }
 
 /**
@@ -1050,11 +1090,18 @@ sealed class CompatibilityZoneParams(
  */
 class SharedCompatibilityZoneParams(
         private val url: URL,
+        private val pnm : UUID?,
         publishNotaries: (List<NotaryInfo>) -> Unit,
         rootCert: X509Certificate? = null
 ) : CompatibilityZoneParams(publishNotaries, rootCert) {
+
+    val config : NetworkServicesConfig by lazy {
+        NetworkServicesConfig(url, url, pnm, false)
+    }
+
     override fun doormanURL() = url
     override fun networkMapURL() = url
+    override fun config() : NetworkServicesConfig = config
 }
 
 /**
@@ -1063,11 +1110,17 @@ class SharedCompatibilityZoneParams(
 class SplitCompatibilityZoneParams(
         private val doormanURL: URL,
         private val networkMapURL: URL,
+        private val pnm : UUID?,
         publishNotaries: (List<NotaryInfo>) -> Unit,
         rootCert: X509Certificate? = null
 ) : CompatibilityZoneParams(publishNotaries, rootCert) {
+    val config : NetworkServicesConfig by lazy {
+        NetworkServicesConfig(doormanURL, networkMapURL, pnm, false)
+    }
+
     override fun doormanURL() = doormanURL
     override fun networkMapURL() = networkMapURL
+    override fun config() : NetworkServicesConfig = config
 }
 
 fun <A> internalDriver(
@@ -1086,7 +1139,7 @@ fun <A> internalDriver(
         compatibilityZone: CompatibilityZoneParams? = null,
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
         inMemoryDB: Boolean = DriverParameters().inMemoryDB,
-        cordappsForAllNodes: Set<TestCorDapp> = DriverParameters().cordappsForAllNodes(),
+        cordappsForAllNodes: Collection<TestCordapp> = DriverParameters().cordappsForAllNodes(),
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1126,7 +1179,7 @@ private fun Config.toNodeOnly(): Config {
     return if (hasPath("webAddress")) withoutPath("webAddress").withoutPath("useHTTPS") else this
 }
 
-internal fun DriverParameters.cordappsForAllNodes(): Set<TestCorDapp> = cordappsForAllNodes
+internal fun DriverParameters.cordappsForAllNodes(): Collection<TestCordapp> = cordappsForAllNodes
         ?: cordappsInCurrentAndAdditionalPackages(extraCordappPackagesToScan)
 
 fun DriverDSL.startNode(providedName: CordaX500Name, devMode: Boolean, parameters: NodeParameters = NodeParameters()): CordaFuture<NodeHandle> {

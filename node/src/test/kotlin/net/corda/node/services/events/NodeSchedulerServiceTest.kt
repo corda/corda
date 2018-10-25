@@ -10,13 +10,13 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.utilities.days
-import net.corda.node.internal.configureDatabase
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.doLookup
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.spectator

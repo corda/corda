@@ -9,32 +9,30 @@ first public Beta (:ref:`Milestone 12 <changelog_m12>`), to :ref:`V1.0 <changelo
 
 General rules
 -------------
-* Always remember to update the version identifiers in your project gradle file:
+Always remember to update the version identifiers in your project's gradle file:
 
 .. sourcecode:: shell
 
     ext.corda_release_version = 'x.y.0'
     ext.corda_gradle_plugins_version = 'x.y.0'
 
-* It may also be necessary to update the version of major dependencies:
+It may also be necessary to update the version of major dependencies:
 
 .. sourcecode:: shell
 
     ext.kotlin_version = 'x.y.z'
     ext.quasar_version = 'x.y.z'
 
-* Please consult the relevant release notes of the release in question. If not specified, you may assume the
-  versions you are currently using are still in force
-  
-  * We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes
+Please consult the relevant release notes of the release in question. If not specified, you may assume the
+versions you are currently using are still in force.
 
-* To run database upgrades against H2, you'll need to connect to the node's database without starting the node. You can 
-  do this by connecting directly to the node's ``persistence.mv.db`` file. See :ref:`h2_relative_path`
+We also strongly recommend cross referencing with the :doc:`changelog` to confirm changes
+
+To run database upgrades against H2, you'll need to connect to the node's database without starting the node. You can
+do this by connecting directly to the node's ``persistence.mv.db`` file. See :ref:`h2_relative_path`
 
 UNRELEASED
 ----------
-
-<<< Fill this in >>>
 
 * Database upgrade - Change the type of the ``checkpoint_value``.
 This will address the issue that the `vacuum` function is unable to clean up deleted checkpoints as they are still referenced from the ``pg_shdepend`` table.
@@ -86,6 +84,17 @@ For H2:
   No action is needed for default node tables as ``PersistentStateRef`` is used as Primary Key only and the backing columns are automatically not nullable
   or custom Cordapp entities using ``PersistentStateRef`` as Primary Key.
 
+V3.2 to v3.3
+------------
+
+* Update the Corda Release version
+
+  The ``corda_release_version`` identifier in your projects gradle file will need changing as follows:
+
+  .. sourcecode:: shell
+
+    ext.corda_release_version = '3.3-corda'
+
 v3.1 to v3.2
 ------------
 
@@ -118,8 +127,11 @@ Database schema changes
 
     ALTER TABLE node_checkpoints ALTER COLUMN checkpoint_value set data type bytea using null;
 
-  .. important::
-     The Corda node will fail on startup if the database was not updated with the above commands.
+  .. note::
+    This change will also need to be run when migrating from version 3.0.
+
+.. important::
+   The Corda node will fail on startup if the database was not updated with the above commands.
 
 v3.0 to v3.1
 ------------

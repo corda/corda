@@ -116,7 +116,6 @@ abstract class EvolutionSerializer(
                 factory: SerializerFactory,
                 constructor: KFunction<Any>,
                 readersAsSerialized: Map<String, OldParam>): AMQPSerializer<Any> {
-            val constructorArgs = arrayOfNulls<Any?>(constructor.parameters.size)
 
             // Java doesn't care about nullability unless it's a primitive in which
             // case it can't be referenced. Unfortunately whilst Kotlin does apply
@@ -125,7 +124,7 @@ abstract class EvolutionSerializer(
             // any particular NonNullable annotation type to indicate cross
             // compiler nullability
             val isKotlin = (new.type.javaClass.declaredAnnotations.any {
-                        it.annotationClass.qualifiedName == "kotlin.Metadata"
+                it.annotationClass.qualifiedName == "kotlin.Metadata"
             })
 
             constructor.parameters.withIndex().forEach {
@@ -144,7 +143,7 @@ abstract class EvolutionSerializer(
                     }
                 }
             }
-            return EvolutionSerializerViaConstructor(new.type, factory, readersAsSerialized, constructor, constructorArgs)
+            return EvolutionSerializerViaConstructor(new.type, factory, readersAsSerialized, constructor)
         }
 
         private fun makeWithSetters(
@@ -210,8 +209,7 @@ class EvolutionSerializerViaConstructor(
         clazz: Type,
         factory: SerializerFactory,
         oldReaders: Map<String, EvolutionSerializer.OldParam>,
-        kotlinConstructor: KFunction<Any>,
-        private val constructorArgs: Array<Any?>) : EvolutionSerializer(clazz, factory, oldReaders, kotlinConstructor) {
+        kotlinConstructor: KFunction<Any>) : EvolutionSerializer(clazz, factory, oldReaders, kotlinConstructor) {
     /**
      * Unlike a normal [readObject] call where we simply apply the parameter deserialisers
      * to the object list of values we need to map that list, which is ordered per the
@@ -226,6 +224,7 @@ class EvolutionSerializerViaConstructor(
     ): Any {
         if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")
 
+        val constructorArgs : Array<Any?> = arrayOfNulls<Any?>(kotlinConstructor.parameters.size)
         // *must* read all the parameters in the order they were serialized
         oldReaders.values.zip(obj).map { it.first.readProperty(it.second, schemas, input, constructorArgs, context) }
 
@@ -270,8 +269,8 @@ class EvolutionSerializerViaSetters(
  * be an object that returns an [EvolutionSerializer]. Of course, any implementation that
  * extends this class can be written to invoke whatever behaviour is desired.
  */
-abstract class EvolutionSerializerGetterBase {
-    abstract fun getEvolutionSerializer(
+interface EvolutionSerializerProvider {
+    fun getEvolutionSerializer(
             factory: SerializerFactory,
             typeNotation: TypeNotation,
             newSerializer: AMQPSerializer<Any>,
@@ -283,12 +282,12 @@ abstract class EvolutionSerializerGetterBase {
  * between the received schema and the class as it exists now on the class path,
  */
 @KeepForDJVM
-class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
+object DefaultEvolutionSerializerProvider : EvolutionSerializerProvider {
     override fun getEvolutionSerializer(factory: SerializerFactory,
                                         typeNotation: TypeNotation,
                                         newSerializer: AMQPSerializer<Any>,
                                         schemas: SerializationSchemas): AMQPSerializer<Any> {
-        return factory.serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
+        return factory.registerByDescriptor(typeNotation.descriptor.name!!) {
             when (typeNotation) {
                 is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
                 is RestrictedType -> {
@@ -311,4 +310,3 @@ class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
         }
     }
 }
-

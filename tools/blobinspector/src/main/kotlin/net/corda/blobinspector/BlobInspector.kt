@@ -8,11 +8,10 @@ import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
 import net.corda.cliutils.start
 import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.rootMessage
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.base64ToByteArray
 import net.corda.core.utilities.hexToByteArray
@@ -22,7 +21,6 @@ import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.amqpMagic
 import org.slf4j.event.Level
-import picocli.CommandLine
 import picocli.CommandLine.*
 import java.io.PrintStream
 import java.net.MalformedURLException
@@ -36,8 +34,8 @@ fun main(args: Array<String>) {
 }
 
 class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised binary blobs to text") {
-    @Parameters(index = "*..0", paramLabel = "SOURCE", description = ["URL or file path to the blob"], converter = [SourceConverter::class])
-    var source: MutableList<URL> = mutableListOf()
+    @Parameters(index = "0", paramLabel = "SOURCE", description = ["URL or file path to the blob"], converter = [SourceConverter::class])
+    var source: URL? = null
 
     @Option(names = ["--format"], paramLabel = "type", description = ["Output format. Possible values: [YAML, JSON]"])
     private var formatType: OutputFormatType = OutputFormatType.YAML
@@ -49,22 +47,13 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
             description = ["Display the owningKey and certPath properties of Party and PartyAndReference objects respectively"])
     private var fullParties: Boolean = false
 
-    @Option(names = ["--schema"], description = ["Print the blob's schema first"])
+    @Option(names = ["--schema"], description = ["Prints the blob's schema first"])
     private var schema: Boolean = false
 
     override fun runProgram() = run(System.out)
 
-    override fun initLogging() {
-        if (verbose) {
-            loggingLevel = Level.TRACE
-        }
-        val loggingLevel = loggingLevel.name.toLowerCase(Locale.ENGLISH)
-        System.setProperty("logLevel", loggingLevel) // This property is referenced from the XML config file.
-    }
-
     fun run(out: PrintStream): Int {
-        require(source.count() == 1) { "You must specify URL or file path to the blob" }
-        val inputBytes = source.first().readBytes()
+        val inputBytes = source!!.readBytes()
         val bytes = parseToBinaryRelaxed(inputFormatType, inputBytes)
                 ?: throw IllegalArgumentException("Error: this input does not appear to be encoded in Corda's AMQP extended format, sorry.")
 
@@ -128,7 +117,7 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
 
     private fun initialiseSerialization() {
         // Deserialise with the lenient carpenter as we only care for the AMQP field getters
-        _contextSerializationEnv.set(SerializationEnvironmentImpl(
+        _contextSerializationEnv.set(SerializationEnvironment.with(
                 SerializationFactoryImpl().apply {
                     registerScheme(AMQPInspectorSerializationScheme)
                 },

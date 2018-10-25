@@ -27,6 +27,8 @@ class JarSignatureCollectorTest {
         private const val ALICE_PASS = "alicepass"
         private const val BOB = "bob"
         private const val BOB_PASS = "bobpass"
+        private const val CHARLIE = "Charlie"
+        private const val CHARLIE_PASS = "charliepass"
 
         @BeforeClass
         @JvmStatic

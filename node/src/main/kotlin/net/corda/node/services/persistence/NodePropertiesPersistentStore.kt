@@ -1,5 +1,6 @@
 package net.corda.node.services.persistence
 
+import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.NodePropertiesStore
@@ -17,12 +18,12 @@ import javax.persistence.Table
 /**
  * Simple node properties key value store in DB.
  */
-class NodePropertiesPersistentStore(readPhysicalNodeId: () -> String, database: CordaPersistence) : NodePropertiesStore {
+class NodePropertiesPersistentStore(readPhysicalNodeId: () -> String, database: CordaPersistence, cacheFactory: NamedCacheFactory) : NodePropertiesStore {
     private companion object {
         val logger = contextLogger()
     }
 
-    override val flowsDrainingMode = FlowsDrainingModeOperationsImpl(readPhysicalNodeId, database, logger)
+    override val flowsDrainingMode = FlowsDrainingModeOperationsImpl(readPhysicalNodeId, database, logger, cacheFactory)
 
     fun start() {
         flowsDrainingMode.map.preload()
@@ -40,7 +41,7 @@ class NodePropertiesPersistentStore(readPhysicalNodeId: () -> String, database: 
     )
 }
 
-class FlowsDrainingModeOperationsImpl(readPhysicalNodeId: () -> String, private val persistence: CordaPersistence, logger: Logger) : FlowsDrainingModeOperations {
+class FlowsDrainingModeOperationsImpl(readPhysicalNodeId: () -> String, private val persistence: CordaPersistence, logger: Logger, cacheFactory: NamedCacheFactory) : FlowsDrainingModeOperations {
     private val nodeSpecificFlowsExecutionModeKey = "${readPhysicalNodeId()}_flowsExecutionMode"
 
     init {
@@ -52,7 +53,8 @@ class FlowsDrainingModeOperationsImpl(readPhysicalNodeId: () -> String, private 
             { key -> key },
             { entity -> entity.key to entity.value!! },
             NodePropertiesPersistentStore::DBNodeProperty,
-            NodePropertiesPersistentStore.DBNodeProperty::class.java
+            NodePropertiesPersistentStore.DBNodeProperty::class.java,
+            cacheFactory
     )
 
     override val values = PublishSubject.create<Pair<Boolean, Boolean>>()!!

@@ -10,7 +10,7 @@ Users of ``bash`` or ``zsh`` can install an alias and auto-completion for Corda 
 
 .. code-block:: shell
 
-   java -jar <name-of-JAR>.jar --install-shell-extensions
+   java -jar <name-of-JAR>.jar install-shell-extensions
 
 Then, either restart your shell, or for ``bash`` users run:
 
@@ -34,7 +34,7 @@ For example, for the Corda node, install the shell extensions using
 
 .. code-block:: shell
 
-   java -jar corda-<version>.jar --install-shell-extensions
+   java -jar corda-<version>.jar install-shell-extensions
 
 And then run the node by running:
 

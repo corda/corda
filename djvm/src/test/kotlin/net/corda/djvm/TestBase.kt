@@ -13,6 +13,7 @@ import net.corda.djvm.messages.Severity
 import net.corda.djvm.references.ClassHierarchy
 import net.corda.djvm.rewiring.LoadedClass
 import net.corda.djvm.rules.Rule
+import net.corda.djvm.rules.implementation.*
 import net.corda.djvm.source.ClassSource
 import net.corda.djvm.utilities.Discovery
 import net.corda.djvm.validation.RuleValidator
@@ -35,12 +36,30 @@ abstract class TestBase {
 
         val ALL_EMITTERS = Discovery.find<Emitter>()
 
+        // We need at least these emitters to handle the Java API classes.
+        @JvmField
+        val BASIC_EMITTERS: List<Emitter> = listOf(
+            ArgumentUnwrapper(),
+            HandleExceptionUnwrapper(),
+            ReturnTypeWrapper(),
+            RewriteClassMethods(),
+            StringConstantWrapper(),
+            ThrowExceptionWrapper()
+        )
+
         val ALL_DEFINITION_PROVIDERS = Discovery.find<DefinitionProvider>()
 
+        // We need at least these providers to handle the Java API classes.
+        @JvmField
+        val BASIC_DEFINITION_PROVIDERS: List<DefinitionProvider> = listOf(StaticConstantRemover())
+
+        @JvmField
         val BLANK = emptySet<Any>()
 
+        @JvmField
         val DEFAULT = (ALL_RULES + ALL_EMITTERS + ALL_DEFINITION_PROVIDERS).distinctBy(Any::javaClass)
 
+        @JvmField
         val DETERMINISTIC_RT: Path = Paths.get(
                 System.getProperty("deterministic-rt.path") ?: throw AssertionError("deterministic-rt.path property not set"))
 
@@ -77,21 +96,13 @@ abstract class TestBase {
         val reader = ClassReader(T::class.java.name)
         AnalysisConfiguration(
             minimumSeverityLevel = minimumSeverityLevel,
-            classPath = listOf(DETERMINISTIC_RT)
+            bootstrapJar = DETERMINISTIC_RT
         ).use { analysisConfiguration ->
             val validator = RuleValidator(ALL_RULES, analysisConfiguration)
             val context = AnalysisContext.fromConfiguration(analysisConfiguration)
             validator.analyze(reader, context)
             block(validator, context)
         }
-    }
-
-    /**
-     * Short-hand for analysing a class.
-     */
-    inline fun analyze(block: (ClassAndMemberVisitor.(AnalysisContext) -> Unit)) {
-        val validator = RuleValidator(emptyList(), configuration)
-        block(validator, context)
     }
 
     /**
@@ -106,8 +117,8 @@ abstract class TestBase {
             action: SandboxRuntimeContext.() -> Unit
     ) {
         val rules = mutableListOf<Rule>()
-        val emitters = mutableListOf<Emitter>()
-        val definitionProviders = mutableListOf<DefinitionProvider>()
+        val emitters = mutableListOf<Emitter>().apply { addAll(BASIC_EMITTERS) }
+        val definitionProviders = mutableListOf<DefinitionProvider>().apply { addAll(BASIC_DEFINITION_PROVIDERS) }
         val classSources = mutableListOf<ClassSource>()
         var executionProfile = ExecutionProfile.UNLIMITED
         var whitelist = Whitelist.MINIMAL
@@ -137,7 +148,12 @@ abstract class TestBase {
                     minimumSeverityLevel = minimumSeverityLevel
                 ).use { analysisConfiguration ->
                     SandboxRuntimeContext(SandboxConfiguration.of(
-                            executionProfile, rules, emitters, definitionProviders, enableTracing, analysisConfiguration
+                        executionProfile,
+                        rules.distinctBy(Any::javaClass),
+                        emitters.distinctBy(Any::javaClass),
+                        definitionProviders.distinctBy(Any::javaClass),
+                        enableTracing,
+                        analysisConfiguration
                     )).use {
                         assertThat(runtimeCosts).areZero()
                         action(this)
@@ -163,7 +179,7 @@ abstract class TestBase {
     inline fun <reified T : Any> SandboxRuntimeContext.loadClass(): LoadedClass = loadClass(T::class.jvmName)
 
     fun SandboxRuntimeContext.loadClass(className: String): LoadedClass =
-            classLoader.loadClassAndBytes(ClassSource.fromClassName(className), context)
+            classLoader.loadForSandbox(className, context)
 
     /**
      * Run the entry-point of the loaded [Callable] class.

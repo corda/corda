@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal
 
-import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
+import io.github.classgraph.ClassGraph
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.UpgradedContract
@@ -28,15 +28,13 @@ class ContractsJarFile(private val file: Path) : ContractsJar {
     override val hash: SecureHash by lazy(LazyThreadSafetyMode.NONE, file::hash)
 
     override fun scan(): List<ContractClassName> {
-        val scanResult = FastClasspathScanner()
-                // A set of a single element may look odd, but if this is removed "Path" which itself is an `Iterable`
-                // is getting broken into pieces to scan individually, which doesn't yield desired effect.
-                .overrideClasspath(singleton(file))
-                .scan()
+        val scanResult = ClassGraph().overrideClasspath(singleton(file)).enableAllInfo().scan()
 
-        val contractClassNames = coreContractClasses
-                .flatMap { scanResult.getNamesOfClassesImplementing(it.qualifiedName) }
-                .toSet()
+        val contractClassNames = scanResult.use {
+            coreContractClasses
+                    .flatMap { scanResult.getClassesImplementing(it.qualifiedName).names }
+                    .toSet()
+        }
 
         return URLClassLoader(arrayOf(file.toUri().toURL()), Contract::class.java.classLoader).use { cl ->
             contractClassNames.mapNotNull {

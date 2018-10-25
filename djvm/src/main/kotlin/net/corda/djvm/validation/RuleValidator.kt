@@ -17,6 +17,7 @@ import org.objectweb.asm.ClassVisitor
  * Helper class for validating a set of rules for a class or set of classes.
  *
  * @property rules A set of rules to validate for provided classes.
+ * @param configuration The configuration to use for class analysis.
  * @param classVisitor Class visitor to use when traversing the structure of classes.
  */
 class RuleValidator(

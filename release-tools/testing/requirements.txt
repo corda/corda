@@ -1,0 +1,3 @@
+jira==2.0.0
+keyring==13.1.0
+termcolor==1.1.0

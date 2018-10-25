@@ -25,7 +25,7 @@ class NotaryCopier(val cacheDir: File) : NodeCopier(cacheDir) {
 
     fun generateNodeInfo(dirToGenerateFrom: File): File {
         val nodeInfoGeneratorProcess = ProcessBuilder()
-                .command(listOf("java", "-jar", "corda.jar", "--just-generate-node-info"))
+                .command(listOf("java", "-jar", "corda.jar", "generate-node-info"))
                 .directory(dirToGenerateFrom)
                 .inheritIO()
                 .start()

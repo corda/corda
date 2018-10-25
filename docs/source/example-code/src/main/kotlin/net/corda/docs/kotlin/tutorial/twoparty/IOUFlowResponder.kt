@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package net.corda.docs.kotlin.tutorial.twoparty
 
 import co.paralleluniverse.fibers.Suspendable

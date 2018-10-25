@@ -21,8 +21,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
         val a = A(testA, testB)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
-        require(obj.obj is A)
-        val amqpObj = obj.obj as A
+        val amqpObj = obj.obj
 
         assertEquals(testA, amqpObj.a)
         assertEquals(testB, amqpObj.b)
@@ -65,8 +64,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
         val a = A(testA, testB)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
-        require(obj.obj is A)
-        val amqpObj = obj.obj as A
+        val amqpObj = obj.obj
 
         assertEquals(testA, amqpObj.a)
         assertEquals(testB, amqpObj.b)

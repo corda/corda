@@ -3,10 +3,7 @@ package net.corda.serialization.internal.amqp
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeToken
 import net.corda.core.internal.isConcreteClass
-import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.serialization.ConstructorForDeserialization
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.*
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.*
 import java.lang.reflect.Field
@@ -68,12 +65,33 @@ fun <T : Any> propertiesForSerialization(
         kotlinConstructor: KFunction<T>?,
         type: Type,
         factory: SerializerFactory): PropertySerializers = PropertySerializers.make(
-            if (kotlinConstructor != null) {
-                propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
-            } else {
-                propertiesForSerializationFromAbstract(type.asClass(), type, factory)
-            }.sortedWith(PropertyAccessor)
-    )
+            getValueProperties(kotlinConstructor, type, factory)
+                .addCalculatedProperties(factory, type)
+                .sortedWith(PropertyAccessor))
+
+fun <T : Any> getValueProperties(kotlinConstructor: KFunction<T>?, type: Type, factory: SerializerFactory)
+        : List<PropertyAccessor> =
+    if (kotlinConstructor != null) {
+        propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
+    } else {
+        propertiesForSerializationFromAbstract(type.asClass(), type, factory)
+    }
+
+private fun List<PropertyAccessor>.addCalculatedProperties(factory: SerializerFactory, type: Type)
+        : List<PropertyAccessor> {
+    val nonCalculated = map { it.serializer.name }.toSet()
+    return this + type.asClass().calculatedPropertyDescriptors().mapNotNull { (name, descriptor) ->
+        if (name in nonCalculated) null else {
+            val calculatedPropertyMethod = descriptor.getter
+                    ?: throw IllegalStateException("Property $name is not a calculated property")
+            CalculatedPropertyAccessor(PropertySerializer.make(
+                    name,
+                    PublicPropertyReader(calculatedPropertyMethod),
+                    calculatedPropertyMethod.genericReturnType,
+                    factory))
+        }
+    }
+}
 
 /**
  * From a constructor, determine which properties of a class are to be serialized.
@@ -145,7 +163,7 @@ fun propertiesForSerializationFromSetters(
         properties: Map<String, PropertyDescriptor>,
         type: Type,
         factory: SerializerFactory): List<PropertyAccessor> =
-        properties.asSequence().withIndex().map { (index, entry) ->
+        properties.asSequence().map { entry ->
             val (name, property) = entry
 
             val getter = property.getter
@@ -154,7 +172,6 @@ fun propertiesForSerializationFromSetters(
             if (getter == null || setter == null) return@map null
 
             PropertyAccessorGetterSetter(
-                    index,
                     PropertySerializer.make(
                             name,
                             PublicPropertyReader(getter),
@@ -191,9 +208,9 @@ private fun propertiesForSerializationFromAbstract(
         clazz: Class<*>,
         type: Type,
         factory: SerializerFactory): List<PropertyAccessor> =
-        clazz.propertyDescriptors().asSequence().withIndex().map { (index, entry) ->
+        clazz.propertyDescriptors().asSequence().withIndex().mapNotNull { (index, entry) ->
             val (name, property) = entry
-            if (property.getter == null || property.field == null) return@map null
+            if (property.getter == null || property.field == null) return@mapNotNull null
 
             val getter = property.getter
             val returnType = resolveTypeVariables(getter.genericReturnType, type)
@@ -201,7 +218,7 @@ private fun propertiesForSerializationFromAbstract(
             PropertyAccessorConstructor(
                     index,
                     PropertySerializer.make(name, PublicPropertyReader(getter), returnType, factory))
-        }.filterNotNull().toList()
+        }.toList()
 
 internal fun interfacesForSerialization(type: Type, serializerFactory: SerializerFactory): List<Type> =
         exploreType(type, serializerFactory).toList()

@@ -5,6 +5,7 @@ import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.node.services.MAX_CONSTRAINT_DATA_SIZE
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -66,7 +67,16 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
             /** refers to the last time a lock was taken (reserved) or updated (released, re-reserved) */
             @Column(name = "lock_timestamp", nullable = true)
-            var lockUpdateTime: Instant? = null
+            var lockUpdateTime: Instant? = null,
+
+            /** refers to constraint type (none, hash, whitelisted, signature) associated with a contract state */
+            @Column(name = "constraint_type", nullable = false)
+            var constraintType: Vault.ConstraintInfo.Type,
+
+            /** associated constraint type data (if any) */
+            @Column(name = "constraint_data", length = MAX_CONSTRAINT_DATA_SIZE, nullable = true)
+            @Type(type = "corda-wrapper-binary")
+            var constraintData: ByteArray? = null
     ) : PersistentState()
 
     @Entity
@@ -135,9 +145,9 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             @Column(name = "issuer_name", nullable = true)
             var issuer: AbstractParty?,
 
-            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
+            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = true)
             @Type(type = "corda-wrapper-binary")
-            var issuerRef: ByteArray
+            var issuerRef: ByteArray?
     ) : PersistentState() {
         constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes, _participants: List<AbstractParty>) :
                 this(owner = _owner,

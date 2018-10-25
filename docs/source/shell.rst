@@ -105,28 +105,15 @@ Starting the standalone shell
 
 Run the following command from the terminal:
 
-Linux and MacOS
-^^^^^^^^^^^^^^^
-
 .. code:: bash
 
-    java -jar corda-tools-shell-cli-VERSION_NUMBER.jar [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
-             --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
-             --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
-
-Windows
-^^^^^^^
-
-.. code:: bash
-
-    corda-shell [-hvV] [--install-shell-extensions]
-                [--logging-level=<loggingLevel>] [--password=<password>]
+    corda-shell [-hvV] [--logging-level=<loggingLevel>] [--password=<password>]
                 [--sshd-hostkey-directory=<sshdHostKeyDirectory>]
                 [--sshd-port=<sshdPort>] [--truststore-file=<trustStoreFile>]
                 [--truststore-password=<trustStorePassword>]
                 [--truststore-type=<trustStoreType>] [--user=<user>] [-a=<host>]
                 [-c=<cordappDirectory>] [-f=<configFile>] [-o=<commandsDirectory>]
-                [-p=<port>]
+                [-p=<port>] [COMMAND]
 
 Where:
 
@@ -144,9 +131,10 @@ Where:
 * ``--truststore-type=<trustStoreType>``: The type of the TrustStore (e.g. JKS).
 * ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
 * ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
-* ``--install-shell-extensions``: Install ``corda-shell`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
 * ``--help``, ``-h``: Show this help message and exit.
 * ``--version``, ``-V``: Print version information and exit.
+
+Additionally, the ``install-shell-extensions`` subcommand can be used to install the ``corda-shell`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
 
 The format of ``config-file``:
 

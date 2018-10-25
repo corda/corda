@@ -151,7 +151,7 @@ private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set
 
 private fun ConfigException.Missing.relative(path: String, nestedPath: String?): ConfigException.Missing {
     return when {
-        nestedPath != null -> throw ConfigException.Missing("$nestedPath.$path")
+        nestedPath != null -> throw ConfigException.Missing("$nestedPath.$path", this)
         else -> this
     }
 }

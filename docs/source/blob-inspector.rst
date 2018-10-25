@@ -98,9 +98,9 @@ The blob inspector can be started with the following command-line options:
 
 .. code-block:: shell
 
-    blob-inspector [-hvV] [--full-parties] [--install-shell-extensions] [--schema]
-                   [--format=type] [--input-format=type]
-                   [--logging-level=<loggingLevel>] [SOURCE]
+    blob-inspector [-hvV] [--full-parties] [--schema] [--format=type]
+                   [--input-format=type] [--logging-level=<loggingLevel>] SOURCE
+                   [COMMAND]
 
 * ``--format=type``: Output format. Possible values: [YAML, JSON]. Default: YAML.
 * ``--input-format=type``: Input format. If the file can't be decoded with the given value it's auto-detected, so you should
@@ -109,6 +109,10 @@ The blob inspector can be started with the following command-line options:
 * ``--schema``: Print the blob's schema first.
 * ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
 * ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
-* ``--install-shell-extensions``: Install ``blob-inspector`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
 * ``--help``, ``-h``: Show this help message and exit.
 * ``--version``, ``-V``: Print version information and exit.
+
+Sub-commands
+^^^^^^^^^^^^
+
+``install-shell-extensions``: Install ``blob-inspector`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
