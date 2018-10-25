@@ -12,7 +12,7 @@ internal class Schema(override val name: String?, unorderedProperties: Iterable<
     init {
         val invalid = properties.groupBy(Configuration.Property.Definition<*>::key).mapValues { entry -> entry.value.size }.filterValues { propertiesForKey -> propertiesForKey > 1 }
         if (invalid.isNotEmpty()) {
-            throw IllegalArgumentException("More than one property was found for keys ${invalid.keys}.")
+            throw IllegalArgumentException("More than one property was found for keys ${invalid.keys.joinToString(", ", "[", "]")}.")
         }
     }
 

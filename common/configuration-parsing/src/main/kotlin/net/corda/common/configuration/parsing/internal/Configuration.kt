@@ -174,7 +174,7 @@ object Configuration {
                     try {
                         valid(Math.toIntExact(value))
                     } catch (e: ArithmeticException) {
-                        invalid<Int, Configuration.Validation.Error>(Configuration.Validation.Error.BadValue.of("Provided value exceeds Integer range.", key, Int::class.javaObjectType.simpleName))
+                        invalid<Int, Configuration.Validation.Error>(Configuration.Validation.Error.BadValue.of("Provided value exceeds Integer range [${Int.MIN_VALUE}, ${Int.MAX_VALUE}].", key, Int::class.javaObjectType.simpleName))
                     }
                 }
 
@@ -396,13 +396,13 @@ object Configuration {
             val containingPathAsString: String = containingPath.joinToString(".")
 
             /**
-             * [path] joined by "." characters.
+             * [pathstr] joined by "." characters.
              */
             val pathAsString: String = path.joinToString(".")
 
-            abstract fun withContainingPath(vararg containingPath: String): Error
+            internal abstract fun withContainingPath(vararg containingPath: String): Error
 
-            abstract fun with(keyName: String = this.keyName ?: UNKNOWN, typeName: String = this.typeName ?: UNKNOWN): Configuration.Validation.Error
+            internal abstract fun with(keyName: String = this.keyName ?: UNKNOWN, typeName: String = this.typeName ?: UNKNOWN): Configuration.Validation.Error
 
             override fun toString(): String {
 

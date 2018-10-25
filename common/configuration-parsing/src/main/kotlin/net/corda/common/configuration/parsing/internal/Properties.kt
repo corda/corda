@@ -182,7 +182,7 @@ private fun ConfigException.toValidationError(keyName: String, typeName: String)
         is ConfigException.BadValue -> Configuration.Validation.Error.BadValue.Companion::of
         is ConfigException.BadPath -> Configuration.Validation.Error.BadPath.Companion::of
         is ConfigException.Parse -> Configuration.Validation.Error.MalformedStructure.Companion::of
-        else -> throw IllegalStateException("Unsupported ConfigException of type ${this::class.java.name}")
+        else -> throw IllegalStateException("Unsupported ConfigException of type ${this::class.java.name}", this)
     }
     return toError.invoke(message!!, keyName, typeName, emptyList())
 }
