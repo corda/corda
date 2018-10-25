@@ -34,9 +34,9 @@ object JarSignatureTestUtils {
     fun Path.updateJar(fileName: String, vararg contents: String) =
             executeProcess(*(arrayOf("jar", "uvf", fileName) + contents))
 
-    fun Path.signJar(fileName: String, alias: String, password: String): PublicKey {
-        executeProcess("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", password, fileName, alias)
-        val ks = loadKeyStore(this.resolve("_teststore"), "storepass")
+    fun Path.signJar(fileName: String, alias: String, storePassword: String, keyPassword: String = storePassword): PublicKey {
+        executeProcess("jarsigner", "-keystore", "_teststore", "-storepass", storePassword, "-keypass", keyPassword, fileName, alias)
+        val ks = loadKeyStore(this.resolve("_teststore"), storePassword)
         return ks.getCertificate(alias).publicKey
     }
 

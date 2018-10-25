@@ -109,7 +109,7 @@ class NetworkParametersTest {
                             JavaPackageName("com.!example.stuff") to key2
                     )
             )
-        }.withMessageContaining("Attempting to whitelist illegal java package")
+        }.withMessageContaining("Invalid java package name")
 
         assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
             NetworkParameters(1,
