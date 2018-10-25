@@ -141,6 +141,21 @@ private val allEnums: sandbox.java.util.Map<Class<out Enum<*>>, Array<out Enum<*
 private val allEnumDirectories: sandbox.java.util.Map<Class<out Enum<*>>, sandbox.java.util.Map<String, out Enum<*>>> = sandbox.java.util.LinkedHashMap()
 
 /**
+ * Replacement function for Object.hashCode(), because some objects
+ * (i.e. arrays) cannot be replaced by [sandbox.java.lang.Object].
+ */
+fun hashCode(obj: Any?): Int {
+    return if (obj is Object) {
+        obj.hashCode()
+    } else if (obj != null) {
+        System.identityHashCode(obj)
+    } else {
+        // Throw the same exception that the JVM would throw in this case.
+        throw NullPointerException()
+    }
+}
+
+/**
  * Replacement functions for Class<*>.forName(...) which protect
  * against users loading classes from outside the sandbox.
  */
