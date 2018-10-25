@@ -6,16 +6,26 @@ Firewall configuration
 File location
 -------------
 When starting a standalone firewall (in bridge, or float mode), the ``corda-firewall.jar`` file defaults to reading the firewall's configuration from a ``firewall.conf`` file in
-the directory from which the command to launch the process is executed. There are two command-line options to override this
-behaviour:
+the directory from which the command to launch the process is executed. The syntax is:
 
-* The ``--config-file`` command line option allows you to specify a configuration file with a different name, or at
-  different file location. Paths are relative to the current working directory
 
-* The ``--base-directory`` command line option allows you to specify the firewall's workspace location. A ``firewall.conf``
+.. code:: bash
+
+    corda-firewall [-hvV] [--install-shell-extensions]
+                   [--logging-level=<loggingLevel>] [-b=<baseDirectory>]
+                   [-f=<_configFile>]
+
+Where:
+
+* ``--config-file``, ``-f``: Allows you to specify a configuration file with a different name, or at
+  a different file location. Paths are relative to the current working directory
+* ``--base-directory``, ``-b``: Allows you to specify the firewall's workspace location. A ``firewall.conf``
   configuration file is then expected in the root of this workspace
-
-If you specify both command line arguments at the same time, the firewall will fail to start.
+* ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
+* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
+* ``--install-shell-extensions``: Install ``corda-firewall`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
+* ``--help``, ``-h``: Show this help message and exit.
+* ``--version``, ``-V``: Print version information and exit.
 
 Format
 ------

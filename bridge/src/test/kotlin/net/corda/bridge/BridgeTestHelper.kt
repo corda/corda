@@ -42,15 +42,14 @@ fun createNetworkParams(baseDirectory: Path): Int {
 
 fun createAndLoadConfigFromResource(baseDirectory: Path, configResource: String): FirewallConfiguration {
     val workspaceFolder = baseDirectory.normalize().toAbsolutePath()
-    val args = arrayOf("--base-directory", workspaceFolder.toString())
-    val argsParser = ArgsParser()
-    val cmdlineOptions = argsParser.parse(*args)
-    val configFile = cmdlineOptions.configFile
+    val cmdLineOptions = FirewallCmdLineOptions()
+    cmdLineOptions.baseDirectory = workspaceFolder
+        val configFile = cmdLineOptions.configFile
     configFile.normalize().parent?.createDirectories()
     ConfigTest::class.java.getResourceAsStream(configResource).use {
         Files.copy(it, configFile)
     }
-    val config = cmdlineOptions.loadConfig()
+    val config = cmdLineOptions.loadConfig()
     return config
 }
 

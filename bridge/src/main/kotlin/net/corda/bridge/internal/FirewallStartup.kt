@@ -1,74 +1,64 @@
 package net.corda.bridge.internal
 
-import com.jcabi.manifests.Manifests
-import joptsimple.OptionException
-import net.corda.bridge.ArgsParser
-import net.corda.bridge.CmdLineOptions
+import net.corda.bridge.FirewallCmdLineOptions
 import net.corda.bridge.FirewallVersionInfo
 import net.corda.bridge.services.api.FirewallConfiguration
+import net.corda.cliutils.CordaCliWrapper
+import net.corda.cliutils.CordaVersionProvider
+import net.corda.cliutils.ExitCodes
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.addShutdownHook
 import org.slf4j.bridge.SLF4JBridgeHandler
+import picocli.CommandLine.Mixin
 import sun.misc.VMSupport
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Path
 import java.util.*
-import kotlin.system.exitProcess
 
-class FirewallStartup(val args: Array<String>) {
+class FirewallStartup: CordaCliWrapper("corda-firewall", "The Corda Firewall application for handling outbound and inbound connections to Corda.") {
     companion object {
         // lazy init the logging, because the logging levels aren't configured until we have parsed some options.
         private val log by lazy { contextLogger() }
         val LOGS_DIRECTORY_NAME = "logs"
     }
 
+    @Mixin
+    val cmdLineOptions = FirewallCmdLineOptions()
+
     /**
-     * @return true if the firewalls startup was successful. This value is intended to be the exit code of the process.
+     * @return zero if the firewalls startup was successful. This value is the exit code of the process.
      */
-    fun run(): Boolean {
+    override fun runProgram(): Int {
         val startTime = System.currentTimeMillis()
-        val (argsParser, cmdlineOptions) = parseArguments()
 
         // We do the single firewall check before we initialise logging so that in case of a double-firewall start it
         // doesn't mess with the running firewall's logs.
-        enforceSingleBridgeIsRunning(cmdlineOptions.baseDirectory)
+        enforceSingleBridgeIsRunning(cmdLineOptions.baseDirectory)
 
-        initLogging(cmdlineOptions)
+        initLogging()
 
         val versionInfo = getVersionInfo()
 
-        if (cmdlineOptions.isVersion) {
-            println("${versionInfo.vendor} ${versionInfo.releaseVersion}")
-            println("Revision ${versionInfo.revision}")
-            println("Platform Version ${versionInfo.platformVersion}")
-            return true
-        }
-
-        // Maybe render command line help.
-        if (cmdlineOptions.help) {
-            argsParser.printHelp(System.out)
-            return true
-        }
         val conf = try {
-            loadConfigFile(cmdlineOptions)
+            loadConfigFile()
         } catch (e: Exception) {
             log.error("Exception during firewall configuration", e)
-            return false
+            return ExitCodes.FAILURE
         }
 
         try {
-            logStartupInfo(versionInfo, cmdlineOptions, conf)
+            logStartupInfo(versionInfo, conf)
         } catch (e: Exception) {
             log.error("Exception during firewall registration", e)
-            return false
+            return ExitCodes.FAILURE
         }
 
         val firewall = try {
-            cmdlineOptions.baseDirectory.createDirectories()
+            cmdLineOptions.baseDirectory.createDirectories()
             startFirewall(conf, versionInfo, startTime)
         } catch (e: Exception) {
             if (e.message?.startsWith("Unknown named curve:") == true) {
@@ -77,7 +67,7 @@ class FirewallStartup(val args: Array<String>) {
             } else {
                 log.error("Exception during firewall startup", e)
             }
-            return false
+            return ExitCodes.FAILURE
         }
 
         if (System.getProperties().containsKey("WAIT_KEY_FOR_EXIT")) {
@@ -89,10 +79,10 @@ class FirewallStartup(val args: Array<String>) {
         log.info("firewall shutting down")
         firewall.stop()
 
-        return true
+        return ExitCodes.SUCCESS
     }
 
-    fun logStartupInfo(versionInfo: FirewallVersionInfo, cmdlineOptions: CmdLineOptions, conf: FirewallConfiguration) {
+    fun logStartupInfo(versionInfo: FirewallVersionInfo, conf: FirewallConfiguration) {
         log.info("Vendor: ${versionInfo.vendor}")
         log.info("Release: ${versionInfo.releaseVersion}")
         log.info("Platform Version: ${versionInfo.platformVersion}")
@@ -106,7 +96,7 @@ class FirewallStartup(val args: Array<String>) {
         log.info("classpath: ${info.classPath}")
         log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
         log.info("Machine: ${lookupMachineNameAndMaybeWarn()}")
-        log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
+        log.info("Working Directory: ${cmdLineOptions.baseDirectory}")
         val agentProperties = VMSupport.getAgentProperties()
         if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
             log.info("Debug port: ${agentProperties.getProperty("sun.jdwp.listenerAddress")}")
@@ -114,20 +104,16 @@ class FirewallStartup(val args: Array<String>) {
         log.info("Starting as firewall mode of ${conf.firewallMode}")
     }
 
-    protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): FirewallConfiguration = cmdlineOptions.loadConfig()
+    protected fun loadConfigFile(): FirewallConfiguration = cmdLineOptions.loadConfig()
 
     protected fun getVersionInfo(): FirewallVersionInfo {
-        // Manifest properties are only available if running from the corda jar
-        fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
-
         return FirewallVersionInfo(
-                manifestValue("Corda-Platform-Version")?.toInt() ?: 1,
-                manifestValue("Corda-Release-Version") ?: "Unknown",
-                manifestValue("Corda-Revision") ?: "Unknown",
-                manifestValue("Corda-Vendor") ?: "Unknown"
+                CordaVersionProvider.platformVersion,
+                CordaVersionProvider.releaseVersion,
+                CordaVersionProvider.revision,
+                CordaVersionProvider.vendor
         )
     }
-
     private fun enforceSingleBridgeIsRunning(baseDirectory: Path) {
         // Write out our process ID (which may or may not resemble a UNIX process id - to us it's just a string) to a
         // file that we'll do our best to delete on exit. But if we don't, it'll be overwritten next time. If it already
@@ -171,25 +157,13 @@ class FirewallStartup(val args: Array<String>) {
         return hostName
     }
 
-    private fun parseArguments(): Pair<ArgsParser, CmdLineOptions> {
-        val argsParser = ArgsParser()
-        val cmdlineOptions = try {
-            argsParser.parse(*args)
-        } catch (ex: OptionException) {
-            println("Invalid command line arguments: ${ex.message}")
-            argsParser.printHelp(System.out)
-            exitProcess(1)
-        }
-        return Pair(argsParser, cmdlineOptions)
-    }
-
-    fun initLogging(cmdlineOptions: CmdLineOptions) {
-        val loggingLevel = cmdlineOptions.loggingLevel.name.toLowerCase(Locale.ENGLISH)
+    override fun initLogging() {
+        val loggingLevel = loggingLevel.name.toLowerCase(Locale.ENGLISH)
         System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
-        if (cmdlineOptions.logToConsole) {
+        if (verbose) {
             System.setProperty("consoleLogLevel", loggingLevel)
         }
-        System.setProperty("log-path", (cmdlineOptions.baseDirectory / LOGS_DIRECTORY_NAME).toString())
+        System.setProperty("log-path", (cmdLineOptions.baseDirectory / LOGS_DIRECTORY_NAME).toString())
         SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
         SLF4JBridgeHandler.install()
     }
