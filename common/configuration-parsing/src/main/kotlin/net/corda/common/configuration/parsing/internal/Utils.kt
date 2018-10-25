@@ -13,8 +13,6 @@ inline fun <TYPE, reified MAPPED : Any> PropertyDelegate.Standard<TYPE>.map(noin
 
 operator fun <TYPE> Config.get(property: Configuration.Property.Definition<TYPE>): TYPE = property.valueIn(this)
 
-fun Configuration.Version.Extractor.parseRequired(config: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults) = parse(config, options).map { it ?: throw IllegalStateException("Absent version value.") }
-
 inline fun <reified NESTED : Any> Configuration.Specification<*>.nested(specification: Configuration.Specification<NESTED>, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<NESTED> = nestedObject(schema = specification, key = key, sensitive = sensitive).map(ConfigObject::toConfig).mapValid { value -> specification.parse(value) }
 
 @Suppress("UNCHECKED_CAST")

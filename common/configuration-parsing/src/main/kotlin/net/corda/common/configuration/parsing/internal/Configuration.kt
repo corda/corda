@@ -344,7 +344,7 @@ object Configuration {
 
         /**
          * [Config] validation options.
-         * @param strict whether to raise unknown property keys as errors.
+         * @property strict whether to raise unknown property keys as errors.
          */
         data class Options(val strict: Boolean) {
 
@@ -360,10 +360,10 @@ object Configuration {
         /**
          * Super-type for the errors raised by the parsing and validation of a [Config] object.
          *
-         * @param keyName name of the property key this error refers to, if any.
-         * @param typeName name of the type of the property this error refers to, if any.
-         * @param message details about what went wrong during the processing.
-         * @param containingPath containing path of the error, excluding the [keyName].
+         * @property keyName name of the property key this error refers to, if any.
+         * @property typeName name of the type of the property this error refers to, if any.
+         * @property message details about what went wrong during the processing.
+         * @property containingPath containing path of the error, excluding the [keyName].
          */
         sealed class Error constructor(open val keyName: String?, open val typeName: String?, open val message: String, val containingPath: List<String> = emptyList()) {
 

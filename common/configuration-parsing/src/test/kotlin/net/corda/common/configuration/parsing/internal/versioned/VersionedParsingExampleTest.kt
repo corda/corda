@@ -7,7 +7,7 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
-class VersitionedParsingExampleTest {
+class VersionedParsingExampleTest {
 
     @Test
     fun correct_parsing_function_is_used_for_present_version() {
@@ -127,3 +127,5 @@ class VersitionedParsingExampleTest {
         }
     }
 }
+
+private fun Configuration.Version.Extractor.parseRequired(config: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults) = parse(config, options).map { it ?: throw IllegalStateException("Absent version value.") }
