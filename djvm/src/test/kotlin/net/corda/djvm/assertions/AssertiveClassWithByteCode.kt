@@ -24,6 +24,11 @@ class AssertiveClassWithByteCode(private val loadedClass: LoadedClass) {
         return this
     }
 
+    fun hasClassLoader(classLoader: ClassLoader): AssertiveClassWithByteCode {
+        assertThat(loadedClass.type.classLoader).isEqualTo(classLoader)
+        return this
+    }
+
     fun hasClassName(className: String): AssertiveClassWithByteCode {
         assertThat(loadedClass.type.name).isEqualTo(className)
         return this

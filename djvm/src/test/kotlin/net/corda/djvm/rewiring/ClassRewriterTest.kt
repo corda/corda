@@ -15,7 +15,7 @@ class ClassRewriterTest : TestBase() {
     @Test
     fun `empty transformer does nothing`() = sandbox(BLANK) {
         val callable = newCallable<Empty>()
-        assertThat(callable).hasNotBeenModified()
+        assertThat(callable).isSandboxed()
         callable.createAndInvoke()
         assertThat(runtimeCosts).areZero()
     }
@@ -129,6 +129,32 @@ class ClassRewriterTest : TestBase() {
                 .hasClassName("sandbox.java.lang.StringBuilder")
                 .hasInterface("sandbox.java.lang.CharSequence")
                 .hasBeenModified()
+    }
+
+    @Test
+    fun `test Java class is owned by parent classloader`() = parentedSandbox {
+        val stringBuilderClass = loadClass<StringBuilder>().type
+        assertThat(stringBuilderClass.classLoader).isEqualTo(parentClassLoader)
+    }
+
+    @Test
+    fun `test user class is owned by new classloader`() = parentedSandbox {
+        assertThat(loadClass<Empty>())
+                .hasClassLoader(classLoader)
+                .hasBeenModified()
+    }
+
+    @Test
+    fun `test template class is owned by parent classloader`() = parentedSandbox {
+        assertThat(classLoader.loadForSandbox("sandbox.java.lang.DJVM"))
+                .hasClassLoader(parentClassLoader)
+                .hasNotBeenModified()
+    }
+
+    @Test
+    fun `test pinned class is owned by application classloader`() = parentedSandbox {
+        val violationClass = loadClass<ThresholdViolationError>().type
+        assertThat(violationClass).isEqualTo(ThresholdViolationError::class.java)
     }
 }
 

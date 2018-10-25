@@ -2,6 +2,7 @@
 @file:Suppress("unused")
 package sandbox.java.lang
 
+import net.corda.djvm.SandboxRuntimeContext
 import net.corda.djvm.analysis.AnalysisConfiguration.Companion.JVM_EXCEPTIONS
 import net.corda.djvm.analysis.ExceptionResolver.Companion.getDJVMException
 import net.corda.djvm.rules.implementation.*
@@ -42,14 +43,14 @@ fun Any.sandbox(): Any {
 private fun Array<*>.fromDJVMArray(): Array<*> = Object.fromDJVM(this)
 
 /**
- * These functions use the "current" classloader, i.e. classloader
- * that owns this DJVM class.
+ * Use the sandbox's classloader explicitly, because this class
+ * might belong to the shared parent classloader.
  */
 @Throws(ClassNotFoundException::class)
-internal fun Class<*>.toDJVMType(): Class<*> = Class.forName(name.toSandboxPackage())
+internal fun Class<*>.toDJVMType(): Class<*> = SandboxRuntimeContext.instance.classLoader.loadClass(name.toSandboxPackage())
 
 @Throws(ClassNotFoundException::class)
-internal fun Class<*>.fromDJVMType(): Class<*> = Class.forName(name.fromSandboxPackage())
+internal fun Class<*>.fromDJVMType(): Class<*> = SandboxRuntimeContext.instance.classLoader.loadClass(name.fromSandboxPackage())
 
 private fun kotlin.String.toSandboxPackage(): kotlin.String {
     return if (startsWith(SANDBOX_PREFIX)) {
@@ -190,10 +191,11 @@ fun fromDJVM(t: Throwable?): kotlin.Throwable {
             val sandboxedName = t!!.javaClass.name
             if (Type.getInternalName(t.javaClass) in JVM_EXCEPTIONS) {
                 // We map these exceptions to their equivalent JVM classes.
-                Class.forName(sandboxedName.fromSandboxPackage()).createJavaThrowable(t)
+                SandboxRuntimeContext.instance.classLoader.loadClass(sandboxedName.fromSandboxPackage())
+                        .createJavaThrowable(t)
             } else {
                 // Whereas the sandbox creates a synthetic throwable wrapper for these.
-                Class.forName(getDJVMException(sandboxedName))
+                SandboxRuntimeContext.instance.classLoader.loadClass(getDJVMException(sandboxedName))
                     .getDeclaredConstructor(sandboxThrowable)
                     .newInstance(t) as kotlin.Throwable
             }

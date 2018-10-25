@@ -191,12 +191,14 @@ abstract class ClassCommand : CommandBase() {
                 emitters = ignoreEmitters.emptyListIfTrueOtherwiseNull(),
                 definitionProviders = if (ignoreDefinitionProviders) { emptyList() } else { Discovery.find() },
                 enableTracing = !disableTracing,
-                analysisConfiguration = AnalysisConfiguration(
+                analysisConfiguration = AnalysisConfiguration.createRoot(
                         whitelist = whitelist,
                         minimumSeverityLevel = level,
-                        classPath = getClasspath(),
                         analyzeAnnotations = analyzeAnnotations,
-                        prefixFilters = prefixFilters.toList()
+                        prefixFilters = prefixFilters.toList(),
+                        sourceClassLoaderFactory = { classResolver, bootstrapClassLoader ->
+                            SourceClassLoader(getClasspath(), classResolver, bootstrapClassLoader)
+                        }
                 )
         )
     }

@@ -19,7 +19,7 @@ class SandboxClassLoadingException(
         val messages: MessageCollection = context.messages,
         val classes: ClassHierarchy = context.classes,
         val classOrigins: Map<String, Set<EntityReference>> = context.classOrigins
-) : Exception("Failed to load class") {
+) : RuntimeException("Failed to load class") {
 
     /**
      * The detailed description of the exception.
@@ -28,7 +28,7 @@ class SandboxClassLoadingException(
         get() = StringBuilder().apply {
             appendln(super.message)
             for (message in messages.sorted().map(Message::toString).distinct()) {
-                appendln(" - $message")
+                append(" - ").appendln(message)
             }
         }.toString().trimEnd('\r', '\n')
 
