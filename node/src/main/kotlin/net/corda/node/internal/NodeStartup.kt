@@ -60,10 +60,10 @@ abstract class NodeCliCommand(alias: String, description: String, val startup: N
 open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     open val startup = NodeStartup()
 
-    private val networkCacheCli = ClearNetworkCacheCli(startup)
-    private val justGenerateNodeInfoCli = GenerateNodeInfoCli(startup)
-    private val justGenerateRpcSslCertsCli = GenerateRpcSslCertsCli(startup)
-    private val initialRegistrationCli = InitialRegistrationCli(startup)
+    private val networkCacheCli by lazy { ClearNetworkCacheCli(startup) }
+    private val justGenerateNodeInfoCli by lazy { GenerateNodeInfoCli(startup) }
+    private val justGenerateRpcSslCertsCli by lazy { GenerateRpcSslCertsCli(startup) }
+    private val initialRegistrationCli by lazy { InitialRegistrationCli(startup) }
 
     override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
 
@@ -418,7 +418,8 @@ interface NodeStartupLogging {
 
     fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print(message)
 
-    fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" } ?: ""}", error)
+    fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" }
+            ?: ""}", error)
 
     fun handleRegistrationError(error: Exception) {
         when (error) {
