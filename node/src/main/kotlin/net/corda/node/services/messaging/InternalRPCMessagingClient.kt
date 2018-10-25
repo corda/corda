@@ -7,8 +7,11 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.security.RPCSecurityManager
+import net.corda.node.services.config.EnterpriseConfiguration
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
 import net.corda.nodeapi.internal.ArtemisTcpTransport
+import net.corda.nodeapi.internal.RoundRobinConnectionPolicy
+import net.corda.nodeapi.internal.config.ExternalBrokerConnectionConfiguration
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ServerLocator
@@ -17,7 +20,12 @@ import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 /**
  * Used by the Node to communicate with the RPC broker.
  */
-class InternalRPCMessagingClient<OPS : RPCOps>(val sslConfig: MutualSslConfiguration, val serverAddress: NetworkHostAndPort, val maxMessageSize: Int, val nodeName: CordaX500Name, val rpcServerConfiguration: RPCServerConfiguration) : SingletonSerializeAsToken(), AutoCloseable {
+
+class InternalRPCMessagingClient<OPS : RPCOps>(val sslConfig: MutualSslConfiguration,
+                                               val serverAddress: NetworkHostAndPort,
+                                               val maxMessageSize: Int,
+                                               val nodeName: CordaX500Name,
+                                               val rpcServerConfiguration: RPCServerConfiguration) : SingletonSerializeAsToken(), AutoCloseable {
     private var locator: ServerLocator? = null
     private var rpcServer: RPCServer<OPS>? = null
 
@@ -28,6 +36,7 @@ class InternalRPCMessagingClient<OPS : RPCOps>(val sslConfig: MutualSslConfigura
     fun init(rpcOpsRouting: RPCOpsRouting<OPS>, securityManager: RPCSecurityManager, cacheFactory: NamedCacheFactory) = synchronized(this) {
 
         val tcpTransport = ArtemisTcpTransport.rpcInternalClientTcpTransport(serverAddress, sslConfig)
+
         locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
             // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
             // would be the default and the two lines below can be deleted.

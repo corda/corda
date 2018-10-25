@@ -4,6 +4,8 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
+import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
+import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransportFromList
 import net.corda.nodeapi.internal.config.ExternalBrokerConnectionConfiguration
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -22,7 +24,8 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
                              private val autoCommitSends: Boolean = true,
                              private val autoCommitAcks: Boolean = true,
                              private val confirmationWindowSize: Int = -1,
-                             private val externalBrokerConnectionConfig: ExternalBrokerConnectionConfiguration? = null
+                             private val externalBrokerConnectionConfig: ExternalBrokerConnectionConfiguration? = null,
+                             private val backupServerAddressPool: List<NetworkHostAndPort> = emptyList()
 )  : ArtemisSessionProvider {
     companion object {
         private val log = loggerFor<ArtemisMessagingClient>()
@@ -35,10 +38,15 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
 
     override fun start(): Started = synchronized(this) {
         check(started == null) { "start can't be called twice" }
+        val tcpTransport = p2pConnectorTcpTransport(serverAddress, config)
+        val backupTransports = p2pConnectorTcpTransportFromList(backupServerAddressPool, config)
+
         log.info("Connecting to message broker: $serverAddress")
-        // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-        val tcpTransport = ArtemisTcpTransport.p2pConnectorTcpTransport(serverAddress, config)
-        val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
+        if (backupTransports.isNotEmpty()) {
+            log.info("Back-up message broker addresses: $backupServerAddressPool")
+        }
+        // If back-up artemis addresses are configured, the locator will be created using HA mode.
+        val locator = ActiveMQClient.createServerLocator(backupTransports.isNotEmpty(), *(listOf(tcpTransport) + backupTransports).toTypedArray()).apply {
             // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
             // would be the default and the two lines below can be deleted.
             connectionTTL = 60000
@@ -47,6 +55,7 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
             isUseGlobalPools = nodeSerializationEnv != null
             confirmationWindowSize = this@ArtemisMessagingClient.confirmationWindowSize
             externalBrokerConnectionConfig?.let {
+                connectionLoadBalancingPolicyClassName = RoundRobinConnectionPolicy::class.java.canonicalName
                 reconnectAttempts = externalBrokerConnectionConfig.reconnectAttempts
                 retryInterval = externalBrokerConnectionConfig.retryInterval.toMillis()
                 retryIntervalMultiplier = externalBrokerConnectionConfig.retryIntervalMultiplier

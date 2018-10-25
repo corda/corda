@@ -60,7 +60,6 @@ class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
             val outboundConf = conf.outboundConfig!!
             log.info("Connecting to message broker: ${outboundConf.artemisBrokerAddress}")
             val brokerAddresses = listOf(outboundConf.artemisBrokerAddress) + outboundConf.alternateArtemisBrokerAddresses
-            // TODO Add broker CN to config for host verification in case the embedded broker isn't used
             val tcpTransports = brokerAddresses.map { ArtemisTcpTransport.p2pConnectorTcpTransport(it, sslConfiguration) }
             locator = ActiveMQClient.createServerLocatorWithoutHA(*tcpTransports.toTypedArray()).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this

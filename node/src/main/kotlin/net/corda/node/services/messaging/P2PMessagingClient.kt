@@ -38,6 +38,8 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
+import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransportFromList
+import net.corda.nodeapi.internal.RoundRobinConnectionPolicy
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -117,6 +119,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         var bridgeNotifyConsumer: ClientConsumer? = null
         var networkChangeSubscription: Subscription? = null
         var sessionFactory: ClientSessionFactory? = null
+        val inboxes = mutableSetOf<String>()
 
         fun sendMessage(address: String, message: ClientMessage) = producer!!.send(address, message)
     }
@@ -150,6 +153,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
             }
             FailoverEventType.FAILOVER_COMPLETED -> {
                 log.info("Connection to broker re-established.")
+                state.locked {
+                    enumerateBridges(bridgeSession!!, inboxes.toList())
+                }
             }
             FailoverEventType.FAILOVER_FAILED -> state.locked {
                 if (running) {
@@ -179,10 +185,14 @@ class P2PMessagingClient(val config: NodeConfiguration,
         this.maxMessageSize = maxMessageSize
         state.locked {
             started = true
-            log.info("Connecting to message broker: $serverAddress")
-            // TODO Add broker CN to config for host verification in case the embedded broker isn't used
             val tcpTransport = p2pConnectorTcpTransport(serverAddress, config.p2pSslOptions)
-            locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
+            val backupTransports = p2pConnectorTcpTransportFromList(config.enterpriseConfiguration.externalBrokerBackupAddresses, config.p2pSslOptions)
+            log.info("Connecting to message broker: $serverAddress")
+            if (backupTransports.isNotEmpty()) {
+                log.info("Back-up message broker addresses: ${config.enterpriseConfiguration.externalBrokerBackupAddresses}")
+            }
+            // If back-up artemis addresses are configured, the locator will be created using HA mode.
+            locator = ActiveMQClient.createServerLocator(backupTransports.isNotEmpty(), *(listOf(tcpTransport) + backupTransports).toTypedArray()).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.
                 connectionTTL = 60000
@@ -192,6 +202,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 confirmationWindowSize = config.enterpriseConfiguration.tuning.p2pConfirmationWindowSize
                 // Configuration for dealing with external broker failover
                 if (config.messagingServerExternal) {
+                    connectionLoadBalancingPolicyClassName = RoundRobinConnectionPolicy::class.java.canonicalName
                     reconnectAttempts = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.reconnectAttempts
                     retryInterval = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.retryInterval.toMillis()
                     retryIntervalMultiplier = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.retryIntervalMultiplier
@@ -214,7 +225,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             producerSession!!.start()
             bridgeSession!!.start()
 
-            val inboxes = mutableSetOf<String>()
+
             // Create a queue, consumer and producer for handling P2P network messages.
             // Create a general purpose producer.
             producer = producerSession!!.createProducer()

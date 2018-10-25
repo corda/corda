@@ -251,7 +251,8 @@ open class Node(configuration: NodeConfiguration,
                         true,
                         true,
                         -1,
-                        configuration.enterpriseConfiguration.externalBrokerConnectionConfiguration)
+                        configuration.enterpriseConfiguration.externalBrokerConnectionConfiguration,
+                        configuration.enterpriseConfiguration.externalBrokerBackupAddresses)
             }
             BridgeControlListener(configuration.p2pSslOptions, null, networkParameters.maxMessageSize, artemisClient)
         } else {
@@ -264,7 +265,11 @@ open class Node(configuration: NodeConfiguration,
                 rpcThreadPoolSize = configuration.enterpriseConfiguration.tuning.rpcThreadPoolSize
         )
         rpcServerAddresses?.let {
-            internalRpcMessagingClient = InternalRPCMessagingClient(configuration.p2pSslOptions, it.admin, MAX_RPC_MESSAGE_SIZE, CordaX500Name.build(configuration.p2pSslOptions.keyStore.get()[X509Utilities.CORDA_CLIENT_TLS].subjectX500Principal), rpcServerConfiguration)
+            internalRpcMessagingClient = InternalRPCMessagingClient(configuration.p2pSslOptions,
+                    it.admin,
+                    MAX_RPC_MESSAGE_SIZE,
+                    CordaX500Name.build(configuration.p2pSslOptions.keyStore.get()[X509Utilities.CORDA_CLIENT_TLS].subjectX500Principal),
+                    rpcServerConfiguration)
             printBasicNodeInfo("RPC connection address", it.primary.toString())
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
         }

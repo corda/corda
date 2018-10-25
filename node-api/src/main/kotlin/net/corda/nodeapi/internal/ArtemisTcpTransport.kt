@@ -130,6 +130,10 @@ class ArtemisTcpTransport {
             return TransportConfiguration(connectorFactoryClassName, options)
         }
 
+        fun p2pConnectorTcpTransportFromList(hostAndPortList: List<NetworkHostAndPort>, config: MutualSslConfiguration?, enableSSL: Boolean = true): List<TransportConfiguration> = hostAndPortList.map {
+            p2pConnectorTcpTransport(it, config, enableSSL)
+        }
+
         fun rpcAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: BrokerRpcSslOptions?, enableSSL: Boolean = true): TransportConfiguration {
             val options = defaultArtemisOptions(hostAndPort).toMutableMap()
 
@@ -159,6 +163,7 @@ class ArtemisTcpTransport {
         fun rpcInternalClientTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration): TransportConfiguration {
             return TransportConfiguration(connectorFactoryClassName, defaultArtemisOptions(hostAndPort) + defaultSSLOptions + config.toTransportOptions())
         }
+
 
         fun rpcInternalAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration): TransportConfiguration {
             return TransportConfiguration(acceptorFactoryClassName, defaultArtemisOptions(hostAndPort) + defaultSSLOptions + config.toTransportOptions())
