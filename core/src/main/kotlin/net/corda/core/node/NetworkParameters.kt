@@ -2,6 +2,7 @@ package net.corda.core.node
 
 import net.corda.core.CordaRuntimeException
 import net.corda.core.KeepForDJVM
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
@@ -140,7 +141,7 @@ data class NetworkParameters(
       modifiedTime=$modifiedTime
       epoch=$epoch,
       packageOwnership= {
-        ${packageOwnership.entries.joinToString("\n    ")}
+        ${packageOwnership.entries.joinToString("\n    ") { "$it.key -> ${it.value.toStringShort()}" }}
       }
   }"""
     }
@@ -183,6 +184,8 @@ data class JavaPackageName(val name: String) {
      * By making the check case insensitive, the node will require that the jar is signed by MegaCorp, so the attack fails.
      */
     fun owns(fullClassName: String) = fullClassName.startsWith("$name.", ignoreCase = true)
+
+    override fun toString() = name
 }
 
 // Check if a string is a legal Java package name.

@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.network
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -376,7 +377,7 @@ internal constructor(private val initSerEnv: Boolean,
                     }
                     else {
                         if (updatePackageOwnership.put(key, value) == null)
-                            println("Registering package $key for owner $value")
+                            println("Registering package $key for owner ${value.toStringShort()}")
                     }
                 }
                 existingNetParams.copy(
