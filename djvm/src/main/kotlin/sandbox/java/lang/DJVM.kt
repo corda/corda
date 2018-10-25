@@ -43,14 +43,15 @@ fun Any.sandbox(): Any {
 private fun Array<*>.fromDJVMArray(): Array<*> = Object.fromDJVM(this)
 
 /**
- * Use the sandbox's classloader explicitly, because this class
- * might belong to the shared parent classloader.
+ * Use [Class.forName] so that we can also fetch classes for arrays of primitive types.
+ * Also use the sandbox's classloader explicitly here, because this invoking class
+ * might belong to a shared parent classloader.
  */
 @Throws(ClassNotFoundException::class)
-internal fun Class<*>.toDJVMType(): Class<*> = SandboxRuntimeContext.instance.classLoader.loadClass(name.toSandboxPackage())
+internal fun Class<*>.toDJVMType(): Class<*> = Class.forName(name.toSandboxPackage(), false, SandboxRuntimeContext.instance.classLoader)
 
 @Throws(ClassNotFoundException::class)
-internal fun Class<*>.fromDJVMType(): Class<*> = SandboxRuntimeContext.instance.classLoader.loadClass(name.fromSandboxPackage())
+internal fun Class<*>.fromDJVMType(): Class<*> = Class.forName(name.fromSandboxPackage(), false, SandboxRuntimeContext.instance.classLoader)
 
 private fun kotlin.String.toSandboxPackage(): kotlin.String {
     return if (startsWith(SANDBOX_PREFIX)) {
