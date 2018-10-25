@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS ${schema}.cp_states_v2_participants;
 DROP TABLE IF EXISTS ${schema}.dummy_linear_state_parts;
 DROP TABLE IF EXISTS ${schema}.dummy_linear_states_v2_parts;
 DROP TABLE IF EXISTS ${schema}.dummy_deal_states_parts;
+DROP TABLE IF EXISTS ${schema}.node_attachments_signers;
 DROP TABLE IF EXISTS ${schema}.node_attachments_contracts;
 DROP TABLE IF EXISTS ${schema}.node_attachments;
 DROP TABLE IF EXISTS ${schema}.node_checkpoints;
