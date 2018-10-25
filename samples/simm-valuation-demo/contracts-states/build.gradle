@@ -83,7 +83,8 @@ task sign(type: net.corda.plugins.SignJar) {
     inputJars shrink
 }
 
-jar.finalizedBy sign
+jar.finalizedBy shrink
+shrink.finalizedBy sign
 
 artifacts {
     shrinkArtifacts file: sign.outputJars.singleFile, name: project.name, type: 'jar', extension: 'jar', classifier: 'tiny', builtBy: sign
