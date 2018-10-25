@@ -140,7 +140,7 @@ data class NetworkParameters(
       modifiedTime=$modifiedTime
       epoch=$epoch,
       packageOwnership= {
-        ${packageOwnership.keys.joinToString()}}
+        ${packageOwnership.entries.joinToString("\n    ")}
       }
   }"""
     }
@@ -172,7 +172,7 @@ class ZoneVersionTooLowException(message: String) : CordaRuntimeException(messag
 @CordaSerializable
 data class JavaPackageName(val name: String) {
     init {
-        require(isPackageValid(name)) { "Attempting to whitelist illegal java package: $name" }
+        require(isPackageValid(name)) { "Invalid java package name: $name" }
     }
 
     /**
@@ -182,7 +182,7 @@ data class JavaPackageName(val name: String) {
      * Note: The ownership check is ignoring case to prevent people from just releasing a jar with: "com.megaCorp.megatoken" and pretend they are MegaCorp.
      * By making the check case insensitive, the node will require that the jar is signed by MegaCorp, so the attack fails.
      */
-    fun owns(fullClassName: String) = fullClassName.startsWith("${name}.", ignoreCase = true)
+    fun owns(fullClassName: String) = fullClassName.startsWith("$name.", ignoreCase = true)
 }
 
 // Check if a string is a legal Java package name.

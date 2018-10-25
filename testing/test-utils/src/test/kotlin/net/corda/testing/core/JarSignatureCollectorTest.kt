@@ -1,11 +1,12 @@
-package net.corda.core.internal
+package net.corda.testing.core
 
-import net.corda.core.JarSignatureTestUtils.createJar
-import net.corda.core.JarSignatureTestUtils.generateKey
-import net.corda.core.JarSignatureTestUtils.getJarSigners
-import net.corda.core.JarSignatureTestUtils.signJar
-import net.corda.core.JarSignatureTestUtils.updateJar
+import net.corda.testing.core.JarSignatureTestUtils.createJar
+import net.corda.testing.core.JarSignatureTestUtils.generateKey
+import net.corda.testing.core.JarSignatureTestUtils.getJarSigners
+import net.corda.testing.core.JarSignatureTestUtils.signJar
+import net.corda.testing.core.JarSignatureTestUtils.updateJar
 import net.corda.core.identity.Party
+import net.corda.core.internal.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
@@ -34,8 +35,8 @@ class JarSignatureCollectorTest {
         @BeforeClass
         @JvmStatic
         fun beforeClass() {
-            dir.generateKey(ALICE, ALICE_PASS, ALICE_NAME.toString())
-            dir.generateKey(BOB, BOB_PASS, BOB_NAME.toString())
+            dir.generateKey(ALICE, "storepass", ALICE_NAME.toString(), keyPassword = ALICE_PASS)
+            dir.generateKey(BOB, "storepass", BOB_NAME.toString(), keyPassword = BOB_PASS)
 
             (dir / "_signable1").writeLines(listOf("signable1"))
             (dir / "_signable2").writeLines(listOf("signable2"))

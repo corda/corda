@@ -7,6 +7,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.node.JavaPackageName
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
@@ -17,6 +18,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.days
+import net.corda.core.utilities.filterNotNullValues
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.*
@@ -30,6 +32,7 @@ import net.corda.serialization.internal.amqp.amqpMagic
 import java.io.InputStream
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executors
@@ -168,14 +171,14 @@ internal constructor(private val initSerEnv: Boolean,
     }
 
     /** Entry point for the tool */
-    fun bootstrap(directory: Path, copyCordapps: Boolean, minimumPlatformVersion: Int) {
+    fun bootstrap(directory: Path, copyCordapps: Boolean, minimumPlatformVersion: Int, packageOwnership : Map<JavaPackageName, PublicKey?> = emptyMap()) {
         require(minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
         // Don't accidently include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
         val cordappJars = directory.list { paths ->
             paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }.toList()
         }
-        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, minimumPlatformVersion = minimumPlatformVersion)
+        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, minimumPlatformVersion = minimumPlatformVersion, packageOwnership = packageOwnership)
     }
 
     private fun bootstrap(
@@ -183,7 +186,8 @@ internal constructor(private val initSerEnv: Boolean,
             cordappJars: List<Path>,
             copyCordapps: Boolean,
             fromCordform: Boolean,
-            minimumPlatformVersion: Int = PLATFORM_VERSION
+            minimumPlatformVersion: Int = PLATFORM_VERSION,
+            packageOwnership : Map<JavaPackageName, PublicKey?> = emptyMap()
     ) {
         directory.createDirectories()
         println("Bootstrapping local test network in $directory")
@@ -223,7 +227,7 @@ internal constructor(private val initSerEnv: Boolean,
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles, configs)
             println("Generating contract implementations whitelist")
             val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.filter { !isSigned(it) }.map(contractsJarConverter))
-            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, minimumPlatformVersion)
+            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, minimumPlatformVersion, packageOwnership)
             if (newNetParams != existingNetParams) {
                 println("${if (existingNetParams == null) "New" else "Updated"} $newNetParams")
             } else {
@@ -355,17 +359,31 @@ internal constructor(private val initSerEnv: Boolean,
             whitelist: Map<String, List<AttachmentId>>,
             existingNetParams: NetworkParameters?,
             nodeDirs: List<Path>,
-            minimumPlatformVersion: Int
+            minimumPlatformVersion: Int,
+            packageOwnership : Map<JavaPackageName, PublicKey?>
     ): NetworkParameters {
-        // TODO Add config for minimumPlatformVersion, maxMessageSize and maxTransactionSize
+        // TODO Add config for maxMessageSize and maxTransactionSize
         val netParams = if (existingNetParams != null) {
-            if (existingNetParams.whitelistedContractImplementations == whitelist && existingNetParams.notaries == notaryInfos) {
+            if (existingNetParams.whitelistedContractImplementations == whitelist && existingNetParams.notaries == notaryInfos &&
+                existingNetParams.packageOwnership.entries.containsAll(packageOwnership.entries)) {
                 existingNetParams
             } else {
+                var updatePackageOwnership = mutableMapOf(*existingNetParams.packageOwnership.map { Pair(it.key,it.value) }.toTypedArray())
+                packageOwnership.forEach { key, value ->
+                    if (value == null) {
+                        if (updatePackageOwnership.remove(key) != null)
+                            println("Unregistering package $key")
+                    }
+                    else {
+                        if (updatePackageOwnership.put(key, value) == null)
+                            println("Registering package $key for owner $value")
+                    }
+                }
                 existingNetParams.copy(
                         notaries = notaryInfos,
                         modifiedTime = Instant.now(),
                         whitelistedContractImplementations = whitelist,
+                        packageOwnership = updatePackageOwnership,
                         epoch = existingNetParams.epoch + 1
                 )
             }
@@ -377,6 +395,7 @@ internal constructor(private val initSerEnv: Boolean,
                     maxMessageSize = 10485760,
                     maxTransactionSize = 10485760,
                     whitelistedContractImplementations = whitelist,
+                    packageOwnership = packageOwnership.filterNotNullValues(),
                     epoch = 1,
                     eventHorizon = 30.days
             )

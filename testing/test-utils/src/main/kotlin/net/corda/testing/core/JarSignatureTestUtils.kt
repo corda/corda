@@ -1,4 +1,4 @@
-package net.corda.core
+package net.corda.testing.core
 
 import net.corda.core.internal.JarSignatureCollector
 import net.corda.core.internal.div
@@ -25,8 +25,8 @@ object JarSignatureTestUtils {
                 .waitFor())
     }
 
-    fun Path.generateKey(alias: String, password: String, name: String, keyalg: String = "RSA") =
-            executeProcess("keytool", "-genkey", "-keystore", "_teststore", "-storepass", "storepass", "-keyalg", keyalg, "-alias", alias, "-keypass", password, "-dname", name)
+    fun Path.generateKey(alias: String, storePassword: String, name: String, keyalg: String = "RSA", keyPassword: String = storePassword) =
+            executeProcess("keytool", "-genkeypair", "-keystore", "_teststore", "-storepass", storePassword, "-keyalg", keyalg, "-alias", alias, "-keypass", keyPassword, "-dname", name)
 
     fun Path.createJar(fileName: String, vararg contents: String) =
             executeProcess(*(arrayOf("jar", "cvf", fileName) + contents))

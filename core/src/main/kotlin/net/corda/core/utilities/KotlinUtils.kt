@@ -26,6 +26,10 @@ infix fun Int.exactAdd(b: Int): Int = Math.addExact(this, b)
 /** Like the + operator but throws [ArithmeticException] in case of integer overflow. */
 infix fun Long.exactAdd(b: Long): Long = Math.addExact(this, b)
 
+/** There is no special case function for filtering null values out of a map in the stdlib */
+@Suppress("UNCHECKED_CAST")
+fun <K, V> Map<K, V?>.filterNotNullValues() = filterValues { it != null } as Map<K, V>
+
 /**
  * Usually you won't need this method:
  * * If you're in a companion object, use [contextLogger]
