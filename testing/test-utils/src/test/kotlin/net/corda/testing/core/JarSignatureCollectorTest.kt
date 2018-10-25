@@ -9,7 +9,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.CHARLIE_NAME
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.AfterClass
@@ -141,6 +140,6 @@ class JarSignatureCollectorTest {
         assertEquals(listOf(key), dir.getJarSigners(FILENAME)) // We only used CHARLIE's distinguished name, so the keys will be different.
     }
 
-    private fun signAsAlice() = dir.signJar(FILENAME, ALICE, ALICE_PASS)
-    private fun signAsBob() = dir.signJar(FILENAME, BOB, BOB_PASS)
+    private fun signAsAlice() = dir.signJar(FILENAME, ALICE, "storepass", ALICE_PASS)
+    private fun signAsBob() = dir.signJar(FILENAME, BOB, "storepass", BOB_PASS)
 }
