@@ -241,6 +241,9 @@ absolute path to the firewall's base directory.
 
 :enableAMQPPacketTrace: Set this developer flag to true if very detailed logs are required for connectivity debugging. Note that the logging volume is substantial, so do not enable in production systems.
 
+:healthCheckPhrase: An optional Health Check Phrase which if passed through the channel will cause AMQP Server to echo it back instead of doing normal pipeline processing.
+    This parameter can be used to facilitate F5 "TCP Echo" health-check monitor. Only when TCP posting starting with ``healthCheckPhrase`` in UTF-8 encoding is sent to application port the server will echo the same pass phrase back.
+
 Complete example
 ----------------
 As an example to show all features the following is a walk through of the configuration for a pair of HA hot-cold Nodes,

@@ -66,8 +66,12 @@ class AMQPServer(val hostName: String,
 
         override fun initChannel(ch: SocketChannel) {
             val amqpConfiguration = parent.configuration
-            val keyStore = amqpConfiguration.keyStore
             val pipeline = ch.pipeline()
+
+            amqpConfiguration.healthCheckPhrase?.let { pipeline.addLast(ModeSelectingChannel.NAME, ModeSelectingChannel(it)) }
+
+            val keyStore = amqpConfiguration.keyStore
+
             // Used for SNI matching with javaSSL.
             val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory, amqpConfiguration)
             // Used to create a mapping for SNI matching with openSSL.

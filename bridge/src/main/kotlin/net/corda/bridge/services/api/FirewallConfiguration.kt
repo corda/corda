@@ -117,4 +117,6 @@ interface FirewallConfiguration {
     val crlCheckSoftFail: Boolean
     val p2pSslOptions: MutualSslConfiguration
     val auditServiceConfiguration: AuditServiceConfiguration
+    // An optional Health Check Phrase which if passed through the channel will cause AMQP Server to echo it back instead of doing normal pipeline processing
+    val healthCheckPhrase: String?
 }

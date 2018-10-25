@@ -70,7 +70,8 @@ data class FirewallConfigurationImpl(
         override val politeShutdownPeriod: Int = 1000,
         override val p2pConfirmationWindowSize: Int = 1048576,
         override val whitelistedHeaders: List<String> = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList(),
-        override val auditServiceConfiguration: AuditServiceConfigurationImpl
+        override val auditServiceConfiguration: AuditServiceConfigurationImpl,
+        override val healthCheckPhrase: String? = null
 ) : FirewallConfiguration {
     init {
         if (firewallMode == FirewallMode.SenderReceiver) {

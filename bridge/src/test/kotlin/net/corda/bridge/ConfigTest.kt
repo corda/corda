@@ -143,9 +143,17 @@ class ConfigTest {
         val configResource = "/net/corda/bridge/withaudit/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
         assertEquals(34, config.auditServiceConfiguration.loggingIntervalSec)
+        assertNull(config.healthCheckPhrase)
 
         assertFailsWith<ConfigException.WrongType> {
             createAndLoadConfigFromResource(tempFolder.root.toPath() / "err1", "/net/corda/bridge/withaudit/badconfig/badInterval.conf")
         }
+    }
+
+    @Test
+    fun `Load healthCheckPhrase config`() {
+        val configResource = "/net/corda/bridge/healthcheckphrase/firewall.conf"
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        assertEquals("ISpeakAMQP!", config.healthCheckPhrase)
     }
 }

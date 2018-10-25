@@ -71,6 +71,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
                 override val crlCheckSoftFail: Boolean = conf.crlCheckSoftFail
                 override val maxMessageSize: Int = maximumMessageSize
                 override val trace: Boolean = conf.enableAMQPPacketTrace
+                override val healthCheckPhrase = conf.healthCheckPhrase
             }
             val controlServer = AMQPServer(floatControlAddress.host,
                     floatControlAddress.port,

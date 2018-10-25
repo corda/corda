@@ -5,6 +5,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.hours
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.*
@@ -34,6 +35,9 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.net.InetSocketAddress
+import java.nio.ByteBuffer
+import java.nio.channels.SocketChannel
 import java.util.*
 import kotlin.concurrent.thread
 import kotlin.system.measureNanoTime
@@ -43,9 +47,33 @@ import kotlin.test.assertEquals
 @RunWith(Parameterized::class)
 class AMQPBridgeTest(private val useOpenSsl: Boolean) {
     companion object {
+
+        private val logger = contextLogger()
+
+        const val echoPhrase = "Hello!"
+
         @JvmStatic
         @Parameterized.Parameters(name = "useOpenSsl = {0}")
         fun data(): Collection<Boolean> = listOf(false, true)
+
+        private fun String.assertEchoResponse(address: InetSocketAddress, drip: Boolean = false) {
+            SocketChannel.open(address).use {
+
+                val byteMsg = toByteArray()
+
+                if(drip) {
+                    (0 until byteMsg.size).forEach { offset ->  it.write(ByteBuffer.wrap(byteMsg, offset, 1)) }
+                } else {
+                    it.write(ByteBuffer.wrap(byteMsg))
+                }
+
+                val responseBuffer = ByteBuffer.allocate(length)
+                do {
+                    val readRes = it.read(responseBuffer)
+                } while(readRes != -1 && responseBuffer.hasRemaining())
+                assertEquals(this, String(responseBuffer.array()))
+            }
+        }
     }
 
     @Rule
@@ -179,6 +207,52 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean) {
         log.info("Message sequence: ${receivedSequence.joinToString(", ", "[", "]")}")
         log.info("Deduped sequence: ${atNodeSequence.joinToString(", ", "[", "]")}")
         assertEquals(listOf(0, 1, 2, 3), atNodeSequence)
+        bridgeManager.stop()
+        amqpServer.stop()
+        artemisClient.stop()
+        artemisServer.stop()
+    }
+
+    @Test
+    fun `test healthcheck and normal messages`() {
+        // Create local queue
+        val sourceQueueName = "internal.peers." + BOB.publicKey.toStringShort()
+        val (artemisServer, artemisClient, bridgeManager) = createArtemis(sourceQueueName)
+
+        val artemis = artemisClient.started!!
+
+        //Create target server
+        val amqpServer = createAMQPServer(echoPhrase = echoPhrase)
+
+        val receive = amqpServer.onReceive.toBlocking().iterator
+        amqpServer.start()
+
+        // Perform communication via TCP socket to see if the server can echo
+        val socketAddress = InetSocketAddress(amqpServer.hostName, amqpServer.port)
+        echoPhrase.assertEchoResponse(socketAddress, true)
+
+        // Do with longer echo phrase with correct prefix.
+        (echoPhrase + "0123456789".repeat(1000)).assertEchoResponse(socketAddress)
+
+        // Send a fresh item and check receive
+        val artemisMessage = artemis.session.createMessage(true).apply {
+            putStringProperty(P2PMessagingHeaders.bridgedCertificateSubject, ALICE_NAME.toString())
+            putIntProperty(P2PMessagingHeaders.senderUUID, 3)
+            writeBodyBufferBytes("Test3".toByteArray())
+            // Use the magic deduplication property built into Artemis as our message identity too
+            putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+        }
+        artemis.producer.send(sourceQueueName, artemisMessage)
+
+        val received5 = receive.next()
+        val messageID5 = received5.applicationProperties[P2PMessagingHeaders.senderUUID.toString()] as Int
+        assertArrayEquals("Test$messageID5".toByteArray(), received5.payload)
+
+        // Do with longer echo phrase with correct prefix, using byte by byte drip
+        logger.info("Before long message drip")
+        (echoPhrase + "0123456789".repeat(100)).assertEchoResponse(socketAddress, true)
+        logger.info("After long message drip")
+
         bridgeManager.stop()
         amqpServer.stop()
         artemisClient.stop()
@@ -322,7 +396,7 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean) {
 
     }
 
-    private fun createAMQPServer(maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPServer {
+    private fun createAMQPServer(maxMessageSize: Int = MAX_MESSAGE_SIZE, echoPhrase: String? = null): AMQPServer {
         val baseDir = temporaryFolder.root.toPath() / "server"
         val certificatesDirectory = baseDir / "certificates"
         val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, useOpenSsl = useOpenSsl)
@@ -340,9 +414,10 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean) {
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
             override val trustStore  = serverConfig.p2pSslOptions.trustStore.get()
-            override val trace: Boolean = true
+            //override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
             override val useOpenSsl = serverConfig.p2pSslOptions.useOpenSsl
+            override val healthCheckPhrase = echoPhrase
         }
         return AMQPServer("0.0.0.0",
                 amqpAddress.port,
