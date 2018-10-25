@@ -193,10 +193,11 @@ object Configuration {
                  */
                 fun float(key: String, sensitive: Boolean = false): Standard<Float> = double(key, sensitive).mapValid { value ->
 
-                    if (value.compareTo(value.toFloat()) == 0) {
-                        valid(value.toFloat())
-                    } else {
+                    val floatValue = value.toFloat()
+                    if (floatValue.isInfinite() || floatValue.isNaN()) {
                         invalid<Float, Configuration.Validation.Error>(Configuration.Validation.Error.BadValue.of(key, Float::class.javaObjectType.simpleName, "Provided value exceeds Float range."))
+                    } else {
+                        valid(value.toFloat())
                     }
                 }
 
