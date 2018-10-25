@@ -45,7 +45,7 @@ interface Validated<TARGET, ERROR> {
     /**
      * Applies the [convert] function to the [TARGET] value, if valid, returning its [Validated] output. Otherwise, returns a [Validated] monad with a [MAPPED] generic type and the current errors set.
      */
-    fun <MAPPED> flatMap(convert: (TARGET) -> Validated<MAPPED, ERROR>): Validated<MAPPED, ERROR>
+    fun <MAPPED> mapValid(convert: (TARGET) -> Validated<MAPPED, ERROR>): Validated<MAPPED, ERROR>
 
     /**
      * Applies the [convertError] function to the errors set, if not empty. Otherwise, returns a [Validated] wrapper with a [MAPPED_ERROR] generic type.
@@ -97,7 +97,7 @@ interface Validated<TARGET, ERROR> {
                 return valid(convert.invoke(value))
             }
 
-            override fun <MAPPED> flatMap(convert: (TARGET) -> Validated<MAPPED, ERROR>): Validated<MAPPED, ERROR> {
+            override fun <MAPPED> mapValid(convert: (TARGET) -> Validated<MAPPED, ERROR>): Validated<MAPPED, ERROR> {
 
                 return convert.invoke(value)
             }
@@ -126,7 +126,7 @@ interface Validated<TARGET, ERROR> {
                 return invalid(errors)
             }
 
-            override fun <MAPPED> flatMap(convert: (TARGET) -> Validated<MAPPED, ERROR>): Validated<MAPPED, ERROR> {
+            override fun <MAPPED> mapValid(convert: (TARGET) -> Validated<MAPPED, ERROR>): Validated<MAPPED, ERROR> {
 
                 return invalid(errors)
             }

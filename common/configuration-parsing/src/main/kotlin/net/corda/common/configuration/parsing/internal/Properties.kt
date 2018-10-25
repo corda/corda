@@ -117,7 +117,7 @@ private class FunctionalProperty<TYPE, MAPPED : Any>(delegate: Configuration.Pro
 
     override val typeName: String = if (super.typeName == "#$mappedTypeName") super.typeName else "$mappedTypeName(${super.typeName})"
 
-    override fun <M : Any> mapValid(mappedTypeName: String, convert: (MAPPED) -> Valid<M>): Configuration.Property.Definition.Standard<M> = FunctionalProperty(delegate, mappedTypeName, extractListValue, { target: TYPE -> this.convert.invoke(target).flatMap(convert) })
+    override fun <M : Any> mapValid(mappedTypeName: String, convert: (MAPPED) -> Valid<M>): Configuration.Property.Definition.Standard<M> = FunctionalProperty(delegate, mappedTypeName, extractListValue, { target: TYPE -> this.convert.invoke(target).mapValid(convert) })
 
     override fun list(): Configuration.Property.Definition.Required<List<MAPPED>> = FunctionalListProperty(this)
 

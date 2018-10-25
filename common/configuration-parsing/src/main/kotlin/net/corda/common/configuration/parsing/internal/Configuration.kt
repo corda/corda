@@ -154,7 +154,7 @@ object Configuration {
 
             override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<TYPE, Validation.Error> {
 
-                return validate(configuration, options).flatMap { config -> valid(valueIn(config)) }
+                return validate(configuration, options).mapValid { config -> valid(valueIn(config)) }
             }
 
             companion object {
@@ -333,7 +333,7 @@ object Configuration {
 
         override fun describe(configuration: Config) = schema.describe(configuration)
 
-        final override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<VALUE> = validate(configuration, options).flatMap(::parseValid)
+        final override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<VALUE> = validate(configuration, options).mapValid(::parseValid)
 
         /**
          * Implement to define further mapping and validation logic, assuming the underlying raw [Config] is correct in terms of this [Configuration.Specification].

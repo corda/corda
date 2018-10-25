@@ -21,7 +21,7 @@ class VersionedSpecificationRegistry<VALUE> private constructor(private val vers
 
     override fun invoke(configuration: Config): Valid<Configuration.Specification<VALUE>> {
 
-        return versionFromConfig.invoke(configuration).flatMap { version ->
+        return versionFromConfig.invoke(configuration).mapValid { version ->
 
             val value = specifications[version]
             value?.let { valid(it) } ?: invalid<Configuration.Specification<VALUE>, Configuration.Validation.Error>(Configuration.Validation.Error.UnsupportedVersion.of(version))

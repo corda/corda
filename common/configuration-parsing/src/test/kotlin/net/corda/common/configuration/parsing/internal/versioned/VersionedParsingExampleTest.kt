@@ -20,13 +20,13 @@ class VersionedParsingExampleTest {
         val adminAddressValue = Address("127.0.0.1", 8081)
 
         val configurationV1 = configObject("configuration.metadata.version" to 1, "principalHost" to principalAddressValue.host, "principalPort" to principalAddressValue.port, "adminHost" to adminAddressValue.host, "adminPort" to adminAddressValue.port).toConfig().also { println(it.serialize()) }
-        val rpcSettingsFromVersion1Conf = parseConfiguration.invoke(configurationV1).flatMap { it.parse(configurationV1) }
+        val rpcSettingsFromVersion1Conf = parseConfiguration.invoke(configurationV1).mapValid { it.parse(configurationV1) }
 
         assertResult(rpcSettingsFromVersion1Conf, principalAddressValue, adminAddressValue)
 
         val addressesValue = configObject("principal" to "${principalAddressValue.host}:${principalAddressValue.port}", "admin" to "${adminAddressValue.host}:${adminAddressValue.port}")
         val configurationV2 = configObject("configuration.metadata.version" to 2, "configuration.value.addresses" to addressesValue).toConfig().also { println(it.serialize()) }
-        val rpcSettingsFromVersion2Conf = parseConfiguration.invoke(configurationV2).flatMap { it.parse(configurationV2) }
+        val rpcSettingsFromVersion2Conf = parseConfiguration.invoke(configurationV2).mapValid { it.parse(configurationV2) }
 
         assertResult(rpcSettingsFromVersion2Conf, principalAddressValue, adminAddressValue)
     }
@@ -44,7 +44,7 @@ class VersionedParsingExampleTest {
 
         val addressesValue = configObject("principal" to "${principalAddressValue.host}:${principalAddressValue.port}", "admin" to "${adminAddressValue.host}:${adminAddressValue.port}")
         val configurationV2 = configObject("configuration.value.addresses" to addressesValue).toConfig().also { println(it.serialize()) }
-        val rpcSettingsFromVersion2Conf = parseConfiguration.invoke(configurationV2).flatMap { it.parse(configurationV2) }
+        val rpcSettingsFromVersion2Conf = parseConfiguration.invoke(configurationV2).mapValid { it.parse(configurationV2) }
 
         assertResult(rpcSettingsFromVersion2Conf, principalAddressValue, adminAddressValue)
     }
