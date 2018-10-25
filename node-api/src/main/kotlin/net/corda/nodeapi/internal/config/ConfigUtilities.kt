@@ -53,6 +53,12 @@ operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T
     return getValueInternal(metadata.name, metadata.returnType, UnknownConfigKeysPolicy.IGNORE::handle)
 }
 
+// Problems:
+// - Forces you to have a primary constructor with all fields of name and type matching the configuration file structure.
+// - Encourages weak bean-like types.
+// - Cannot support a many-to-one relationship between configuration file structures and configuration domain type. This is essential for versioning of the configuration files.
+// - It's complicated and based on reflection, meaning problems with it are typically found at runtime.
+// - It doesn't support validation errors in a structured way. If something goes wrong, it throws exceptions, which doesn't support good usability practices like displaying all the errors at once.
 fun <T : Any> Config.parseAs(clazz: KClass<T>, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle, nestedPath: String? = null): T {
     // Use custom parser if provided, instead of treating the object as data class.
     clazz.findAnnotation<CustomConfigParser>()?.let { return uncheckedCast(it.parser.createInstance().parse(this)) }
