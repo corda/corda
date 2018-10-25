@@ -135,7 +135,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap(),
                   flowManager: FlowManager = NodeFlowManager(FlowOverrideConfig())): NodeWithInfo {
-        val node = initNode(legalName,platformVersion, rpcUsers,configOverrides)
+        val node = initNode(legalName,platformVersion, rpcUsers,configOverrides, flowManager=flowManager)
         val nodeInfo = node.start()
         val nodeWithInfo = NodeWithInfo(node, nodeInfo)
         nodes += nodeWithInfo
