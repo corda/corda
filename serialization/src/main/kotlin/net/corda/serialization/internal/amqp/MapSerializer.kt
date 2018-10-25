@@ -7,7 +7,6 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
-import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
@@ -22,7 +21,7 @@ private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
 class MapSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = (declaredType as? ParameterizedType)
             ?: (TypeIdentifier.forGenericType(declaredType) as TypeIdentifier.Erased)
-                    .toParameterized(TypeIdentifier.Unknown, TypeIdentifier.Unknown)
+                    .toParameterized(TypeIdentifier.TopType, TypeIdentifier.TopType)
                     .getLocalType(factory.classloader) // replace erased type parameters
 
     override val typeDescriptor: Symbol = Symbol.valueOf(
@@ -65,7 +64,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
         private fun deriveParametrizedType(declaredType: Type, collectionClass: Class<out Map<*, *>>): ParameterizedType =
                 (declaredType as? ParameterizedType)
                         ?: TypeIdentifier.Erased(collectionClass.name, 2)
-                                .toParameterized(TypeIdentifier.Top, TypeIdentifier.Top)
+                                .toParameterized(TypeIdentifier.TopType, TypeIdentifier.TopType)
                                 .getLocalType(
                                         collectionClass.classLoader ?:
                                         TypeIdentifier::class.java.classLoader) as ParameterizedType

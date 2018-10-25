@@ -45,11 +45,11 @@ sealed class RemoteTypeInformation {
     //endregion
 
     object Unknown : RemoteTypeInformation() {
-        override val typeIdentifier = TypeIdentifier.Unknown
+        override val typeIdentifier = TypeIdentifier.UnknownType
     }
 
     object Any : RemoteTypeInformation() {
-        override val typeIdentifier = TypeIdentifier.Top
+        override val typeIdentifier = TypeIdentifier.TopType
     }
 
     data class Unparameterised(override val typeIdentifier: TypeIdentifier) : RemoteTypeInformation()

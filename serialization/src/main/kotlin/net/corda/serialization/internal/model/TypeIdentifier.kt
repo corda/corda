@@ -3,7 +3,6 @@ package net.corda.serialization.internal.model
 import com.google.common.reflect.TypeToken
 import net.corda.serialization.internal.amqp.asClass
 import java.io.NotSerializableException
-import java.lang.IllegalArgumentException
 import java.lang.reflect.*
 
 /**
@@ -44,8 +43,8 @@ sealed class TypeIdentifier {
      * Obtain a nicely-formatted representation of the identified type, for help with debugging.
      */
     fun prettyPrint(simplifyClassNames: Boolean = true): String = when(this) {
-            is TypeIdentifier.Unknown -> "?"
-            is TypeIdentifier.Top -> "*"
+            is TypeIdentifier.UnknownType -> "?"
+            is TypeIdentifier.TopType -> "*"
             is TypeIdentifier.Unparameterised -> name.simplifyClassNameIfRequired(simplifyClassNames)
             is TypeIdentifier.Erased -> "${name.simplifyClassNameIfRequired(simplifyClassNames)} (erased)"
             is TypeIdentifier.ArrayOf -> "${componentType.prettyPrint(simplifyClassNames)}[]"
@@ -65,7 +64,7 @@ sealed class TypeIdentifier {
          * @param type The class to get a [TypeIdentifier] for.
          */
         fun forClass(type: Class<*>): TypeIdentifier = when {
-            type.name == "java.lang.Object" -> Top
+            type.name == "java.lang.Object" -> TopType
             type.isArray -> ArrayOf(forClass(type.componentType))
             type.typeParameters.isEmpty() -> Unparameterised(type.name)
             else -> Erased(type.name, type.typeParameters.size)
@@ -88,17 +87,17 @@ sealed class TypeIdentifier {
             })
             is Class<*> -> forClass(type)
             is GenericArrayType -> ArrayOf(forGenericType(type.genericComponentType.resolveAgainst(resolutionContext)))
-            else -> Unknown
+            else -> UnknownType
         }
     }
 
     /**
      * The [TypeIdentifier] of [Any] / [java.lang.Object].
      */
-    object Top : TypeIdentifier() {
+    object TopType : TypeIdentifier() {
         override val name get() = "*"
         override fun getLocalType(classLoader: ClassLoader): Type = classLoader.loadClass("java.lang.Object")
-        override fun toString() = "Top"
+        override fun toString() = "TopType"
     }
 
     private object UnboundedWildcardType : WildcardType {
@@ -110,10 +109,10 @@ sealed class TypeIdentifier {
     /**
      * The [TypeIdentifier] of an unbounded wildcard.
      */
-    object Unknown : TypeIdentifier() {
+    object UnknownType : TypeIdentifier() {
         override val name get() = "?"
         override fun getLocalType(classLoader: ClassLoader): Type = UnboundedWildcardType
-        override fun toString() = "Unknown"
+        override fun toString() = "UnknownType"
     }
 
     /**
@@ -147,7 +146,7 @@ sealed class TypeIdentifier {
         /**
          * Get a parameterised version of this type, with the type parameters populated with [Unknown].
          */
-        fun toParameterized(): TypeIdentifier = toParameterized((0 until erasedParameterCount).map { Unknown })
+        fun toParameterized(): TypeIdentifier = toParameterized((0 until erasedParameterCount).map { UnknownType })
 
         fun toParameterized(vararg parameters: TypeIdentifier): TypeIdentifier = toParameterized(parameters.toList())
 

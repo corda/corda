@@ -3,7 +3,6 @@ package net.corda.serialization.internal.model
 import com.google.common.reflect.TypeToken
 import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.serialization.internal.AllWhitelist
-import net.corda.serialization.internal.amqp.*
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -13,9 +12,7 @@ import java.util.*
 
 class LocalTypeModelTests {
 
-    private val descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry()
-    private val customSerializerRegistry: CustomSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
-    private val model = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist, customSerializerRegistry))
+    private val model = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist))
 
     interface CollectionHolder<K, V> {
         val list: List<V>
@@ -27,16 +24,7 @@ class LocalTypeModelTests {
 
     class StringCollectionHolder(list: List<String>, map: Map<String, String>, array: Array<List<String>>) : StringKeyedCollectionHolder<String>(list, map, array)
 
-    @Suppress("unused")
-    class Nested(
-            val collectionHolder: StringKeyedCollectionHolder<out Int>?,
-            private val intArray: IntArray,
-            optionalParam: Short?)
-
-    // This can't be treated as a composable type, because the [intArray] parameter is mandatory but we have no readable
-    // field or property to populate it from.
-    @Suppress("unused")
-    class NonComposableNested(val collectionHolder: StringKeyedCollectionHolder<out Int>?, intArray: IntArray)
+    class Nested(val collectionHolder: StringKeyedCollectionHolder<out Int>?)
 
     @Test
     fun `Primitives and collections`() {
@@ -57,15 +45,12 @@ class LocalTypeModelTests {
         """)
 
         assertInformation<Nested>("""
-            Nested(collectionHolder: StringKeyedCollectionHolder<Integer>?, intArray: int[], optionalParam: Short?)
+            Nested(collectionHolder: StringKeyedCollectionHolder<Integer>?)
               collectionHolder (optional): StringKeyedCollectionHolder<Integer>(list: List<Integer>, map: Map<String, Integer>, array: List<Integer>[]): CollectionHolder<String, Integer>
               array: List<Integer>[]
               list: List<Integer>
               map: Map<String, Integer>
-              intArray: int[]
         """)
-
-        assertInformation<NonComposableNested>("NonComposableNested")
     }
 
     interface SuperSuper<A, B> {
@@ -73,29 +58,28 @@ class LocalTypeModelTests {
         val b: B
     }
 
-    interface Super<C> : SuperSuper<C, Double> {
+    interface Super<C> : SuperSuper<C, String> {
         val c: List<C>
     }
 
-    abstract class Abstract<T>(override val a: Array<T>, override val b: Double) : Super<Array<T>>
+    abstract class Abstract<T>(override val a: Array<T>, override val b: String) : Super<Array<T>>
 
-    class Concrete(a: Array<Int>, b: Double, override val c: List<Array<Int>>, val d: Int) : Abstract<Int>(a, b)
+    class Concrete(a: Array<Int>, b: String, override val c: List<Array<Int>>) : Abstract<Int>(a, b)
 
     @Test
     fun `interfaces and superclasses`() {
         assertInformation<SuperSuper<Int, Int>>("SuperSuper<Integer, Integer>")
-        assertInformation<Super<UUID>>("Super<UUID>: SuperSuper<UUID, Double>")
+        assertInformation<Super<UUID>>("Super<UUID>: SuperSuper<UUID, String>")
         assertInformation<Abstract<LocalDateTime>>("""
-            Abstract<LocalDateTime>: Super<LocalDateTime[]>, SuperSuper<LocalDateTime[], Double>
+            Abstract<LocalDateTime>: Super<LocalDateTime[]>, SuperSuper<LocalDateTime[], String>
               a: LocalDateTime[]
-              b: Double
+              b: String
         """)
         assertInformation<Concrete>("""
-            Concrete(a: Integer[], b: double, c: List<Integer[]>, d: int): Abstract<Integer>, Super<Integer[]>, SuperSuper<Integer[], Double>
+            Concrete(a: Integer[], b: String, c: List<Integer[]>): Abstract<Integer>, Super<Integer[]>, SuperSuper<Integer[], String>
               a: Integer[]
-              b: Double
+              b: String
               c: List<Integer[]>
-              d: int
         """)
     }
 
@@ -138,14 +122,7 @@ class LocalTypeModelTests {
 
     @Test
     fun `non-composable types`() {
-        val serializerRegistry = object: CustomSerializerRegistry {
-            override fun register(customSerializer: CustomSerializer<out Any>) {}
-
-            override fun registerExternal(customSerializer: CorDappCustomSerializer) {}
-
-            override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? = null
-        }
-        val modelWithoutOpacity = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist, serializerRegistry) )
+        val modelWithoutOpacity = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist) { false })
         assertTrue(modelWithoutOpacity.inspect(typeOf<Exception>()) is LocalTypeInformation.NonComposable)
         assertTrue(modelWithoutOpacity.inspect(typeOf<TransitivelyNonComposable>()) is LocalTypeInformation.NonComposable)
     }

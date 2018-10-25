@@ -18,7 +18,10 @@ import kotlin.collections.LinkedHashSet
 @KeepForDJVM
 class CollectionSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = (declaredType as? ParameterizedType)
-            ?: TypeIdentifier.forGenericType(declaredType).getLocalType(factory.classloader) // replace erased type parameters
+            ?: (TypeIdentifier.forGenericType(declaredType) as TypeIdentifier.Erased)
+                    .toParameterized(TypeIdentifier.TopType)
+                    .getLocalType(factory.classloader) // replace erased type parameters
+
     override val typeDescriptor: Symbol by lazy {
         Symbol.valueOf("$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
     }
@@ -60,7 +63,7 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
         private fun deriveParametrizedType(declaredType: Type, collectionClass: Class<out Collection<*>>): ParameterizedType =
                 (declaredType as? ParameterizedType)
                         ?: TypeIdentifier.Erased(collectionClass.name, 1)
-                                .toParameterized(TypeIdentifier.Top)
+                                .toParameterized(TypeIdentifier.TopType)
                                 .getLocalType(
                                 collectionClass.classLoader ?:
                                 TypeIdentifier::class.java.classLoader) as ParameterizedType

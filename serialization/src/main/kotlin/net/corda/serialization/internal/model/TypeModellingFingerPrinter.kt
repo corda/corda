@@ -10,6 +10,7 @@ import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.asClass
 import net.corda.serialization.internal.amqp.ifThrowsAppend
 import org.apache.qpid.proton.amqp.*
+import java.io.NotSerializableException
 import java.lang.reflect.*
 import java.util.*
 
@@ -49,7 +50,7 @@ internal fun getTypeModellingFingerPrinter(factory: SerializerFactory): TypeMode
             customTypeDescriptorLookup.getCustomTypeDescriptor(type) != null
 
     val typeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(factory.whitelist, ::isOpaque))
-    val localTypeInformationFingerPrinter = CustomisableLocalTypeInformationFingerPrinter(customTypeDescriptorLookup)
+    val localTypeInformationFingerPrinter = CustomisableLocalTypeInformationFingerPrinter(customTypeDescriptorLookup, typeModel)
 
     return TypeModellingFingerPrinter(typeModel, localTypeInformationFingerPrinter)
 }
@@ -107,10 +108,12 @@ interface LocalTypeInformationFingerPrinter {
  */
 class CustomisableLocalTypeInformationFingerPrinter(
         private val customTypeDescriptorLookup: CustomTypeDescriptorLookup,
+        private val typeModel: LocalTypeModel,
         private val debugEnabled: Boolean = false) : LocalTypeInformationFingerPrinter {
     override fun fingerprint(typeInformation: LocalTypeInformation): String =
             CustomisableLocalTypeInformationFingerPrintingState(
                     customTypeDescriptorLookup,
+                    typeModel,
                     FingerprintWriter(debugEnabled)).fingerprint(typeInformation)
 }
 
@@ -118,7 +121,7 @@ class CustomisableLocalTypeInformationFingerPrinter(
  * Wrapper for the [Hasher] we use to generate fingerprints, providing methods for writing various kinds of content
  * into the hash.
  */
-internal class FingerprintWriter(private val debugEnabled: Boolean) {
+internal class FingerprintWriter(debugEnabled: Boolean) {
 
     companion object {
         private const val ARRAY_HASH: String = "Array = true"
@@ -162,10 +165,11 @@ internal class FingerprintWriter(private val debugEnabled: Boolean) {
  */
 private class CustomisableLocalTypeInformationFingerPrintingState(
         private val customTypeDescriptorLookup: CustomTypeDescriptorLookup,
+        private val typeModel: LocalTypeModel,
         private val writer: FingerprintWriter) {
 
     companion object {
-        private var CHARACTER_TYPE = LocalTypeInformation.APrimitive(
+        private var CHARACTER_TYPE = LocalTypeInformation.Atomic(
                 Character::class.java,
                 TypeIdentifier.forClass(Character::class.java))
     }
@@ -182,33 +186,38 @@ private class CustomisableLocalTypeInformationFingerPrintingState(
     // effectively creating a unique string for a type which we then hash in the calling function above.
     private fun fingerprintType(type: LocalTypeInformation): CustomisableLocalTypeInformationFingerPrintingState = apply {
         // Don't go round in circles.
-        if (hasSeen(type.typeIdentifier)) writer.writeAlreadySeen()
-        else ifThrowsAppend(
-                { type.observedType.typeName },
-                {
-                    typesSeen.add(type.typeIdentifier)
-                    fingerprintNewType(type)
-                })
+        when {
+            hasSeen(type.typeIdentifier) -> writer.writeAlreadySeen()
+            type is LocalTypeInformation.Cycle -> fingerprintType(typeModel[type.typeIdentifier] ?:
+                throw IllegalStateException("Cycle $type encountered, but no type information found in type model"))
+            else -> ifThrowsAppend({ type.observedType.typeName }, {
+                typesSeen.add(type.typeIdentifier)
+                fingerprintNewType(type)
+            })
+        }
     }
 
     // For a type we haven't seen before, determine the correct path depending on the type of type it is.
     private fun fingerprintNewType(type: LocalTypeInformation) = apply {
         when (type) {
-            is LocalTypeInformation.Cycle -> writer.writeAlreadySeen()
+            is LocalTypeInformation.Cycle ->
+                throw IllegalStateException("Cyclic references must be dereferenced before fingerprinting")
             is LocalTypeInformation.Unknown,
-            is LocalTypeInformation.Any -> writer.writeAny()
+            is LocalTypeInformation.Top -> writer.writeAny()
             is LocalTypeInformation.AnArray -> {
                 fingerprintType(type.componentType)
                 writer.writeArray()
             }
             is LocalTypeInformation.ACollection -> fingerprintCollection(type)
-            is LocalTypeInformation.APrimitive -> fingerprintName(type)
+            is LocalTypeInformation.Atomic -> fingerprintName(type)
             is LocalTypeInformation.Opaque -> fingerprintOpaque(type)
             is LocalTypeInformation.AnEnum -> fingerprintEnum(type)
             is LocalTypeInformation.AnInterface -> fingerprintInterface(type)
             is LocalTypeInformation.Abstract -> fingerprintAbstract(type)
-            is LocalTypeInformation.AnObject -> fingerprintName(type)
-            is LocalTypeInformation.APojo -> fingerprintPojo(type)
+            is LocalTypeInformation.Singleton -> fingerprintName(type)
+            is LocalTypeInformation.Composable -> fingerprintComposable(type)
+            is LocalTypeInformation.NonComposable -> throw NotSerializableException(
+                    "Attempted to fingerprint non-composable type ${type.typeIdentifier.prettyPrint(false)}")
         }
     }
 
@@ -238,7 +247,7 @@ private class CustomisableLocalTypeInformationFingerPrintingState(
                 fingerprintTypeParameters(type.typeParameters)
             }
 
-    private fun fingerprintPojo(type: LocalTypeInformation.APojo) =
+    private fun fingerprintComposable(type: LocalTypeInformation.Composable) =
             fingerprintWithCustomSerializerOrElse(type) {
                 fingerprintName(type)
                 fingerprintProperties(type.properties)
@@ -292,7 +301,7 @@ private class CustomisableLocalTypeInformationFingerPrintingState(
     // serialise the object in the  first place (and thus the cache lookup fails). This is also
     // true of Any, where we need  Example<A, B> and Example<?, ?> to have the same fingerprint
     private fun hasSeen(type: TypeIdentifier) = (type in typesSeen)
-            && (type != TypeIdentifier.Unknown)
+            && (type != TypeIdentifier.UnknownType)
 }
 
 // region Utility functions

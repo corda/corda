@@ -5,6 +5,29 @@ import net.corda.serialization.internal.amqp.*
 import java.lang.reflect.*
 
 /**
+ * Provides a means for looking up [LocalTypeInformation] by [Type] and [TypeIdentifier], falling back to building it
+ * if the lookup can't supply it.
+ *
+ * The purpose of this class is to make a registry of [LocalTypeInformation] usable by a [LocalTypeInformationBuilder] that
+ * recursively builds [LocalTypeInformation] for all of the types visible by traversing the DAG of related types of a given
+ * [Type].
+ */
+interface LocalTypeLookup {
+
+    /**
+     * Either return the [LocalTypeInformation] held in the registry for the given [Type] and [TypeIdentifier] or, if
+     * no such information is registered, call the supplied builder to construct the type information, add it to the
+     * registry and then return it.
+     */
+    fun lookup(type: Type, typeIdentifier: TypeIdentifier, builder: () -> LocalTypeInformation): LocalTypeInformation
+
+    /**
+     * Indicates whether a type should be excluded from lists of interfaces associated with inspected types.
+     */
+    fun isExcluded(type: Type): Boolean
+}
+
+/**
  * A [LocalTypeModel] maintains a registry of [LocalTypeInformation] for all [Type]s which have been observed within a
  * given classloader context.
  */
@@ -12,7 +35,7 @@ interface LocalTypeModel : LocalTypeLookup {
     /**
      * Look for a [Type] in the registry, and return its associated [LocalTypeInformation] if found. If the [Type] is
      * not in the registry, build [LocalTypeInformation] for that type, using this [LocalTypeModel] as the [LocalTypeLookup]
-     * for recursively resolving dependencies, place it in the registry and return it.
+     * for recursively resolving dependencies, place it in the registry, and return it.
      *
      * @param type The [Type] to get [LocalTypeInformation] for.
      */
@@ -75,7 +98,11 @@ interface LocalTypeModelConfiguration {
  */
 class WhitelistBasedTypeModelConfiguration(
         private val whitelist: ClassWhitelist,
-        private val opaqueTest: (Type) -> Boolean = { !it.asClass().isCollectionOrMap && it.typeName.startsWith("java") })
+        private val opaqueTest: (Type) -> Boolean = {
+            it.asClass() != Any::class.java &&
+            !it.asClass().isCollectionOrMap &&
+            it.typeName.startsWith("java")
+        })
     : LocalTypeModelConfiguration {
     override fun isExcluded(type: Type): Boolean = whitelist.isNotWhitelisted(type.asClass())
     override fun isOpaque(type: Type): Boolean = opaqueTest(type)

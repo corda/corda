@@ -3,8 +3,6 @@ package net.corda.serialization.internal.amqp
 import net.corda.serialization.internal.model.RemotePropertyInformation
 import net.corda.serialization.internal.model.RemoteTypeInformation
 import net.corda.serialization.internal.model.TypeIdentifier
-import net.corda.serialization.internal.model.isCollectionOrMap
-import java.lang.reflect.ParameterizedType
 
 class AMQPRemoteTypeModel {
 
@@ -53,7 +51,7 @@ class AMQPRemoteTypeModel {
 
     private fun Field.interpret(notationLookup: Map<TypeIdentifier, TypeNotation>): Pair<String, RemotePropertyInformation> {
         val identifier = type.typeIdentifier
-        val fieldTypeIdentifier = if (identifier == TypeIdentifier.Top && !requires.isEmpty()) requires[0].typeIdentifier else identifier
+        val fieldTypeIdentifier = if (identifier == TypeIdentifier.TopType && !requires.isEmpty()) requires[0].typeIdentifier else identifier
         val fieldType = fieldTypeIdentifier.interpretIdentifier(notationLookup)
         return name to RemotePropertyInformation(
                 fieldType,
@@ -62,8 +60,8 @@ class AMQPRemoteTypeModel {
 
     private fun TypeIdentifier.interpretNoNotation(notationLookup: Map<TypeIdentifier, TypeNotation>): RemoteTypeInformation =
             when (this) {
-                is TypeIdentifier.Top -> RemoteTypeInformation.Any
-                is TypeIdentifier.Unknown -> RemoteTypeInformation.Unknown
+                is TypeIdentifier.TopType -> RemoteTypeInformation.Any
+                is TypeIdentifier.UnknownType -> RemoteTypeInformation.Unknown
                 is TypeIdentifier.ArrayOf -> RemoteTypeInformation.AnArray(this, componentType.interpretIdentifier(notationLookup))
                 is TypeIdentifier.Parameterised -> RemoteTypeInformation.Parameterised(this, parameters.map { it.interpretIdentifier(notationLookup) })
                 else -> RemoteTypeInformation.Unparameterised(this)
