@@ -31,10 +31,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.days
-import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.minutes
+import net.corda.core.utilities.*
 import net.corda.node.CordaClock
 import net.corda.node.SerialFilter
 import net.corda.node.VersionInfo
@@ -49,7 +46,6 @@ import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.shell.toShellConfig
@@ -92,7 +88,6 @@ import org.slf4j.Logger
 import rx.Observable
 import rx.Scheduler
 import java.io.IOException
-import java.lang.UnsupportedOperationException
 import java.lang.management.ManagementFactory
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
