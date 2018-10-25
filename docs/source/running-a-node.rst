@@ -62,9 +62,6 @@ The node can optionally be started with the following command-line options:
 Sub-commands
 ^^^^^^^^^^^^
 
-``bootstrap-raft-cluster``: Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer
-addresses), acting as a seed for other nodes to join the cluster.
-
 ``clear-network-cache``: Clears local copy of network map, on node startup it will be restored from server or file system.
 
 ``initial-registration``: Starts initial node registration with the compatibility zone to obtain a certificate from the Doorman.

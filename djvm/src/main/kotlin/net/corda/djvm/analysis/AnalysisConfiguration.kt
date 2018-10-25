@@ -8,6 +8,7 @@ import net.corda.djvm.references.ClassModule
 import net.corda.djvm.references.Member
 import net.corda.djvm.references.MemberModule
 import net.corda.djvm.references.MethodBody
+import net.corda.djvm.source.AbstractSourceClassLoader
 import net.corda.djvm.source.BootstrapClassLoader
 import net.corda.djvm.source.SourceClassLoader
 import org.objectweb.asm.Opcodes.*
@@ -21,35 +22,35 @@ import java.nio.file.Path
  * The configuration to use for an analysis.
  *
  * @property whitelist The whitelist of class names.
- * @param additionalPinnedClasses Classes that have already been declared in the sandbox namespace and that should be
- * made available inside the sandboxed environment.
+ * @property pinnedClasses Classes that have already been declared in the sandbox namespace and that should be
+ * made available inside the sandboxed environment. These classes belong to the application
+ * classloader and so are shared across all sandboxes.
+ * @property classResolver Functionality used to resolve the qualified name and relevant information about a class.
+ * @property exceptionResolver Resolves the internal names of synthetic exception classes.
  * @property minimumSeverityLevel The minimum severity level to log and report.
- * @param classPath The extended class path to use for the analysis.
- * @param bootstrapJar The location of a jar containing the Java APIs.
  * @property analyzeAnnotations Analyze annotations despite not being explicitly referenced.
  * @property prefixFilters Only record messages where the originating class name matches one of the provided prefixes.
  * If none are provided, all messages will be reported.
  * @property classModule Module for handling evolution of a class hierarchy during analysis.
  * @property memberModule Module for handling the specification and inspection of class members.
+ * @property bootstrapClassLoader Optional provider for the Java API classes.
+ * @property supportingClassLoader ClassLoader providing the classes to run inside the sandbox.
+ * @property isRootConfiguration Effectively, whether we are allowed to close [bootstrapClassLoader].
  */
-class AnalysisConfiguration(
-        val whitelist: Whitelist = Whitelist.MINIMAL,
-        additionalPinnedClasses: Set<String> = emptySet(),
-        val minimumSeverityLevel: Severity = Severity.WARNING,
-        classPath: List<Path> = emptyList(),
-        bootstrapJar: Path? = null,
-        val analyzeAnnotations: Boolean = false,
-        val prefixFilters: List<String> = emptyList(),
-        val classModule: ClassModule = ClassModule(),
-        val memberModule: MemberModule = MemberModule()
+class AnalysisConfiguration private constructor(
+        val whitelist: Whitelist,
+        val pinnedClasses: Set<String>,
+        val classResolver: ClassResolver,
+        val exceptionResolver: ExceptionResolver,
+        val minimumSeverityLevel: Severity,
+        val analyzeAnnotations: Boolean,
+        val prefixFilters: List<String>,
+        val classModule: ClassModule,
+        val memberModule: MemberModule,
+        private val bootstrapClassLoader: BootstrapClassLoader?,
+        val supportingClassLoader: AbstractSourceClassLoader,
+        private val isRootConfiguration: Boolean
 ) : Closeable {
-
-    /**
-     * Classes that have already been declared in the sandbox namespace and that should be made
-     * available inside the sandboxed environment. These classes belong to the application
-     * classloader and so are shared across all sandboxes.
-     */
-    val pinnedClasses: Set<String> = MANDATORY_PINNED_CLASSES + additionalPinnedClasses
 
     /**
      * These interfaces are modified as they are mapped into the sandbox by
@@ -63,24 +64,37 @@ class AnalysisConfiguration(
      */
     val stitchedClasses: Map<String, List<Member>> get() = STITCHED_CLASSES
 
-    /**
-     * Functionality used to resolve the qualified name and relevant information about a class.
-     */
-    val classResolver: ClassResolver = ClassResolver(pinnedClasses, TEMPLATE_CLASSES, whitelist, SANDBOX_PREFIX)
-
-    /**
-     * Resolves the internal names of synthetic exception classes.
-     */
-    val exceptionResolver: ExceptionResolver = ExceptionResolver(JVM_EXCEPTIONS, pinnedClasses, SANDBOX_PREFIX)
-
-    private val bootstrapClassLoader = bootstrapJar?.let { BootstrapClassLoader(it, classResolver) }
-    val supportingClassLoader = SourceClassLoader(classPath, classResolver, bootstrapClassLoader)
-
     @Throws(IOException::class)
     override fun close() {
         supportingClassLoader.use {
-            bootstrapClassLoader?.close()
+            if (isRootConfiguration) {
+                bootstrapClassLoader?.close()
+            }
         }
+    }
+
+    /**
+     * Creates a child [AnalysisConfiguration] with this instance as its parent.
+     * The child inherits the same [whitelist], [pinnedClasses] and [bootstrapClassLoader].
+     */
+    fun createChild(
+        classPaths: List<Path> = emptyList(),
+        newMinimumSeverityLevel: Severity?
+    ): AnalysisConfiguration {
+        return AnalysisConfiguration(
+            whitelist = whitelist,
+            pinnedClasses = pinnedClasses,
+            classResolver = classResolver,
+            exceptionResolver = exceptionResolver,
+            minimumSeverityLevel = newMinimumSeverityLevel ?: minimumSeverityLevel,
+            analyzeAnnotations = analyzeAnnotations,
+            prefixFilters = prefixFilters,
+            classModule = classModule,
+            memberModule = memberModule,
+            bootstrapClassLoader = bootstrapClassLoader,
+            supportingClassLoader = SourceClassLoader(classPaths, classResolver, bootstrapClassLoader),
+            isRootConfiguration = false
+        )
     }
 
     fun isTemplateClass(className: String): Boolean = className in TEMPLATE_CLASSES
@@ -107,7 +121,7 @@ class AnalysisConfiguration(
 
         /**
          * These classes will be duplicated into every sandbox's
-         * classloader.
+         * parent classloader.
          */
         private val TEMPLATE_CLASSES: Set<String> = setOf(
             java.lang.Boolean::class.java,
@@ -131,6 +145,7 @@ class AnalysisConfiguration(
         ).sandboxed() + setOf(
             "sandbox/Task",
             "sandbox/TaskTypes",
+            "sandbox/java/lang/Character\$Cache",
             "sandbox/java/lang/DJVM",
             "sandbox/java/lang/DJVMException",
             "sandbox/java/lang/DJVMThrowableWrapper",
@@ -139,8 +154,8 @@ class AnalysisConfiguration(
         )
 
         /**
-         * These are thrown by the JVM itself, and so
-         * we need to handle them without wrapping them.
+         * These exceptions are thrown by the JVM itself, and
+         * so we need to handle them without wrapping them.
          *
          * Note that this set is closed, i.e. every one
          * of these exceptions' [Throwable] super classes
@@ -271,6 +286,41 @@ class AnalysisConfiguration(
         private fun Set<Class<*>>.sandboxed(): Set<String> = map(Companion::sandboxed).toSet()
         private fun Iterable<Member>.mapByClassName(): Map<String, List<Member>>
                       = groupBy(Member::className).mapValues(Map.Entry<String, List<Member>>::value)
+
+        /**
+         * @see [AnalysisConfiguration]
+         */
+        fun createRoot(
+            whitelist: Whitelist = Whitelist.MINIMAL,
+            additionalPinnedClasses: Set<String> = emptySet(),
+            minimumSeverityLevel: Severity = Severity.WARNING,
+            analyzeAnnotations: Boolean = false,
+            prefixFilters: List<String> = emptyList(),
+            classModule: ClassModule = ClassModule(),
+            memberModule: MemberModule = MemberModule(),
+            bootstrapClassLoader: BootstrapClassLoader? = null,
+            sourceClassLoaderFactory: (ClassResolver, BootstrapClassLoader?) -> AbstractSourceClassLoader = { classResolver, bootstrapCL ->
+                SourceClassLoader(emptyList(), classResolver, bootstrapCL)
+            }
+        ): AnalysisConfiguration {
+            val pinnedClasses = MANDATORY_PINNED_CLASSES + additionalPinnedClasses
+            val classResolver = ClassResolver(pinnedClasses, TEMPLATE_CLASSES, whitelist, SANDBOX_PREFIX)
+
+            return AnalysisConfiguration(
+                whitelist = whitelist,
+                pinnedClasses = pinnedClasses,
+                classResolver = classResolver,
+                exceptionResolver = ExceptionResolver(JVM_EXCEPTIONS, pinnedClasses, SANDBOX_PREFIX),
+                minimumSeverityLevel = minimumSeverityLevel,
+                analyzeAnnotations = analyzeAnnotations,
+                prefixFilters = prefixFilters,
+                classModule = classModule,
+                memberModule = memberModule,
+                bootstrapClassLoader = bootstrapClassLoader,
+                supportingClassLoader = sourceClassLoaderFactory(classResolver, bootstrapClassLoader),
+                isRootConfiguration = true
+            )
+        }
     }
 
     private open class MethodBuilder(

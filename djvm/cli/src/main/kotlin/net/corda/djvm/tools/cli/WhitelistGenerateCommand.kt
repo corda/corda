@@ -33,7 +33,7 @@ class WhitelistGenerateCommand : CommandBase() {
     override fun validateArguments() = paths.isNotEmpty()
 
     override fun handleCommand(): Boolean {
-        val entries = AnalysisConfiguration().use { configuration ->
+        val entries = AnalysisConfiguration.createRoot().use { configuration ->
             val entries = mutableListOf<String>()
             val visitor = object : ClassAndMemberVisitor(configuration, null) {
                 override fun visitClass(clazz: ClassRepresentation): ClassRepresentation {

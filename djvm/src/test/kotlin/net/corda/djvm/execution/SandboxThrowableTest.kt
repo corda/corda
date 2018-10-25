@@ -8,7 +8,7 @@ import java.util.function.Function
 class SandboxThrowableTest : TestBase() {
 
     @Test
-    fun `test user exception handling`() = sandbox(DEFAULT) {
+    fun `test user exception handling`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<String, Array<String>>(configuration)
         contractExecutor.run<ThrowAndCatchExample>("Hello World").apply {
             assertThat(result)
@@ -17,7 +17,7 @@ class SandboxThrowableTest : TestBase() {
     }
 
     @Test
-    fun `test rethrowing an exception`() = sandbox(DEFAULT) {
+    fun `test rethrowing an exception`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<String, Array<String>>(configuration)
         contractExecutor.run<ThrowAndRethrowExample>("Hello World").apply {
             assertThat(result)
@@ -26,7 +26,7 @@ class SandboxThrowableTest : TestBase() {
     }
 
     @Test
-    fun `test JVM exceptions still propagate`() = sandbox(DEFAULT) {
+    fun `test JVM exceptions still propagate`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, String>(configuration)
         contractExecutor.run<TriggerJVMException>(-1).apply {
             assertThat(result)

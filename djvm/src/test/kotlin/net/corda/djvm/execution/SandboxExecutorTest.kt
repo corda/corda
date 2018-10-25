@@ -4,7 +4,7 @@ import foo.bar.sandbox.MyObject
 import foo.bar.sandbox.testClock
 import foo.bar.sandbox.toNumber
 import net.corda.djvm.TestBase
-import net.corda.djvm.analysis.Whitelist
+import net.corda.djvm.analysis.Whitelist.Companion.MINIMAL
 import net.corda.djvm.Utilities
 import net.corda.djvm.Utilities.throwRuleViolationError
 import net.corda.djvm.Utilities.throwThresholdViolationError
@@ -22,7 +22,7 @@ import java.util.stream.Collectors.*
 class SandboxExecutorTest : TestBase() {
 
     @Test
-    fun `can load and execute runnable`() = sandbox(Whitelist.MINIMAL) {
+    fun `can load and execute runnable`() = sandbox(MINIMAL) {
         val contractExecutor = DeterministicSandboxExecutor<Int, String>(configuration)
         val summary = contractExecutor.run<TestSandboxedRunnable>(1)
         val result = summary.result
@@ -36,7 +36,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can load and execute contract`() = sandbox(
+    fun `can load and execute contract`() = sandbox(DEFAULT,
             pinnedClasses = setOf(Transaction::class.java, Utilities::class.java)
     ) {
         val contractExecutor = DeterministicSandboxExecutor<Transaction, Unit>(configuration)
@@ -56,7 +56,7 @@ class SandboxExecutorTest : TestBase() {
     data class Transaction(val id: Int)
 
     @Test
-    fun `can load and execute code that overrides object hash code`() = sandbox(DEFAULT) {
+    fun `can load and execute code that overrides object hash code`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         val summary = contractExecutor.run<TestObjectHashCode>(0)
         val result = summary.result
@@ -74,7 +74,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can load and execute code that overrides object hash code when derived`() = sandbox(DEFAULT) {
+    fun `can load and execute code that overrides object hash code when derived`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         val summary = contractExecutor.run<TestObjectHashCodeWithHierarchy>(0)
         val result = summary.result
@@ -107,7 +107,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can detect stack overflow`() = sandbox(DEFAULT) {
+    fun `can detect stack overflow`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestStackOverflow>(0) }
@@ -141,7 +141,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `cannot execute runnable that references non-deterministic code`() = sandbox(DEFAULT) {
+    fun `cannot execute runnable that references non-deterministic code`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, Long>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestNonDeterministicCode>(0) }
@@ -156,7 +156,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `cannot execute runnable that catches ThreadDeath`() = sandbox(DEFAULT, pinnedClasses = setOf(Utilities::class.java)) {
+    fun `cannot execute runnable that catches ThreadDeath`() = parentedSandbox {
         TestCatchThreadDeath().apply {
             assertThat(apply(0)).isEqualTo(1)
         }
@@ -178,7 +178,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `cannot execute runnable that catches ThresholdViolationError`() = sandbox(DEFAULT, pinnedClasses = setOf(Utilities::class.java)) {
+    fun `cannot execute runnable that catches ThresholdViolationError`() = parentedSandbox {
         TestCatchThresholdViolationError().apply {
             assertThat(apply(0)).isEqualTo(1)
         }
@@ -201,7 +201,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `cannot execute runnable that catches RuleViolationError`() = sandbox(DEFAULT, pinnedClasses = setOf(Utilities::class.java)) {
+    fun `cannot execute runnable that catches RuleViolationError`() = parentedSandbox {
         TestCatchRuleViolationError().apply {
             assertThat(apply(0)).isEqualTo(1)
         }
@@ -224,7 +224,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can catch Throwable`() = sandbox(DEFAULT, pinnedClasses = setOf(Utilities::class.java)) {
+    fun `can catch Throwable`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         contractExecutor.run<TestCatchThrowableAndError>(1).apply {
             assertThat(result).isEqualTo(1)
@@ -232,7 +232,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can catch Error`() = sandbox(DEFAULT, pinnedClasses = setOf(Utilities::class.java)) {
+    fun `can catch Error`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         contractExecutor.run<TestCatchThrowableAndError>(2).apply {
             assertThat(result).isEqualTo(2)
@@ -240,7 +240,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `cannot catch ThreadDeath`() = sandbox(DEFAULT, pinnedClasses = setOf(Utilities::class.java)) {
+    fun `cannot catch ThreadDeath`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestCatchThrowableErrorsAndThreadDeath>(3) }
@@ -295,7 +295,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `cannot catch stack-overflow error`() = sandbox(DEFAULT, pinnedClasses = setOf(Utilities::class.java)) {
+    fun `cannot catch stack-overflow error`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestCatchThrowableErrorsAndThreadDeath>(4) }
@@ -304,7 +304,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `cannot catch out-of-memory error`() = sandbox(DEFAULT, pinnedClasses = setOf(Utilities::class.java)) {
+    fun `cannot catch out-of-memory error`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestCatchThrowableErrorsAndThreadDeath>(5) }
@@ -313,7 +313,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `cannot persist state across sessions`() = sandbox(DEFAULT) {
+    fun `cannot persist state across sessions`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         val result1 = contractExecutor.run<TestStatePersistence>(0)
         val result2 = contractExecutor.run<TestStatePersistence>(0)
@@ -335,7 +335,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can load and execute code that uses IO`() = sandbox(DEFAULT) {
+    fun `can load and execute code that uses IO`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestIO>(0) }
@@ -354,7 +354,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can load and execute code that uses reflection`() = sandbox(DEFAULT) {
+    fun `can load and execute code that uses reflection`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestReflection>(0) }
@@ -373,7 +373,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can load and execute code that uses notify()`() = sandbox(DEFAULT) {
+    fun `can load and execute code that uses notify()`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, String?>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestMonitors>(1) }
@@ -383,7 +383,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can load and execute code that uses notifyAll()`() = sandbox(DEFAULT) {
+    fun `can load and execute code that uses notifyAll()`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, String?>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestMonitors>(2) }
@@ -393,7 +393,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can load and execute code that uses wait()`() = sandbox(DEFAULT) {
+    fun `can load and execute code that uses wait()`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, String?>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestMonitors>(3) }
@@ -403,7 +403,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can load and execute code that uses wait(long)`() = sandbox(DEFAULT) {
+    fun `can load and execute code that uses wait(long)`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, String?>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestMonitors>(4) }
@@ -413,7 +413,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can load and execute code that uses wait(long,int)`() = sandbox(DEFAULT) {
+    fun `can load and execute code that uses wait(long,int)`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, String?>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestMonitors>(5) }
@@ -423,7 +423,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `code after forbidden APIs is intact`() = sandbox(DEFAULT) {
+    fun `code after forbidden APIs is intact`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, String?>(configuration)
         assertThat(contractExecutor.run<TestMonitors>(0).result)
                 .isEqualTo("unknown")
@@ -462,7 +462,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can load and execute code that has a native method`() = sandbox(DEFAULT) {
+    fun `can load and execute code that has a native method`() = parentedSandbox {
         assertThatExceptionOfType(UnsatisfiedLinkError::class.java)
             .isThrownBy { TestNativeMethod().apply(0) }
             .withMessageContaining("TestNativeMethod.evilDeeds()I")
@@ -483,7 +483,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `check arrays still work`() = sandbox(DEFAULT) {
+    fun `check arrays still work`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, Array<Int>>(configuration)
         contractExecutor.run<TestArray>(100).apply {
             assertThat(result).isEqualTo(arrayOf(100))
@@ -497,7 +497,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `check building a string`() = sandbox(DEFAULT) {
+    fun `check building a string`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<String?, String?>(configuration)
         contractExecutor.run<TestStringBuilding>("Hello Sandbox!").apply {
             assertThat(result)
@@ -522,7 +522,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `check System-arraycopy still works with Objects`() = sandbox(DEFAULT) {
+    fun `check System-arraycopy still works with Objects`() = parentedSandbox {
         val source = arrayOf("one", "two", "three")
         assertThat(TestArrayCopy().apply(source))
             .isEqualTo(source)
@@ -545,7 +545,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `test System-arraycopy still works with CharArray`() = sandbox(DEFAULT) {
+    fun `test System-arraycopy still works with CharArray`() = parentedSandbox {
         val source = CharArray(10) { '?' }
         val contractExecutor = DeterministicSandboxExecutor<CharArray, CharArray>(configuration)
         contractExecutor.run<TestCharArrayCopy>(source).apply {
@@ -564,7 +564,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can load and execute class that has finalize`() = sandbox(DEFAULT) {
+    fun `can load and execute class that has finalize`() = parentedSandbox {
         assertThatExceptionOfType(UnsupportedOperationException::class.java)
             .isThrownBy { TestFinalizeMethod().apply(100) }
             .withMessageContaining("Very Bad Thing")
@@ -587,7 +587,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `can execute parallel stream`() = sandbox(DEFAULT) {
+    fun `can execute parallel stream`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<String, String>(configuration)
         contractExecutor.run<TestParallelStream>("Pebble").apply {
             assertThat(result).isEqualTo("Five,Four,One,Pebble,Three,Two")
@@ -605,7 +605,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `users cannot load our sandboxed classes`() = sandbox(DEFAULT) {
+    fun `users cannot load our sandboxed classes`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<String, Class<*>>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<TestClassForName>("java.lang.DJVM") }
@@ -614,7 +614,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `users can load sandboxed classes`() = sandbox(DEFAULT) {
+    fun `users can load sandboxed classes`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<String, Class<*>>(configuration)
         contractExecutor.run<TestClassForName>("java.util.List").apply {
             assertThat(result?.name).isEqualTo("sandbox.java.util.List")
@@ -628,7 +628,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `test case-insensitive string sorting`() = sandbox(DEFAULT) {
+    fun `test case-insensitive string sorting`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Array<String>, Array<String>>(configuration)
         contractExecutor.run<CaseInsensitiveSort>(arrayOf("Zelda", "angela", "BOB", "betsy", "ALBERT")).apply {
             assertThat(result).isEqualTo(arrayOf("ALBERT", "angela", "betsy", "BOB", "Zelda"))
@@ -642,7 +642,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `test unicode characters`() = sandbox(DEFAULT) {
+    fun `test unicode characters`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, String>(configuration)
         contractExecutor.run<ExamineUnicodeBlock>(0x01f600).apply {
             assertThat(result).isEqualTo("EMOTICONS")
@@ -656,7 +656,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `test unicode scripts`() = sandbox(DEFAULT) {
+    fun `test unicode scripts`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<String, Character.UnicodeScript?>(configuration)
         contractExecutor.run<ExamineUnicodeScript>("COMMON").apply {
             assertThat(result).isEqualTo(Character.UnicodeScript.COMMON)
@@ -671,7 +671,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `test users cannot define new classes`() = sandbox(DEFAULT) {
+    fun `test users cannot define new classes`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<String, Class<*>>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<DefineNewClass>("sandbox.java.lang.DJVM") }
@@ -693,7 +693,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `test users cannot load new classes`() = sandbox(DEFAULT) {
+    fun `test users cannot load new classes`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<String, Class<*>>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<LoadNewClass>("sandbox.java.lang.DJVM") }
@@ -714,7 +714,7 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
-    fun `test users cannot lookup classes`() = sandbox(DEFAULT) {
+    fun `test users cannot lookup classes`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<String, Class<*>>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
                 .isThrownBy { contractExecutor.run<FindClass>("sandbox.java.lang.DJVM") }

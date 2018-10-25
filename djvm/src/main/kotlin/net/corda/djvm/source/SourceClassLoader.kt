@@ -1,5 +1,7 @@
+@file:JvmName("SourceClassLoaderTools")
 package net.corda.djvm.source
 
+import net.corda.djvm.analysis.AnalysisConfiguration.Companion.SANDBOX_PREFIX
 import net.corda.djvm.analysis.AnalysisContext
 import net.corda.djvm.analysis.ClassResolver
 import net.corda.djvm.analysis.ExceptionResolver.Companion.getDJVMExceptionOwner
@@ -33,19 +35,23 @@ abstract class AbstractSourceClassLoader(
             className: String, context: AnalysisContext, origin: String? = null
     ): ClassReader {
         val originalName = classResolver.reverse(className.asResourcePath)
+
+        fun throwClassLoadingError(): Nothing {
+            context.messages.provisionalAdd(Message(
+                message ="Class file not found; $originalName.class",
+                severity = Severity.ERROR,
+                location = SourceLocation(origin ?: "")
+            ))
+            throw SandboxClassLoadingException(context)
+        }
+
         return try {
             logger.trace("Opening ClassReader for class {}...", originalName)
-            getResourceAsStream("$originalName.class").use {
+            getResourceAsStream("$originalName.class")?.use {
                 ClassReader(it)
-            }
+            } ?: run(::throwClassLoadingError)
         } catch (exception: IOException) {
-            context.messages.add(Message(
-                    message ="Class file not found; $originalName.class",
-                    severity = Severity.ERROR,
-                    location = SourceLocation(origin ?: "")
-            ))
-            logger.error("Failed to open ClassReader for class", exception)
-            throw SandboxClassLoadingException(context)
+            throwClassLoadingError()
         }
     }
 
@@ -78,55 +84,52 @@ abstract class AbstractSourceClassLoader(
     protected companion object {
         @JvmStatic
         protected val logger = loggerFor<SourceClassLoader>()
-
-        private fun resolvePaths(paths: List<Path>): Array<URL> {
-            return paths.map(this::expandPath).flatMap {
-                when {
-                    !Files.exists(it) -> throw FileNotFoundException("File not found; $it")
-                    Files.isDirectory(it) -> {
-                        listOf(it.toURL()) + Files.list(it).filter(::isJarFile).map { jar -> jar.toURL() }.toList()
-                    }
-                    Files.isReadable(it) && isJarFile(it) -> listOf(it.toURL())
-                    else -> throw IllegalArgumentException("Expected JAR or class file, but found $it")
-                }
-            }.apply {
-                logger.trace("Resolved paths: {}", this)
-            }.toTypedArray()
-        }
-
-        private fun expandPath(path: Path): Path {
-            val pathString = path.toString()
-            if (pathString.startsWith("~/")) {
-                return homeDirectory.resolve(pathString.removePrefix("~/"))
-            }
-            return path
-        }
-
-        private fun isJarFile(path: Path) = path.toString().endsWith(".jar", true)
-
-        private fun Path.toURL(): URL = this.toUri().toURL()
-
-        private val homeDirectory: Path
-            get() = Paths.get(System.getProperty("user.home"))
-
     }
-
 }
 
 /**
  * Class loader to manage an optional JAR of replacement Java APIs.
  * @param bootstrapJar The location of the JAR containing the Java APIs.
- * @param classResolver The resolver to use to derive the original name of a requested class.
  */
 class BootstrapClassLoader(
-    bootstrapJar: Path,
-    classResolver: ClassResolver
-) : AbstractSourceClassLoader(listOf(bootstrapJar), classResolver, null) {
+    bootstrapJar: Path
+) : URLClassLoader(resolvePaths(listOf(bootstrapJar)), null) {
 
     /**
      * Only search our own jars for the given resource.
      */
     override fun getResource(name: String): URL? = findResource(name)
+}
+
+/**
+ * Class loader that only provides our built-in sandbox classes.
+ * @param classResolver The resolver to use to derive the original name of a requested class.
+ */
+class SandboxSourceClassLoader(
+    classResolver: ClassResolver,
+    private val bootstrap: BootstrapClassLoader
+) : AbstractSourceClassLoader(emptyList(), classResolver, SandboxSourceClassLoader::class.java.classLoader) {
+
+    /**
+     * Always check the bootstrap classloader first. If we're requesting
+     * built-in sandbox classes then delegate to our parent classloader,
+     * otherwise deny the request.
+     */
+    override fun getResource(name: String): URL? {
+        val resource = bootstrap.findResource(name)
+        if (resource != null) {
+            return resource
+        } else if (isJvmInternal(name)) {
+            logger.error("Denying request for actual {}", name)
+            return null
+        }
+
+        return if (name.startsWith(SANDBOX_PREFIX)) {
+            parent.getResource(name)
+        } else {
+            null
+        }
+    }
 }
 
 /**
@@ -168,12 +171,41 @@ class SourceClassLoader(
         return if (name.startsWith("net/corda/djvm/")) null else super.findResource(name)
     }
 
-    /**
-     * Does [name] exist within any of the packages reserved for Java itself?
-     */
-    private fun isJvmInternal(name: String): Boolean = name.startsWith("java/")
-                                                          || name.startsWith("javax/")
-                                                          || name.startsWith("com/sun/")
-                                                          || name.startsWith("sun/")
-                                                          || name.startsWith("jdk/")
 }
+
+private fun resolvePaths(paths: List<Path>): Array<URL> {
+    return paths.map(::expandPath).flatMap {
+        when {
+            !Files.exists(it) -> throw FileNotFoundException("File not found; $it")
+            Files.isDirectory(it) -> {
+                listOf(it.toURL()) + Files.list(it).filter(::isJarFile).map { jar -> jar.toURL() }.toList()
+            }
+            Files.isReadable(it) && isJarFile(it) -> listOf(it.toURL())
+            else -> throw IllegalArgumentException("Expected JAR or class file, but found $it")
+        }
+    }.toTypedArray()
+}
+
+private fun expandPath(path: Path): Path {
+    val pathString = path.toString()
+    if (pathString.startsWith("~/")) {
+        return homeDirectory.resolve(pathString.removePrefix("~/"))
+    }
+    return path
+}
+
+private fun isJarFile(path: Path) = path.toString().endsWith(".jar", true)
+
+private fun Path.toURL(): URL = this.toUri().toURL()
+
+private val homeDirectory: Path
+    get() = Paths.get(System.getProperty("user.home"))
+
+/**
+ * Does [name] exist within any of the packages reserved for Java itself?
+ */
+private fun isJvmInternal(name: String): Boolean = name.startsWith("java/")
+        || name.startsWith("javax/")
+        || name.startsWith("com/sun/")
+        || name.startsWith("sun/")
+        || name.startsWith("jdk/")
