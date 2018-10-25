@@ -7,9 +7,9 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.flows.CashConfigDataFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.internal.CashConfigDataFlow
 import java.util.*
 import java.util.concurrent.TimeUnit
 

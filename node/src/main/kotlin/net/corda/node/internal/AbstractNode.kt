@@ -31,7 +31,10 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.days
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.minutes
 import net.corda.node.CordaClock
 import net.corda.node.SerialFilter
 import net.corda.node.VersionInfo
@@ -70,6 +73,7 @@ import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.*
+import net.corda.nodeapi.internal.DEV_CERTIFICATES
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.config.CertificateStore
@@ -102,13 +106,10 @@ import java.time.Clock
 import java.time.Duration
 import java.time.format.DateTimeParseException
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
-import kotlin.collections.set
-import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
@@ -123,11 +124,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                val platformClock: CordaClock,
                                cacheFactoryPrototype: BindableNamedCacheFactory,
                                protected val versionInfo: VersionInfo,
+                               protected val flowManager: FlowManager,
                                protected val serverThread: AffinityExecutor.ServiceAffinityExecutor,
                                protected val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
-
     @Suppress("LeakingThis")
     private var tokenizableServices: MutableList<Any>? = mutableListOf(platformClock, this)
 
@@ -169,7 +170,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
     val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database).tokenize()
-    val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(), attachments).tokenize()
+    val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
     val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, transactionStorage).also {
@@ -213,7 +214,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     ).tokenize().closeOnStop()
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
-    private val flowFactories = ConcurrentHashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
     private val shutdownExecutor = Executors.newSingleThreadExecutor()
 
     protected abstract val transactionVerifierWorkerCount: Int
@@ -239,7 +239,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private var _started: S? = null
 
     private fun <T : Any> T.tokenize(): T {
-        tokenizableServices?.add(this) ?: throw IllegalStateException("The tokenisable services list has already been finalised")
+        tokenizableServices?.add(this)
+                ?: throw IllegalStateException("The tokenisable services list has already been finalised")
         return this
     }
 
@@ -530,10 +531,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // CorDapp will be generated.
             generatedCordapps += VirtualCordapp.generateSimpleNotaryCordapp(versionInfo)
         }
+        val blacklistedCerts = if (configuration.devMode) emptyList() else DEV_CERTIFICATES
         return JarScanningCordappLoader.fromDirectories(
                 configuration.cordappDirectories,
                 versionInfo,
-                extraCordapps = generatedCordapps
+                extraCordapps = generatedCordapps,
+                blacklistedCerts = blacklistedCerts
         )
     }
 
@@ -624,91 +627,27 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     private fun registerCordappFlows() {
-        cordappLoader.cordapps.flatMap { it.initiatedFlows }
-                .forEach {
+        cordappLoader.cordapps.forEach { cordapp ->
+            cordapp.initiatedFlows.groupBy { it.requireAnnotation<InitiatedBy>().value.java }.forEach { initiator, responders ->
+                responders.forEach { responder ->
                     try {
-                        registerInitiatedFlowInternal(smm, it, track = false)
+                        flowManager.registerInitiatedFlow(initiator, responder)
                     } catch (e: NoSuchMethodException) {
-                        log.error("${it.name}, as an initiated flow, must have a constructor with a single parameter " +
+                        log.error("${responder.name}, as an initiated flow, must have a constructor with a single parameter " +
                                 "of type ${Party::class.java.name}")
-                    } catch (e: Exception) {
-                        log.error("Unable to register initiated flow ${it.name}", e)
+                        throw e
                     }
                 }
-    }
-
-    fun <T : FlowLogic<*>> registerInitiatedFlow(smm: StateMachineManager, initiatedFlowClass: Class<T>): Observable<T> {
-        return registerInitiatedFlowInternal(smm, initiatedFlowClass, track = true)
-    }
-
-    // TODO remove once not needed
-    private fun deprecatedFlowConstructorMessage(flowClass: Class<*>): String {
-        return "Installing flow factory for $flowClass accepting a ${Party::class.java.simpleName}, which is deprecated. " +
-                "It should accept a ${FlowSession::class.java.simpleName} instead"
-    }
-
-    private fun <F : FlowLogic<*>> registerInitiatedFlowInternal(smm: StateMachineManager, initiatedFlow: Class<F>, track: Boolean): Observable<F> {
-        val constructors = initiatedFlow.declaredConstructors.associateBy { it.parameterTypes.toList() }
-        val flowSessionCtor = constructors[listOf(FlowSession::class.java)]?.apply { isAccessible = true }
-        val ctor: (FlowSession) -> F = if (flowSessionCtor == null) {
-            // Try to fallback to a Party constructor
-            val partyCtor = constructors[listOf(Party::class.java)]?.apply { isAccessible = true }
-            if (partyCtor == null) {
-                throw IllegalArgumentException("$initiatedFlow must have a constructor accepting a ${FlowSession::class.java.name}")
-            } else {
-                log.warn(deprecatedFlowConstructorMessage(initiatedFlow))
             }
-            { flowSession: FlowSession -> uncheckedCast(partyCtor.newInstance(flowSession.counterparty)) }
-        } else {
-            { flowSession: FlowSession -> uncheckedCast(flowSessionCtor.newInstance(flowSession)) }
         }
-        val initiatingFlow = initiatedFlow.requireAnnotation<InitiatedBy>().value.java
-        val (version, classWithAnnotation) = initiatingFlow.flowVersionAndInitiatingClass
-        require(classWithAnnotation == initiatingFlow) {
-            "${InitiatedBy::class.java.name} must point to ${classWithAnnotation.name} and not ${initiatingFlow.name}"
-        }
-        val flowFactory = InitiatedFlowFactory.CorDapp(version, initiatedFlow.appName, ctor)
-        val observable = internalRegisterFlowFactory(smm, initiatingFlow, flowFactory, initiatedFlow, track)
-        log.info("Registered ${initiatingFlow.name} to initiate ${initiatedFlow.name} (version $version)")
-        return observable
-    }
-
-    protected fun <F : FlowLogic<*>> internalRegisterFlowFactory(smm: StateMachineManager,
-                                                                 initiatingFlowClass: Class<out FlowLogic<*>>,
-                                                                 flowFactory: InitiatedFlowFactory<F>,
-                                                                 initiatedFlowClass: Class<F>,
-                                                                 track: Boolean): Observable<F> {
-        val observable = if (track) {
-            smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
-        } else {
-            Observable.empty()
-        }
-        check(initiatingFlowClass !in flowFactories.keys) {
-            "$initiatingFlowClass is attempting to register multiple initiated flows"
-        }
-        flowFactories[initiatingFlowClass] = flowFactory
-        return observable
-    }
-
-    /**
-     * Installs a flow that's core to the Corda platform. Unlike CorDapp flows which are versioned individually using
-     * [InitiatingFlow.version], core flows have the same version as the node's platform version. To cater for backwards
-     * compatibility [flowFactory] provides a second parameter which is the platform version of the initiating party.
-     */
-    @VisibleForTesting
-    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (FlowSession) -> FlowLogic<*>) {
-        require(clientFlowClass.java.flowVersionAndInitiatingClass.first == 1) {
-            "${InitiatingFlow::class.java.name}.version not applicable for core flows; their version is the node's platform version"
-        }
-        flowFactories[clientFlowClass.java] = InitiatedFlowFactory.Core(flowFactory)
-        log.debug { "Installed core flow ${clientFlowClass.java.name}" }
+        flowManager.validateRegistrations()
     }
 
     private fun installCoreFlows() {
-        installCoreFlow(FinalityFlow::class, ::FinalityHandler)
-        installCoreFlow(NotaryChangeFlow::class, ::NotaryChangeHandler)
-        installCoreFlow(ContractUpgradeFlow.Initiate::class, ::ContractUpgradeHandler)
-        installCoreFlow(SwapIdentitiesFlow::class, ::SwapIdentitiesHandler)
+        flowManager.registerInitiatedCoreFlowFactory(FinalityFlow::class, FinalityHandler::class, ::FinalityHandler)
+        flowManager.registerInitiatedCoreFlowFactory(NotaryChangeFlow::class, NotaryChangeHandler::class, ::NotaryChangeHandler)
+        flowManager.registerInitiatedCoreFlowFactory(ContractUpgradeFlow.Initiate::class, NotaryChangeHandler::class, ::ContractUpgradeHandler)
+        flowManager.registerInitiatedCoreFlowFactory(SwapIdentitiesFlow::class, SwapIdentitiesHandler::class, ::SwapIdentitiesHandler)
     }
 
     protected open fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {
@@ -739,7 +678,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             requireNotNull(getCertificateStores()) {
                 "One or more keyStores (identity or TLS) or trustStore not found. " +
                         "Please either copy your existing keys and certificates from another node, " +
-                        "or if you don't have one yet, fill out the config file and run corda.jar --initial-registration. " +
+                        "or if you don't have one yet, fill out the config file and run corda.jar initial-registration. " +
                         "Read more at: https://docs.corda.net/permissioning.html"
             }
         } catch (e: KeyStoreException) {
@@ -811,7 +750,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             service.run {
                 tokenize()
                 runOnStop += ::stop
-                installCoreFlow(NotaryFlow.Client::class, ::createServiceFlow)
+                flowManager.registerInitiatedCoreFlowFactory(NotaryFlow.Client::class, ::createServiceFlow)
                 start()
             }
             return service
@@ -998,7 +937,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? {
-            return flowFactories[initiatingFlowClass]
+            return flowManager.getFlowFactoryForInitiatingFlow(initiatingFlowClass)
         }
 
         override fun jdbcSession(): Connection = database.createSession()

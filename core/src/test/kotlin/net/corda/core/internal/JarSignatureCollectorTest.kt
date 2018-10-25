@@ -8,7 +8,6 @@ import net.corda.core.JarSignatureTestUtils.updateJar
 import net.corda.core.identity.Party
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.CHARLIE_NAME
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.AfterClass

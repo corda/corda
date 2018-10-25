@@ -1,31 +1,24 @@
 package net.corda.node.internal
 
-import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
-import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
-import net.corda.cliutils.CordaCliWrapper
-import net.corda.cliutils.CordaVersionProvider
-import net.corda.cliutils.ExitCodes
+import net.corda.cliutils.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.Try
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
 import net.corda.node.*
-import net.corda.node.internal.Node.Companion.isValidJavaVersion
+import net.corda.node.internal.Node.Companion.isInvalidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
+import net.corda.node.internal.subcommands.*
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
-import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
-import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationException
-import net.corda.node.utilities.registration.NodeRegistrationHelper
-import net.corda.node.utilities.saveToKeyStore
-import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
@@ -35,10 +28,8 @@ import net.corda.nodeapi.internal.persistence.oracleJdbcDriverSerialFilter
 import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
-import picocli.CommandLine.Mixin
+import picocli.CommandLine.*
 import sun.misc.VMSupport
-import java.io.Console
-import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
@@ -47,201 +38,146 @@ import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
 import java.util.*
-import kotlin.system.exitProcess
 
-/** This class is responsible for starting a Node from command line arguments. */
-open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
+/** An interface that can be implemented to tell the node what to do once it's intitiated. */
+interface RunAfterNodeInitialisation {
+    fun run(node: Node)
+}
+
+/** Base class for subcommands to derive from that initialises the logs and provides standard options. */
+abstract class NodeCliCommand(alias: String, description: String, val startup: NodeStartup) : CliWrapperBase(alias, description), NodeStartupLogging {
     companion object {
-        private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
         const val LOGS_DIRECTORY_NAME = "logs"
-        const val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
-        private const val INITIAL_REGISTRATION_MARKER = ".initialregistration"
+    }
+
+    override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
+
+    @Mixin
+    val cmdLineOptions = SharedNodeCmdLineOptions()
+}
+
+/** Main corda entry point. */
+open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
+    open val startup = NodeStartup()
+
+    private val networkCacheCli = ClearNetworkCacheCli(startup)
+    private val justGenerateNodeInfoCli = GenerateNodeInfoCli(startup)
+    private val justGenerateRpcSslCertsCli = GenerateRpcSslCertsCli(startup)
+    private val initialRegistrationCli = InitialRegistrationCli(startup)
+
+    override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
+
+    override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli)
+
+    override fun runProgram(): Int {
+        return when {
+            InitialRegistration.checkRegistrationMode(cmdLineOptions.baseDirectory) -> {
+                println("Node was started before in `initial-registration` mode, but the registration was not completed.\nResuming registration.")
+                initialRegistrationCli.cmdLineOptions.copyFrom(cmdLineOptions)
+                initialRegistrationCli.runProgram()
+            }
+            //deal with legacy flags and redirect to subcommands
+            cmdLineOptions.isRegistration -> {
+                Node.printWarning("The --initial-registration flag has been deprecated and will be removed in a future version. Use the initial-registration command instead.")
+                requireNotNull(cmdLineOptions.networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
+                initialRegistrationCli.networkRootTrustStorePassword = cmdLineOptions.networkRootTrustStorePassword!!
+                initialRegistrationCli.networkRootTrustStorePathParameter = cmdLineOptions.networkRootTrustStorePathParameter
+                initialRegistrationCli.cmdLineOptions.copyFrom(cmdLineOptions)
+                initialRegistrationCli.runProgram()
+            }
+            cmdLineOptions.clearNetworkMapCache -> {
+                Node.printWarning("The --clear-network-map-cache flag has been deprecated and will be removed in a future version. Use the clear-network-cache command instead.")
+                networkCacheCli.cmdLineOptions.copyFrom(cmdLineOptions)
+                networkCacheCli.runProgram()
+            }
+            cmdLineOptions.justGenerateNodeInfo -> {
+                Node.printWarning("The --just-generate-node-info flag has been deprecated and will be removed in a future version. Use the generate-node-info command instead.")
+                justGenerateNodeInfoCli.cmdLineOptions.copyFrom(cmdLineOptions)
+                justGenerateNodeInfoCli.runProgram()
+            }
+            cmdLineOptions.justGenerateRpcSslCerts -> {
+                Node.printWarning("The --just-generate-rpc-ssl-settings flag has been deprecated and will be removed in a future version. Use the generate-rpc-ssl-settings command instead.")
+                justGenerateRpcSslCertsCli.cmdLineOptions.copyFrom(cmdLineOptions)
+                justGenerateRpcSslCertsCli.runProgram()
+            }
+            else -> startup.initialiseAndRun(cmdLineOptions, object : RunAfterNodeInitialisation {
+                val startupTime = System.currentTimeMillis()
+                override fun run(node: Node) = startup.startNode(node, startupTime)
+            })
+        }
     }
 
     @Mixin
     val cmdLineOptions = NodeCmdLineOptions()
+}
 
-    /**
-     * @return exit code based on the success of the node startup. This value is intended to be the exit code of the process.
-     */
-    override fun runProgram(): Int {
-        val startTime = System.currentTimeMillis()
+/** This class provides a common set of functionality for starting a Node from command line arguments. */
+open class NodeStartup : NodeStartupLogging {
+    companion object {
+        private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
+        const val LOGS_DIRECTORY_NAME = "logs"
+        const val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
+    }
+
+    lateinit var cmdLineOptions: SharedNodeCmdLineOptions
+
+    fun initialiseAndRun(cmdLineOptions: SharedNodeCmdLineOptions, afterNodeInitialisation: RunAfterNodeInitialisation): Int {
+        this.cmdLineOptions = cmdLineOptions
+
         // Step 1. Check for supported Java version.
-        if (!isValidJavaVersion()) return ExitCodes.FAILURE
+        if (isInvalidJavaVersion()) return ExitCodes.FAILURE
 
         // Step 2. We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
         enforceSingleNodeIsRunning(cmdLineOptions.baseDirectory)
 
-        // Step 3. Initialise logging.
-        initLogging()
-
-        // Step 4. Register all cryptography [Provider]s.
+        // Step 3. Register all cryptography [Provider]s.
         // Required to install our [SecureRandom] before e.g., UUID asks for one.
-        // This needs to go after initLogging(netty clashes with our logging).
+        // This needs to go after initLogging(netty clashes with our logging)
         Crypto.registerProviders()
 
-        // Step 5. Print banner and basic node info.
+        // Step 4. Print banner and basic node info.
         val versionInfo = getVersionInfo()
         drawBanner(versionInfo)
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
-        // Step 6. Load and validate node configuration.
-        val configuration = (attempt { loadConfiguration() }.doOnException(handleConfigurationLoadingError(cmdLineOptions.configFile)) as? Try.Success)?.let(Try.Success<NodeConfiguration>::value) ?: return ExitCodes.FAILURE
+        // Step 5. Load and validate node configuration.
+        val configuration = (attempt { cmdLineOptions.loadConfig() }.doOnException(handleConfigurationLoadingError(cmdLineOptions.configFile)) as? Try.Success)?.let(Try.Success<NodeConfiguration>::value)
+                ?: return ExitCodes.FAILURE
         val errors = configuration.validate()
         if (errors.isNotEmpty()) {
             logger.error("Invalid node configuration. Errors were:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
             return ExitCodes.FAILURE
         }
 
-        // Step 7. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
-        attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success ?: return ExitCodes.FAILURE
+        // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
+        attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success
+                ?: return ExitCodes.FAILURE
 
-        // Step 8. Any actions required before starting up the Corda network layer.
-        attempt { preNetworkRegistration(configuration) }.doOnException(handleRegistrationError) as? Try.Success ?: return ExitCodes.FAILURE
+        // Step 7. Any actions required before starting up the Corda network layer.
+        attempt { preNetworkRegistration(configuration) }.doOnException(::handleRegistrationError) as? Try.Success
+                ?: return ExitCodes.FAILURE
 
-        // Step 9. Check if in registration mode.
-        checkAndRunRegistrationMode(configuration, versionInfo)?.let {
-            return if (it) ExitCodes.SUCCESS
-            else ExitCodes.FAILURE
-        }
-
-        // Step 10. Log startup info.
+        // Step 8. Log startup info.
         logStartupInfo(versionInfo, configuration)
 
-        // Step 11. Start node: create the node, check for other command-line options, add extra logging etc.
-        attempt { startNode(configuration, versionInfo, startTime) }.doOnSuccess { logger.info("Node exiting successfully") }.doOnException(handleStartError) as? Try.Success ?: return ExitCodes.FAILURE
+        // Step 9. Start node: create the node, check for other command-line options, add extra logging etc.
+        attempt {
+            cmdLineOptions.baseDirectory.createDirectories()
+            afterNodeInitialisation.run(createNode(configuration, versionInfo))
+        }.doOnException(::handleStartError) as? Try.Success ?: return ExitCodes.FAILURE
 
         return ExitCodes.SUCCESS
     }
 
-    private fun checkAndRunRegistrationMode(configuration: NodeConfiguration, versionInfo: VersionInfo): Boolean? {
-        checkUnfinishedRegistration()
-        cmdLineOptions.nodeRegistrationOption?.let {
-            // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
-            attempt { registerWithNetwork(configuration, versionInfo, it) }.doOnException(handleRegistrationError) as? Try.Success
-                    ?: return false
-            // At this point the node registration was successful. We can delete the marker file.
-            deleteNodeRegistrationMarker(cmdLineOptions.baseDirectory)
-            return true
-        }
-        return null
-    }
-
-    // TODO: Reconsider if automatic re-registration should be applied when something failed during initial registration.
-    //      There might be cases where the node user should investigate what went wrong before registering again.
-    private fun checkUnfinishedRegistration() {
-        if (checkRegistrationMode() && !cmdLineOptions.isRegistration) {
-            println("Node was started before with `--initial-registration`, but the registration was not completed.\nResuming registration.")
-            // Pretend that the node was started with `--initial-registration` to help prevent user error.
-            cmdLineOptions.isRegistration = true
-        }
-    }
-
-    private fun <RESULT> attempt(action: () -> RESULT): Try<RESULT> = Try.on(action)
-
-    private fun Exception.isExpectedWhenStartingNode() = startNodeExpectedErrors.any { error -> error.isInstance(this) }
-
-    private val startNodeExpectedErrors = setOf(DatabaseMigrationException::class, MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
-
-    private fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print(message)
-
-    private fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" } ?: ""}", error)
-
-    private fun Exception.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
-
-    private val handleRegistrationError = { error: Exception ->
-        when (error) {
-            is NodeRegistrationException -> error.logAsExpected("Issue with Node registration: ${error.message}")
-            else -> error.logAsUnexpected("Exception during node registration")
-        }
-    }
-
-    private val handleStartError = { error: Exception ->
-        when {
-            error.isExpectedWhenStartingNode() -> error.logAsExpected()
-            error is CouldNotCreateDataSourceException -> error.logAsUnexpected()
-            error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")
-            error.isOpenJdkKnownIssue() -> error.logAsExpected("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
-            else -> error.logAsUnexpected("Exception during node startup")
-        }
-    }
-
-    private fun handleConfigurationLoadingError(configFile: Path) = { error: Exception ->
-        when (error) {
-            is UnknownConfigurationKeysException -> error.logAsExpected()
-            is ConfigException.IO -> error.logAsExpected(configFileNotFoundMessage(configFile), ::println)
-            else -> error.logAsUnexpected("Unexpected error whilst reading node configuration")
-        }
-    }
-
-    private fun configFileNotFoundMessage(configFile: Path): String {
-        return """
-                Unable to load the node config file from '$configFile'.
-
-                Try setting the --base-directory flag to change which directory the node
-                is looking in, or use the --config-file flag to specify it explicitly.
-            """.trimIndent()
-    }
-
-    private fun loadConfiguration(): NodeConfiguration {
-        val (rawConfig, configurationResult) = loadConfigFile()
-        if (cmdLineOptions.devMode == true) {
-            println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
-        }
-        return configurationResult.getOrThrow()
-    }
-
-    private fun checkRegistrationMode(): Boolean {
-        // If the node was started with `--initial-registration`, create marker file.
-        // We do this here to ensure the marker is created even if parsing the args with NodeArgsParser fails.
-        val marker = cmdLineOptions.baseDirectory / INITIAL_REGISTRATION_MARKER
-        if (!cmdLineOptions.isRegistration && !marker.exists()) {
-            return false
-        }
-        try {
-            marker.createFile()
-        } catch (e: Exception) {
-            logger.warn("Could not create marker file for `--initial-registration`.", e)
-        }
-        return true
-    }
-
-    private fun deleteNodeRegistrationMarker(baseDir: Path) {
-        try {
-            val marker = File((baseDir / INITIAL_REGISTRATION_MARKER).toUri())
-            if (marker.exists()) {
-                marker.delete()
-            }
-        } catch (e: Exception) {
-            e.logAsUnexpected("Could not delete the marker file that was created for `--initial-registration`.", print = logger::warn)
-        }
-    }
-
     protected open fun preNetworkRegistration(conf: NodeConfiguration) = Unit
 
-    protected open fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
+    open fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
 
-    protected open fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long) {
-        cmdLineOptions.baseDirectory.createDirectories()
-        val node = createNode(conf, versionInfo)
-        if (cmdLineOptions.clearNetworkMapCache) {
-            node.clearNetworkMapCache()
-            return
-        }
-        if (cmdLineOptions.justGenerateNodeInfo) {
-            // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
-            node.generateAndSaveNodeInfo()
-            return
-        }
-        if (cmdLineOptions.justGenerateRpcSslCerts) {
-            generateRpcSslCertificates(conf)
-            return
-        }
-
-        if (conf.devMode) {
+    fun startNode(node: Node, startTime: Long) {
+        if (node.configuration.devMode) {
             Emoji.renderIfSupported {
-                Node.printWarning("This node is running in developer mode! ${Emoji.developer} This is not safe for production deployment.")
+                Node.printWarning("This node is running in development mode! ${Emoji.developer} This is not safe for production deployment.")
             }
         } else {
             logger.info("The Corda node is running in production mode. If this is a developer environment you can set 'devMode=true' in the node.conf file.")
@@ -258,7 +194,7 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
             Node.printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.
-            if (conf.shouldStartLocalShell()) {
+            if (node.configuration.shouldStartLocalShell()) {
                 node.startupComplete.then {
                     try {
                         InteractiveShell.runLocalShell(node::stop)
@@ -267,90 +203,14 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
                     }
                 }
             }
-            if (conf.shouldStartSSHDaemon()) {
-                Node.printBasicNodeInfo("SSH server listening on port", conf.sshd!!.port.toString())
+            if (node.configuration.shouldStartSSHDaemon()) {
+                Node.printBasicNodeInfo("SSH server listening on port", node.configuration.sshd!!.port.toString())
             }
         },
                 { th ->
                     logger.error("Unexpected exception during registration", th)
                 })
         node.run()
-    }
-
-    private fun generateRpcSslCertificates(conf: NodeConfiguration) {
-        val (keyPair, cert) = createKeyPairAndSelfSignedTLSCertificate(conf.myLegalName.x500Principal)
-
-        val keyStorePath = conf.baseDirectory / "certificates" / "rpcsslkeystore.jks"
-        val trustStorePath = conf.baseDirectory / "certificates" / "export" / "rpcssltruststore.jks"
-
-        if (keyStorePath.exists() || trustStorePath.exists()) {
-            println("Found existing RPC SSL keystores. Command was already run. Exiting..")
-            exitProcess(0)
-        }
-
-        val console: Console? = System.console()
-
-        when (console) {
-            // In this case, the JVM is not connected to the console so we need to exit.
-            null -> {
-                println("Not connected to console. Exiting")
-                exitProcess(1)
-            }
-            // Otherwise we can proceed normally.
-            else -> {
-                while (true) {
-                    val keystorePassword1 = console.readPassword("Enter the RPC keystore password => ")
-                    // TODO: consider adding a password strength policy.
-                    if (keystorePassword1.isEmpty()) {
-                        println("The RPC keystore password cannot be an empty String.")
-                        continue
-                    }
-
-                    val keystorePassword2 = console.readPassword("Re-enter the RPC keystore password => ")
-                    if (!keystorePassword1.contentEquals(keystorePassword2)) {
-                        println("The RPC keystore passwords don't match.")
-                        continue
-                    }
-
-                    saveToKeyStore(keyStorePath, keyPair, cert, String(keystorePassword1), "rpcssl")
-                    println("The RPC keystore was saved to: $keyStorePath .")
-                    break
-                }
-
-                while (true) {
-                    val trustStorePassword1 = console.readPassword("Enter the RPC truststore password => ")
-                    // TODO: consider adding a password strength policy.
-                    if (trustStorePassword1.isEmpty()) {
-                        println("The RPC truststore password cannot be an empty String.")
-                        continue
-                    }
-
-                    val trustStorePassword2 = console.readPassword("Re-enter the RPC truststore password => ")
-                    if (!trustStorePassword1.contentEquals(trustStorePassword2)) {
-                        println("The RPC truststore passwords don't match.")
-                        continue
-                    }
-
-                    saveToTrustStore(trustStorePath, cert, String(trustStorePassword1), "rpcssl")
-                    println("The RPC truststore was saved to: $trustStorePath .")
-                    println("You need to distribute this file along with the password in a secure way to all RPC clients.")
-                    break
-                }
-
-                val dollar = '$'
-                println("""
-                            |
-                            |The SSL certificates for RPC were generated successfully.
-                            |
-                            |Add this snippet to the "rpcSettings" section of your node.conf:
-                            |       useSsl=true
-                            |       ssl {
-                            |           keyStorePath=$dollar{baseDirectory}/certificates/rpcsslkeystore.jks
-                            |           keyStorePassword=the_above_password
-                            |       }
-                            |""".trimMargin())
-            }
-        }
     }
 
     protected open fun logStartupInfo(versionInfo: VersionInfo, conf: NodeConfiguration) {
@@ -378,34 +238,6 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         logger.info(nodeStartedMessage)
     }
 
-    protected open fun registerWithNetwork(
-            conf: NodeConfiguration,
-            versionInfo: VersionInfo,
-            nodeRegistrationConfig: NodeRegistrationOption
-    ) {
-        println("\n" +
-                "******************************************************************\n" +
-                "*                                                                *\n" +
-                "*      Registering as a new participant with a Corda network     *\n" +
-                "*                                                                *\n" +
-                "******************************************************************\n")
-
-        NodeRegistrationHelper(conf,
-                HTTPNetworkRegistrationService(
-                        requireNotNull(conf.networkServices),
-                        versionInfo),
-                nodeRegistrationConfig).buildKeystore()
-
-        // Minimal changes to make registration tool create node identity.
-        // TODO: Move node identity generation logic from node to registration helper.
-        createNode(conf, getVersionInfo()).generateAndSaveNodeInfo()
-
-        println("Successfully registered Corda node with compatibility zone, node identity keys and certificates are stored in '${conf.certificatesDirectory}', it is advised to backup the private keys and certificates.")
-        println("Corda node will now terminate.")
-    }
-
-    protected open fun loadConfigFile(): Pair<Config, Try<NodeConfiguration>> = cmdLineOptions.loadConfig()
-
     protected open fun banJavaSerialisation(conf: NodeConfiguration) {
         // Enterprise only -  Oracle database requires additional serialization
         val isOracleDbDriver = conf.dataSourceProperties.getProperty("dataSource.url", "").startsWith("jdbc:oracle:")
@@ -419,7 +251,7 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
         SerialFilter.install(serialFilter)
     }
 
-    protected open fun getVersionInfo(): VersionInfo {
+    open fun getVersionInfo(): VersionInfo {
         return VersionInfo(
                 PLATFORM_VERSION,
                 CordaVersionProvider.releaseVersion,
@@ -470,18 +302,6 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
             println("Corda Node process in now exiting. Please check directory permissions and try starting the Node again.")
             System.exit(1)
         }
-    }
-
-    override fun initLogging() {
-        val loggingLevel = loggingLevel.name.toLowerCase(Locale.ENGLISH)
-        System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
-        if (verbose) {
-            System.setProperty("consoleLogLevel", loggingLevel)
-            Node.renderBasicInfoToConsole = false
-        }
-        System.setProperty("log-path", (cmdLineOptions.baseDirectory / LOGS_DIRECTORY_NAME).toString())
-        SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
-        SLF4JBridgeHandler.install()
     }
 
     private fun lookupMachineNameAndMaybeWarn(): String {
@@ -587,3 +407,66 @@ open class NodeStartup : CordaCliWrapper("corda", "Runs a Corda Node") {
     }
 }
 
+/** Provide some common logging methods for node startup commands. */
+interface NodeStartupLogging {
+    companion object {
+        val logger by lazy { contextLogger() }
+        val startupErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
+    }
+
+    fun <RESULT> attempt(action: () -> RESULT): Try<RESULT> = Try.on(action)
+
+    fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print(message)
+
+    fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" } ?: ""}", error)
+
+    fun handleRegistrationError(error: Exception) {
+        when (error) {
+            is NodeRegistrationException -> error.logAsExpected("Issue with Node registration: ${error.message}")
+            else -> error.logAsUnexpected("Exception during node registration")
+        }
+    }
+
+    fun Exception.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
+
+    fun Exception.isExpectedWhenStartingNode() = startupErrors.any { error -> error.isInstance(this) }
+
+    fun handleStartError(error: Exception) {
+        when {
+            error.isExpectedWhenStartingNode() -> error.logAsExpected()
+            error is CouldNotCreateDataSourceException -> error.logAsUnexpected()
+            error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")
+            error.isOpenJdkKnownIssue() -> error.logAsExpected("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
+            else -> error.logAsUnexpected("Exception during node startup")
+        }
+    }
+
+    fun handleConfigurationLoadingError(configFile: Path) = { error: Exception ->
+        when (error) {
+            is UnknownConfigurationKeysException -> error.logAsExpected()
+            is ConfigException.IO -> error.logAsExpected(configFileNotFoundMessage(configFile), ::println)
+            else -> error.logAsUnexpected("Unexpected error whilst reading node configuration")
+        }
+    }
+
+    private fun configFileNotFoundMessage(configFile: Path): String {
+        return """
+                Unable to load the node config file from '$configFile'.
+
+                Try setting the --base-directory flag to change which directory the node
+                is looking in, or use the --config-file flag to specify it explicitly.
+            """.trimIndent()
+    }
+}
+
+fun CliWrapperBase.initLogging(baseDirectory: Path) {
+    val loggingLevel = loggingLevel.name.toLowerCase(Locale.ENGLISH)
+    System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
+    if (verbose) {
+        System.setProperty("consoleLogLevel", loggingLevel)
+        Node.renderBasicInfoToConsole = false
+    }
+    System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
+    SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
+    SLF4JBridgeHandler.install()
+}

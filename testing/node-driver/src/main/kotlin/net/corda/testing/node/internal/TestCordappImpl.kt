@@ -7,6 +7,7 @@ data class TestCordappImpl(override val name: String,
                            override val vendor: String,
                            override val title: String,
                            override val targetVersion: Int,
+                           override val config: Map<String, Any>,
                            override val packages: Set<String>,
                            val classes: Set<Class<*>>) : TestCordapp {
 
@@ -19,6 +20,8 @@ data class TestCordappImpl(override val name: String,
     override fun withTitle(title: String): TestCordappImpl = copy(title = title)
 
     override fun withTargetVersion(targetVersion: Int): TestCordappImpl = copy(targetVersion = targetVersion)
+
+    override fun withConfig(config: Map<String, Any>): TestCordappImpl = copy(config = config)
 
     fun withClasses(vararg classes: Class<*>): TestCordappImpl {
         return copy(classes = classes.filter { clazz -> packages.none { clazz.name.startsWith("$it.") } }.toSet())

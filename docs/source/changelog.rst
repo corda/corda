@@ -1548,9 +1548,9 @@ New features in this release:
 
 * Testnet
 
-    * Permissioning infrastructure phase one is built out. The node now has a notion of developer mode vs normal
-      mode. In developer mode it works like M3 and the SSL certificates used by nodes running on your local
-      machine all self-sign using a developer key included in the source tree. When developer mode is not active,
+    * Permissioning infrastructure phase one is built out. The node now has a notion of development mode vs normal
+      mode. In development mode it works like M3 and the SSL certificates used by nodes running on your local
+      machine all self-sign using a developer key included in the source tree. When development mode is not active,
       the node won't start until it has a signed certificate. Such a certificate can be obtained by simply running
       an included command line utility which generates a CSR and submits it to a permissioning service, then waits
       for the signed certificate to be returned. Note that currently there is no public Corda testnet, so we are

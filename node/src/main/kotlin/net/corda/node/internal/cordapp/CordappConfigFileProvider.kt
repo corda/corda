@@ -5,30 +5,26 @@ import com.typesafe.config.ConfigFactory
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
-import net.corda.core.internal.isDirectory
+import net.corda.core.internal.noneOrSingle
 import net.corda.core.utilities.contextLogger
 import java.nio.file.Path
-import java.nio.file.Paths
 
-class CordappConfigFileProvider(private val configDir: Path = DEFAULT_CORDAPP_CONFIG_DIR) : CordappConfigProvider {
+class CordappConfigFileProvider(cordappDirectories: List<Path>) : CordappConfigProvider {
     companion object {
-        val DEFAULT_CORDAPP_CONFIG_DIR = Paths.get("cordapps") / "config"
-        const val CONFIG_EXT = ".conf"
-        val logger = contextLogger()
+        private val logger = contextLogger()
     }
 
-    init {
-        configDir.createDirectories()
-    }
+    private val configDirectories = cordappDirectories.map { (it / "config").createDirectories() }
 
     override fun getConfigByName(name: String): Config {
-        val configFile = configDir / "$name$CONFIG_EXT"
-        return if (configFile.exists()) {
-            check(!configFile.isDirectory()) { "${configFile.toAbsolutePath()} is a directory, expected a config file" }
-            logger.info("Found config for cordapp $name in ${configFile.toAbsolutePath()}")
+        // TODO There's nothing stopping the same CorDapp jar from occuring in different directories and thus causing
+        // conflicts. The cordappDirectories list config option should just be a single cordappDirectory
+        val configFile = configDirectories.map { it / "$name.conf" }.noneOrSingle { it.exists() }
+        return if (configFile != null) {
+            logger.info("Found config for cordapp $name in $configFile")
             ConfigFactory.parseFile(configFile.toFile())
         } else {
-            logger.info("No config found for cordapp $name in ${configFile.toAbsolutePath()}")
+            logger.info("No config found for cordapp $name in $configDirectories")
             ConfigFactory.empty()
         }
     }

@@ -6,6 +6,7 @@ import com.codahale.metrics.MetricRegistry
 import com.palominolabs.metrics.newrelic.AllEnabledMetricAttributeFilter
 import com.palominolabs.metrics.newrelic.NewRelicReporter
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.cliutils.ShellConstants
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
@@ -43,6 +44,7 @@ import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.*
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
+import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.*
 import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.ArtemisMessagingClient
@@ -58,7 +60,6 @@ import org.apache.commons.lang.SystemUtils
 import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import rx.Observable
 import rx.Scheduler
 import rx.schedulers.Schedulers
 import java.net.BindException
@@ -74,8 +75,7 @@ import kotlin.system.exitProcess
 class NodeWithInfo(val node: Node, val info: NodeInfo) {
     val services: StartedNodeServices = object : StartedNodeServices, ServiceHubInternal by node.services, FlowStarter by node.flowStarter {}
     fun dispose() = node.stop()
-    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> =
-            node.registerInitiatedFlow(node.smm, initiatedFlowClass)
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = node.registerInitiatedFlow(node.smm, initiatedFlowClass)
 }
 
 /**
@@ -87,12 +87,14 @@ class NodeWithInfo(val node: Node, val info: NodeInfo) {
 open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 private val initialiseSerialization: Boolean = true,
+                flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides),
                 cacheFactoryPrototype: BindableNamedCacheFactory = EnterpriseNamedCacheFactory(configuration.enterpriseConfiguration.getTracingConfig())
 ) : AbstractNode<NodeInfo>(
         configuration,
         createClock(configuration),
         cacheFactoryPrototype,
         versionInfo,
+        flowManager,
         // Under normal (non-test execution) it will always be "1"
         AffinityExecutor.ServiceAffinityExecutor("Node thread-${sameVmNodeCounter.incrementAndGet()}", 1)
 ) {
@@ -111,9 +113,13 @@ open class Node(configuration: NodeConfiguration,
             LoggerFactory.getLogger(loggerName).info(msg)
         }
 
+        fun printInRed(message: String) {
+            println("${ShellConstants.RED}$message${ShellConstants.RESET}")
+        }
+
         fun printWarning(message: String) {
             Emoji.renderIfSupported {
-                println("${Emoji.warningSign} ATTENTION: $message")
+                printInRed("${Emoji.warningSign} ATTENTION: $message")
             }
             staticLog.warn(message)
         }
@@ -133,13 +139,13 @@ open class Node(configuration: NodeConfiguration,
         // TODO: make this configurable.
         const val MAX_RPC_MESSAGE_SIZE = 10485760
 
-        fun isValidJavaVersion(): Boolean {
+        fun isInvalidJavaVersion(): Boolean {
             if (!hasMinimumJavaVersion()) {
                 println("You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8.")
                 println("Corda will now exit...")
-                return false
+                return true
             }
-            return true
+            return false
         }
 
         private fun hasMinimumJavaVersion(): Boolean {
@@ -204,7 +210,8 @@ open class Node(configuration: NodeConfiguration,
         return P2PMessagingClient(
                 config = configuration,
                 versionInfo = versionInfo,
-                serverAddress = configuration.messagingServerAddress ?: NetworkHostAndPort("localhost", configuration.p2pAddress.port),
+                serverAddress = configuration.messagingServerAddress
+                        ?: NetworkHostAndPort("localhost", configuration.p2pAddress.port),
                 nodeExecutor = serverThread,
                 database = database,
                 networkMap = networkMapCache,
@@ -230,7 +237,8 @@ open class Node(configuration: NodeConfiguration,
         }
 
         val messageBroker = if (!configuration.messagingServerExternal) {
-            val brokerBindAddress = configuration.messagingServerAddress ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
+            val brokerBindAddress = configuration.messagingServerAddress
+                    ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
             ArtemisMessagingServer(configuration, brokerBindAddress, networkParameters.maxMessageSize)
         } else {
             null
@@ -468,7 +476,7 @@ open class Node(configuration: NodeConfiguration,
         }.build().start()
     }
 
-    private fun registerNewRelicReporter (registry: MetricRegistry) {
+    private fun registerNewRelicReporter(registry: MetricRegistry) {
         log.info("Registering New Relic JMX Reporter:")
         val reporter = NewRelicReporter.forRegistry(registry)
                 .name("New Relic Reporter")
@@ -529,5 +537,9 @@ open class Node(configuration: NodeConfiguration,
         shutdown = false
 
         log.info("Shutdown complete")
+    }
+
+    fun <T : FlowLogic<*>> registerInitiatedFlow(smm: StateMachineManager, initiatedFlowClass: Class<T>) {
+        this.flowManager.registerInitiatedFlow(initiatedFlowClass)
     }
 }

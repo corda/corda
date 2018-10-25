@@ -1,0 +1,58 @@
+- commandName: "<main class>"
+  positionalParams:
+  - parameterName: "0"
+    parameterType: "java.net.URL"
+    required: true
+    multiParam: false
+    acceptableValues: []
+  params:
+  - parameterName: "--format"
+    parameterType: "net.corda.blobinspector.OutputFormatType"
+    required: false
+    multiParam: false
+    acceptableValues:
+    - "YAML"
+    - "JSON"
+  - parameterName: "--full-parties"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--input-format"
+    parameterType: "net.corda.blobinspector.InputFormatType"
+    required: false
+    multiParam: false
+    acceptableValues:
+    - "BINARY"
+    - "HEX"
+    - "BASE64"
+  - parameterName: "--log-to-console"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--logging-level"
+    parameterType: "org.slf4j.event.Level"
+    required: false
+    multiParam: false
+    acceptableValues:
+    - "ERROR"
+    - "WARN"
+    - "INFO"
+    - "DEBUG"
+    - "TRACE"
+  - parameterName: "--schema"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "--verbose"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []
+  - parameterName: "-v"
+    parameterType: "boolean"
+    required: false
+    multiParam: false
+    acceptableValues: []

@@ -29,8 +29,9 @@ import java.util.concurrent.TimeUnit
 
 open class EnterpriseNode(configuration: NodeConfiguration,
                           versionInfo: VersionInfo,
-                          initialiseSerialization: Boolean = true
-) : Node(configuration, versionInfo, initialiseSerialization, cacheFactoryPrototype = EnterpriseNamedCacheFactory(configuration.enterpriseConfiguration.getTracingConfig())) {
+                          initialiseSerialization: Boolean = true,
+                          flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides)
+) : Node(configuration, versionInfo, initialiseSerialization, flowManager, cacheFactoryPrototype = EnterpriseNamedCacheFactory(configuration.enterpriseConfiguration.getTracingConfig())) {
     companion object {
         private val logger by lazy { loggerFor<EnterpriseNode>() }
 
@@ -48,6 +49,10 @@ open class EnterpriseNode(configuration: NodeConfiguration,
             }
             return graphiteName
         }
+    }
+
+    class NodeCli : NodeStartupCli() {
+        override val startup = Startup()
     }
 
     class Startup : NodeStartup() {

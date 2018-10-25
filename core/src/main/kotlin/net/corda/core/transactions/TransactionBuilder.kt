@@ -4,7 +4,11 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.FlowStateMachine
@@ -24,6 +28,38 @@ import java.time.Duration
 import java.time.Instant
 import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.collections.Collection
+import kotlin.collections.List
+import kotlin.collections.Map
+import kotlin.collections.MutableList
+import kotlin.collections.Set
+import kotlin.collections.all
+import kotlin.collections.any
+import kotlin.collections.arrayListOf
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.emptyList
+import kotlin.collections.filter
+import kotlin.collections.filterNot
+import kotlin.collections.find
+import kotlin.collections.flatMap
+import kotlin.collections.flatten
+import kotlin.collections.forEach
+import kotlin.collections.groupBy
+import kotlin.collections.intersect
+import kotlin.collections.isNotEmpty
+import kotlin.collections.listOf
+import kotlin.collections.map
+import kotlin.collections.mapNotNull
+import kotlin.collections.none
+import kotlin.collections.plus
+import kotlin.collections.setOf
+import kotlin.collections.single
+import kotlin.collections.singleOrNull
+import kotlin.collections.toList
+import kotlin.collections.toMap
+import kotlin.collections.toSet
+import kotlin.collections.toSortedSet
 
 /**
  * A TransactionBuilder is a transaction class that's mutable (unlike the others which are all immutable). It is
