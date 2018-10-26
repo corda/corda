@@ -26,10 +26,10 @@ Get the testing tools
 To run the tests and make sure your node is connecting correctly to the network you will need to download and install a
 couple of resources.
 
-1. Log into your Cloud VM via SSH. 
+#. Log into your Cloud VM via SSH.
 
 
-2. Stop the Corda node(s) running on your cloud instance.
+#. Stop the Corda node(s) running on your cloud instance.
 
    .. code:: bash
 
@@ -38,7 +38,7 @@ couple of resources.
    .. warning:: If this is an HA node, make sure to stop both the hot and cold nodes before proceeding. Any database migration should be performed whilst both nodes are offline.
 
 
-3. Download the Resources:
+#. Download the Resources:
 
    Download the finance CorDapp and database manager to your VM instance:
 
@@ -50,34 +50,33 @@ couple of resources.
 
    Copy the downloads from ``/home/<USER>/`` to ``/opt/corda/cordapps/``.
 
-   This is required to run some flows to check your connections, and to issue/transfer cash to counterparties.
+   This is required to run some flows to check your connections, and to issue/transfer cash to counterparties. Copy it to
+   the Corda installation location:
 
    .. code:: bash
 
        sudo cp /home/<USER>/corda-finance-*.jar /opt/corda/cordapps/
 
-4. Create a symbolic link to the shared database driver folder
+#. Create a symbolic link to the shared database driver folder
 
    .. code:: bash
 
        sudo ln -s /opt/corda/drivers /opt/corda/plugins
     
-5. Execute the database migration. This is required so that the node database has the right schema for finance transactions defined in the installed CorDapp.
+#. Execute the database migration. This is required so that the node database has the right schema for finance transactions defined in the installed CorDapp.
 
    .. code:: bash
    
        cd /opt/corda
        sudo java -jar /home/<USER>/corda-tools-database-manager-3.0.jar --base-directory /opt/corda --execute-migration
 
-6. Add the following line to the bottom of your ``node.conf``:
+#. Run the following to create a config file for the finance CorDapp:
 
    .. code:: bash
-   
-       custom : { issuableCurrencies : [ USD ] }
-   
-   .. note:: Make sure that the config file is in the correct format, e.g., by ensuring that there's a comma at the end of the line prior to the added config.
 
-7. Restart the Corda node:
+       echo "issuableCurrencies : [ USD ]" > /opt/corda/cordapps/config/corda-finance-<VERSION>-corda.conf
+
+#. Restart the Corda node:
 
    .. code:: bash
 
@@ -85,17 +84,19 @@ couple of resources.
 
    Your node is now running the Finance Cordapp.
    
-   .. note:: You can double-check that the CorDapp is loaded in the log file ``/opt/corda/logs/node-<VM-NAME>.log``. This file will list installed apps at startup. Search for ``Loaded CorDapps`` in the logs.
+   .. note:: You can double-check that the CorDapp is loaded in the log file ``/opt/corda/logs/node-<VM-NAME>.log``. This
+      file will list installed apps at startup. Search for ``Loaded CorDapps`` in the logs.
 
-8. Now download the Node Explorer to your **LOCAL** machine:
+#. Now download the Node Explorer to your **LOCAL** machine:
 
    .. code:: bash
 
        wget http://downloads.corda.net/tools/explorer/ENT-3.1/corda-tools-explorer-3.1.jar
 
-   .. warning:: The Enterprise Node Explorer is incompatible with open source versions of Corda and vice versa as they currently use different serialisation schemes (Kryo vs AMQP).
+   .. warning:: The Enterprise Node Explorer is incompatible with open source versions of Corda and vice versa as they currently
+      use different serialisation schemes (Kryo vs AMQP).
 
-9. Run the Node Explorer tool on your **LOCAL** machine.
+#. Run the Node Explorer tool on your **LOCAL** machine.
 
    .. code:: bash
 
@@ -110,8 +111,10 @@ Connect to the node
 To connect to the node you will need:
 
 * The IP address of your node (the public IP of your cloud instance). You can find this in the instance page of your cloud console.
-* The port number of the RPC interface to the node, specified in ``/opt/corda/node.conf`` in the ``rpcSettings`` section, (by default this is 10003 on Testnet).
-* The username and password of the RPC interface of the node, also in the ``node.conf`` in the ``rpcUsers`` section, (by default the username is ``cordazoneservice`` on Testnet).
+* The port number of the RPC interface to the node, specified in ``/opt/corda/node.conf`` in the ``rpcSettings`` section,
+  (by default this is 10003 on Testnet).
+* The username and password of the RPC interface of the node, also in the ``node.conf`` in the ``rpcUsers`` section,
+  (by default the username is ``cordazoneservice`` on Testnet).
 
 Click on ``Connect`` to log into the node.
 
@@ -122,7 +125,8 @@ Once Explorer has logged in to your node over RPC click on the ``Network`` tab i
 
 .. image:: resources/explorer-network.png
 
-If your Enterprise node is correctly configured and connected to the Testnet then you should be able to see the identities of your node, the Testnet notary and the network map listing all the counterparties currently on the network. 
+If your Enterprise node is correctly configured and connected to the Testnet then you should be able to see the identities of
+your node, the Testnet notary and the network map listing all the counterparties currently on the network.
 
 
 Test issuance transaction
@@ -140,7 +144,8 @@ Click ``Execute`` and the transaction will start.
 
 .. image:: resources/explorer-cash-issue3.png
 
-Click on the red X to close the notification window and click on ``Transactions`` tab to see the transaction in progress, or wait for a success message to be displayed:
+Click on the red X to close the notification window and click on ``Transactions`` tab to see the transaction in progress,
+or wait for a success message to be displayed:
 
 .. image:: resources/explorer-transactions.png
 
