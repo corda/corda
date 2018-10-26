@@ -60,46 +60,46 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     @Mixin
     val cmdLineOptions = NodeCmdLineOptions()
 
-    private val networkCache by lazy { ClearNetworkCacheCli(startup) }
-    private val justGenerateNodeInfo by lazy { GenerateNodeInfoCli(startup) }
-    private val justGenerateRpcSslCerts by lazy { GenerateRpcSslCertsCli(startup) }
-    private val initialRegistration by lazy { InitialRegistrationCli(startup) }
-    private val validateConfiguration by lazy { ValidateConfigurationCli(cmdLineOptions) }
+    private val networkCacheCli by lazy { ClearNetworkCacheCli(startup) }
+    private val justGenerateNodeInfoCli by lazy { GenerateNodeInfoCli(startup) }
+    private val justGenerateRpcSslCertsCli by lazy { GenerateRpcSslCertsCli(startup) }
+    private val initialRegistrationCli by lazy { InitialRegistrationCli(startup) }
+    private val validateConfigurationCli by lazy { ValidateConfigurationCli(cmdLineOptions) }
 
     override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
 
-    override fun additionalSubCommands() = setOf(networkCache, justGenerateNodeInfo, justGenerateRpcSslCerts, initialRegistration, validateConfiguration)
+    override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli, validateConfigurationCli)
 
     override fun runProgram(): Int {
         return when {
             InitialRegistration.checkRegistrationMode(cmdLineOptions.baseDirectory) -> {
                 println("Node was started before in `initial-registration` mode, but the registration was not completed.\nResuming registration.")
-                initialRegistration.cmdLineOptions.copyFrom(cmdLineOptions)
-                initialRegistration.runProgram()
+                initialRegistrationCli.cmdLineOptions.copyFrom(cmdLineOptions)
+                initialRegistrationCli.runProgram()
             }
             //deal with legacy flags and redirect to subcommands
             cmdLineOptions.isRegistration -> {
                 Node.printWarning("The --initial-registration flag has been deprecated and will be removed in a future version. Use the initial-registration command instead.")
                 requireNotNull(cmdLineOptions.networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
-                initialRegistration.networkRootTrustStorePassword = cmdLineOptions.networkRootTrustStorePassword!!
-                initialRegistration.networkRootTrustStorePathParameter = cmdLineOptions.networkRootTrustStorePathParameter
-                initialRegistration.cmdLineOptions.copyFrom(cmdLineOptions)
-                initialRegistration.runProgram()
+                initialRegistrationCli.networkRootTrustStorePassword = cmdLineOptions.networkRootTrustStorePassword!!
+                initialRegistrationCli.networkRootTrustStorePathParameter = cmdLineOptions.networkRootTrustStorePathParameter
+                initialRegistrationCli.cmdLineOptions.copyFrom(cmdLineOptions)
+                initialRegistrationCli.runProgram()
             }
             cmdLineOptions.clearNetworkMapCache -> {
                 Node.printWarning("The --clear-network-map-cache flag has been deprecated and will be removed in a future version. Use the clear-network-cache command instead.")
-                networkCache.cmdLineOptions.copyFrom(cmdLineOptions)
-                networkCache.runProgram()
+                networkCacheCli.cmdLineOptions.copyFrom(cmdLineOptions)
+                networkCacheCli.runProgram()
             }
             cmdLineOptions.justGenerateNodeInfo -> {
                 Node.printWarning("The --just-generate-node-info flag has been deprecated and will be removed in a future version. Use the generate-node-info command instead.")
-                justGenerateNodeInfo.cmdLineOptions.copyFrom(cmdLineOptions)
-                justGenerateNodeInfo.runProgram()
+                justGenerateNodeInfoCli.cmdLineOptions.copyFrom(cmdLineOptions)
+                justGenerateNodeInfoCli.runProgram()
             }
             cmdLineOptions.justGenerateRpcSslCerts -> {
                 Node.printWarning("The --just-generate-rpc-ssl-settings flag has been deprecated and will be removed in a future version. Use the generate-rpc-ssl-settings command instead.")
-                justGenerateRpcSslCerts.cmdLineOptions.copyFrom(cmdLineOptions)
-                justGenerateRpcSslCerts.runProgram()
+                justGenerateRpcSslCertsCli.cmdLineOptions.copyFrom(cmdLineOptions)
+                justGenerateRpcSslCertsCli.runProgram()
             }
             else -> startup.initialiseAndRun(cmdLineOptions, object : RunAfterNodeInitialisation {
                 val startupTime = System.currentTimeMillis()
@@ -140,7 +140,7 @@ open class NodeStartup : NodeStartupLogging {
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
         // Step 5. Load and validate node configuration.
-        val configuration = cmdLineOptions.nodeConfiguration().doOnErrors(::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
+        val configuration = cmdLineOptions.nodeConfiguration().doOnErrors(ValidateConfigurationCli.Companion::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
 
         // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
         attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success
@@ -160,11 +160,6 @@ open class NodeStartup : NodeStartupLogging {
         }.doOnException(::handleStartError) as? Try.Success ?: return ExitCodes.FAILURE
 
         return ExitCodes.SUCCESS
-    }
-
-    private fun logConfigurationErrors(errors: Iterable<Exception>) {
-
-        errors.forEach { error -> logger.error("Error while parsing node configuration.", error) }
     }
 
     protected open fun preNetworkRegistration(conf: NodeConfiguration) = Unit

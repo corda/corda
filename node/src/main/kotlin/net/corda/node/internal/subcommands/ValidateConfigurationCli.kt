@@ -13,22 +13,27 @@ import net.corda.node.services.config.NodeConfiguration
 
 internal class ValidateConfigurationCli(private val cmdLineOptions: SharedNodeCmdLineOptions) : CliWrapperBase("validate-configuration", "Validates the configuration without starting the node.") {
 
-    private companion object {
+    internal companion object {
 
         private val logger = loggerFor<ValidateConfigurationCli>()
+
+        internal fun logConfigurationErrors(errors: Iterable<Exception>) {
+
+            errors.forEach { error ->
+                logger.error("Error while parsing node configuration.", error)
+            }
+        }
     }
 
     override fun runProgram(): Int {
 
         val configuration = cmdLineOptions.nodeConfiguration()
         if (configuration.isInvalid) {
-            logger.error("Invalid node configuration. Errors were:${System.lineSeparator()}${configuration.errorsDescription()}")
+            logConfigurationErrors(configuration.errors)
             return ExitCodes.FAILURE
         }
         return ExitCodes.SUCCESS
     }
-
-    private fun Validated<*, Exception>.errorsDescription() = errors.asSequence().map(Exception::message).joinToString(System.lineSeparator())
 }
 
 internal fun SharedNodeCmdLineOptions.nodeConfiguration(): Valid<NodeConfiguration> = NodeConfigurationParser.invoke(this)

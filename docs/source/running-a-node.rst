@@ -66,8 +66,6 @@ Sub-commands
 
 ``initial-registration``: Starts initial node registration with the compatibility zone to obtain a certificate from the Doorman.
 
-``validate-configuration``: Validates the actual configuration without starting the node.
-
 Parameters:
 
 * ``--network-root-truststore``, ``-t`` **required**: Network root trust store obtained from network operator.
@@ -78,6 +76,9 @@ Parameters:
 ``generate-rpc-ssl-settings``: Generates the SSL keystore and truststore for a secure RPC connection.
 
 ``install-shell-extensions``: Install ``corda`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
+
+
+``validate-configuration``: Validates the actual configuration without starting the node.
 
 .. _enabling-remote-debugging:
 
