@@ -162,7 +162,7 @@ open class NodeStartup : NodeStartupLogging {
         return ExitCodes.SUCCESS
     }
 
-    private fun logConfigurationErrors(errors: Set<Exception>) {
+    private fun logConfigurationErrors(errors: Iterable<Exception>) {
 
         errors.forEach { error -> logger.error("Error while parsing node configuration.", error) }
     }
