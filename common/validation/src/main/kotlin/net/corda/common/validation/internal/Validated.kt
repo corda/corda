@@ -33,7 +33,7 @@ interface Validated<TARGET, ERROR> {
     /**
      * Returns the underlying value as optional, with a null result instead of an exception if validation rules were violated.
      */
-    val valueOptional: TARGET? get() = if (isValid) value else null
+    val optional: TARGET? get() = if (isValid) value else null
 
     /**
      * Returns a valid [TARGET] if no validation errors are present. Otherwise, it throws the exception produced by [exceptionOnErrors], defaulting to [IllegalStateException].

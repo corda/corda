@@ -142,7 +142,7 @@ open class NodeStartup : NodeStartupLogging {
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
         // Step 5. Load and validate node configuration.
-        val configuration = cmdLineOptions.nodeConfiguration().doOnErrors(::logConfigurationErrors).valueOptional ?: return ExitCodes.FAILURE
+        val configuration = cmdLineOptions.nodeConfiguration().doOnErrors(::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
 
         // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
         attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success

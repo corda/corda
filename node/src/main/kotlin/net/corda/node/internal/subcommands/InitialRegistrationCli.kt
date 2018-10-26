@@ -82,7 +82,7 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
     }
 
     private fun initialRegistration(config: NodeConfiguration) {
-        // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.parseConfiguration]
+        // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
         attempt { registerWithNetwork(config) }.doOnException(this::handleRegistrationError) as? Try.Success
         // At this point the node registration was successful. We can delete the marker file.
         deleteNodeRegistrationMarker(baseDirectory)
