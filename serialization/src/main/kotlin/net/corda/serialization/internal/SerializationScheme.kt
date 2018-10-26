@@ -32,7 +32,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
                                                               override val encoding: SerializationEncoding?,
                                                               override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist,
                                                               override val lenientCarpenterEnabled: Boolean = false,
-                                                              private val builder: AttachmentsClassLoaderBuilder = AttachmentsClassLoaderBuilder(properties, deserializationClassLoader)
+                                                              private val builder: AttachmentsClassLoaderBuilder = AttachmentsClassLoaderBuilder()
 ) : SerializationContext {
 
 
@@ -43,7 +43,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
      */
     override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext {
         properties[attachmentsClassLoaderEnabledPropertyName] as? Boolean == true || return this
-        val classLoader = builder.build(attachmentHashes) ?: return this
+        val classLoader = builder.build(attachmentHashes, properties, deserializationClassLoader) ?: return this
         return withClassLoader(classLoader)
     }
 
@@ -77,10 +77,10 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
  * can replace it with an alternative version.
  */
 @DeleteForDJVM
-class AttachmentsClassLoaderBuilder(private val properties: Map<Any, Any>, private val deserializationClassLoader: ClassLoader) {
+class AttachmentsClassLoaderBuilder() {
     private val cache: Cache<List<SecureHash>, AttachmentsClassLoader> = Caffeine.newBuilder().weakValues().maximumSize(1024).build()
 
-    fun build(attachmentHashes: List<SecureHash>): AttachmentsClassLoader? {
+    fun build(attachmentHashes: List<SecureHash>, properties: Map<Any, Any>, deserializationClassLoader: ClassLoader): AttachmentsClassLoader? {
         val serializationContext = properties[serializationContextKey] as? SerializeAsTokenContext ?: return null // Some tests don't set one.
         try {
             return cache.get(attachmentHashes) {
