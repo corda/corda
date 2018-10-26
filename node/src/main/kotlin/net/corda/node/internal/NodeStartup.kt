@@ -1,8 +1,6 @@
 package net.corda.node.internal
 
-import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
-import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
 import net.corda.cliutils.*
 import net.corda.core.crypto.Crypto
@@ -167,13 +165,6 @@ open class NodeStartup : NodeStartupLogging {
     private fun logConfigurationErrors(errors: Set<Exception>) {
 
         logger.error("Invalid node configuration. Errors were:${System.lineSeparator()}${errors.asSequence().map(Exception::message).joinToString(System.lineSeparator())}")
-    }
-
-    private fun log(config: Config) {
-
-        if (cmdLineOptions.devMode == true) {
-            println("Config:\n${config.root().render(ConfigRenderOptions.defaults())}")
-        }
     }
 
     protected open fun preNetworkRegistration(conf: NodeConfiguration) = Unit
