@@ -1,0 +1,9 @@
+Corda Enterprise Performance Test Suite
+
+File Contents:
+jmeter-corda-[version].jar - This is the jar containing the JMeter software to drive any performance tests.
+corda-ptflows-[version].jar - This is the default performance test CordApp.
+Sample Testplans - example for JMeter jmx test plan files. Open in the JMeter GUI to look at and try out.
+
+Documentation:
+Please go to https://docs.corda.r3.com/performance-testing/introduction.html for a full documentation of this package

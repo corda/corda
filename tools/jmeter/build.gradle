@@ -155,7 +155,26 @@ task buildJMeterJAR(type: FatCapsule) {
         jvmArgs = ['-Xms512m', '-Xmx512m', '-XX:+UseG1GC']
     }
 }
+
+// Build a zip file that can be downloaded by clients containing everything they need to get started with
+// performance testing
+task buildReleasePackage(type: Zip) {
+    baseName = "corda-performance-testsuite"
+    from (buildJMeterJAR){
+        include "jmeter-corda*.jar"
+    }
+    from (configurations.compile.files){
+        include "corda-ptflow*.jar"
+    }
+    from(sourceSets.main.resources.getSrcDirs().first().getPath() + "/../data"){
+        include "Sample Testplans/*"
+        include "LICENSE"
+        include "README"
+    }
+}
+
 assemble.dependsOn buildJMeterJAR
+assemble.dependsOn buildReleasePackage
 
 artifacts {
     runtimeArtifacts buildJMeterJAR
