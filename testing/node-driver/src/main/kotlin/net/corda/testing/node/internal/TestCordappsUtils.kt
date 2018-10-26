@@ -13,6 +13,7 @@ import kotlin.reflect.KClass
 
 @JvmField
 val FINANCE_CORDAPP: TestCordappImpl = cordappForPackages("net.corda.finance")
+val BUSINESS_NETWORK_CORDAPP: TestCordappImpl = cordappForPackages("net.corda.sample.businessnetwork")
 
 /** Creates a [TestCordappImpl] for each package. */
 fun cordappsForPackages(vararg packageNames: String): List<TestCordappImpl> = cordappsForPackages(packageNames.asList())

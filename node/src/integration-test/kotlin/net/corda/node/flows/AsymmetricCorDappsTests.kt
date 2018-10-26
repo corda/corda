@@ -76,7 +76,7 @@ class AsymmetricCorDappsTests : IntegrationTest() {
     fun `shared cordapps with asymmetric specific classes in process`() {
         val sharedCordapp = cordappForClasses(Ping::class.java)
         val cordappForNodeB = cordappForClasses(Pong::class.java)
-        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = setOf(sharedCordapp))) {
+        driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = setOf(sharedCordapp))) {
 
             val (nodeA, nodeB) = listOf(startNode(providedName = ALICE_NAME), startNode(providedName = BOB_NAME, additionalCordapps = setOf(cordappForNodeB))).transpose().getOrThrow()
             nodeA.rpc.startFlow(::Ping, nodeB.nodeInfo.singleIdentity(), 1).returnValue.getOrThrow()

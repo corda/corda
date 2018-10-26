@@ -31,6 +31,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.*
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPP
+import net.corda.testing.node.internal.BUSINESS_NETWORK_CORDAPP
 import java.time.Instant
 import java.util.*
 import kotlin.reflect.KClass
@@ -66,18 +67,22 @@ class ExplorerSimulation(private val options: OptionSet) {
     private val issuers = HashMap<Currency, CordaRPCOps>()
     private val parties = ArrayList<Pair<Party, CordaRPCOps>>()
 
+    init {
+        startDemoNodes()
+    }
+
     private fun onEnd() {
         println("Closing RPC connections")
         RPCConnections.forEach { it.close() }
     }
 
-    fun startDemoNodes() {
+    private fun startDemoNodes() {
         val portAllocation = PortAllocation.Incremental(20000)
         driver(DriverParameters(
                 portAllocation = portAllocation,
                 extraCordappPackagesToScan = packagesOfClasses(CashIssueFlow::class, Cash::class, CashSchemaV1::class,
                         IOUFlow::class, ObtainMembershipListContentFlow::class),
-                cordappsForAllNodes = listOf(FINANCE_CORDAPP),
+                cordappsForAllNodes = listOf(FINANCE_CORDAPP, BUSINESS_NETWORK_CORDAPP),
                 waitForAllNodesToFinish = true,
                 jmxPolicy = JmxPolicy(true)
         )) {
