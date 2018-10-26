@@ -10,6 +10,7 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.utilities.loggerFor
 import net.corda.node.SharedNodeCmdLineOptions
+import net.corda.node.internal.initLogging
 import net.corda.node.services.config.NodeConfiguration
 import picocli.CommandLine.*
 import java.nio.file.Path
@@ -42,6 +43,8 @@ internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration
 
     @Mixin
     private val cmdLineOptions = SharedNodeCmdLineOptions()
+
+    override fun initLogging() = initLogging(cmdLineOptions.baseDirectory)
 
     override fun runProgram(): Int {
 
