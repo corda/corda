@@ -66,6 +66,8 @@ Sub-commands
 
 ``initial-registration``: Starts initial node registration with the compatibility zone to obtain a certificate from the Doorman.
 
+``validate-configuration``: Validates the actual configuration without starting the node.
+
 Parameters:
 
 * ``--network-root-truststore``, ``-t`` **required**: Network root trust store obtained from network operator.

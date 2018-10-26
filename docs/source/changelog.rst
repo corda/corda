@@ -7,6 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* Added new "validate-configuration" sub-command to `corda.jar`, allowing to validate the actual node configuration without starting the node.
+
 * Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter
 
 * Introduce minimum and target platform version for CorDapps.
