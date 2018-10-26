@@ -31,6 +31,11 @@ interface Validated<TARGET, ERROR> {
     val isInvalid: Boolean get() = !isValid
 
     /**
+     * Returns the underlying value as optional, with a null result instead of an exception if validation rules were violated.
+     */
+    val valueOptional: TARGET? get() = if (isValid) value else null
+
+    /**
      * Returns a valid [TARGET] if no validation errors are present. Otherwise, it throws the exception produced by [exceptionOnErrors], defaulting to [IllegalStateException].
      *
      * @throws IllegalStateException or the result of [exceptionOnErrors] if there are errors.
@@ -51,6 +56,30 @@ interface Validated<TARGET, ERROR> {
      * Applies the [convertError] function to the errors set, if not empty. Otherwise, returns a [Validated] wrapper with a [MAPPED_ERROR] generic type.
      */
     fun <MAPPED_ERROR> mapErrors(convertError: (ERROR) -> MAPPED_ERROR): Validated<TARGET, MAPPED_ERROR>
+
+    /**
+     * Performs the given [action] if the underlying value is valid.
+     * @return itself for fluent chained invocation.
+     */
+    fun doIfValid(action: (TARGET) -> Unit): Validated<TARGET, ERROR> {
+
+        if (isValid) {
+            action.invoke(value)
+        }
+        return this
+    }
+
+    /**
+     * Performs the given [action] if the underlying value is invalid.
+     * @return itself for fluent chained invocation.
+     */
+    fun doOnErrors(action: (Set<ERROR>) -> Unit): Validated<TARGET, ERROR> {
+
+        if (isInvalid) {
+            action.invoke(errors)
+        }
+        return this
+    }
 
     companion object {
 

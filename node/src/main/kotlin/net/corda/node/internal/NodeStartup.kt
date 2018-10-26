@@ -142,13 +142,7 @@ open class NodeStartup : NodeStartupLogging {
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
         // Step 5. Load and validate node configuration.
-        val configuration = (attempt(::loadConfig).doOnException(handleConfigurationLoadingError(cmdLineOptions.configFile)) as? Try.Success)?.let(Try.Success<NodeConfiguration>::value)
-                ?: return ExitCodes.FAILURE
-        val errors = configuration.validate()
-        if (errors.isNotEmpty()) {
-            logger.error("Invalid node configuration. Errors were:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
-            return ExitCodes.FAILURE
-        }
+        val configuration = cmdLineOptions.nodeConfiguration().doOnErrors(::logConfigurationErrors).valueOptional ?: return ExitCodes.FAILURE
 
         // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
         attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success
@@ -170,7 +164,10 @@ open class NodeStartup : NodeStartupLogging {
         return ExitCodes.SUCCESS
     }
 
-    private fun loadConfig() = with(cmdLineOptions) { parseConfiguration(rawConfiguration().also(::log)) }
+    private fun logConfigurationErrors(errors: Set<Exception>) {
+
+        logger.error("Invalid node configuration. Errors were:${System.lineSeparator()}${errors.asSequence().map(Exception::message).joinToString(System.lineSeparator())}")
+    }
 
     private fun log(config: Config) {
 
