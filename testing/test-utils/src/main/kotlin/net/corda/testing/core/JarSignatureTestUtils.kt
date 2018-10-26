@@ -31,6 +31,10 @@ object JarSignatureTestUtils {
     fun Path.createJar(fileName: String, vararg contents: String) =
             executeProcess(*(arrayOf("jar", "cvf", fileName) + contents))
 
+    fun Path.addIndexList(fileName: String) {
+        executeProcess(*(arrayOf("jar", "i", fileName)))
+    }
+
     fun Path.updateJar(fileName: String, vararg contents: String) =
             executeProcess(*(arrayOf("jar", "uvf", fileName) + contents))
 

@@ -5,10 +5,12 @@ import net.corda.testing.core.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.JarSignatureTestUtils.getJarSigners
 import net.corda.testing.core.JarSignatureTestUtils.signJar
 import net.corda.testing.core.JarSignatureTestUtils.updateJar
+import net.corda.testing.core.JarSignatureTestUtils.addIndexList
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.AfterClass
@@ -138,6 +140,18 @@ class JarSignatureCollectorTest {
         dir.createJar(FILENAME, "_signable1", "_signable2")
         val key = dir.signJar(FILENAME, CHARLIE, "storepass", CHARLIE_PASS)
         assertEquals(listOf(key), dir.getJarSigners(FILENAME)) // We only used CHARLIE's distinguished name, so the keys will be different.
+    }
+
+    @Test
+    fun `one signer jar with META-INF INDEX dot LIST`() {
+        dir.createJar(FILENAME, "_signable1", "_signable2")
+        dir.addIndexList(FILENAME)
+        val key = signAsAlice()
+        assertEquals(listOf(key), dir.getJarSigners(FILENAME))
+
+        (dir / "my-dir").createDirectory()
+        dir.updateJar(FILENAME, "my-dir")
+        assertEquals(listOf(key), dir.getJarSigners(FILENAME)) // Unsigned directory is irrelevant.
     }
 
     private fun signAsAlice() = dir.signJar(FILENAME, ALICE, "storepass", ALICE_PASS)
