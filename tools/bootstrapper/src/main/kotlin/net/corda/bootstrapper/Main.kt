@@ -80,7 +80,7 @@ class PublicKeyConverter : CommandLine.ITypeConverter<PublicKey> {
         if (!keyStore.isBlank()) {
             val keyStoreSpec = keyStore.split(":")
             if (keyStoreSpec.size != 3)
-                throw IllegalArgumentException("keystore argument must specify 3 elements separated by semi-colon: 'keyStorePath:password:alias'")
+                throw IllegalArgumentException("keystore argument must specify 3 elements separated by colon: 'keyStorePath:password:alias'")
             val ks = loadKeyStore(Paths.get(keyStoreSpec[0]), keyStoreSpec[1])
             return ks.getCertificate(keyStoreSpec[2]).publicKey
         }
