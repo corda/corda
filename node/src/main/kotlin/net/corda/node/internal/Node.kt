@@ -475,7 +475,7 @@ open class Node(configuration: NodeConfiguration,
         nodeSerializationEnv = SerializationEnvironment.with(
                 SerializationFactoryImpl().apply {
                     registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps, Caffeine.newBuilder().maximumSize(128).build<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>().asMap()))
-                    registerScheme(AMQPClientSerializationScheme(cordappLoader.cordapps))
+                    registerScheme(AMQPClientSerializationScheme(cordappLoader.cordapps, Caffeine.newBuilder().maximumSize(128).build<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>().asMap()))
                 },
                 p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                 rpcServerContext = AMQP_RPC_SERVER_CONTEXT.withClassLoader(classloader),

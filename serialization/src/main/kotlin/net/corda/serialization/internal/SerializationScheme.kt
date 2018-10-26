@@ -122,7 +122,8 @@ open class SerializationFactoryImpl(
         // truncate sequence to at most magicSize, and make sure it's a copy to avoid holding onto large ByteArrays
         val magic = CordaSerializationMagic(byteSequence.slice(end = magicSize).copyBytes())
         val lookupKey = magic to target
-        return (schemes.get(lookupKey) ?: schemes.computeIfAbsent(lookupKey) {
+        // ConcurrentHashMap.get() is lock free, but computeIfAbsent is not, even if the key is in the map already.
+        return (schemes[lookupKey] ?: schemes.computeIfAbsent(lookupKey) {
             registeredSchemes.filter { it.canDeserializeVersion(magic, target) }.forEach { return@computeIfAbsent it } // XXX: Not single?
             logger.warn("Cannot find serialization scheme for: [$lookupKey, " +
                     "${if (magic == amqpMagic) "AMQP" else "UNKNOWN MAGIC"}] registeredSchemes are: $registeredSchemes")

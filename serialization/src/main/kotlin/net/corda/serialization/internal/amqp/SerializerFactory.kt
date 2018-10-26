@@ -98,6 +98,7 @@ open class SerializerFactory(
 
     val classloader: ClassLoader get() = classCarpenter.classloader
 
+    // Used to short circuit any computation for a given input, for performance.
     private data class MemoType(val actualClass: Class<*>?, val declaredType: Type) : Type
 
     /**
@@ -112,7 +113,8 @@ open class SerializerFactory(
         logger.trace { "Get Serializer for $actualClass ${declaredType.typeName}" }
 
         val ourType = MemoType(actualClass, declaredType)
-        return serializersByType.get(ourType) ?: run {
+        // ConcurrentHashMap.get() is lock free, but computeIfAbsent is not, even if the key is in the map already.
+        return serializersByType[ourType] ?: run {
 
             val declaredClass = declaredType.asClass()
             val actualType: Type = if (actualClass == null) declaredType
@@ -156,6 +158,7 @@ open class SerializerFactory(
             }
 
             serializersByDescriptor.putIfAbsent(serializer.typeDescriptor, serializer)
+            // Always store the short-circuit too, for performance.
             serializersByType.putIfAbsent(ourType, serializer)
             return serializer
         }
