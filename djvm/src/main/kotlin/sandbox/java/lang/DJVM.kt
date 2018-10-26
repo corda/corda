@@ -151,7 +151,7 @@ fun hashCode(obj: Any?): Int {
         System.identityHashCode(obj)
     } else {
         // Throw the same exception that the JVM would throw in this case.
-        throw NullPointerException()
+        throw NullPointerException().sanitise()
     }
 }
 
@@ -177,7 +177,7 @@ fun classForName(className: kotlin.String, initialize: kotlin.Boolean, classLoad
  */
 private fun toSandbox(className: kotlin.String): kotlin.String {
     if (bannedClasses.any { it.matches(className) }) {
-        throw ClassNotFoundException(className)
+        throw ClassNotFoundException(className).sanitise()
     }
     return SANDBOX_PREFIX + className
 }
@@ -216,7 +216,7 @@ fun fromDJVM(t: Throwable?): kotlin.Throwable {
                     .newInstance(t) as kotlin.Throwable
             }
         } catch (e: Exception) {
-            RuleViolationError(e.message)
+            RuleViolationError(e.message).sanitise()
         }
     }
 }
@@ -241,8 +241,18 @@ fun catch(t: kotlin.Throwable): Throwable {
     try {
         return t.toDJVMThrowable()
     } catch (e: Exception) {
-        throw RuleViolationError(e.message)
+        throw RuleViolationError(e.message).sanitise()
     }
+}
+
+/**
+ * Clean up exception stack trace for throwing.
+ */
+private fun <T: kotlin.Throwable> T.sanitise(): T {
+    stackTrace = stackTrace.let {
+        it.sliceArray(1 until findEntryPointIndex(it))
+    }
+    return this
 }
 
 /**
@@ -282,12 +292,16 @@ private fun Class<*>.createJavaThrowable(t: Throwable): kotlin.Throwable {
     }
 }
 
-private fun sanitiseToDJVM(source: Array<java.lang.StackTraceElement>): Array<StackTraceElement> {
+private fun findEntryPointIndex(source: Array<java.lang.StackTraceElement>): Int {
     var idx = 0
     while (idx < source.size && !isEntryPoint(source[idx])) {
         ++idx
     }
-    return copyToDJVM(source, 0, idx)
+    return idx
+}
+
+private fun sanitiseToDJVM(source: Array<java.lang.StackTraceElement>): Array<StackTraceElement> {
+    return copyToDJVM(source, 0, findEntryPointIndex(source))
 }
 
 internal fun copyToDJVM(source: Array<java.lang.StackTraceElement>, fromIdx: Int, toIdx: Int): Array<StackTraceElement> {

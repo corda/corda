@@ -78,7 +78,7 @@ public class SandboxObjectHashCodeJavaTest extends TestBase {
         @SuppressWarnings("all")
         @Override
         public Integer apply(Object obj) {
-            return new Object[1].hashCode();
+            return new Object[0].hashCode();
         }
     }
 
