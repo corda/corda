@@ -56,11 +56,12 @@ abstract class NodeCliCommand(alias: String, description: String, val startup: N
 
 /** Main corda entry point. */
 open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
-    val startup = NodeStartup()
-    private val networkCacheCli = ClearNetworkCacheCli(startup)
-    private val justGenerateNodeInfoCli = GenerateNodeInfoCli(startup)
-    private val justGenerateRpcSslCertsCli = GenerateRpcSslCertsCli(startup)
-    private val initialRegistrationCli = InitialRegistrationCli(startup)
+    open val startup = NodeStartup()
+
+    private val networkCacheCli by lazy { ClearNetworkCacheCli(startup) }
+    private val justGenerateNodeInfoCli by lazy { GenerateNodeInfoCli(startup) }
+    private val justGenerateRpcSslCertsCli by lazy { GenerateRpcSslCertsCli(startup) }
+    private val initialRegistrationCli by lazy { InitialRegistrationCli(startup) }
 
     override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
 
