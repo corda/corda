@@ -78,12 +78,12 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
  */
 @DeleteForDJVM
 class AttachmentsClassLoaderBuilder() {
-    private val cache: Cache<List<SecureHash>, AttachmentsClassLoader> = Caffeine.newBuilder().weakValues().maximumSize(1024).build()
+    private val cache: Cache<Pair<List<SecureHash>, ClassLoader>, AttachmentsClassLoader> = Caffeine.newBuilder().weakValues().maximumSize(1024).build()
 
     fun build(attachmentHashes: List<SecureHash>, properties: Map<Any, Any>, deserializationClassLoader: ClassLoader): AttachmentsClassLoader? {
         val serializationContext = properties[serializationContextKey] as? SerializeAsTokenContext ?: return null // Some tests don't set one.
         try {
-            return cache.get(attachmentHashes) {
+            return cache.get(Pair(attachmentHashes, deserializationClassLoader)) {
                 val missing = ArrayList<SecureHash>()
                 val attachments = ArrayList<Attachment>()
                 attachmentHashes.forEach { id ->
