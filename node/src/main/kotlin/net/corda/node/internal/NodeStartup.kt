@@ -1,6 +1,8 @@
 package net.corda.node.internal
 
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
+import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
 import net.corda.cliutils.*
 import net.corda.core.crypto.Crypto
@@ -57,45 +59,49 @@ abstract class NodeCliCommand(alias: String, description: String, val startup: N
 /** Main corda entry point. */
 open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     val startup = NodeStartup()
-    private val networkCacheCli = ClearNetworkCacheCli(startup)
-    private val justGenerateNodeInfoCli = GenerateNodeInfoCli(startup)
-    private val justGenerateRpcSslCertsCli = GenerateRpcSslCertsCli(startup)
-    private val initialRegistrationCli = InitialRegistrationCli(startup)
+    @Mixin
+    val cmdLineOptions = NodeCmdLineOptions()
+
+    private val networkCache = ClearNetworkCacheCli(startup)
+    private val justGenerateNodeInfo = GenerateNodeInfoCli(startup)
+    private val justGenerateRpcSslCerts = GenerateRpcSslCertsCli(startup)
+    private val initialRegistration = InitialRegistrationCli(startup)
+    private val validateConfiguration = ValidateConfigurationCli(cmdLineOptions)
 
     override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
 
-    override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli)
+    override fun additionalSubCommands() = setOf(networkCache, justGenerateNodeInfo, justGenerateRpcSslCerts, initialRegistration, validateConfiguration)
 
     override fun runProgram(): Int {
         return when {
             InitialRegistration.checkRegistrationMode(cmdLineOptions.baseDirectory) -> {
                 println("Node was started before in `initial-registration` mode, but the registration was not completed.\nResuming registration.")
-                initialRegistrationCli.cmdLineOptions.copyFrom(cmdLineOptions)
-                initialRegistrationCli.runProgram()
+                initialRegistration.cmdLineOptions.copyFrom(cmdLineOptions)
+                initialRegistration.runProgram()
             }
             //deal with legacy flags and redirect to subcommands
             cmdLineOptions.isRegistration -> {
                 Node.printWarning("The --initial-registration flag has been deprecated and will be removed in a future version. Use the initial-registration command instead.")
                 requireNotNull(cmdLineOptions.networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
-                initialRegistrationCli.networkRootTrustStorePassword = cmdLineOptions.networkRootTrustStorePassword!!
-                initialRegistrationCli.networkRootTrustStorePathParameter = cmdLineOptions.networkRootTrustStorePathParameter
-                initialRegistrationCli.cmdLineOptions.copyFrom(cmdLineOptions)
-                initialRegistrationCli.runProgram()
+                initialRegistration.networkRootTrustStorePassword = cmdLineOptions.networkRootTrustStorePassword!!
+                initialRegistration.networkRootTrustStorePathParameter = cmdLineOptions.networkRootTrustStorePathParameter
+                initialRegistration.cmdLineOptions.copyFrom(cmdLineOptions)
+                initialRegistration.runProgram()
             }
             cmdLineOptions.clearNetworkMapCache -> {
                 Node.printWarning("The --clear-network-map-cache flag has been deprecated and will be removed in a future version. Use the clear-network-cache command instead.")
-                networkCacheCli.cmdLineOptions.copyFrom(cmdLineOptions)
-                networkCacheCli.runProgram()
+                networkCache.cmdLineOptions.copyFrom(cmdLineOptions)
+                networkCache.runProgram()
             }
             cmdLineOptions.justGenerateNodeInfo -> {
                 Node.printWarning("The --just-generate-node-info flag has been deprecated and will be removed in a future version. Use the generate-node-info command instead.")
-                justGenerateNodeInfoCli.cmdLineOptions.copyFrom(cmdLineOptions)
-                justGenerateNodeInfoCli.runProgram()
+                justGenerateNodeInfo.cmdLineOptions.copyFrom(cmdLineOptions)
+                justGenerateNodeInfo.runProgram()
             }
             cmdLineOptions.justGenerateRpcSslCerts -> {
                 Node.printWarning("The --just-generate-rpc-ssl-settings flag has been deprecated and will be removed in a future version. Use the generate-rpc-ssl-settings command instead.")
-                justGenerateRpcSslCertsCli.cmdLineOptions.copyFrom(cmdLineOptions)
-                justGenerateRpcSslCertsCli.runProgram()
+                justGenerateRpcSslCerts.cmdLineOptions.copyFrom(cmdLineOptions)
+                justGenerateRpcSslCerts.runProgram()
             }
             else -> startup.initialiseAndRun(cmdLineOptions, object : RunAfterNodeInitialisation {
                 val startupTime = System.currentTimeMillis()
@@ -103,9 +109,6 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
             })
         }
     }
-
-    @Mixin
-    val cmdLineOptions = NodeCmdLineOptions()
 }
 
 /** This class provides a common set of functionality for starting a Node from command line arguments. */
@@ -139,7 +142,7 @@ open class NodeStartup : NodeStartupLogging {
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
         // Step 5. Load and validate node configuration.
-        val configuration = (attempt { cmdLineOptions.loadConfig() }.doOnException(handleConfigurationLoadingError(cmdLineOptions.configFile)) as? Try.Success)?.let(Try.Success<NodeConfiguration>::value)
+        val configuration = (attempt(::loadConfig).doOnException(handleConfigurationLoadingError(cmdLineOptions.configFile)) as? Try.Success)?.let(Try.Success<NodeConfiguration>::value)
                 ?: return ExitCodes.FAILURE
         val errors = configuration.validate()
         if (errors.isNotEmpty()) {
@@ -165,6 +168,15 @@ open class NodeStartup : NodeStartupLogging {
         }.doOnException(::handleStartError) as? Try.Success ?: return ExitCodes.FAILURE
 
         return ExitCodes.SUCCESS
+    }
+
+    private fun loadConfig() = with(cmdLineOptions) { parseConfiguration(rawConfiguration().also(::log)) }
+
+    private fun log(config: Config) {
+
+        if (cmdLineOptions.devMode == true) {
+            println("Config:\n${config.root().render(ConfigRenderOptions.defaults())}")
+        }
     }
 
     protected open fun preNetworkRegistration(conf: NodeConfiguration) = Unit
