@@ -15,7 +15,7 @@ import net.corda.node.services.config.NodeConfiguration
 import picocli.CommandLine.*
 import java.nio.file.Path
 
-internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration", "Validates the configuration without starting the node.") {
+internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration", "Validate the configuration without starting the node.") {
 
     internal companion object {
 
