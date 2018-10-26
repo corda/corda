@@ -164,7 +164,7 @@ open class NodeStartup : NodeStartupLogging {
 
     private fun logConfigurationErrors(errors: Set<Exception>) {
 
-        logger.error("Invalid node configuration. Errors were:${System.lineSeparator()}${errors.asSequence().map(Exception::message).joinToString(System.lineSeparator())}")
+        errors.forEach { error -> logger.error("Error while parsing node configuration.", error) }
     }
 
     protected open fun preNetworkRegistration(conf: NodeConfiguration) = Unit
