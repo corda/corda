@@ -74,6 +74,7 @@ class Jira:
         if dry_run:
             return Issue(self, fields=fields)
         try:
+            fields['labels'] = filter(lambda x: x is not None, fields['labels'])
             issue = self.jira.create_issue(fields)
             return Issue(self, issue=issue)
         except JIRAError as error:
