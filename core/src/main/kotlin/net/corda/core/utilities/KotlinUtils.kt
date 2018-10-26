@@ -1,4 +1,5 @@
 @file:KeepForDJVM
+
 package net.corda.core.utilities
 
 import net.corda.core.DeleteForDJVM
@@ -134,3 +135,17 @@ fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
 } catch (e: ExecutionException) {
     throw e.cause!!
 }
+
+private class LazyResolvedList<T, U>(val originalList: List<T>, val transform: (T, Int) -> U) : AbstractList<U>() {
+    private val partialResolvedList = MutableList<U?>(originalList.size) { null }
+
+    override val size = originalList.size
+
+    override fun get(index: Int) = partialResolvedList[index]
+            ?: transform(originalList[index], index).also { computed -> partialResolvedList[index] = computed }
+}
+
+/**
+ * Creates a lazy list that applies the [transform] function only when the element is accessed.
+ */
+fun <T, U> makeLazyResolvedList(originalList: List<T>, transform: (T, Int) -> U): List<U> = LazyResolvedList(originalList, transform)
