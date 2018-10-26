@@ -1,6 +1,7 @@
 package net.corda.node.internal.subcommands
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.ExitCodes
@@ -10,26 +11,43 @@ import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.utilities.loggerFor
 import net.corda.node.SharedNodeCmdLineOptions
 import net.corda.node.services.config.NodeConfiguration
+import picocli.CommandLine.*
+import java.nio.file.Path
 
-internal class ValidateConfigurationCli(private val cmdLineOptions: SharedNodeCmdLineOptions) : CliWrapperBase("validate-configuration", "Validates the configuration without starting the node.") {
+internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration", "Validates the configuration without starting the node.") {
 
     internal companion object {
 
         private val logger = loggerFor<ValidateConfigurationCli>()
 
-        internal fun logConfigurationErrors(errors: Iterable<Exception>) {
+        internal fun logConfigurationErrors(errors: Iterable<Exception>, configFile: Path) {
 
             errors.forEach { error ->
-                logger.error("Error while parsing node configuration.", error)
+                when (error) {
+                    is ConfigException.IO -> logger.error(configFileNotFoundMessage(configFile))
+                    else -> logger.error("Error while parsing node configuration.", error)
+                }
             }
         }
+
+        private fun configFileNotFoundMessage(configFile: Path): String {
+            return """
+                Unable to load the node config file from '$configFile'.
+
+                Try setting the --base-directory flag to change which directory the node
+                is looking in, or use the --config-file flag to specify it explicitly.
+            """.trimIndent()
+        }
     }
+
+    @Mixin
+    private val cmdLineOptions = SharedNodeCmdLineOptions()
 
     override fun runProgram(): Int {
 
         val configuration = cmdLineOptions.nodeConfiguration()
         if (configuration.isInvalid) {
-            logConfigurationErrors(configuration.errors)
+            logConfigurationErrors(configuration.errors, cmdLineOptions.configFile)
             return ExitCodes.FAILURE
         }
         return ExitCodes.SUCCESS
