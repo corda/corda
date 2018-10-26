@@ -34,13 +34,13 @@ class MigrationExporter(val parent: Path, val datasourceProperties: Properties, 
         const val CORDA_USER = "R3.Corda.Generated"
     }
 
-    fun generateMigrationForCorDapp(schemaName: String): Path {
+    fun generateMigrationForCorDapp(schemaName: String): Pair<Class<*>, Path> {
         val schemaClass = cordappClassLoader.loadClass(schemaName)
         val schemaObject = schemaClass.kotlin.objectOrNewInstance() as MappedSchema
         return generateMigrationForCorDapp(schemaObject)
     }
 
-    fun generateMigrationForCorDapp(mappedSchema: MappedSchema): Path {
+    fun generateMigrationForCorDapp(mappedSchema: MappedSchema): Pair<Class<*>, Path> {
 
         //create hibernate metadata for MappedSchema
         val metadata = createHibernateMetadataForSchema(mappedSchema)
@@ -64,7 +64,7 @@ class MigrationExporter(val parent: Path, val datasourceProperties: Properties, 
             setOutputFile(outputFile.absolutePath)
             execute(EnumSet.of(TargetType.SCRIPT), SchemaExport.Action.CREATE, metadata)
         }
-        return outputFile.toPath()
+        return mappedSchema::class.java to outputFile.toPath()
     }
 
     private fun createHibernateMetadataForSchema(mappedSchema: MappedSchema): Metadata {

@@ -73,7 +73,7 @@ class SchemaMigrationTest {
 
         // create a migration file for the DummyTestSchemaV1 and add it to the classpath
         val tmpFolder = Files.createTempDirectory("test")
-        val fileName = MigrationExporter(tmpFolder, dataSourceProps, Thread.currentThread().contextClassLoader, HikariDataSource(HikariConfig(dataSourceProps))).generateMigrationForCorDapp(DummyTestSchemaV1).fileName
+        val fileName = MigrationExporter(tmpFolder, dataSourceProps, Thread.currentThread().contextClassLoader, HikariDataSource(HikariConfig(dataSourceProps))).generateMigrationForCorDapp(DummyTestSchemaV1).second.fileName
         addToClassPath(tmpFolder)
 
         // run the migrations for DummyTestSchemaV1, which should pick up the migration file
