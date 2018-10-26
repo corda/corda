@@ -233,8 +233,8 @@ class DriverDSLImpl(
                 customOverrides,
                 startInSameProcess,
                 maximumHeapSize,
-                defaultParameters.additionalCordapps,
-                defaultParameters.regenerateCordappsOnStart,
+                additionalCordapps,
+                regenerateCordappsOnStart,
                 flowOverrides,
                 null
         )
