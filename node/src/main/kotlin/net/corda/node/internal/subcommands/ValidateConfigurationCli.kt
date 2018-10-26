@@ -63,12 +63,14 @@ private object NodeConfigurationParser : (SharedNodeCmdLineOptions) -> Valid<Nod
 
     private val logger = loggerFor<ValidateConfigurationCli>()
 
+    private val configRenderingOptions = ConfigRenderOptions.defaults().setComments(false).setOriginComments(false).setFormatted(true)
+
     override fun invoke(cmds: SharedNodeCmdLineOptions): Valid<NodeConfiguration> {
 
         return attempt(cmds::rawConfiguration).doIfValid(::log).attemptMap(cmds::parseConfiguration).mapValid(::validate)
     }
 
-    internal fun log(config: Config) = logger.debug("Actual configuration:\n${config.root().render(ConfigRenderOptions.defaults().setComments(false).setOriginComments(false).setFormatted(true))}")
+    internal fun log(config: Config) = logger.debug("Actual configuration:\n${config.root().render(configRenderingOptions)}")
 
     private fun validate(configuration: NodeConfiguration): Valid<NodeConfiguration> {
 
