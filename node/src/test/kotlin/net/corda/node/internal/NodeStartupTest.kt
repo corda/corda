@@ -1,6 +1,8 @@
 package net.corda.node.internal
 
 import net.corda.core.internal.div
+import net.corda.node.InitialRegistrationCmdLineOptions
+import net.corda.node.internal.subcommands.InitialRegistrationCli
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.BeforeClass
@@ -11,7 +13,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 class NodeStartupTest {
-    private val startup = NodeStartup()
+    private val startup = NodeStartupCli()
 
     companion object {
         private lateinit var workingDirectory: Path
@@ -30,7 +32,6 @@ class NodeStartupTest {
         assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / "node.conf")
         assertThat(startup.verbose).isEqualTo(false)
         assertThat(startup.loggingLevel).isEqualTo(Level.INFO)
-        assertThat(startup.cmdLineOptions.nodeRegistrationOption).isEqualTo(null)
         assertThat(startup.cmdLineOptions.noLocalShell).isEqualTo(false)
         assertThat(startup.cmdLineOptions.sshdServer).isEqualTo(false)
         assertThat(startup.cmdLineOptions.justGenerateNodeInfo).isEqualTo(false)
@@ -38,7 +39,7 @@ class NodeStartupTest {
         assertThat(startup.cmdLineOptions.unknownConfigKeysPolicy).isEqualTo(UnknownConfigKeysPolicy.FAIL)
         assertThat(startup.cmdLineOptions.devMode).isEqualTo(null)
         assertThat(startup.cmdLineOptions.clearNetworkMapCache).isEqualTo(false)
-        assertThat(startup.cmdLineOptions.networkRootTrustStorePath).isEqualTo(workingDirectory / "certificates" / "network-root-truststore.jks")
+        assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)
     }
 
     @Test
@@ -46,6 +47,6 @@ class NodeStartupTest {
         CommandLine.populateCommand(startup, "--base-directory", (workingDirectory / "another-base-dir").toString())
         assertThat(startup.cmdLineOptions.baseDirectory).isEqualTo(workingDirectory / "another-base-dir")
         assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / "another-base-dir" / "node.conf")
-        assertThat(startup.cmdLineOptions.networkRootTrustStorePath).isEqualTo(workingDirectory / "another-base-dir" / "certificates" / "network-root-truststore.jks")
+        assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)
     }
 }

@@ -12,14 +12,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Function;
 
-import static java.util.Collections.emptySet;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class SandboxThrowableJavaTest extends TestBase {
 
     @Test
     public void testUserExceptionHandling() {
-        sandbox(new Object[]{ DEFAULT }, emptySet(), WARNING, true, ctx -> {
+        parentedSandbox(WARNING, true, ctx -> {
             SandboxExecutor<String, String[]> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
             ExecutionSummaryWithResult<String[]> output = WithJava.run(executor, ThrowAndCatchJavaExample.class, "Hello World!");
             assertThat(output.getResult())
@@ -30,7 +29,7 @@ public class SandboxThrowableJavaTest extends TestBase {
 
     @Test
     public void testCheckedExceptions() {
-        sandbox(new Object[]{ DEFAULT }, emptySet(), WARNING, true, ctx -> {
+        parentedSandbox(WARNING, true, ctx -> {
             SandboxExecutor<String, String> executor = new DeterministicSandboxExecutor<>(ctx.getConfiguration());
 
             ExecutionSummaryWithResult<String> success = WithJava.run(executor, JavaWithCheckedExceptions.class, "http://localhost:8080/hello/world");

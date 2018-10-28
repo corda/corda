@@ -11,20 +11,17 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.CommercialPaper
-import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.TwoPartyTradeFlow
-import net.corda.traderdemo.TransactionGraphSearch
 import java.util.*
 
 @InitiatedBy(SellerFlow::class)
-class BuyerFlow(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
+open class BuyerFlow(private val otherSideSession: FlowSession) : FlowLogic<SignedTransaction>() {
 
     object STARTING_BUY : ProgressTracker.Step("Seller connected, purchasing commercial paper asset")
-
     override val progressTracker: ProgressTracker = ProgressTracker(STARTING_BUY)
 
     @Suspendable
-    override fun call() {
+    override fun call(): SignedTransaction {
         progressTracker.currentStep = STARTING_BUY
 
         // Receive the offered amount and automatically agree to it (in reality this would be a longer negotiation)
@@ -43,33 +40,6 @@ class BuyerFlow(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         println("Purchase complete - we are a happy customer! Final transaction is: " +
                 "\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
 
-        logIssuanceAttachment(tradeTX)
-        logBalance()
-    }
-
-    private fun logBalance() {
-        val balances = serviceHub.getCashBalances().entries.map { "${it.key.currencyCode} ${it.value}" }
-        println("Remaining balance: ${balances.joinToString()}")
-    }
-
-    private fun logIssuanceAttachment(tradeTX: SignedTransaction) {
-        // Find the original CP issuance.
-        // TODO: This is potentially very expensive, and requires transaction details we may no longer have once
-        //       SGX is enabled. Should be replaced with including the attachment on all transactions involving
-        //       the state.
-        val search = TransactionGraphSearch(serviceHub.validatedTransactions, listOf(tradeTX.tx),
-                TransactionGraphSearch.Query(withCommandOfType = CommercialPaper.Commands.Issue::class.java,
-                        followInputsOfType = CommercialPaper.State::class.java))
-        val cpIssuance = search.call().single()
-
-        // Buyer will fetch the attachment from the seller automatically when it resolves the transaction.
-
-        cpIssuance.attachments.first().let {
-            println("""
-
-The issuance of the commercial paper came with an attachment. You can find it in the attachments directory: $it.jar
-
-${Emoji.renderIfSupported(cpIssuance)}""")
-        }
+        return tradeTX
     }
 }

@@ -22,6 +22,7 @@ import net.corda.finance.flows.*
 import net.corda.finance.flows.CashExitFlow.ExitRequest
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.finance.schemas.CashSchemaV1
+import net.corda.finance.internal.CashConfigDataFlow
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.sample.businessnetwork.iou.IOUFlow
 import net.corda.sample.businessnetwork.membership.flow.ObtainMembershipListContentFlow
@@ -29,6 +30,8 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.*
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.FINANCE_CORDAPP
+import net.corda.testing.node.internal.BUSINESS_NETWORK_CORDAPP
 import java.time.Instant
 import java.util.*
 import kotlin.reflect.KClass
@@ -64,17 +67,20 @@ class ExplorerSimulation(private val options: OptionSet) {
     private val issuers = HashMap<Currency, CordaRPCOps>()
     private val parties = ArrayList<Pair<Party, CordaRPCOps>>()
 
+    init {
+        startDemoNodes()
+    }
+
     private fun onEnd() {
         println("Closing RPC connections")
         RPCConnections.forEach { it.close() }
     }
 
-    fun startDemoNodes() {
+    private fun startDemoNodes() {
         val portAllocation = PortAllocation.Incremental(20000)
         driver(DriverParameters(
                 portAllocation = portAllocation,
-                extraCordappPackagesToScan = packagesOfClasses(CashIssueFlow::class, Cash::class, CashSchemaV1::class,
-                        IOUFlow::class, ObtainMembershipListContentFlow::class),
+                cordappsForAllNodes = listOf(FINANCE_CORDAPP, BUSINESS_NETWORK_CORDAPP),
                 waitForAllNodesToFinish = true,
                 jmxPolicy = JmxPolicy(true)
         )) {
@@ -83,10 +89,16 @@ class ExplorerSimulation(private val options: OptionSet) {
             val bob = startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
             val ukBankName = CordaX500Name(organisation = "UK Bank Plc", locality = "London", country = "GB")
             val usaBankName = CordaX500Name(organisation = "USA Bank Corp", locality = "New York", country = "US")
-            val issuerGBP = startNode(providedName = ukBankName, rpcUsers = listOf(manager),
-                    customOverrides = mapOf("custom" to mapOf("issuableCurrencies" to listOf("GBP"))))
-            val issuerUSD = startNode(providedName = usaBankName, rpcUsers = listOf(manager),
-                    customOverrides = mapOf("custom" to mapOf("issuableCurrencies" to listOf("USD"))))
+            val issuerGBP = startNode(
+                    providedName = ukBankName,
+                    rpcUsers = listOf(manager),
+                    additionalCordapps = listOf(FINANCE_CORDAPP.withConfig(mapOf("issuableCurrencies" to listOf("GBP"))))
+            )
+            val issuerUSD = startNode(
+                    providedName = usaBankName,
+                    rpcUsers = listOf(manager),
+                    additionalCordapps = listOf(FINANCE_CORDAPP.withConfig(mapOf("issuableCurrencies" to listOf("USD"))))
+            )
             val bno = startNode(providedName = IOUFlow.allowedMembershipName, rpcUsers = listOf(user))
 
             notaryNode = defaultNotaryNode.get()

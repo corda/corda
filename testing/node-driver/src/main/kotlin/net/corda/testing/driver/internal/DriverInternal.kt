@@ -14,6 +14,7 @@ import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.node.User
 import rx.Observable
 import java.nio.file.Path
+import javax.validation.constraints.NotNull
 
 interface NodeHandleInternal : NodeHandle {
     val configuration: NodeConfiguration
@@ -70,7 +71,11 @@ data class InProcessImpl(
     }
 
     override fun close() = stop()
-    override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> = node.registerInitiatedFlow(initiatedFlowClass)
+    @NotNull
+    override fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> {
+        node.registerInitiatedFlow(initiatedFlowClass)
+        return Observable.empty()
+    }
 }
 
 val InProcess.internalServices: StartedNodeServices get() = services as StartedNodeServices

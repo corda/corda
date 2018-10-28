@@ -149,7 +149,7 @@ class NodeTest {
         }
     }
 
-    private fun createConfig(nodeName: CordaX500Name): NodeConfiguration {
+    private fun createConfig(nodeName: CordaX500Name): NodeConfigurationImpl {
         val fakeAddress = NetworkHostAndPort("0.1.2.3", 456)
         return NodeConfigurationImpl(
                 baseDirectory = temporaryFolder.root.toPath(),
@@ -171,7 +171,8 @@ class NodeTest {
                 enterpriseConfiguration = EnterpriseConfiguration(
                         mutualExclusionConfiguration = MutualExclusionConfiguration(updateInterval = 0, waitInterval = 0)
                 ),
-                relay = null
+                relay = null,
+                flowOverrides = FlowOverrideConfig(listOf())
         )
     }
 }

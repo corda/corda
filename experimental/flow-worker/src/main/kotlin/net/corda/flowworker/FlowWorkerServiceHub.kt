@@ -137,7 +137,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
     @Suppress("LeakingThis")
     override val validatedTransactions: WritableTransactionStorage = DBTransactionStorage(database, cacheFactory).tokenize()
     override val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database).tokenize()
-    override val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(), attachments).tokenize()
+    override val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(emptyList()), attachments).tokenize()
     @Suppress("LeakingThis")
     override val keyManagementService = PersistentKeyManagementService(cacheFactory, identityService, database).tokenize()
     private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, validatedTransactions)

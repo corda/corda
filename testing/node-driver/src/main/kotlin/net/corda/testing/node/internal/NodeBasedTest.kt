@@ -11,6 +11,8 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
 import net.corda.node.internal.EnterpriseNode
+import net.corda.node.internal.FlowManager
+import net.corda.node.internal.NodeFlowManager
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.config.*
 import net.corda.nodeapi.internal.config.toConfig
@@ -31,6 +33,7 @@ import rx.internal.schedulers.CachedThreadScheduler
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
+import kotlin.test.assertFalse
 
 // TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by
 // using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't
@@ -89,7 +92,8 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     fun initNode(legalName: CordaX500Name,
                  platformVersion: Int = PLATFORM_VERSION,
                  rpcUsers: List<User> = emptyList(),
-                 configOverrides: Map<String, Any> = emptyMap()): InProcessNode {
+                 configOverrides: Map<String, Any> = emptyMap(),
+                 flowManager: FlowManager = NodeFlowManager(FlowOverrideConfig())): InProcessNode {
         val baseDirectory = baseDirectory(legalName).createDirectories()
         val p2pAddress = configOverrides["p2pAddress"] ?: portAllocation.nextHostAndPort().toString()
         val config = ConfigHelper.loadConfig(
@@ -122,15 +126,16 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
         }
 
         defaultNetworkParameters.install(baseDirectory)
-        return InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion))
+        return InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion), flowManager)
     }
 
     @JvmOverloads
     fun startNode(legalName: CordaX500Name,
                   platformVersion: Int = PLATFORM_VERSION,
                   rpcUsers: List<User> = emptyList(),
-                  configOverrides: Map<String, Any> = emptyMap()): NodeWithInfo {
-        val node = initNode(legalName,platformVersion, rpcUsers,configOverrides)
+                  configOverrides: Map<String, Any> = emptyMap(),
+                  flowManager: FlowManager = NodeFlowManager(FlowOverrideConfig())): NodeWithInfo {
+        val node = initNode(legalName,platformVersion, rpcUsers,configOverrides, flowManager=flowManager)
         val nodeInfo = node.start()
         val nodeWithInfo = NodeWithInfo(node, nodeInfo)
         nodes += nodeWithInfo
@@ -142,7 +147,6 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
         return nodeWithInfo
     }
-
     protected fun baseDirectory(legalName: CordaX500Name): Path {
         return tempFolder.root.toPath() / legalName.organisation.replace(WHITESPACE, "")
     }
@@ -157,10 +161,9 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     }
 }
 
-class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo) : EnterpriseNode(configuration, versionInfo, false) {
-
+class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo, flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides)) : EnterpriseNode(configuration, versionInfo, false, flowManager = flowManager) {
     override fun start() : NodeInfo {
-        check(isValidJavaVersion()) { "You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8." }
+        assertFalse(isInvalidJavaVersion(), "You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8." )
         return super.start()
     }
 

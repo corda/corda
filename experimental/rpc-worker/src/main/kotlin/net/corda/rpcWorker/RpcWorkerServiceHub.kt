@@ -98,7 +98,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration, overrid
     private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
     override val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database)
 
-    override val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(), attachments)
+    override val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(emptyList()), attachments)
 
     @Suppress("LeakingThis")
     override val keyManagementService = PersistentKeyManagementService(cacheFactory, identityService, database)

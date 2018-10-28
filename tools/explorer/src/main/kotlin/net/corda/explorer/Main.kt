@@ -146,5 +146,5 @@ class Main : App(MainView::class) {
 fun main(args: Array<String>) {
     val parser = OptionParser("SF")
     val options = parser.parse(*args)
-    ExplorerSimulation(options).startDemoNodes()
+    ExplorerSimulation(options)
 }

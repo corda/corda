@@ -85,7 +85,7 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
         // Note: does not copy dependencies because we should soon be making all apps fat jars and dependencies implicit.
         //
         // TODO: Remove this code when serialisation has been upgraded.
-        val cordappsDir = config.explorerDir / NodeConfig.cordappDirName
+        val cordappsDir = config.explorerDir / NodeConfig.CORDAPP_DIR_NAME
         cordappsDir.createDirectories()
         config.cordappsDir.list {
             it.forEachOrdered { path ->

@@ -21,7 +21,6 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
-import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.serialization.internal.DefaultWhitelist
 import org.apache.commons.collections4.map.LRUMap
@@ -29,6 +28,7 @@ import java.lang.reflect.Modifier
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
+import java.security.cert.X509Certificate
 import java.util.*
 import java.util.jar.JarInputStream
 import kotlin.reflect.KClass
@@ -41,7 +41,8 @@ import kotlin.streams.toList
  */
 class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>,
                                                    private val versionInfo: VersionInfo = VersionInfo.UNKNOWN,
-                                                   extraCordapps: List<CordappImpl>) : CordappLoaderTemplate() {
+                                                   extraCordapps: List<CordappImpl>,
+                                                   private val blacklistedCordappSigners: List<X509Certificate> = emptyList()) : CordappLoaderTemplate() {
 
     override val cordapps: List<CordappImpl> by lazy {
         loadCordapps() + extraCordapps
@@ -67,10 +68,11 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
          */
         fun fromDirectories(cordappDirs: Collection<Path>,
                             versionInfo: VersionInfo = VersionInfo.UNKNOWN,
-                            extraCordapps: List<CordappImpl> = emptyList()): JarScanningCordappLoader {
+                            extraCordapps: List<CordappImpl> = emptyList(),
+                            blacklistedCerts: List<X509Certificate> = emptyList()): JarScanningCordappLoader {
             logger.info("Looking for CorDapps in ${cordappDirs.distinct().joinToString(", ", "[", "]")}")
             val paths = cordappDirs.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() }
-            return JarScanningCordappLoader(paths, versionInfo, extraCordapps)
+            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, blacklistedCerts)
         }
 
         /**
@@ -78,9 +80,9 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
          *
          * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection.
          */
-        fun fromJarUrls(scanJars: List<URL>, versionInfo: VersionInfo = VersionInfo.UNKNOWN, extraCordapps: List<CordappImpl> = emptyList()): JarScanningCordappLoader {
+        fun fromJarUrls(scanJars: List<URL>, versionInfo: VersionInfo = VersionInfo.UNKNOWN, extraCordapps: List<CordappImpl> = emptyList(), blacklistedCerts: List<X509Certificate> = emptyList()): JarScanningCordappLoader {
             val paths = scanJars.map { it.restricted() }
-            return JarScanningCordappLoader(paths, versionInfo, extraCordapps)
+            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, blacklistedCerts)
         }
 
         private fun URL.restricted(rootPackageName: String? = null) = RestrictedURL(this, rootPackageName)
@@ -107,6 +109,20 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                         false
                     } else {
                         true
+                    }
+                }
+                .filter {
+                    if (blacklistedCordappSigners.isEmpty()) {
+                        true //Nothing blacklisted, no need to check
+                    } else {
+                        val certificates = it.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectCertificates)
+                        if (certificates.isEmpty() || (certificates - blacklistedCordappSigners).isNotEmpty())
+                            true // Cordapp is not signed or it is signed by at least one non-blacklisted certificate
+                        else {
+                            logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it is signed by development key(s) only: " +
+                                    "${certificates.intersect(blacklistedCordappSigners).map { it.publicKey }}.")
+                            false
+                        }
                     }
                 }
         cordapps.forEach { CordappInfoResolver.register(it.cordappClasses, it.info) }
@@ -151,17 +167,6 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun findInitiatedFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, InitiatedBy::class)
-                // First group by the initiating flow class in case there are multiple mappings
-                .groupBy { it.requireAnnotation<InitiatedBy>().value.java }
-                .map { (initiatingFlow, initiatedFlows) ->
-                    val sorted = initiatedFlows.sortedWith(FlowTypeHierarchyComparator(initiatingFlow))
-                    if (sorted.size > 1) {
-                        logger.warn("${initiatingFlow.name} has been specified as the inititating flow by multiple flows " +
-                                "in the same type hierarchy: ${sorted.joinToString { it.name }}. Choosing the most " +
-                                "specific sub-type for registration: ${sorted[0].name}.")
-                    }
-                    sorted[0]
-                }
     }
 
     private fun Class<out FlowLogic<*>>.isUserInvokable(): Boolean {
@@ -216,17 +221,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         }
     }
 
-    private class FlowTypeHierarchyComparator(val initiatingFlow: Class<out FlowLogic<*>>) : Comparator<Class<out FlowLogic<*>>> {
-        override fun compare(o1: Class<out FlowLogic<*>>, o2: Class<out FlowLogic<*>>): Int {
-            return when {
-                o1 == o2 -> 0
-                o1.isAssignableFrom(o2) -> 1
-                o2.isAssignableFrom(o1) -> -1
-                else -> throw IllegalArgumentException("${initiatingFlow.name} has been specified as the initiating flow by " +
-                        "both ${o1.name} and ${o2.name}")
-            }
-        }
-    }
+
 
     private fun <T : Any> loadClass(className: String, type: KClass<T>): Class<out T>? {
         return try {
