@@ -80,8 +80,6 @@ class ExplorerSimulation(private val options: OptionSet) {
         val portAllocation = PortAllocation.Incremental(20000)
         driver(DriverParameters(
                 portAllocation = portAllocation,
-                extraCordappPackagesToScan = packagesOfClasses(CashIssueFlow::class, Cash::class, CashSchemaV1::class,
-                        IOUFlow::class, ObtainMembershipListContentFlow::class),
                 cordappsForAllNodes = listOf(FINANCE_CORDAPP, BUSINESS_NETWORK_CORDAPP),
                 waitForAllNodesToFinish = true,
                 jmxPolicy = JmxPolicy(true)
