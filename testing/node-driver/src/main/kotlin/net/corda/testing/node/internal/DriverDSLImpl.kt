@@ -777,6 +777,7 @@ class DriverDSLImpl(
                     "visualvm.display.name" to "corda-${config.corda.myLegalName}"
             )
             debugPort?.let {
+                systemProperties += "log4j2.level" to "debug"
                 systemProperties += "log4j2.debug" to "true"
             }
 
