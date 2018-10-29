@@ -299,7 +299,7 @@ def main():
                 nargs = '?'
             else:
                 nargs = 1
-            command.add('CANDIDATE', help='the number of the release candidate, e.g., 1 for RC01', type=int, nargs=nargs)
+            command.add('CANDIDATE', help='the number of the release candidate, e.g., 1 for RC01, or an 8 digit date in the format YYYYMMDD for snapshot releases', type=int, nargs=nargs)
 
         with program.command('list-tests', 'list test cases applicable to the provided specification', list_test_cases) as command:
             mixin_product(command)
