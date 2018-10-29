@@ -121,10 +121,10 @@ class GenericsTests {
         data class G(val a: Int)
         data class Wrapper<T : Any>(val a: Int, val b: SerializedBytes<T>)
 
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         val ser = SerializationOutput(factory)
@@ -150,10 +150,10 @@ class GenericsTests {
         data class Container<T>(val b: T)
         data class Wrapper<T : Any>(val c: Container<T>)
 
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
-        val factories = listOf(factory, SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factories = listOf(factory, SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         ))
         val ser = SerializationOutput(factory)
@@ -187,10 +187,10 @@ class GenericsTests {
         data class Wrapper<T : Any>(val c: Container<T>)
 
         val factorys = listOf(
-                SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+                SerializerFactoryBuilder.build(AllWhitelist,
                         ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
                 ),
-                SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+                SerializerFactoryBuilder.build(AllWhitelist,
                         ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
                 ))
 
@@ -213,7 +213,7 @@ class GenericsTests {
 
     private fun forceWildcardSerialize(
             a: ForceWildcard<*>,
-            factory: SerializerFactory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+            factory: SerializerFactory = SerializerFactoryBuilder.build(AllWhitelist,
                     ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
             )): SerializedBytes<*> {
         val bytes = SerializationOutput(factory).serializeAndReturnSchema(a)
@@ -225,7 +225,7 @@ class GenericsTests {
     @Suppress("UNCHECKED_CAST")
     private fun forceWildcardDeserializeString(
             bytes: SerializedBytes<*>,
-            factory: SerializerFactory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+            factory: SerializerFactory = SerializerFactoryBuilder.build(AllWhitelist,
                     ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
             )) {
         DeserializationInput(factory).deserialize(bytes as SerializedBytes<ForceWildcard<String>>)
@@ -234,7 +234,7 @@ class GenericsTests {
     @Suppress("UNCHECKED_CAST")
     private fun forceWildcardDeserializeDouble(
             bytes: SerializedBytes<*>,
-            factory: SerializerFactory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+            factory: SerializerFactory = SerializerFactoryBuilder.build(AllWhitelist,
                     ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
             )) {
         DeserializationInput(factory).deserialize(bytes as SerializedBytes<ForceWildcard<Double>>)
@@ -243,7 +243,7 @@ class GenericsTests {
     @Suppress("UNCHECKED_CAST")
     private fun forceWildcardDeserialize(
             bytes: SerializedBytes<*>,
-            factory: SerializerFactory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+            factory: SerializerFactory = SerializerFactoryBuilder.build(AllWhitelist,
                     ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
             )) {
         DeserializationInput(factory).deserialize(bytes as SerializedBytes<ForceWildcard<*>>)
@@ -257,7 +257,7 @@ class GenericsTests {
 
     @Test
     fun forceWildcardSharedFactory() {
-        val f = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val f = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         forceWildcardDeserializeString(forceWildcardSerialize(ForceWildcard("hello"), f), f)
@@ -273,7 +273,7 @@ class GenericsTests {
 
     @Test
     fun forceWildcardDeserializeSharedFactory() {
-        val f = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val f = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         forceWildcardDeserialize(forceWildcardSerialize(ForceWildcard("hello"), f), f)
@@ -313,7 +313,7 @@ class GenericsTests {
         // possibly altering how we serialise things
         val altClassLoader = cl()
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, altClassLoader)
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
@@ -324,7 +324,7 @@ class GenericsTests {
         factory3.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
         DeserializationInput(factory3).deserializeAndReturnEnvelope(ser1.obj)
 
-        val factory4 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory4 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, cl())
         )
         factory4.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)

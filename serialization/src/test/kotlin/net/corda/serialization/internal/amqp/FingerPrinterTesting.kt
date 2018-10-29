@@ -40,9 +40,9 @@ class FingerPrinterTestingTests {
     fun worksAsReplacement() {
         data class C(val a: Int, val b: Long)
 
-        val factory = SerializerFactoryBuilder.buildWithCustomFingerprinter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
-                FailIfEvolutionAttempted) { _ -> FingerPrinterTesting() }
+                fingerPrinterProvider = { _ -> FingerPrinterTesting() })
 
         val blob = TestSerializationOutput(VERBOSE, factory).serializeAndReturnSchema(C(1, 2L))
 

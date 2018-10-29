@@ -7,7 +7,6 @@ import net.corda.node.serialization.kryo.kryoMagic
 import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.Envelope
-import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.amqpSpecific
@@ -29,7 +28,7 @@ class ListsSerializationTest {
         fun <T : Any> verifyEnvelope(serBytes: SerializedBytes<T>, envVerBody: (Envelope) -> Unit) =
                 amqpSpecific("AMQP specific envelope verification") {
                     val context = SerializationFactory.defaultFactory.defaultContext
-                    val envelope = DeserializationInput(SerializerFactoryBuilder.buildWithCarpenterClassloader(context.whitelist, context.deserializationClassLoader)).getEnvelope(serBytes, context)
+                    val envelope = DeserializationInput(SerializerFactoryBuilder.build(context.whitelist, context.deserializationClassLoader)).getEnvelope(serBytes, context)
                     envVerBody(envelope)
                 }
     }

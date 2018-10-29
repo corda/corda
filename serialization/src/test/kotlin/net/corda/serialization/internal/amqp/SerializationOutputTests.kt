@@ -208,7 +208,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     }
 
     private fun defaultFactory(): SerializerFactory {
-        return SerializerFactoryBuilder.buildWithCustomEvolutionSerializerProvider(AllWhitelist,
+        return SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
                 evolutionSerializerProvider = FailIfEvolutionAttempted
         )
@@ -368,7 +368,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     @Test(expected = NotSerializableException::class)
     fun `test whitelist`() {
         val obj = Woo2(4)
-        serdes(obj, SerializerFactoryBuilder.buildWithCarpenter(EmptyWhitelist,
+        serdes(obj, SerializerFactoryBuilder.build(EmptyWhitelist,
                 ClassCarpenterImpl(EmptyWhitelist, ClassLoader.getSystemClassLoader())
         ))
     }
@@ -376,7 +376,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     @Test
     fun `test annotation whitelisting`() {
         val obj = AnnotatedWoo(5)
-        serdes(obj, SerializerFactoryBuilder.buildWithCarpenter(EmptyWhitelist,
+        serdes(obj, SerializerFactoryBuilder.build(EmptyWhitelist,
                 ClassCarpenterImpl(EmptyWhitelist, ClassLoader.getSystemClassLoader())
         ))
     }
@@ -475,7 +475,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     @Test
     fun `class constructor is invoked on deserialisation`() {
         compression == null || return // Manipulation of serialized bytes is invalid if they're compressed.
-        val ser = SerializationOutput(SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val ser = SerializationOutput(SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         ))
         val des = DeserializationInput(ser.serializerFactory)
@@ -502,11 +502,11 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test custom serializers on public key`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
@@ -517,7 +517,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     @Test
     fun `test annotation is inherited`() {
         val obj = InheritAnnotation("blah")
-        serdes(obj, SerializerFactoryBuilder.buildWithCarpenter(EmptyWhitelist,
+        serdes(obj, SerializerFactoryBuilder.build(EmptyWhitelist,
                 ClassCarpenterImpl(EmptyWhitelist, ClassLoader.getSystemClassLoader())
         ))
     }
@@ -525,19 +525,19 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     @Test
     fun `generics from java are supported`() {
         val obj = DummyOptional<String>("YES")
-        serdes(obj, SerializerFactoryBuilder.buildWithCarpenter(EmptyWhitelist,
+        serdes(obj, SerializerFactoryBuilder.build(EmptyWhitelist,
                 ClassCarpenterImpl(EmptyWhitelist, ClassLoader.getSystemClassLoader())
         ))
     }
 
     @Test
     fun `test throwables serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(factory2))
@@ -555,12 +555,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test complex throwables serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(factory2))
@@ -589,12 +589,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test suppressed throwables serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(factory2))
@@ -615,12 +615,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test flow corda exception subclasses serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(factory2))
@@ -631,12 +631,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test RPC corda exception subclasses serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(factory2))
@@ -700,12 +700,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
                 SerializerFactory::class.java)
         func.isAccessible = true
 
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         func.invoke(scheme, testSerializationContext, factory)
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         func.invoke(scheme, testSerializationContext, factory2)
@@ -718,12 +718,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test currencies serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.CurrencySerializer)
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.CurrencySerializer)
@@ -734,12 +734,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test big decimals serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.BigDecimalSerializer)
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.BigDecimalSerializer)
@@ -750,12 +750,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test instants serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.InstantSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.InstantSerializer(factory2))
@@ -766,12 +766,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test durations serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.DurationSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.DurationSerializer(factory2))
@@ -782,12 +782,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test local date serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.LocalDateSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.LocalDateSerializer(factory2))
@@ -798,12 +798,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test local time serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.LocalTimeSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.LocalTimeSerializer(factory2))
@@ -814,12 +814,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test local date time serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.LocalDateTimeSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.LocalDateTimeSerializer(factory2))
@@ -830,12 +830,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test zoned date time serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.ZonedDateTimeSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.ZonedDateTimeSerializer(factory2))
@@ -846,12 +846,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test offset time serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.OffsetTimeSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.OffsetTimeSerializer(factory2))
@@ -862,12 +862,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test offset date time serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.OffsetDateTimeSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.OffsetDateTimeSerializer(factory2))
@@ -878,12 +878,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test year serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.YearSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.YearSerializer(factory2))
@@ -894,12 +894,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test year month serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.YearMonthSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.YearMonthSerializer(factory2))
@@ -910,12 +910,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test month day serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.MonthDaySerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.MonthDaySerializer(factory2))
@@ -926,12 +926,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test period serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.PeriodSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.PeriodSerializer(factory2))
@@ -960,12 +960,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test X509 certificate serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.X509CertificateSerializer)
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.X509CertificateSerializer)
@@ -976,12 +976,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test cert path serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.CertPathSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.CertPathSerializer(factory2))
@@ -1007,11 +1007,11 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test StateRef serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
 
@@ -1059,10 +1059,10 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         val b = ByteArray(2)
         val obj = Bob(listOf(a, b, a))
 
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         val obj2 = serdes(obj, factory, factory2, false, false)
@@ -1077,10 +1077,10 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         val a = listOf("a", "b")
         val obj = Vic(a, a)
 
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         val objCopy = serdes(obj, factory, factory2)
@@ -1098,10 +1098,10 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     fun `test private constructor`() {
         val obj = Spike()
 
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         serdes(obj, factory, factory2)
@@ -1111,12 +1111,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test toString custom serializer`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.BigDecimalSerializer)
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.BigDecimalSerializer)
@@ -1130,12 +1130,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test BigInteger custom serializer`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.BigIntegerSerializer)
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.BigIntegerSerializer)
@@ -1154,12 +1154,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test X509CRL custom serializer`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.X509CRLSerializer)
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.X509CRLSerializer)
@@ -1172,12 +1172,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test byte arrays not reference counted`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.BigDecimalSerializer)
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.BigDecimalSerializer)
@@ -1190,12 +1190,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test StringBuffer serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.StringBufferSerializer)
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.StringBufferSerializer)
@@ -1207,12 +1207,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test SimpleString serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.SimpleStringSerializer)
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.SimpleStringSerializer)
@@ -1235,12 +1235,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test InputStream serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.InputStreamSerializer)
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.InputStreamSerializer)
@@ -1254,12 +1254,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test EnumSet serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.EnumSetSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.EnumSetSerializer(factory2))
@@ -1270,12 +1270,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test BitSet serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.BitSetSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.BitSetSerializer(factory2))
@@ -1294,12 +1294,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test contract attachment serialize`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.ContractAttachmentSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.ContractAttachmentSerializer(factory2))
@@ -1314,12 +1314,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test contract attachment throws if missing attachment`() {
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory.register(net.corda.serialization.internal.amqp.custom.ContractAttachmentSerializer(factory))
 
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.ContractAttachmentSerializer(factory2))
@@ -1513,7 +1513,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `compression reduces number of bytes significantly`() {
-        val ser = SerializationOutput(SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val ser = SerializationOutput(SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         ))
         val obj = ByteArray(20000)

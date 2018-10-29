@@ -15,7 +15,7 @@ class CorDappSerializerTests {
 
     private fun proxyFactory(
             serializers: List<SerializationCustomSerializer<*, *>>
-    ) = SerializerFactoryBuilder.buildOnlyCustomerSerializers(AllWhitelist,
+    ) = SerializerFactoryBuilder.build(AllWhitelist,
             ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
             DefaultEvolutionSerializerProvider).apply {
         serializers.forEach {
@@ -101,7 +101,7 @@ class CorDappSerializerTests {
         }
 
         val whitelist = WL()
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+        val factory = SerializerFactoryBuilder.build(whitelist,
                 ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
         )
         factory.registerExternal(CorDappCustomSerializer(NeedsProxyProxySerializer(), factory))
@@ -126,7 +126,7 @@ class CorDappSerializerTests {
         }
 
         val whitelist = WL()
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+        val factory = SerializerFactoryBuilder.build(whitelist,
                 ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
         )
         factory.registerExternal(CorDappCustomSerializer(NeedsProxyProxySerializer(), factory))
@@ -154,7 +154,7 @@ class CorDappSerializerTests {
         }
 
         val whitelist = WL()
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+        val factory = SerializerFactoryBuilder.build(whitelist,
                 ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
         )
         factory.registerExternal(CorDappCustomSerializer(NeedsProxyProxySerializer(), factory))

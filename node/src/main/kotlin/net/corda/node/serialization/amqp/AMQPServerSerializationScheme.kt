@@ -29,7 +29,7 @@ class AMQPServerSerializationScheme(
     }
 
     override fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory {
-        return SerializerFactoryBuilder.buildWithCarpenterClassloader(context.whitelist, context.deserializationClassLoader, context.lenientCarpenterEnabled).apply {
+        return SerializerFactoryBuilder.build(context.whitelist, context.deserializationClassLoader, context.lenientCarpenterEnabled).apply {
             register(RpcServerObservableSerializer())
             register(RpcServerCordaFutureSerializer(this))
             register(RxNotificationSerializer(this))
