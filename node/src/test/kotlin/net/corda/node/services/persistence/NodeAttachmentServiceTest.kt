@@ -146,7 +146,6 @@ class NodeAttachmentServiceTest {
             assertNotEquals(attachment1, attachment2)
             assertEquals(P2P_UPLOADER, (attachment1 as ContractAttachment).uploader)
             assertEquals(DEPLOYED_CORDAPP_UPLOADER, (attachment2 as ContractAttachment).uploader)
-            assertEquals(attachment1, attachment2)
         }
     }
 
