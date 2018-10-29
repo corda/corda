@@ -1,38 +1,32 @@
 package net.corda.node.internal.subcommands
 
-import net.corda.cliutils.CliWrapperBase
 import net.corda.core.internal.createFile
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.utilities.Try
-import net.corda.node.InitialRegistrationCmdLineOptions
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.internal.*
 import net.corda.node.internal.NodeStartupLogging.Companion.logger
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
-import picocli.CommandLine.Mixin
 import picocli.CommandLine.Option
 import java.io.File
 import java.nio.file.Path
 
-class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.") {
+class InitialRegistrationCli(startup: NodeStartup) : NodeCliCommand("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.", startup) {
     @Option(names = ["-t", "--network-root-truststore"], description = ["Network root trust store obtained from network operator."])
     var networkRootTrustStorePathParameter: Path? = null
 
     @Option(names = ["-p", "--network-root-truststore-password"], description = ["Network root trust store password obtained from network operator."], required = true)
     var networkRootTrustStorePassword: String = ""
 
-    override fun runProgram() : Int {
+    override fun runProgram(): Int {
         val networkRootTrustStorePath: Path = networkRootTrustStorePathParameter ?: cmdLineOptions.baseDirectory / "certificates" / "network-root-truststore.jks"
         return startup.initialiseAndRun(cmdLineOptions, InitialRegistration(cmdLineOptions.baseDirectory, networkRootTrustStorePath, networkRootTrustStorePassword, startup))
     }
 
     override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
-
-    @Mixin
-    val cmdLineOptions = InitialRegistrationCmdLineOptions()
 }
 
 class InitialRegistration(val baseDirectory: Path, private val networkRootTrustStorePath: Path, networkRootTrustStorePassword: String, private val startup: NodeStartup) : RunAfterNodeInitialisation, NodeStartupLogging {
