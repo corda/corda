@@ -1,8 +1,6 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
@@ -11,8 +9,8 @@ import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.packageName
 import net.corda.core.utilities.seconds
-import net.corda.node.services.config.FlowTimeoutConfiguration
-import net.corda.node.services.config.NodeConfiguration
+import net.corda.testing.node.MockNetFlowTimeOut
+import net.corda.testing.node.MockNodeConfigOverides
 import net.corda.testing.node.internal.*
 import org.junit.After
 import org.junit.Before
@@ -37,11 +35,7 @@ class IdempotentFlowTests {
         mockNet = InternalMockNetwork(threadPerNode = true, cordappsForAllNodes = cordappsForPackages(this.javaClass.packageName))
         nodeA = mockNet.createNode(InternalMockNodeParameters(
                 legalName = CordaX500Name("Alice", "AliceCorp", "GB"),
-                configOverrides = {
-                    conf: NodeConfiguration ->
-                    val retryConfig = FlowTimeoutConfiguration(1.seconds, 3, 1.0)
-                    doReturn(retryConfig).whenever(conf).flowTimeout
-                }
+                configOverrides = MockNodeConfigOverides(flowTimeout = MockNetFlowTimeOut(1.seconds, 3, 1.0))
         ))
         nodeB = mockNet.createNode()
         mockNet.startNodes()

@@ -1,24 +1,24 @@
 package net.corda.node.internal
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.node.JavaPackageName
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.node.services.config.NotaryConfig
-import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.core.node.NotaryInfo
-import net.corda.core.utilities.days
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.node.*
+import net.corda.testing.node.MockNetNotaryConfig
+import net.corda.testing.node.MockNetworkNotarySpec
+import net.corda.testing.node.MockNetworkParameters
+import net.corda.testing.node.MockNodeConfigOverides
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
@@ -66,10 +66,8 @@ class NetworkParametersTest {
     // Notaries tests
     @Test
     fun `choosing notary not specified in network parameters will fail`() {
-        val fakeNotary = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME, configOverrides = {
-            val notary = NotaryConfig(false)
-            doReturn(notary).whenever(it).notary
-        }))
+        val fakeNotary = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME,
+                configOverrides = MockNodeConfigOverides(notary = MockNetNotaryConfig(validating = false))))
         val fakeNotaryId = fakeNotary.info.singleIdentity()
         val alice = mockNet.createPartyNode(ALICE_NAME)
         assertThat(alice.services.networkMapCache.notaryIdentities).doesNotContain(fakeNotaryId)

@@ -22,6 +22,7 @@ import java.math.BigInteger
 import java.nio.file.Path
 import java.util.concurrent.Future
 
+
 /**
  * Immutable builder for configuring a [StartedMockNode] or an [UnstartedMockNode] via [MockNetwork.createNode] and
  * [MockNetwork.createUnstartedNode]. Kotlin users can also use the named parameters overloads of those methods which
@@ -40,21 +41,21 @@ data class MockNodeParameters(
         val forcedID: Int? = null,
         val legalName: CordaX500Name? = null,
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-        val configOverrides: (NodeConfiguration) -> Any? = {},
+        val configOverrides: MockNodeConfigOverides? = null,
         val additionalCordapps: Collection<TestCordapp> = emptyList()) {
 
     constructor(forcedID: Int? = null,
                 legalName: CordaX500Name? = null,
                 entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                configOverrides: (NodeConfiguration) -> Any? = {}
+                configOverrides: MockNodeConfigOverides
     ) : this(forcedID, legalName, entropyRoot, configOverrides, emptyList())
 
     fun withForcedID(forcedID: Int?): MockNodeParameters = copy(forcedID = forcedID)
     fun withLegalName(legalName: CordaX500Name?): MockNodeParameters = copy(legalName = legalName)
     fun withEntropyRoot(entropyRoot: BigInteger): MockNodeParameters = copy(entropyRoot = entropyRoot)
-    fun withConfigOverrides(configOverrides: (NodeConfiguration) -> Any?): MockNodeParameters = copy(configOverrides = configOverrides)
+    fun withConfigOverrides(configOverrides: MockNodeConfigOverides): MockNodeParameters = copy(configOverrides = configOverrides)
     fun withAdditionalCordapps(additionalCordapps: Collection<TestCordapp>): MockNodeParameters = copy(additionalCordapps = additionalCordapps)
-    fun copy(forcedID: Int?, legalName: CordaX500Name?, entropyRoot: BigInteger, configOverrides: (NodeConfiguration) -> Any?): MockNodeParameters {
+    fun copy(forcedID: Int?, legalName: CordaX500Name?, entropyRoot: BigInteger, configOverrides: MockNodeConfigOverides): MockNodeParameters {
         return MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides)
     }
 }
@@ -351,7 +352,7 @@ open class MockNetwork(
     fun createNode(legalName: CordaX500Name? = null,
                    forcedID: Int? = null,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                   configOverrides: (NodeConfiguration) -> Any? = {},
+                   configOverrides: MockNodeConfigOverides? = null,
                    extraCordappPackages: List<String> = emptyList()): StartedMockNode {
 
         return createNode(legalName, forcedID, entropyRoot, configOverrides, cordappsForPackages(extraCordappPackages))
@@ -370,7 +371,7 @@ open class MockNetwork(
     fun createNode(legalName: CordaX500Name? = null,
                    forcedID: Int? = null,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                   configOverrides: (NodeConfiguration) -> Any? = {},
+                   configOverrides: MockNodeConfigOverides? = null,
                    additionalCordapps: Collection<TestCordapp>): StartedMockNode {
         val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides, additionalCordapps)
         return StartedMockNode.create(internalMockNetwork.createNode(InternalMockNodeParameters(parameters)))
@@ -393,7 +394,7 @@ open class MockNetwork(
     fun createUnstartedNode(legalName: CordaX500Name? = null,
                             forcedID: Int? = null,
                             entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                            configOverrides: (NodeConfiguration) -> Any? = {},
+                            configOverrides: MockNodeConfigOverides? = null,
                             extraCordappPackages: List<String> = emptyList()): UnstartedMockNode {
 
         return createUnstartedNode(legalName, forcedID, entropyRoot, configOverrides, cordappsForPackages(extraCordappPackages))
@@ -412,7 +413,7 @@ open class MockNetwork(
     fun createUnstartedNode(legalName: CordaX500Name? = null,
                             forcedID: Int? = null,
                             entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                            configOverrides: (NodeConfiguration) -> Any? = {},
+                            configOverrides: MockNodeConfigOverides? = null,
                             additionalCordapps: Collection<TestCordapp>): UnstartedMockNode {
         val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides, additionalCordapps)
         return UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(InternalMockNodeParameters(parameters)))
