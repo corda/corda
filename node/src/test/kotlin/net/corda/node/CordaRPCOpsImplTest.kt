@@ -14,10 +14,14 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
+import net.corda.core.internal.extractFile
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.ColumnPredicate
+import net.corda.core.node.services.vault.EqualityComparisonOperator
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -52,6 +56,7 @@ import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.io.ByteArrayOutputStream
+import java.util.jar.JarInputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -282,6 +287,51 @@ class CordaRPCOpsImplTest {
             IOUtils.copy(rpc.openAttachment(secureHash), bufferRpc)
 
             assertArrayEquals(bufferFile.toByteArray(), bufferRpc.toByteArray())
+        }
+    }
+
+    @Test
+    fun `can upload attachment with metadata`() {
+        withPermissions(invokeRpc(CordaRPCOps::uploadAttachmentWithMetadata), invokeRpc(CordaRPCOps::attachmentExists)) {
+            val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
+            val secureHash = rpc.uploadAttachmentWithMetadata(inputJar, "Iron Fist", "Season 2")
+            assertTrue(rpc.attachmentExists(secureHash))
+        }
+    }
+
+    @Test
+    fun `attachment uploaded with metadata has specified filename`() {
+        withPermissions(invokeRpc(CordaRPCOps::uploadAttachmentWithMetadata), invokeRpc(CordaRPCOps::queryAttachments)) {
+            val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
+            rpc.uploadAttachmentWithMetadata(inputJar, "The Punisher", "Season 1")
+            assertEquals(
+                rpc.queryAttachments(
+                    AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                        filenameCondition = ColumnPredicate.EqualityComparison(
+                            EqualityComparisonOperator.EQUAL,
+                            "Season 1"
+                        )
+                    ), null
+                ).size, 1
+            )
+        }
+    }
+
+    @Test
+    fun `attachment uploaded with metadata has specified uploader`() {
+        withPermissions(invokeRpc(CordaRPCOps::uploadAttachmentWithMetadata), invokeRpc(CordaRPCOps::queryAttachments)) {
+            val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
+            rpc.uploadAttachmentWithMetadata(inputJar, "Daredevil", "Season 3")
+            assertEquals(
+                rpc.queryAttachments(
+                    AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                        uploaderCondition = ColumnPredicate.EqualityComparison(
+                            EqualityComparisonOperator.EQUAL,
+                            "Daredevil"
+                        )
+                    ), null
+                ).size, 1
+            )
         }
     }
 

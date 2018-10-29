@@ -34,7 +34,7 @@ To create a new release version in JIRA, you can run the following command:
 $ ./test-manager create-version <PRODUCT> <VERSION> <CANDIDATE>
 ```
 
-Note that `<CANDIDATE>` is optional. This command will create new versions in the following JIRA projects: `CORDA`, `ENT`, `ENM`, `CID` and `R3T`.
+Note that `<CANDIDATE>` is optional and can either be a short integer representing a release candidate, or an eight digit date (on the format YYYYMMDD) for a release snapshot. This command will create new versions in the following JIRA projects: `CORDA`, `ENT`, `ENM`, `CID` and `R3T`.
 
 ## Create Release Tests
 

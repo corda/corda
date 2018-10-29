@@ -85,6 +85,14 @@ include 'tools:notary-healthcheck:client'
 include 'notary:jpa'
 include 'notary:mysql'
 
+// Common libraries - start
+include 'common-validation'
+project(":common-validation").projectDir = new File("$settingsDir/common/validation")
+
+include 'common-configuration-parsing'
+project(":common-configuration-parsing").projectDir = new File("$settingsDir/common/configuration-parsing")
+// Common libraries - end
+
 apply from: 'buildCacheSettings.gradle'
 
 if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
@@ -94,3 +102,4 @@ if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
     include 'core-deterministic:testing:verifier'
     include 'serialization-deterministic'
 }
+
