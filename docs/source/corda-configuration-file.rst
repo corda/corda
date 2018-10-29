@@ -239,6 +239,11 @@ absolute path to the node's base directory.
                         .. _Dropwizard: https://metrics.dropwizard.io/3.2.3/manual/third-party.html
                         .. _Introduction to New Relic for Java: https://docs.newrelic.com/docs/agents/java-agent/getting-started/introduction-new-relic-java
 
+:cordappSignerKeyFingerprintBlacklist: List of public keys fingerprints (SHA-256) not allowed as Cordapp JARs signers.
+                                       Node will not load Cordapps signed by those keys.
+                                       The option takes effect only in production mode and defaults to Corda development keys,
+                                       in development mode any key is allowed to sign Cordpapp JARs.
+
 Examples
 --------
 
