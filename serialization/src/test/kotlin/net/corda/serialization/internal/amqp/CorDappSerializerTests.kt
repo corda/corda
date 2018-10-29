@@ -4,6 +4,7 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.*
+import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.io.NotSerializableException
@@ -14,11 +15,9 @@ class CorDappSerializerTests {
 
     private fun proxyFactory(
             serializers: List<SerializationCustomSerializer<*, *>>
-    ) = SerializerFactory(
-            AllWhitelist,
-            ClassLoader.getSystemClassLoader(),
-            onlyCustomSerializers = true
-    ).apply {
+    ) = SerializerFactoryBuilder.buildOnlyCustomerSerializers(AllWhitelist,
+            ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
+            DefaultEvolutionSerializerProvider).apply {
         serializers.forEach {
             registerExternal(CorDappCustomSerializer(it, this))
         }
@@ -101,7 +100,10 @@ class CorDappSerializerTests {
             override fun hasListed(type: Class<*>): Boolean = type.name in allowedClasses
         }
 
-        val factory = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+        val whitelist = WL()
+        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+                ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
+        )
         factory.registerExternal(CorDappCustomSerializer(NeedsProxyProxySerializer(), factory))
 
         val tv1 = 100
@@ -123,7 +125,10 @@ class CorDappSerializerTests {
             override fun hasListed(type: Class<*>): Boolean = type.name in allowedClasses
         }
 
-        val factory = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+        val whitelist = WL()
+        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+                ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
+        )
         factory.registerExternal(CorDappCustomSerializer(NeedsProxyProxySerializer(), factory))
 
         val tv1 = 100
@@ -148,7 +153,10 @@ class CorDappSerializerTests {
             override fun hasListed(type: Class<*>): Boolean = type.name in allowedClasses
         }
 
-        val factory = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+        val whitelist = WL()
+        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+                ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
+        )
         factory.registerExternal(CorDappCustomSerializer(NeedsProxyProxySerializer(), factory))
 
         val tv1 = 100

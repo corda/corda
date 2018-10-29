@@ -10,6 +10,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.EmptyWhitelist
 import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import net.corda.testing.common.internal.ProjectStructure
 import org.apache.qpid.proton.codec.Data
 import org.junit.Test
@@ -17,16 +18,20 @@ import java.io.File.separatorChar
 import java.io.NotSerializableException
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
-fun testDefaultFactory() = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+fun testDefaultFactory() = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
+)
 
 fun testDefaultFactoryNoEvolution(): SerializerFactory {
-    return SerializerFactory(
+    return SerializerFactoryBuilder.buildWithCustomEvolutionSerializerProvider(
             AllWhitelist,
-            ClassLoader.getSystemClassLoader(),
-            evolutionSerializerProvider = FailIfEvolutionAttempted)
+            ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
+            FailIfEvolutionAttempted)
 }
 
-fun testDefaultFactoryWithWhitelist() = SerializerFactory(EmptyWhitelist, ClassLoader.getSystemClassLoader())
+fun testDefaultFactoryWithWhitelist() = SerializerFactoryBuilder.buildWithCarpenter(EmptyWhitelist,
+        ClassCarpenterImpl(EmptyWhitelist, ClassLoader.getSystemClassLoader())
+)
 
 class TestSerializationOutput(
         private val verbose: Boolean,

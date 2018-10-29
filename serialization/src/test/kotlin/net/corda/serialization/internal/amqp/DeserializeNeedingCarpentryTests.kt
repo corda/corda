@@ -94,7 +94,9 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         // won't already exist and it will be carpented a second time showing that when A and B are the
         // same underlying class that we didn't create a second instance of the class with the
         // second deserialisation
-        val lfactory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        val lfactory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+                ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
+        )
         val deserialisedC = DeserializationInput(lfactory).deserialize(
                 TestSerializationOutput(VERBOSE, lfactory).serialize(concreteC))
 

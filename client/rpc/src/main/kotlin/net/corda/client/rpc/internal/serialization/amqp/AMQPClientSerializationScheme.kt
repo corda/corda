@@ -8,10 +8,7 @@ import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.serialization.internal.*
-import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
-import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
-import net.corda.serialization.internal.amqp.SerializerFactory
-import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.amqp.custom.RxNotificationSerializer
 
 /**
@@ -52,7 +49,7 @@ class AMQPClientSerializationScheme(
     }
 
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
-        return SerializerFactory(context.whitelist, context.deserializationClassLoader, context.lenientCarpenterEnabled).apply {
+        return SerializerFactoryBuilder.buildWithCarpenterClassloader(context.whitelist, context.deserializationClassLoader, context.lenientCarpenterEnabled).apply {
             register(RpcClientObservableDeSerializer)
             register(RpcClientCordaFutureSerializer(this))
             register(RxNotificationSerializer(this))

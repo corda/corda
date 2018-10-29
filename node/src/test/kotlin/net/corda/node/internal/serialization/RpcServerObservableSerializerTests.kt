@@ -11,6 +11,7 @@ import net.corda.node.services.messaging.ObservableSubscription
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.SerializationOutput
 import net.corda.serialization.internal.amqp.SerializerFactory
+import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Test
 import rx.Observable
@@ -34,7 +35,7 @@ class RpcServerObservableSerializerTests {
 
     @Test
     fun canSerializerBeRegistered() {
-        val sf = SerializerFactory(AllWhitelist, javaClass.classLoader)
+        val sf = SerializerFactoryBuilder.buildWithCarpenterClassloader(AllWhitelist, javaClass.classLoader)
 
         try {
             sf.register(RpcServerObservableSerializer())
@@ -67,7 +68,7 @@ class RpcServerObservableSerializerTests {
                 deduplicationIdentity = "thisIsATest",
                 clientAddress = SimpleString(testClientAddress))
 
-        val sf = SerializerFactory(AllWhitelist, javaClass.classLoader).apply {
+        val sf = SerializerFactoryBuilder.buildWithCarpenterClassloader(AllWhitelist, javaClass.classLoader).apply {
             register(RpcServerObservableSerializer())
         }
 

@@ -1,7 +1,6 @@
 package net.corda.serialization.internal.amqp
 
 import com.google.common.primitives.Primitives
-import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
 import net.corda.core.internal.kotlinObjectInstance
@@ -12,12 +11,11 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.carpenter.*
+import net.corda.serialization.internal.model.DefaultCacheProvider
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.*
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArrayList
 import javax.annotation.concurrent.ThreadSafe
 
 @KeepForDJVM
@@ -54,45 +52,15 @@ open class SerializerFactory(
         val classCarpenter: ClassCarpenter,
         private val evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
         val fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
-        private val serializersByType: MutableMap<Type, AMQPSerializer<Any>>,
-        val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>>,
-        private val customSerializers: MutableList<SerializerFor>,
-        private val customSerializersCache: MutableMap<CustomSerializersCacheKey, AMQPSerializer<Any>?>,
-        val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>,
         private val onlyCustomSerializers: Boolean = false
 ) {
-    @DeleteForDJVM
-    constructor(whitelist: ClassWhitelist,
-                classCarpenter: ClassCarpenter,
-                evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
-                fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
-                onlyCustomSerializers: Boolean = false
-    ) : this(
-            whitelist,
-            classCarpenter,
-            evolutionSerializerProvider,
-            fingerPrinterConstructor,
-            ConcurrentHashMap(),
-            ConcurrentHashMap(),
-            CopyOnWriteArrayList(),
-            ConcurrentHashMap(),
-            ConcurrentHashMap(),
-            onlyCustomSerializers
-    )
 
-    @DeleteForDJVM
-    constructor(whitelist: ClassWhitelist,
-                carpenterClassLoader: ClassLoader,
-                lenientCarpenter: Boolean = false,
-                evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
-                fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
-                onlyCustomSerializers: Boolean = false
-    ) : this(
-            whitelist,
-            ClassCarpenterImpl(whitelist, carpenterClassLoader, lenientCarpenter),
-            evolutionSerializerProvider,
-            fingerPrinterConstructor,
-            onlyCustomSerializers)
+    // Caches
+    private val serializersByType: MutableMap<Type, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
+    val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
+    private var customSerializers: List<SerializerFor> = emptyList()
+    private val customSerializersCache: MutableMap<CustomSerializersCacheKey, AMQPSerializer<Any>?> = DefaultCacheProvider.createCache()
+    val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>> = DefaultCacheProvider.createCache()
 
     val fingerPrinter by lazy { fingerPrinterConstructor(this) }
 

@@ -6,6 +6,7 @@ import net.corda.serialization.internal.BuiltInExceptionsWhitelist
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.GlobalTransientClassWhiteList
 import net.corda.serialization.internal.SerializationContextImpl
+import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -22,7 +23,7 @@ val TESTING_CONTEXT = SerializationContextImpl(amqpMagic,
 class TestSerializerFactory(
         wl: ClassWhitelist,
         cl: ClassLoader
-) : SerializerFactory(wl, cl) {
+) : SerializerFactory(wl, ClassCarpenterImpl(wl, cl, false)) {
     var registerCount = 0
 
     override fun register(customSerializer: CustomSerializer<out Any>) {

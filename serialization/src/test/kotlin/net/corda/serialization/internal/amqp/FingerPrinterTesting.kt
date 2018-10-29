@@ -6,6 +6,7 @@ import kotlin.test.assertEquals
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
+import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 
 class FingerPrinterTesting : FingerPrinter {
     private var index = 0
@@ -39,11 +40,9 @@ class FingerPrinterTestingTests {
     fun worksAsReplacement() {
         data class C(val a: Int, val b: Long)
 
-        val factory = SerializerFactory(
-                AllWhitelist,
-                ClassLoader.getSystemClassLoader(),
-                evolutionSerializerProvider = FailIfEvolutionAttempted,
-                fingerPrinterConstructor = { _ -> FingerPrinterTesting() })
+        val factory = SerializerFactoryBuilder.buildWithCustomFingerprinter(AllWhitelist,
+                ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
+                FailIfEvolutionAttempted) { _ -> FingerPrinterTesting() }
 
         val blob = TestSerializationOutput(VERBOSE, factory).serializeAndReturnSchema(C(1, 2L))
 

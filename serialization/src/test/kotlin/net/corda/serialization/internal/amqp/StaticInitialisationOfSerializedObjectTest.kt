@@ -48,7 +48,9 @@ class StaticInitialisationOfSerializedObjectTest {
     fun kotlinObjectWithCompanionObject() {
         data class D(val c: C)
 
-        val sf = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        val sf = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+                ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
+        )
 
         val typeMap = sf::class.java.getDeclaredField("serializersByType")
         typeMap.isAccessible = true
@@ -87,7 +89,10 @@ class StaticInitialisationOfSerializedObjectTest {
                             ".StaticInitialisationOfSerializedObjectTest\$deserializeTest\$D"
         }
 
-        val sf2 = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+        val whitelist = WL()
+        val sf2 = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+                ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
+        )
         val bytes = url.readBytes()
 
         assertThatThrownBy {

@@ -38,10 +38,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.parseAsHex
 import net.corda.core.utilities.toHexString
 import net.corda.serialization.internal.AllWhitelist
-import net.corda.serialization.internal.amqp.SerializerFactory
-import net.corda.serialization.internal.amqp.constructorForDeserialization
-import net.corda.serialization.internal.amqp.hasCordaSerializable
-import net.corda.serialization.internal.amqp.propertiesForSerialization
+import net.corda.serialization.internal.amqp.*
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.security.cert.CertPath
@@ -88,7 +85,7 @@ class CordaModule : SimpleModule("corda-core") {
  */
 private class CordaSerializableBeanSerializerModifier : BeanSerializerModifier() {
     // We need to pass in a SerializerFactory when scanning for properties, but don't actually do any serialisation so any will do.
-    private val serializerFactory = SerializerFactory(AllWhitelist, javaClass.classLoader)
+    private val serializerFactory = SerializerFactoryBuilder.buildWithCarpenterClassloader(AllWhitelist, javaClass.classLoader)
 
     override fun changeProperties(config: SerializationConfig,
                                   beanDesc: BeanDescription,

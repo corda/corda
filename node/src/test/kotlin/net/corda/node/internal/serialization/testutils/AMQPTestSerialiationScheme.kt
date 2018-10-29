@@ -12,6 +12,7 @@ import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
+import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
 import net.corda.client.rpc.internal.ObservableContext as ClientObservableContext
 
 /**
@@ -28,13 +29,13 @@ class AMQPRoundTripRPCSerializationScheme(
         cordappCustomSerializers, serializerFactoriesForContexts
 ) {
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
-        return SerializerFactory(AllWhitelist, javaClass.classLoader).apply {
+        return SerializerFactoryBuilder.buildWithCarpenterClassloader(AllWhitelist, javaClass.classLoader).apply {
             register(RpcClientObservableDeSerializer)
         }
     }
 
     override fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory {
-        return SerializerFactory(AllWhitelist, javaClass.classLoader).apply {
+        return SerializerFactoryBuilder.buildWithCarpenterClassloader(AllWhitelist, javaClass.classLoader).apply {
             register(RpcServerObservableSerializer())
         }
     }

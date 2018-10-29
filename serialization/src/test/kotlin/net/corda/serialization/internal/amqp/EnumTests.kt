@@ -9,6 +9,7 @@ import net.corda.serialization.internal.amqp.testutils.deserializeAndReturnEnvel
 import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
 import net.corda.serialization.internal.amqp.testutils.testName
+import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.io.NotSerializableException
@@ -205,7 +206,10 @@ class EnumTests {
             }
         }
 
-        val factory = SerializerFactory(WL(classTestName("C")), ClassLoader.getSystemClassLoader())
+        val whitelist = WL(classTestName("C"))
+        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+                ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
+        )
 
         Assertions.assertThatThrownBy {
             TestSerializationOutput(VERBOSE, factory).serialize(C(Bras.UNDERWIRE))
@@ -223,7 +227,10 @@ class EnumTests {
             }
         }
 
-        val factory = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+        val whitelist = WL()
+        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+                ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
+        )
 
         // if it all works, this won't explode
         TestSerializationOutput(VERBOSE, factory).serialize(C(Bras.UNDERWIRE))
@@ -237,7 +244,10 @@ class EnumTests {
             override fun hasListed(type: Class<*>) = false
         }
 
-        val factory = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+        val whitelist = WL()
+        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+                ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
+        )
 
         // if it all works, this won't explode
         TestSerializationOutput(VERBOSE, factory).serialize(C(AnnotatedBras.UNDERWIRE))
@@ -252,14 +262,19 @@ class EnumTests {
         }
 
         // first serialise the class using a context in which Bras are whitelisted
-        val factory = SerializerFactory(WL(listOf(classTestName("C"),
-                "net.corda.serialization.internal.amqp.EnumTests\$Bras")),
-                ClassLoader.getSystemClassLoader())
+        val whitelist = WL(listOf(classTestName("C"),
+                "net.corda.serialization.internal.amqp.EnumTests\$Bras"))
+        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+                ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
+        )
         val bytes = TestSerializationOutput(VERBOSE, factory).serialize(C(Bras.UNDERWIRE))
 
         // then take that serialised object and attempt to deserialize it in a context that
         // disallows the Bras enum
-        val factory2 = SerializerFactory(WL(listOf(classTestName("C"))), ClassLoader.getSystemClassLoader())
+        val whitelist1 = WL(listOf(classTestName("C")))
+        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(whitelist1,
+                ClassCarpenterImpl(whitelist1, ClassLoader.getSystemClassLoader())
+        )
         Assertions.assertThatThrownBy {
             DeserializationInput(factory2).deserialize(bytes)
         }.isInstanceOf(NotSerializableException::class.java)
