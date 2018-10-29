@@ -75,15 +75,23 @@ def list_test_cases(args):
     print()
 # }}}
 
+# {{{ format_candidate() - Format a candidate number
+def format_candidate(candidate):
+    if candidate > 100:
+        return '({})'.format(candidate)
+    else:
+        return 'RC{:02d}'.format(candidate)
+# }}}
+
 # {{{ show_status() - Show the status of all test runs for a specific release or release candidate
 def show_status(args):
     user, password = login('jira', args.user)
     if not user or not password: sys.exit(1)
     jira = Jira().login(user, password)
     version = '{} {}'.format(product_map[args.PRODUCT], args.VERSION).replace('.0', '')
-    candidate = '{} RC{:02d}'.format(version, args.CANDIDATE) if args.CANDIDATE else version
+    candidate = '{} {}'.format(version, format_candidate(args.CANDIDATE)) if args.CANDIDATE else version
     if args.CANDIDATE:
-        print(u'Status of test runs for {} version {} release candidate {}:'.format(yellow(product_map[args.PRODUCT]), yellow(args.VERSION), yellow('RC{:02d}'.format(args.CANDIDATE))))
+        print(u'Status of test runs for {} version {} release candidate {}:'.format(yellow(product_map[args.PRODUCT]), yellow(args.VERSION), yellow(format_candidate(args.CANDIDATE))))
     else:
         print(u'Status of test runs for {} version {}:'.format(yellow(product_map[args.PRODUCT]), yellow(args.VERSION)))
     if args.verbose:
@@ -141,7 +149,7 @@ def create_version(args):
     if not user or not password: sys.exit(1)
     jira = Jira().login(user, password)
     version = '{} {}'.format(product_map[args.PRODUCT], args.VERSION).replace('.0', '')
-    version = '{} RC{:02d}'.format(version, args.CANDIDATE) if args.CANDIDATE else version
+    version = '{} {}'.format(version, format_candidate(args.CANDIDATE)) if args.CANDIDATE else version
     confirm(u'Create new version {}?'.format(yellow(version)), auto_yes=args.yes or args.dry_run)
     print()
     if not args.dry_run:
@@ -229,8 +237,8 @@ def create_release_candidate(args):
     jira = Jira().login(user, password)
     version = '{} {}'.format(product_map[args.PRODUCT], args.VERSION).replace('.0', '')
     CANDIDATE = args.CANDIDATE[0]
-    candidate = '{} RC{:02d}'.format(version, CANDIDATE)
-    confirm(u'Create test run tickets for {} version {} release candidate {}?'.format(yellow(product_map[args.PRODUCT]), yellow(args.VERSION), yellow('RC{:02d}'.format(CANDIDATE))), auto_yes=args.yes or args.dry_run)
+    candidate = '{} {}'.format(version, format_candidate(CANDIDATE))
+    confirm(u'Create test run tickets for {} version {} release candidate {}?'.format(yellow(product_map[args.PRODUCT]), yellow(args.VERSION), yellow(format_candidate(CANDIDATE))), auto_yes=args.yes or args.dry_run)
     if args.verbose:
         print(faint('[{}]'.format(QUERY_LIST_TEST_INSTANCES.format(args.PRODUCT, version))))
     print()
@@ -247,7 +255,7 @@ def create_release_candidate(args):
             continue
         print()
         has_tests = True
-        print(u'    - Creating test run ticket for release candidate {} ...'.format(yellow('RC{:02d}'.format(CANDIDATE))))
+        print(u'    - Creating test run ticket for release candidate {} ...'.format(yellow(format_candidate(CANDIDATE))))
         if args.verbose:
             print(faint(u'      [{}]'.format(QUERY_LIST_TEST_RUN_FOR_TICKET.format(args.PRODUCT, candidate, issue.key))))
         has_test_instance_for_version = len(list(jira.search(QUERY_LIST_TEST_RUN_FOR_TICKET.format(args.PRODUCT, candidate, issue.key))))
@@ -291,7 +299,7 @@ def main():
                 nargs = '?'
             else:
                 nargs = 1
-            command.add('CANDIDATE', help='the number of the release candidate, e.g., 1 for RC01', type=int, nargs=nargs)
+            command.add('CANDIDATE', help='the number of the release candidate, e.g., 1 for RC01, or an 8 digit date in the format YYYYMMDD for snapshot releases', type=int, nargs=nargs)
 
         with program.command('list-tests', 'list test cases applicable to the provided specification', list_test_cases) as command:
             mixin_product(command)

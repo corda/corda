@@ -1,6 +1,5 @@
 package net.corda.node.internal
 
-import com.typesafe.config.ConfigException
 import io.netty.channel.unix.Errors
 import net.corda.cliutils.*
 import net.corda.core.crypto.Crypto
@@ -15,15 +14,14 @@ import net.corda.node.*
 import net.corda.node.internal.Node.Companion.isInvalidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.internal.subcommands.*
+import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logConfigurationErrors
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
-import net.corda.nodeapi.internal.persistence.DatabaseMigrationException
 import net.corda.nodeapi.internal.persistence.oracleJdbcDriverSerialFilter
 import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
@@ -59,15 +57,18 @@ abstract class NodeCliCommand(alias: String, description: String, val startup: N
 /** Main corda entry point. */
 open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
     open val startup = NodeStartup()
+    @Mixin
+    val cmdLineOptions = NodeCmdLineOptions()
 
     private val networkCacheCli by lazy { ClearNetworkCacheCli(startup) }
     private val justGenerateNodeInfoCli by lazy { GenerateNodeInfoCli(startup) }
     private val justGenerateRpcSslCertsCli by lazy { GenerateRpcSslCertsCli(startup) }
     private val initialRegistrationCli by lazy { InitialRegistrationCli(startup) }
+    private val validateConfigurationCli by lazy { ValidateConfigurationCli() }
 
     override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
 
-    override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli)
+    override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli, validateConfigurationCli)
 
     override fun runProgram(): Int {
         return when {
@@ -106,9 +107,6 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
             })
         }
     }
-
-    @Mixin
-    val cmdLineOptions = NodeCmdLineOptions()
 }
 
 /** This class provides a common set of functionality for starting a Node from command line arguments. */
@@ -142,13 +140,7 @@ open class NodeStartup : NodeStartupLogging {
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
         // Step 5. Load and validate node configuration.
-        val configuration = (attempt { cmdLineOptions.loadConfig() }.doOnException(handleConfigurationLoadingError(cmdLineOptions.configFile)) as? Try.Success)?.let(Try.Success<NodeConfiguration>::value)
-                ?: return ExitCodes.FAILURE
-        val errors = configuration.validate()
-        if (errors.isNotEmpty()) {
-            logger.error("Invalid node configuration. Errors were:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
-            return ExitCodes.FAILURE
-        }
+        val configuration = cmdLineOptions.nodeConfiguration().doOnErrors { errors -> logConfigurationErrors(errors, cmdLineOptions.configFile) }.optional ?: return ExitCodes.FAILURE
 
         // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
         attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success
@@ -440,23 +432,6 @@ interface NodeStartupLogging {
             error.isOpenJdkKnownIssue() -> error.logAsExpected("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
             else -> error.logAsUnexpected("Exception during node startup")
         }
-    }
-
-    fun handleConfigurationLoadingError(configFile: Path) = { error: Exception ->
-        when (error) {
-            is UnknownConfigurationKeysException -> error.logAsExpected()
-            is ConfigException.IO -> error.logAsExpected(configFileNotFoundMessage(configFile), ::println)
-            else -> error.logAsUnexpected("Unexpected error whilst reading node configuration")
-        }
-    }
-
-    private fun configFileNotFoundMessage(configFile: Path): String {
-        return """
-                Unable to load the node config file from '$configFile'.
-
-                Try setting the --base-directory flag to change which directory the node
-                is looking in, or use the --config-file flag to specify it explicitly.
-            """.trimIndent()
     }
 }
 
