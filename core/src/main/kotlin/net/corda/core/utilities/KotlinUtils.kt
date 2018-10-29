@@ -136,7 +136,7 @@ fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
     throw e.cause!!
 }
 
-private class LazyResolvedList<T, U>(val originalList: List<T>, val transform: (T, Int) -> U) : AbstractList<U>() {
+private class LazyMappedList<T, U>(val originalList: List<T>, val transform: (T, Int) -> U) : AbstractList<U>() {
     private val partialResolvedList = MutableList<U?>(originalList.size) { null }
 
     override val size = originalList.size
@@ -148,4 +148,4 @@ private class LazyResolvedList<T, U>(val originalList: List<T>, val transform: (
 /**
  * Creates a lazy list that applies the [transform] function only when the element is accessed.
  */
-fun <T, U> makeLazyResolvedList(originalList: List<T>, transform: (T, Int) -> U): List<U> = LazyResolvedList(originalList, transform)
+fun <T, U> List<T>.lazyMapped(transform: (T, Int) -> U): List<U> = LazyMappedList(this, transform)
