@@ -14,7 +14,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.makeLazyResolvedList
+import net.corda.core.utilities.lazyMapped
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
@@ -128,17 +128,17 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             networkParameters: NetworkParameters?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
-        val authenticatedArgs = makeLazyResolvedList(commands) { cmd, _ ->
+        val authenticatedArgs = commands.lazyMapped { cmd, _ ->
             val parties = cmd.signers.mapNotNull { pk -> resolveIdentity(pk) }
             CommandWithParties(cmd.signers, parties, cmd.value)
         }
-        val resolvedInputs = makeLazyResolvedList(inputs) { ref, _ ->
+        val resolvedInputs = inputs.lazyMapped { ref, _ ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-        val resolvedReferences = makeLazyResolvedList(references) { ref, _ ->
+        val resolvedReferences = references.lazyMapped { ref, _ ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-        val attachments = makeLazyResolvedList(attachments) { att, _ ->
+        val attachments = attachments.lazyMapped { att, _ ->
             resolveAttachment(att) ?: throw AttachmentResolutionException(att)
         }
         val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, networkParameters, resolvedReferences)

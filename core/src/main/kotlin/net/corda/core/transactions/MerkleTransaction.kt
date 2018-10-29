@@ -9,7 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.makeLazyResolvedList
+import net.corda.core.utilities.lazyMapped
 import java.security.PublicKey
 import java.util.function.Predicate
 import kotlin.reflect.KClass
@@ -73,7 +73,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
         val context = factory.defaultContext
         val group = componentGroups.firstOrNull { it.groupIndex == groupEnum.ordinal }
         return if (group != null && group.components.isNotEmpty()) {
-            makeLazyResolvedList(group.components) { component, internalIndex ->
+            group.components.lazyMapped { component, internalIndex ->
                 try {
                     factory.deserialize(component, clazz.java, context)
                 } catch (e: MissingAttachmentsException) {
@@ -105,14 +105,14 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
             val leafIndices = componentHashes.map { group.partialMerkleTree.leafIndex(it) }
             if (leafIndices.isNotEmpty())
                 check(leafIndices.max()!! < signersList.size) { "Invalid Transaction. A command with no corresponding signer detected" }
-            makeLazyResolvedList(commandDataList) { commandData, index -> Command(commandData, signersList[leafIndices[index]]) }
+            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]]) }
         } else {
             // It is a WireTransaction
             // or a FilteredTransaction with no Commands (in which case group is null).
             check(commandDataList.size == signersList.size) {
                 "Invalid Transaction. Sizes of CommandData (${commandDataList.size}) and Signers (${signersList.size}) do not match"
             }
-            makeLazyResolvedList(commandDataList){ commandData, index -> Command(commandData, signersList[index]) }
+            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index]) }
         }
     }
 }
