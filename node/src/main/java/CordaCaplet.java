@@ -54,6 +54,7 @@ public class CordaCaplet extends Capsule {
 
     @Override
     protected ProcessBuilder prelaunch(List<String> jvmArgs, List<String> args) {
+        checkJavaVersion();
         nodeConfig = parseConfigFile(args);
         return super.prelaunch(jvmArgs, args);
     }
@@ -140,6 +141,14 @@ public class CordaCaplet extends Capsule {
             }
         } catch (SecurityException | NullPointerException e) {
             log(LOG_QUIET, e);
+        }
+    }
+
+    private static void checkJavaVersion() {
+        String version = System.getProperty("java.version");
+        if (version == null || !version.startsWith("1.8")) {
+            System.err.printf("Error: Unsupported Java version %s; currently only version 1.8 is supported.\n", version);
+            System.exit(1);
         }
     }
 
