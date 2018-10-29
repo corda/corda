@@ -18,18 +18,18 @@ import java.io.File.separatorChar
 import java.io.NotSerializableException
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
-fun testDefaultFactory() = SerializerFactoryBuilder.build(AllWhitelist,
+fun testDefaultFactory() = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
         ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
 )
 
 fun testDefaultFactoryNoEvolution(): SerializerFactory {
-    return SerializerFactoryBuilder.build(
+    return SerializerFactoryBuilder.buildWithCustomEvolutionSerializerProvider(
             AllWhitelist,
             ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
             FailIfEvolutionAttempted)
 }
 
-fun testDefaultFactoryWithWhitelist() = SerializerFactoryBuilder.build(EmptyWhitelist,
+fun testDefaultFactoryWithWhitelist() = SerializerFactoryBuilder.buildWithCarpenter(EmptyWhitelist,
         ClassCarpenterImpl(EmptyWhitelist, ClassLoader.getSystemClassLoader())
 )
 

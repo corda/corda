@@ -1,24 +1,18 @@
 package net.corda.serialization.internal.amqp
 
 import com.google.common.primitives.Primitives
-import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.trace
+import net.corda.core.utilities.*
 import net.corda.serialization.internal.carpenter.*
-import net.corda.serialization.internal.model.getTypeModellingFingerPrinter
+import net.corda.serialization.internal.model.DefaultCacheProvider
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.*
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArrayList
 import javax.annotation.concurrent.ThreadSafe
 
 @KeepForDJVM
@@ -54,53 +48,20 @@ open class SerializerFactory(
         val whitelist: ClassWhitelist,
         val classCarpenter: ClassCarpenter,
         private val evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
-        val fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter = ::getTypeModellingFingerPrinter,
-        private val serializersByType: MutableMap<Type, AMQPSerializer<Any>>,
-        val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>>,
-        private val customSerializers: MutableList<SerializerFor>,
-        private val customSerializersCache: MutableMap<CustomSerializersCacheKey, AMQPSerializer<Any>?>,
-        val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>,
+        val fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
         private val onlyCustomSerializers: Boolean = false
 ) {
-    @DeleteForDJVM
-    constructor(whitelist: ClassWhitelist,
-                classCarpenter: ClassCarpenter,
-                evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
-                fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter = ::getTypeModellingFingerPrinter,
-                onlyCustomSerializers: Boolean = false
-    ) : this(
-            whitelist,
-            classCarpenter,
-            evolutionSerializerProvider,
-            fingerPrinterConstructor,
-            ConcurrentHashMap(),
-            ConcurrentHashMap(),
-            CopyOnWriteArrayList(),
-            ConcurrentHashMap(),
-            ConcurrentHashMap(),
-            onlyCustomSerializers
-    )
 
-    @DeleteForDJVM
-    constructor(whitelist: ClassWhitelist,
-                carpenterClassLoader: ClassLoader,
-                lenientCarpenter: Boolean = false,
-                evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
-                fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter = ::getTypeModellingFingerPrinter,
-                onlyCustomSerializers: Boolean = false
-    ) : this(
-            whitelist,
-            ClassCarpenterImpl(whitelist, carpenterClassLoader, lenientCarpenter),
-            evolutionSerializerProvider,
-            fingerPrinterConstructor,
-            onlyCustomSerializers)
+    // Caches
+    private val serializersByType: MutableMap<Type, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
+    val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
+    private var customSerializers: List<SerializerFor> = emptyList()
+    private val customSerializersCache: MutableMap<CustomSerializersCacheKey, AMQPSerializer<Any>?> = DefaultCacheProvider.createCache()
+    val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>> = DefaultCacheProvider.createCache()
 
     val fingerPrinter by lazy { fingerPrinterConstructor(this) }
 
     val classloader: ClassLoader get() = classCarpenter.classloader
-
-    // Used to short circuit any computation for a given input, for performance.
-    private data class MemoType(val actualClass: Class<*>?, val declaredType: Type) : Type
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
@@ -113,56 +74,50 @@ open class SerializerFactory(
         // can be useful to enable but will be *extremely* chatty if you do
         logger.trace { "Get Serializer for $actualClass ${declaredType.typeName}" }
 
-        val ourType = MemoType(actualClass, declaredType)
-        // ConcurrentHashMap.get() is lock free, but computeIfAbsent is not, even if the key is in the map already.
-        return serializersByType[ourType] ?: run {
+        val declaredClass = declaredType.asClass()
+        val actualType: Type = if (actualClass == null) declaredType
+        else inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
 
-            val declaredClass = declaredType.asClass()
-            val actualType: Type = if (actualClass == null) declaredType
-            else inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
-
-            val serializer = when {
+        val serializer = when {
             // Declared class may not be set to Collection, but actual class could be a collection.
             // In this case use of CollectionSerializer is perfectly appropriate.
-                (Collection::class.java.isAssignableFrom(declaredClass) ||
-                        (actualClass != null && Collection::class.java.isAssignableFrom(actualClass))) &&
-                        !EnumSet::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
-                    val declaredTypeAmended = CollectionSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
-                    serializersByType.computeIfAbsent(declaredTypeAmended) {
-                        CollectionSerializer(declaredTypeAmended, this)
-                    }
-                }
-            // Declared class may not be set to Map, but actual class could be a map.
-            // In this case use of MapSerializer is perfectly appropriate.
-                (Map::class.java.isAssignableFrom(declaredClass) ||
-                        (actualClass != null && Map::class.java.isAssignableFrom(actualClass))) -> {
-                    val declaredTypeAmended = MapSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
-                    serializersByType.computeIfAbsent(declaredTypeAmended) {
-                        makeMapSerializer(declaredTypeAmended)
-                    }
-                }
-                Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
-                    logger.trace {
-                        "class=[${actualClass?.simpleName} | $declaredClass] is an enumeration " +
-                                "declaredType=${declaredType.typeName} " +
-                                "isEnum=${declaredType::class.java.isEnum}"
-                    }
-
-                    serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
-                        whitelist.requireWhitelisted(actualType)
-                        EnumSerializer(actualType, actualClass ?: declaredClass, this)
-                    }
-                }
-                else -> {
-                    makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
+            (Collection::class.java.isAssignableFrom(declaredClass) ||
+                    (actualClass != null && Collection::class.java.isAssignableFrom(actualClass))) &&
+                    !EnumSet::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
+                val declaredTypeAmended = CollectionSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
+                serializersByType.computeIfAbsent(declaredTypeAmended) {
+                    CollectionSerializer(declaredTypeAmended, this)
                 }
             }
+            // Declared class may not be set to Map, but actual class could be a map.
+            // In this case use of MapSerializer is perfectly appropriate.
+            (Map::class.java.isAssignableFrom(declaredClass) ||
+                    (actualClass != null && Map::class.java.isAssignableFrom(actualClass))) -> {
+                val declaredTypeAmended = MapSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
+                serializersByType.computeIfAbsent(declaredTypeAmended) {
+                    makeMapSerializer(declaredTypeAmended)
+                }
+            }
+            Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
+                logger.trace {
+                    "class=[${actualClass?.simpleName} | $declaredClass] is an enumeration " +
+                            "declaredType=${declaredType.typeName} " +
+                            "isEnum=${declaredType::class.java.isEnum}"
+                }
 
-            serializersByDescriptor.putIfAbsent(serializer.typeDescriptor, serializer)
-            // Always store the short-circuit too, for performance.
-            serializersByType.putIfAbsent(ourType, serializer)
-            return serializer
+                serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
+                    whitelist.requireWhitelisted(actualType)
+                    EnumSerializer(actualType, actualClass ?: declaredClass, this)
+                }
+            }
+            else -> {
+                makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
+            }
         }
+
+        serializersByDescriptor.putIfAbsent(serializer.typeDescriptor, serializer)
+
+        return serializer
     }
 
     /**
@@ -262,8 +217,32 @@ open class SerializerFactory(
         return get(type.asClass(), type)
     }
 
-    private fun typeForName(name: String, classloader: ClassLoader): Type =
-            AMQPTypeIdentifierParser.parse(name).getLocalType(classloader)
+    private fun typeForName(name: String, classloader: ClassLoader): Type = when {
+        name.endsWith("[]") -> {
+            val elementType = typeForName(name.substring(0, name.lastIndex - 1), classloader)
+            if (elementType is ParameterizedType || elementType is GenericArrayType) {
+                DeserializedGenericArrayType(elementType)
+            } else if (elementType is Class<*>) {
+                java.lang.reflect.Array.newInstance(elementType, 0).javaClass
+            } else {
+                throw AMQPNoTypeNotSerializableException("Not able to deserialize array type: $name")
+            }
+        }
+        name.endsWith("[p]") -> // There is no need to handle the ByteArray case as that type is coercible automatically
+            // to the binary type and is thus handled by the main serializer and doesn't need a
+            // special case for a primitive array of bytes
+            when (name) {
+                "int[p]" -> IntArray::class.java
+                "char[p]" -> CharArray::class.java
+                "boolean[p]" -> BooleanArray::class.java
+                "float[p]" -> FloatArray::class.java
+                "double[p]" -> DoubleArray::class.java
+                "short[p]" -> ShortArray::class.java
+                "long[p]" -> LongArray::class.java
+                else -> throw AMQPNoTypeNotSerializableException("Not able to deserialize array type: $name")
+            }
+        else -> DeserializedParameterizedType.make(name, classloader)
+    }
 
     @StubOutForDJVM
     private fun runCarpentry(schemaAndDescriptor: FactorySchemaAndDescriptor, metaSchema: CarpenterMetaSchema) {

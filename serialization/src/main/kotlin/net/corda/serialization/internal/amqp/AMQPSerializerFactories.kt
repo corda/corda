@@ -9,7 +9,7 @@ fun createSerializerFactoryFactory(): SerializerFactoryFactory = SerializerFacto
 
 open class SerializerFactoryFactoryImpl : SerializerFactoryFactory {
     override fun make(context: SerializationContext): SerializerFactory {
-        return SerializerFactoryBuilder.build(context.whitelist,
+        return SerializerFactoryBuilder.buildWithCarpenter(context.whitelist,
                 ClassCarpenterImpl(context.whitelist, context.deserializationClassLoader, context.lenientCarpenterEnabled)
         )
     }

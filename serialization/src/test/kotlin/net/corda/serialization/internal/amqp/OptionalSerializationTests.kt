@@ -18,7 +18,7 @@ class OptionalSerializationTests {
     fun setupEnclosedSerializationTest() {
         @Test
         fun `java optionals should serialize`() {
-            val factory = SerializerFactoryBuilder.build(AllWhitelist,
+            val factory = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
                     ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
             )
             factory.register(OptionalSerializer(factory))

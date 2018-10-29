@@ -13,16 +13,14 @@ import kotlin.test.assertEquals
 class CorDappSerializerTests {
     data class NeedsProxy(val a: String)
 
-    private fun proxyFactory(serializers: List<SerializationCustomSerializer<*, *>>): SerializerFactory {
-        val factory = SerializerFactoryBuilder.build(AllWhitelist,
-                ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
-                DefaultEvolutionSerializerProvider)
-
+    private fun proxyFactory(
+            serializers: List<SerializationCustomSerializer<*, *>>
+    ) = SerializerFactoryBuilder.buildOnlyCustomerSerializers(AllWhitelist,
+            ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
+            DefaultEvolutionSerializerProvider).apply {
         serializers.forEach {
-            factory.registerExternal(CorDappCustomSerializer(it, factory))
+            registerExternal(CorDappCustomSerializer(it, this))
         }
-
-        return factory
     }
 
     class NeedsProxyProxySerializer : SerializationCustomSerializer<NeedsProxy, NeedsProxyProxySerializer.Proxy> {
@@ -103,7 +101,7 @@ class CorDappSerializerTests {
         }
 
         val whitelist = WL()
-        val factory = SerializerFactoryBuilder.build(whitelist,
+        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
                 ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
         )
         factory.registerExternal(CorDappCustomSerializer(NeedsProxyProxySerializer(), factory))
@@ -128,7 +126,7 @@ class CorDappSerializerTests {
         }
 
         val whitelist = WL()
-        val factory = SerializerFactoryBuilder.build(whitelist,
+        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
                 ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
         )
         factory.registerExternal(CorDappCustomSerializer(NeedsProxyProxySerializer(), factory))
@@ -156,7 +154,7 @@ class CorDappSerializerTests {
         }
 
         val whitelist = WL()
-        val factory = SerializerFactoryBuilder.build(whitelist,
+        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
                 ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
         )
         factory.registerExternal(CorDappCustomSerializer(NeedsProxyProxySerializer(), factory))
