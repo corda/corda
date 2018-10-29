@@ -488,8 +488,6 @@ class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>
 }
 
 /** For serializing the utility [LazyMappedList]. It will serialize the fully resolved object.*/
-typealias Transform = (Any, Int) -> Any
-
 @ThreadSafe
 @SuppressWarnings("ALL")
 object LazyMappedListSerializer : Serializer<List<*>>() {

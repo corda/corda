@@ -83,14 +83,12 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
             return components.originalList as List<T>
         }
 
-        val javaClazz = clazz.java // This is needed because the checkpoint serializer can't serialize KClasses.
-
         val factory = SerializationFactory.defaultFactory
         val context = factory.defaultContext.let { if (attachmentsContext) it.withAttachmentsClassLoader(attachments) else it }
 
-        return group.components.lazyMapped { component, internalIndex ->
+        return components.lazyMapped { component, internalIndex ->
             try {
-                factory.deserialize(component, javaClazz, context)
+                factory.deserialize(component, clazz.java , context)
             } catch (e: MissingAttachmentsException) {
                 throw e
             } catch (e: Exception) {
