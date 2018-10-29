@@ -487,18 +487,12 @@ class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>
     private fun Throwable.setSuppressedToSentinel() = suppressedField.set(this, sentinelValue)
 }
 
-/** For serializing the utility [LazyMappedList]. */
+/** For serializing the utility [LazyMappedList]. It will serialize the fully resolved object.*/
 typealias Transform = (Any, Int) -> Any
 
 @ThreadSafe
 @SuppressWarnings("ALL")
-object LazyMappedListSerializer : Serializer<LazyMappedList<*, *>>() {
-    override fun write(kryo: Kryo, output: Output, obj: LazyMappedList<*, *>) {
-        kryo.writeClassAndObject(output, obj.originalList)
-        kryo.writeClassAndObject(output, obj.transform)
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<LazyMappedList<*, *>>) =
-            LazyMappedList(kryo.readClassAndObject(input) as List<Any>, kryo.readClassAndObject(input) as Transform)
-
+object LazyMappedListSerializer : Serializer<List<*>>() {
+    override fun write(kryo: Kryo, output: Output, obj: List<*>) = kryo.writeClassAndObject(output, obj.toList())
+    override fun read(kryo: Kryo, input: Input, type: Class<List<*>>) = kryo.readClassAndObject(input) as List<*>
 }

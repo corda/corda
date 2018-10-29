@@ -30,7 +30,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
     /** Pointers to reference states, identified by (tx identity hash, output index). */
     override val references: List<StateRef> = deserialiseComponentGroup(StateRef::class, REFERENCES_GROUP)
 
-    override val outputs: List<TransactionState<ContractState>> = deserialiseComponentGroup(TransactionState::class, OUTPUTS_GROUP)
+    override val outputs: List<TransactionState<ContractState>> = deserialiseComponentGroup(TransactionState::class, OUTPUTS_GROUP, attachmentsContext = true)
 
     /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
     val commands: List<Command<*>> = deserialiseCommands()
@@ -68,16 +68,19 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
 
     // Helper function to return a meaningful exception if deserialisation of a component fails.
     private fun <T : Any> deserialiseComponentGroup(clazz: KClass<T>,
-                                                    groupEnum: ComponentGroupEnum): List<T> {
+                                                    groupEnum: ComponentGroupEnum,
+                                                    attachmentsContext: Boolean = false): List<T> {
         val group = componentGroups.firstOrNull { it.groupIndex == groupEnum.ordinal }
 
         val javaClazz = clazz.java // This is needed because the checkpoint serializer can't serialize KClasses.
 
+        val factory = SerializationFactory.defaultFactory
+        val context = factory.defaultContext.let { if (attachmentsContext) it.withAttachmentsClassLoader(attachments) else it }
+
         return if (group != null && group.components.isNotEmpty()) {
             group.components.lazyMapped { component, internalIndex ->
                 try {
-                    val factory = SerializationFactory.defaultFactory
-                    factory.deserialize(component, javaClazz, factory.defaultContext)
+                    factory.deserialize(component, javaClazz, context)
                 } catch (e: MissingAttachmentsException) {
                     throw e
                 } catch (e: Exception) {
@@ -97,7 +100,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
         //      However, current approach ensures the transaction is not malformed
         //      and it will throw if any of the signers objects is not List of public keys).
         val signersList: List<List<PublicKey>> = uncheckedCast(deserialiseComponentGroup(List::class, SIGNERS_GROUP))
-        val commandDataList: List<CommandData> = deserialiseComponentGroup(CommandData::class, COMMANDS_GROUP)
+        val commandDataList: List<CommandData> = deserialiseComponentGroup(CommandData::class, COMMANDS_GROUP, attachmentsContext = true)
         val group = componentGroups.firstOrNull { it.groupIndex == COMMANDS_GROUP.ordinal }
         return if (group is FilteredComponentGroup) {
             check(commandDataList.size <= signersList.size) {

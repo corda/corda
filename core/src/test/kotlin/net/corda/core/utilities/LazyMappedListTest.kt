@@ -11,7 +11,7 @@ class LazyMappedListTest {
 
         var callCounter = 0
 
-        val lazyList = originalList.lazyMapped { value, index ->
+        val lazyList = originalList.lazyMapped { value, _ ->
             callCounter++
             value * value
         }
