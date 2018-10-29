@@ -688,11 +688,12 @@ class DriverDSLImpl(
      * Simple holder class to capture the node configuration both as the raw [Config] object and the parsed [NodeConfiguration].
      * Keeping [Config] around is needed as the user may specify extra config options not specified in [NodeConfiguration].
      */
-    private class NodeConfig(val typesafe: Config, val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration()) {
-        init {
+    private class NodeConfig(val typesafe: Config, corda: NodeConfiguration? = null) {
+
+        val corda = corda?.also {
             val errors = corda.validate()
             require(errors.isEmpty()) { "Invalid node configuration. Errors where:\n${errors.joinToString("\n")}" }
-        }
+        } ?: typesafe.parseAsNodeConfiguration().orThrow()
     }
 
     companion object {

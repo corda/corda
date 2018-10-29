@@ -18,7 +18,7 @@ class VersionExtractorTest {
         val versionValue = Configuration.Version.Extractor.DEFAULT_VERSION_VALUE + 1
         val rawConfiguration = configObject("configuration" to configObject("metadata" to configObject("version" to versionValue), "node" to configObject("p2pAddress" to "localhost:8080"))).toConfig()
 
-        val version = extractVersion.invoke(rawConfiguration).valueOrThrow()
+        val version = extractVersion.invoke(rawConfiguration).orThrow()
         assertThat(version).isEqualTo(versionValue)
     }
 
@@ -27,7 +27,7 @@ class VersionExtractorTest {
 
         val rawConfiguration = configObject("configuration" to configObject("node" to configObject("p2pAddress" to "localhost:8080"))).toConfig()
 
-        val version = extractVersion.invoke(rawConfiguration).valueOrThrow()
+        val version = extractVersion.invoke(rawConfiguration).orThrow()
         assertThat(version).isEqualTo(Configuration.Version.Extractor.DEFAULT_VERSION_VALUE)
     }
 
@@ -36,7 +36,7 @@ class VersionExtractorTest {
 
         val rawConfiguration = configObject("configuration" to configObject("metadata" to configObject(), "node" to configObject("p2pAddress" to "localhost:8080"))).toConfig()
 
-        val version = extractVersion.invoke(rawConfiguration).valueOrThrow()
+        val version = extractVersion.invoke(rawConfiguration).orThrow()
 
         assertThat(version).isEqualTo(Configuration.Version.Extractor.DEFAULT_VERSION_VALUE)
     }
@@ -46,7 +46,7 @@ class VersionExtractorTest {
 
         val rawConfiguration = configObject("configuration" to configObject("metadata" to configObject("version" to null), "node" to configObject("p2pAddress" to "localhost:8080"))).toConfig()
 
-        val version = extractVersion.invoke(rawConfiguration).valueOrThrow()
+        val version = extractVersion.invoke(rawConfiguration).orThrow()
 
         assertThat(version).isEqualTo(Configuration.Version.Extractor.DEFAULT_VERSION_VALUE)
     }
@@ -56,7 +56,7 @@ class VersionExtractorTest {
 
         val rawConfiguration = configObject().toConfig()
 
-        val version = extractVersion.invoke(rawConfiguration).valueOrThrow()
+        val version = extractVersion.invoke(rawConfiguration).orThrow()
 
         assertThat(version).isEqualTo(Configuration.Version.Extractor.DEFAULT_VERSION_VALUE)
     }

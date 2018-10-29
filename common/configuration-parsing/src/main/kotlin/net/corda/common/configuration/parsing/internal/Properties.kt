@@ -113,7 +113,7 @@ private class OptionalProperty<TYPE>(delegate: Configuration.Property.Definition
 
 private class FunctionalProperty<TYPE, MAPPED : Any>(delegate: Configuration.Property.Definition.Standard<TYPE>, private val mappedTypeName: String, internal val extractListValue: (Config, String) -> List<TYPE>, private val convert: (TYPE) -> Valid<MAPPED>) : RequiredDelegatedProperty<MAPPED, Configuration.Property.Definition.Standard<TYPE>>(delegate), Configuration.Property.Definition.Standard<MAPPED> {
 
-    override fun valueIn(configuration: Config) = convert.invoke(delegate.valueIn(configuration)).valueOrThrow()
+    override fun valueIn(configuration: Config) = convert.invoke(delegate.valueIn(configuration)).orThrow()
 
     override val typeName: String = if (super.typeName == "#$mappedTypeName") super.typeName else "$mappedTypeName(${super.typeName})"
 

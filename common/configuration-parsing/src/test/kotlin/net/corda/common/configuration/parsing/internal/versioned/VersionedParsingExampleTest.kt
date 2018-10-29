@@ -52,7 +52,7 @@ class VersionedParsingExampleTest {
     private fun assertResult(result: Valid<RpcSettings>, principalAddressValue: Address, adminAddressValue: Address) {
 
         assertThat(result.isValid).isTrue()
-        assertThat(result.valueOrThrow()).satisfies { value ->
+        assertThat(result.orThrow()).satisfies { value ->
 
             assertThat(value.principal).isEqualTo(principalAddressValue)
             assertThat(value.admin).isEqualTo(adminAddressValue)

@@ -5,6 +5,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
 import net.corda.bootstrapper.docker.DockerUtils
+import net.corda.common.validation.internal.Validated
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
 import org.slf4j.LoggerFactory
@@ -30,14 +31,13 @@ open class NodeBuilder {
                 .withBaseDirectory(nodeDir)
                 .exec(BuildImageResultCallback()).awaitImageId()
         LOG.info("finished building docker image for: $nodeDir with id: $nodeImageId")
-        val config = nodeConfig.parseAsNodeConfigWithFallback(ConfigFactory.parseFile(copiedNode.configFile))
+        val config = nodeConfig.parseAsNodeConfigWithFallback(ConfigFactory.parseFile(copiedNode.configFile)).orThrow()
         return copiedNode.builtNode(config, nodeImageId)
     }
 
 }
 
-
-fun Config.parseAsNodeConfigWithFallback(preCopyConfig: Config): NodeConfiguration {
+fun Config.parseAsNodeConfigWithFallback(preCopyConfig: Config): Validated<NodeConfiguration, Exception> {
     val nodeConfig = this
             .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(""))
             .withFallback(ConfigFactory.parseResources("reference.conf"))

@@ -39,7 +39,7 @@ class SpecificationTest {
         val rpcSettings = RpcSettingsSpec.parse(configuration)
 
         assertThat(rpcSettings.isValid).isTrue()
-        assertThat(rpcSettings.valueOrThrow()).satisfies { value ->
+        assertThat(rpcSettings.orThrow()).satisfies { value ->
 
             assertThat(value.useSsl).isEqualTo(useSslValue)
             assertThat(value.addresses).satisfies { addresses ->

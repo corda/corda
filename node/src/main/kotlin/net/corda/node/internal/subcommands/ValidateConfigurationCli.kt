@@ -61,7 +61,7 @@ private object NodeConfigurationParser : (SharedNodeCmdLineOptions) -> Valid<Nod
     private val configRenderingOptions = ConfigRenderOptions.defaults().setComments(false).setOriginComments(false).setFormatted(true)
 
     override fun invoke(cmds: SharedNodeCmdLineOptions): Valid<NodeConfiguration> {
-        return attempt(cmds::rawConfiguration).doIfValid(::log).attemptMap(cmds::parseConfiguration).mapValid(::validate)
+        return attempt(cmds::rawConfiguration).doIfValid(::log).mapValid(cmds::parseConfiguration).mapValid(::validate)
     }
 
     internal fun log(config: Config) = logger.debug("Actual configuration:\n${config.root().render(configRenderingOptions)}")
@@ -69,8 +69,6 @@ private object NodeConfigurationParser : (SharedNodeCmdLineOptions) -> Valid<Nod
     private fun validate(configuration: NodeConfiguration): Valid<NodeConfiguration> {
         return Validated.withResult(configuration, configuration.validate().asSequence().map { error -> IllegalArgumentException(error) }.toSet())
     }
-
-    private fun <VALUE, MAPPED> Valid<VALUE>.attemptMap(convert: (VALUE) -> MAPPED): Valid<MAPPED> = mapValid { value -> attempt { convert.invoke(value) } }
 
     private fun <VALUE> attempt(action: () -> VALUE): Valid<VALUE> {
         return try {

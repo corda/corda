@@ -5,6 +5,7 @@ import com.typesafe.config.ConfigFactory
 import net.corda.core.internal.div
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.Valid
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import picocli.CommandLine.Option
@@ -37,7 +38,7 @@ open class SharedNodeCmdLineOptions {
     )
     var devMode: Boolean? = null
 
-    open fun parseConfiguration(configuration: Config): NodeConfiguration = configuration.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle)
+    open fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> = configuration.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle)
 
     open fun rawConfiguration(): Config = ConfigHelper.loadConfig(baseDirectory, configFile)
 
@@ -50,8 +51,8 @@ open class SharedNodeCmdLineOptions {
 }
 
 class InitialRegistrationCmdLineOptions : SharedNodeCmdLineOptions() {
-    override fun parseConfiguration(configuration: Config): NodeConfiguration {
-        return super.parseConfiguration(configuration).also { config ->
+    override fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
+        return super.parseConfiguration(configuration).doIfValid { config ->
             require(!config.devMode) { "Registration cannot occur in development mode" }
             require(config.compatibilityZoneURL != null || config.networkServices != null) {
                 "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
@@ -121,8 +122,8 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
     )
     var networkRootTrustStorePassword: String? = null
 
-    override fun parseConfiguration(configuration: Config): NodeConfiguration {
-        return super.parseConfiguration(configuration).also { config ->
+    override fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
+        return super.parseConfiguration(configuration).doIfValid { config ->
             if (isRegistration) {
                 require(!config.devMode) { "Registration cannot occur in development mode" }
                 require(config.compatibilityZoneURL != null || config.networkServices != null) {

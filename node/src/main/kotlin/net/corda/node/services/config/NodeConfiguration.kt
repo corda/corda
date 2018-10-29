@@ -2,6 +2,7 @@ package net.corda.node.services.config
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
+import net.corda.common.validation.internal.Validated
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.TimedFlow
@@ -162,7 +163,24 @@ data class FlowTimeoutConfiguration(
         val backoffBase: Double
 )
 
-fun Config.parseAsNodeConfiguration(onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle): NodeConfiguration = parseAs<NodeConfigurationImpl>(onUnknownKeys)
+fun Config.parseAsNodeConfiguration(onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle): Valid<NodeConfiguration> = attempt { parseAs<NodeConfigurationImpl>(onUnknownKeys) }.mapValid(::validate)
+
+// TODO sollecitom check
+private fun <VALUE> attempt(action: () -> VALUE): Valid<VALUE> {
+    return try {
+        Validated.valid(action.invoke())
+    } catch (exception: Exception) {
+        return Validated.invalid(exception)
+    }
+}
+
+// TODO sollecitom check
+private fun validate(configuration: NodeConfiguration): Valid<NodeConfiguration> {
+    return Validated.withResult(configuration, configuration.validate().asSequence().map { error -> IllegalArgumentException(error) }.toSet())
+}
+
+// TODO sollecitom check
+internal typealias Valid<TARGET> = Validated<TARGET, Exception>
 
 data class NodeConfigurationImpl(
         /** This is not retrieved from the config file but rather from a command line argument. */
