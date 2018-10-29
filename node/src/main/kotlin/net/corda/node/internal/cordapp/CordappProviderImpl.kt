@@ -90,16 +90,12 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
     private fun loadContractsIntoAttachmentStore(): Map<SecureHash, URL> =
             cordapps.filter { !it.contractClassNames.isEmpty() }.map {
                 it.jarPath.openStream().use { stream ->
-                    try {
-                        // We can't make attachmentStorage a AttachmentStorageInternal as that ends up requiring
-                        // MockAttachmentStorage to implement it.
-                        if (attachmentStorage is AttachmentStorageInternal) {
-                            attachmentStorage.privilegedImportAttachment(stream, DEPLOYED_CORDAPP_UPLOADER, null)
-                        } else {
-                            attachmentStorage.importAttachment(stream, DEPLOYED_CORDAPP_UPLOADER, null)
-                        }
-                    } catch (faee: java.nio.file.FileAlreadyExistsException) {
-                        AttachmentId.parse(faee.message!!)
+                    // We can't make attachmentStorage a AttachmentStorageInternal as that ends up requiring
+                    // MockAttachmentStorage to implement it.
+                    if (attachmentStorage is AttachmentStorageInternal) {
+                        attachmentStorage.privilegedImportAttachment(stream, DEPLOYED_CORDAPP_UPLOADER, null)
+                    } else {
+                        attachmentStorage.importAttachment(stream, DEPLOYED_CORDAPP_UPLOADER, null)
                     }
                 } to it.jarPath
             }.toMap()
