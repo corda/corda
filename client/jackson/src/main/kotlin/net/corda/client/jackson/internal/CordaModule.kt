@@ -85,7 +85,7 @@ class CordaModule : SimpleModule("corda-core") {
  */
 private class CordaSerializableBeanSerializerModifier : BeanSerializerModifier() {
     // We need to pass in a SerializerFactory when scanning for properties, but don't actually do any serialisation so any will do.
-    private val serializerFactory = SerializerFactoryBuilder.buildWithCarpenterClassloader(AllWhitelist, javaClass.classLoader)
+    private val serializerFactory = SerializerFactoryBuilder.build(AllWhitelist, javaClass.classLoader)
 
     override fun changeProperties(config: SerializationConfig,
                                   beanDesc: BeanDescription,

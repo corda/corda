@@ -29,13 +29,13 @@ class AMQPRoundTripRPCSerializationScheme(
         cordappCustomSerializers, serializerFactoriesForContexts
 ) {
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
-        return SerializerFactoryBuilder.buildWithCarpenterClassloader(AllWhitelist, javaClass.classLoader).apply {
+        return SerializerFactoryBuilder.build(AllWhitelist, javaClass.classLoader).apply {
             register(RpcClientObservableDeSerializer)
         }
     }
 
     override fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory {
-        return SerializerFactoryBuilder.buildWithCarpenterClassloader(AllWhitelist, javaClass.classLoader).apply {
+        return SerializerFactoryBuilder.build(AllWhitelist, javaClass.classLoader).apply {
             register(RpcServerObservableSerializer())
         }
     }

@@ -48,7 +48,7 @@ class StaticInitialisationOfSerializedObjectTest {
     fun kotlinObjectWithCompanionObject() {
         data class D(val c: C)
 
-        val sf = SerializerFactoryBuilder.buildWithCarpenter(AllWhitelist,
+        val sf = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         )
 
@@ -90,7 +90,7 @@ class StaticInitialisationOfSerializedObjectTest {
         }
 
         val whitelist = WL()
-        val sf2 = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+        val sf2 = SerializerFactoryBuilder.build(whitelist,
                 ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
         )
         val bytes = url.readBytes()

@@ -15,7 +15,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class TransactionVerificationExceptionSerialisationTests {
-    private fun defaultFactory() = SerializerFactoryBuilder.buildWithCarpenterClassloader(
+    private fun defaultFactory() = SerializerFactoryBuilder.build(
             AllWhitelist,
             ClassLoader.getSystemClassLoader()
     )

@@ -207,7 +207,7 @@ class EnumTests {
         }
 
         val whitelist = WL(classTestName("C"))
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+        val factory = SerializerFactoryBuilder.build(whitelist,
                 ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
         )
 
@@ -228,7 +228,7 @@ class EnumTests {
         }
 
         val whitelist = WL()
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+        val factory = SerializerFactoryBuilder.build(whitelist,
                 ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
         )
 
@@ -245,7 +245,7 @@ class EnumTests {
         }
 
         val whitelist = WL()
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+        val factory = SerializerFactoryBuilder.build(whitelist,
                 ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
         )
 
@@ -264,7 +264,7 @@ class EnumTests {
         // first serialise the class using a context in which Bras are whitelisted
         val whitelist = WL(listOf(classTestName("C"),
                 "net.corda.serialization.internal.amqp.EnumTests\$Bras"))
-        val factory = SerializerFactoryBuilder.buildWithCarpenter(whitelist,
+        val factory = SerializerFactoryBuilder.build(whitelist,
                 ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
         )
         val bytes = TestSerializationOutput(VERBOSE, factory).serialize(C(Bras.UNDERWIRE))
@@ -272,7 +272,7 @@ class EnumTests {
         // then take that serialised object and attempt to deserialize it in a context that
         // disallows the Bras enum
         val whitelist1 = WL(listOf(classTestName("C")))
-        val factory2 = SerializerFactoryBuilder.buildWithCarpenter(whitelist1,
+        val factory2 = SerializerFactoryBuilder.build(whitelist1,
                 ClassCarpenterImpl(whitelist1, ClassLoader.getSystemClassLoader())
         )
         Assertions.assertThatThrownBy {
