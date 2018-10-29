@@ -5,6 +5,9 @@
         <Property name="log-path">${sys:log-path:-logs}</Property>
         <Property name="log-name">node-${hostName}</Property>
         <Property name="archive">${log-path}/archive</Property>
+        <Property name="defaultLogLevel">${sys:log4j2.level:-info}</Property>
+        <Property name="consoleLogLevel">${sys:consoleLogLevel:-$defaultLogLevel}</Property>
+        <Property name="fileLogLevel">${sys:fileLogLevel:-$defaultLogLevel}</Property>
     </Properties>
 
     <Appenders>
@@ -73,11 +76,9 @@
     </Appenders>
 
     <Loggers>
-        <Root level="debug">
-        <!--<Root level="${defaultLogLevel}">-->
-            <AppenderRef ref="Console-Appender"/>
-            <!--<AppenderRef ref="Console-Appender" level="${consoleLogLevel}"/>-->
-            <AppenderRef ref="RollingFile-Appender"/>
+        <Root level="${defaultLogLevel}">
+            <AppenderRef ref="Console-Appender" level="${consoleLogLevel}"/>
+            <AppenderRef ref="RollingFile-Appender" level="${fileLogLevel}"/>
         </Root>
         <Logger name="BasicInfo" additivity="false">
             <AppenderRef ref="Console-Appender-Println"/>
