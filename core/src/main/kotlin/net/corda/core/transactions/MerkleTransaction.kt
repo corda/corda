@@ -6,6 +6,7 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.LazyMappedList
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
 import net.corda.core.utilities.OpaqueBytes
@@ -72,23 +73,29 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
                                                     attachmentsContext: Boolean = false): List<T> {
         val group = componentGroups.firstOrNull { it.groupIndex == groupEnum.ordinal }
 
+        if (group == null || group.components.isEmpty()) {
+            return emptyList()
+        }
+
+        // If the componentGroup is a [LazyMappedList] it means that the original deserialized version is already available.
+        val components = group.components
+        if (components is LazyMappedList<*, OpaqueBytes>) {
+            return components.originalList as List<T>
+        }
+
         val javaClazz = clazz.java // This is needed because the checkpoint serializer can't serialize KClasses.
 
         val factory = SerializationFactory.defaultFactory
         val context = factory.defaultContext.let { if (attachmentsContext) it.withAttachmentsClassLoader(attachments) else it }
 
-        return if (group != null && group.components.isNotEmpty()) {
-            group.components.lazyMapped { component, internalIndex ->
-                try {
-                    factory.deserialize(component, javaClazz, context)
-                } catch (e: MissingAttachmentsException) {
-                    throw e
-                } catch (e: Exception) {
-                    throw Exception("Malformed transaction, $groupEnum at index $internalIndex cannot be deserialised", e)
-                }
+        return group.components.lazyMapped { component, internalIndex ->
+            try {
+                factory.deserialize(component, javaClazz, context)
+            } catch (e: MissingAttachmentsException) {
+                throw e
+            } catch (e: Exception) {
+                throw Exception("Malformed transaction, $groupEnum at index $internalIndex cannot be deserialised", e)
             }
-        } else {
-            emptyList()
         }
     }
 
