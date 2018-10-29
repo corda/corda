@@ -1,6 +1,5 @@
 package net.corda.node.internal
 
-import com.typesafe.config.ConfigException
 import io.netty.channel.unix.Errors
 import net.corda.cliutils.*
 import net.corda.core.crypto.Crypto
@@ -21,7 +20,6 @@ import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.tools.shell.InteractiveShell

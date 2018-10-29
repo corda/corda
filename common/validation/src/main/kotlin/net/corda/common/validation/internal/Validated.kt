@@ -62,7 +62,6 @@ interface Validated<TARGET, ERROR> {
      * @return itself for fluent chained invocation.
      */
     fun doIfValid(action: (TARGET) -> Unit): Validated<TARGET, ERROR> {
-
         if (isValid) {
             action.invoke(value)
         }
@@ -74,7 +73,6 @@ interface Validated<TARGET, ERROR> {
      * @return itself for fluent chained invocation.
      */
     fun doOnErrors(action: (Set<ERROR>) -> Unit): Validated<TARGET, ERROR> {
-
         if (isInvalid) {
             action.invoke(errors)
         }

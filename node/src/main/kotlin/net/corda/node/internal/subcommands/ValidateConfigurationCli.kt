@@ -16,13 +16,10 @@ import picocli.CommandLine.*
 import java.nio.file.Path
 
 internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration", "Validate the configuration without starting the node.") {
-
     internal companion object {
-
         private val logger = loggerFor<ValidateConfigurationCli>()
 
         internal fun logConfigurationErrors(errors: Iterable<Exception>, configFile: Path) {
-
             errors.forEach { error ->
                 when (error) {
                     is ConfigException.IO -> logger.error(configFileNotFoundMessage(configFile))
@@ -47,7 +44,6 @@ internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration
     override fun initLogging() = initLogging(cmdLineOptions.baseDirectory)
 
     override fun runProgram(): Int {
-
         val configuration = cmdLineOptions.nodeConfiguration()
         if (configuration.isInvalid) {
             logConfigurationErrors(configuration.errors, cmdLineOptions.configFile)
@@ -60,27 +56,23 @@ internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration
 internal fun SharedNodeCmdLineOptions.nodeConfiguration(): Valid<NodeConfiguration> = NodeConfigurationParser.invoke(this)
 
 private object NodeConfigurationParser : (SharedNodeCmdLineOptions) -> Valid<NodeConfiguration> {
-
     private val logger = loggerFor<ValidateConfigurationCli>()
 
     private val configRenderingOptions = ConfigRenderOptions.defaults().setComments(false).setOriginComments(false).setFormatted(true)
 
     override fun invoke(cmds: SharedNodeCmdLineOptions): Valid<NodeConfiguration> {
-
         return attempt(cmds::rawConfiguration).doIfValid(::log).attemptMap(cmds::parseConfiguration).mapValid(::validate)
     }
 
     internal fun log(config: Config) = logger.debug("Actual configuration:\n${config.root().render(configRenderingOptions)}")
 
     private fun validate(configuration: NodeConfiguration): Valid<NodeConfiguration> {
-
         return Validated.withResult(configuration, configuration.validate().asSequence().map { error -> IllegalArgumentException(error) }.toSet())
     }
 
     private fun <VALUE, MAPPED> Valid<VALUE>.attemptMap(convert: (VALUE) -> MAPPED): Valid<MAPPED> = mapValid { value -> attempt { convert.invoke(value) } }
 
     private fun <VALUE> attempt(action: () -> VALUE): Valid<VALUE> {
-
         return try {
             valid(action.invoke())
         } catch (exception: Exception) {
