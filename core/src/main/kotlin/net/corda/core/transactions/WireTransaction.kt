@@ -148,19 +148,26 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
     private fun checkTransactionSize(ltx: LedgerTransaction, maxTransactionSize: Int) {
         var remainingTransactionSize = maxTransactionSize
-// TODO - temporarily commented until figured out
-//        fun minus(size: Int) {
-//            require(remainingTransactionSize > size) { "Transaction exceeded network's maximum transaction size limit : $maxTransactionSize bytes." }
-//            remainingTransactionSize -= size
-//        }
+
+        fun minus(size: Int) {
+            require(remainingTransactionSize > size) { "Transaction exceeded network's maximum transaction size limit : $maxTransactionSize bytes." }
+            remainingTransactionSize -= size
+        }
+
+        // TODO - does it matter if it is slightly lower than the actual re-serialized version?
+        fun componentGroupSize(componentGroup: ComponentGroup) = componentGroup.components.sumBy { it.size } + 4
 
         // Check attachments size first as they are most likely to go over the limit. With ContractAttachment instances
         // it's likely that the same underlying Attachment CorDapp will occur more than once so we dedup on the attachment id.
-//        ltx.attachments.distinctBy { it.id }.forEach { minus(it.size) }
-//        minus(ltx.references.serialize().size)
-//        minus(ltx.inputs.serialize().size)
-//        minus(ltx.commands.serialize().size)
-//        minus(ltx.outputs.serialize().size)
+        ltx.attachments.distinctBy { it.id }.forEach { minus(it.size) }
+
+        // TODO - these can be optimized by creating a LazyStateAndRef class, that just stores (a pointer) the serialized output componentGroup from the previous transaction.
+        minus(ltx.references.serialize().size)
+        minus(ltx.inputs.serialize().size)
+
+        // For Commands and outputs we can use the component groups as they are already serialized.
+        minus(componentGroupSize(this.componentGroups[COMMANDS_GROUP.ordinal]))
+        minus(componentGroupSize(this.componentGroups[OUTPUTS_GROUP.ordinal]))
     }
 
     /**

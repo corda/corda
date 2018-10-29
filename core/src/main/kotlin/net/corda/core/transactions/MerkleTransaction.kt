@@ -69,13 +69,15 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
     // Helper function to return a meaningful exception if deserialisation of a component fails.
     private fun <T : Any> deserialiseComponentGroup(clazz: KClass<T>,
                                                     groupEnum: ComponentGroupEnum): List<T> {
-        val factory = SerializationFactory.defaultFactory
-        val context = factory.defaultContext
         val group = componentGroups.firstOrNull { it.groupIndex == groupEnum.ordinal }
+
+        val javaClazz = clazz.java // This is needed because the checkpoint serializer can't serialize KClasses.
+
         return if (group != null && group.components.isNotEmpty()) {
             group.components.lazyMapped { component, internalIndex ->
                 try {
-                    factory.deserialize(component, clazz.java, context)
+                    val factory = SerializationFactory.defaultFactory
+                    factory.deserialize(component, javaClazz, factory.defaultContext)
                 } catch (e: MissingAttachmentsException) {
                     throw e
                 } catch (e: Exception) {

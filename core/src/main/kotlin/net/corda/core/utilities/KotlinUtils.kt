@@ -4,6 +4,7 @@ package net.corda.core.utilities
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
+import net.corda.core.internal.LazyMappedList
 import net.corda.core.internal.concurrent.get
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
@@ -136,16 +137,8 @@ fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
     throw e.cause!!
 }
 
-private class LazyMappedList<T, U>(val originalList: List<T>, val transform: (T, Int) -> U) : AbstractList<U>() {
-    private val partialResolvedList = MutableList<U?>(originalList.size) { null }
-
-    override val size = originalList.size
-
-    override fun get(index: Int) = partialResolvedList[index]
-            ?: transform(originalList[index], index).also { computed -> partialResolvedList[index] = computed }
-}
-
 /**
- * Creates a lazy list that applies the [transform] function only when the element is accessed.
+ * Returns a [List] implementation that applies the expensive [transform] function only when an element is accessed and then caches the calculated values.
+ * Size is very cheap as it doesn't call [transform].
  */
 fun <T, U> List<T>.lazyMapped(transform: (T, Int) -> U): List<U> = LazyMappedList(this, transform)
