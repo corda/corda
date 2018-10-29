@@ -259,14 +259,13 @@ class CordaRPCOpsImplTest {
     }
 
     @Test
-    fun `can't upload the same attachment`() {
+    fun `can upload the same attachment`() {
         withPermissions(invokeRpc(CordaRPCOps::uploadAttachment), invokeRpc(CordaRPCOps::attachmentExists)) {
             val inputJar1 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             val inputJar2 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
-            rpc.uploadAttachment(inputJar1)
-            assertThatExceptionOfType(java.nio.file.FileAlreadyExistsException::class.java).isThrownBy {
-                rpc.uploadAttachment(inputJar2)
-            }
+            val attachmentId1 = rpc.uploadAttachment(inputJar1)
+            val attachmentId2 = rpc.uploadAttachment(inputJar2)
+            assertEquals(attachmentId1, attachmentId2)
         }
     }
 
