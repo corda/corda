@@ -77,6 +77,9 @@ Parameters:
 
 ``install-shell-extensions``: Install ``corda`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
 
+
+``validate-configuration``: Validates the actual configuration without starting the node.
+
 .. _enabling-remote-debugging:
 
 Enabling remote debugging

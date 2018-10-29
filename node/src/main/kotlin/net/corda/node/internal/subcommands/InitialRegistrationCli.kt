@@ -17,7 +17,7 @@ import picocli.CommandLine.Option
 import java.io.File
 import java.nio.file.Path
 
-class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-registration", "Starts initial node registration with Corda network to obtain certificate from the permissioning server.") {
+class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.") {
     @Option(names = ["-t", "--network-root-truststore"], description = ["Network root trust store obtained from network operator."])
     var networkRootTrustStorePathParameter: Path? = null
 

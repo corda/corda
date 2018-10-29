@@ -2,11 +2,9 @@ package net.corda.node
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigRenderOptions
 import net.corda.core.internal.div
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import picocli.CommandLine.Option
@@ -39,20 +37,9 @@ open class SharedNodeCmdLineOptions {
     )
     var devMode: Boolean? = null
 
-    open fun loadConfig(): NodeConfiguration {
-        return getRawConfig().parseAsNodeConfiguration(unknownConfigKeysPolicy::handle)
-    }
+    open fun parseConfiguration(configuration: Config): NodeConfiguration = configuration.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle)
 
-    protected fun getRawConfig(): Config {
-        val rawConfig = ConfigHelper.loadConfig(
-                baseDirectory,
-                configFile
-        )
-        if (devMode == true) {
-            println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
-        }
-        return rawConfig
-    }
+    open fun rawConfiguration(): Config = ConfigHelper.loadConfig(baseDirectory, configFile)
 
     fun copyFrom(other: SharedNodeCmdLineOptions) {
         baseDirectory = other.baseDirectory
@@ -63,8 +50,8 @@ open class SharedNodeCmdLineOptions {
 }
 
 class InitialRegistrationCmdLineOptions : SharedNodeCmdLineOptions() {
-    override fun loadConfig(): NodeConfiguration {
-        return getRawConfig().parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
+    override fun parseConfiguration(configuration: Config): NodeConfiguration {
+        return super.parseConfiguration(configuration).also { config ->
             require(!config.devMode) { "Registration cannot occur in development mode" }
             require(config.compatibilityZoneURL != null || config.networkServices != null) {
                 "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
@@ -134,15 +121,8 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
     )
     var networkRootTrustStorePassword: String? = null
 
-    override fun loadConfig(): NodeConfiguration {
-        val rawConfig = ConfigHelper.loadConfig(
-                baseDirectory,
-                configFile,
-                configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell) +
-                        if (sshdServer) mapOf("sshd" to mapOf("port" to sshdServerPort.toString())) else emptyMap<String, Any>() +
-                                if (devMode != null) mapOf("devMode" to this.devMode) else emptyMap())
-        )
-        return rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
+    override fun parseConfiguration(configuration: Config): NodeConfiguration {
+        return super.parseConfiguration(configuration).also { config ->
             if (isRegistration) {
                 require(!config.devMode) { "Registration cannot occur in development mode" }
                 require(config.compatibilityZoneURL != null || config.networkServices != null) {
@@ -150,6 +130,18 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
                 }
             }
         }
+    }
+
+    override fun rawConfiguration(): Config {
+        val configOverrides = mutableMapOf<String, Any>()
+        configOverrides += "noLocalShell" to noLocalShell
+        if (sshdServer) {
+            configOverrides += "sshd" to mapOf("port" to sshdServerPort.toString())
+        }
+        devMode?.let {
+            configOverrides += "devMode" to it
+        }
+        return ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(configOverrides))
     }
 }
 

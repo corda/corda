@@ -7,7 +7,6 @@ import java.util.Collections.emptySet
  * It wraps either a valid [TARGET] or a set of [ERROR].
  */
 interface Validated<TARGET, ERROR> {
-
     /**
      * The valid [TARGET] value.
      *
@@ -31,6 +30,11 @@ interface Validated<TARGET, ERROR> {
     val isInvalid: Boolean get() = !isValid
 
     /**
+     * Returns the underlying value as optional, with a null result instead of an exception if validation rules were violated.
+     */
+    val optional: TARGET? get() = if (isValid) value else null
+
+    /**
      * Returns a valid [TARGET] if no validation errors are present. Otherwise, it throws the exception produced by [exceptionOnErrors], defaulting to [IllegalStateException].
      *
      * @throws IllegalStateException or the result of [exceptionOnErrors] if there are errors.
@@ -52,8 +56,29 @@ interface Validated<TARGET, ERROR> {
      */
     fun <MAPPED_ERROR> mapErrors(convertError: (ERROR) -> MAPPED_ERROR): Validated<TARGET, MAPPED_ERROR>
 
-    companion object {
+    /**
+     * Performs the given [action] if the underlying value is valid.
+     * @return itself for fluent chained invocation.
+     */
+    fun doIfValid(action: (TARGET) -> Unit): Validated<TARGET, ERROR> {
+        if (isValid) {
+            action.invoke(value)
+        }
+        return this
+    }
 
+    /**
+     * Performs the given [action] if the underlying value is invalid.
+     * @return itself for fluent chained invocation.
+     */
+    fun doOnErrors(action: (Set<ERROR>) -> Unit): Validated<TARGET, ERROR> {
+        if (isInvalid) {
+            action.invoke(errors)
+        }
+        return this
+    }
+
+    companion object {
         /**
          * Constructs a [Validated] wrapper with given valid [target] value and no errors.
          */
@@ -82,28 +107,23 @@ interface Validated<TARGET, ERROR> {
      * Models the result of validating a [TARGET] value, producing [ERROR]s if rules are violated.
      */
     sealed class Result<TARGET, ERROR> : Validated<TARGET, ERROR> {
-
         /**
          * A successful validation result, containing a valid [TARGET] value and no [ERROR]s.
          */
         class Successful<TARGET, ERROR>(override val value: TARGET) : Result<TARGET, ERROR>(), Validated<TARGET, ERROR> {
-
             override val errors: Set<ERROR> = emptySet<ERROR>()
 
             override fun valueOrThrow(exceptionOnErrors: (Set<ERROR>) -> Exception) = value
 
             override fun <MAPPED> map(convert: (TARGET) -> MAPPED): Validated<MAPPED, ERROR> {
-
                 return valid(convert.invoke(value))
             }
 
             override fun <MAPPED> mapValid(convert: (TARGET) -> Validated<MAPPED, ERROR>): Validated<MAPPED, ERROR> {
-
                 return convert.invoke(value)
             }
 
             override fun <MAPPED_ERROR> mapErrors(convertError: (ERROR) -> MAPPED_ERROR): Validated<TARGET, MAPPED_ERROR> {
-
                 return valid(value)
             }
         }
@@ -112,7 +132,6 @@ interface Validated<TARGET, ERROR> {
          * An unsuccessful validation result, containing [ERROR]s and no valid [TARGET] value.
          */
         class Unsuccessful<TARGET, ERROR>(override val errors: Set<ERROR>) : Result<TARGET, ERROR>(), Validated<TARGET, ERROR> {
-
             init {
                 require(errors.isNotEmpty())
             }
@@ -122,17 +141,14 @@ interface Validated<TARGET, ERROR> {
             override fun valueOrThrow(exceptionOnErrors: (Set<ERROR>) -> Exception) = throw exceptionOnErrors.invoke(errors)
 
             override fun <MAPPED> map(convert: (TARGET) -> MAPPED): Validated<MAPPED, ERROR> {
-
                 return invalid(errors)
             }
 
             override fun <MAPPED> mapValid(convert: (TARGET) -> Validated<MAPPED, ERROR>): Validated<MAPPED, ERROR> {
-
                 return invalid(errors)
             }
 
             override fun <MAPPED_ERROR> mapErrors(convertError: (ERROR) -> MAPPED_ERROR): Validated<TARGET, MAPPED_ERROR> {
-
                 return invalid(errors.asSequence().map(convertError).toSet())
             }
         }
