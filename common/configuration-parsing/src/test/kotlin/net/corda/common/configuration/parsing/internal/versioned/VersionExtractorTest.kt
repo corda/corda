@@ -10,7 +10,7 @@ import org.junit.Test
 class VersionExtractorTest {
 
     private val versionExtractor = Configuration.Version.Extractor.fromKey("configuration.metadata.version")
-    private val extractVersion: (Config) -> Valid<Int?> = { config -> versionExtractor.parse(config) }
+    private val extractVersion: (Config) -> Valid<Int> = { config -> versionExtractor.parse(config) }
 
     @Test
     fun version_header_extraction_present() {

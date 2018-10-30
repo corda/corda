@@ -125,9 +125,9 @@ object Configuration {
             interface Required<TYPE> : Definition<TYPE> {
 
                 /**
-                 * Returns an optional property with given [defaultValue]. This property does not produce errors in case the value is unspecified, returning the [defaultValue] instead.
+                 * Returns an optional property. This property does not produce errors in case the value is unspecified.
                  */
-                fun optional(defaultValue: TYPE? = null): Definition<TYPE?>
+                fun optional(): Optional<TYPE>
             }
 
             /**
@@ -139,6 +139,17 @@ object Configuration {
                  * Returns a required property expecting multiple values for the relevant key.
                  */
                 fun list(): Required<List<TYPE>>
+            }
+
+            /**
+             * Defines a property that might be missing, resulting in a null value.
+             */
+            interface Optional<TYPE> : Definition<TYPE?> {
+
+                /**
+                 * Allows to specify a [defaultValue], returning a required [Configuration.Property.Definition].
+                 */
+                fun withDefaultValue(defaultValue: TYPE): Definition<TYPE>
             }
 
             /**
@@ -541,7 +552,7 @@ object Configuration {
         /**
          * Defines the contract from extracting a specification version from a [Config] object.
          */
-        interface Extractor : Configuration.Value.Parser<Int?> {
+        interface Extractor : Configuration.Value.Parser<Int> {
 
             companion object {
 
@@ -550,7 +561,7 @@ object Configuration {
                 /**
                  * Returns a [Configuration.Version.Extractor] that reads the value from given [versionKey], defaulting to [versionDefaultValue] when [versionKey] is unspecified.
                  */
-                fun fromKey(versionKey: String, versionDefaultValue: Int? = DEFAULT_VERSION_VALUE): Configuration.Version.Extractor = VersionExtractor(versionKey, versionDefaultValue)
+                fun fromKey(versionKey: String, versionDefaultValue: Int = DEFAULT_VERSION_VALUE): Configuration.Version.Extractor = VersionExtractor(versionKey, versionDefaultValue)
             }
         }
     }

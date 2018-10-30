@@ -25,7 +25,7 @@ internal open class StandardProperty<TYPE>(override val key: String, typeNameArg
 
     override fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = FunctionalProperty(this, mappedTypeName, extractListValue, convert)
 
-    override fun optional(defaultValue: TYPE?): Configuration.Property.Definition<TYPE?> = OptionalProperty(this, defaultValue)
+    override fun optional(): Configuration.Property.Definition.Optional<TYPE> = OptionalDelegatedProperty(this)
 
     override fun list(): Configuration.Property.Definition.Required<List<TYPE>> = ListProperty(this)
 
@@ -84,31 +84,17 @@ private class ListProperty<TYPE>(delegate: StandardProperty<TYPE>) : RequiredDel
     }
 }
 
-private class OptionalProperty<TYPE>(delegate: Configuration.Property.Definition.Required<TYPE>, private val defaultValue: TYPE?) : DelegatedProperty<TYPE?, Configuration.Property.Definition.Required<TYPE>>(delegate) {
+private class OptionalPropertyWithDefault<TYPE>(delegate: Configuration.Property.Definition.Optional<TYPE>, private val defaultValue: TYPE) : DelegatedProperty<TYPE, Configuration.Property.Definition.Optional<TYPE>>(delegate) {
 
     override val isMandatory: Boolean = false
 
-    override val typeName: String = "${super.typeName}?"
+    override val typeName: String = delegate.typeName.removeSuffix("?")
 
     override fun describe(configuration: Config) = delegate.describe(configuration)
 
-    override fun valueIn(configuration: Config): TYPE? {
+    override fun valueIn(configuration: Config): TYPE = delegate.valueIn(configuration) ?: defaultValue
 
-        return when {
-            isSpecifiedBy(configuration) -> delegate.valueIn(configuration)
-            else -> defaultValue
-        }
-    }
-
-    override fun validate(target: Config, options: Configuration.Validation.Options): Valid<Config> {
-
-        val result = delegate.validate(target, options)
-        val error = result.errors.asSequence().filterIsInstance<Configuration.Validation.Error.MissingValue>().singleOrNull()
-        return when {
-            error != null -> if (result.errors.size > 1) result else valid(target)
-            else -> result
-        }
-    }
+    override fun validate(target: Config, options: Configuration.Validation.Options): Valid<Config> = delegate.validate(target, options)
 }
 
 private class FunctionalProperty<TYPE, MAPPED : Any>(delegate: Configuration.Property.Definition.Standard<TYPE>, private val mappedTypeName: String, internal val extractListValue: (Config, String) -> List<TYPE>, private val convert: (TYPE) -> Valid<MAPPED>) : RequiredDelegatedProperty<MAPPED, Configuration.Property.Definition.Standard<TYPE>>(delegate), Configuration.Property.Definition.Standard<MAPPED> {
@@ -169,9 +155,41 @@ private abstract class DelegatedProperty<TYPE, DELEGATE : Configuration.Property
     final override fun toString() = "\"$key\": \"$typeName\""
 }
 
+private class OptionalDelegatedProperty<TYPE>(private val delegate: Configuration.Property.Definition<TYPE>) : Configuration.Property.Metadata by delegate, Configuration.Property.Definition.Optional<TYPE> {
+
+    override val isMandatory: Boolean = false
+
+    override val typeName: String = "${delegate.typeName}?"
+
+    override fun describe(configuration: Config) = delegate.describe(configuration)
+
+    override fun valueIn(configuration: Config): TYPE? {
+
+        return when {
+            isSpecifiedBy(configuration) -> delegate.valueIn(configuration)
+            else -> null
+        }
+    }
+
+    override fun validate(target: Config, options: Configuration.Validation.Options): Valid<Config> {
+
+        val result = delegate.validate(target, options)
+        val error = result.errors.asSequence().filterIsInstance<Configuration.Validation.Error.MissingValue>().singleOrNull()
+        return when {
+            error != null -> if (result.errors.size > 1) result else valid(target)
+            else -> result
+        }
+    }
+
+    override fun withDefaultValue(defaultValue: TYPE): Configuration.Property.Definition<TYPE> = OptionalPropertyWithDefault(this, defaultValue)
+
+    override fun toString() = "\"$key\": \"$typeName\""
+}
+
+
 private abstract class RequiredDelegatedProperty<TYPE, DELEGATE : Configuration.Property.Definition.Required<*>>(delegate: DELEGATE) : DelegatedProperty<TYPE, DELEGATE>(delegate), Configuration.Property.Definition.Required<TYPE> {
 
-    final override fun optional(defaultValue: TYPE?): Configuration.Property.Definition<TYPE?> = OptionalProperty(this, defaultValue)
+    final override fun optional(): Configuration.Property.Definition.Optional<TYPE> = OptionalDelegatedProperty(this)
 }
 
 private fun ConfigException.toValidationError(keyName: String, typeName: String): Configuration.Validation.Error {
