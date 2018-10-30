@@ -39,22 +39,23 @@ weakly or untyped string-based serialisation schemes like JSON or XML. The prima
 Whitelisting
 ------------
 
-In classic Java serialization, any class on the JVM classpath can be deserialized.  This has shown to be a source of exploits
-and vulnerabilities by exploiting the large set of 3rd party libraries on the classpath as part of the dependencies of
-a JVM application and a carefully crafted stream of bytes to be deserialized. In Corda, we prevent just any class from
-being deserialized (and pro-actively during serialization) by insisting that each object's class belongs on a whitelist
-of allowed classes.
+In classic Java serialization, any class on the JVM classpath can be deserialized. This is a source of exploits and
+vulnerabilities that exploit the large set of third-party libraries that are added to the classpath as part of a JVM
+application's dependencies and carefully craft a malicious stream of bytes to be deserialized. In Corda, we strictly
+control which classes can be deserialized (and, pro-actively, serialized) by insisting that each (de)serializable class
+is part of a whitelist of allowed classes.
 
-Classes get onto the whitelist via one of three mechanisms:
+To add a class to the whitelist, you must use either of the following mechanisms:
 
-#. Via the ``@CordaSerializable`` annotation.  In order to whitelist a class, this annotation can be present on the
-   class itself, on any of the super classes or on any interface implemented by the class or super classes or any
-   interface extended by an interface implemented by the class or superclasses.
-#. By implementing the ``SerializationWhitelist`` interface and specifying a list of `whitelist` classes.
-#. Via the built in Corda whitelist (see the class ``DefaultWhitelist``).  Whilst this is not user editable, it does list
-   common JDK classes that have been whitelisted for your convenience.
+#. Add the ``@CordaSerializable`` annotation to the class. This annotation can be present on the
+   class itself, on any super class of the class, on any interface implemented by the class or its super classes, or any
+   interface extended by an interface implemented by the class or its super classes.
+#. Implement the ``SerializationWhitelist`` interface and specify a list of whitelisted classes.
 
-The annotation is the preferred method for whitelisting.  An example is shown in :doc:`tutorial-clientrpc-api`.
+There is also a built-in Corda whitelist (see the ``DefaultWhitelist`` class) that whitelists common JDK classes for
+convenience. This whitelist is not user-editable.
+
+The annotation is the preferred method for whitelisting. An example is shown in :doc:`tutorial-clientrpc-api`.
 It's reproduced here as an example of both ways you can do this for a couple of example classes.
 
 .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/ClientRpcTutorial.kt
