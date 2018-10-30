@@ -14,6 +14,7 @@ import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import net.corda.tools.shell.SSHDConfiguration
 import org.slf4j.Logger
 import java.net.URL
@@ -83,6 +84,8 @@ interface NodeConfiguration {
 
     val cordappDirectories: List<Path>
     val flowOverrides: FlowOverrideConfig?
+
+    val cordappSignerKeyFingerprintBlacklist: List<String>
 
     fun validate(): List<String>
 
@@ -234,7 +237,8 @@ data class NodeConfigurationImpl(
         override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT),
         override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA,
         private val useOpenSsl: Boolean = false,
-        override val flowOverrides: FlowOverrideConfig?
+        override val flowOverrides: FlowOverrideConfig?,
+        override val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() }
 ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()

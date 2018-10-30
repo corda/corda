@@ -71,6 +71,10 @@ dependencies {
     compile project(":client:jackson")
     compile project(":test-utils")
     compile project(path: ":samples:irs-demo:cordapp", configuration: "demoArtifacts")
+
+	// JOpt: for command line flags.
+    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+
     testCompile('org.springframework.boot:spring-boot-starter-test') {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"

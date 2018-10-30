@@ -24,8 +24,12 @@ class AlwaysInheritFromSandboxedObject : ClassDefinitionProvider, Emitter {
 
     override fun emit(context: EmitterContext, instruction: Instruction) = context.emit {
         if (instruction is TypeInstruction &&
-                instruction.typeName == OBJECT_NAME) {
+                instruction.typeName == OBJECT_NAME &&
+                instruction.operation != Opcodes.ANEWARRAY &&
+                instruction.operation != Opcodes.MULTIANEWARRAY) {
             // When creating new objects, make sure the sandboxed type gets used.
+            // However, an array is always [java.lang.Object] so we must exclude
+            // arrays from this so that we can still support arrays of arrays.
             new(SANDBOX_OBJECT_NAME, instruction.operation)
             preventDefault()
         }

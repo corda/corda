@@ -137,10 +137,10 @@ class Main : App(MainView::class) {
 }
 
 /**
- * This main method will starts 5 nodes (Notary, USA Bank, UK Bank, Bob and Alice) locally for UI testing,
- * they will be on localhost ports 20005, 20008, 20011, 20014 and 20017 respectively.
+ * This main method will start 5 nodes (Notary, USA Bank, UK Bank, Bob and Alice) locally for UI testing,
+ * which will bind to ports 20005, 20008, 20011, 20014 and 20017 locally.
  *
- * The simulation start with pre-allocating chunks of cash to each of the party in 2 currencies (USD, GBP), then it enter a loop to generate random events.
+ * The simulation starts by pre-allocating chunks of cash to each of the parties in 2 currencies (USD, GBP), then it enters a loop which generates random events.
  * On each iteration, the issuers will execute a Cash Issue or Cash Exit flow (at a 9:1 ratio) and a random party will execute a move of cash to another random party.
  */
 fun main(args: Array<String>) {

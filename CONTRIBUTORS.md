@@ -120,6 +120,7 @@ see changes to this list.
 * Lucas Salmen (Itau)
 * Lulu Ren (Monad-Labs)
 * Maksymilian Pawlak (R3)
+* Manila Gauns (Persistent Systems Limited)
 * Marek Scocovsky (ABSA)
 * marekdapps
 * Mark Lauer (Westpac)
