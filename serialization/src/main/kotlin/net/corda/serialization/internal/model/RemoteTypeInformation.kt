@@ -57,7 +57,7 @@ sealed class RemoteTypeInformation {
 
     data class AnArray(override val typeIdentifier: TypeIdentifier, val componentType: RemoteTypeInformation) : RemoteTypeInformation()
 
-    data class AnEnum(val typeDescriptor: TypeDescriptor, override val typeIdentifier: TypeIdentifier, val interfaces: List<RemoteTypeInformation>, val members: List<String>)
+    data class AnEnum(val typeDescriptor: TypeDescriptor, override val typeIdentifier: TypeIdentifier, val members: List<String>)
         : RemoteTypeInformation()
 
     data class AnInterface(val typeDescriptor: TypeDescriptor, override val typeIdentifier: TypeIdentifier, val interfaces: List<RemoteTypeInformation>, val typeParameters: List<RemoteTypeInformation>) : RemoteTypeInformation()

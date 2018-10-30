@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp
 
-import com.google.common.reflect.TypeToken
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
@@ -16,7 +15,7 @@ class AMQPRemoteTypeModelTests {
     @JvmField
     val serializationEnvRule = SerializationEnvironmentRule()
 
-    private val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+    private val factory = SerializerFactoryBuilder.build(AllWhitelist, ClassLoader.getSystemClassLoader())
     private val typeModel = AMQPRemoteTypeModel()
 
     private val localTypeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist))
@@ -39,17 +38,26 @@ class AMQPRemoteTypeModelTests {
         val map: Map<Q, R>
     }
 
+    enum class Enum : Interface<String, IntArray, Int> {
+        FOO, BAR, BAZ;
+
+        override val array: Array<out String> get() = emptyArray()
+        override val list: List<IntArray> get() = emptyList()
+        override val map: Map<IntArray, Int> get() = emptyMap()
+    }
+
     open class Superclass<K, V>(override val array: Array<out String>, override val list: List<K>, override val map: Map<K, V>)
         : Interface<String, K, V>
 
-    class C<V>(array: Array<out String>, list: List<UUID>, map: Map<UUID, V>): Superclass<UUID, V>(array, list, map)
+    class C<V>(array: Array<out String>, list: List<UUID>, map: Map<UUID, V>, val enum: Enum): Superclass<UUID, V>(array, list, map)
 
     @Test
     fun primitives() {
         val singleValue = C(
                     arrayOf("a", "b"),
                     listOf(UUID.randomUUID()),
-                    mapOf(UUID.randomUUID() to intArrayOf(1, 2, 3)))
+                    mapOf(UUID.randomUUID() to intArrayOf(1, 2, 3)),
+                Enum.BAZ)
         val remoteType = getRemoteType(singleValue)
         println(remoteType.prettyPrint())
         println("===")

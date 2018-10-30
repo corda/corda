@@ -76,7 +76,6 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
                     type,
                     typeIdentifier,
                     type.enumConstants.map { it.toString() },
-                    buildSuperclassInformation(type),
                     buildInterfaceInformation(type))
             type.isAbstractClass -> buildAbstract(type, typeIdentifier, emptyList())
             type.kotlinObjectInstance != null -> LocalTypeInformation.Singleton(
@@ -97,7 +96,6 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
             rawType.isInterface -> buildInterface(rawType, typeIdentifier, buildTypeParameterInformation(type))
             rawType.isAbstractClass -> buildAbstract(rawType, typeIdentifier, buildTypeParameterInformation(type))
             else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
-
         }
     }
 

@@ -46,7 +46,7 @@ class AMQPRemoteTypeModel {
         when (identifier) {
             is TypeIdentifier.Parameterised -> RemoteTypeInformation.Parameterised(identifier, identifier.interpretTypeParameters(notationLookup))
             is TypeIdentifier.ArrayOf -> RemoteTypeInformation.AnArray(identifier, identifier.componentType.interpretIdentifier(notationLookup))
-            else -> throw TODO("Deal with enums")
+            else -> RemoteTypeInformation.AnEnum(descriptor.name.toString(), identifier, choices.map { it.name })
         }
 
     private fun Field.interpret(notationLookup: Map<TypeIdentifier, TypeNotation>): Pair<String, RemotePropertyInformation> {

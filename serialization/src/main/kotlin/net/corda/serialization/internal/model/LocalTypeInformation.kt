@@ -129,7 +129,6 @@ sealed class LocalTypeInformation {
             override val observedType: Class<*>,
             override val typeIdentifier: TypeIdentifier,
             val members: List<String>,
-            val superclass: LocalTypeInformation,
             val interfaces: List<LocalTypeInformation>): LocalTypeInformation()
 
     /**

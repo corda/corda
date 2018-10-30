@@ -73,7 +73,7 @@ class ClassCarpentingTypeLoader(private val carpenter: ClassCarpenter): TypeLoad
     // Recursively traverse all of the types connected to this type in the remote type DAG.
     private val RemoteTypeInformation.traverse: Sequence<RemoteTypeInformation> get() = sequenceOf(this) + when(this) {
         is RemoteTypeInformation.AnInterface -> typeParameters.traverse + interfaces.traverse
-        is RemoteTypeInformation.AnEnum -> interfaces.traverse
+        //is RemoteTypeInformation.AnEnum -> interfaces.traverse
         is RemoteTypeInformation.AnArray -> componentType.traverse
         is RemoteTypeInformation.APojo -> typeParameters.traverse + interfaces.traverse + properties.traverse
         else -> emptySequence()
