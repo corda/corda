@@ -23,7 +23,7 @@ val TESTING_CONTEXT = SerializationContextImpl(amqpMagic,
 class TestSerializerFactory(
         wl: ClassWhitelist,
         cl: ClassLoader
-) : SerializerFactory(wl, ClassCarpenterImpl(wl, cl, false)) {
+) : DefaultSerializerFactory(wl, ClassCarpenterImpl(wl, cl, false)) {
     var registerCount = 0
 
     override fun register(customSerializer: CustomSerializer<out Any>) {
