@@ -51,7 +51,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
     @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.", ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
     @DeleteForDJVM
-    @JvmOverloads constructor(
+    @JvmOverloads
+    constructor(
             inputs: List<StateRef>,
             attachments: List<SecureHash>,
             outputs: List<TransactionState<ContractState>>,
@@ -155,7 +156,9 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }
 
         // TODO - does it matter if it is slightly lower than the actual re-serialized version?
-        fun componentGroupSize(componentGroup: ComponentGroup) = componentGroup.components.sumBy { it.size } + 4
+        fun componentGroupSize(componentGroup: ComponentGroupEnum): Int {
+            return this.componentGroups.firstOrNull { it.groupIndex == componentGroup.ordinal }?.let { cg -> cg.components.sumBy { it.size } + 4 } ?: 0
+        }
 
         // Check attachments size first as they are most likely to go over the limit. With ContractAttachment instances
         // it's likely that the same underlying Attachment CorDapp will occur more than once so we dedup on the attachment id.
@@ -166,8 +169,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         minus(ltx.inputs.serialize().size)
 
         // For Commands and outputs we can use the component groups as they are already serialized.
-        minus(componentGroupSize(this.componentGroups.firstOrNull { it.groupIndex == COMMANDS_GROUP.ordinal }!!))
-        minus(componentGroupSize(this.componentGroups.firstOrNull { it.groupIndex == OUTPUTS_GROUP.ordinal }!!))
+        minus(componentGroupSize(COMMANDS_GROUP))
+        minus(componentGroupSize(OUTPUTS_GROUP))
     }
 
     /**
