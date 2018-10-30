@@ -44,24 +44,122 @@ data class CustomSerializersCacheKey(val clazz: Class<*>, val declaredType: Type
 // TODO: need to support super classes as well as interfaces with our current code base... what's involved?  If we continue to ban, what is the impact?
 @KeepForDJVM
 @ThreadSafe
-open class SerializerFactory(
-        val whitelist: ClassWhitelist,
-        val classCarpenter: ClassCarpenter,
-        private val evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
-        val fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
+interface SerializerFactory {
+    val whitelist: ClassWhitelist
+    val classCarpenter: ClassCarpenter
+    val fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter
+    // Caches
+    val serializersByType: MutableMap<Type, AMQPSerializer<Any>>
+    val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>>
+    val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>
+    val fingerPrinter: FingerPrinter
+    val classloader: ClassLoader
+    /**
+     * Look up, and manufacture if necessary, a serializer for the given type.
+     *
+     * @param actualClass Will be null if there isn't an actual object instance available (e.g. for
+     * restricted type processing).
+     */
+    @Throws(NotSerializableException::class)
+    fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any>
+
+    /**
+     * Lookup and manufacture a serializer for the given AMQP type descriptor, assuming we also have the necessary types
+     * contained in the [Schema].
+     */
+    @Throws(NotSerializableException::class)
+    fun get(typeDescriptor: Any, schema: SerializationSchemas): AMQPSerializer<Any>
+
+    /**
+     * Register a custom serializer for any type that cannot be serialized or deserialized by the default serializer
+     * that expects to find getters and a constructor with a parameter for each property.
+     */
+    fun register(customSerializer: CustomSerializer<out Any>)
+
+    fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>?
+    fun registerExternal(customSerializer: CorDappCustomSerializer)
+    fun registerByDescriptor(name: Symbol, serializerCreator: () -> AMQPSerializer<Any>): AMQPSerializer<Any>
+
+    object AnyType : WildcardType {
+        override fun getUpperBounds(): Array<Type> = arrayOf(Object::class.java)
+
+        override fun getLowerBounds(): Array<Type> = emptyArray()
+
+        override fun toString(): String = "?"
+    }
+
+    companion object {
+        fun isPrimitive(type: Type): Boolean = primitiveTypeName(type) != null
+
+        fun primitiveTypeName(type: Type): String? {
+            val clazz = type as? Class<*> ?: return null
+            return primitiveTypeNames[Primitives.unwrap(clazz)]
+        }
+
+        fun primitiveType(type: String): Class<*>? {
+            return namesOfPrimitiveTypes[type]
+        }
+
+        private val primitiveTypeNames: Map<Class<*>, String> = mapOf(
+                Character::class.java to "char",
+                Char::class.java to "char",
+                Boolean::class.java to "boolean",
+                Byte::class.java to "byte",
+                UnsignedByte::class.java to "ubyte",
+                Short::class.java to "short",
+                UnsignedShort::class.java to "ushort",
+                Int::class.java to "int",
+                UnsignedInteger::class.java to "uint",
+                Long::class.java to "long",
+                UnsignedLong::class.java to "ulong",
+                Float::class.java to "float",
+                Double::class.java to "double",
+                Decimal32::class.java to "decimal32",
+                Decimal64::class.java to "decimal62",
+                Decimal128::class.java to "decimal128",
+                Date::class.java to "timestamp",
+                UUID::class.java to "uuid",
+                ByteArray::class.java to "binary",
+                String::class.java to "string",
+                Symbol::class.java to "symbol")
+
+        private val namesOfPrimitiveTypes: Map<String, Class<*>> = primitiveTypeNames.map { it.value to it.key }.toMap()
+
+        fun nameForType(type: Type): String = when (type) {
+            is Class<*> -> {
+                primitiveTypeName(type) ?: if (type.isArray) {
+                    "${nameForType(type.componentType)}${if (type.componentType.isPrimitive) "[p]" else "[]"}"
+                } else type.name
+            }
+            is ParameterizedType -> {
+                "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
+            }
+            is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
+            is WildcardType -> "?"
+            is TypeVariable<*> -> "?"
+            else -> throw AMQPNotSerializableException(type, "Unable to render type $type to a string.")
+        }
+    }
+}
+
+open class DefaultSerializerFactory(
+        override val whitelist: ClassWhitelist,
+        override val classCarpenter: ClassCarpenter,
+        private val evolutionSerializerProvider: EvolutionSerializerProvider,
+        override val fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter,
         private val onlyCustomSerializers: Boolean = false
-) {
+) : SerializerFactory {
 
     // Caches
-    private val serializersByType: MutableMap<Type, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
-    val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
+    override val serializersByType: MutableMap<Type, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
+    override val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
     private var customSerializers: List<SerializerFor> = emptyList()
     private val customSerializersCache: MutableMap<CustomSerializersCacheKey, AMQPSerializer<Any>?> = DefaultCacheProvider.createCache()
-    val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>> = DefaultCacheProvider.createCache()
+    override val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>> = DefaultCacheProvider.createCache()
 
-    val fingerPrinter by lazy { fingerPrinterConstructor(this) }
+    override val fingerPrinter by lazy { fingerPrinterConstructor(this) }
 
-    val classloader: ClassLoader get() = classCarpenter.classloader
+    override val classloader: ClassLoader get() = classCarpenter.classloader
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
@@ -70,7 +168,7 @@ open class SerializerFactory(
      * restricted type processing).
      */
     @Throws(NotSerializableException::class)
-    fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any> {
+    override fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any> {
         // can be useful to enable but will be *extremely* chatty if you do
         logger.trace { "Get Serializer for $actualClass ${declaredType.typeName}" }
 
@@ -125,7 +223,7 @@ open class SerializerFactory(
      * contained in the [Schema].
      */
     @Throws(NotSerializableException::class)
-    fun get(typeDescriptor: Any, schema: SerializationSchemas): AMQPSerializer<Any> {
+    override fun get(typeDescriptor: Any, schema: SerializationSchemas): AMQPSerializer<Any> {
         return serializersByDescriptor[typeDescriptor] ?: {
             logger.trace("get Serializer descriptor=${typeDescriptor}")
             processSchema(FactorySchemaAndDescriptor(schema, typeDescriptor))
@@ -138,7 +236,7 @@ open class SerializerFactory(
      * Register a custom serializer for any type that cannot be serialized or deserialized by the default serializer
      * that expects to find getters and a constructor with a parameter for each property.
      */
-    open fun register(customSerializer: CustomSerializer<out Any>) {
+    override fun register(customSerializer: CustomSerializer<out Any>) {
         logger.trace("action=\"Registering custom serializer\", class=\"${customSerializer.type}\"")
         if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
             customSerializers += customSerializer
@@ -149,7 +247,7 @@ open class SerializerFactory(
         }
     }
 
-    fun registerExternal(customSerializer: CorDappCustomSerializer) {
+    override fun registerExternal(customSerializer: CorDappCustomSerializer) {
         logger.trace("action=\"Registering external serializer\", class=\"${customSerializer.type}\"")
         if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
             customSerializers += customSerializer
@@ -275,7 +373,7 @@ open class SerializerFactory(
             throw AMQPNotSerializableException(
                     type,
                     "Serializer does not support synthetic classes")
-        } else if (isPrimitive(clazz)) {
+        } else if (SerializerFactory.isPrimitive(clazz)) {
             AMQPPrimitiveSerializer(clazz)
         } else {
             findCustomSerializer(clazz, declaredType) ?: run {
@@ -300,7 +398,7 @@ open class SerializerFactory(
         }
     }
 
-    internal fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
+    override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
         return customSerializersCache.computeIfAbsent(CustomSerializersCacheKey(clazz, declaredType), ::doFindCustomSerializer)
     }
 
@@ -339,69 +437,11 @@ open class SerializerFactory(
         return MapSerializer(declaredType, this)
     }
 
-    fun registerByDescriptor(name: Symbol, serializerCreator: () -> AMQPSerializer<Any>): AMQPSerializer<Any> =
+    override fun registerByDescriptor(name: Symbol, serializerCreator: () -> AMQPSerializer<Any>): AMQPSerializer<Any> =
             serializersByDescriptor.computeIfAbsent(name) { _ -> serializerCreator() }
 
     companion object {
         private val logger = contextLogger()
-
-        fun isPrimitive(type: Type): Boolean = primitiveTypeName(type) != null
-
-        fun primitiveTypeName(type: Type): String? {
-            val clazz = type as? Class<*> ?: return null
-            return primitiveTypeNames[Primitives.unwrap(clazz)]
-        }
-
-        fun primitiveType(type: String): Class<*>? {
-            return namesOfPrimitiveTypes[type]
-        }
-
-        private val primitiveTypeNames: Map<Class<*>, String> = mapOf(
-                Character::class.java to "char",
-                Char::class.java to "char",
-                Boolean::class.java to "boolean",
-                Byte::class.java to "byte",
-                UnsignedByte::class.java to "ubyte",
-                Short::class.java to "short",
-                UnsignedShort::class.java to "ushort",
-                Int::class.java to "int",
-                UnsignedInteger::class.java to "uint",
-                Long::class.java to "long",
-                UnsignedLong::class.java to "ulong",
-                Float::class.java to "float",
-                Double::class.java to "double",
-                Decimal32::class.java to "decimal32",
-                Decimal64::class.java to "decimal62",
-                Decimal128::class.java to "decimal128",
-                Date::class.java to "timestamp",
-                UUID::class.java to "uuid",
-                ByteArray::class.java to "binary",
-                String::class.java to "string",
-                Symbol::class.java to "symbol")
-
-        private val namesOfPrimitiveTypes: Map<String, Class<*>> = primitiveTypeNames.map { it.value to it.key }.toMap()
-
-        fun nameForType(type: Type): String = when (type) {
-            is Class<*> -> {
-                primitiveTypeName(type) ?: if (type.isArray) {
-                    "${nameForType(type.componentType)}${if (type.componentType.isPrimitive) "[p]" else "[]"}"
-                } else type.name
-            }
-            is ParameterizedType -> {
-                "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
-            }
-            is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
-            is WildcardType -> "?"
-            is TypeVariable<*> -> "?"
-            else -> throw AMQPNotSerializableException(type, "Unable to render type $type to a string.")
-        }
     }
 
-    object AnyType : WildcardType {
-        override fun getUpperBounds(): Array<Type> = arrayOf(Object::class.java)
-
-        override fun getLowerBounds(): Array<Type> = emptyArray()
-
-        override fun toString(): String = "?"
-    }
 }

@@ -23,7 +23,7 @@ val TESTING_CONTEXT = SerializationContextImpl(amqpMagic,
 class TestSerializerFactory(
         wl: ClassWhitelist,
         cl: ClassLoader
-) : DefaultSerializerFactory(wl, ClassCarpenterImpl(wl, cl, false)) {
+) : DefaultSerializerFactory(wl, ClassCarpenterImpl(wl, cl, false), DefaultEvolutionSerializerProvider, ::SerializerFingerPrinter) {
     var registerCount = 0
 
     override fun register(customSerializer: CustomSerializer<out Any>) {
