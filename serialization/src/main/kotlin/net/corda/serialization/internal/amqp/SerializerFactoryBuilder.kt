@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.serialization.internal.carpenter.ClassCarpenter
@@ -10,8 +9,9 @@ import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 object SerializerFactoryBuilder {
 
     @JvmStatic
+    // Has to be named differently, otherwise serialization-deterministic:determinise fails mysteriously.
     fun buildDeterministic(whitelist: ClassWhitelist, classCarpenter: ClassCarpenter) =
-            SerializerFactory(
+            makeFactory(
                     whitelist,
                     classCarpenter,
                     DefaultEvolutionSerializerProvider,
@@ -19,14 +19,14 @@ object SerializerFactoryBuilder {
                     false)
 
     @JvmStatic
-    @DeleteForDJVM
+    @JvmOverloads
     fun build(
             whitelist: ClassWhitelist,
             classCarpenter: ClassCarpenter,
             evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
             fingerPrinterProvider: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
             onlyCustomSerializers: Boolean = false) =
-            SerializerFactory(
+            makeFactory(
                     whitelist,
                     classCarpenter,
                     evolutionSerializerProvider,
@@ -34,7 +34,7 @@ object SerializerFactoryBuilder {
                     onlyCustomSerializers)
 
     @JvmStatic
-    @DeleteForDJVM
+    @JvmOverloads
     fun build(
             whitelist: ClassWhitelist,
             carpenterClassLoader: ClassLoader,
@@ -42,10 +42,18 @@ object SerializerFactoryBuilder {
             evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
             fingerPrinterProvider: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
             onlyCustomSerializers: Boolean = false) =
-            build(
+            makeFactory(
                     whitelist,
                     ClassCarpenterImpl(whitelist, carpenterClassLoader, lenientCarpenterEnabled),
                     evolutionSerializerProvider,
                     fingerPrinterProvider,
+                    onlyCustomSerializers)
+
+    private fun makeFactory(whitelist: ClassWhitelist,
+                            classCarpenter: ClassCarpenter,
+                            evolutionSerializerProvider: EvolutionSerializerProvider,
+                            fingerPrinterProvider: (SerializerFactory) -> FingerPrinter,
+                            onlyCustomSerializers: Boolean) =
+            DefaultSerializerFactory(whitelist, classCarpenter, evolutionSerializerProvider, fingerPrinterProvider,
                     onlyCustomSerializers)
 }

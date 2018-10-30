@@ -102,8 +102,8 @@ class StaticInitialisationOfSerializedObjectTest {
 
     // Version of a serializer factory that will allow the class carpenter living on the
     // factory to have a different whitelist applied to it than the factory
-    class TestSerializerFactory(wl1: ClassWhitelist, wl2: ClassWhitelist) :
-            SerializerFactory(wl1, ClassCarpenterImpl(wl2, ClassLoader.getSystemClassLoader()))
+    private fun testSerializerFactory(wl1: ClassWhitelist, wl2: ClassWhitelist) =
+            SerializerFactoryBuilder.build(wl1, ClassCarpenterImpl(wl2, ClassLoader.getSystemClassLoader()))
 
     // This time have the serialization factory and the carpenter use different whitelists
     @Test
@@ -131,7 +131,7 @@ class StaticInitialisationOfSerializedObjectTest {
             override fun hasListed(type: Class<*>) = true
         }
 
-        val sf2 = TestSerializerFactory(WL1(), WL2())
+        val sf2 = testSerializerFactory(WL1(), WL2())
         val bytes = url.readBytes()
 
         // Deserializing should throw because C is not on the whitelist NOT because

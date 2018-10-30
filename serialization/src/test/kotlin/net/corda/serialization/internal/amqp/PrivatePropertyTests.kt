@@ -17,15 +17,6 @@ import java.util.*
 class PrivatePropertyTests {
     private val factory = testDefaultFactoryNoEvolution()
 
-    companion object {
-        val fields : Map<String, java.lang.reflect.Field> = mapOf (
-                "serializersByDesc" to SerializerFactory::class.java.getDeclaredField("serializersByDescriptor")).apply {
-            this.values.forEach {
-                it.isAccessible = true
-            }
-        }
-    }
-
     @Test
     fun testWithOnePrivateProperty() {
         data class C(private val b: String)
@@ -134,8 +125,7 @@ class PrivatePropertyTests {
         val schemaAndBlob = SerializationOutput(factory).serializeAndReturnSchema(c1)
         assertEquals(1, schemaAndBlob.schema.types.size)
 
-        @Suppress("UNCHECKED_CAST")
-        val serializersByDescriptor = fields["serializersByDesc"]?.get(factory) as ConcurrentHashMap<Any, AMQPSerializer<Any>>
+        val serializersByDescriptor = factory.serializersByDescriptor
 
         val schemaDescriptor = schemaAndBlob.schema.types.first().descriptor.name
         serializersByDescriptor.filterKeys { (it as Symbol) == schemaDescriptor }.values.apply {
@@ -163,8 +153,7 @@ class PrivatePropertyTests {
         val schemaAndBlob = SerializationOutput(factory).serializeAndReturnSchema(c1)
         assertEquals(1, schemaAndBlob.schema.types.size)
 
-        @Suppress("UNCHECKED_CAST")
-        val serializersByDescriptor = fields["serializersByDesc"]?.get(factory) as ConcurrentHashMap<Any, AMQPSerializer<Any>>
+        val serializersByDescriptor = factory.serializersByDescriptor
 
         val schemaDescriptor = schemaAndBlob.schema.types.first().descriptor.name
         serializersByDescriptor.filterKeys { (it as Symbol) == schemaDescriptor }.values.apply {
@@ -192,7 +181,7 @@ class PrivatePropertyTests {
         val output = SerializationOutput(factory).serializeAndReturnSchema(c1)
         println (output.schema)
 
-        val serializersByDescriptor = fields["serializersByDesc"]!!.get(factory) as ConcurrentHashMap<Any, AMQPSerializer<Any>>
+        val serializersByDescriptor = factory.serializersByDescriptor
 
         // Inner and Outer
         assertEquals(2, serializersByDescriptor.size)
@@ -212,7 +201,7 @@ class PrivatePropertyTests {
 
         val output = SerializationOutput(factory).serializeAndReturnSchema(C("this is nice"))
 
-        val serializersByDescriptor = fields["serializersByDesc"]!!.get(factory) as ConcurrentHashMap<Any, AMQPSerializer<Any>>
+        val serializersByDescriptor = factory.serializersByDescriptor
 
         val schemaDescriptor = output.schema.types.first().descriptor.name
         serializersByDescriptor.filterKeys { (it as Symbol) == schemaDescriptor }.values.apply {

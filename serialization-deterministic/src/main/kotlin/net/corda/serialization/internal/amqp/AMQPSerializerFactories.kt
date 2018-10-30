@@ -15,7 +15,7 @@ fun createSerializerFactoryFactory(): SerializerFactoryFactory = DeterministicSe
 
 private class DeterministicSerializerFactoryFactory : SerializerFactoryFactory {
     override fun make(context: SerializationContext) =
-            SerializerFactoryBuilder.build(
+            SerializerFactoryBuilder.buildDeterministic(
             whitelist = context.whitelist,
             classCarpenter = DummyClassCarpenter(context.whitelist, context.deserializationClassLoader))
 }
