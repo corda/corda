@@ -21,7 +21,6 @@ import javax.persistence.Table
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-
 class ExposeJpaToFlowsTests {
 
     object FooSchema
