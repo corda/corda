@@ -111,9 +111,9 @@ For further information about managing dependencies, see
 
 Signing the CorDapp JAR
 ^^^^^^^^^^^^^^^^^^^^^^^
-The ``cordapp`` plugin can sign the generated Cordapp JAR file using `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/signing.html>`_.
-Signing the Cordapp enables it's contract classes to use signature constraints instead of other types of the constraints,
-refer to :doc:`api-contract-constraints` for description.
+The ``cordapp`` plugin can sign the generated CorDapp JAR file using `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/signing.html>`_.
+Signing the CorDapp enables it's contract classes to use signature constraints instead of other types of the constraints,
+for constraints explanation refer to :doc:`api-contract-constraints`.
 By default the JAR file is signed by Corda development certificate.
 The signing process can be disabled or configured to use an external keystore.
 The ``signing`` entry may contain the following parameters:
@@ -121,7 +121,7 @@ The ``signing`` entry may contain the following parameters:
  * ``enabled`` the control flag to enable signing process, by default is set to ``true``, set to ``false`` to disable signing
  * ``options`` any relevant parameters of `SignJar ANT task <https://ant.apache.org/manual/Tasks/signjar.html>`_ ,
    by default the JAR file is signed by Corda development key, the external keystore can be specified,
-   the minimal list of required options is shown below (for all options referer to the `SignJar task <https://ant.apache.org/manual/Tasks/signjar.html>`_).
+   the minimal list of required options is shown below, for other options referer to `SignJar task <https://ant.apache.org/manual/Tasks/signjar.html>`_:
 
    * ``keystore`` the path to the keystore file, by default `cordadevcakeys.jks` keystore is shipped with the plugin
    * ``alias`` the alias to sign under, the default value is `cordaintermediateca`
@@ -130,15 +130,15 @@ The ``signing`` entry may contain the following parameters:
    * ``storetype`` the keystore type, the default value is `JKS`
 
 The parameters can be also set by system properties passed to Gradle build process.
-The system properties shoud be named as the relevant option name starting with upper case and prefixed with `signing` e.g.:
-the value for ``alias`` option can be taken from the ``signingAlias`` system property. The following system properties can be used:
+The system properties shoud be named as the relevant option name starting with upper case and prefixed with `signing`, e.g.
+a value for ``alias`` can be taken from the ``signingAlias`` system property. The following system properties can be used:
 ``signingEnabled``, ``signingKeystore``, ``signingAlias``, ``signingStorepass``, ``signingKeypass``, ``signingStoretype``.
-The resolution order of a configuration value is as follows: the signing process takes value specified in ``signing`` entry first,
-the empty value `""` is also the correct value.
-If the option is not set, the relevant system property (`signingOption`) is tried.
+The resolution order of a configuration value is as follows: the signing process takes a value specified in the ``signing`` entry first,
+the empty string "" is also considered as the correct value.
+If the option is not set, the relevant system property named `signing[OptionName]` is tried.
 If the system property is not set then the value defaults to the configuration of the Corda development certificate.
 
-The example plugin ``singing`` configuration:
+The example ``cordapp`` plugin with plugin ``singing`` configuration:
 
 .. sourcecode:: groovy
 
@@ -154,7 +154,7 @@ The example plugin ``singing`` configuration:
         }
     }
 
-Cordapp auto-signing allows to use signature constraints for contracts from the CorDapp
+CorDapp auto-signing allows to use signature constraints for contracts from the CorDapp
 without need to create a keystore and configure the ``cordapp`` plugin.
 For production deployment ensure to sign the CorDapp using your own certificate e.g. by setting system properties to point to an external keystore
 or by disabling signing in ``cordapp`` plugin and signing the CordDapp JAR downstream in your build pipeline.
@@ -169,7 +169,7 @@ The example system properties setup for the build process which overrides signin
 
     ./gradlew -DsigningKeystore="/path/to/keystore.jks" -DsigningAlias="alias" -DsigningStorepass="password" -DsigningKeypass="password"
 
-Without providing the system properties, the build will sign the Cordapp with the default Corda development keystore:
+Without providing the system properties, the build will sign the CorDapp with the default Corda development keystore:
 
 .. sourcecode:: shell
 
@@ -182,7 +182,7 @@ To signing can be disabled for a build:
     ./gradlew -DsigningEnabled=false
 
 Other system properties can be explicitly assigned to options by calling `System.getProperty` in ``cordapp`` plugin cnfiguration.
-For example the below configuration sets the specific singing algorithm when a system property is available otherwise defaults to empty string:
+For example the below configuration sets the specific singing algorithm when a system property is available otherwise defaults to an empty string:
 
 .. sourcecode:: groovy
 
@@ -200,7 +200,7 @@ Then a build process can set the value for `customSigalg` system property and ot
 
     ./gradlew -DcustomSigalg="SHA256withECDSA" -DsigningKeystore="/path/to/keystore.jks" -DsigningAlias="alias" -DsigningStorepass="password" -DsigningKeypass="password"
 
-To check if Cordapp is signed use `JAR signing tool and verification <https://docs.oracle.com/javase/tutorial/deployment/jar/signing.html>`_:
+To check if CorDapp is signed use `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/verify.html>`_:
 
 .. sourcecode:: shell
 
