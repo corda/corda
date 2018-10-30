@@ -9,6 +9,7 @@ import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isCRLDistributionPointBlacklisted
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sign
@@ -69,7 +70,6 @@ import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.*
-import net.corda.nodeapi.internal.DEV_CERTIFICATES
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.config.CertificateStore
@@ -526,12 +526,20 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // CorDapp will be generated.
             generatedCordapps += VirtualCordapp.generateSimpleNotaryCordapp(versionInfo)
         }
-        val blacklistedCerts = if (configuration.devMode) emptyList() else DEV_CERTIFICATES
+        val blacklistedKeys = if (configuration.devMode) emptyList()
+        else configuration.cordappSignerKeyFingerprintBlacklist.mapNotNull {
+            try {
+                SecureHash.parse(it)
+            } catch (e: IllegalArgumentException) {
+                log.error("Error while adding key fingerprint $it to cordappSignerKeyFingerprintBlacklist due to ${e.message}", e)
+                throw e
+            }
+        }
         return JarScanningCordappLoader.fromDirectories(
                 configuration.cordappDirectories,
                 versionInfo,
                 extraCordapps = generatedCordapps,
-                blacklistedCerts = blacklistedCerts
+                signerKeyFingerprintBlacklist = blacklistedKeys
         )
     }
 

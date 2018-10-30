@@ -49,6 +49,7 @@ abstract class TestBase {
             HandleExceptionUnwrapper(),
             ReturnTypeWrapper(),
             RewriteClassMethods(),
+            RewriteObjectMethods(),
             StringConstantWrapper(),
             ThrowExceptionWrapper()
         )

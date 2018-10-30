@@ -28,7 +28,6 @@ import java.lang.reflect.Modifier
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
-import java.security.cert.X509Certificate
 import java.util.*
 import java.util.jar.JarInputStream
 import kotlin.reflect.KClass
@@ -42,7 +41,7 @@ import kotlin.streams.toList
 class JarScanningCordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>,
                                                    private val versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                                                    extraCordapps: List<CordappImpl>,
-                                                   private val blacklistedCordappSigners: List<X509Certificate> = emptyList()) : CordappLoaderTemplate() {
+                                                   private val signerKeyFingerprintBlacklist: List<SecureHash.SHA256> = emptyList()) : CordappLoaderTemplate() {
 
     override val cordapps: List<CordappImpl> by lazy {
         loadCordapps() + extraCordapps
@@ -69,10 +68,10 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         fun fromDirectories(cordappDirs: Collection<Path>,
                             versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                             extraCordapps: List<CordappImpl> = emptyList(),
-                            blacklistedCerts: List<X509Certificate> = emptyList()): JarScanningCordappLoader {
+                            signerKeyFingerprintBlacklist: List<SecureHash.SHA256> = emptyList()): JarScanningCordappLoader {
             logger.info("Looking for CorDapps in ${cordappDirs.distinct().joinToString(", ", "[", "]")}")
             val paths = cordappDirs.distinct().flatMap(this::jarUrlsInDirectory).map { it.restricted() }
-            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, blacklistedCerts)
+            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, signerKeyFingerprintBlacklist)
         }
 
         /**
@@ -80,9 +79,10 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
          *
          * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection.
          */
-        fun fromJarUrls(scanJars: List<URL>, versionInfo: VersionInfo = VersionInfo.UNKNOWN, extraCordapps: List<CordappImpl> = emptyList(), blacklistedCerts: List<X509Certificate> = emptyList()): JarScanningCordappLoader {
+        fun fromJarUrls(scanJars: List<URL>, versionInfo: VersionInfo = VersionInfo.UNKNOWN, extraCordapps: List<CordappImpl> = emptyList(),
+                        cordappsSignerKeyFingerprintBlacklist: List<SecureHash.SHA256> = emptyList()): JarScanningCordappLoader {
             val paths = scanJars.map { it.restricted() }
-            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, blacklistedCerts)
+            return JarScanningCordappLoader(paths, versionInfo, extraCordapps, cordappsSignerKeyFingerprintBlacklist)
         }
 
         private fun URL.restricted(rootPackageName: String? = null) = RestrictedURL(this, rootPackageName)
@@ -112,15 +112,16 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                     }
                 }
                 .filter {
-                    if (blacklistedCordappSigners.isEmpty()) {
+                    if (signerKeyFingerprintBlacklist.isEmpty()) {
                         true //Nothing blacklisted, no need to check
                     } else {
                         val certificates = it.jarPath.openStream().let(::JarInputStream).use(JarSignatureCollector::collectCertificates)
-                        if (certificates.isEmpty() || (certificates - blacklistedCordappSigners).isNotEmpty())
+                        val blockedCertificates = certificates.filter { it.publicKey.hash.sha256() in signerKeyFingerprintBlacklist }
+                        if (certificates.isEmpty() || (certificates - blockedCertificates).isNotEmpty())
                             true // Cordapp is not signed or it is signed by at least one non-blacklisted certificate
                         else {
                             logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it is signed by development key(s) only: " +
-                                    "${certificates.intersect(blacklistedCordappSigners).map { it.publicKey }}.")
+                                    "${blockedCertificates.map { it.publicKey }}.")
                             false
                         }
                     }

@@ -2,8 +2,11 @@ package net.corda.nodeapi.internal
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.hash
 import net.corda.core.internal.toX500Name
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.*
@@ -99,7 +102,7 @@ const val DEV_CA_TRUST_STORE_FILE: String = "cordatruststore.jks"
 const val DEV_CA_TRUST_STORE_PASS: String = "trustpass"
 const val DEV_CA_TRUST_STORE_PRIVATE_KEY_PASS: String = "trustpasskeypass"
 
-val DEV_CERTIFICATES: List<X509Certificate> get() = listOf(DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate)
+val DEV_PUB_KEY_HASHES: List<SecureHash.SHA256> get() = listOf(DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate).map { it.publicKey.hash.sha256() }
 
 // We need a class so that we can get hold of the class loader
 internal object DevCaHelper {
