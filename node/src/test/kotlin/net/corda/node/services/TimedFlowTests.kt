@@ -13,7 +13,7 @@ import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.notary.NotaryServiceFlow
-import net.corda.core.internal.notary.TrustedAuthorityNotaryService
+import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.SignedTransaction
@@ -176,7 +176,7 @@ class TimedFlowTests {
         }.bufferUntilSubscribed().toBlocking().toFuture()
     }
 
-    private class TestNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
+    private class TestNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
         override val uniquenessProvider = mock<UniquenessProvider>()
         override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = TestNotaryFlow(otherPartySession, this)
         override fun start() {}
