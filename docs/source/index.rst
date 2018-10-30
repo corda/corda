@@ -88,6 +88,7 @@ application development please continue to refer to `the main project documentat
    design/threat-model/corda-threat-model.md
    design/data-model-upgrades/signature-constraints.md
    design/data-model-upgrades/package-namespace-ownership.md
+   performance-testing/toc-tree.rst
 
 .. conditional-toctree::
    :caption: Operations
@@ -95,4 +96,6 @@ application development please continue to refer to `the main project documentat
    :if_tag: htmlmode
 
    corda-nodes-index.rst
-   corda-networks-index.rstcertificate-revocation
+   corda-networks-index.rst
+   certificate-revocation
+
