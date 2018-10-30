@@ -157,7 +157,7 @@ The ``signing`` entry may contain the following parameters:
   * ``keystore`` the path to the keystore file, by default cordadevcakeys.jks` keystore is shipped with the plugin
   * ``alias`` the alias to sign under, the default value is `cordaintermediateca`
   * ``storepass`` the keystore password, the default value is `cordacadevpass`
-  * ``keypass`` the private key password if it's different than the password for the keyStore, the default value is `cordacadevkeypass`
+  * ``keypass`` the private key password if it's different than the password for the keystore, the default value is `cordacadevkeypass`
   * ``storetype`` the keystore type, the default value is `JKS`
   * ``dname`` the distinguished name for entity, the option for keystore generation only
   * ``keyalg`` the method to use when generating name-value pair, the value defaults to `RSA` as Corda doesn't support `DSA`, the option for keystore generation only
